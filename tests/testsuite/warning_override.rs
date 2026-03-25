@@ -32,13 +32,7 @@ fn requires_nightly() {
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] unused variable: `x`
- --> src/main.rs:1:17
-  |
-1 | fn main() { let x = 3; }
-  |                 ^ [HELP] if this is intentional, prefix it with an underscore: `_x`
-  |
-  = [NOTE] `#[warn(unused_variables)]` [..]on by default
-
+...
 [WARNING] `foo` (bin "foo") generated 1 warning[..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -89,13 +83,7 @@ fn config() {
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] unused variable: `x`
- --> src/main.rs:1:17
-  |
-1 | fn main() { let x = 3; }
-  |                 ^ [HELP] if this is intentional, prefix it with an underscore: `_x`
-  |
-  = [NOTE] `#[warn(unused_variables)]` [..]on by default
-
+...
 [ERROR] `foo` (bin "foo") generated 1 warning[..]
 [ERROR] warnings are denied by `build.warnings` configuration
 
@@ -112,13 +100,7 @@ fn config() {
         .env("CARGO_BUILD_WARNINGS", "deny")
         .with_stderr_data(str![[r#"
 [WARNING] unused variable: `x`
- --> src/main.rs:1:17
-  |
-1 | fn main() { let x = 3; }
-  |                 ^ [HELP] if this is intentional, prefix it with an underscore: `_x`
-  |
-  = [NOTE] `#[warn(unused_variables)]` [..]on by default
-
+...
 [WARNING] `foo` (bin "foo") generated 1 warning[..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -225,13 +207,7 @@ fn rustc_caching_allow_first() {
         .arg("build.warnings='deny'")
         .with_stderr_data(str![[r#"
 [WARNING] unused variable: `x`
- --> src/main.rs:1:17
-  |
-1 | fn main() { let x = 3; }
-  |                 ^ [HELP] if this is intentional, prefix it with an underscore: `_x`
-  |
-  = [NOTE] `#[warn(unused_variables)]` [..]on by default
-
+...
 [ERROR] `foo` (bin "foo") generated 1 warning[..]
 [ERROR] warnings are denied by `build.warnings` configuration
 
@@ -251,13 +227,7 @@ fn rustc_caching_deny_first() {
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] unused variable: `x`
- --> src/main.rs:1:17
-  |
-1 | fn main() { let x = 3; }
-  |                 ^ [HELP] if this is intentional, prefix it with an underscore: `_x`
-  |
-  = [NOTE] `#[warn(unused_variables)]` [..]on by default
-
+...
 [ERROR] `foo` (bin "foo") generated 1 warning[..]
 [ERROR] warnings are denied by `build.warnings` configuration
 
