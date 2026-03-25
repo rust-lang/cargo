@@ -262,6 +262,43 @@ fn hard_warning_deny() {
         )
         .file("src/main.rs", "fn main() {}")
         .build();
+
+    // Baseline behavior
+    p.cargo("rustc")
+        .arg("--")
+        .arg("-ox.rs")
+        .with_stderr_data(str![[r#"
+[WARNING] `package.edition` is unspecified, defaulting to `2015` while the latest is `[..]`
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] [..]
+
+[WARNING] [..]
+
+[WARNING] `foo` (bin "foo") generated 2 warnings
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    // Compare with `RUSTFLAGS
+    p.cargo("rustc")
+        .env("RUSTFLAGS", "-Dwarnings")
+        .arg("--")
+        .arg("-ox.rs")
+        .with_stderr_data(str![[r#"
+[WARNING] `package.edition` is unspecified, defaulting to `2015` while the latest is `[..]`
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] [..]
+
+[WARNING] [..]
+
+[WARNING] `foo` (bin "foo") generated 2 warnings
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    // Behavior under test
     p.cargo("rustc")
         .masquerade_as_nightly_cargo(&["warnings"])
         .arg("-Zwarnings")
@@ -298,6 +335,40 @@ fn hard_warning_allow() {
         )
         .file("src/main.rs", "fn main() {}")
         .build();
+
+    // Baseline behavior
+    p.cargo("rustc")
+        .arg("--")
+        .arg("-ox.rs")
+        .with_stderr_data(str![[r#"
+[WARNING] `package.edition` is unspecified, defaulting to `2015` while the latest is `[..]`
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] [..]
+
+[WARNING] [..]
+
+[WARNING] `foo` (bin "foo") generated 2 warnings
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .with_status(0)
+        .run();
+
+    // Compare with `RUSTFLAGS
+    p.cargo("rustc")
+        .env("RUSTFLAGS", "-Awarnings")
+        .arg("--")
+        .arg("-ox.rs")
+        .with_stderr_data(str![[r#"
+[WARNING] `package.edition` is unspecified, defaulting to `2015` while the latest is `[..]`
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .with_status(0)
+        .run();
+
+    // Behavior under test
     p.cargo("rustc")
         .masquerade_as_nightly_cargo(&["warnings"])
         .arg("-Zwarnings")
@@ -311,7 +382,6 @@ fn hard_warning_allow() {
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
-        .with_status(0)
         .run();
 }
 
@@ -339,8 +409,8 @@ fn cap_lints_deny() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
+    // Baseline behavior
     p.cargo("check -vv")
-        .env("RUSTFLAGS", "-Dwarnings")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
@@ -358,11 +428,9 @@ fn cap_lints_deny() {
 "#]])
         .run();
 
+    // Compare with `RUSTFLAGS
     p.cargo("check -vv")
-        .masquerade_as_nightly_cargo(&["warnings"])
-        .arg("-Zwarnings")
-        .arg("--config")
-        .arg("build.warnings='deny'")
+        .env("RUSTFLAGS", "-Dwarnings")
         .with_stderr_data(str![[r#"
 [CHECKING] has_warning v1.0.0
 [RUNNING] [..]
@@ -371,6 +439,23 @@ fn cap_lints_deny() {
 [WARNING] `has_warning` (lib) generated 1 warning
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    // Behavior under test
+    p.cargo("check -vv")
+        .masquerade_as_nightly_cargo(&["warnings"])
+        .arg("-Zwarnings")
+        .arg("--config")
+        .arg("build.warnings='deny'")
+        .with_stderr_data(str![[r#"
+[FRESH] has_warning v1.0.0
+[WARNING] unused variable: `x`
+...
+[WARNING] `has_warning` (lib) generated 1 warning
+[FRESH] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -401,11 +486,8 @@ fn cap_lints_allow() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
+    // Baseline behavior
     p.cargo("check -vv")
-        .masquerade_as_nightly_cargo(&["warnings"])
-        .arg("-Zwarnings")
-        .arg("--config")
-        .arg("build.warnings='allow'")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
@@ -413,8 +495,38 @@ fn cap_lints_allow() {
 [DOWNLOADED] has_warning v1.0.0 (registry `dummy-registry`)
 [CHECKING] has_warning v1.0.0
 [RUNNING] [..]
+[WARNING] unused variable: `x`
+...
+[WARNING] `has_warning` (lib) generated 1 warning
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    // Compare with `RUSTFLAGS
+    p.cargo("check -vv")
+        .env("RUSTFLAGS", "-Awarnings")
+        .with_stderr_data(str![[r#"
+[CHECKING] has_warning v1.0.0
+[RUNNING] [..]
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    // Behavior under test
+    p.cargo("check -vv")
+        .masquerade_as_nightly_cargo(&["warnings"])
+        .arg("-Zwarnings")
+        .arg("--config")
+        .arg("build.warnings='allow'")
+        .with_stderr_data(str![[r#"
+[FRESH] has_warning v1.0.0
+[FRESH] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
