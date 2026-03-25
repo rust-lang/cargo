@@ -203,7 +203,7 @@ pub(super) fn activation_error(
                     msg.push_str(&*dep.package_name());
                     msg.push_str("` does not have that feature.\n");
                     msg.push_str(
-                        " An optional dependency with that name exists, \
+                        "note: an optional dependency with that name exists, \
                          but that dependency uses the \"dep:\" \
                          syntax in the features table, so it does not have an \
                          implicit feature with that name.\n",
