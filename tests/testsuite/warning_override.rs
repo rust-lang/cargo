@@ -23,6 +23,187 @@ fn make_project_with_rustc_warning() -> Project {
 }
 
 #[cargo_test]
+fn requires_nightly() {
+    // build.warnings has no effect without -Zwarnings.
+    let p = make_project_with_rustc_warning();
+    p.cargo("check")
+        .arg("--config")
+        .arg("build.warnings='deny'")
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] unused variable: `x`
+ --> src/main.rs:1:17
+  |
+1 | fn main() { let x = 3; }
+  |                 ^ [HELP] if this is intentional, prefix it with an underscore: `_x`
+  |
+  = [NOTE] `#[warn(unused_variables)]` [..]on by default
+
+[WARNING] `foo` (bin "foo") generated 1 warning[..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn clippy() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+            "#,
+        )
+        .file("src/lib.rs", "use std::io;") // <-- unused import
+        .build();
+
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["warnings"])
+        .arg("-Zwarnings")
+        .arg("--config")
+        .arg("build.warnings='deny'")
+        .env("RUSTC_WORKSPACE_WRAPPER", tools::wrapped_clippy_driver())
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] unused import: `std::io`
+...
+[ERROR] `foo` (lib) generated 1 warning (run `cargo clippy --fix --lib -p foo` to apply 1 suggestion)
+[ERROR] warnings are denied by `build.warnings` configuration
+
+"#]])
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test]
+fn config() {
+    let p = make_project_with_rustc_warning();
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["warnings"])
+        .arg("-Zwarnings")
+        .env("CARGO_BUILD_WARNINGS", "deny")
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] unused variable: `x`
+ --> src/main.rs:1:17
+  |
+1 | fn main() { let x = 3; }
+  |                 ^ [HELP] if this is intentional, prefix it with an underscore: `_x`
+  |
+  = [NOTE] `#[warn(unused_variables)]` [..]on by default
+
+[ERROR] `foo` (bin "foo") generated 1 warning[..]
+[ERROR] warnings are denied by `build.warnings` configuration
+
+"#]])
+        .with_status(101)
+        .run();
+
+    // CLI has precedence over env
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["warnings"])
+        .arg("-Zwarnings")
+        .arg("--config")
+        .arg("build.warnings='warn'")
+        .env("CARGO_BUILD_WARNINGS", "deny")
+        .with_stderr_data(str![[r#"
+[WARNING] unused variable: `x`
+ --> src/main.rs:1:17
+  |
+1 | fn main() { let x = 3; }
+  |                 ^ [HELP] if this is intentional, prefix it with an underscore: `_x`
+  |
+  = [NOTE] `#[warn(unused_variables)]` [..]on by default
+
+[WARNING] `foo` (bin "foo") generated 1 warning[..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn unknown_value() {
+    let p = make_project_with_rustc_warning();
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["warnings"])
+        .arg("-Zwarnings")
+        .arg("--config")
+        .arg("build.warnings='forbid'")
+        .with_stderr_data(str![[r#"
+[ERROR] error in --config cli option: could not load config key `build.warnings`
+
+Caused by:
+  unknown variant `forbid`, expected one of `warn`, `allow`, `deny`
+
+"#]])
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test]
+fn keep_going() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2021"
+            "#
+            ),
+        )
+        .file("build.rs", "fn main() { let x = 3; }")
+        .file("src/main.rs", "fn main() { let y = 4; }")
+        .build();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo(&["warnings"])
+        .arg("-Zwarnings")
+        .arg("--config")
+        .arg("build.warnings='deny'")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] unused variable: `x`
+...
+[ERROR] `foo` (build script) generated 1 warning
+[ERROR] warnings are denied by `build.warnings` configuration
+
+"#]])
+        .with_status(101)
+        .run();
+    // No uplifting
+    assert!(!p.bin("foo").is_file());
+
+    p.cargo("build --keep-going")
+        .masquerade_as_nightly_cargo(&["warnings"])
+        .arg("-Zwarnings")
+        .arg("--config")
+        .arg("build.warnings='deny'")
+        .with_stderr_data(str![[r#"
+[WARNING] unused variable: `x`
+...
+[ERROR] `foo` (build script) generated 1 warning
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+...
+[ERROR] `foo` (bin "foo") generated 1 warning (run `cargo fix --bin "foo" -p foo` to apply 1 suggestion)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[ERROR] warnings are denied by `build.warnings` configuration
+
+"#]])
+        .with_status(101)
+        .run();
+    // Uplifting happened despite the error
+    assert!(p.bin("foo").is_file());
+}
+
+#[cargo_test]
 fn rustc_caching_allow_first() {
     let p = make_project_with_rustc_warning();
     p.cargo("check")
@@ -97,129 +278,6 @@ fn rustc_caching_deny_first() {
 }
 
 #[cargo_test]
-fn config() {
-    let p = make_project_with_rustc_warning();
-    p.cargo("check")
-        .masquerade_as_nightly_cargo(&["warnings"])
-        .arg("-Zwarnings")
-        .env("CARGO_BUILD_WARNINGS", "deny")
-        .with_stderr_data(str![[r#"
-[CHECKING] foo v0.0.1 ([ROOT]/foo)
-[WARNING] unused variable: `x`
- --> src/main.rs:1:17
-  |
-1 | fn main() { let x = 3; }
-  |                 ^ [HELP] if this is intentional, prefix it with an underscore: `_x`
-  |
-  = [NOTE] `#[warn(unused_variables)]` [..]on by default
-
-[ERROR] `foo` (bin "foo") generated 1 warning[..]
-[ERROR] warnings are denied by `build.warnings` configuration
-
-"#]])
-        .with_status(101)
-        .run();
-
-    // CLI has precedence over env
-    p.cargo("check")
-        .masquerade_as_nightly_cargo(&["warnings"])
-        .arg("-Zwarnings")
-        .arg("--config")
-        .arg("build.warnings='warn'")
-        .env("CARGO_BUILD_WARNINGS", "deny")
-        .with_stderr_data(str![[r#"
-[WARNING] unused variable: `x`
- --> src/main.rs:1:17
-  |
-1 | fn main() { let x = 3; }
-  |                 ^ [HELP] if this is intentional, prefix it with an underscore: `_x`
-  |
-  = [NOTE] `#[warn(unused_variables)]` [..]on by default
-
-[WARNING] `foo` (bin "foo") generated 1 warning[..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-
-"#]])
-        .run();
-}
-
-#[cargo_test]
-fn requires_nightly() {
-    // build.warnings has no effect without -Zwarnings.
-    let p = make_project_with_rustc_warning();
-    p.cargo("check")
-        .arg("--config")
-        .arg("build.warnings='deny'")
-        .with_stderr_data(str![[r#"
-[CHECKING] foo v0.0.1 ([ROOT]/foo)
-[WARNING] unused variable: `x`
- --> src/main.rs:1:17
-  |
-1 | fn main() { let x = 3; }
-  |                 ^ [HELP] if this is intentional, prefix it with an underscore: `_x`
-  |
-  = [NOTE] `#[warn(unused_variables)]` [..]on by default
-
-[WARNING] `foo` (bin "foo") generated 1 warning[..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-
-"#]])
-        .run();
-}
-
-#[cargo_test]
-fn clippy() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-                edition = "2015"
-            "#,
-        )
-        .file("src/lib.rs", "use std::io;") // <-- unused import
-        .build();
-
-    p.cargo("check")
-        .masquerade_as_nightly_cargo(&["warnings"])
-        .arg("-Zwarnings")
-        .arg("--config")
-        .arg("build.warnings='deny'")
-        .env("RUSTC_WORKSPACE_WRAPPER", tools::wrapped_clippy_driver())
-        .with_stderr_data(str![[r#"
-[CHECKING] foo v0.0.1 ([ROOT]/foo)
-[WARNING] unused import: `std::io`
-...
-[ERROR] `foo` (lib) generated 1 warning (run `cargo clippy --fix --lib -p foo` to apply 1 suggestion)
-[ERROR] warnings are denied by `build.warnings` configuration
-
-"#]])
-        .with_status(101)
-        .run();
-}
-
-#[cargo_test]
-fn unknown_value() {
-    let p = make_project_with_rustc_warning();
-    p.cargo("check")
-        .masquerade_as_nightly_cargo(&["warnings"])
-        .arg("-Zwarnings")
-        .arg("--config")
-        .arg("build.warnings='forbid'")
-        .with_stderr_data(str![[r#"
-[ERROR] error in --config cli option: could not load config key `build.warnings`
-
-Caused by:
-  unknown variant `forbid`, expected one of `warn`, `allow`, `deny`
-
-"#]])
-        .with_status(101)
-        .run();
-}
-
-#[cargo_test]
 fn hard_warning_deny() {
     let p = project()
         .file(
@@ -285,64 +343,6 @@ fn hard_warning_allow() {
 "#]])
         .with_status(0)
         .run();
-}
-
-#[cargo_test]
-fn keep_going() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            &format!(
-                r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-                edition = "2021"
-            "#
-            ),
-        )
-        .file("build.rs", "fn main() { let x = 3; }")
-        .file("src/main.rs", "fn main() { let y = 4; }")
-        .build();
-
-    p.cargo("build")
-        .masquerade_as_nightly_cargo(&["warnings"])
-        .arg("-Zwarnings")
-        .arg("--config")
-        .arg("build.warnings='deny'")
-        .with_stderr_data(str![[r#"
-[COMPILING] foo v0.0.1 ([ROOT]/foo)
-[WARNING] unused variable: `x`
-...
-[ERROR] `foo` (build script) generated 1 warning
-[ERROR] warnings are denied by `build.warnings` configuration
-
-"#]])
-        .with_status(101)
-        .run();
-    // No uplifting
-    assert!(!p.bin("foo").is_file());
-
-    p.cargo("build --keep-going")
-        .masquerade_as_nightly_cargo(&["warnings"])
-        .arg("-Zwarnings")
-        .arg("--config")
-        .arg("build.warnings='deny'")
-        .with_stderr_data(str![[r#"
-[WARNING] unused variable: `x`
-...
-[ERROR] `foo` (build script) generated 1 warning
-[COMPILING] foo v0.0.1 ([ROOT]/foo)
-...
-[ERROR] `foo` (bin "foo") generated 1 warning (run `cargo fix --bin "foo" -p foo` to apply 1 suggestion)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[ERROR] warnings are denied by `build.warnings` configuration
-
-"#]])
-        .with_status(101)
-        .run();
-    // Uplifting happened despite the error
-    assert!(p.bin("foo").is_file());
 }
 
 #[cargo_test]
