@@ -335,7 +335,7 @@ pub(super) fn activation_error(
         if let Some(pre) = candidates.iter().find(|c| c.version().is_prerelease()) {
             let _ = write!(
                 &mut hints,
-                "\nif you are looking for the prerelease package it needs to be specified explicitly"
+                "\nhelp: if you are looking for the prerelease package it needs to be specified explicitly"
             );
             let _ = write!(
                 &mut hints,

@@ -2209,7 +2209,7 @@ fn use_semver_package_incorrectly_http() {
 candidate versions found which didn't match: 0.1.1-alpha.0
 location searched: [ROOT]/foo/a
 required by package `b v0.1.0 ([ROOT]/foo/b)`
-if you are looking for the prerelease package it needs to be specified explicitly
+[HELP] if you are looking for the prerelease package it needs to be specified explicitly
     a = { version = "0.1.1-alpha.0" }
 
 "#]]);
@@ -2222,7 +2222,7 @@ fn use_semver_package_incorrectly_git() {
 candidate versions found which didn't match: 0.1.1-alpha.0
 location searched: [ROOT]/foo/a
 required by package `b v0.1.0 ([ROOT]/foo/b)`
-if you are looking for the prerelease package it needs to be specified explicitly
+[HELP] if you are looking for the prerelease package it needs to be specified explicitly
     a = { version = "0.1.1-alpha.0" }
 
 "#]]);
