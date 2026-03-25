@@ -188,6 +188,18 @@
   [#16615](https://github.com/rust-lang/cargo/pull/16615)
   [#16624](https://github.com/rust-lang/cargo/pull/16624)
 
+## Cargo 1.94.1 (2026-03-26)
+
+[85eff7c8...rust-1.94.0](https://github.com/rust-lang/cargo/compare/85eff7c8...rust-1.94.0)
+
+### Fixed
+
+- 🚨 [CVE-2026-33055](https://github.com/advisories/GHSA-gchp-q4r4-x4ff) and [CVE-2026-33056](https://github.com/advisories/GHSA-j4xf-2g29-59ph):
+  Extracting malicious crates can alter permissions on arbitrary paths on Unix-like systems.
+  [#16769](https://github.com/rust-lang/cargo/pull/16769)
+- Fixed certificate behavior on FreeBSD by downgrading libcurl from 8.17.0 to 8.15.0. This was inadvertently updated in 1.94.0. In future, Rust 1.95 is expected to update to libcurl 8.19.0 which should address the issue going forward.
+  [#16787](https://github.com/rust-lang/cargo/pull/16787)
+
 ## Cargo 1.94 (2026-03-05)
 
 [2c283a9a...rust-1.94.0](https://github.com/rust-lang/cargo/compare/2c283a9a...rust-1.94.0)
