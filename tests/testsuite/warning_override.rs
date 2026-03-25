@@ -316,7 +316,7 @@ fn hard_warning_allow() {
 }
 
 #[cargo_test]
-fn cap_lints() {
+fn cap_lints_deny() {
     Package::new("has_warning", "1.0.0")
         .file("src/lib.rs", "pub fn foo() { let x = 3; }")
         .publish();
@@ -375,6 +375,31 @@ fn cap_lints() {
 
 "#]])
         .run();
+}
+
+#[cargo_test]
+fn cap_lints_allow() {
+    Package::new("has_warning", "1.0.0")
+        .file("src/lib.rs", "pub fn foo() { let x = 3; }")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2021"
+
+                [dependencies]
+                has_warning = "1"
+            "#
+            ),
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
 
     p.cargo("check -vv")
         .masquerade_as_nightly_cargo(&["warnings"])
@@ -382,8 +407,14 @@ fn cap_lints() {
         .arg("--config")
         .arg("build.warnings='allow'")
         .with_stderr_data(str![[r#"
-[FRESH] has_warning v1.0.0
-[FRESH] foo v0.0.1 ([ROOT]/foo)
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] has_warning v1.0.0 (registry `dummy-registry`)
+[CHECKING] has_warning v1.0.0
+[RUNNING] [..]
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] [..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
