@@ -216,11 +216,11 @@ fn wrong_case_http() {
     let _server = setup_http();
     wrong_case(str![[r#"
 [UPDATING] `dummy-registry` index
-[ERROR] no matching package found
-searched package name: `Init`
-perhaps you meant:      init
+[ERROR] no matching package named `Init` found
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.1 ([ROOT]/foo)`
+[HELP] packages with similar names: init
+
 
 "#]]);
 }
@@ -229,11 +229,11 @@ required by package `foo v0.0.1 ([ROOT]/foo)`
 fn wrong_case_git() {
     wrong_case(str![[r#"
 [UPDATING] `dummy-registry` index
-[ERROR] no matching package found
-searched package name: `Init`
-perhaps you meant:      init
+[ERROR] no matching package named `Init` found
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.1 ([ROOT]/foo)`
+[HELP] packages with similar names: init
+
 
 "#]]);
 }
@@ -270,11 +270,11 @@ fn mis_hyphenated_http() {
     let _server = setup_http();
     mis_hyphenated(str![[r#"
 [UPDATING] `dummy-registry` index
-[ERROR] no matching package found
-searched package name: `mis_hyphenated`
-perhaps you meant:      mis-hyphenated
+[ERROR] no matching package named `mis_hyphenated` found
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.1 ([ROOT]/foo)`
+[HELP] packages with similar names: mis-hyphenated
+
 
 "#]]);
 }
@@ -283,11 +283,11 @@ required by package `foo v0.0.1 ([ROOT]/foo)`
 fn mis_hyphenated_git() {
     mis_hyphenated(str![[r#"
 [UPDATING] `dummy-registry` index
-[ERROR] no matching package found
-searched package name: `mis_hyphenated`
-perhaps you meant:      mis-hyphenated
+[ERROR] no matching package named `mis_hyphenated` found
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.1 ([ROOT]/foo)`
+[HELP] packages with similar names: mis-hyphenated
+
 
 "#]]);
 }

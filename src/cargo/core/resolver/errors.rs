@@ -366,19 +366,20 @@ pub(super) fn activation_error(
             Ok(c) => c,
             Err(e) => return to_resolve_err(e),
         };
-        let _ = writeln!(&mut msg, "no matching package found",);
-        let _ = writeln!(&mut msg, "searched package name: `{}`", dep.package_name());
+        let _ = writeln!(
+            &mut msg,
+            "no matching package named `{}` found",
+            dep.package_name()
+        );
+
         let mut names = name_candidates
             .iter()
             .take(3)
             .map(|c| c.1.name().as_str())
             .collect::<Vec<_>>();
-
         if name_candidates.len() > 3 {
             names.push("...");
         }
-        // Vertically align first suggestion with missing crate name
-        // so a typo jumps out at you.
         let suggestions =
             names
                 .iter()
@@ -388,7 +389,10 @@ pub(super) fn activation_error(
                     i if names.len() - 1 == i && name_candidates.len() <= 3 => acc + " or " + el,
                     _ => acc + ", " + el,
                 });
-        let _ = writeln!(&mut msg, "perhaps you meant:      {suggestions}");
+        let _ = writeln!(
+            &mut hints,
+            "\nhelp: packages with similar names: {suggestions}"
+        );
     } else {
         let _ = writeln!(
             &mut msg,
