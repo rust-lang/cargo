@@ -3040,7 +3040,7 @@ fn patch_eq_conflict_panic() {
     ... required by package `foo v0.1.0 ([ROOT]/foo)`
 versions that meet the requirements `=0.1.1` are: 0.1.1
 
-all possible versions conflict with previously selected packages.
+all possible versions conflict with previously selected packages
 
   previously selected package `bar v0.1.0`
     ... which satisfies dependency `bar = "=0.1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
@@ -3098,7 +3098,7 @@ fn mismatched_version2() {
     ... which satisfies dependency `bar = "^0.1.0"` of package `foo v0.1.0 ([ROOT]/foo)`
 versions that meet the requirements `=0.1.0-beta.1` are: 0.1.0-beta.1
 
-all possible versions conflict with previously selected packages.
+all possible versions conflict with previously selected packages
 
   previously selected package `qux v0.1.0-beta.2`
     ... which satisfies dependency `qux = "^0.1.0-beta.2"` of package `foo v0.1.0 ([ROOT]/foo)`

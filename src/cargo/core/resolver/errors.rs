@@ -215,7 +215,7 @@ pub(super) fn activation_error(
 
         if has_semver {
             // Group these errors together.
-            msg.push_str("\n\nall possible versions conflict with previously selected packages.");
+            msg.push_str("\n\nall possible versions conflict with previously selected packages");
             for (p, r) in &conflicting_activations {
                 if let ConflictReason::Semver = r {
                     msg.push_str("\n\n  previously selected ");

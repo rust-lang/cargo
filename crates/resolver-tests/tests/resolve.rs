@@ -1025,7 +1025,7 @@ failed to select a version for `F`.
     ... which satisfies dependency `A = "*"` of package `root v1.0.0 (registry `https://example.com/`)`
 versions that meet the requirements `<=0.1.1` are: 0.1.1, 0.1.0
 
-all possible versions conflict with previously selected packages.
+all possible versions conflict with previously selected packages
 
   previously selected package `F v0.1.2 (registry `https://example.com/`)`
     ... which satisfies dependency `F = "^0.1.2"` of package `E v1.0.0 (registry `https://example.com/`)`

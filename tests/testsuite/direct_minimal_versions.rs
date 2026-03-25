@@ -84,7 +84,7 @@ fn mixed_dependencies() {
     ... required by package `foo v0.0.1 ([ROOT]/foo)`
 versions that meet the requirements `^1.1` are: 1.1.0
 
-all possible versions conflict with previously selected packages.
+all possible versions conflict with previously selected packages
 
   previously selected package `dep v1.0.0`
     ... which satisfies dependency `dep = "^1.0"` of package `foo v0.0.1 ([ROOT]/foo)`
@@ -244,7 +244,7 @@ fn indirect_conflict() {
     ... which satisfies dependency `direct = "^1.0"` of package `foo v0.0.1 ([ROOT]/foo)`
 versions that meet the requirements `^2.1` are: 2.2.0, 2.1.0
 
-all possible versions conflict with previously selected packages.
+all possible versions conflict with previously selected packages
 
   previously selected package `indirect v2.0.0`
     ... which satisfies dependency `indirect = "^2.0"` of package `foo v0.0.1 ([ROOT]/foo)`
