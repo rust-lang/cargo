@@ -778,7 +778,7 @@ Caused by:
   candidate versions found which didn't match: 0.0.1
   location searched: directory source `[..] (which is replacing registry `[..]`)
   required by package `bar v0.1.0`
-  perhaps a crate was updated and forgotten to be re-vendored?
+  [NOTE] perhaps a crate was updated and forgotten to be re-vendored?
 
 "#]])
         .with_status(101)

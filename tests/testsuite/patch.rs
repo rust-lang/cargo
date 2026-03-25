@@ -3147,7 +3147,7 @@ location searched: `dummy-registry` index (which is replacing registry `crates-i
 required by package `foo v0.1.0 ([ROOT]/foo)`
 [HELP] if you are looking for the prerelease package it needs to be specified explicitly
     prerelease-deps = { version = "0.1.1-pre1" }
-perhaps a crate was updated and forgotten to be re-vendored?
+[NOTE] perhaps a crate was updated and forgotten to be re-vendored?
 
 "#]])
         .run();

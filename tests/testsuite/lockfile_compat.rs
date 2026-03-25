@@ -891,7 +891,7 @@ dependencies = [
 candidate versions found which didn't match: 0.0.1
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `test v0.0.0 ([ROOT]/foo)`
-perhaps a crate was updated and forgotten to be re-vendored?
+[NOTE] perhaps a crate was updated and forgotten to be re-vendored?
 
 "#]])
         .run();

@@ -358,7 +358,7 @@ pub(super) fn activation_error(
         if registry.is_replaced(dep.source_id()) {
             let _ = write!(
                 &mut hints,
-                "\nperhaps a crate was updated and forgotten to be re-vendored?"
+                "\nnote: perhaps a crate was updated and forgotten to be re-vendored?"
             );
         }
     } else if let Some(name_candidates) = alt_names(registry, dep) {

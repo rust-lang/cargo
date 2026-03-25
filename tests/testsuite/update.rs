@@ -444,7 +444,7 @@ fn update_precise_mismatched() {
 candidate versions found which didn't match: 1.6.0
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `bar v0.0.1 ([ROOT]/foo)`
-perhaps a crate was updated and forgotten to be re-vendored?
+[NOTE] perhaps a crate was updated and forgotten to be re-vendored?
 
 "#]])
         .with_status(101)
