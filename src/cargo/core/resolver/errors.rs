@@ -163,16 +163,14 @@ pub(super) fn activation_error(
                     msg.push_str("` does not have that feature.\n");
                     let latest = candidates.last().expect("in the non-empty branch");
                     if let Some(closest) = closest(feature, latest.features().keys(), |k| k) {
-                        msg.push_str(" package `");
-                        msg.push_str(&*dep.package_name());
-                        msg.push_str("` does have feature `");
+                        msg.push_str("help: there is a feature `");
                         msg.push_str(closest);
-                        msg.push_str("`\n");
+                        msg.push_str("` with a similar name\n");
                     } else if !latest.features().is_empty() {
                         let mut features: Vec<_> =
                             latest.features().keys().map(|f| f.as_str()).collect();
                         features.sort();
-                        msg.push_str(" available features: ");
+                        msg.push_str("help: available features: ");
                         msg.push_str(&features.join(", "));
                         msg.push_str("\n");
                     }
