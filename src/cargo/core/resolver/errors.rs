@@ -187,7 +187,7 @@ pub(super) fn activation_error(
                     msg.push_str(&*dep.package_name());
                     msg.push_str("` does not have that feature.\n");
                     msg.push_str(
-                        " A required dependency with that name exists, \
+                        "note: a required dependency with that name exists, \
                          but only optional dependencies can be used as features.\n",
                     );
                     // p == parent so the full path is redundant.

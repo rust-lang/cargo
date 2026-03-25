@@ -549,7 +549,7 @@ fn dependency_activates_required_dependency() {
 versions that meet the requirements `*` are: 0.0.1
 
 package `foo` depends on `bar` with feature `baz` but `bar` does not have that feature.
- A required dependency with that name exists, but only optional dependencies can be used as features.
+[NOTE] a required dependency with that name exists, but only optional dependencies can be used as features.
 
 
 failed to select a version for `bar` which could resolve this conflict
