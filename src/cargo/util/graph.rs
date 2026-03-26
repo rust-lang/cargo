@@ -107,14 +107,22 @@ impl<N: Eq + Ord + Clone, E: Default + Clone> Graph<N, E> {
 
     /// Resolves one of the paths from the given dependent package down to a leaf.
     ///
-    /// The path return will be the shortest path, or more accurately one of the paths with the shortest length.
+    /// The path return will be the shortest path, or more accurately one of the paths with the shortest length,
+    /// if `key_path` is not specified.
+    ///
+    /// With `key_path` specified, the full path will always contains the given path, making it possible to control
+    /// the returned path. The input should in form of (dep, dep's parent)
     ///
     /// Each element contains a node along with an edge except the first one.
     /// The representation would look like:
     ///
     /// (Node0,) -> (Node1, Edge01) -> (Node2, Edge12)...
-    pub fn path_to_bottom<'a>(&'a self, pkg: &'a N) -> Vec<(&'a N, Option<&'a E>)> {
-        self.path_to(pkg, |s, p| s.edges(p))
+    pub fn path_to_bottom<'a>(
+        &'a self,
+        pkg: &'a N,
+        key_pkg: Option<&'a (N, N)>,
+    ) -> Vec<(&'a N, Option<&'a E>)> {
+        self.path_to(pkg, |s, p| s.edges(p), key_pkg)
     }
 
     /// Resolves one of the paths from the given dependent package up to the root.
@@ -126,19 +134,28 @@ impl<N: Eq + Ord + Clone, E: Default + Clone> Graph<N, E> {
     ///
     /// (Node0,) -> (Node1, Edge01) -> (Node2, Edge12)...
     pub fn path_to_top<'a>(&'a self, pkg: &'a N) -> Vec<(&'a N, Option<&'a E>)> {
-        self.path_to(pkg, |s, pk| {
-            // Note that this implementation isn't the most robust per se, we'll
-            // likely have to tweak this over time. For now though it works for what
-            // it's used for!
-            s.nodes
-                .iter()
-                .filter_map(|(p, adjacent)| adjacent.get(pk).map(|e| (p, e)))
-        })
+        self.path_to(
+            pkg,
+            |s, pk| {
+                // Note that this implementation isn't the most robust per se, we'll
+                // likely have to tweak this over time. For now though it works for what
+                // it's used for!
+                s.nodes
+                    .iter()
+                    .filter_map(|(p, adjacent)| adjacent.get(pk).map(|e| (p, e)))
+            },
+            None,
+        )
     }
 }
 
 impl<'s, N: Eq + Ord + Clone + 's, E: Default + Clone + 's> Graph<N, E> {
-    fn path_to<'a, F, I>(&'s self, pkg: &'a N, fn_edge: F) -> Vec<(&'a N, Option<&'a E>)>
+    fn path_to<'a, F, I>(
+        &'s self,
+        pkg: &'a N,
+        fn_edge: F,
+        required_node: Option<&'a (N, N)>,
+    ) -> Vec<(&'a N, Option<&'a E>)>
     where
         I: Iterator<Item = (&'a N, &'a E)>,
         F: Fn(&'s Self, &'a N) -> I,
@@ -147,9 +164,22 @@ impl<'s, N: Eq + Ord + Clone + 's, E: Default + Clone + 's> Graph<N, E> {
         let mut back_link = BTreeMap::new();
         let mut queue = VecDeque::from([pkg]);
         let mut last = pkg;
+        let mut flag = true;
 
         while let Some(p) = queue.pop_front() {
             last = p;
+            if let Some((child, edge)) = fn_edge(&self, p).find(|(child, _)| {
+                required_node
+                    .is_some_and(|(ch, pa)| (ch == *child && flag) || (pa == *child && !flag))
+            }) {
+                flag = !flag;
+                queue.clear();
+                back_link.entry(child).or_insert_with(|| {
+                    queue.push_back(child);
+                    (p, edge)
+                });
+                continue;
+            }
             let mut out_edges = true;
             for (child, edge) in fn_edge(&self, p) {
                 out_edges = false;
@@ -200,6 +230,24 @@ impl<'s, N: Eq + Ord + Clone + 's, E: Default + Clone + 's> Graph<N, E> {
 }
 
 #[test]
+fn path_to_case_longer() {
+    let mut new = Graph::new();
+    new.link(0, 3);
+    new.link(1, 0);
+    new.link(2, 0);
+    new.link(2, 1);
+    assert_eq!(
+        new.path_to_bottom(&2, Some(&(1, 0))),
+        vec![
+            (&2, None),
+            (&1, Some(&())),
+            (&0, Some(&())),
+            (&3, Some(&()))
+        ]
+    );
+}
+
+#[test]
 fn path_to_case() {
     let mut new = Graph::new();
     new.link(0, 3);
@@ -207,7 +255,7 @@ fn path_to_case() {
     new.link(2, 0);
     new.link(2, 1);
     assert_eq!(
-        new.path_to_bottom(&2),
+        new.path_to_bottom(&2, None),
         vec![(&2, None), (&0, Some(&())), (&3, Some(&()))]
     );
 }
@@ -217,7 +265,7 @@ fn path_to_self() {
     // Extracted from #12941
     let mut new: Graph<i32, ()> = Graph::new();
     new.link(0, 0);
-    assert_eq!(new.path_to_bottom(&0), vec![(&0, Some(&()))]);
+    assert_eq!(new.path_to_bottom(&0, Some(&(0, 0))), vec![(&0, Some(&()))]);
 }
 
 #[test]
