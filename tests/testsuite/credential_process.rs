@@ -104,6 +104,7 @@ fn credential_provider_auth_failure() {
 [UPDATING] `alternative` index
 [ERROR] token rejected for `alternative`
 You may need to log in using this registry's credential provider
+[NOTE] the token does not include an authentication scheme
 
 Caused by:
   failed to get successful HTTP response from [..]
@@ -629,7 +630,7 @@ fn basic_provider() {
             eprintln!("CARGO={:?}", std::env::var("CARGO").ok());
             eprintln!("CARGO_REGISTRY_NAME_OPT={:?}", std::env::var("CARGO_REGISTRY_NAME_OPT").ok());
             eprintln!("CARGO_REGISTRY_INDEX_URL={:?}", std::env::var("CARGO_REGISTRY_INDEX_URL").ok());
-            print!("sekrit"); 
+            print!("sekrit");
         }"#)
         .build();
     cred_proj.cargo("build").run();
