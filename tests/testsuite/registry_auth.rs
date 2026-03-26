@@ -419,6 +419,66 @@ Caused by:
 }
 
 #[cargo_test]
+fn incorrect_token_unrecognized_scheme() {
+    let _registry = RegistryBuilder::new()
+        .alternative()
+        .auth_required()
+        .no_configure_token()
+        .http_index()
+        .build();
+
+    let p = make_project();
+    cargo(&p, "build")
+        .env("CARGO_REGISTRIES_ALTERNATIVE_TOKEN", "Digest incorrect")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] `alternative` index
+[ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
+
+Caused by:
+  token rejected for `alternative`, please run `cargo login --registry alternative`
+  or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
+
+Caused by:
+  failed to get successful HTTP response from `http://127.0.0.1:[..]/index/config.json`, got 401
+  body:
+  Unauthorized message from server.
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn incorrect_token_bearer_scheme() {
+    let _registry = RegistryBuilder::new()
+        .alternative()
+        .auth_required()
+        .no_configure_token()
+        .http_index()
+        .build();
+
+    let p = make_project();
+    cargo(&p, "build")
+        .env("CARGO_REGISTRIES_ALTERNATIVE_TOKEN", "Bearer incorrect")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] `alternative` index
+[ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
+
+Caused by:
+  token rejected for `alternative`, please run `cargo login --registry alternative`
+  or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
+
+Caused by:
+  failed to get successful HTTP response from `http://127.0.0.1:[..]/index/config.json`, got 401
+  body:
+  Unauthorized message from server.
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn anonymous_alt_registry() {
     // An alternative registry that requires auth, but is not in the config.
     let registry = RegistryBuilder::new()
