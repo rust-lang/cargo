@@ -202,7 +202,9 @@ impl CompileTarget {
         }
 
         if !unstable_json {
-            bail!("`.json` target specs require -Zjson-target-spec");
+            bail!(
+                "`.json` target specs require -Zjson-target-spec to be added to the cargo invocation"
+            );
         }
 
         // If `name` ends in `.json` then it's likely a custom target
