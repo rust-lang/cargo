@@ -2435,7 +2435,8 @@ fn disallow_network_http() {
 [ERROR] no matching package named `foo` found
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `bar v0.5.0 ([ROOT]/foo)`
-As a reminder, you're using offline mode (--frozen) which can sometimes cause surprising resolution failures, if this error is too confusing you may wish to retry without `--frozen`.
+[NOTE] offline mode (via `--frozen`) can sometimes cause surprising resolution failures
+[HELP] if this error is too confusing you may wish to retry without `--frozen`
 
 "#]])
         .run();
@@ -2467,7 +2468,8 @@ fn disallow_network_git() {
 [ERROR] no matching package named `foo` found
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `bar v0.5.0 ([ROOT]/foo)`
-As a reminder, you're using offline mode (--frozen) which can sometimes cause surprising resolution failures, if this error is too confusing you may wish to retry without `--frozen`.
+[NOTE] offline mode (via `--frozen`) can sometimes cause surprising resolution failures
+[HELP] if this error is too confusing you may wish to retry without `--frozen`
 
 "#]])
         .run();
