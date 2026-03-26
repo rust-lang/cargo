@@ -387,6 +387,42 @@ impl fmt::Display for AuthorizationErrorReason {
     }
 }
 
+#[derive(Debug)]
+pub enum AuthorizationScheme {
+    Bearer,
+    Basic,
+    Unrecognized(String),
+    NoScheme,
+}
+
+impl fmt::Display for AuthorizationScheme {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            AuthorizationScheme::Basic => write!(f, "Basic"),
+            AuthorizationScheme::Bearer => write!(f, "Bearer"),
+            AuthorizationScheme::Unrecognized(s) => write!(f, "{s}"),
+            AuthorizationScheme::NoScheme => write!(f, "(none)"),
+        }
+    }
+}
+
+/// Detects the authorization scheme in a token string, following RFC 7235
+fn detect_auth_scheme(token: &str) -> Option<AuthorizationScheme> {
+    if token.is_empty() {
+        return None;
+    }
+    // RFC 7235 credentials = auth-scheme SP token68/params
+    match token.split_once(' ') {
+        None => Some(AuthorizationScheme::NoScheme),
+        Some((prefix, _)) if !prefix.is_empty() => Some(match prefix {
+            "Bearer" => AuthorizationScheme::Bearer,
+            "Basic" => AuthorizationScheme::Basic,
+            other => AuthorizationScheme::Unrecognized(other.to_string()),
+        }),
+        _ => Some(AuthorizationScheme::NoScheme),
+    }
+}
+
 /// An authorization error from accessing a registry.
 #[derive(Debug)]
 pub struct AuthorizationError {
@@ -400,6 +436,8 @@ pub struct AuthorizationError {
     reason: AuthorizationErrorReason,
     /// Should `cargo login` and the `_TOKEN` env var be included when displaying this error?
     supports_cargo_token_credential_provider: bool,
+    /// Auth scheme detected in the cached token.
+    scheme_hint: Option<AuthorizationScheme>,
 }
 
 impl AuthorizationError {
@@ -416,12 +454,17 @@ impl AuthorizationError {
             credential_provider(gctx, &sid, false, false)?
                 .iter()
                 .any(|p| p.first().map(String::as_str) == Some("cargo:token"));
+        let cache = gctx.credential_cache();
+        let scheme_hint = cache
+            .get(sid.canonical_url())
+            .and_then(|entry| detect_auth_scheme(entry.token_value.as_deref().expose()));
         Ok(AuthorizationError {
             sid,
             default_registry: gctx.default_registry()?,
             login_url,
             reason,
             supports_cargo_token_credential_provider,
+            scheme_hint,
         })
     }
 }
@@ -460,6 +503,27 @@ impl fmt::Display for AuthorizationError {
                     f,
                     "\nYou may need to log in using this registry's credential provider"
                 )?;
+            }
+
+            if self.reason == AuthorizationErrorReason::TokenRejected {
+                if let Some(scheme) = &self.scheme_hint {
+                    match scheme {
+                        AuthorizationScheme::NoScheme => write!(
+                            f,
+                            "\nnote: the token does not include an authorization scheme prefix \
+                         (e.g. `Bearer `); if the registry requires one, prefix the token value \
+                         in credentials.toml"
+                        )?,
+                        AuthorizationScheme::Unrecognized(x) => write!(
+                            f,
+                            "\nwarning: the token has an unrecognized authorization scheme `{x}`"
+                        )?,
+                        AuthorizationScheme::Basic | AuthorizationScheme::Bearer => write!(
+                            f,
+                            "\nnote: the token uses the `{scheme}` authorization scheme"
+                        )?,
+                    }
+                }
             }
             Ok(())
         } else if self.reason == AuthorizationErrorReason::TokenMissing {
