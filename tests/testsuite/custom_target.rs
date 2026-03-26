@@ -45,7 +45,7 @@ fn custom_target_gated() {
     p.cargo("build --target custom-target.json")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] `.json` target specs require -Zjson-target-spec
+[ERROR] `.json` target specs require -Zjson-target-spec to be added to the cargo invocation
 
 "#]])
         .run();
@@ -55,7 +55,7 @@ fn custom_target_gated() {
         .env("CARGO_BUILD_TARGET", "custom-target.json")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] `.json` target specs require -Zjson-target-spec
+[ERROR] `.json` target specs require -Zjson-target-spec to be added to the cargo invocation
 
 "#]])
         .run();
@@ -79,7 +79,7 @@ fn custom_target_gated() {
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
-  `.json` target specs require -Zjson-target-spec
+  `.json` target specs require -Zjson-target-spec to be added to the cargo invocation
 
 "#]])
         .run();
