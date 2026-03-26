@@ -2,13 +2,14 @@ use std::fmt;
 use std::fmt::Write as _;
 use std::task::Poll;
 
-use crate::core::{Dependency, PackageId, Registry, Summary};
-use crate::sources::IndexSummary;
+use crate::core::{Dependency, PackageId, Registry, SourceId, Summary};
 use crate::sources::source::QueryKind;
+use crate::sources::{IndexSummary, PathSource, RecursivePathSource};
 use crate::util::edit_distance::{closest, edit_distance};
 use crate::util::errors::CargoResult;
 use crate::util::{GlobalContext, OptVersionReq, VersionExt};
 use anyhow::Error;
+use std::path::{Path, PathBuf};
 
 use super::context::ResolverContext;
 use super::types::{ConflictMap, ConflictReason};
@@ -392,33 +393,103 @@ pub(super) fn activation_error(
                 });
         let _ = writeln!(&mut msg, "perhaps you meant:      {suggestions}");
     } else {
-        let _ = writeln!(
-            &mut msg,
-            "no matching package named `{}` found",
-            dep.package_name()
-        );
-    }
-
-    let mut location_searched_msg = registry.describe_source(dep.source_id());
-    if location_searched_msg.is_empty() {
-        location_searched_msg = format!("{}", dep.source_id());
-    }
-    let _ = writeln!(&mut msg, "location searched: {}", location_searched_msg);
-    let _ = write!(
-        &mut msg,
-        "required by {}",
-        describe_path_in_context(resolver_ctx, &parent.package_id()),
-    );
-
-    if let Some(gctx) = gctx {
-        if let Some(offline_flag) = gctx.offline_flag() {
-            let _ = write!(
-                &mut hints,
-                "\nAs a reminder, you're using offline mode ({offline_flag}) \
-                 which can sometimes cause surprising resolution failures, \
-                 if this error is too confusing you may wish to retry \
-                 without `{offline_flag}`.",
+        let mut write_not_found = || {
+            let _ = writeln!(
+                &mut msg,
+                "no matching package named `{}` found",
+                dep.package_name()
             );
+        };
+
+        if dep.source_id().is_path() {
+            let path = dep
+                .source_id()
+                .url()
+                .to_file_path()
+                .expect("file dependency source url should have a path");
+
+            if let Some(context) = gctx {
+                let sid = dep.source_id();
+
+                let root_package = inspect_root_package(Path::new(&path), context, sid);
+                let requested = dep.package_name().as_str();
+
+                let recursive_packages =
+                    inspect_recursive_packages(Path::new(&path), context, sid, requested);
+
+                if let Some(package_name) = root_package {
+                    let _ = writeln!(
+                        &mut msg,
+                        "no matching package named `{}` found at `{}`",
+                        dep.package_name(),
+                        path.display()
+                    );
+
+                    let _ = writeln!(
+                        &mut msg,
+                        "note: required by {}",
+                        describe_path_in_context(resolver_ctx, &parent.package_id()),
+                    );
+
+                    let _ = write!(
+                        &mut msg,
+                        "help: package `{}` exists at `{}`",
+                        package_name,
+                        path.display()
+                    );
+                } else if let Some((package_name, package_path)) = recursive_packages {
+                    let _ = writeln!(
+                        &mut msg,
+                        "no matching package named `{}` found at `{}`",
+                        dep.package_name(),
+                        path.display()
+                    );
+
+                    let _ = writeln!(
+                        &mut msg,
+                        "note: required by {}",
+                        describe_path_in_context(resolver_ctx, &parent.package_id()),
+                    );
+
+                    let _ = write!(
+                        &mut msg,
+                        "help: package `{}` exists at `{}`",
+                        package_name,
+                        package_path.display()
+                    );
+                } else {
+                    write_not_found()
+                }
+            } else {
+                write_not_found()
+            }
+        } else {
+            write_not_found()
+        }
+    }
+
+    if !dep.source_id().is_path() {
+        let mut location_searched_msg = registry.describe_source(dep.source_id());
+        if location_searched_msg.is_empty() {
+            location_searched_msg = format!("{}", dep.source_id());
+        }
+        let _ = writeln!(&mut msg, "location searched: {}", location_searched_msg);
+        let _ = write!(
+            &mut msg,
+            "required by {}",
+            describe_path_in_context(resolver_ctx, &parent.package_id()),
+        );
+
+        if let Some(gctx) = gctx {
+            if let Some(offline_flag) = gctx.offline_flag() {
+                let _ = write!(
+                    &mut hints,
+                    "\nAs a reminder, you're using offline mode ({offline_flag}) \
+                     which can sometimes cause surprising resolution failures, \
+                     if this error is too confusing you may wish to retry \
+                     without `{offline_flag}`.",
+                );
+            }
         }
     }
 
@@ -574,4 +645,53 @@ pub(crate) fn describe_path<'a>(
     }
 
     String::new()
+}
+
+fn inspect_root_package(path: &Path, gctx: &GlobalContext, sid: SourceId) -> Option<String> {
+    let mut ps = PathSource::new(path, sid, gctx);
+
+    if ps.load().is_err() {
+        return None;
+    }
+
+    let pkg = ps
+        .root_package()
+        .expect("path source should have a root package");
+
+    let package_name = pkg.name().to_string();
+
+    Some(package_name)
+}
+
+fn inspect_recursive_packages(
+    path: &Path,
+    gctx: &GlobalContext,
+    sid: SourceId,
+    requested: &str,
+) -> Option<(String, PathBuf)> {
+    let mut rps = RecursivePathSource::new(path, sid, gctx);
+
+    if rps.load().is_err() {
+        return None;
+    }
+
+    let pkgs = rps
+        .read_packages()
+        .expect("path source should read the packages");
+
+    for pkg in pkgs {
+        if pkg.name() == requested {
+            let manifest = pkg.manifest_path();
+            let pkg_dir = manifest
+                .parent()
+                .expect("manifest path should have a parent")
+                .to_path_buf();
+
+            let name = pkg.name().to_string();
+            let path = pkg_dir;
+
+            return Some((name, path));
+        }
+    }
+    return None;
 }

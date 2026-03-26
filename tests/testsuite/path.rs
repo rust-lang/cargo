@@ -1672,8 +1672,7 @@ fn invalid_path_dep_in_workspace_with_lockfile() {
 [ERROR] no matching package found
 searched package name: `bar`
 perhaps you meant:      foo
-location searched: [ROOT]/foo/foo
-required by package `foo v0.5.0 ([ROOT]/foo/foo)`
+
 
 "#]])
         .run();
@@ -1914,6 +1913,88 @@ foo v1.0.0 ([ROOT]/foo)
         .with_stdout_data(str![[r#"
 foo v1.0.0 ([ROOT]/foo)
 └── foo v2.0.1 ([ROOT]/foo/foo2)
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn invalid_package_name_in_path() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.5.0"
+            edition = "2015"
+            authors = []
+
+            [dependencies]
+            definitely_not_bar = { path = "crates/bar" }
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "crates/bar/Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.5.0"
+            edition = "2015"
+            authors = []
+            "#,
+        )
+        .file("crates/bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] no matching package named `definitely_not_bar` found at `[ROOT]/foo/crates/bar`
+[NOTE] required by package `foo v0.5.0 ([ROOT]/foo)`
+[HELP] package `bar` exists at `[ROOT]/foo/crates/bar`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn invalid_package_in_subdirectory() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.5.0"
+            edition = "2015"
+            authors = []
+
+            [dependencies]
+            definitely_not_bar = { path = "crates/bar" }
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "crates/bar/definitely_not_bar/Cargo.toml",
+            r#"
+            [package]
+            name = "definitely_not_bar"
+            version = "0.5.0"
+            edition = "2015"
+            authors = []
+            "#,
+        )
+        .file("crates/bar/definitely_not_bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] no matching package named `definitely_not_bar` found at `[ROOT]/foo/crates/bar`
+[NOTE] required by package `foo v0.5.0 ([ROOT]/foo)`
+[HELP] package `bar` exists at `[ROOT]/foo/crates/bar/definitely_not_bar`
 
 "#]])
         .run();

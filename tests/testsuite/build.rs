@@ -1277,9 +1277,9 @@ fn cargo_compile_with_dep_name_mismatch() {
     p.cargo("build")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no matching package named `notquitebar` found
-location searched: [ROOT]/foo/bar
-required by package `foo v0.0.1 ([ROOT]/foo)`
+[ERROR] no matching package named `notquitebar` found at `[ROOT]/foo/bar`
+[NOTE] required by package `foo v0.0.1 ([ROOT]/foo)`
+[HELP] package `bar` exists at `[ROOT]/foo/bar`
 
 "#]])
         .run();
