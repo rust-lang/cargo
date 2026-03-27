@@ -384,6 +384,7 @@ dependencies = [
  "cargo-test-support",
  "cargo-util",
  "cargo-util-schemas",
+ "cargo-util-terminal",
  "clap",
  "clap_complete",
  "color-print",
@@ -588,6 +589,13 @@ dependencies = [
  "toml",
  "unicode-ident",
  "url",
+]
+
+[[package]]
+name = "cargo-util-terminal"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
 ]
 
 [[package]]
