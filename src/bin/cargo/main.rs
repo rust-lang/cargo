@@ -276,9 +276,7 @@ fn execute_external_subcommand(gctx: &GlobalContext, cmd: &str, args: &[&OsStr])
     let command = match path {
         Some(command) => command,
         None => {
-            let script_suggestion = if gctx.cli_unstable().script
-                && std::path::Path::new(cmd).is_file()
-            {
+            let script_suggestion = if std::path::Path::new(cmd).is_file() {
                 let sep = std::path::MAIN_SEPARATOR;
                 format!(
                     "\nhelp: to run the file `{cmd}`, provide a relative path like `.{sep}{cmd}`"

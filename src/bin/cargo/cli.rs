@@ -337,23 +337,7 @@ To pass the arguments to the subcommand, remove `--`",
                     }
                 }
                 if commands::run::is_manifest_command(cmd) {
-                    if gctx.cli_unstable().script {
-                        return Ok((args, GlobalArgs::default()));
-                    } else {
-                        gctx.shell().print_report(
-                            &[
-                                Level::WARNING.secondary_title(
-                                    format!("user-defined alias `{cmd}` has the appearance of a manifest-command")
-                                ).element(
-                                    Level::NOTE.message(
-                                        "this was previously accepted but will be phased out when `-Zscript` is stabilized; \
-                                        see <https://github.com/rust-lang/cargo/issues/12207>"
-                                    )
-                                )
-                            ],
-                            false
-                        )?;
-                    }
+                    return Ok((args, GlobalArgs::default()));
                 }
 
                 let mut alias = alias
@@ -490,31 +474,12 @@ impl Exec {
         match self {
             Self::Builtin(exec) => exec(gctx, subcommand_args),
             Self::Manifest(cmd) => {
-                let ext_path = super::find_external_subcommand(gctx, &cmd);
-                if !gctx.cli_unstable().script && ext_path.is_some() {
-                    gctx.shell().print_report(
-                        &[
-                            Level::WARNING.secondary_title(
-                                format!("external subcommand `{cmd}` has the appearance of a manifest-command")
-                            ).element(
-                                Level::NOTE.message(
-                                    "this was previously accepted but will be phased out when `-Zscript` is stabilized; \
-                                    see <https://github.com/rust-lang/cargo/issues/12207>"
-                                )
-                            )
-                        ],
-                        false
-                    )?;
-
-                    Self::External(cmd).exec(gctx, subcommand_args)
-                } else {
-                    let ext_args: Vec<OsString> = subcommand_args
-                        .get_many::<OsString>("")
-                        .unwrap_or_default()
-                        .cloned()
-                        .collect();
-                    commands::run::exec_manifest_command(gctx, &cmd, &ext_args)
-                }
+                let ext_args: Vec<OsString> = subcommand_args
+                    .get_many::<OsString>("")
+                    .unwrap_or_default()
+                    .cloned()
+                    .collect();
+                commands::run::exec_manifest_command(gctx, &cmd, &ext_args)
             }
             Self::External(cmd) => {
                 let mut ext_args = vec![OsStr::new(&cmd)];
@@ -581,11 +546,11 @@ pub fn cli(gctx: &GlobalContext) -> Command {
 
     let usage = if is_rustup() {
         color_print::cstr!(
-            "<bright-cyan,bold>cargo</> <cyan>[+toolchain] [OPTIONS] [COMMAND]</>\n       <bright-cyan,bold>cargo</> <cyan>[+toolchain] [OPTIONS]</> <bright-cyan,bold>-Zscript</> <cyan><<MANIFEST_RS>> [ARGS]...</>"
+            "<bright-cyan,bold>cargo</> <cyan>[+toolchain] [OPTIONS] [COMMAND]</>\n       <bright-cyan,bold>cargo</> <cyan>[+toolchain] [OPTIONS]</> <cyan><<MANIFEST_RS>> [ARGS]...</>"
         )
     } else {
         color_print::cstr!(
-            "<bright-cyan,bold>cargo</> <cyan>[OPTIONS] [COMMAND]</>\n       <bright-cyan,bold>cargo</> <cyan>[OPTIONS]</> <bright-cyan,bold>-Zscript</> <cyan><<MANIFEST_RS>> [ARGS]...</>"
+            "<bright-cyan,bold>cargo</> <cyan>[OPTIONS] [COMMAND]</>\n       <bright-cyan,bold>cargo</> <cyan>[OPTIONS]</> <cyan><<MANIFEST_RS>> [ARGS]...</>"
         )
     };
 
