@@ -1428,15 +1428,14 @@ fn fix_to_broken_code() {
     p.cargo("fix --allow-no-vcs --broken-code")
         .cwd("bar")
         .env("RUSTC", p.root().join("foo/target/debug/foo"))
-        .with_stderr_data(str![[r#"
+        .with_stderr_data(        str![[r#"
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [ERROR] errors present after applying fixes to crate `bar`
   |
   = cause: thread 'main' ([..]) panicked at src/main.rs:23:29:
            explicit panic
            [NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
-[HELP] to report this as a bug, open an issue at https://github.com/rust-lang/rust/issues, quoting the full output of this command
-[HELP] to possibly apply more fixes, pass in the `--broken-code` flag
+[WARNING] fixes were applied but the code still does not compile; partially-fixed code was saved due to `--broken-code`
 [NOTE] original diagnostics will follow:
 ...
 
@@ -2381,6 +2380,9 @@ fn fix_in_rust_src() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
+[WARNING] no fixes were suggested because the code is already broken
+[NOTE] cargo fix requires code that compiles successfully to apply automatic fixes
+[NOTE] the broken code was saved due to --broken-code
 error[E0308]: mismatched types
  --> lib.rs:5:9
   |
