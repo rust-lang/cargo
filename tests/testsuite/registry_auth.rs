@@ -225,7 +225,7 @@ fn bad_environment_token_with_asymmetric_subject() {
 Caused by:
   token rejected for `alternative`, please run `cargo login --registry alternative`
   or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
-  [NOTE] the token does not include an authorization scheme prefix (e.g. `Bearer `); if the registry requires one, prefix the token value in credentials.toml
+  [NOTE] the token does not include a supported authorization scheme prefix (`Bearer` or `Basic`); if the registry requires one, prefix the token value
 
 Caused by:
   failed to get successful HTTP response from `http://127.0.0.1:[..]/index/config.json`, got 401
@@ -261,7 +261,7 @@ fn bad_environment_token_with_asymmetric_incorrect_subject() {
 Caused by:
   token rejected for `alternative`, please run `cargo login --registry alternative`
   or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
-  [NOTE] the token does not include an authorization scheme prefix (e.g. `Bearer `); if the registry requires one, prefix the token value in credentials.toml
+  [NOTE] the token does not include a supported authorization scheme prefix (`Bearer` or `Basic`); if the registry requires one, prefix the token value
 
 Caused by:
   failed to get successful HTTP response from `http://127.0.0.1:[..]/index/config.json`, got 401
@@ -300,7 +300,7 @@ fn bad_environment_token_with_incorrect_asymmetric() {
 Caused by:
   token rejected for `alternative`, please run `cargo login --registry alternative`
   or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
-  [NOTE] the token does not include an authorization scheme prefix (e.g. `Bearer `); if the registry requires one, prefix the token value in credentials.toml
+  [NOTE] the token does not include a supported authorization scheme prefix (`Bearer` or `Basic`); if the registry requires one, prefix the token value
 
 Caused by:
   failed to get successful HTTP response from `http://127.0.0.1:[..]/index/config.json`, got 401
@@ -383,7 +383,7 @@ fn incorrect_token() {
 Caused by:
   token rejected for `alternative`, please run `cargo login --registry alternative`
   or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
-  [NOTE] the token does not include an authorization scheme prefix (e.g. `Bearer `); if the registry requires one, prefix the token value in credentials.toml
+  [NOTE] the token does not include a supported authorization scheme prefix (`Bearer` or `Basic`); if the registry requires one, prefix the token value
 
 Caused by:
   failed to get successful HTTP response from `http://127.0.0.1:[..]/index/config.json`, got 401
@@ -442,7 +442,7 @@ fn incorrect_token_unrecognized_scheme() {
 Caused by:
   token rejected for `alternative`, please run `cargo login --registry alternative`
   or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
-  [WARNING] the token has an unrecognized authorization scheme `Digest`
+  [NOTE] the token does not include a supported authorization scheme prefix (`Bearer` or `Basic`); if the registry requires one, prefix the token value
 
 Caused by:
   failed to get successful HTTP response from `http://127.0.0.1:[..]/index/config.json`, got 401

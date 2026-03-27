@@ -391,7 +391,6 @@ impl fmt::Display for AuthorizationErrorReason {
 pub enum AuthorizationScheme {
     Bearer,
     Basic,
-    Unrecognized(String),
     NoScheme,
 }
 
@@ -400,27 +399,21 @@ impl fmt::Display for AuthorizationScheme {
         match self {
             AuthorizationScheme::Basic => write!(f, "Basic"),
             AuthorizationScheme::Bearer => write!(f, "Bearer"),
-            AuthorizationScheme::Unrecognized(s) => write!(f, "{s}"),
             AuthorizationScheme::NoScheme => write!(f, "(none)"),
         }
     }
 }
 
 /// Detects the authorization scheme in a token string, following RFC 7235
+/// RFC 7235 credentials = auth-scheme (case-insensitive) SP token68/params
 fn detect_auth_scheme(token: &str) -> Option<AuthorizationScheme> {
-    if token.is_empty() {
-        return None;
-    }
-    // RFC 7235 credentials = auth-scheme SP token68/params
-    match token.split_once(' ') {
-        None => Some(AuthorizationScheme::NoScheme),
-        Some((prefix, _)) if !prefix.is_empty() => Some(match prefix {
-            "Bearer" => AuthorizationScheme::Bearer,
-            "Basic" => AuthorizationScheme::Basic,
-            other => AuthorizationScheme::Unrecognized(other.to_string()),
-        }),
-        _ => Some(AuthorizationScheme::NoScheme),
-    }
+    let prefix = token.split_whitespace().next()?;
+
+    Some(match prefix {
+        p if p.eq_ignore_ascii_case("Bearer") => AuthorizationScheme::Bearer,
+        p if p.eq_ignore_ascii_case("Basic") => AuthorizationScheme::Basic,
+        _ => AuthorizationScheme::NoScheme,
+    })
 }
 
 /// An authorization error from accessing a registry.
@@ -510,13 +503,8 @@ impl fmt::Display for AuthorizationError {
                     match scheme {
                         AuthorizationScheme::NoScheme => write!(
                             f,
-                            "\nnote: the token does not include an authorization scheme prefix \
-                         (e.g. `Bearer `); if the registry requires one, prefix the token value \
-                         in credentials.toml"
-                        )?,
-                        AuthorizationScheme::Unrecognized(x) => write!(
-                            f,
-                            "\nwarning: the token has an unrecognized authorization scheme `{x}`"
+                            "\nnote: the token does not include a supported authorization scheme prefix \
+                         (`Bearer` or `Basic`); if the registry requires one, prefix the token value"
                         )?,
                         AuthorizationScheme::Basic | AuthorizationScheme::Bearer => write!(
                             f,
