@@ -15,6 +15,7 @@ mod non_snake_case_features;
 mod non_snake_case_packages;
 mod redundant_homepage;
 mod redundant_readme;
+mod uninherited_repository;
 mod unknown_lints;
 mod unused_workspace_dependencies;
 mod unused_workspace_package_fields;
