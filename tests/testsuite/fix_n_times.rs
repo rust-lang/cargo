@@ -571,8 +571,7 @@ fn broken_code_one_suggestion() {
 [ERROR] errors present after applying fixes to crate `foo`
  --> src/lib.rs
   = cause: rustc fix shim error count=2
-[HELP] to report this as a bug, open an issue at https://github.com/rust-lang/rust/issues, quoting the full output of this command
-[HELP] to possibly apply more fixes, pass in the `--broken-code` flag
+[WARNING] fixes were applied but the code still does not compile; partially-fixed code was saved due to `--broken-code`
 [NOTE] original diagnostics will follow:
 rustc fix shim comment 1
 rustc fix shim error count=2
