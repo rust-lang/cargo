@@ -426,7 +426,7 @@ Caused by:
   unable to update registry `crates-io`
 
 Caused by:
-  failed to update replaced source registry `crates-io`
+  failed to query replaced source registry `crates-io`
 
 Caused by:
   local registry path is not a directory: [..]path[..]to[..]nowhere

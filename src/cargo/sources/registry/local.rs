@@ -5,11 +5,11 @@ use crate::sources::registry::{LoadResponse, MaybeLock, RegistryConfig, Registry
 use crate::util::errors::CargoResult;
 use crate::util::{Filesystem, GlobalContext};
 use cargo_util::{Sha256, paths};
+use std::cell::Cell;
 use std::fs::File;
 use std::io::SeekFrom;
 use std::io::{self, prelude::*};
 use std::path::Path;
-use std::task::Poll;
 
 /// A local registry is a registry that lives on the filesystem as a set of
 /// `.crate` files with an `index` directory in the [same format] as a remote
@@ -64,7 +64,7 @@ pub struct LocalRegistry<'gctx> {
     src_path: Filesystem,
     gctx: &'gctx GlobalContext,
     /// Whether this source has updated all package information it may contain.
-    updated: bool,
+    updated: Cell<bool>,
     /// Disables status messages.
     quiet: bool,
 }
@@ -80,12 +80,35 @@ impl<'gctx> LocalRegistry<'gctx> {
             index_path: Filesystem::new(root.join("index")),
             root: Filesystem::new(root.to_path_buf()),
             gctx,
-            updated: false,
+            updated: Cell::new(false),
             quiet: false,
         }
     }
+
+    fn update(&self) -> CargoResult<()> {
+        if self.updated.get() {
+            return Ok(());
+        }
+        // Nothing to update, we just use what's on disk. Verify it actually
+        // exists though. We don't use any locks as we're just checking whether
+        // these directories exist.
+        let root = self.root.clone().into_path_unlocked();
+        if !root.is_dir() {
+            anyhow::bail!("local registry path is not a directory: {}", root.display());
+        }
+        let index_path = self.index_path.clone().into_path_unlocked();
+        if !index_path.is_dir() {
+            anyhow::bail!(
+                "local registry index path is not a directory: {}",
+                index_path.display()
+            );
+        }
+        self.updated.set(true);
+        Ok(())
+    }
 }
 
+#[async_trait::async_trait(?Send)]
 impl<'gctx> RegistryData for LocalRegistry<'gctx> {
     fn prepare(&self) -> CargoResult<()> {
         Ok(())
@@ -105,60 +128,37 @@ impl<'gctx> RegistryData for LocalRegistry<'gctx> {
         path.as_path_unlocked()
     }
 
-    fn load(
-        &mut self,
+    async fn load(
+        &self,
         root: &Path,
         path: &Path,
         _index_version: Option<&str>,
-    ) -> Poll<CargoResult<LoadResponse>> {
-        if self.updated {
-            let raw_data = match paths::read_bytes(&root.join(path)) {
-                Err(e)
-                    if e.downcast_ref::<io::Error>()
-                        .map_or(false, |ioe| ioe.kind() == io::ErrorKind::NotFound) =>
-                {
-                    return Poll::Ready(Ok(LoadResponse::NotFound));
-                }
-                r => r,
-            }?;
-            Poll::Ready(Ok(LoadResponse::Data {
-                raw_data,
-                index_version: None,
-            }))
-        } else {
-            Poll::Pending
+    ) -> CargoResult<LoadResponse> {
+        if !self.updated.get() {
+            self.update()?;
         }
+        let raw_data = match paths::read_bytes(&root.join(path)) {
+            Err(e)
+                if e.downcast_ref::<io::Error>()
+                    .map_or(false, |ioe| ioe.kind() == io::ErrorKind::NotFound) =>
+            {
+                return Ok(LoadResponse::NotFound);
+            }
+            r => r,
+        }?;
+        Ok(LoadResponse::Data {
+            raw_data,
+            index_version: None,
+        })
     }
 
-    fn config(&mut self) -> Poll<CargoResult<Option<RegistryConfig>>> {
+    async fn config(&self) -> CargoResult<Option<RegistryConfig>> {
         // Local registries don't have configuration for remote APIs or anything
         // like that
-        Poll::Ready(Ok(None))
+        Ok(None)
     }
 
-    fn block_until_ready(&mut self) -> CargoResult<()> {
-        if self.updated {
-            return Ok(());
-        }
-        // Nothing to update, we just use what's on disk. Verify it actually
-        // exists though. We don't use any locks as we're just checking whether
-        // these directories exist.
-        let root = self.root.clone().into_path_unlocked();
-        if !root.is_dir() {
-            anyhow::bail!("local registry path is not a directory: {}", root.display());
-        }
-        let index_path = self.index_path.clone().into_path_unlocked();
-        if !index_path.is_dir() {
-            anyhow::bail!(
-                "local registry index path is not a directory: {}",
-                index_path.display()
-            );
-        }
-        self.updated = true;
-        Ok(())
-    }
-
-    fn invalidate_cache(&mut self) {
+    fn invalidate_cache(&self) {
         // Local registry has no cache - just reads from disk.
     }
 
@@ -167,10 +167,11 @@ impl<'gctx> RegistryData for LocalRegistry<'gctx> {
     }
 
     fn is_updated(&self) -> bool {
-        self.updated
+        // There is nothing to update.
+        true
     }
 
-    fn download(&mut self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock> {
+    fn download(&self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock> {
         // Note that the usage of `into_path_unlocked` here is because the local
         // crate files here never change in that we're not the one writing them,
         // so it's not our responsibility to synchronize access to them.
@@ -200,12 +201,7 @@ impl<'gctx> RegistryData for LocalRegistry<'gctx> {
         Ok(MaybeLock::Ready(crate_file))
     }
 
-    fn finish_download(
-        &mut self,
-        _pkg: PackageId,
-        _checksum: &str,
-        _data: &[u8],
-    ) -> CargoResult<File> {
+    fn finish_download(&self, _pkg: PackageId, _checksum: &str, _data: &[u8]) -> CargoResult<File> {
         panic!("this source doesn't download")
     }
 }

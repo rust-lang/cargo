@@ -12,7 +12,6 @@ mod yank;
 
 use std::collections::HashSet;
 use std::str;
-use std::task::Poll;
 
 use anyhow::{Context as _, bail, format_err};
 use cargo_credential::{Operation, Secret};
@@ -136,22 +135,16 @@ fn registry<'gctx>(
         auth::cache_token_from_commandline(gctx, &source_ids.original, token);
     }
 
-    let mut src = RegistrySource::remote(source_ids.replacement, &HashSet::new(), gctx)?;
+    let src = RegistrySource::remote(source_ids.replacement, &HashSet::new(), gctx)?;
     let cfg = {
         let _lock = gctx.acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
         // Only update the index if `force_update` is set.
         if force_update {
             src.invalidate_cache()
         }
-        let cfg = loop {
-            match src.config()? {
-                Poll::Pending => src
-                    .block_until_ready()
-                    .with_context(|| format!("failed to update {}", source_ids.replacement))?,
-                Poll::Ready(cfg) => break cfg,
-            }
-        };
-        cfg.expect("remote registries must have config")
+        crate::util::block_on(src.config())
+            .with_context(|| format!("failed to update {}", source_ids.replacement))?
+            .expect("remote registries must have config")
     };
     let api_host = cfg
         .api

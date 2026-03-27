@@ -439,19 +439,12 @@ fn wait_for_any_publish_confirmation(
 fn poll_one_package(
     registry_src: SourceId,
     pkg_id: &PackageId,
-    source: &mut dyn Source,
+    source: &dyn Source,
 ) -> CargoResult<bool> {
     let version_req = format!("={}", pkg_id.version());
     let query = Dependency::parse(pkg_id.name(), Some(&version_req), registry_src)?;
-    let summaries = loop {
-        // Exact to avoid returning all for path/git
-        match source.query_vec(&query, QueryKind::Exact) {
-            std::task::Poll::Ready(res) => {
-                break res?;
-            }
-            std::task::Poll::Pending => source.block_until_ready()?,
-        }
-    };
+    // Exact to avoid returning all for path/git
+    let summaries = crate::util::block_on(source.query_vec(&query, QueryKind::Exact))?;
     Ok(!summaries.is_empty())
 }
 
@@ -467,14 +460,7 @@ fn verify_unpublished(
         Some(&pkg.version().to_exact_req().to_string()),
         source_ids.replacement,
     )?;
-    let duplicate_query = loop {
-        match source.query_vec(&query, QueryKind::Exact) {
-            std::task::Poll::Ready(res) => {
-                break res?;
-            }
-            std::task::Poll::Pending => source.block_until_ready()?,
-        }
-    };
+    let duplicate_query = crate::util::block_on(source.query_vec(&query, QueryKind::Exact))?;
     if !duplicate_query.is_empty() {
         // Move the registry error earlier in the publish process.
         // Since dry-run wouldn't talk to the registry to get the error, we downgrade it to a

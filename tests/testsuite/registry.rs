@@ -3562,27 +3562,38 @@ fn sparse_blocking_count() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    Package::new("bar", "0.0.1").publish();
+    Package::new("dep1", "0.0.1").publish();
+    Package::new("dep2", "0.0.1").publish();
+    Package::new("bar", "0.0.1")
+        .dep("dep1", "0.0.1")
+        .dep("dep2", "0.0.1")
+        .publish();
 
-    // Ensure we have the expected number of `block_until_ready` calls.
-    // The 1st (0 transfers pending), is the deliberate extra call in `ensure_loaded` for a source.
-    // The 2nd (1 transfers pending), is the registry `config.json`.
-    // the 3rd (1 transfers pending), is the package metadata for `bar`.
-
+    // Ensure we have the expected number of resolver restarts and network requests.
     p.cargo("check")
-        .env("CARGO_LOG", "network::HttpRegistry::block_until_ready=trace")
+        .env("CARGO_LOG", "cargo::core::resolver::restarting=debug,network::fetch=debug")
         .with_stderr_data(str![[r#"
-   [..] TRACE network::HttpRegistry::block_until_ready: 0 transfers pending
 [UPDATING] `dummy-registry` index
-   [..] TRACE network::HttpRegistry::block_until_ready: 1 transfers pending
-   [..] TRACE network::HttpRegistry::block_until_ready: 1 transfers pending
+   [..] DEBUG network::fetch: url="[..]/index/config.json"
+   [..] DEBUG network::fetch: url="[..]/index/3/b/bar"
 [WARNING] spurious network error (3 tries remaining): failed to get successful HTTP response from `[..]/index/3/b/bar` ([..]), got 500
 body:
 internal server error
-[LOCKING] 1 package to latest compatible version
+   [..] DEBUG network::fetch: url="[..]/index/3/b/bar"
+   [..] DEBUG cargo::core::resolver::restarting: pending=1
+   [..] DEBUG network::fetch: url="[..]/index/de/p1/dep1"
+   [..] DEBUG network::fetch: url="[..]/index/de/p2/dep2"
+   [..] DEBUG cargo::core::resolver::restarting: pending=2
+   [..] DEBUG cargo::core::resolver::restarting: pending=0
+[LOCKING] 3 packages to latest compatible versions
+   [..] DEBUG cargo::core::resolver::restarting: pending=0
 [DOWNLOADING] crates ...
-[DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
-[CHECKING] bar v0.0.1
+[DOWNLOADED] [..] v0.0.1 (registry `dummy-registry`)
+[DOWNLOADED] [..] v0.0.1 (registry `dummy-registry`)
+[DOWNLOADED] [..] v0.0.1 (registry `dummy-registry`)
+[CHECKING] [..] v0.0.1
+[CHECKING] [..] v0.0.1
+[CHECKING] [..] v0.0.1
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -4282,10 +4293,13 @@ Please slow down
 [ERROR] failed to get `bar` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
 
 Caused by:
-  failed to query replaced source registry `crates-io`
+  failed to load source for dependency `bar`
 
 Caused by:
-  download of 3/b/bar failed
+  unable to update registry `crates-io`
+
+Caused by:
+  failed to query replaced source registry `crates-io`
 
 Caused by:
   failed to get successful HTTP response from `http://127.0.0.1:[..]/index/3/b/bar` (127.0.0.1), got 503

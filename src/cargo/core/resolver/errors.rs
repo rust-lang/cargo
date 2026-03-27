@@ -1,6 +1,5 @@
 use std::fmt;
 use std::fmt::Write as _;
-use std::task::Poll;
 
 use crate::core::{Dependency, PackageId, Registry, Summary};
 use crate::sources::IndexSummary;
@@ -74,7 +73,7 @@ impl From<(PackageId, ConflictReason)> for ActivateError {
 
 pub(super) fn activation_error(
     resolver_ctx: &ResolverContext,
-    registry: &mut impl Registry,
+    registry: &impl Registry,
     parent: &Summary,
     dep: &Dependency,
     conflicting_activations: &ConflictMap,
@@ -430,22 +429,13 @@ pub(super) fn activation_error(
 // Maybe the user mistyped the ver_req? Like `dep="2"` when `dep="0.2"`
 // was meant. So we re-query the registry with `dep="*"` so we can
 // list a few versions that were actually found.
-fn alt_versions(
-    registry: &mut impl Registry,
-    dep: &Dependency,
-) -> Option<CargoResult<Vec<Summary>>> {
+fn alt_versions(registry: &impl Registry, dep: &Dependency) -> Option<CargoResult<Vec<Summary>>> {
     let mut wild_dep = dep.clone();
     wild_dep.set_version_req(OptVersionReq::Any);
 
-    let candidates = loop {
-        match registry.query_vec(&wild_dep, QueryKind::Exact) {
-            Poll::Ready(Ok(candidates)) => break candidates,
-            Poll::Ready(Err(e)) => return Some(Err(e)),
-            Poll::Pending => match registry.block_until_ready() {
-                Ok(()) => continue,
-                Err(e) => return Some(Err(e)),
-            },
-        }
+    let candidates = match crate::util::block_on(registry.query_vec(&wild_dep, QueryKind::Exact)) {
+        Ok(candidates) => candidates,
+        Err(e) => return Some(Err(e)),
     };
     let mut candidates: Vec<_> = candidates.into_iter().map(|s| s.into_summary()).collect();
     candidates.sort_unstable_by(|a, b| b.version().cmp(a.version()));
@@ -458,19 +448,14 @@ fn alt_versions(
 
 /// Maybe something is wrong with the available versions
 fn rejected_versions(
-    registry: &mut impl Registry,
+    registry: &impl Registry,
     dep: &Dependency,
 ) -> Option<CargoResult<Vec<IndexSummary>>> {
-    let mut version_candidates = loop {
-        match registry.query_vec(&dep, QueryKind::RejectedVersions) {
-            Poll::Ready(Ok(candidates)) => break candidates,
-            Poll::Ready(Err(e)) => return Some(Err(e)),
-            Poll::Pending => match registry.block_until_ready() {
-                Ok(()) => continue,
-                Err(e) => return Some(Err(e)),
-            },
-        }
-    };
+    let mut version_candidates =
+        match crate::util::block_on(registry.query_vec(&dep, QueryKind::RejectedVersions)) {
+            Ok(candidates) => candidates,
+            Err(e) => return Some(Err(e)),
+        };
     version_candidates.sort_unstable_by_key(|a| a.as_summary().version().clone());
     if version_candidates.is_empty() {
         None
@@ -482,22 +467,17 @@ fn rejected_versions(
 /// Maybe the user mistyped the name? Like `dep-thing` when `Dep_Thing`
 /// was meant. So we try asking the registry for a `fuzzy` search for suggestions.
 fn alt_names(
-    registry: &mut impl Registry,
+    registry: &impl Registry,
     dep: &Dependency,
 ) -> Option<CargoResult<Vec<(usize, Summary)>>> {
     let mut wild_dep = dep.clone();
     wild_dep.set_version_req(OptVersionReq::Any);
 
-    let name_candidates = loop {
-        match registry.query_vec(&wild_dep, QueryKind::AlternativeNames) {
-            Poll::Ready(Ok(candidates)) => break candidates,
-            Poll::Ready(Err(e)) => return Some(Err(e)),
-            Poll::Pending => match registry.block_until_ready() {
-                Ok(()) => continue,
-                Err(e) => return Some(Err(e)),
-            },
-        }
-    };
+    let name_candidates =
+        match crate::util::block_on(registry.query_vec(&wild_dep, QueryKind::AlternativeNames)) {
+            Ok(candidates) => candidates,
+            Err(e) => return Some(Err(e)),
+        };
     let mut name_candidates: Vec<_> = name_candidates
         .into_iter()
         .map(|s| s.into_summary())
