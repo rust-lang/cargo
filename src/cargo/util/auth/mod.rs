@@ -388,31 +388,31 @@ impl fmt::Display for AuthorizationErrorReason {
 }
 
 #[derive(Debug)]
-pub enum AuthorizationScheme {
+pub enum AuthenticationScheme {
     Bearer,
     Basic,
     NoScheme,
 }
 
-impl fmt::Display for AuthorizationScheme {
+impl fmt::Display for AuthenticationScheme {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            AuthorizationScheme::Basic => write!(f, "Basic"),
-            AuthorizationScheme::Bearer => write!(f, "Bearer"),
-            AuthorizationScheme::NoScheme => write!(f, "(none)"),
+            AuthenticationScheme::Basic => write!(f, "Basic"),
+            AuthenticationScheme::Bearer => write!(f, "Bearer"),
+            AuthenticationScheme::NoScheme => write!(f, "(none)"),
         }
     }
 }
 
 /// Detects the authorization scheme in a token string, following RFC 7235
 /// RFC 7235 credentials = auth-scheme (case-insensitive) SP token68/params
-fn detect_auth_scheme(token: &str) -> Option<AuthorizationScheme> {
+fn detect_auth_scheme(token: &str) -> Option<AuthenticationScheme> {
     let prefix = token.split_whitespace().next()?;
 
     Some(match prefix {
-        p if p.eq_ignore_ascii_case("Bearer") => AuthorizationScheme::Bearer,
-        p if p.eq_ignore_ascii_case("Basic") => AuthorizationScheme::Basic,
-        _ => AuthorizationScheme::NoScheme,
+        p if p.eq_ignore_ascii_case("Bearer") => AuthenticationScheme::Bearer,
+        p if p.eq_ignore_ascii_case("Basic") => AuthenticationScheme::Basic,
+        _ => AuthenticationScheme::NoScheme,
     })
 }
 
@@ -430,7 +430,7 @@ pub struct AuthorizationError {
     /// Should `cargo login` and the `_TOKEN` env var be included when displaying this error?
     supports_cargo_token_credential_provider: bool,
     /// Auth scheme detected in the cached token.
-    scheme_hint: Option<AuthorizationScheme>,
+    scheme_hint: Option<AuthenticationScheme>,
 }
 
 impl AuthorizationError {
@@ -501,14 +501,14 @@ impl fmt::Display for AuthorizationError {
             if self.reason == AuthorizationErrorReason::TokenRejected {
                 if let Some(scheme) = &self.scheme_hint {
                     match scheme {
-                        AuthorizationScheme::NoScheme => write!(
+                        AuthenticationScheme::NoScheme => write!(
                             f,
-                            "\nnote: the token does not include a supported authorization scheme prefix \
+                            "\nnote: the token does not include a supported authentication scheme \
                          (`Bearer` or `Basic`); if the registry requires one, prefix the token value"
                         )?,
-                        AuthorizationScheme::Basic | AuthorizationScheme::Bearer => write!(
+                        AuthenticationScheme::Basic | AuthenticationScheme::Bearer => write!(
                             f,
-                            "\nnote: the token uses the `{scheme}` authorization scheme"
+                            "\nnote: the token uses the `{scheme}` authentication scheme"
                         )?,
                     }
                 }
