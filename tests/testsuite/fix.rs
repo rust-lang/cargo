@@ -2380,6 +2380,9 @@ fn fix_in_rust_src() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
+[WARNING] no fixes were suggested because the code is already broken
+[NOTE] cargo fix requires code that compiles successfully to apply automatic fixes
+[NOTE] the broken code was saved due to `--broken-code`
 error[E0308]: mismatched types
  --> lib.rs:5:9
   |
