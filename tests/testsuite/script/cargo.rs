@@ -158,7 +158,8 @@ fn manifest_precedence_over_plugins() {
     path.push(p.root().join("path-test"));
     let path = std::env::join_paths(path.iter()).unwrap();
 
-    p.cargo("-Zscript -v echo.rs")
+    let mut process = p.cargo("-Zscript -v echo.rs");
+    process
         .env("PATH", &path)
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![[r#"
@@ -173,8 +174,11 @@ args: []
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/echo[EXE]`
 
-"#]])
-        .run();
+"#]]);
+    if let Some(val) = std::env::var_os("RUSTUP_HOME") {
+        process.env("RUSTUP_HOME", val);
+    }
+    process.run();
 }
 
 #[cfg(unix)]
