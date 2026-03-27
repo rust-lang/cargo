@@ -10,6 +10,7 @@ cargo-platform.workspace = true
 cargo-util-schemas.workspace = true
 cargo-util.workspace = true
 proptest.workspace = true
+snapbox.workspace = true
 varisat.workspace = true
 
 [lints]

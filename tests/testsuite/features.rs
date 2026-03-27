@@ -279,7 +279,7 @@ fn dependency_activates_typoed_feature() {
 versions that meet the requirements `*` are: 0.0.1
 
 package `foo` depends on `bar` with feature `bar` but `bar` does not have that feature.
- package `bar` does have feature `baz`
+[HELP] there is a feature `baz` with a similar name
 
 
 failed to select a version for `bar` which could resolve this conflict
@@ -330,7 +330,7 @@ fn dependency_activates_feature_with_no_close_match() {
 versions that meet the requirements `*` are: 0.0.1
 
 package `foo` depends on `bar` with feature `serde` but `bar` does not have that feature.
- available features: cookies, json, tls
+[HELP] available features: cookies, json, tls
 
 
 failed to select a version for `bar` which could resolve this conflict
@@ -549,7 +549,7 @@ fn dependency_activates_required_dependency() {
 versions that meet the requirements `*` are: 0.0.1
 
 package `foo` depends on `bar` with feature `baz` but `bar` does not have that feature.
- A required dependency with that name exists, but only optional dependencies can be used as features.
+[NOTE] a required dependency with that name exists, but only optional dependencies can be used as features.
 
 
 failed to select a version for `bar` which could resolve this conflict

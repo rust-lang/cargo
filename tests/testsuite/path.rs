@@ -1669,11 +1669,11 @@ fn invalid_path_dep_in_workspace_with_lockfile() {
     p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no matching package found
-searched package name: `bar`
-perhaps you meant:      foo
+[ERROR] no matching package named `bar` found
 location searched: [ROOT]/foo/foo
 required by package `foo v0.5.0 ([ROOT]/foo/foo)`
+[HELP] packages with similar names: foo
+
 
 "#]])
         .run();

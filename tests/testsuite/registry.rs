@@ -216,11 +216,11 @@ fn wrong_case_http() {
     let _server = setup_http();
     wrong_case(str![[r#"
 [UPDATING] `dummy-registry` index
-[ERROR] no matching package found
-searched package name: `Init`
-perhaps you meant:      init
+[ERROR] no matching package named `Init` found
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.1 ([ROOT]/foo)`
+[HELP] packages with similar names: init
+
 
 "#]]);
 }
@@ -229,11 +229,11 @@ required by package `foo v0.0.1 ([ROOT]/foo)`
 fn wrong_case_git() {
     wrong_case(str![[r#"
 [UPDATING] `dummy-registry` index
-[ERROR] no matching package found
-searched package name: `Init`
-perhaps you meant:      init
+[ERROR] no matching package named `Init` found
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.1 ([ROOT]/foo)`
+[HELP] packages with similar names: init
+
 
 "#]]);
 }
@@ -270,11 +270,11 @@ fn mis_hyphenated_http() {
     let _server = setup_http();
     mis_hyphenated(str![[r#"
 [UPDATING] `dummy-registry` index
-[ERROR] no matching package found
-searched package name: `mis_hyphenated`
-perhaps you meant:      mis-hyphenated
+[ERROR] no matching package named `mis_hyphenated` found
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.1 ([ROOT]/foo)`
+[HELP] packages with similar names: mis-hyphenated
+
 
 "#]]);
 }
@@ -283,11 +283,11 @@ required by package `foo v0.0.1 ([ROOT]/foo)`
 fn mis_hyphenated_git() {
     mis_hyphenated(str![[r#"
 [UPDATING] `dummy-registry` index
-[ERROR] no matching package found
-searched package name: `mis_hyphenated`
-perhaps you meant:      mis-hyphenated
+[ERROR] no matching package named `mis_hyphenated` found
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.1 ([ROOT]/foo)`
+[HELP] packages with similar names: mis-hyphenated
+
 
 "#]]);
 }
@@ -329,7 +329,7 @@ fn wrong_version_http() {
 candidate versions found which didn't match: 0.0.2, 0.0.1
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.1 ([ROOT]/foo)`
-perhaps a crate was updated and forgotten to be re-vendored?
+[NOTE] perhaps a crate was updated and forgotten to be re-vendored?
 
 "#]],
         str![[r#"
@@ -338,7 +338,7 @@ perhaps a crate was updated and forgotten to be re-vendored?
 candidate versions found which didn't match: 0.0.4, 0.0.3, 0.0.2, ...
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.1 ([ROOT]/foo)`
-perhaps a crate was updated and forgotten to be re-vendored?
+[NOTE] perhaps a crate was updated and forgotten to be re-vendored?
 
 "#]],
     );
@@ -353,7 +353,7 @@ fn wrong_version_git() {
 candidate versions found which didn't match: 0.0.2, 0.0.1
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.1 ([ROOT]/foo)`
-perhaps a crate was updated and forgotten to be re-vendored?
+[NOTE] perhaps a crate was updated and forgotten to be re-vendored?
 
 "#]],
         str![[r#"
@@ -362,7 +362,7 @@ perhaps a crate was updated and forgotten to be re-vendored?
 candidate versions found which didn't match: 0.0.4, 0.0.3, 0.0.2, ...
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.1 ([ROOT]/foo)`
-perhaps a crate was updated and forgotten to be re-vendored?
+[NOTE] perhaps a crate was updated and forgotten to be re-vendored?
 
 "#]],
     );
@@ -2209,7 +2209,7 @@ fn use_semver_package_incorrectly_http() {
 candidate versions found which didn't match: 0.1.1-alpha.0
 location searched: [ROOT]/foo/a
 required by package `b v0.1.0 ([ROOT]/foo/b)`
-if you are looking for the prerelease package it needs to be specified explicitly
+[HELP] if you are looking for the prerelease package it needs to be specified explicitly
     a = { version = "0.1.1-alpha.0" }
 
 "#]]);
@@ -2222,7 +2222,7 @@ fn use_semver_package_incorrectly_git() {
 candidate versions found which didn't match: 0.1.1-alpha.0
 location searched: [ROOT]/foo/a
 required by package `b v0.1.0 ([ROOT]/foo/b)`
-if you are looking for the prerelease package it needs to be specified explicitly
+[HELP] if you are looking for the prerelease package it needs to be specified explicitly
     a = { version = "0.1.1-alpha.0" }
 
 "#]]);
@@ -2435,7 +2435,8 @@ fn disallow_network_http() {
 [ERROR] no matching package named `foo` found
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `bar v0.5.0 ([ROOT]/foo)`
-As a reminder, you're using offline mode (--frozen) which can sometimes cause surprising resolution failures, if this error is too confusing you may wish to retry without `--frozen`.
+[NOTE] offline mode (via `--frozen`) can sometimes cause surprising resolution failures
+[HELP] if this error is too confusing you may wish to retry without `--frozen`
 
 "#]])
         .run();
@@ -2467,7 +2468,8 @@ fn disallow_network_git() {
 [ERROR] no matching package named `foo` found
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `bar v0.5.0 ([ROOT]/foo)`
-As a reminder, you're using offline mode (--frozen) which can sometimes cause surprising resolution failures, if this error is too confusing you may wish to retry without `--frozen`.
+[NOTE] offline mode (via `--frozen`) can sometimes cause surprising resolution failures
+[HELP] if this error is too confusing you may wish to retry without `--frozen`
 
 "#]])
         .run();

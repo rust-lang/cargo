@@ -184,20 +184,25 @@ fn cargo_compile_offline_not_try_update() {
 [ERROR] no matching package named `not_cached_dep` found
 location searched: crates.io index
 required by package `bar v0.1.0 ([ROOT]/bar)`
-As a reminder, you're using offline mode (--offline) which can sometimes cause surprising resolution failures, if this error is too confusing you may wish to retry without `--offline`.
+[NOTE] offline mode (via `--offline`) can sometimes cause surprising resolution failures
+[HELP] if this error is too confusing you may wish to retry without `--offline`
 
 "#]])
         .run();
 
     // While we're here, also check the config works.
     p.change_file(".cargo/config.toml", "net.offline = true");
-    p.cargo("check").with_status(101).with_stderr_data(str![[r#"
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
 [ERROR] no matching package named `not_cached_dep` found
 location searched: crates.io index
 required by package `bar v0.1.0 ([ROOT]/bar)`
-As a reminder, you're using offline mode (--offline) which can sometimes cause surprising resolution failures, if this error is too confusing you may wish to retry without `--offline`.
+[NOTE] offline mode (via `--offline`) can sometimes cause surprising resolution failures
+[HELP] if this error is too confusing you may wish to retry without `--offline`
 
-"#]]).run();
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -388,7 +393,8 @@ fn update_offline_not_cached() {
 [ERROR] no matching package named `bar` found
 location searched: [..]
 required by package `foo v0.0.1 ([ROOT]/foo)`
-As a reminder, you're using offline mode (--offline) which can sometimes cause surprising resolution failures, if this error is too confusing you may wish to retry without `--offline`.
+[NOTE] offline mode (via `--offline`) can sometimes cause surprising resolution failures
+[HELP] if this error is too confusing you may wish to retry without `--offline`
 
 "#]])
         .run();
@@ -600,17 +606,16 @@ fn offline_resolve_optional_fail() {
 
     p.cargo("check --offline")
         .with_status(101)
-        .with_stderr_data(
-            str![[r#"
+        .with_stderr_data(str![[r#"
 [ERROR] failed to select a version for the requirement `dep = "^2.0"`
 candidate versions found which didn't match: 1.0.0
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.1.0 ([ROOT]/foo)`
-perhaps a crate was updated and forgotten to be re-vendored?
-As a reminder, you're using offline mode (--offline) which can sometimes cause surprising resolution failures, if this error is too confusing you may wish to retry without `--offline`.
+[NOTE] perhaps a crate was updated and forgotten to be re-vendored?
+[NOTE] offline mode (via `--offline`) can sometimes cause surprising resolution failures
+[HELP] if this error is too confusing you may wish to retry without `--offline`
 
-"#]]
-        )
+"#]])
         .run();
 }
 
@@ -749,15 +754,14 @@ fn main(){
     // No v1.2.8 loaded into the cache so expect failure.
     p2.cargo("update present_dep --precise 1.2.8 --offline")
         .with_status(101)
-        .with_stderr_data(
-            str![[r#"
+        .with_stderr_data(str![[r#"
 [ERROR] no matching package named `present_dep` found
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.1.0 ([ROOT]/foo)`
-As a reminder, you're using offline mode (--offline) which can sometimes cause surprising resolution failures, if this error is too confusing you may wish to retry without `--offline`.
+[NOTE] offline mode (via `--offline`) can sometimes cause surprising resolution failures
+[HELP] if this error is too confusing you may wish to retry without `--offline`
 
-"#]]
-        )
+"#]])
         .run();
 }
 

@@ -1,6 +1,8 @@
 use cargo::core::Dependency;
 use cargo::core::dependency::DepKind;
 use cargo::util::GlobalContext;
+use snapbox::assert_data_eq;
+use snapbox::str;
 
 use resolver_tests::{
     helpers::{
@@ -991,12 +993,15 @@ fn cyclic_good_error_message() {
     let reg = registry(input);
     let error = resolve(vec![dep("A"), dep("B")], &reg).unwrap_err();
     println!("{}", error);
-    assert_eq!("\
+    assert_data_eq!(
+        error.to_string(),
+        str![[r#"
 cyclic package dependency: package `A v0.0.0 (registry `https://example.com/`)` depends on itself. Cycle:
 package `A v0.0.0 (registry `https://example.com/`)`
-    ... which satisfies dependency `A = \"*\"` of package `C v0.0.0 (registry `https://example.com/`)`
-    ... which satisfies dependency `C = \"*\"` of package `A v0.0.0 (registry `https://example.com/`)`\
-", error.to_string());
+    ... which satisfies dependency `A = "*"` of package `C v0.0.0 (registry `https://example.com/`)`
+    ... which satisfies dependency `C = "*"` of package `A v0.0.0 (registry `https://example.com/`)`
+"#]]
+    );
 }
 
 #[test]
@@ -1012,22 +1017,22 @@ fn shortest_path_in_error_message() {
     ];
     let error = resolve(vec![dep("A")], &registry(input)).unwrap_err();
     println!("{}", error);
-    assert_eq!(
-        "\
+    assert_data_eq!(
+        error.to_string(),
+        str![[r#"
 failed to select a version for `F`.
     ... required by package `A v1.0.0 (registry `https://example.com/`)`
-    ... which satisfies dependency `A = \"*\"` of package `root v1.0.0 (registry `https://example.com/`)`
+    ... which satisfies dependency `A = "*"` of package `root v1.0.0 (registry `https://example.com/`)`
 versions that meet the requirements `<=0.1.1` are: 0.1.1, 0.1.0
 
-all possible versions conflict with previously selected packages.
+all possible versions conflict with previously selected packages
 
   previously selected package `F v0.1.2 (registry `https://example.com/`)`
-    ... which satisfies dependency `F = \"^0.1.2\"` of package `E v1.0.0 (registry `https://example.com/`)`
-    ... which satisfies dependency `E = \"*\"` of package `A v1.0.0 (registry `https://example.com/`)`
-    ... which satisfies dependency `A = \"*\"` of package `root v1.0.0 (registry `https://example.com/`)`
+    ... which satisfies dependency `F = "^0.1.2"` of package `E v1.0.0 (registry `https://example.com/`)`
+    ... which satisfies dependency `E = "*"` of package `A v1.0.0 (registry `https://example.com/`)`
+    ... which satisfies dependency `A = "*"` of package `root v1.0.0 (registry `https://example.com/`)`
 
-failed to select a version for `F` which could resolve this conflict\
-    ",
-        error.to_string()
+failed to select a version for `F` which could resolve this conflict
+"#]]
     );
 }

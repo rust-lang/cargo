@@ -3984,6 +3984,7 @@ dependencies = [
  "cargo-util",
  "cargo-util-schemas",
  "proptest",
+ "snapbox",
  "varisat",
 ]
 

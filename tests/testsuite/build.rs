@@ -1412,7 +1412,7 @@ fn incompatible_dependencies() {
     ... which satisfies dependency `qux = "^0.1.0"` of package `foo v0.0.1 ([ROOT]/foo)`
 versions that meet the requirements `>=1.0.1` are: 1.0.2, 1.0.1
 
-all possible versions conflict with previously selected packages.
+all possible versions conflict with previously selected packages
 
   previously selected package `bad v1.0.0`
     ... which satisfies dependency `bad = "=1.0.0"` of package `baz v0.1.0`
@@ -1459,7 +1459,7 @@ fn incompatible_dependencies_with_multi_semver() {
     ... required by package `foo v0.0.1 ([ROOT]/foo)`
 versions that meet the requirements `>=1.0.1, <=2.0.0` are: 2.0.0, 1.0.1
 
-all possible versions conflict with previously selected packages.
+all possible versions conflict with previously selected packages
 
   previously selected package `bad v2.0.1`
     ... which satisfies dependency `bad = ">=2.0.1"` of package `baz v0.1.0`

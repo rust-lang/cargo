@@ -196,11 +196,10 @@ fn simple_install_fail() {
 To reuse those artifacts with a future compilation, set the environment variable `CARGO_BUILD_BUILD_DIR` to that path.
 
 Caused by:
-  no matching package found
-  searched package name: `baz`
-  perhaps you meant:      bar or foo
+  no matching package named `baz` found
   location searched: directory source `[ROOT]/index` (which is replacing registry `crates-io`)
   required by package `bar v0.1.0`
+  [HELP] packages with similar names: bar or foo
 
 "#]])
         .run();
@@ -778,7 +777,7 @@ Caused by:
   candidate versions found which didn't match: 0.0.1
   location searched: directory source `[..] (which is replacing registry `[..]`)
   required by package `bar v0.1.0`
-  perhaps a crate was updated and forgotten to be re-vendored?
+  [NOTE] perhaps a crate was updated and forgotten to be re-vendored?
 
 "#]])
         .with_status(101)
