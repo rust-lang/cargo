@@ -262,31 +262,36 @@ impl<'gctx> Timings<'gctx> {
         build_runner: &BuildRunner<'_, '_>,
         error: &Option<anyhow::Error>,
     ) -> CargoResult<()> {
-        if let Some(logger) = build_runner.bcx.logger
-            && let Some(logs) = logger.get_logs()
-        {
-            let timings_path = build_runner
-                .files()
-                .timings_dir()
-                .expect("artifact-dir was not locked");
-            paths::create_dir_all(&timings_path)?;
-            let run_id = logger.run_id();
-            let filename = timings_path.join(format!("cargo-timing-{run_id}.html"));
-            let mut f = BufWriter::new(paths::create(&filename)?);
+        if let Some(logger) = build_runner.bcx.logger {
+            // Log CPU usage data so it can be reconstructed by `cargo report timings`.
+            for &(elapsed, usage) in &self.cpu_usage {
+                logger.log(LogMessage::CpuUsage { elapsed, usage });
+            }
 
-            let mut ctx = prepare_context(logs.into_iter(), run_id)?;
-            ctx.error = error;
-            ctx.cpu_usage = &self.cpu_usage;
-            report::write_html(ctx, &mut f)?;
+            if let Some(logs) = logger.get_logs() {
+                let timings_path = build_runner
+                    .files()
+                    .timings_dir()
+                    .expect("artifact-dir was not locked");
+                paths::create_dir_all(&timings_path)?;
+                let run_id = logger.run_id();
+                let filename = timings_path.join(format!("cargo-timing-{run_id}.html"));
+                let mut f = BufWriter::new(paths::create(&filename)?);
 
-            let unstamped_filename = timings_path.join("cargo-timing.html");
-            paths::link_or_copy(&filename, &unstamped_filename)?;
+                let mut ctx = prepare_context(logs.into_iter(), run_id)?;
+                ctx.error = error;
+                ctx.cpu_usage = std::borrow::Cow::Borrowed(&self.cpu_usage);
+                report::write_html(ctx, &mut f)?;
 
-            let mut shell = self.gctx.shell();
-            let timing_path = std::env::current_dir().unwrap_or_default().join(&filename);
-            let link = shell.err_file_hyperlink(&timing_path);
-            let msg = format!("report saved to {link}{}{link:#}", timing_path.display(),);
-            shell.status_with_color("Timing", msg, &style::NOTE)?;
+                let unstamped_filename = timings_path.join("cargo-timing.html");
+                paths::link_or_copy(&filename, &unstamped_filename)?;
+
+                let mut shell = self.gctx.shell();
+                let timing_path = std::env::current_dir().unwrap_or_default().join(&filename);
+                let link = shell.err_file_hyperlink(&timing_path);
+                let msg = format!("report saved to {link}{}{link:#}", timing_path.display(),);
+                shell.status_with_color("Timing", msg, &style::NOTE)?;
+            }
         }
         Ok(())
     }
