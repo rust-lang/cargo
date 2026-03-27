@@ -532,6 +532,9 @@ fn starts_with_error() {
         },
         str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] no fixes were suggested because the code is already broken
+[NOTE] cargo fix requires code that compiles successfully to apply automatic fixes
+[HELP] use `--broken-code` to save partial progress
 rustc fix shim error count=1
 [ERROR] could not compile `foo` (lib) due to 1 previous error
 
@@ -550,6 +553,9 @@ fn broken_code_no_suggestions() {
         },
         str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] no fixes were suggested because the code is already broken
+[NOTE] cargo fix requires code that compiles successfully to apply automatic fixes
+[NOTE] the broken code was saved due to `--broken-code`
 rustc fix shim error count=1
 [ERROR] could not compile `foo` (lib) due to 1 previous error
 
