@@ -327,22 +327,9 @@ impl<'a> Graph<'a> {
             .filter(|(_name, indexes)| {
                 indexes
                     .into_iter()
-                    .map(|(node, _)| {
-                        match node {
-                            Node::Package {
-                                package_id,
-                                features,
-                                ..
-                            } => {
-                                // Do not treat duplicates on the host or target as duplicates.
-                                Node::Package {
-                                    package_id: package_id.clone(),
-                                    features: features.clone(),
-                                    kind: CompileKind::Host,
-                                }
-                            }
-                            _ => unreachable!(),
-                        }
+                    .map(|(node, _)| match node {
+                        Node::Package { package_id, .. } => package_id.clone(),
+                        _ => unreachable!(),
                     })
                     .collect::<HashSet<_>>()
                     .len()
