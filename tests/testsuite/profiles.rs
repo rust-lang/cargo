@@ -956,3 +956,136 @@ fn profile_hint_mostly_unused_nightly() {
         )
         .run();
 }
+
+#[cargo_test]
+fn frame_pointers_force_on() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [profile.release]
+                frame-pointers = "force-on"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build --release -v")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `rustc [..] -C force-frame-pointers=on [..]`
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn frame_pointers_force_off() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [profile.release]
+                frame-pointers = "force-off"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build --release -v")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `rustc [..] -C force-frame-pointers=off [..]`
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn frame_pointers_unspecified() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build -v")
+        .with_stderr_does_not_contain("[RUNNING] `rustc [..] -C force-frame-pointers[..]`")
+        .run();
+}
+
+#[cargo_test]
+fn frame_pointers_default_overrides_parent() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [profile.release]
+                frame-pointers = "force-on"
+
+                [profile.myprofile]
+                inherits = "release"
+                frame-pointers = "default"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build --profile myprofile -v")
+        .with_stderr_does_not_contain("[RUNNING] `rustc [..] -C force-frame-pointers[..]`")
+        .run();
+}
+
+#[cargo_test]
+fn frame_pointers_invalid_value() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [profile.release]
+                frame-pointers = "invalid"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build --release")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  `frame-pointers` setting of `invalid` is not a valid setting, must be `"force-on"`, `"force-off"`, or `"default"`.
+
+"#]])
+        .run();
+}
