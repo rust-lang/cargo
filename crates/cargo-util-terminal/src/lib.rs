@@ -5,3 +5,5 @@
 //! > crate may make major changes to its APIs or be deprecated without warning.
 
 #![allow(clippy::disallowed_methods)]
+
+pub mod style;

@@ -66,11 +66,12 @@ pub mod rustc;
 mod semver_eval_ext;
 mod semver_ext;
 pub mod sqlite;
-pub mod style;
 pub mod toml;
 pub mod toml_mut;
 mod vcs;
 mod workspace;
+
+pub use cargo_util_terminal::style;
 
 pub fn is_rustup() -> bool {
     #[expect(clippy::disallowed_methods, reason = "consistency with rustup")]

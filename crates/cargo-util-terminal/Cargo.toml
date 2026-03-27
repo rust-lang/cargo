@@ -8,6 +8,8 @@ repository.workspace = true
 description = "Cargo's terminal rendering"
 
 [dependencies]
+annotate-snippets.workspace = true
+anstyle.workspace = true
 anyhow.workspace = true
 
 [lints]
