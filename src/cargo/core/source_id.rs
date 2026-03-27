@@ -140,6 +140,18 @@ impl SourceId {
         }
     }
 
+    pub fn new_builtin(name: &str, root: &PathBuf) -> CargoResult<SourceId> {
+        let path = if name == "compiler_builtins" {
+            root.join("compiler-builtins").join("compiler-builtins")
+        } else {
+            root.join(name)
+        };
+        Self::from_url(&format!(
+            "builtin+file://{}",
+            path.to_str().expect("path is utf8")
+        ))
+    }
+
     /// Parses a source URL and returns the corresponding ID.
     ///
     /// ## Example
@@ -175,6 +187,10 @@ impl SourceId {
             "path" => {
                 let url = url.into_url()?;
                 SourceId::new(SourceKind::Path, url, None)
+            }
+            "builtin" => {
+                let url = url.into_url()?;
+                SourceId::new(SourceKind::Builtin, url, None)
             }
             kind => Err(anyhow::format_err!("unsupported source protocol: {}", kind)),
         }
@@ -387,6 +403,10 @@ impl SourceId {
         matches!(self.inner.kind, SourceKind::Git(_))
     }
 
+    pub fn is_builtin(self) -> bool {
+        matches!(self.inner.kind, SourceKind::Builtin)
+    }
+
     /// Creates an implementation of `Source` corresponding to this ID.
     ///
     /// * `yanked_whitelist` --- Packages allowed to be used, even if they are yanked.
@@ -432,6 +452,14 @@ impl SourceId {
                     .to_file_path()
                     .expect("path sources cannot be remote");
                 Ok(Box::new(DirectorySource::new(&path, self, gctx)))
+            }
+            SourceKind::Builtin => {
+                let path = self
+                    .inner
+                    .url
+                    .to_file_path()
+                    .expect("builtin sources should not be remote");
+                Ok(Box::new(PathSource::new(&path, self, gctx)))
             }
         }
     }
@@ -679,6 +707,7 @@ impl fmt::Display for SourceId {
             }
             SourceKind::LocalRegistry => write!(f, "registry `{}`", url_display(&self.inner.url)),
             SourceKind::Directory => write!(f, "dir {}", url_display(&self.inner.url)),
+            SourceKind::Builtin => write!(f, "builtin {}", url_display(&self.inner.url)),
         }
     }
 }
