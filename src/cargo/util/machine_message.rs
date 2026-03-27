@@ -103,3 +103,14 @@ impl Message for BuildFinished {
         "build-finished"
     }
 }
+
+#[derive(Serialize)]
+pub struct BuildStarted<'a> {
+    pub run_id: &'a str,
+}
+
+impl Message for BuildStarted<'_> {
+    fn reason(&self) -> &str {
+        "build-started"
+    }
+}
