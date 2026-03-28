@@ -147,12 +147,16 @@ fn simple_install() {
     cargo_process("install bar")
         .with_stderr_data(str![[r#"
 [INSTALLING] bar v0.1.0
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [LOCKING] 1 package to latest compatible version
 [COMPILING] foo v0.0.1
 [COMPILING] bar v0.1.0
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [..]bar[..]
-[INSTALLED] package `bar v0.1.0` (executable `bar[EXE]`)
+[INSTALLING] [ROOT]/home/.cargo/bin/bar
+[INSTALLED] package `bar v0.1.0` (executable `bar`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]])
@@ -192,7 +196,11 @@ fn simple_install_fail() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [INSTALLING] bar v0.1.0
-[ERROR] failed to compile `bar v0.1.0`, intermediate artifacts can be found at `[..]`.
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
+[ERROR] failed to compile `bar v0.1.0`, intermediate artifacts can be found at `/var/folders/78/tfh4ck1s0nv0h4ztpq0l8x8m0000gn/T/cargo-installBoQ1KK`.
 To reuse those artifacts with a future compilation, set the environment variable `CARGO_BUILD_BUILD_DIR` to that path.
 
 Caused by:
@@ -241,12 +249,16 @@ fn install_without_feature_dep() {
     cargo_process("install bar")
         .with_stderr_data(str![[r#"
 [INSTALLING] bar v0.1.0
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [LOCKING] 1 package to latest compatible version
 [COMPILING] foo v0.0.1
 [COMPILING] bar v0.1.0
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [..]bar[..]
-[INSTALLED] package `bar v0.1.0` (executable `bar[EXE]`)
+[INSTALLING] [ROOT]/home/.cargo/bin/bar
+[INSTALLED] package `bar v0.1.0` (executable `bar`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]])
@@ -770,13 +782,17 @@ fn version_missing() {
     cargo_process("install bar")
         .with_stderr_data(str![[r#"
 [INSTALLING] bar v0.1.0
-[ERROR] failed to compile [..], intermediate artifacts can be found at `[..]`.
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
+[ERROR] failed to compile `bar v0.1.0`, intermediate artifacts can be found at `/var/folders/78/tfh4ck1s0nv0h4ztpq0l8x8m0000gn/T/cargo-installri16vj`.
 To reuse those artifacts with a future compilation, set the environment variable `CARGO_BUILD_BUILD_DIR` to that path.
 
 Caused by:
   failed to select a version for the requirement `foo = "^2"`
   candidate versions found which didn't match: 0.0.1
-  location searched: directory source `[..] (which is replacing registry `[..]`)
+  location searched: directory source `[ROOT]/index` (which is replacing registry `crates-io`)
   required by package `bar v0.1.0`
   perhaps a crate was updated and forgotten to be re-vendored?
 

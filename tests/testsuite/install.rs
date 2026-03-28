@@ -40,10 +40,14 @@ fn simple() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.1
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [COMPILING] foo v0.0.1
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
-[INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
+[INSTALLING] [ROOT]/home/.cargo/bin/foo
+[INSTALLED] package `foo v0.0.1` (executable `foo`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]]).run();
@@ -68,10 +72,14 @@ fn install_the_same_version_twice() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.1
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [COMPILING] foo v0.0.1
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
-[INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
+[INSTALLING] [ROOT]/home/.cargo/bin/foo
+[INSTALLED] package `foo v0.0.1` (executable `foo`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]])
@@ -116,11 +124,15 @@ fn simple_with_message_format() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.1
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [COMPILING] foo v0.0.1
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
-[INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
-[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
+[INSTALLING] [ROOT]/home/.cargo/bin/foo
+[INSTALLED] package `foo v0.0.1` (executable `foo`)
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]])
         .with_stdout_data(
@@ -199,10 +211,14 @@ fn with_index() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `[ROOT]/registry`)
 [INSTALLING] foo v0.0.1 (registry `[ROOT]/registry`)
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [COMPILING] foo v0.0.1 (registry `[ROOT]/registry`)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
-[INSTALLED] package `foo v0.0.1 (registry `[ROOT]/registry`)` (executable `foo[EXE]`)
+[INSTALLING] [ROOT]/home/.cargo/bin/foo
+[INSTALLED] package `foo v0.0.1 (registry `[ROOT]/registry`)` (executable `foo`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]])
@@ -233,15 +249,23 @@ fn multiple_pkgs() {
 [DOWNLOADED] bar v0.0.2 (registry `dummy-registry`)
 [ERROR] could not find `baz` in registry `crates-io` with version `*`
 [INSTALLING] foo v0.0.1
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [COMPILING] foo v0.0.1
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
-[INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
+[INSTALLING] [ROOT]/home/.cargo/bin/foo
+[INSTALLED] package `foo v0.0.1` (executable `foo`)
 [INSTALLING] bar v0.0.2
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [COMPILING] bar v0.0.2
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/home/.cargo/bin/bar[EXE]
-[INSTALLED] package `bar v0.0.2` (executable `bar[EXE]`)
+[INSTALLING] [ROOT]/home/.cargo/bin/bar
+[INSTALLED] package `bar v0.0.2` (executable `bar`)
 [SUMMARY] Successfully installed foo, bar! Failed to install baz (see error(s) above).
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 [ERROR] some crates failed to install
@@ -291,15 +315,23 @@ fn multiple_pkgs_path_set() {
 [DOWNLOADED] bar v0.0.2 (registry `dummy-registry`)
 [ERROR] could not find `baz` in registry `crates-io` with version `*`
 [INSTALLING] foo v0.0.1
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [COMPILING] foo v0.0.1
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
-[INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
+[INSTALLING] [ROOT]/home/.cargo/bin/foo
+[INSTALLED] package `foo v0.0.1` (executable `foo`)
 [INSTALLING] bar v0.0.2
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [COMPILING] bar v0.0.2
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/home/.cargo/bin/bar[EXE]
-[INSTALLED] package `bar v0.0.2` (executable `bar[EXE]`)
+[INSTALLING] [ROOT]/home/.cargo/bin/bar
+[INSTALLED] package `bar v0.0.2` (executable `bar`)
 [SUMMARY] Successfully installed foo, bar! Failed to install baz (see error(s) above).
 [ERROR] some crates failed to install
 
@@ -334,10 +366,14 @@ fn pick_max_version() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.2.1 (registry `dummy-registry`)
 [INSTALLING] foo v0.2.1
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [COMPILING] foo v0.2.1
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
-[INSTALLED] package `foo v0.2.1` (executable `foo[EXE]`)
+[INSTALLING] [ROOT]/home/.cargo/bin/foo
+[INSTALLED] package `foo v0.2.1` (executable `foo`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]]).run();
@@ -528,10 +564,14 @@ fn relative_install_location_without_trailing_slash() {
   = [HELP] add a trailing slash (`t1/`) to adopt the correct behavior and silence this warning
   = [NOTE] see more at https://doc.rust-lang.org/cargo/reference/config.html#config-relative-paths
 [INSTALLING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/foo/t1/bin/foo[EXE]
-[INSTALLED] package `foo v0.0.1 ([ROOT]/foo)` (executable `foo[EXE]`)
+[INSTALLING] [ROOT]/foo/t1/bin/foo
+[INSTALLED] package `foo v0.0.1 ([ROOT]/foo)` (executable `foo`)
 [WARNING] be sure to add `[ROOT]/foo/t1/bin` to your PATH to be able to run the installed binaries
 
 "#]])
@@ -557,10 +597,14 @@ fn cli_root_argument_without_deprecation_warning() {
         .cwd(p.root())
         .with_stderr_data(str![[r#"
 [INSTALLING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/foo/t1/bin/foo[EXE]
-[INSTALLED] package `foo v0.0.1 ([ROOT]/foo)` (executable `foo[EXE]`)
+[INSTALLING] [ROOT]/foo/t1/bin/foo
+[INSTALLED] package `foo v0.0.1 ([ROOT]/foo)` (executable `foo`)
 [WARNING] be sure to add `[ROOT]/foo/t1/bin` to your PATH to be able to run the installed binaries
 
 "#]])
@@ -592,10 +636,14 @@ fn relative_install_location_with_trailing_slash() {
     cmd.cwd(p.root());
     cmd.with_stderr_data(str![[r#"
 [INSTALLING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/t1/bin/foo[EXE]
-[INSTALLED] package `foo v0.0.1 ([ROOT]/foo)` (executable `foo[EXE]`)
+[INSTALLING] [ROOT]/t1/bin/foo
+[INSTALLED] package `foo v0.0.1 ([ROOT]/foo)` (executable `foo`)
 [WARNING] be sure to add `[ROOT]/t1/bin` to your PATH to be able to run the installed binaries
 
 "#]])
@@ -640,10 +688,14 @@ fn relative_install_location_with_path_set() {
   = [HELP] add a trailing slash (`t1/`) to adopt the correct behavior and silence this warning
   = [NOTE] see more at https://doc.rust-lang.org/cargo/reference/config.html#config-relative-paths
 [INSTALLING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/foo/t1/bin/foo[EXE]
-[INSTALLED] package `foo v0.0.1 ([ROOT]/foo)` (executable `foo[EXE]`)
+[INSTALLING] [ROOT]/foo/t1/bin/foo
+[INSTALLED] package `foo v0.0.1 ([ROOT]/foo)` (executable `foo`)
 
 "#]])
         .run();
@@ -660,9 +712,13 @@ fn install_path() {
     // path-style installs force a reinstall
     p.cargo("install --path .").with_stderr_data(str![[r#"
 [INSTALLING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[REPLACING] [ROOT]/home/.cargo/bin/foo[EXE]
-[REPLACED] package `foo v0.0.1 ([ROOT]/foo)` with `foo v0.0.1 ([ROOT]/foo)` (executable `foo[EXE]`)
+[REPLACING] [ROOT]/home/.cargo/bin/foo
+[REPLACED] package `foo v0.0.1 ([ROOT]/foo)` with `foo v0.0.1 ([ROOT]/foo)` (executable `foo`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]]).run();
@@ -676,10 +732,14 @@ fn install_target_dir() {
         .with_stderr_data(str![[r#"
 [WARNING] using `cargo install` to install the binaries from the package in current working directory is deprecated, use `cargo install --path .` instead. [NOTE] use `cargo build` if you want to simply build the package.
 [INSTALLING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
-[INSTALLED] package `foo v0.0.1 ([ROOT]/foo)` (executable `foo[EXE]`)
+[INSTALLING] [ROOT]/home/.cargo/bin/foo
+[INSTALLED] package `foo v0.0.1 ([ROOT]/foo)` (executable `foo`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]])
@@ -751,10 +811,14 @@ fn install_relative_path_outside_current_ws() {
     p.cargo("install --path ../bar/foo")
         .with_stderr_data(str![[r#"
 [INSTALLING] foo v0.0.1 ([ROOT]/bar/foo)
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [COMPILING] foo v0.0.1 ([ROOT]/bar/foo)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
-[INSTALLED] package `foo v0.0.1 ([ROOT]/bar/foo)` (executable `foo[EXE]`)
+[INSTALLING] [ROOT]/home/.cargo/bin/foo
+[INSTALLED] package `foo v0.0.1 ([ROOT]/bar/foo)` (executable `foo`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]])
@@ -1059,10 +1123,14 @@ fn install_force() {
         .arg(p.root())
         .with_stderr_data(str![[r#"
 [INSTALLING] foo v0.2.0 ([ROOT]/foo2)
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [COMPILING] foo v0.2.0 ([ROOT]/foo2)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[REPLACING] [ROOT]/home/.cargo/bin/foo[EXE]
-[REPLACED] package `foo v0.0.1 ([ROOT]/foo)` with `foo v0.2.0 ([ROOT]/foo2)` (executable `foo[EXE]`)
+[REPLACING] [ROOT]/home/.cargo/bin/foo
+[REPLACED] package `foo v0.0.1 ([ROOT]/foo)` with `foo v0.2.0 ([ROOT]/foo2)` (executable `foo`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]])
@@ -1097,13 +1165,17 @@ fn install_force_partial_overlap() {
         .arg(p.root())
         .with_stderr_data(str![[r#"
 [INSTALLING] foo v0.2.0 ([ROOT]/foo2)
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [COMPILING] foo v0.2.0 ([ROOT]/foo2)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/home/.cargo/bin/foo-bin3[EXE]
-[REPLACING] [ROOT]/home/.cargo/bin/foo-bin2[EXE]
-[REMOVING] executable `[ROOT]/home/.cargo/bin/foo-bin1[EXE]` from previous version foo v0.0.1 ([ROOT]/foo)
-[INSTALLED] package `foo v0.2.0 ([ROOT]/foo2)` (executable `foo-bin3[EXE]`)
-[REPLACED] package `foo v0.0.1 ([ROOT]/foo)` with `foo v0.2.0 ([ROOT]/foo2)` (executable `foo-bin2[EXE]`)
+[INSTALLING] [ROOT]/home/.cargo/bin/foo-bin3
+[REPLACING] [ROOT]/home/.cargo/bin/foo-bin2
+[REMOVING] executable `[ROOT]/home/.cargo/bin/foo-bin1` from previous version foo v0.0.1 ([ROOT]/foo)
+[INSTALLED] package `foo v0.2.0 ([ROOT]/foo2)` (executable `foo-bin3`)
+[REPLACED] package `foo v0.0.1 ([ROOT]/foo)` with `foo v0.2.0 ([ROOT]/foo2)` (executable `foo-bin2`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]])
@@ -1139,10 +1211,14 @@ fn install_force_bin() {
         .arg(p.root())
         .with_stderr_data(str![[r#"
 [INSTALLING] foo v0.2.0 ([ROOT]/foo2)
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [COMPILING] foo v0.2.0 ([ROOT]/foo2)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[REPLACING] [ROOT]/home/.cargo/bin/foo-bin2[EXE]
-[REPLACED] package `foo v0.0.1 ([ROOT]/foo)` with `foo v0.2.0 ([ROOT]/foo2)` (executable `foo-bin2[EXE]`)
+[REPLACING] [ROOT]/home/.cargo/bin/foo-bin2
+[REPLACED] package `foo v0.0.1 ([ROOT]/foo)` with `foo v0.2.0 ([ROOT]/foo2)` (executable `foo-bin2`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]])
@@ -1190,10 +1266,14 @@ fn git_repo() {
 [UPDATING] git repository `[ROOTURL]/foo`
 [WARNING] no Cargo.lock file published in foo v0.1.0 ([ROOTURL]/foo#[..])
 [INSTALLING] foo v0.1.0 ([ROOTURL]/foo#[..])
-[COMPILING] foo v0.1.0 ([ROOT]/home/.cargo/git/checkouts/foo-[HASH]/[..])
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
+[COMPILING] foo v0.1.0 ([ROOT]/home/.cargo/git/checkouts/foo-[HASH]/5cf2583)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
-[INSTALLED] package `foo v0.1.0 ([ROOTURL]/foo#[..])` (executable `foo[EXE]`)
+[INSTALLING] [ROOT]/home/.cargo/bin/foo
+[INSTALLED] package `foo v0.1.0 ([ROOTURL]/foo#5cf2583d)` (executable `foo`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]])
@@ -1407,10 +1487,14 @@ fn uninstall_cwd() {
     let p = project().file("src/main.rs", "fn main() {}").build();
     p.cargo("install --path .").with_stderr_data(str![[r#"
 [INSTALLING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
-[INSTALLED] package `foo v0.0.1 ([ROOT]/foo)` (executable `foo[EXE]`)
+[INSTALLING] [ROOT]/home/.cargo/bin/foo
+[INSTALLED] package `foo v0.0.1 ([ROOT]/foo)` (executable `foo`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]]).run();
@@ -1463,9 +1547,13 @@ fn do_not_rebuilds_on_local_install() {
         .arg(p.root())
         .with_stderr_data(str![[r#"
 [INSTALLING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
-[INSTALLED] package `foo v0.0.1 ([ROOT]/foo)` (executable `foo[EXE]`)
+[INSTALLING] [ROOT]/home/.cargo/bin/foo
+[INSTALLED] package `foo v0.0.1 ([ROOT]/foo)` (executable `foo`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]])
@@ -1631,10 +1719,14 @@ fn path_install_workspace_root_despite_default_members() {
         .arg("ws-root")
         .with_stderr_data(str![[r#"
 [INSTALLING] ws-root v0.1.0 ([ROOT]/foo)
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [COMPILING] ws-root v0.1.0 ([ROOT]/foo)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/home/.cargo/bin/ws-root[EXE]
-[INSTALLED] package `ws-root v0.1.0 ([ROOT]/foo)` (executable `ws-root[EXE]`)
+[INSTALLING] [ROOT]/home/.cargo/bin/ws-root
+[INSTALLED] package `ws-root v0.1.0 ([ROOT]/foo)` (executable `ws-root`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]])
@@ -2149,9 +2241,13 @@ fn workspace_uses_workspace_target_dir() {
         .arg(p.root().join("bar"))
         .with_stderr_data(str![[r#"
 [INSTALLING] bar v0.1.0 ([ROOT]/foo/bar)
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/home/.cargo/bin/bar[EXE]
-[INSTALLED] package `bar v0.1.0 ([ROOT]/foo/bar)` (executable `bar[EXE]`)
+[INSTALLING] [ROOT]/home/.cargo/bin/bar
+[INSTALLED] package `bar v0.1.0 ([ROOT]/foo/bar)` (executable `bar`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]])
@@ -2353,10 +2449,14 @@ fn install_git_with_symlink_home() {
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `[ROOTURL]/foo`
 [INSTALLING] foo v1.0.0 ([ROOTURL]/foo#[..])
-[COMPILING] foo v1.0.0 ([ROOT]/home/.cargo/git/checkouts/foo-[HASH]/[..])
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
+[COMPILING] foo v1.0.0 ([ROOT]/home/.cargo/git/checkouts/foo-[HASH]/05f25cd)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
-[INSTALLED] package `foo v1.0.0 ([ROOTURL]/foo#[..])` (executable `foo[EXE]`)
+[INSTALLING] [ROOT]/home/.cargo/bin/foo
+[INSTALLED] package `foo v1.0.0 ([ROOTURL]/foo#05f25cdf)` (executable `foo`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]])
@@ -2430,10 +2530,14 @@ workspace: [ROOT]/foo/Cargo.toml
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.1.0 (registry `dummy-registry`)
 [INSTALLING] foo v0.1.0
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [COMPILING] foo v0.1.0
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
-[INSTALLED] package `foo v0.1.0` (executable `foo[EXE]`)
+[INSTALLING] [ROOT]/home/.cargo/bin/foo
+[INSTALLED] package `foo v0.1.0` (executable `foo`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]]).run();
@@ -2487,10 +2591,14 @@ fn install_semver_metadata() {
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
 [INSTALLING] foo v1.0.0+abc (registry `alternative`)
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [COMPILING] foo v1.0.0+abc (registry `alternative`)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[REPLACING] [ROOT]/home/.cargo/bin/foo[EXE]
-[REPLACED] package `foo v1.0.0+abc (registry `alternative`)` with `foo v1.0.0+abc (registry `alternative`)` (executable `foo[EXE]`)
+[REPLACING] [ROOT]/home/.cargo/bin/foo
+[REPLACED] package `foo v1.0.0+abc (registry `alternative`)` with `foo v1.0.0+abc (registry `alternative`)` (executable `foo`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]])
@@ -2504,10 +2612,14 @@ fn install_semver_metadata() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v1.0.0+abc (registry `alternative`)
 [INSTALLING] foo v1.0.0+abc (registry `alternative`)
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [COMPILING] foo v1.0.0+abc (registry `alternative`)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
-[INSTALLED] package `foo v1.0.0+abc (registry `alternative`)` (executable `foo[EXE]`)
+[INSTALLING] [ROOT]/home/.cargo/bin/foo
+[INSTALLED] package `foo v1.0.0+abc (registry `alternative`)` (executable `foo`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]])
@@ -2534,10 +2646,14 @@ fn no_auto_fix_note() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] auto_fix v0.0.1 (registry `dummy-registry`)
 [INSTALLING] auto_fix v0.0.1
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [COMPILING] auto_fix v0.0.1
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/home/.cargo/bin/auto_fix[EXE]
-[INSTALLED] package `auto_fix v0.0.1` (executable `auto_fix[EXE]`)
+[INSTALLING] [ROOT]/home/.cargo/bin/auto_fix
+[INSTALLED] package `auto_fix v0.0.1` (executable `auto_fix`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]])
@@ -2567,15 +2683,19 @@ fn failed_install_retains_temp_directory() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.1
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [COMPILING] foo v0.0.1
 [ERROR] expected one of `!` or `::`, found `<eof>`
- --> [ROOT]/home/.cargo/registry/src/-[..]/foo-0.0.1/src/main.rs:1:1
+ --> [ROOT]/home/.cargo/registry/src/-[HASH]/foo-0.0.1/src/main.rs:1:1
   |
 1 | x
   | ^ expected one of `!` or `::`
 
 [ERROR] could not compile `foo` (bin "foo") due to 1 previous error
-[ERROR] failed to compile `foo v0.0.1`, intermediate artifacts can be found at `[..]`.
+[ERROR] failed to compile `foo v0.0.1`, intermediate artifacts can be found at `/var/folders/78/tfh4ck1s0nv0h4ztpq0l8x8m0000gn/T/cargo-install6ZFzC6`.
 To reuse those artifacts with a future compilation, set the environment variable `CARGO_BUILD_BUILD_DIR` to that path.
 
 "#]]);
@@ -2617,6 +2737,10 @@ fn failed_install_points_to_build_dir_for_intermediate_artifacts() {
     let stderr = String::from_utf8(err.stderr.unwrap()).unwrap();
     assert_e2e().eq(&stderr, str![[r#"
 [INSTALLING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] expected one of `!` or `::`, found `<eof>`
  --> src/main.rs:1:1
@@ -2647,11 +2771,15 @@ fn sparse_install() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.1 (registry `dummy-registry`)
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [UPDATING] `dummy-registry` index
 [COMPILING] foo v0.0.1 (registry `dummy-registry`)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
-[INSTALLED] package `foo v0.0.1 (registry `dummy-registry`)` (executable `foo[EXE]`)
+[INSTALLING] [ROOT]/home/.cargo/bin/foo
+[INSTALLED] package `foo v0.0.1 (registry `dummy-registry`)` (executable `foo`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]])
@@ -2720,6 +2848,10 @@ fn self_referential() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.2 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.2
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [LOCKING] 1 package to latest compatible version
 [ADDING] foo v0.0.1 (available: v0.0.2)
 [DOWNLOADING] crates ...
@@ -2727,8 +2859,8 @@ fn self_referential() {
 [COMPILING] foo v0.0.1
 [COMPILING] foo v0.0.2
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
-[INSTALLED] package `foo v0.0.2` (executable `foo[EXE]`)
+[INSTALLING] [ROOT]/home/.cargo/bin/foo
+[INSTALLED] package `foo v0.0.2` (executable `foo`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]]).run();
@@ -2764,6 +2896,10 @@ fn ambiguous_registry_vs_local_package() {
         .arg(p.root())
         .with_stderr_data(str![[r#"
 [INSTALLING] foo v0.1.0 ([ROOT]/foo)
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
@@ -2771,8 +2907,8 @@ fn ambiguous_registry_vs_local_package() {
 [COMPILING] foo v0.0.1
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
-[INSTALLED] package `foo v0.1.0 ([ROOT]/foo)` (executable `foo[EXE]`)
+[INSTALLING] [ROOT]/home/.cargo/bin/foo
+[INSTALLED] package `foo v0.1.0 ([ROOT]/foo)` (executable `foo`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]])
@@ -2870,10 +3006,14 @@ fn uninstall_running_binary() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.1
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [COMPILING] foo v0.0.1
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
-[INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
+[INSTALLING] [ROOT]/home/.cargo/bin/foo
+[INSTALLED] package `foo v0.0.1` (executable `foo`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]]).run();
@@ -2933,10 +3073,14 @@ fn uninstall_running_binary() {
     cargo_process("install foo").with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [INSTALLING] foo v0.0.1
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [COMPILING] foo v0.0.1
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
-[INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
+[INSTALLING] [ROOT]/home/.cargo/bin/foo
+[INSTALLED] package `foo v0.0.1` (executable `foo`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]]).run();
@@ -2953,7 +3097,11 @@ fn dry_run() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.1
-[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
+[INSTALLING] [ROOT]/home/.cargo/bin/foo
 [WARNING] aborting install due to dry run
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
@@ -3017,12 +3165,16 @@ fn dry_run_incompatible_package_dependency() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [INSTALLING] foo v0.1.0 ([ROOT]/foo)
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [LOCKING] 1 package to latest compatible version
 [ERROR] failed to compile `foo v0.1.0 ([ROOT]/foo)`, intermediate artifacts can be found at `[ROOT]/foo/target`.
 To reuse those artifacts with a future compilation, set the environment variable `CARGO_BUILD_BUILD_DIR` to that path.
 
 Caused by:
-  rustc [..] is not supported by the following package:
+  rustc 1.94.0 is not supported by the following package:
     some-package-from-the-distant-future@0.1.0 requires rustc 1.2345.0
 
 "#]])
@@ -3044,7 +3196,11 @@ fn dry_run_upgrade() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.2 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.2
-[REPLACING] [ROOT]/home/.cargo/bin/foo[EXE]
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
+[REPLACING] [ROOT]/home/.cargo/bin/foo
 [WARNING] aborting install due to dry run
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
@@ -3066,11 +3222,15 @@ fn dry_run_remove_orphan() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 [INSTALLING] bar v1.0.0
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [COMPILING] bar v1.0.0
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/home/.cargo/bin/client[EXE]
-[INSTALLING] [ROOT]/home/.cargo/bin/server[EXE]
-[INSTALLED] package `bar v1.0.0` (executables `client[EXE]`, `server[EXE]`)
+[INSTALLING] [ROOT]/home/.cargo/bin/client
+[INSTALLING] [ROOT]/home/.cargo/bin/server
+[INSTALLED] package `bar v1.0.0` (executables `client`, `server`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]])
@@ -3089,8 +3249,12 @@ fn dry_run_remove_orphan() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v2.0.0 (registry `dummy-registry`)
 [INSTALLING] bar v2.0.0
-[REPLACING] [ROOT]/home/.cargo/bin/client[EXE]
-[REMOVING] executable `[ROOT]/home/.cargo/bin/server[EXE]` from previous version bar v1.0.0
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
+[REPLACING] [ROOT]/home/.cargo/bin/client
+[REMOVING] executable `[ROOT]/home/.cargo/bin/server` from previous version bar v1.0.0
 [WARNING] aborting install due to dry run
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 

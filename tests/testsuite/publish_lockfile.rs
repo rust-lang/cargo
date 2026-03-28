@@ -384,14 +384,18 @@ dependencies = [
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.1.0 (registry `dummy-registry`)
 [INSTALLING] foo v0.1.0
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [WARNING] package `bar v0.1.0` in Cargo.lock is yanked in registry `crates-io`, consider running without --locked
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
 [COMPILING] bar v0.1.0
 [COMPILING] foo v0.1.0
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
-[INSTALLED] package `foo v0.1.0` (executable `foo[EXE]`)
+[INSTALLING] [ROOT]/home/.cargo/bin/foo
+[INSTALLED] package `foo v0.1.0` (executable `foo`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]])
@@ -402,14 +406,18 @@ dependencies = [
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [INSTALLING] foo v0.1.0
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.1 (registry `dummy-registry`)
 [COMPILING] bar v0.1.1
 [COMPILING] foo v0.1.0
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[REPLACING] [ROOT]/home/.cargo/bin/foo[EXE]
-[REPLACED] package `foo v0.1.0` with `foo v0.1.0` (executable `foo[EXE]`)
+[REPLACING] [ROOT]/home/.cargo/bin/foo
+[REPLACED] package `foo v0.1.0` with `foo v0.1.0` (executable `foo`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]])
