@@ -373,7 +373,7 @@ impl Shell {
         }
     }
 
-    pub(crate) fn set_unstable_flags_rustc_unicode(&mut self, yes: bool) -> CargoResult<()> {
+    pub fn set_unstable_flags_rustc_unicode(&mut self, yes: bool) -> CargoResult<()> {
         if let ShellOut::Stream {
             unstable_flags_rustc_unicode,
             ..
