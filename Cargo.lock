@@ -941,9 +941,9 @@ dependencies = [
 
 [[package]]
 name = "curl-sys"
-version = "0.4.86+curl-8.19.0"
+version = "0.4.87+curl-8.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3a1dd6a487cf4532ce0d801634b82aa2deb7c9c3ed930b9dadfce904df000745"
+checksum = "61a460380f0ef783703dcbe909107f39c162adeac050d73c850055118b5b6327"
 dependencies = [
  "cc",
  "libc",
