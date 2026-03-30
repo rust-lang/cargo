@@ -13,6 +13,7 @@ mod binary_name;
 mod build;
 mod build_analysis;
 mod build_dir;
+mod build_dir_fine_grain_locking;
 mod build_dir_legacy;
 mod build_script;
 mod build_script_env;
