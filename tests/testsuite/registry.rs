@@ -3276,8 +3276,7 @@ fn package_lock_inside_package_is_overwritten() {
 }
 
 #[cargo_test]
-fn package_lock_as_a_symlink_inside_package_is_overwritten() {
-    let registry = registry::init();
+fn package_lock_as_a_symlink_inside_package_is_invalid() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -3300,21 +3299,23 @@ fn package_lock_as_a_symlink_inside_package_is_overwritten() {
         .symlink(".cargo-ok", "src/lib.rs")
         .publish();
 
-    p.cargo("check").run();
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
+[ERROR] failed to download replaced source registry `crates-io`
 
-    let id = SourceId::for_registry(registry.index_url()).unwrap();
-    let hash = cargo::util::hex::short_hash(&id);
-    let pkg_root = paths::cargo_home()
-        .join("registry")
-        .join("src")
-        .join(format!("-{}", hash))
-        .join("bar-0.0.1");
-    let ok = pkg_root.join(".cargo-ok");
-    let librs = pkg_root.join("src/lib.rs");
+Caused by:
+  failed to unpack package `bar v0.0.1 (registry `dummy-registry`)`
 
-    // Is correctly overwritten and doesn't affect the file linked to
-    assert_eq!(ok.metadata().unwrap().len(), 7);
-    assert_eq!(fs::read_to_string(librs).unwrap(), "pub fn f() {}");
+Caused by:
+  invalid tarball downloaded, contains an entry at "bar-0.0.1/.cargo-ok" with invalid type Symlink
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -4770,13 +4771,7 @@ Caused by:
   failed to unpack package `bar v1.0.0 (registry `dummy-registry`)`
 
 Caused by:
-  failed to unpack entry at `bar-1.0.0/smuggled`
-
-Caused by:
-  failed to unpack `[ROOT]/home/.cargo/registry/src/-[HASH]/bar-1.0.0/smuggled`
-
-Caused by:
-  [..] when creating dir [ROOT]/home/.cargo/registry/src/-[HASH]/bar-1.0.0/smuggled
+  invalid tarball downloaded, contains an entry at "bar-1.0.0/smuggled" with invalid type Symlink
 
 "#]])
         .run();
