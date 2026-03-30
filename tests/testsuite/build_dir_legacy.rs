@@ -8,8 +8,9 @@
 //!
 //! Tests check if directories match some "layout" by using [`CargoPathExt::assert_build_dir_layout`]
 //!
-//! Note: This file is mirrored by build_dir.rs which contains the same tests with additional
-//! unstable flags. New tests should be added to both when applicable.
+//! Note: This file is mirrored by build_dir_fine_grain_locking.rs and build_dir.rs which contain
+//! the same tests with `-Zfine-grain-locking` enabled and the new build-dir layout respectively.
+//! New tests should be added to all when applicable.
 
 use std::path::PathBuf;
 
