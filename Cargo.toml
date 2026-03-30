@@ -160,7 +160,6 @@ path = "src/cargo/lib.rs"
 annotate-snippets.workspace = true
 anstream.workspace = true
 anstyle.workspace = true
-anstyle-hyperlink = { workspace = true, features = ["file"] }
 anstyle-progress.workspace = true
 anyhow.workspace = true
 base64.workspace = true
@@ -213,8 +212,6 @@ serde_ignored.workspace = true
 serde_json = { workspace = true, features = ["raw_value"] }
 sha1.workspace = true
 shell-escape.workspace = true
-supports-hyperlinks.workspace = true
-supports-unicode.workspace = true
 tar.workspace = true
 tempfile.workspace = true
 thiserror.workspace = true

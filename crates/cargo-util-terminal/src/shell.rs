@@ -7,8 +7,8 @@ use annotate_snippets::{Renderer, Report};
 use anstream::AutoStream;
 use anstyle::Style;
 
-use crate::util::errors::CargoResult;
-use crate::util::style::*;
+use crate::CargoResult;
+use crate::style::*;
 
 pub use anstyle_hyperlink::Hyperlink;
 

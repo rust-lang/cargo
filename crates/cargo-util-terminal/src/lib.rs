@@ -6,4 +6,14 @@
 
 #![allow(clippy::disallowed_methods)]
 
+mod shell;
+
 pub mod style;
+
+pub use shell::ColorChoice;
+pub use shell::Hyperlink;
+pub use shell::Shell;
+pub use shell::TtyWidth;
+pub use shell::Verbosity;
+
+pub type CargoResult<T> = anyhow::Result<T>;

@@ -371,7 +371,6 @@ dependencies = [
  "annotate-snippets",
  "anstream 1.0.0",
  "anstyle",
- "anstyle-hyperlink",
  "anstyle-progress",
  "anyhow",
  "base64",
@@ -434,8 +433,6 @@ dependencies = [
  "sha1",
  "shell-escape",
  "snapbox",
- "supports-hyperlinks",
- "supports-unicode",
  "tar",
  "tempfile",
  "thiserror 2.0.18",
@@ -596,8 +593,17 @@ name = "cargo-util-terminal"
 version = "0.1.0"
 dependencies = [
  "annotate-snippets",
+ "anstream 1.0.0",
  "anstyle",
+ "anstyle-hyperlink",
+ "anstyle-progress",
  "anyhow",
+ "libc",
+ "serde",
+ "serde_json",
+ "supports-hyperlinks",
+ "supports-unicode",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

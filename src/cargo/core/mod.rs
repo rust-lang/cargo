@@ -7,7 +7,6 @@ pub use self::package_id::PackageId;
 pub use self::package_id_spec::PackageIdSpecQuery;
 pub use self::registry::Registry;
 pub use self::resolver::{Resolve, ResolveVersion};
-pub use self::shell::{Shell, Verbosity};
 pub use self::source_id::SourceId;
 pub use self::summary::{FeatureMap, FeatureValue, Summary};
 pub use self::workspace::{
@@ -15,6 +14,8 @@ pub use self::workspace::{
     find_workspace_root_with_membership_check, resolve_relative_path,
 };
 pub use cargo_util_schemas::core::{GitReference, PackageIdSpec, SourceKind};
+pub use cargo_util_terminal as shell;
+pub use cargo_util_terminal::{ColorChoice, Shell, Verbosity};
 
 pub mod compiler;
 pub mod dependency;
@@ -28,7 +29,6 @@ mod package_id_spec;
 pub mod profiles;
 pub mod registry;
 pub mod resolver;
-pub mod shell;
 mod source_id;
 pub mod summary;
 mod workspace;
