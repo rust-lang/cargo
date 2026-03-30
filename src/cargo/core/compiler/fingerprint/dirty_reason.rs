@@ -5,8 +5,8 @@ use std::fmt::Debug;
 use serde::Serialize;
 
 use super::*;
-use crate::core::Shell;
 use crate::core::compiler::UnitIndex;
+use cargo_util_terminal::Shell;
 
 /// Tells a better story of why a build is considered "dirty" that leads
 /// to a recompile. Usually constructed via [`Fingerprint::compare`].

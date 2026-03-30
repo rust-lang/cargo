@@ -3,11 +3,11 @@
 use std::cmp;
 use std::time::{Duration, Instant};
 
-use crate::core::shell::Verbosity;
 use crate::util::context::ProgressWhen;
 use crate::util::{CargoResult, GlobalContext};
 use anstyle_progress::TermProgress;
 use cargo_util::is_ci;
+use cargo_util_terminal::Verbosity;
 use unicode_width::UnicodeWidthChar;
 
 /// CLI progress bar.

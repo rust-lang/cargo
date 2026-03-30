@@ -8,6 +8,7 @@ publish = false
 anyhow.workspace = true
 cargo.workspace = true
 cargo-util.workspace = true
+cargo-util-terminal.workspace = true
 clap.workspace = true
 git2.workspace = true
 semver.workspace = true

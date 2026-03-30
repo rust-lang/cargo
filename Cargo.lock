@@ -233,6 +233,7 @@ version = "0.0.0"
 dependencies = [
  "cargo",
  "cargo-util",
+ "cargo-util-terminal",
  "criterion",
  "flate2",
  "rand 0.10.0",
@@ -5645,6 +5646,7 @@ dependencies = [
  "anyhow",
  "cargo",
  "cargo-util",
+ "cargo-util-terminal",
  "clap",
  "git2",
  "semver",

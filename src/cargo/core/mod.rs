@@ -14,8 +14,6 @@ pub use self::workspace::{
     find_workspace_root_with_membership_check, resolve_relative_path,
 };
 pub use cargo_util_schemas::core::{GitReference, PackageIdSpec, SourceKind};
-pub use cargo_util_terminal as shell;
-pub use cargo_util_terminal::{ColorChoice, Shell, Verbosity};
 
 pub mod compiler;
 pub mod dependency;

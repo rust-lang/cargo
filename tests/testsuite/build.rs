@@ -10,7 +10,6 @@ use crate::utils::cargo_exe;
 use crate::utils::cargo_process;
 use crate::utils::tools;
 use cargo::GlobalContext;
-use cargo::core::Shell;
 use cargo::core::Workspace;
 use cargo::core::compiler::UserIntent;
 use cargo::ops::CompileOptions;
@@ -23,6 +22,7 @@ use cargo_test_support::{
     main_file, paths, process, project, rustc_host, sleep_ms, symlink_supported, t,
 };
 use cargo_util::paths::dylib_path_envvar;
+use cargo_util_terminal::Shell;
 
 #[cargo_test]
 fn cargo_compile_simple() {

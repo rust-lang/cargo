@@ -102,7 +102,7 @@ pub use crate::core::compiler::unit::UnitIndex;
 pub use crate::core::compiler::unit::UnitInterner;
 use crate::core::manifest::TargetSourcePath;
 use crate::core::profiles::{PanicStrategy, Profile, StripInner};
-use crate::core::{Feature, PackageId, Target, Verbosity};
+use crate::core::{Feature, PackageId, Target};
 use crate::lints::get_key_value;
 use crate::util::OnceExt;
 use crate::util::context::WarningHandling;
@@ -115,6 +115,7 @@ use cargo_util::{ProcessBuilder, ProcessError, paths};
 use cargo_util_schemas::manifest::TomlDebugInfo;
 use cargo_util_schemas::manifest::TomlTrimPaths;
 use cargo_util_schemas::manifest::TomlTrimPathsValue;
+use cargo_util_terminal::Verbosity;
 use rustfix::diagnostics::Applicability;
 
 const RUSTDOC_CRATE_VERSION_FLAG: &str = "--crate-version";

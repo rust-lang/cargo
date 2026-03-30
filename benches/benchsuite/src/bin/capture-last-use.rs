@@ -24,7 +24,7 @@ use std::path::Path;
 
 fn main() {
     // Set up config.
-    let shell = cargo::core::Shell::new();
+    let shell = cargo_util_terminal::Shell::new();
     let homedir = Path::new(env!("CARGO_MANIFEST_DIR")).join("global-cache-tracker");
     let cwd = homedir.clone();
     let mut gctx = GlobalContext::new(shell, cwd, homedir.clone());

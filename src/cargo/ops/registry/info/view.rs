@@ -1,16 +1,14 @@
 use std::collections::HashMap;
 use std::io::Write;
 
-use crate::core::Shell;
 use crate::util::style::{CONTEXT, ERROR, HEADER, LITERAL, NOP, WARN};
 use crate::{
     CargoResult, GlobalContext,
-    core::{
-        Dependency, FeatureMap, Package, PackageId, SourceId, dependency::DepKind, shell::Verbosity,
-    },
+    core::{Dependency, FeatureMap, Package, PackageId, SourceId, dependency::DepKind},
     sources::IndexSummary,
     util::interning::InternedString,
 };
+use cargo_util_terminal::{Shell, Verbosity};
 
 // Pretty print the package information.
 pub(super) fn pretty_view(

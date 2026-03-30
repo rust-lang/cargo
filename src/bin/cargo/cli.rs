@@ -16,8 +16,8 @@ use super::third_party_subcommands;
 use super::user_defined_aliases;
 use crate::command_prelude::*;
 use crate::util::is_rustup;
-use cargo::core::shell::ColorChoice;
 use cargo::util::style;
+use cargo_util_terminal::ColorChoice;
 
 #[tracing::instrument(skip_all)]
 pub fn main(gctx: &mut GlobalContext) -> CliResult {

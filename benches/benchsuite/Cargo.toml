@@ -10,6 +10,7 @@ publish = false
 [dependencies]
 cargo.workspace = true
 cargo-util.workspace = true
+cargo-util-terminal.workspace = true
 criterion.workspace = true
 flate2.workspace = true
 rand.workspace = true

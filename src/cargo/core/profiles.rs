@@ -25,9 +25,7 @@ use crate::core::Feature;
 use crate::core::compiler::{CompileKind, CompileTarget, Unit};
 use crate::core::dependency::Artifact;
 use crate::core::resolver::features::FeaturesFor;
-use crate::core::{
-    PackageId, PackageIdSpec, PackageIdSpecQuery, Resolve, Shell, Target, Workspace,
-};
+use crate::core::{PackageId, PackageIdSpec, PackageIdSpecQuery, Resolve, Target, Workspace};
 use crate::util::interning::InternedString;
 use crate::util::toml::validate_profile;
 use crate::util::{CargoResult, GlobalContext, closest_msg, context};
@@ -37,6 +35,7 @@ use cargo_util_schemas::manifest::TomlTrimPathsValue;
 use cargo_util_schemas::manifest::{
     ProfilePackageSpec, StringOrBool, TomlDebugInfo, TomlProfile, TomlProfiles,
 };
+use cargo_util_terminal::Shell;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::hash::Hash;
 use std::{cmp, fmt, hash};

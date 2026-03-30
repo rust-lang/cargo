@@ -1,12 +1,12 @@
 use crate::core::Workspace;
 use crate::core::compiler::{Compilation, CompileKind};
-use crate::core::shell::Verbosity;
 use crate::ops;
 use crate::util;
 use crate::util::CargoResult;
 
 use anyhow::{Error, bail};
 use cargo_util::ProcessBuilder;
+use cargo_util_terminal::Verbosity;
 
 use std::ffi::OsString;
 use std::path::PathBuf;

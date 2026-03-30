@@ -13,6 +13,7 @@ use cargo_util::paths;
 use cargo_util_schemas::core::PartialVersion;
 use cargo_util_schemas::manifest::PathBaseName;
 use cargo_util_schemas::manifest::RustVersion;
+use cargo_util_terminal::Shell;
 use indexmap::IndexSet;
 use itertools::Itertools;
 use toml_edit::Item as TomlItem;
@@ -25,7 +26,6 @@ use crate::core::Features;
 use crate::core::Package;
 use crate::core::PackageId;
 use crate::core::Registry;
-use crate::core::Shell;
 use crate::core::Summary;
 use crate::core::Workspace;
 use crate::core::dependency::DepKind;
@@ -1224,7 +1224,7 @@ fn populate_available_features(
 }
 
 fn print_action_msg(shell: &mut Shell, dep: &DependencyUI, section: &[String]) -> CargoResult<()> {
-    if matches!(shell.verbosity(), crate::core::shell::Verbosity::Quiet) {
+    if matches!(shell.verbosity(), cargo_util_terminal::Verbosity::Quiet) {
         return Ok(());
     }
 
@@ -1266,7 +1266,7 @@ fn print_action_msg(shell: &mut Shell, dep: &DependencyUI, section: &[String]) -
 }
 
 fn print_dep_table_msg(shell: &mut Shell, dep: &DependencyUI) -> CargoResult<()> {
-    if matches!(shell.verbosity(), crate::core::shell::Verbosity::Quiet) {
+    if matches!(shell.verbosity(), cargo_util_terminal::Verbosity::Quiet) {
         return Ok(());
     }
 
