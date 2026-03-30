@@ -1266,6 +1266,12 @@ impl CliUnstable {
             self.gitoxide = GitoxideFeatures::safe().into();
         }
 
+        // NOTE: We set this before `implicitly_enable_features_if_needed` as `-Zfine-grain-locking`
+        //       must use the new layout so that takes priority.
+        if is_new_build_dir_layout_opt_out() {
+            self.build_dir_new_layout = false;
+        }
+
         self.implicitly_enable_features_if_needed();
 
         Ok(warnings)
@@ -1584,6 +1590,14 @@ pub fn channel() -> String {
 )]
 fn cargo_use_gitoxide_instead_of_git2() -> bool {
     std::env::var_os("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2").map_or(false, |value| value == "1")
+}
+
+#[expect(
+    clippy::disallowed_methods,
+    reason = "Temporary opt out that is not part of the public interface"
+)]
+fn is_new_build_dir_layout_opt_out() -> bool {
+    std::env::var("__CARGO_TEMPORARY_BUILD_DIR_NEW_LAYOUT_OPT_OUT").as_deref() == Ok("1")
 }
 
 /// Generate a link to Cargo documentation for the current release channel

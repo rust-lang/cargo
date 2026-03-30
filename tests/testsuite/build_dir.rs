@@ -1314,12 +1314,12 @@ fn new_layout_opt_out_nightly() {
 [ROOT]/foo/build-dir/.rustc_info.json
 [ROOT]/foo/build-dir/CACHEDIR.TAG
 [ROOT]/foo/build-dir/debug/.cargo-build-lock
-[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo
-[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo.json
-[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/dep-bin-foo
-[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/invoked.timestamp
-[ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/foo[..][EXE]
-[ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/foo[..].d
+[ROOT]/foo/build-dir/debug/.fingerprint/foo-[HASH]/bin-foo
+[ROOT]/foo/build-dir/debug/.fingerprint/foo-[HASH]/bin-foo.json
+[ROOT]/foo/build-dir/debug/.fingerprint/foo-[HASH]/dep-bin-foo
+[ROOT]/foo/build-dir/debug/.fingerprint/foo-[HASH]/invoked.timestamp
+[ROOT]/foo/build-dir/debug/deps/foo[..][EXE]
+[ROOT]/foo/build-dir/debug/deps/foo[..].d
 
 "#]]);
 
