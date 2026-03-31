@@ -349,7 +349,12 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
     }
 
     // Building the command to execute
-    let to_exec = script_dir.join(unit.target.name());
+    let bin_name = if bcx.gctx.cli_unstable().build_dir_new_layout {
+        unit.target.crate_name()
+    } else {
+        unit.target.name().to_string()
+    };
+    let to_exec = script_dir.join(bin_name);
 
     // Start preparing the process to execute, starting out with some
     // environment variables. Note that the profile-related environment
