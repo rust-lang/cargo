@@ -449,7 +449,13 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
     ///
     /// Returns `None` if the unit shouldn't be uplifted (for example, a
     /// dependent rlib).
-    fn uplift_to(&self, unit: &Unit, file_type: &FileType, from_path: &Path) -> Option<PathBuf> {
+    fn uplift_to(
+        &self,
+        unit: &Unit,
+        file_type: &FileType,
+        from_path: &Path,
+        bcx: &BuildContext<'_, '_>,
+    ) -> Option<PathBuf> {
         // Tests, check, doc, etc. should not be uplifted.
         if unit.mode != CompileMode::Build || file_type.flavor == FileFlavor::Rmeta {
             return None;
@@ -457,6 +463,11 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
 
         // Artifact dependencies are never uplifted.
         if unit.artifact.is_true() {
+            return None;
+        }
+
+        // Build script bins are never uplifted.
+        if bcx.gctx.cli_unstable().build_dir_new_layout && unit.target.is_custom_build() {
             return None;
         }
 
@@ -645,7 +656,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
 
             // If, the `different_binary_name` feature is enabled, the name of the hardlink will
             // be the name of the binary provided by the user in `Cargo.toml`.
-            let hardlink = self.uplift_to(unit, &file_type, &path);
+            let hardlink = self.uplift_to(unit, &file_type, &path, bcx);
             let export_path = if unit.target.is_custom_build() {
                 None
             } else {
