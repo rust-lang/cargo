@@ -17,6 +17,12 @@ pub fn get_env(
 ) -> CargoResult<HashMap<String, OsString>> {
     let mut env = HashMap::new();
 
+    if unit.target.is_test() || unit.target.is_bench() {
+        if let Ok(value) = build_runner.bcx.gctx.get_env("__CARGO_TEST_OUT_DIR_OVERRIDE") {
+            env.insert("OUT_DIR".to_string(), OsString::from(value));
+        }
+    }
+
     // Add `CARGO_BIN_EXE_` environment variables for building tests.
     //
     // These aren't built for `cargo check`, so can't use `dependencies`
