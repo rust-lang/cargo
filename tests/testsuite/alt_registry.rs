@@ -4,6 +4,7 @@ use std::fs;
 
 use crate::prelude::*;
 use cargo_test_support::compare::assert_e2e;
+use cargo_test_support::git;
 use cargo_test_support::publish::validate_alt_upload;
 use cargo_test_support::registry::{self, Package, RegistryBuilder};
 use cargo_test_support::str;
@@ -227,13 +228,32 @@ fn registry_and_path_dep_works() {
 }
 
 #[cargo_test]
-fn registry_incompatible_with_git() {
-    registry::alt_init();
+fn registry_and_git_dep_works() {
+    let _reg = RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        .alternative()
+        .build();
+
+    let bar = git::repo(&paths::root().join("bar"))
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
 
     let p = project()
         .file(
             "Cargo.toml",
-            r#"
+            &format!(
+                r#"
                 [package]
                 name = "foo"
                 version = "0.0.1"
@@ -241,12 +261,17 @@ fn registry_incompatible_with_git() {
                 edition = "2015"
 
                 [dependencies.bar]
-                git = ""
+                version = "0.0.1"
                 registry = "alternative"
+                git="{}"
             "#,
+                bar.url(),
+            ),
         )
         .file("src/main.rs", "fn main() {}")
         .build();
+
+    Package::new("bar", "0.0.1").alternative(true).publish();
 
     p.cargo("check")
         .with_status(101)
@@ -646,6 +671,64 @@ fn publish_with_crates_io_dep() {
         "foo-0.0.1.crate",
         &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
     );
+}
+
+#[cargo_test]
+fn publish_with_git_and_registry_dep() {
+    let _reg = RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        .alternative()
+        .build();
+
+    let bar = git::repo(&paths::root().join("bar"))
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                edition = "2015"
+
+                [dependencies.bar]
+                version = "0.0.1"
+                registry = "alternative"
+                git="{}"
+            "#,
+                bar.url(),
+            ),
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    Package::new("bar", "0.0.1").alternative(true).publish();
+
+    p.cargo("publish --registry alternative")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  dependency (bar) specification is ambiguous. Only one of `git` or `registry` is allowed.
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
