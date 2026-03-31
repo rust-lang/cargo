@@ -56,11 +56,6 @@ pub enum ProgressStyle {
     Indeterminate,
 }
 
-struct Throttle {
-    first: bool,
-    last_update: Instant,
-}
-
 struct State<'gctx> {
     gctx: &'gctx GlobalContext,
     format: Format,
@@ -79,10 +74,24 @@ struct Format {
     unicode: bool,
 }
 
+struct Throttle {
+    first: bool,
+    last_update: Instant,
+}
+
 /// Controls terminal progress integration via OSC sequences.
 struct TerminalIntegration {
     enabled: bool,
     error: bool,
+}
+
+enum ProgressOutput {
+    /// Print progress without a message
+    PrintNow,
+    /// Progress, message and progress report
+    TextAndReport(String, StatusValue),
+    /// Only progress report, no message and no text progress
+    Report(StatusValue),
 }
 
 /// A progress status value printable as an ANSI OSC 9;4 escape code.
@@ -98,80 +107,6 @@ enum StatusValue {
     Indeterminate,
     /// Progress value in an error state (0-100).
     Error(u8),
-}
-
-enum ProgressOutput {
-    /// Print progress without a message
-    PrintNow,
-    /// Progress, message and progress report
-    TextAndReport(String, StatusValue),
-    /// Only progress report, no message and no text progress
-    Report(StatusValue),
-}
-
-impl TerminalIntegration {
-    #[cfg(test)]
-    fn new(enabled: bool) -> Self {
-        Self {
-            enabled,
-            error: false,
-        }
-    }
-
-    /// Creates a `TerminalIntegration` from Cargo's configuration.
-    /// Autodetect support if not explicitly enabled or disabled.
-    fn from_config(gctx: &GlobalContext) -> Self {
-        let enabled = gctx
-            .progress_config()
-            .term_integration
-            .unwrap_or_else(|| gctx.shell().is_err_term_integration_available());
-
-        Self {
-            enabled,
-            error: false,
-        }
-    }
-
-    fn progress_state(&self, value: StatusValue) -> StatusValue {
-        match (self.enabled, self.error) {
-            (true, false) => value,
-            (true, true) => match value {
-                StatusValue::Value(v) => StatusValue::Error(v),
-                _ => StatusValue::Error(100),
-            },
-            (false, _) => StatusValue::None,
-        }
-    }
-
-    pub fn remove(&self) -> StatusValue {
-        self.progress_state(StatusValue::Remove)
-    }
-
-    pub fn value(&self, percent: u8) -> StatusValue {
-        self.progress_state(StatusValue::Value(percent))
-    }
-
-    pub fn indeterminate(&self) -> StatusValue {
-        self.progress_state(StatusValue::Indeterminate)
-    }
-
-    pub fn error(&mut self) {
-        self.error = true;
-    }
-}
-
-impl std::fmt::Display for StatusValue {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let progress = match self {
-            Self::None => TermProgress::none(),
-            Self::Remove => TermProgress::remove(),
-            Self::Value(v) => TermProgress::start().percent(*v),
-            Self::Indeterminate => TermProgress::start(),
-            Self::Error(v) => TermProgress::error().percent(*v),
-        };
-
-        progress.fmt(f)
-    }
 }
 
 impl<'gctx> Progress<'gctx> {
@@ -342,36 +277,6 @@ impl<'gctx> Progress<'gctx> {
     }
 }
 
-impl Throttle {
-    fn new() -> Throttle {
-        Throttle {
-            first: true,
-            last_update: Instant::now(),
-        }
-    }
-
-    fn allowed(&mut self) -> bool {
-        if self.first {
-            let delay = Duration::from_millis(500);
-            if self.last_update.elapsed() < delay {
-                return false;
-            }
-        } else {
-            let interval = Duration::from_millis(100);
-            if self.last_update.elapsed() < interval {
-                return false;
-            }
-        }
-        self.update();
-        true
-    }
-
-    fn update(&mut self) {
-        self.first = false;
-        self.last_update = Instant::now();
-    }
-}
-
 impl<'gctx> State<'gctx> {
     fn tick(&mut self, cur: usize, max: usize, msg: &str) -> CargoResult<()> {
         if self.done {
@@ -457,6 +362,12 @@ impl<'gctx> State<'gctx> {
                 self.format.max_width = n;
             }
         }
+    }
+}
+
+impl<'gctx> Drop for State<'gctx> {
+    fn drop(&mut self) {
+        self.clear();
     }
 }
 
@@ -557,9 +468,98 @@ impl Format {
     }
 }
 
-impl<'gctx> Drop for State<'gctx> {
-    fn drop(&mut self) {
-        self.clear();
+impl Throttle {
+    fn new() -> Throttle {
+        Throttle {
+            first: true,
+            last_update: Instant::now(),
+        }
+    }
+
+    fn allowed(&mut self) -> bool {
+        if self.first {
+            let delay = Duration::from_millis(500);
+            if self.last_update.elapsed() < delay {
+                return false;
+            }
+        } else {
+            let interval = Duration::from_millis(100);
+            if self.last_update.elapsed() < interval {
+                return false;
+            }
+        }
+        self.update();
+        true
+    }
+
+    fn update(&mut self) {
+        self.first = false;
+        self.last_update = Instant::now();
+    }
+}
+
+impl TerminalIntegration {
+    #[cfg(test)]
+    fn new(enabled: bool) -> Self {
+        Self {
+            enabled,
+            error: false,
+        }
+    }
+
+    /// Creates a `TerminalIntegration` from Cargo's configuration.
+    /// Autodetect support if not explicitly enabled or disabled.
+    fn from_config(gctx: &GlobalContext) -> Self {
+        let enabled = gctx
+            .progress_config()
+            .term_integration
+            .unwrap_or_else(|| gctx.shell().is_err_term_integration_available());
+
+        Self {
+            enabled,
+            error: false,
+        }
+    }
+
+    fn progress_state(&self, value: StatusValue) -> StatusValue {
+        match (self.enabled, self.error) {
+            (true, false) => value,
+            (true, true) => match value {
+                StatusValue::Value(v) => StatusValue::Error(v),
+                _ => StatusValue::Error(100),
+            },
+            (false, _) => StatusValue::None,
+        }
+    }
+
+    pub fn remove(&self) -> StatusValue {
+        self.progress_state(StatusValue::Remove)
+    }
+
+    pub fn value(&self, percent: u8) -> StatusValue {
+        self.progress_state(StatusValue::Value(percent))
+    }
+
+    pub fn indeterminate(&self) -> StatusValue {
+        self.progress_state(StatusValue::Indeterminate)
+    }
+
+    pub fn error(&mut self) {
+        self.error = true;
+    }
+}
+
+impl std::fmt::Display for StatusValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let progress = match self {
+            Self::None => TermProgress::none(),
+            Self::Remove => TermProgress::remove(),
+            Self::Value(v) => TermProgress::start().percent(*v),
+            Self::Indeterminate => TermProgress::start(),
+            Self::Error(v) => TermProgress::error().percent(*v),
+        };
+
+        progress.fmt(f)
     }
 }
 
