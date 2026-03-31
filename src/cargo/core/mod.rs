@@ -7,7 +7,6 @@ pub use self::package_id::PackageId;
 pub use self::package_id_spec::PackageIdSpecQuery;
 pub use self::registry::Registry;
 pub use self::resolver::{Resolve, ResolveVersion};
-pub use self::shell::{Shell, Verbosity};
 pub use self::source_id::SourceId;
 pub use self::summary::{FeatureMap, FeatureValue, Summary};
 pub use self::workspace::{
@@ -28,7 +27,6 @@ mod package_id_spec;
 pub mod profiles;
 pub mod registry;
 pub mod resolver;
-pub mod shell;
 mod source_id;
 pub mod summary;
 mod workspace;

@@ -115,7 +115,7 @@ trigger_files = ["src/cargo/util/context/mod.rs"]
 
 [autolabel."A-console-output"]
 trigger_files = [
-  "src/cargo/core/shell.rs",
+  "crates/cargo-util-terminal/",
   "src/cargo/util/progress.rs",
 ]
 

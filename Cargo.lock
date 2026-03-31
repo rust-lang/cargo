@@ -233,6 +233,7 @@ version = "0.0.0"
 dependencies = [
  "cargo",
  "cargo-util",
+ "cargo-util-terminal",
  "criterion",
  "flate2",
  "rand 0.10.0",
@@ -371,7 +372,6 @@ dependencies = [
  "annotate-snippets",
  "anstream 1.0.0",
  "anstyle",
- "anstyle-hyperlink",
  "anstyle-progress",
  "anyhow",
  "base64",
@@ -384,6 +384,7 @@ dependencies = [
  "cargo-test-support",
  "cargo-util",
  "cargo-util-schemas",
+ "cargo-util-terminal",
  "clap",
  "clap_complete",
  "color-print",
@@ -433,8 +434,6 @@ dependencies = [
  "sha1",
  "shell-escape",
  "snapbox",
- "supports-hyperlinks",
- "supports-unicode",
  "tar",
  "tempfile",
  "thiserror 2.0.18",
@@ -588,6 +587,24 @@ dependencies = [
  "toml",
  "unicode-ident",
  "url",
+]
+
+[[package]]
+name = "cargo-util-terminal"
+version = "0.1.0"
+dependencies = [
+ "annotate-snippets",
+ "anstream 1.0.0",
+ "anstyle",
+ "anstyle-hyperlink",
+ "anstyle-progress",
+ "anyhow",
+ "libc",
+ "serde",
+ "serde_json",
+ "supports-hyperlinks",
+ "supports-unicode",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -5629,6 +5646,7 @@ dependencies = [
  "anyhow",
  "cargo",
  "cargo-util",
+ "cargo-util-terminal",
  "clap",
  "git2",
  "semver",

@@ -8,8 +8,6 @@ use std::path::{Path, PathBuf};
 use std::task::Poll;
 
 use crate::core::PackageIdSpecQuery;
-use crate::core::Shell;
-use crate::core::Verbosity;
 use crate::core::Workspace;
 use crate::core::dependency::DepKind;
 use crate::core::manifest::Target;
@@ -37,6 +35,7 @@ use anyhow::{Context as _, bail};
 use cargo_util::paths;
 use cargo_util_schemas::index::{IndexPackage, RegistryDependency};
 use cargo_util_schemas::messages;
+use cargo_util_terminal::{Shell, Verbosity};
 use flate2::{Compression, GzBuilder};
 use tar::{Builder, EntryType, Header, HeaderMode};
 use tracing::debug;

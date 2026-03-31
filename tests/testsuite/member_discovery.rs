@@ -1,11 +1,12 @@
 //! Tests for workspace member discovery.
 
 use crate::prelude::*;
-use cargo::core::{Shell, Workspace};
+use cargo::core::Workspace;
 use cargo::util::context::GlobalContext;
 use cargo_test_support::paths;
 use cargo_test_support::project;
 use cargo_test_support::registry;
+use cargo_util_terminal::Shell;
 
 /// Tests exclusion of non-directory files from workspace member discovery using glob `*`.
 #[cargo_test]

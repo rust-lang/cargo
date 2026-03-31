@@ -1,4 +1,4 @@
-use crate::core::{Edition, Shell, Workspace};
+use crate::core::{Edition, Workspace};
 use crate::util::errors::CargoResult;
 use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::{FossilRepo, GitRepo, HgRepo, PijulRepo, existing_vcs_repo};
@@ -6,6 +6,7 @@ use crate::util::{GlobalContext, restricted_names};
 use anyhow::{Context as _, anyhow};
 use cargo_util::paths::{self, write_atomic};
 use cargo_util_schemas::manifest::PackageName;
+use cargo_util_terminal::Shell;
 use home::home_dir;
 use serde::Deserialize;
 use serde::de;

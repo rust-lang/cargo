@@ -139,10 +139,10 @@
 //! [The Cargo Book]: https://doc.rust-lang.org/cargo/
 //! [Cargo Contributor Guide]: https://doc.crates.io/contrib/
 
-use crate::core::Shell;
-use crate::core::shell::Verbosity;
-use crate::core::shell::Verbosity::Verbose;
 use anyhow::Error;
+use cargo_util_terminal::Shell;
+use cargo_util_terminal::Verbosity;
+use cargo_util_terminal::Verbosity::Verbose;
 use tracing::debug;
 
 pub use crate::util::errors::{AlreadyPrintedError, InternalError, VerboseError};

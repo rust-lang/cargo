@@ -114,7 +114,6 @@
 //!
 //! There are checks for read-only filesystems, which is generally ignored.
 
-use crate::core::Verbosity;
 use crate::core::gc::GcOpts;
 use crate::ops::CleanContext;
 use crate::util::cache_lock::CacheLockMode;
@@ -124,6 +123,7 @@ use crate::util::{Filesystem, Progress, ProgressStyle};
 use crate::{CargoResult, GlobalContext};
 use anyhow::{Context as _, bail};
 use cargo_util::paths;
+use cargo_util_terminal::Verbosity;
 use rusqlite::{Connection, ErrorCode, params};
 use std::collections::{HashMap, hash_map};
 use std::path::{Path, PathBuf};

@@ -241,7 +241,7 @@ fn display_report(
     run_id: &RunId,
     ws_root: &Path,
 ) -> CargoResult<()> {
-    let verbose = gctx.shell().verbosity() == crate::core::shell::Verbosity::Verbose;
+    let verbose = gctx.shell().verbosity() == cargo_util_terminal::Verbosity::Verbose;
     let extra_verbose = gctx.extra_verbose();
 
     let Context {

@@ -36,6 +36,7 @@ cargo-test-macro = { version = "0.4.10", path = "crates/cargo-test-macro" }
 cargo-test-support = { version = "0.11.0", path = "crates/cargo-test-support" }
 cargo-util = { version = "0.2.28", path = "crates/cargo-util" }
 cargo-util-schemas = { version = "0.13.0", path = "crates/cargo-util-schemas" }
+cargo-util-terminal = { version = "0.1.0", path = "crates/cargo-util-terminal" }
 cargo_metadata = "0.23.1"
 clap = "4.5.60"
 clap_complete = { version = "4.5.66", features = ["unstable-dynamic"] }
@@ -159,7 +160,6 @@ path = "src/cargo/lib.rs"
 annotate-snippets.workspace = true
 anstream.workspace = true
 anstyle.workspace = true
-anstyle-hyperlink = { workspace = true, features = ["file"] }
 anstyle-progress.workspace = true
 anyhow.workspace = true
 base64.workspace = true
@@ -167,6 +167,7 @@ blake3.workspace = true
 cargo-credential.workspace = true
 cargo-platform.workspace = true
 cargo-util-schemas.workspace = true
+cargo-util-terminal.workspace = true
 cargo-util.workspace = true
 clap = { workspace = true, features = ["wrap_help"] }
 clap_complete.workspace = true
@@ -211,8 +212,6 @@ serde_ignored.workspace = true
 serde_json = { workspace = true, features = ["raw_value"] }
 sha1.workspace = true
 shell-escape.workspace = true
-supports-hyperlinks.workspace = true
-supports-unicode.workspace = true
 tar.workspace = true
 tempfile.workspace = true
 thiserror.workspace = true

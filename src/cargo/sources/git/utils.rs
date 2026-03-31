@@ -1,7 +1,7 @@
 //! Utilities for handling git repositories, mainly around
 //! authentication/cloning.
 
-use crate::core::{GitReference, SourceId, Verbosity};
+use crate::core::{GitReference, SourceId};
 use crate::sources::git::fetch::RemoteKind;
 use crate::sources::git::oxide;
 use crate::sources::git::oxide::cargo_config_to_gitoxide_overrides;
@@ -13,6 +13,7 @@ use crate::util::{GlobalContext, IntoUrl, MetricsCounter, Progress, network};
 
 use anyhow::{Context as _, anyhow};
 use cargo_util::{ProcessBuilder, paths};
+use cargo_util_terminal::Verbosity;
 use curl::easy::List;
 use git2::{ErrorClass, ObjectType, Oid};
 use tracing::{debug, info};

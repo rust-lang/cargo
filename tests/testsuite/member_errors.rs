@@ -1,7 +1,6 @@
 //! Tests for workspace member errors.
 
 use crate::prelude::*;
-use cargo::core::Shell;
 use cargo::core::Workspace;
 use cargo::core::compiler::UserIntent;
 use cargo::core::resolver::ResolveError;
@@ -11,6 +10,7 @@ use cargo_test_support::paths;
 use cargo_test_support::project;
 use cargo_test_support::registry;
 use cargo_test_support::str;
+use cargo_util_terminal::Shell;
 
 /// Tests inclusion of a `ManifestError` pointing to a member manifest
 /// when that manifest fails to deserialize.

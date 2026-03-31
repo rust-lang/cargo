@@ -27,7 +27,7 @@ fn cargo_home() -> PathBuf {
 
 fn initialize_context() -> GlobalContext {
     // Set up config.
-    let shell = cargo::core::Shell::new();
+    let shell = cargo_util_terminal::Shell::new();
     let homedir = cargo_home();
     if !homedir.exists() {
         fs::create_dir_all(&homedir).unwrap();

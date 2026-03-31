@@ -124,7 +124,7 @@ help: specify a package with `-p <PKGID>`
             let verbosity = ws.gctx().shell().verbosity();
             ws.gctx()
                 .shell()
-                .set_verbosity(cargo::core::Verbosity::Quiet);
+                .set_verbosity(cargo_util_terminal::Verbosity::Quiet);
             let resolve = resolve_ws(&ws, dry_run);
             ws.gctx().shell().set_verbosity(verbosity);
             resolve?.1

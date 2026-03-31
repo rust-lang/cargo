@@ -9,8 +9,8 @@ use std::path::{Path, PathBuf};
 
 use crate::prelude::*;
 use cargo::CargoResult;
+use cargo::core::PackageIdSpec;
 use cargo::core::features::{GitFeatures, GitoxideFeatures};
-use cargo::core::{PackageIdSpec, Shell};
 use cargo::util::auth::RegistryConfig;
 use cargo::util::context::Value;
 use cargo::util::context::{
@@ -22,6 +22,7 @@ use cargo_test_support::{paths, project, project_in_home, symlink_supported, t};
 use cargo_util_schemas::manifest::TomlTrimPaths;
 use cargo_util_schemas::manifest::TomlTrimPathsValue;
 use cargo_util_schemas::manifest::{self as cargo_toml, TomlDebugInfo, VecStringOrBool as VSOB};
+use cargo_util_terminal::Shell;
 use serde::Deserialize;
 
 /// Helper for constructing a `GlobalContext` object.

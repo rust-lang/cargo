@@ -1,13 +1,12 @@
 use crate::core::compiler::{Compilation, Doctest, Unit, UnitHash, UnitOutput};
 use crate::core::profiles::PanicStrategy;
-use crate::core::shell::ColorChoice;
-use crate::core::shell::Verbosity;
 use crate::core::{TargetKind, Workspace};
 use crate::ops;
 use crate::util::errors::CargoResult;
 use crate::util::{CliError, CliResult, GlobalContext, add_path_args};
 use anyhow::format_err;
 use cargo_util::{ProcessBuilder, ProcessError};
+use cargo_util_terminal::{ColorChoice, Verbosity};
 use std::collections::HashMap;
 use std::ffi::OsString;
 use std::fmt::Write;

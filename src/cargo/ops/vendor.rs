@@ -1,5 +1,4 @@
 use crate::core::SourceId;
-use crate::core::shell::Verbosity;
 use crate::core::{GitReference, Package, Workspace};
 use crate::ops;
 use crate::sources::CRATES_IO_REGISTRY;
@@ -13,6 +12,7 @@ use anyhow::{Context as _, bail};
 use cargo_util::{Sha256, paths};
 use cargo_util_schemas::core::SourceKind;
 use cargo_util_schemas::manifest::TomlPackageBuild;
+use cargo_util_terminal::Verbosity;
 use serde::Serialize;
 use walkdir::WalkDir;
 

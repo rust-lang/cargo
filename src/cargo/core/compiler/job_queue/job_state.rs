@@ -35,7 +35,7 @@ pub struct JobState<'a, 'gctx> {
     /// interleaving is still prevented as the lock would be held for the whole printing of an
     /// output message.
     ///
-    /// [`Shell`]: crate::core::Shell
+    /// [`Shell`]: cargo_util_terminal::Shell
     /// [`GlobalContext`]: crate::GlobalContext
     output: Option<&'a DiagDedupe<'gctx>>,
 

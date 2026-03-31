@@ -7,8 +7,8 @@ use annotate_snippets::{Renderer, Report};
 use anstream::AutoStream;
 use anstyle::Style;
 
-use crate::util::errors::CargoResult;
-use crate::util::style::*;
+use crate::CargoResult;
+use crate::style::*;
 
 pub use anstyle_hyperlink::Hyperlink;
 
@@ -373,7 +373,7 @@ impl Shell {
         }
     }
 
-    pub(crate) fn set_unstable_flags_rustc_unicode(&mut self, yes: bool) -> CargoResult<()> {
+    pub fn set_unstable_flags_rustc_unicode(&mut self, yes: bool) -> CargoResult<()> {
         if let ShellOut::Stream {
             unstable_flags_rustc_unicode,
             ..

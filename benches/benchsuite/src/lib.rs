@@ -185,7 +185,7 @@ impl Fixtures {
 
     /// Creates a new Context.
     pub fn make_context(&self, ws_root: &Path) -> GlobalContext {
-        let shell = cargo::core::Shell::new();
+        let shell = cargo_util_terminal::Shell::new();
         let mut gctx = GlobalContext::new(shell, ws_root.to_path_buf(), self.cargo_home());
         // Configure is needed to set the target_dir which is needed to write
         // the .rustc_info.json file which is very expensive.
