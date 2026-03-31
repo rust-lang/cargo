@@ -7,6 +7,7 @@ use crate::util::context::ProgressWhen;
 use crate::util::{CargoResult, GlobalContext};
 use anstyle_progress::TermProgress;
 use cargo_util::is_ci;
+use cargo_util_terminal::Shell;
 use cargo_util_terminal::Verbosity;
 use unicode_width::UnicodeWidthChar;
 
@@ -28,7 +29,8 @@ use unicode_width::UnicodeWidthChar;
 /// needed, though be cautious if the tick rate is very high or it is
 /// expensive to compute the progress value.
 pub struct Progress<'gctx> {
-    state: Option<State<'gctx>>,
+    gctx: &'gctx GlobalContext,
+    state: Option<State>,
 }
 
 impl<'gctx> Progress<'gctx> {
@@ -64,11 +66,11 @@ impl<'gctx> Progress<'gctx> {
         let progress_config = gctx.progress_config();
         match progress_config.when {
             ProgressWhen::Always => return Progress::new_priv(name, style, gctx),
-            ProgressWhen::Never => return Progress { state: None },
+            ProgressWhen::Never => return Progress { gctx, state: None },
             ProgressWhen::Auto => {}
         }
         if gctx.shell().verbosity() == Verbosity::Quiet || dumb || is_ci() {
-            return Progress { state: None };
+            return Progress { gctx, state: None };
         }
         Progress::new_priv(name, style, gctx)
     }
@@ -80,8 +82,8 @@ impl<'gctx> Progress<'gctx> {
             .or_else(|| gctx.shell().err_width().progress_max_width());
 
         Progress {
+            gctx,
             state: width.map(|n| State {
-                gctx,
                 format: Format {
                     style,
                     max_width: n,
@@ -124,6 +126,8 @@ impl<'gctx> Progress<'gctx> {
             return Ok(());
         };
 
+        let mut shell = self.gctx.shell();
+
         // Don't update too often as it can cause excessive performance loss
         // just putting stuff onto the terminal. We also want to avoid
         // flickering by not drawing anything that goes away too quickly. As a
@@ -140,7 +144,7 @@ impl<'gctx> Progress<'gctx> {
             return Ok(());
         }
 
-        s.tick(cur, max, msg)
+        s.tick(cur, max, msg, &mut shell)
     }
 
     /// Updates the state of the progress bar.
@@ -152,8 +156,10 @@ impl<'gctx> Progress<'gctx> {
     /// `tick` too fast, and accurate information is more important than
     /// limiting the console update rate.
     pub fn tick_now(&mut self, cur: usize, max: usize, msg: &str) -> CargoResult<()> {
+        let mut shell = self.gctx.shell();
+
         match self.state {
-            Some(ref mut s) => s.tick(cur, max, msg),
+            Some(ref mut s) => s.tick(cur, max, msg, &mut shell),
             None => Ok(()),
         }
     }
@@ -178,16 +184,20 @@ impl<'gctx> Progress<'gctx> {
     /// This does not have any rate limit throttling, so be careful about
     /// calling it too often.
     pub fn print_now(&mut self, msg: &str) -> CargoResult<()> {
+        let mut shell = self.gctx.shell();
+
         match &mut self.state {
-            Some(s) => s.print(ProgressOutput::PrintNow, msg),
+            Some(s) => s.print(ProgressOutput::PrintNow, msg, &mut shell),
             None => Ok(()),
         }
     }
 
     /// Clears the progress bar from the console.
     pub fn clear(&mut self) {
+        let mut shell = self.gctx.shell();
+
         if let Some(ref mut s) = self.state {
-            s.clear();
+            s.clear(&mut shell);
         }
     }
 
@@ -230,8 +240,7 @@ pub enum ProgressStyle {
     Indeterminate,
 }
 
-struct State<'gctx> {
-    gctx: &'gctx GlobalContext,
+struct State {
     format: Format,
     name: String,
     done: bool,
@@ -240,14 +249,10 @@ struct State<'gctx> {
     fixed_width: Option<usize>,
 }
 
-impl<'gctx> State<'gctx> {
-    fn tick(&mut self, cur: usize, max: usize, msg: &str) -> CargoResult<()> {
+impl State {
+    fn tick(&mut self, cur: usize, max: usize, msg: &str, shell: &mut Shell) -> CargoResult<()> {
         if self.done {
-            write!(
-                self.gctx.shell().err(),
-                "{}",
-                self.format.term_integration.remove()
-            )?;
+            write!(shell.err(), "{}", self.format.term_integration.remove())?;
             return Ok(());
         }
 
@@ -257,16 +262,16 @@ impl<'gctx> State<'gctx> {
 
         // Write out a pretty header, then the progress bar itself, and then
         // return back to the beginning of the line for the next print.
-        self.try_update_max_width();
+        self.try_update_max_width(shell);
         if let Some(pbar) = self.format.progress(cur, max) {
-            self.print(pbar, msg)?;
+            self.print(pbar, msg, shell)?;
         }
         Ok(())
     }
 
-    fn print(&mut self, progress: ProgressOutput, msg: &str) -> CargoResult<()> {
+    fn print(&mut self, progress: ProgressOutput, msg: &str, shell: &mut Shell) -> CargoResult<()> {
         self.throttle.update();
-        self.try_update_max_width();
+        self.try_update_max_width(shell);
 
         let (mut line, report) = match progress {
             ProgressOutput::PrintNow => (String::new(), None),
@@ -278,7 +283,7 @@ impl<'gctx> State<'gctx> {
         if self.format.max_width < 15 {
             // even if we don't have space we can still output progress report
             if let Some(tb) = report {
-                write!(self.gctx.shell().err(), "{tb}\r")?;
+                write!(shell.err(), "{tb}\r")?;
             }
             return Ok(());
         }
@@ -289,8 +294,7 @@ impl<'gctx> State<'gctx> {
         }
 
         // Only update if the line has changed.
-        if self.gctx.shell().is_cleared() || self.last_line.as_ref() != Some(&line) {
-            let mut shell = self.gctx.shell();
+        if shell.is_cleared() || self.last_line.as_ref() != Some(&line) {
             shell.set_needs_clear(false);
             shell.transient_status(&self.name)?;
             if let Some(tb) = report {
@@ -305,23 +309,19 @@ impl<'gctx> State<'gctx> {
         Ok(())
     }
 
-    fn clear(&mut self) {
+    fn clear(&mut self, shell: &mut Shell) {
         // Always clear the progress report
-        let _ = write!(
-            self.gctx.shell().err(),
-            "{}",
-            self.format.term_integration.remove()
-        );
+        let _ = write!(shell.err(), "{}", self.format.term_integration.remove());
         // No need to clear if the progress is not currently being displayed.
-        if self.last_line.is_some() && !self.gctx.shell().is_cleared() {
-            self.gctx.shell().err_erase_line();
+        if self.last_line.is_some() && !shell.is_cleared() {
+            shell.err_erase_line();
             self.last_line = None;
         }
     }
 
-    fn try_update_max_width(&mut self) {
+    fn try_update_max_width(&mut self, shell: &mut Shell) {
         if self.fixed_width.is_none() {
-            if let Some(n) = self.gctx.shell().err_width().progress_max_width() {
+            if let Some(n) = shell.err_width().progress_max_width() {
                 self.format.max_width = n;
             }
         }
