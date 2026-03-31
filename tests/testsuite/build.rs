@@ -4581,8 +4581,8 @@ fn rustc_wrapper_vv_probe_has_cargo_env() {
 
     let result = std::fs::read_to_string(marker_dir.join("cargo_env_in_vv")).unwrap();
     assert_eq!(
-        result, "false",
-        "CARGO env var should not be set during -vV probe without the fix"
+        result, "true",
+        "CARGO env var should be set during -vV probe for wrapper compatibility"
     );
 }
 
