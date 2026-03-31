@@ -4534,6 +4534,59 @@ fn rustc_wrapper_queries() {
 }
 
 #[cargo_test]
+fn rustc_wrapper_vv_probe_has_cargo_env() {
+    // Verify that the CARGO env var is set during the -vV probe,
+    // so that wrappers like sccache can detect the workspace wrapper pattern.
+    // See https://github.com/rust-lang/cargo/issues/16805
+    let p = project().file("src/lib.rs", "").build();
+    let marker_dir = p.build_dir().join("cargo-env-check");
+    std::fs::create_dir_all(&marker_dir).unwrap();
+
+    let wrapper_project = project()
+        .at("cargo-env-checker")
+        .file("Cargo.toml", &basic_manifest("cargo-env-checker", "1.0.0"))
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {
+                let args: Vec<_> = std::env::args().collect();
+                // When invoked for the -vV probe, record whether CARGO is set.
+                if args.iter().any(|a| a == "-vV") {
+                    if let Ok(dir) = std::env::var("CARGO_ENV_CHECK_DIR") {
+                        let has_cargo = std::env::var("CARGO").is_ok();
+                        let _ = std::fs::write(
+                            format!("{dir}/cargo_env_in_vv"),
+                            format!("{has_cargo}"),
+                        );
+                    }
+                }
+                let status = std::process::Command::new(&args[1])
+                    .args(&args[2..])
+                    .status()
+                    .unwrap();
+                std::process::exit(status.code().unwrap_or(1));
+            }
+            "#,
+        )
+        .build();
+    wrapper_project.cargo("build").run();
+    let wrapper = wrapper_project.bin("cargo-env-checker");
+
+    p.cargo("build")
+        .env_remove("CARGO")
+        .env("CARGO_ENV_CHECK_DIR", &marker_dir)
+        .env("RUSTC_WRAPPER", &wrapper)
+        .env("RUSTC_WORKSPACE_WRAPPER", &wrapper)
+        .run();
+
+    let result = std::fs::read_to_string(marker_dir.join("cargo_env_in_vv")).unwrap();
+    assert_eq!(
+        result, "true",
+        "CARGO env var should be set during -vV probe for wrapper compatibility"
+    );
+}
+
+#[cargo_test]
 fn rustc_wrapper_relative() {
     Package::new("bar", "1.0.0").publish();
     let p = project()
