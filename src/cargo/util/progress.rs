@@ -31,84 +31,6 @@ pub struct Progress<'gctx> {
     state: Option<State<'gctx>>,
 }
 
-/// Indicates the style of information for displaying the amount of progress.
-///
-/// See also [`Progress::print_now`] for displaying progress without a bar.
-pub enum ProgressStyle {
-    /// Displays progress as a percentage.
-    ///
-    /// Example: `Fetch [=====================>   ]  88.15%`
-    ///
-    /// This is good for large values like number of bytes downloaded.
-    Percentage,
-    /// Displays progress as a ratio.
-    ///
-    /// Example: `Building [===>                      ] 35/222`
-    ///
-    /// This is good for smaller values where the exact number is useful to see.
-    Ratio,
-    /// Does not display an exact value of how far along it is.
-    ///
-    /// Example: `Fetch [===========>                     ]`
-    ///
-    /// This is good for situations where the exact value is an approximation,
-    /// and thus there isn't anything accurate to display to the user.
-    Indeterminate,
-}
-
-struct State<'gctx> {
-    gctx: &'gctx GlobalContext,
-    format: Format,
-    name: String,
-    done: bool,
-    throttle: Throttle,
-    last_line: Option<String>,
-    fixed_width: Option<usize>,
-}
-
-struct Format {
-    style: ProgressStyle,
-    max_width: usize,
-    max_print: usize,
-    term_integration: TerminalIntegration,
-    unicode: bool,
-}
-
-struct Throttle {
-    first: bool,
-    last_update: Instant,
-}
-
-/// Controls terminal progress integration via OSC sequences.
-struct TerminalIntegration {
-    enabled: bool,
-    error: bool,
-}
-
-enum ProgressOutput {
-    /// Print progress without a message
-    PrintNow,
-    /// Progress, message and progress report
-    TextAndReport(String, StatusValue),
-    /// Only progress report, no message and no text progress
-    Report(StatusValue),
-}
-
-/// A progress status value printable as an ANSI OSC 9;4 escape code.
-#[cfg_attr(test, derive(PartialEq, Debug))]
-enum StatusValue {
-    /// No output.
-    None,
-    /// Remove progress.
-    Remove,
-    /// Progress value (0-100).
-    Value(u8),
-    /// Indeterminate state (no bar, just animation)
-    Indeterminate,
-    /// Progress value in an error state (0-100).
-    Error(u8),
-}
-
 impl<'gctx> Progress<'gctx> {
     /// Creates a new `Progress` with the [`ProgressStyle::Percentage`] style.
     ///
@@ -277,6 +199,41 @@ impl<'gctx> Progress<'gctx> {
     }
 }
 
+/// Indicates the style of information for displaying the amount of progress.
+///
+/// See also [`Progress::print_now`] for displaying progress without a bar.
+pub enum ProgressStyle {
+    /// Displays progress as a percentage.
+    ///
+    /// Example: `Fetch [=====================>   ]  88.15%`
+    ///
+    /// This is good for large values like number of bytes downloaded.
+    Percentage,
+    /// Displays progress as a ratio.
+    ///
+    /// Example: `Building [===>                      ] 35/222`
+    ///
+    /// This is good for smaller values where the exact number is useful to see.
+    Ratio,
+    /// Does not display an exact value of how far along it is.
+    ///
+    /// Example: `Fetch [===========>                     ]`
+    ///
+    /// This is good for situations where the exact value is an approximation,
+    /// and thus there isn't anything accurate to display to the user.
+    Indeterminate,
+}
+
+struct State<'gctx> {
+    gctx: &'gctx GlobalContext,
+    format: Format,
+    name: String,
+    done: bool,
+    throttle: Throttle,
+    last_line: Option<String>,
+    fixed_width: Option<usize>,
+}
+
 impl<'gctx> State<'gctx> {
     fn tick(&mut self, cur: usize, max: usize, msg: &str) -> CargoResult<()> {
         if self.done {
@@ -369,6 +326,14 @@ impl<'gctx> Drop for State<'gctx> {
     fn drop(&mut self) {
         self.clear();
     }
+}
+
+struct Format {
+    style: ProgressStyle,
+    max_width: usize,
+    max_print: usize,
+    term_integration: TerminalIntegration,
+    unicode: bool,
 }
 
 impl Format {
@@ -468,6 +433,11 @@ impl Format {
     }
 }
 
+struct Throttle {
+    first: bool,
+    last_update: Instant,
+}
+
 impl Throttle {
     fn new() -> Throttle {
         Throttle {
@@ -496,6 +466,12 @@ impl Throttle {
         self.first = false;
         self.last_update = Instant::now();
     }
+}
+
+/// Controls terminal progress integration via OSC sequences.
+struct TerminalIntegration {
+    enabled: bool,
+    error: bool,
 }
 
 impl TerminalIntegration {
@@ -547,6 +523,30 @@ impl TerminalIntegration {
     pub fn error(&mut self) {
         self.error = true;
     }
+}
+
+enum ProgressOutput {
+    /// Print progress without a message
+    PrintNow,
+    /// Progress, message and progress report
+    TextAndReport(String, StatusValue),
+    /// Only progress report, no message and no text progress
+    Report(StatusValue),
+}
+
+/// A progress status value printable as an ANSI OSC 9;4 escape code.
+#[cfg_attr(test, derive(PartialEq, Debug))]
+enum StatusValue {
+    /// No output.
+    None,
+    /// Remove progress.
+    Remove,
+    /// Progress value (0-100).
+    Value(u8),
+    /// Indeterminate state (no bar, just animation)
+    Indeterminate,
+    /// Progress value in an error state (0-100).
+    Error(u8),
 }
 
 impl std::fmt::Display for StatusValue {
