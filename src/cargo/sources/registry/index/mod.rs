@@ -528,6 +528,11 @@ impl Summaries {
         match response {
             LoadResponse::CacheValid => {
                 tracing::debug!("fast path for registry cache of {:?}", relative);
+                if cached_summaries.is_none() {
+                    return Poll::Ready(Err(anyhow::anyhow!(
+                        "registry said cache valid when no cache exists"
+                    )));
+                }
                 return Poll::Ready(Ok(cached_summaries));
             }
             LoadResponse::NotFound => {

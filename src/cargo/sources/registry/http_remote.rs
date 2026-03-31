@@ -577,11 +577,6 @@ impl<'gctx> RegistryData for HttpRegistry<'gctx> {
                 }
                 StatusCode::NotModified => {
                     // Not Modified: the data in the cache is still the latest.
-                    if index_version.is_none() {
-                        return Poll::Ready(Err(anyhow::anyhow!(
-                            "server said not modified (HTTP 304) when no local cache exists"
-                        )));
-                    }
                     return Poll::Ready(Ok(LoadResponse::CacheValid));
                 }
                 StatusCode::NotFound => {
