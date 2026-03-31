@@ -21,6 +21,9 @@ pub fn get_env(
         if let Ok(value) = build_runner.bcx.gctx.get_env("__CARGO_TEST_OUT_DIR_OVERRIDE") {
             env.insert("OUT_DIR".to_string(), OsString::from(value));
         }
+        if let Ok(value) = build_runner.bcx.gctx.get_env("__CARGO_TEST_MANIFEST_DIR_OVERRIDE") {
+            env.insert("CARGO_MANIFEST_DIR".to_string(), OsString::from(value));
+        }
     }
 
     // Add `CARGO_BIN_EXE_` environment variables for building tests.
