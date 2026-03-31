@@ -175,6 +175,13 @@ impl std::fmt::Display for StatusValue {
 }
 
 impl<'gctx> Progress<'gctx> {
+    /// Creates a new `Progress` with the [`ProgressStyle::Percentage`] style.
+    ///
+    /// See [`Progress::with_style`] for more information.
+    pub fn new(name: &str, gctx: &'gctx GlobalContext) -> Progress<'gctx> {
+        Self::with_style(name, ProgressStyle::Percentage, gctx)
+    }
+
     /// Creates a new progress bar.
     ///
     /// The first parameter is the text displayed to the left of the bar, such
@@ -244,13 +251,6 @@ impl<'gctx> Progress<'gctx> {
     /// Returns whether or not the progress bar is allowed to be displayed.
     pub fn is_enabled(&self) -> bool {
         self.state.is_some()
-    }
-
-    /// Creates a new `Progress` with the [`ProgressStyle::Percentage`] style.
-    ///
-    /// See [`Progress::with_style`] for more information.
-    pub fn new(name: &str, gctx: &'gctx GlobalContext) -> Progress<'gctx> {
-        Self::with_style(name, ProgressStyle::Percentage, gctx)
     }
 
     /// Updates the state of the progress bar.
