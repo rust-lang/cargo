@@ -274,12 +274,12 @@ fn registry_and_git_dep_works() {
     Package::new("bar", "0.0.1").alternative(true).publish();
 
     p.cargo("check")
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  dependency (bar) specification is ambiguous. Only one of `git` or `registry` is allowed.
+[UPDATING] git repository `[ROOTURL]/bar`
+[LOCKING] 1 package to latest compatible version
+[CHECKING] bar v0.0.1 ([ROOTURL]/bar#[..])
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -720,15 +720,62 @@ fn publish_with_git_and_registry_dep() {
     Package::new("bar", "0.0.1").alternative(true).publish();
 
     p.cargo("publish --registry alternative")
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  dependency (bar) specification is ambiguous. Only one of `git` or `registry` is allowed.
+[UPDATING] `alternative` index
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[UPDATING] `alternative` index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.1 (registry `alternative`)
+[COMPILING] bar v0.0.1 (registry `alternative`)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[UPLOADING] foo v0.0.1 ([ROOT]/foo)
+[UPLOADED] foo v0.0.1 to registry `alternative`
+[NOTE] waiting for foo v0.0.1 to be available at registry `alternative`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
+[PUBLISHED] foo v0.0.1 at registry `alternative`
 
 "#]])
         .run();
+
+    validate_alt_upload(
+        r#"{
+            "authors": [],
+            "badges": {},
+            "categories": [],
+            "deps": [
+                {
+                    "default_features": true,
+                    "features": [],
+                    "kind": "normal",
+                    "name": "bar",
+                    "optional": false,
+                    "target": null,
+                    "version_req": "^0.0.1"
+                }
+            ],
+            "description": null,
+            "documentation": null,
+            "features": {},
+            "homepage": null,
+            "keywords": [],
+            "license": null,
+            "license_file": null,
+            "links": null,
+            "name": "foo",
+            "readme": null,
+            "readme_file": null,
+            "repository": null,
+            "homepage": null,
+            "documentation": null,
+            "rust_version": null,
+            "vers": "0.0.1"
+        }"#,
+        "foo-0.0.1.crate",
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+    );
 }
 
 #[cargo_test]
