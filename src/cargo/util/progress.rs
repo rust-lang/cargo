@@ -199,6 +199,12 @@ impl<'gctx> Progress<'gctx> {
     }
 }
 
+impl<'gctx> Drop for Progress<'gctx> {
+    fn drop(&mut self) {
+        self.clear();
+    }
+}
+
 /// Indicates the style of information for displaying the amount of progress.
 ///
 /// See also [`Progress::print_now`] for displaying progress without a bar.
@@ -319,12 +325,6 @@ impl<'gctx> State<'gctx> {
                 self.format.max_width = n;
             }
         }
-    }
-}
-
-impl<'gctx> Drop for State<'gctx> {
-    fn drop(&mut self) {
-        self.clear();
     }
 }
 
