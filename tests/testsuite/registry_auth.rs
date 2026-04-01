@@ -234,7 +234,7 @@ Caused by:
   [NOTE] the token does not include an authentication scheme
 
 Caused by:
-  failed to get successful HTTP response from `http://127.0.0.1:[..]/index/config.json`, got 401
+  failed to get successful HTTP response from `http://127.0.0.1:[..]/index/config.json` ([..]), got 401
   body:
   Unauthorized message from server.
 
@@ -276,7 +276,7 @@ Caused by:
   [NOTE] the token does not include an authentication scheme
 
 Caused by:
-  failed to get successful HTTP response from `http://127.0.0.1:[..]/index/config.json`, got 401
+  failed to get successful HTTP response from `http://127.0.0.1:[..]/index/config.json` ([..]), got 401
   body:
   Unauthorized message from server.
 
@@ -321,7 +321,7 @@ Caused by:
   [NOTE] the token does not include an authentication scheme
 
 Caused by:
-  failed to get successful HTTP response from `http://127.0.0.1:[..]/index/config.json`, got 401
+  failed to get successful HTTP response from `http://127.0.0.1:[..]/index/config.json` ([..]), got 401
   body:
   Unauthorized message from server.
 
@@ -416,7 +416,7 @@ Caused by:
   [NOTE] the token does not include an authentication scheme
 
 Caused by:
-  failed to get successful HTTP response from `http://127.0.0.1:[..]/index/config.json`, got 401
+  failed to get successful HTTP response from `http://127.0.0.1:[..]/index/config.json` ([..]), got 401
   body:
   Unauthorized message from server.
 
@@ -480,7 +480,7 @@ Caused by:
   or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
 
 Caused by:
-  failed to get successful HTTP response from `http://127.0.0.1:[..]/index/config.json`, got 401
+  failed to get successful HTTP response from `http://127.0.0.1:[..]/index/config.json` ([..]), got 401
   body:
   Unauthorized message from server.
 

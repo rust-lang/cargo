@@ -25,10 +25,10 @@ type HttpResult<T> = std::result::Result<T, Error>;
 #[derive(Debug, Clone, thiserror::Error)]
 #[non_exhaustive]
 pub enum Error {
-    #[error("curl multi failed")]
+    #[error(transparent)]
     Multi(#[from] curl::MultiError),
 
-    #[error("curl failed")]
+    #[error(transparent)]
     Easy(#[from] curl::Error),
 
     #[error("failed to convert header value of `{name}` to string: {bytes:?}")]
@@ -212,6 +212,7 @@ impl WorkerServer {
                         // Would be nice to set HTTP version via `response.version_mut()`, but `curl` doesn't have it exposed.
                         let extensions = Extensions {
                             client_ip: easy.primary_ip().ok().flatten().map(str::to_string),
+                            effective_url: easy.effective_url().ok().flatten().map(str::to_string),
                         };
                         response.extensions_mut().insert(extensions);
                         let _ = sender.send(result.map(|()| response).map_err(Into::into));
@@ -340,10 +341,12 @@ impl Handler for Collector {
 #[derive(Clone)]
 struct Extensions {
     client_ip: Option<String>,
+    effective_url: Option<String>,
 }
 
 pub trait ResponsePartsExtensions {
     fn client_ip(&self) -> Option<&str>;
+    fn effective_url(&self) -> Option<&str>;
 }
 
 impl ResponsePartsExtensions for http::response::Parts {
@@ -352,6 +355,12 @@ impl ResponsePartsExtensions for http::response::Parts {
             .get::<Extensions>()
             .and_then(|extensions| extensions.client_ip.as_deref())
     }
+
+    fn effective_url(&self) -> Option<&str> {
+        self.extensions
+            .get::<Extensions>()
+            .and_then(|extensions| extensions.effective_url.as_deref())
+    }
 }
 
 impl ResponsePartsExtensions for Response {
@@ -359,6 +368,12 @@ impl ResponsePartsExtensions for Response {
         self.extensions()
             .get::<Extensions>()
             .and_then(|extensions| extensions.client_ip.as_deref())
+    }
+
+    fn effective_url(&self) -> Option<&str> {
+        self.extensions()
+            .get::<Extensions>()
+            .and_then(|extensions| extensions.effective_url.as_deref())
     }
 }
 
