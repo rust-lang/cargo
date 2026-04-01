@@ -2025,10 +2025,14 @@ impl OutputOptions {
         // Remove old cache, ignore ENOENT, which is the common case.
         drop(fs::remove_file(&path));
         let cache_cell = Some((path, OnceCell::new()));
+
         let show_diagnostics =
             build_runner.bcx.gctx.warning_handling().unwrap_or_default() != WarningHandling::Allow;
+
+        let format = build_runner.bcx.build_config.message_format;
+
         OutputOptions {
-            format: build_runner.bcx.build_config.message_format,
+            format,
             cache_cell,
             show_diagnostics,
             warnings_seen: 0,
@@ -2037,15 +2041,19 @@ impl OutputOptions {
     }
 
     fn for_fresh(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> OutputOptions {
+        let cache_cell = None;
+
         // We always replay the output cache,
         // since it might contain future-incompat-report messages
         let show_diagnostics = unit.show_warnings(build_runner.bcx.gctx)
             && build_runner.bcx.gctx.warning_handling().unwrap_or_default()
                 != WarningHandling::Allow;
+
         let format = build_runner.bcx.build_config.message_format;
+
         OutputOptions {
             format,
-            cache_cell: None,
+            cache_cell,
             show_diagnostics,
             warnings_seen: 0,
             errors_seen: 0,
