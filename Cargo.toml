@@ -122,7 +122,7 @@ url = "2.5.8"
 varisat = "0.2.2"
 walkdir = "2.5.0"
 windows-sys = "0.61"
-winnow = "0.7.15"
+winnow = "1.0.1"
 
 [workspace.lints.rust]
 rust_2018_idioms = "warn" # TODO: could this be removed?
