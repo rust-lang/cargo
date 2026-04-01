@@ -41,6 +41,27 @@ fn requires_nightly() {
 }
 
 #[cargo_test]
+fn always_show_error_diags() {
+    let p = make_project_with_rustc_warning();
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["warnings"])
+        .env("RUSTFLAGS", "-Dunused_variables")
+        .arg("-Zwarnings")
+        .arg("--config")
+        .arg("build.warnings='allow'")
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[ERROR] could not compile `foo` (bin "foo")
+
+Caused by:
+  process didn't exit successfully: `rustc --crate-name foo --edition=2021 src/main.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --diagnostic-width=400 --crate-type bin --emit=dep-info,metadata -C embed-bitcode=no -C debuginfo=2 --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=cbc5c944f9a4e5cb -C extra-filename=-b1a006a0c806d1bb --out-dir [ROOT]/foo/target/debug/deps -L dependency=[ROOT]/foo/target/debug/deps -Dunused_variables` ([EXIT_STATUS]: 1)
+
+"#]])
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test]
 fn clippy() {
     let p = project()
         .file(
