@@ -81,6 +81,8 @@ macro_rules! t {
 }
 
 pub use cargo_util::ProcessBuilder;
+#[doc(inline)]
+pub use snapbox;
 pub use snapbox::file;
 pub use snapbox::str;
 pub use snapbox::utils::current_dir;
