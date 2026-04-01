@@ -33,7 +33,7 @@ fn warn_without_passing_unstable_flag() {
     p.cargo("run")
         .env("CARGO_BUILD_SBOM", "true")
         .masquerade_as_nightly_cargo(&["sbom"])
-        .with_stderr_data(snapbox::str![[r#"
+        .with_stderr_data(cargo_test_support::str![[r#"
 [WARNING] ignoring 'sbom' config, pass `-Zsbom` to enable it
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -65,7 +65,7 @@ fn simple() {
     // but other tests omit them for brevity.
     assert_e2e().eq(
         output,
-        snapbox::str![[r#"
+        cargo_test_support::str![[r#"
 {
   "crates": [
     {
@@ -129,7 +129,7 @@ fn with_multiple_crate_types() {
     let output = std::fs::read_to_string(sbom_path).unwrap();
     assert_e2e().eq(
         output,
-        snapbox::str![[r#"
+        cargo_test_support::str![[r#"
 {
   "crates": [
     {
@@ -185,7 +185,7 @@ fn with_simple_build_script() {
     let output = std::fs::read_to_string(path).unwrap();
     assert_e2e().eq(
         output,
-        snapbox::str![[r#"
+        cargo_test_support::str![[r#"
 {
   "crates": [
     {
@@ -271,7 +271,7 @@ fn with_build_dependencies() {
     let output = std::fs::read_to_string(path).unwrap();
     assert_e2e().eq(
         output,
-        snapbox::str![[r#"
+        cargo_test_support::str![[r#"
 {
   "crates": [
     {
@@ -397,7 +397,7 @@ fn crate_uses_different_features_for_build_and_normal_dependencies() {
     let output = std::fs::read_to_string(path).unwrap();
     assert_e2e().eq(
         output,
-        snapbox::str![[r#"
+        cargo_test_support::str![[r#"
 {
   "crates": [
     {
@@ -502,7 +502,7 @@ fn artifact_dep() {
     let output = std::fs::read_to_string(append_sbom_suffix(&p.dylib("foo"))).unwrap();
     assert_e2e().eq(
         output,
-        snapbox::str![[r#"
+        cargo_test_support::str![[r#"
 {
   "crates": [
     {
@@ -617,7 +617,7 @@ fn proc_macro() {
     let output = std::fs::read_to_string(append_sbom_suffix(&p.bin("foo"))).unwrap();
     assert_e2e().eq(
         output,
-        snapbox::str![[r#"
+        cargo_test_support::str![[r#"
 {
   "crates": [
     {
@@ -685,7 +685,7 @@ fn workspace_wrapper() {
         .env("CARGO_BUILD_SBOM", "true")
         .env("RUSTC_WRAPPER", wrapper.bin("wrapper"))
         .masquerade_as_nightly_cargo(&["sbom"])
-        .with_stderr_data(snapbox::str![[r#"
+        .with_stderr_data(cargo_test_support::str![[r#"
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 found sbom
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -697,7 +697,7 @@ found sbom
     let output = std::fs::read_to_string(file).unwrap();
     assert_e2e().eq(
         output,
-        snapbox::str![[r#"
+        cargo_test_support::str![[r#"
 {
   "crates": [
     {
