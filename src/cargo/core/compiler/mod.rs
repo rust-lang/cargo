@@ -220,19 +220,7 @@ fn compile<'gctx>(
                 };
                 work.then(link_targets(build_runner, unit, false)?)
             } else {
-                // We always replay the output cache,
-                // since it might contain future-incompat-report messages
-                let show_diagnostics = unit.show_warnings(build_runner.bcx.gctx)
-                    && build_runner.bcx.gctx.warning_handling().unwrap_or_default()
-                        != WarningHandling::Allow;
-                let format = build_runner.bcx.build_config.message_format;
-                let output_options = OutputOptions {
-                    format,
-                    cache_cell: None,
-                    show_diagnostics,
-                    warnings_seen: 0,
-                    errors_seen: 0,
-                };
+                let output_options = OutputOptions::for_fresh(build_runner, unit);
                 let manifest = ManifestErrorContext::new(build_runner, unit);
                 let work = replay_output_cache(
                     unit.pkg.package_id(),
@@ -2042,6 +2030,22 @@ impl OutputOptions {
         OutputOptions {
             format: build_runner.bcx.build_config.message_format,
             cache_cell,
+            show_diagnostics,
+            warnings_seen: 0,
+            errors_seen: 0,
+        }
+    }
+
+    fn for_fresh(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> OutputOptions {
+        // We always replay the output cache,
+        // since it might contain future-incompat-report messages
+        let show_diagnostics = unit.show_warnings(build_runner.bcx.gctx)
+            && build_runner.bcx.gctx.warning_handling().unwrap_or_default()
+                != WarningHandling::Allow;
+        let format = build_runner.bcx.build_config.message_format;
+        OutputOptions {
+            format,
+            cache_cell: None,
             show_diagnostics,
             warnings_seen: 0,
             errors_seen: 0,
