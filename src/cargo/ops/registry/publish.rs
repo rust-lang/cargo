@@ -11,12 +11,12 @@ use std::io::Seek;
 use std::io::SeekFrom;
 use std::time::Duration;
 
-use annotate_snippets::Level;
 use anyhow::Context as _;
 use anyhow::bail;
 use cargo_credential::Operation;
 use cargo_credential::Secret;
 use cargo_util::paths;
+use cargo_util_terminal::report::Level;
 use crates_io::NewCrate;
 use crates_io::NewCrateDependency;
 use crates_io::Registry;
@@ -298,12 +298,12 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
                 let short_pkg_descriptions = package_list(to_confirm.iter().copied(), "or");
                 if plan.is_empty() {
                     let report = &[
-                        annotate_snippets::Group::with_title(
-                        annotate_snippets::Level::NOTE
+                        cargo_util_terminal::report::Group::with_title(
+                        cargo_util_terminal::report::Level::NOTE
                             .secondary_title(format!(
                                 "waiting for {short_pkg_descriptions} to be available at {source_description}"
                             ))),
-                            annotate_snippets::Group::with_title(annotate_snippets::Level::HELP.secondary_title(format!(
+                            cargo_util_terminal::report::Group::with_title(cargo_util_terminal::report::Level::HELP.secondary_title(format!(
                                 "you may press ctrl-c to skip waiting; the {crate} should be available shortly",
                                 crate = if to_confirm.len() == 1 { "crate" } else {"crates"}
                             ))),

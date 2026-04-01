@@ -4,13 +4,13 @@ use std::fmt::Display;
 use std::ops::Range;
 use std::path::Path;
 
-use annotate_snippets::AnnotationKind;
-use annotate_snippets::Group;
-use annotate_snippets::Level;
-use annotate_snippets::Snippet;
 use cargo_util_schemas::manifest::RustVersion;
 use cargo_util_schemas::manifest::TomlLintLevel;
 use cargo_util_schemas::manifest::TomlToolLints;
+use cargo_util_terminal::report::AnnotationKind;
+use cargo_util_terminal::report::Group;
+use cargo_util_terminal::report::Level;
+use cargo_util_terminal::report::Snippet;
 use pathdiff::diff_paths;
 
 use crate::core::Workspace;

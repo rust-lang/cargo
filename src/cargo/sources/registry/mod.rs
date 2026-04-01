@@ -191,9 +191,9 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::task::{Poll, ready};
 
-use annotate_snippets::Level;
 use anyhow::Context as _;
 use cargo_util::paths::{self, exclude_from_backups_and_indexing};
+use cargo_util_terminal::report::Level;
 use flate2::read::GzDecoder;
 use serde::Deserialize;
 use serde::Serialize;

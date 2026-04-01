@@ -157,7 +157,6 @@ name = "cargo"
 path = "src/cargo/lib.rs"
 
 [dependencies]
-annotate-snippets.workspace = true
 anstream.workspace = true
 anstyle.workspace = true
 anstyle-progress.workspace = true

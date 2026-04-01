@@ -1,12 +1,12 @@
 use crate::cli;
 use crate::command_prelude::*;
-use annotate_snippets::Level;
 use anyhow::{bail, format_err};
 use cargo::core::dependency::DepKind;
 use cargo::ops::Packages;
 use cargo::ops::tree::{self, DisplayDepth, EdgeKind};
 use cargo::util::CargoResult;
 use cargo::util::print_available_packages;
+use cargo_util_terminal::report::Level;
 use clap_complete::ArgValueCandidates;
 use std::collections::HashSet;
 use std::str::FromStr;

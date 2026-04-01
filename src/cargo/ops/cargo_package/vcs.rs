@@ -5,9 +5,9 @@ use crate::ops::PackageOpts;
 use crate::sources::PathEntry;
 use crate::{CargoResult, GlobalContext};
 
-use annotate_snippets::Level;
 use anyhow::Context;
 use cargo_util::paths;
+use cargo_util_terminal::report::Level;
 use gix::bstr::BString;
 use gix::bstr::ByteSlice;
 use gix::bstr::ByteVec;

@@ -6,10 +6,10 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::task::Poll;
 
-use annotate_snippets::Level;
 use anyhow::{Context as _, bail, format_err};
 use cargo_util::paths;
 use cargo_util_schemas::core::PartialVersion;
+use cargo_util_terminal::report::Level;
 use ops::FilterRule;
 use serde::{Deserialize, Serialize};
 

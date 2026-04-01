@@ -10,6 +10,7 @@ mod shell;
 
 pub mod style;
 
+pub use annotate_snippets as report;
 pub use shell::ColorChoice;
 pub use shell::Hyperlink;
 pub use shell::Shell;

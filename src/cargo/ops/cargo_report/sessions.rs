@@ -1,6 +1,6 @@
 //! The `cargo report sessions` command.
 
-use annotate_snippets::Level;
+use cargo_util_terminal::report::Level;
 
 use crate::CargoResult;
 use crate::GlobalContext;

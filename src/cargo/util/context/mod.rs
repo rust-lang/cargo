@@ -91,11 +91,11 @@ use crate::util::restricted_names::is_glob_pattern;
 use crate::util::{CanonicalUrl, closest_msg, internal};
 use crate::util::{Filesystem, IntoUrl, IntoUrlWithBase, Rustc};
 
-use annotate_snippets::Level;
 use anyhow::{Context as _, anyhow, bail, format_err};
 use cargo_credential::Secret;
 use cargo_util::paths;
 use cargo_util_schemas::manifest::RegistryName;
+use cargo_util_terminal::report::Level;
 use cargo_util_terminal::{Shell, Verbosity};
 use curl::easy::Easy;
 use itertools::Itertools;

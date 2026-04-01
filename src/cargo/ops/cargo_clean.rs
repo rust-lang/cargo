@@ -7,9 +7,9 @@ use crate::util::edit_distance;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::{GlobalContext, Progress, ProgressStyle};
-use annotate_snippets::Level;
 use anyhow::bail;
 use cargo_util::paths;
+use cargo_util_terminal::report::Level;
 use indexmap::{IndexMap, IndexSet};
 
 use std::ffi::OsString;

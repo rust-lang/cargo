@@ -1,8 +1,8 @@
-use annotate_snippets::Level;
 use anyhow::{Context as _, anyhow};
 use cargo::core::{CliUnstable, features};
 use cargo::util::context::TermConfig;
 use cargo::{CargoResult, drop_print, drop_println};
+use cargo_util_terminal::report::Level;
 use clap::builder::UnknownArgumentValueParser;
 use itertools::Itertools;
 use std::collections::HashMap;

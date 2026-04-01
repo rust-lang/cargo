@@ -64,9 +64,9 @@ use std::ops::Range;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, LazyLock};
 
-use annotate_snippets::{AnnotationKind, Group, Level, Renderer, Snippet};
 use anyhow::{Context as _, Error};
 use cargo_platform::{Cfg, Platform};
+use cargo_util_terminal::report::{AnnotationKind, Group, Level, Renderer, Snippet};
 use itertools::Itertools;
 use regex::Regex;
 use tracing::{debug, instrument, trace};
@@ -2435,7 +2435,7 @@ impl ManifestErrorContext {
                 .shell()
                 .err_width()
                 .diagnostic_terminal_width()
-                .unwrap_or(annotate_snippets::renderer::DEFAULT_TERM_WIDTH),
+                .unwrap_or(cargo_util_terminal::report::renderer::DEFAULT_TERM_WIDTH),
         }
     }
 
