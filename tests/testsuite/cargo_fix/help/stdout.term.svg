@@ -144,7 +144,7 @@
 </tspan>
     <tspan x="10px" y="1126px">
 </tspan>
-    <tspan x="10px" y="1144px"><tspan>Run `</tspan><tspan class="fg-bright-cyan bold">cargo help fix</tspan><tspan class="bold">` for more detailed information.</tspan>
+    <tspan x="10px" y="1144px"><tspan>Run `</tspan><tspan class="fg-bright-cyan bold">cargo help fix</tspan><tspan>` for more detailed information.</tspan>
 </tspan>
     <tspan x="10px" y="1162px">
 </tspan>

@@ -64,7 +64,7 @@
 </tspan>
     <tspan x="10px" y="406px">
 </tspan>
-    <tspan x="10px" y="424px"><tspan>Run `</tspan><tspan class="fg-bright-cyan bold">cargo help fetch</tspan><tspan class="bold">` for more detailed information.</tspan>
+    <tspan x="10px" y="424px"><tspan>Run `</tspan><tspan class="fg-bright-cyan bold">cargo help fetch</tspan><tspan>` for more detailed information.</tspan>
 </tspan>
     <tspan x="10px" y="442px">
 </tspan>

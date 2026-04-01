@@ -1,7 +1,7 @@
 <svg width="827px" height="398px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
-    .bg { background: #000000 }
+    .bg { fill: #000000 }
     .fg-bright-cyan { fill: #55FFFF }
     .fg-bright-green { fill: #55FF55 }
     .fg-cyan { fill: #00AAAA }
@@ -24,7 +24,7 @@
 </tspan>
     <tspan x="10px" y="46px">
 </tspan>
-    <tspan x="10px" y="64px"><tspan>Use `</tspan><tspan class="fg-bright-cyan bold">cargo metadata --no-deps</tspan><tspan class="bold">` instead.</tspan>
+    <tspan x="10px" y="64px"><tspan>Use `</tspan><tspan class="fg-bright-cyan bold">cargo metadata --no-deps</tspan><tspan>` instead.</tspan>
 </tspan>
     <tspan x="10px" y="82px">
 </tspan>

@@ -1,7 +1,7 @@
-<svg width="740px" height="794px" xmlns="http://www.w3.org/2000/svg">
+<svg width="886px" height="794px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
-    .bg { background: #000000 }
+    .bg { fill: #000000 }
     .fg-blue { fill: #0000AA }
     .fg-bright-blue { fill: #5555FF }
     .fg-bright-cyan { fill: #55FFFF }
@@ -12,7 +12,7 @@
       line-height: 18px;
     }
     .bold { font-weight: bold; }
-    .dimmed { opacity: 0.7; }
+    .dimmed { opacity: 0.4; }
     tspan {
       font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
       white-space: pre;
@@ -39,7 +39,7 @@
 </tspan>
     <tspan x="10px" y="154px"><tspan class="dimmed">│</tspan><tspan>   </tspan><tspan class="fg-magenta dimmed"> </tspan><tspan>   </tspan><tspan class="dimmed"> </tspan><tspan>   </tspan><tspan class="fg-magenta dimmed"> </tspan><tspan>   </tspan><tspan class="fg-bright-blue bold">[build-dependencies]</tspan>
 </tspan>
-    <tspan x="10px" y="172px"><tspan class="bold dimmed">│</tspan><tspan>   </tspan><tspan class="fg-magenta dimmed"> </tspan><tspan>   </tspan><tspan class="dimmed"> </tspan><tspan>   </tspan><tspan class="fg-magenta dimmed"> </tspan><tspan>   </tspan><tspan class="fg-blue bold">└──</tspan><tspan> normal_b_build_a feature "default"</tspan>
+    <tspan x="10px" y="172px"><tspan class="dimmed">│</tspan><tspan>   </tspan><tspan class="fg-magenta dimmed"> </tspan><tspan>   </tspan><tspan class="dimmed"> </tspan><tspan>   </tspan><tspan class="fg-magenta dimmed"> </tspan><tspan>   </tspan><tspan class="fg-blue bold">└──</tspan><tspan> normal_b_build_a feature "default"</tspan>
 </tspan>
     <tspan x="10px" y="190px"><tspan class="dimmed">│</tspan><tspan>   </tspan><tspan class="fg-magenta dimmed"> </tspan><tspan>   </tspan><tspan class="dimmed"> </tspan><tspan>   </tspan><tspan class="fg-magenta dimmed"> </tspan><tspan>   </tspan><tspan class="fg-blue bold"> </tspan><tspan>   </tspan><tspan class="fg-magenta dimmed">└──</tspan><tspan> normal_b_build_a v1.0.0</tspan>
 </tspan>

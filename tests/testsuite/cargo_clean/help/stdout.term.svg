@@ -82,7 +82,7 @@
 </tspan>
     <tspan x="10px" y="568px">
 </tspan>
-    <tspan x="10px" y="586px"><tspan>Run `</tspan><tspan class="fg-bright-cyan bold">cargo help clean</tspan><tspan class="bold">` for more detailed information.</tspan>
+    <tspan x="10px" y="586px"><tspan>Run `</tspan><tspan class="fg-bright-cyan bold">cargo help clean</tspan><tspan>` for more detailed information.</tspan>
 </tspan>
     <tspan x="10px" y="604px">
 </tspan>

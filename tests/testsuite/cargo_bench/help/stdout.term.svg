@@ -140,7 +140,7 @@
 </tspan>
     <tspan x="10px" y="1090px">
 </tspan>
-    <tspan x="10px" y="1108px"><tspan>Run `</tspan><tspan class="fg-bright-cyan bold">cargo help bench</tspan><tspan class="bold">` for more detailed information.</tspan>
+    <tspan x="10px" y="1108px"><tspan>Run `</tspan><tspan class="fg-bright-cyan bold">cargo help bench</tspan><tspan>` for more detailed information.</tspan>
 </tspan>
     <tspan x="10px" y="1126px">
 </tspan>
