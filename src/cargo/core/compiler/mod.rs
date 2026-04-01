@@ -223,7 +223,8 @@ fn compile<'gctx>(
                 // We always replay the output cache,
                 // since it might contain future-incompat-report messages
                 let show_diagnostics = unit.show_warnings(build_runner.bcx.gctx)
-                    && build_runner.bcx.gctx.warning_handling()? != WarningHandling::Allow;
+                    && build_runner.bcx.gctx.warning_handling().unwrap_or_default()
+                        != WarningHandling::Allow;
                 let format = build_runner.bcx.build_config.message_format;
                 let output_options = OutputOptions {
                     format,
