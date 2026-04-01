@@ -186,7 +186,6 @@ fn compile<'gctx>(
     exec: &Arc<dyn Executor>,
     force_rebuild: bool,
 ) -> CargoResult<()> {
-    let bcx = build_runner.bcx;
     if !build_runner.compiled.insert(unit.clone()) {
         return Ok(());
     }
@@ -223,7 +222,7 @@ fn compile<'gctx>(
             } else {
                 // We always replay the output cache,
                 // since it might contain future-incompat-report messages
-                let show_diagnostics = unit.show_warnings(bcx.gctx)
+                let show_diagnostics = unit.show_warnings(build_runner.bcx.gctx)
                     && build_runner.bcx.gctx.warning_handling()? != WarningHandling::Allow;
                 let format = build_runner.bcx.build_config.message_format;
                 let output_options = OutputOptions {
