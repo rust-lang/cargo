@@ -419,7 +419,7 @@ fn pkgid_json_message_metadata_consistency() {
     let output = std::fs::read_to_string(&path).unwrap();
     assert_e2e().eq(
         output,
-        snapbox::str![[r#"
+        cargo_test_support::str![[r#"
 {
   "crates": [
     {

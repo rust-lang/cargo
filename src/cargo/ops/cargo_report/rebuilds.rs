@@ -5,10 +5,10 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
 
-use annotate_snippets::Group;
-use annotate_snippets::Level;
 use anyhow::Context as _;
 use cargo_util_schemas::core::PackageIdSpec;
+use cargo_util_terminal::report::Group;
+use cargo_util_terminal::report::Level;
 use itertools::Itertools as _;
 
 use crate::AlreadyPrintedError;

@@ -14,10 +14,10 @@ use crate::util::errors::CargoResult;
 use crate::util::{Filesystem, GlobalContext, Rustc};
 use crate::{drop_println, ops};
 
-use annotate_snippets::Level;
 use anyhow::{Context as _, bail};
 use cargo_util::paths;
 use cargo_util_schemas::core::PartialVersion;
+use cargo_util_terminal::report::Level;
 use itertools::Itertools;
 use semver::VersionReq;
 use tempfile::Builder as TempFileBuilder;

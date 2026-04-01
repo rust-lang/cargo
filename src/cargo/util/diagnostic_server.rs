@@ -9,11 +9,11 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::{self, JoinHandle};
 
-use annotate_snippets::Group;
-use annotate_snippets::Level;
-use annotate_snippets::Origin;
 use anyhow::{Context as _, Error};
 use cargo_util::ProcessBuilder;
+use cargo_util_terminal::report::Group;
+use cargo_util_terminal::report::Level;
+use cargo_util_terminal::report::Origin;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 

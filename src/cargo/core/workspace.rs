@@ -4,8 +4,8 @@ use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
-use annotate_snippets::Level;
 use anyhow::{Context as _, anyhow, bail};
+use cargo_util_terminal::report::Level;
 use glob::glob;
 use itertools::Itertools;
 use tracing::debug;

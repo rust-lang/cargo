@@ -505,7 +505,7 @@ https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch
         current_reports.save_report(bcx.ws, suggestion_message.clone(), rendered_report);
 
     if should_display_message || bcx.build_config.future_incompat_report {
-        use annotate_snippets::*;
+        use cargo_util_terminal::report::*;
         let mut report = vec![Group::with_title(Level::WARNING.secondary_title(format!(
             "the following packages contain code that will be rejected by a future \
              version of Rust: {}",

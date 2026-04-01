@@ -5,9 +5,9 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
 
-use annotate_snippets::Level;
 use anyhow::Context as _;
 use cargo_util::paths;
+use cargo_util_terminal::report::Level;
 use indexmap::IndexMap;
 use indexmap::map::Entry;
 use itertools::Itertools as _;

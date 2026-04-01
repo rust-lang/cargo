@@ -61,7 +61,7 @@ use crate::util::log_message::LogMessage;
 use crate::util::{CargoResult, StableHasher};
 
 mod compile_filter;
-use annotate_snippets::{Group, Level, Origin};
+use cargo_util_terminal::report::{Group, Level, Origin};
 pub use compile_filter::{CompileFilter, FilterRule, LibRule};
 
 pub(super) mod unit_generator;

@@ -1,4 +1,4 @@
-use annotate_snippets::{AnnotationKind, Group, Level, Snippet};
+use cargo_util_terminal::report::{AnnotationKind, Group, Level, Snippet};
 use std::borrow::Cow;
 use std::cell::OnceCell;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
