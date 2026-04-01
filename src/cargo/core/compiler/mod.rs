@@ -225,14 +225,21 @@ fn compile<'gctx>(
                 // since it might contain future-incompat-report messages
                 let show_diagnostics = unit.show_warnings(bcx.gctx)
                     && build_runner.bcx.gctx.warning_handling()? != WarningHandling::Allow;
+                let format = build_runner.bcx.build_config.message_format;
+                let output_options = OutputOptions {
+                    format,
+                    cache_cell: None,
+                    show_diagnostics,
+                    warnings_seen: 0,
+                    errors_seen: 0,
+                };
                 let manifest = ManifestErrorContext::new(build_runner, unit);
                 let work = replay_output_cache(
                     unit.pkg.package_id(),
                     manifest,
                     &unit.target,
                     build_runner.files().message_cache_path(unit),
-                    build_runner.bcx.build_config.message_format,
-                    show_diagnostics,
+                    output_options,
                 );
                 // Need to link targets on both the dirty and fresh.
                 work.then(link_targets(build_runner, unit, true)?)
@@ -2537,17 +2544,9 @@ fn replay_output_cache(
     manifest: ManifestErrorContext,
     target: &Target,
     path: PathBuf,
-    format: MessageFormat,
-    show_diagnostics: bool,
+    mut output_options: OutputOptions,
 ) -> Work {
     let target = target.clone();
-    let mut options = OutputOptions {
-        format,
-        cache_cell: None,
-        show_diagnostics,
-        warnings_seen: 0,
-        errors_seen: 0,
-    };
     Work::new(move |state| {
         if !path.exists() {
             // No cached output, probably didn't emit anything.
@@ -2565,7 +2564,14 @@ fn replay_output_cache(
                 break;
             }
             let trimmed = line.trim_end_matches(&['\n', '\r'][..]);
-            on_stderr_line(state, trimmed, package_id, &manifest, &target, &mut options)?;
+            on_stderr_line(
+                state,
+                trimmed,
+                package_id,
+                &manifest,
+                &target,
+                &mut output_options,
+            )?;
             line.clear();
         }
         Ok(())
