@@ -4128,7 +4128,6 @@ dependencies = [
  "proptest",
  "serde",
  "serde_json",
- "similar",
  "snapbox",
  "tempfile",
  "thiserror 2.0.18",

@@ -102,7 +102,6 @@ serde_json = "1.0.149"
 sha1 = "0.11.0"
 sha2 = "0.11.0"
 shell-escape = "0.1.5"
-similar = "2.7.0"
 supports-hyperlinks = "3.2.0"
 supports-unicode = "3.0.0"
 snapbox = { version = "1.2.0", features = ["diff", "dir", "term-svg", "regex", "json"] }
