@@ -6,7 +6,10 @@
 //! file verify the files saved to disk are in the correct locations according to the `build-dir`
 //! configuration.
 //!
-//! Tests check if directories match some "layout" by using [`CargoPathExt::assert_file_layout`]
+//! Tests check if directories match some "layout" by using [`CargoPathExt::assert_build_dir_layout`]
+//!
+//! Note: This file is mirrored by build_dir_legacy.rs which contains the same test with no
+//! unstable flags.
 
 use std::path::PathBuf;
 
