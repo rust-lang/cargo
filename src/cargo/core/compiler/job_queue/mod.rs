@@ -988,9 +988,17 @@ impl<'gctx> DrainState<'gctx> {
         let is_fresh = job.freshness().is_fresh();
         let rmeta_required = build_runner.rmeta_required(unit);
         let lock_manager = build_runner.lock_manager.clone();
+        let warning_handling = build_runner.bcx.gctx.warning_handling().unwrap_or_default();
 
         let doit = move |diag_dedupe| {
-            let state = JobState::new(id, messages, diag_dedupe, rmeta_required, lock_manager);
+            let state = JobState::new(
+                id,
+                messages,
+                diag_dedupe,
+                rmeta_required,
+                lock_manager,
+                warning_handling,
+            );
             state.run_to_finish(job);
         };
 

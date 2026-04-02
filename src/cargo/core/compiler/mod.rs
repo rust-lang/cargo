@@ -105,7 +105,6 @@ use crate::core::profiles::{PanicStrategy, Profile, StripInner};
 use crate::core::{Feature, PackageId, Target};
 use crate::lints::get_key_value;
 use crate::util::OnceExt;
-use crate::util::context::WarningHandling;
 use crate::util::errors::{CargoResult, VerboseError};
 use crate::util::interning::InternedString;
 use crate::util::machine_message::{self, Message};
@@ -2026,8 +2025,7 @@ impl OutputOptions {
         drop(fs::remove_file(&path));
         let cache_cell = Some((path, OnceCell::new()));
 
-        let show_diagnostics =
-            build_runner.bcx.gctx.warning_handling().unwrap_or_default() != WarningHandling::Allow;
+        let show_diagnostics = true;
 
         let format = build_runner.bcx.build_config.message_format;
 
@@ -2045,9 +2043,7 @@ impl OutputOptions {
 
         // We always replay the output cache,
         // since it might contain future-incompat-report messages
-        let show_diagnostics = unit.show_warnings(build_runner.bcx.gctx)
-            && build_runner.bcx.gctx.warning_handling().unwrap_or_default()
-                != WarningHandling::Allow;
+        let show_diagnostics = unit.show_warnings(build_runner.bcx.gctx);
 
         let format = build_runner.bcx.build_config.message_format;
 

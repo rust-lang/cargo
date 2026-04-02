@@ -41,6 +41,26 @@ fn requires_nightly() {
 }
 
 #[cargo_test]
+fn always_show_error_diags() {
+    let p = make_project_with_rustc_warning();
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["warnings"])
+        .env("RUSTFLAGS", "-Dunused_variables")
+        .arg("-Zwarnings")
+        .arg("--config")
+        .arg("build.warnings='allow'")
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[ERROR] unused variable: `x`
+...
+[ERROR] could not compile `foo` (bin "foo") due to 1 previous error
+
+"#]])
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test]
 fn clippy() {
     let p = project()
         .file(
