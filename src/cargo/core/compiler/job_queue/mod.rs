@@ -650,9 +650,7 @@ impl<'gctx> DrainState<'gctx> {
                 }
             }
             Message::Warning { id, warning } => {
-                if warning_handling != WarningHandling::Allow {
-                    build_runner.bcx.gctx.shell().warn(warning)?;
-                }
+                build_runner.bcx.gctx.shell().warn(warning)?;
                 let lint = false;
                 let emitted = true;
                 let fixable = false;
