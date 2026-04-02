@@ -417,6 +417,11 @@ fn hard_warning_allow() {
 [WARNING] `package.edition` is unspecified, defaulting to `2015` while the latest is `[..]`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] foo@0.0.1: from a build script
+[WARNING] [..]
+
+[WARNING] [..]
+
+[WARNING] `foo` (bin "foo") generated 2 warnings
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])

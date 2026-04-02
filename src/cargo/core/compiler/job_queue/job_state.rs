@@ -111,7 +111,7 @@ impl<'a, 'gctx> JobState<'a, 'gctx> {
         lint: bool,
         fixable: bool,
     ) -> CargoResult<()> {
-        if level == "warning" && self.warning_handling == WarningHandling::Allow {
+        if level == "warning" && lint && self.warning_handling == WarningHandling::Allow {
             tracing::warn!("{diag}");
         } else if let Some(dedupe) = self.output {
             let emitted = dedupe.emit_diag(&diag)?;
