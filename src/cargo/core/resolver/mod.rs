@@ -122,7 +122,7 @@ mod version_prefs;
 pub fn resolve(
     summaries: &[(Summary, ResolveOpts)],
     replacements: &[(PackageIdSpec, Dependency)],
-    registry: &mut impl Registry,
+    registry: &impl Registry,
     version_prefs: &VersionPreferences,
     resolve_version: ResolveVersion,
     gctx: Option<&GlobalContext>,
@@ -146,10 +146,8 @@ pub fn resolve(
             gctx,
             &mut past_conflicting_activations,
         )?;
-        if registry.reset_pending() {
+        if registry.wait()? {
             break resolver_ctx;
-        } else {
-            registry.registry.block_until_ready()?;
         }
     };
 
@@ -350,7 +348,7 @@ fn activate_deps_loop(
                         debug!("no candidates found");
                         Err(errors::activation_error(
                             &resolver_ctx,
-                            registry.registry,
+                            registry.registry(),
                             &parent,
                             &dep,
                             &conflicting_activations,
@@ -648,7 +646,7 @@ fn activate(
             // does. TBH it basically cause panics in the test suite if
             // `parent` is passed through here and `[replace]` is otherwise
             // on life support so it's not critical to fix bugs anyway per se.
-            if cx.flag_activated(replace, opts, None)? && activated {
+            if cx.flag_activated(&replace, opts, None)? && activated {
                 return Ok(None);
             }
             trace!(

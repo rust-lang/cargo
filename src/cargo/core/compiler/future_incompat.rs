@@ -40,11 +40,11 @@ use crate::sources::source::QueryKind;
 use crate::util::CargoResult;
 use crate::util::cache_lock::CacheLockMode;
 use anyhow::{Context, bail, format_err};
+use futures::stream::FuturesUnordered;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt::Write as _;
 use std::io::{Read, Write};
-use std::task::Poll;
 
 pub const REPORT_PREAMBLE: &str = "\
 The following warnings were discovered during the build. These warnings are an
@@ -308,7 +308,7 @@ fn get_updates(ws: &Workspace<'_>, package_ids: &BTreeSet<PackageId>) -> Option<
         .ok()?;
     // Create a set of updated registry sources.
     let map = SourceConfigMap::new(ws.gctx()).ok()?;
-    let mut package_ids: BTreeSet<_> = package_ids
+    let package_ids: BTreeSet<_> = package_ids
         .iter()
         .filter(|pkg_id| pkg_id.source_id().is_registry())
         .collect();
@@ -316,7 +316,7 @@ fn get_updates(ws: &Workspace<'_>, package_ids: &BTreeSet<PackageId>) -> Option<
         .iter()
         .map(|pkg_id| pkg_id.source_id())
         .collect();
-    let mut sources: HashMap<_, _> = source_ids
+    let sources: HashMap<_, _> = source_ids
         .into_iter()
         .filter_map(|sid| {
             let source = map.load(sid, &HashSet::new()).ok()?;
@@ -325,28 +325,18 @@ fn get_updates(ws: &Workspace<'_>, package_ids: &BTreeSet<PackageId>) -> Option<
         .collect();
 
     // Query the sources for new versions, mapping `package_ids` into `summaries`.
-    let mut summaries = Vec::new();
-    while !package_ids.is_empty() {
-        package_ids.retain(|&pkg_id| {
-            let Some(source) = sources.get_mut(&pkg_id.source_id()) else {
-                return false;
-            };
-            let Ok(dep) = Dependency::parse(pkg_id.name(), None, pkg_id.source_id()) else {
-                return false;
-            };
-            match source.query_vec(&dep, QueryKind::Exact) {
-                Poll::Ready(Ok(sum)) => {
-                    summaries.push((pkg_id, sum));
-                    false
-                }
-                Poll::Ready(Err(_)) => false,
-                Poll::Pending => true,
-            }
-        });
-        for (_, source) in sources.iter_mut() {
-            source.block_until_ready().ok()?;
+    let pending = FuturesUnordered::new();
+    for pkg_id in package_ids {
+        if let Some(source) = sources.get(&pkg_id.source_id())
+            && let Ok(dep) = Dependency::parse(pkg_id.name(), None, pkg_id.source_id())
+        {
+            pending.push(async move {
+                let sum = source.query_vec(&dep, QueryKind::Exact).await.ok()?;
+                Some((pkg_id, sum))
+            });
         }
     }
+    let summaries = crate::util::block_on_stream(pending).flatten();
 
     let mut updates = String::new();
     for (pkg_id, summaries) in summaries {

@@ -1,7 +1,7 @@
+use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::fmt::{self, Debug, Formatter};
 use std::path::{Path, PathBuf};
-use std::task::Poll;
 
 use crate::core::{Dependency, Package, PackageId, SourceId};
 use crate::sources::IndexSummary;
@@ -60,9 +60,9 @@ pub struct DirectorySource<'gctx> {
     /// The root path of this source.
     root: PathBuf,
     /// Packages that this sources has discovered.
-    packages: HashMap<PackageId, (Package, Checksum)>,
+    packages: RefCell<HashMap<PackageId, (Package, Checksum)>>,
     gctx: &'gctx GlobalContext,
-    updated: bool,
+    updated: Cell<bool>,
 }
 
 /// The checksum file to ensure the integrity of a package in a directory source.
@@ -84,57 +84,16 @@ impl<'gctx> DirectorySource<'gctx> {
             source_id: id,
             root: path.to_path_buf(),
             gctx,
-            packages: HashMap::new(),
-            updated: false,
+            packages: RefCell::new(HashMap::new()),
+            updated: Cell::new(false),
         }
     }
-}
 
-impl<'gctx> Debug for DirectorySource<'gctx> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "DirectorySource {{ root: {:?} }}", self.root)
-    }
-}
-
-impl<'gctx> Source for DirectorySource<'gctx> {
-    fn query(
-        &mut self,
-        dep: &Dependency,
-        kind: QueryKind,
-        f: &mut dyn FnMut(IndexSummary),
-    ) -> Poll<CargoResult<()>> {
-        if !self.updated {
-            return Poll::Pending;
-        }
-        let packages = self.packages.values().map(|p| &p.0);
-        let matches = packages.filter(|pkg| match kind {
-            QueryKind::Exact | QueryKind::RejectedVersions => dep.matches(pkg.summary()),
-            QueryKind::AlternativeNames => true,
-            QueryKind::Normalized => dep.matches(pkg.summary()),
-        });
-        for summary in matches.map(|pkg| pkg.summary().clone()) {
-            f(IndexSummary::Candidate(summary));
-        }
-        Poll::Ready(Ok(()))
-    }
-
-    fn supports_checksums(&self) -> bool {
-        true
-    }
-
-    fn requires_precise(&self) -> bool {
-        true
-    }
-
-    fn source_id(&self) -> SourceId {
-        self.source_id
-    }
-
-    fn block_until_ready(&mut self) -> CargoResult<()> {
-        if self.updated {
+    fn update(&self) -> CargoResult<()> {
+        if self.updated.get() {
             return Ok(());
         }
-        self.packages.clear();
+        self.packages.borrow_mut().clear();
         let entries = self.root.read_dir().with_context(|| {
             format!(
                 "failed to read root of directory source: {}",
@@ -201,15 +160,61 @@ impl<'gctx> Source for DirectorySource<'gctx> {
                     .summary_mut()
                     .set_checksum(package.clone());
             }
-            self.packages.insert(pkg.package_id(), (pkg, cksum));
+            self.packages
+                .borrow_mut()
+                .insert(pkg.package_id(), (pkg, cksum));
         }
 
-        self.updated = true;
+        self.updated.set(true);
+        Ok(())
+    }
+}
+
+impl<'gctx> Debug for DirectorySource<'gctx> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "DirectorySource {{ root: {:?} }}", self.root)
+    }
+}
+
+#[async_trait::async_trait(?Send)]
+impl<'gctx> Source for DirectorySource<'gctx> {
+    async fn query(
+        &self,
+        dep: &Dependency,
+        kind: QueryKind,
+        f: &mut dyn FnMut(IndexSummary),
+    ) -> CargoResult<()> {
+        if !self.updated.get() {
+            self.update()?;
+        }
+        let packages = self.packages.borrow();
+        let packages = packages.values().map(|p| &p.0);
+        let matches = packages.filter(|pkg| match kind {
+            QueryKind::Exact | QueryKind::RejectedVersions => dep.matches(pkg.summary()),
+            QueryKind::AlternativeNames => true,
+            QueryKind::Normalized => dep.matches(pkg.summary()),
+        });
+        for summary in matches.map(|pkg| pkg.summary().clone()) {
+            f(IndexSummary::Candidate(summary));
+        }
         Ok(())
     }
 
-    fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
+    fn supports_checksums(&self) -> bool {
+        true
+    }
+
+    fn requires_precise(&self) -> bool {
+        true
+    }
+
+    fn source_id(&self) -> SourceId {
+        self.source_id
+    }
+
+    fn download(&self, id: PackageId) -> CargoResult<MaybePackage> {
         self.packages
+            .borrow()
             .get(&id)
             .map(|p| &p.0)
             .cloned()
@@ -217,7 +222,7 @@ impl<'gctx> Source for DirectorySource<'gctx> {
             .ok_or_else(|| anyhow::format_err!("failed to find package with id: {}", id))
     }
 
-    fn finish_download(&mut self, _id: PackageId, _data: Vec<u8>) -> CargoResult<Package> {
+    fn finish_download(&self, _id: PackageId, _data: Vec<u8>) -> CargoResult<Package> {
         panic!("no downloads to do")
     }
 
@@ -226,7 +231,8 @@ impl<'gctx> Source for DirectorySource<'gctx> {
     }
 
     fn verify(&self, id: PackageId) -> CargoResult<()> {
-        let Some((pkg, cksum)) = self.packages.get(&id) else {
+        let packages = self.packages.borrow_mut();
+        let Some((pkg, cksum)) = packages.get(&id) else {
             anyhow::bail!("failed to find entry for `{}` in directory source", id);
         };
 
@@ -261,13 +267,13 @@ impl<'gctx> Source for DirectorySource<'gctx> {
         format!("directory source `{}`", self.root.display())
     }
 
-    fn add_to_yanked_whitelist(&mut self, _pkgs: &[PackageId]) {}
+    fn add_to_yanked_whitelist(&self, _pkgs: &[PackageId]) {}
 
-    fn is_yanked(&mut self, _pkg: PackageId) -> Poll<CargoResult<bool>> {
-        Poll::Ready(Ok(false))
+    async fn is_yanked(&self, _pkg: PackageId) -> CargoResult<bool> {
+        Ok(false)
     }
 
-    fn invalidate_cache(&mut self) {
+    fn invalidate_cache(&self) {
         // Directory source has no local cache.
     }
 
