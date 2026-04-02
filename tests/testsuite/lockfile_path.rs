@@ -352,13 +352,12 @@ bar = "0.1.0"
 }
 
 #[cargo_test]
-fn config_install_respects_lock_file_path() {
-    // `cargo install` will imply --locked when lockfile path is provided
-    Package::new("bar", "0.1.0").publish();
-    Package::new("bar", "0.1.1")
+fn config_install_ignores_lock_file_path() {
+    Package::new("bar", "0.1.0")
         .file("src/lib.rs", "not rust")
         .publish();
-    // Publish with lockfile containing bad version of `bar` (0.1.1)
+    Package::new("bar", "0.1.1").publish();
+    // Publish with lockfile containing good version of `bar` (0.1.1)
     Package::new("foo", "0.1.0")
         .dep("bar", "0.1")
         .file("src/lib.rs", "")
@@ -386,16 +385,9 @@ dependencies = [
 
     let p = project().at("install").build();
 
-    p.cargo("install foo --locked")
-        .with_stderr_data(str![[r#"
-...
-[..]not rust[..]
-...
-"#]])
-        .with_status(101)
-        .run();
+    p.cargo("install foo --locked").run();
 
-    // Create lockfile with the good `bar` version (0.1.0) and use it for install
+    // Create lockfile with the bad `bar` version (0.1.0) and see it ignored for install
     project()
         .file(
             "Cargo.lock",
@@ -422,34 +414,6 @@ dependencies = [
 
     assert!(paths::root().join("foo/Cargo.lock").is_file());
     assert_has_installed_exe(paths::cargo_home(), "foo");
-}
-
-#[cargo_test]
-fn config_install_lock_file_path_must_present() {
-    // `cargo install` will imply --locked when lockfile path is provided
-    Package::new("bar", "0.1.0").publish();
-    Package::new("foo", "0.1.0")
-        .dep("bar", "0.1")
-        .file("src/lib.rs", "")
-        .file(
-            "src/main.rs",
-            "extern crate foo; extern crate bar; fn main() {}",
-        )
-        .publish();
-
-    let p = project().at("install").build();
-
-    p.cargo("install foo --locked -Zlockfile-path")
-        .masquerade_as_nightly_cargo(&["lockfile-path"])
-        .arg("--config")
-        .arg("resolver.lockfile-path='../lockfile_dir/Cargo.lock'")
-        .with_stderr_data(str![[r#"
-...
-[ERROR] no Cargo.lock file found in the requested path [ROOT]/install/../lockfile_dir/Cargo.lock
-...
-"#]])
-        .with_status(101)
-        .run();
 }
 
 #[cargo_test(nightly, reason = "-Zscript is unstable")]

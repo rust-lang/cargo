@@ -219,23 +219,11 @@ impl<'gctx> InstallablePackage<'gctx> {
 
         let (ws, rustc, target) =
             make_ws_rustc_target(gctx, &original_opts, &source_id, pkg.clone())?;
-
-        if !gctx.lock_update_allowed() {
-            // When --lockfile-path is set, check that passed lock file exists
-            // (unlike the usual flag behavior, lockfile won't be created as we imply --locked)
-            if let Some(requested_lockfile_path) = ws.requested_lockfile_path() {
-                if !requested_lockfile_path.is_file() {
-                    bail!(
-                        "no Cargo.lock file found in the requested path {}",
-                        requested_lockfile_path.display()
-                    );
-                }
-            // If we're installing in --locked mode and there's no `Cargo.lock` published
-            // ie. the bin was published before https://github.com/rust-lang/cargo/pull/7026
-            } else if !ws.root().join("Cargo.lock").exists() {
-                gctx.shell()
-                    .warn(format!("no Cargo.lock file published in {}", pkg))?;
-            }
+        // If we're installing in --locked mode and there's no `Cargo.lock` published
+        // ie. the bin was published before https://github.com/rust-lang/cargo/pull/7026
+        if !gctx.lock_update_allowed() && !ws.root().join("Cargo.lock").exists() {
+            gctx.shell()
+                .warn(format!("no Cargo.lock file published in {}", pkg))?;
         }
         let pkg = if source_id.is_git() {
             // Don't use ws.current() in order to keep the package source as a git source so that
@@ -941,6 +929,7 @@ fn make_ws_rustc_target<'gctx>(
     };
     ws.set_resolve_feature_unification(FeatureUnification::Selected);
     ws.set_ignore_lock(gctx.lock_update_allowed());
+    ws.set_requested_lockfile_path(None);
     ws.set_require_optional_deps(false);
 
     let rustc = gctx.load_global_rustc(Some(&ws))?;
