@@ -88,7 +88,7 @@ regex = "1.12.3"
 rusqlite = { version = "0.39.0", features = ["bundled"] }
 rustc-hash = "2.1.2"
 rustc-stable-hash = "0.1.2"
-rustfix = { version = "0.9.5", path = "crates/rustfix" }
+rustfix = { version = "0.9.6", path = "crates/rustfix" }
 same-file = "1.0.6"
 schemars = "1.2.1"
 security-framework = "3.7.0"
