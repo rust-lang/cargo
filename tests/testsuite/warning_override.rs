@@ -281,6 +281,12 @@ fn hard_warning_deny() {
             ),
         )
         .file("src/main.rs", "fn main() {}")
+        .file(
+            "build.rs",
+            r#"fn main() {
+    println!("cargo::warning=from a build script");
+}"#,
+        )
         .build();
 
     // Baseline behavior
@@ -290,6 +296,7 @@ fn hard_warning_deny() {
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2015` while the latest is `[..]`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] foo@0.0.1: from a build script
 [WARNING] [..]
 
 [WARNING] [..]
@@ -308,6 +315,7 @@ fn hard_warning_deny() {
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2015` while the latest is `[..]`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] foo@0.0.1: from a build script
 [WARNING] [..]
 
 [WARNING] [..]
@@ -329,6 +337,7 @@ fn hard_warning_deny() {
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2015` while the latest is `[..]`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] foo@0.0.1: from a build script
 [WARNING] [..]
 
 [WARNING] [..]
@@ -354,6 +363,12 @@ fn hard_warning_allow() {
             ),
         )
         .file("src/main.rs", "fn main() {}")
+        .file(
+            "build.rs",
+            r#"fn main() {
+    println!("cargo::warning=from a build script");
+}"#,
+        )
         .build();
 
     // Baseline behavior
@@ -363,6 +378,7 @@ fn hard_warning_allow() {
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2015` while the latest is `[..]`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] foo@0.0.1: from a build script
 [WARNING] [..]
 
 [WARNING] [..]
@@ -382,6 +398,7 @@ fn hard_warning_allow() {
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2015` while the latest is `[..]`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] foo@0.0.1: from a build script
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -399,6 +416,12 @@ fn hard_warning_allow() {
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2015` while the latest is `[..]`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] foo@0.0.1: from a build script
+[WARNING] [..]
+
+[WARNING] [..]
+
+[WARNING] `foo` (bin "foo") generated 2 warnings
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])

@@ -650,9 +650,7 @@ impl<'gctx> DrainState<'gctx> {
                 }
             }
             Message::Warning { id, warning } => {
-                if warning_handling != WarningHandling::Allow {
-                    build_runner.bcx.gctx.shell().warn(warning)?;
-                }
+                build_runner.bcx.gctx.shell().warn(warning)?;
                 let lint = false;
                 let emitted = true;
                 let fixable = false;
@@ -686,16 +684,17 @@ impl<'gctx> DrainState<'gctx> {
                             .filter(|count| 0 < count.total)
                             .cloned();
                         if let Some(count) = count {
+                            let denied_warnings =
+                                warning_handling == WarningHandling::Deny && 0 < count.lints;
                             self.report_warning_count(
                                 build_runner,
                                 &unit,
                                 &count,
                                 &build_runner.bcx.rustc().workspace_wrapper,
-                                warning_handling,
+                                denied_warnings,
                             );
-                            let stop_on_warnings = warning_handling == WarningHandling::Deny
-                                && 0 < count.lints
-                                && !build_runner.bcx.build_config.keep_going;
+                            let stop_on_warnings =
+                                denied_warnings && !build_runner.bcx.build_config.keep_going;
                             if stop_on_warnings {
                                 result = Err(anyhow::format_err!(
                                     "warnings are denied by `build.warnings` configuration"
@@ -1089,7 +1088,7 @@ impl<'gctx> DrainState<'gctx> {
         unit: &Unit,
         count: &WarningCount,
         rustc_workspace_wrapper: &Option<PathBuf>,
-        warning_handling: WarningHandling,
+        denied_warnings: bool,
     ) {
         let gctx = runner.bcx.gctx;
         runner.compilation.lint_warning_count += count.lints;
@@ -1160,7 +1159,7 @@ impl<'gctx> DrainState<'gctx> {
         }
         // Errors are ignored here because it is tricky to handle them
         // correctly, and they aren't important.
-        let _ = if warning_handling == WarningHandling::Deny && 0 < count.lints {
+        let _ = if denied_warnings {
             gctx.shell().error(message)
         } else {
             gctx.shell().warn(message)
