@@ -116,9 +116,9 @@
 </tspan>
     <tspan x="10px" y="874px">
 </tspan>
-    <tspan x="10px" y="892px"><tspan>Run `</tspan><tspan class="fg-bright-cyan bold">cargo help run</tspan><tspan class="bold">` for more detailed information.</tspan>
+    <tspan x="10px" y="892px"><tspan>Run `</tspan><tspan class="fg-bright-cyan bold">cargo help run</tspan><tspan>` for more detailed information.</tspan>
 </tspan>
-    <tspan x="10px" y="910px"><tspan class="bold">To pass `--help` to the specified binary, use `</tspan><tspan class="fg-bright-cyan bold">-- --help</tspan><tspan class="bold">`.</tspan>
+    <tspan x="10px" y="910px"><tspan>To pass `--help` to the specified binary, use `</tspan><tspan class="fg-bright-cyan bold">-- --help</tspan><tspan>`.</tspan>
 </tspan>
     <tspan x="10px" y="928px">
 </tspan>

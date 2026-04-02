@@ -138,7 +138,7 @@
 </tspan>
     <tspan x="10px" y="1072px">
 </tspan>
-    <tspan x="10px" y="1090px"><tspan>Run `</tspan><tspan class="fg-bright-cyan bold">cargo help install</tspan><tspan class="bold">` for more detailed information.</tspan>
+    <tspan x="10px" y="1090px"><tspan>Run `</tspan><tspan class="fg-bright-cyan bold">cargo help install</tspan><tspan>` for more detailed information.</tspan>
 </tspan>
     <tspan x="10px" y="1108px">
 </tspan>

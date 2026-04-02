@@ -1,7 +1,7 @@
 <svg width="740px" height="164px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
-    .bg { background: #000000 }
+    .bg { fill: #000000 }
     .fg-bright-cyan { fill: #55FFFF }
     .fg-bright-green { fill: #55FF55 }
     .fg-bright-red { fill: #FF5555 }
@@ -26,15 +26,15 @@
 </tspan>
     <tspan x="10px" y="46px">
 </tspan>
-    <tspan x="10px" y="64px"><tspan class="fg-bright-green bold">Usage:</tspan><tspan> </tspan><tspan class="fg-bright-cyan bold">cargo add</tspan><tspan class="bold"> </tspan><tspan class="fg-cyan bold">[OPTIONS] &lt;DEP&gt;[@&lt;VERSION&gt;] ...</tspan>
+    <tspan x="10px" y="64px"><tspan class="fg-bright-green bold">Usage:</tspan><tspan> </tspan><tspan class="fg-bright-cyan bold">cargo add</tspan><tspan> </tspan><tspan class="fg-cyan">[OPTIONS] &lt;DEP&gt;[@&lt;VERSION&gt;] ...</tspan>
 </tspan>
-    <tspan x="10px" y="82px"><tspan class="bold">       </tspan><tspan class="fg-bright-cyan bold">cargo add</tspan><tspan class="bold"> </tspan><tspan class="fg-cyan bold">[OPTIONS]</tspan><tspan class="bold"> </tspan><tspan class="fg-bright-cyan bold">--path</tspan><tspan class="bold"> </tspan><tspan class="fg-cyan bold">&lt;PATH&gt; ...</tspan>
+    <tspan x="10px" y="82px"><tspan>       </tspan><tspan class="fg-bright-cyan bold">cargo add</tspan><tspan> </tspan><tspan class="fg-cyan">[OPTIONS]</tspan><tspan> </tspan><tspan class="fg-bright-cyan bold">--path</tspan><tspan> </tspan><tspan class="fg-cyan">&lt;PATH&gt; ...</tspan>
 </tspan>
-    <tspan x="10px" y="100px"><tspan class="bold">       </tspan><tspan class="fg-bright-cyan bold">cargo add</tspan><tspan class="bold"> </tspan><tspan class="fg-cyan bold">[OPTIONS]</tspan><tspan class="bold"> </tspan><tspan class="fg-bright-cyan bold">--git</tspan><tspan class="bold"> </tspan><tspan class="fg-cyan bold">&lt;URL&gt; ...</tspan>
+    <tspan x="10px" y="100px"><tspan>       </tspan><tspan class="fg-bright-cyan bold">cargo add</tspan><tspan> </tspan><tspan class="fg-cyan">[OPTIONS]</tspan><tspan> </tspan><tspan class="fg-bright-cyan bold">--git</tspan><tspan> </tspan><tspan class="fg-cyan">&lt;URL&gt; ...</tspan>
 </tspan>
     <tspan x="10px" y="118px">
 </tspan>
-    <tspan x="10px" y="136px"><tspan class="bold">For more information, try '</tspan><tspan class="fg-bright-cyan bold">--help</tspan><tspan>'.</tspan>
+    <tspan x="10px" y="136px"><tspan>For more information, try '</tspan><tspan class="fg-bright-cyan bold">--help</tspan><tspan>'.</tspan>
 </tspan>
     <tspan x="10px" y="154px">
 </tspan>

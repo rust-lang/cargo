@@ -1,7 +1,7 @@
 <svg width="844px" height="596px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
-    .bg { background: #000000 }
+    .bg { fill: #000000 }
     .fg-bright-cyan { fill: #55FFFF }
     .fg-bright-green { fill: #55FF55 }
     .fg-cyan { fill: #00AAAA }
@@ -80,7 +80,7 @@
 </tspan>
     <tspan x="10px" y="550px">
 </tspan>
-    <tspan x="10px" y="568px"><tspan>Run `</tspan><tspan class="fg-bright-cyan bold">cargo help init</tspan><tspan class="bold">` for more detailed information.</tspan>
+    <tspan x="10px" y="568px"><tspan>Run `</tspan><tspan class="fg-bright-cyan bold">cargo help init</tspan><tspan>` for more detailed information.</tspan>
 </tspan>
     <tspan x="10px" y="586px">
 </tspan>

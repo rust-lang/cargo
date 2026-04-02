@@ -74,7 +74,7 @@
 </tspan>
     <tspan x="10px" y="496px">
 </tspan>
-    <tspan x="10px" y="514px"><tspan>Run `</tspan><tspan class="fg-bright-cyan bold">cargo help generate-lockfile</tspan><tspan class="bold">` for more detailed information.</tspan>
+    <tspan x="10px" y="514px"><tspan>Run `</tspan><tspan class="fg-bright-cyan bold">cargo help generate-lockfile</tspan><tspan>` for more detailed information.</tspan>
 </tspan>
     <tspan x="10px" y="532px">
 </tspan>

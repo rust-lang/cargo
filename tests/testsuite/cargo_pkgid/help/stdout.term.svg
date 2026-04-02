@@ -70,7 +70,7 @@
 </tspan>
     <tspan x="10px" y="460px">
 </tspan>
-    <tspan x="10px" y="478px"><tspan>Run `</tspan><tspan class="fg-bright-cyan bold">cargo help pkgid</tspan><tspan class="bold">` for more detailed information.</tspan>
+    <tspan x="10px" y="478px"><tspan>Run `</tspan><tspan class="fg-bright-cyan bold">cargo help pkgid</tspan><tspan>` for more detailed information.</tspan>
 </tspan>
     <tspan x="10px" y="496px">
 </tspan>

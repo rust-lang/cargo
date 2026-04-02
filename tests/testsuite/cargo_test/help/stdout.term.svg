@@ -146,9 +146,9 @@
 </tspan>
     <tspan x="10px" y="1144px">
 </tspan>
-    <tspan x="10px" y="1162px"><tspan>Run `</tspan><tspan class="fg-bright-cyan bold">cargo help test</tspan><tspan class="bold">` for more detailed information.</tspan>
+    <tspan x="10px" y="1162px"><tspan>Run `</tspan><tspan class="fg-bright-cyan bold">cargo help test</tspan><tspan>` for more detailed information.</tspan>
 </tspan>
-    <tspan x="10px" y="1180px"><tspan class="bold">Run `</tspan><tspan class="fg-bright-cyan bold">cargo test -- --help</tspan><tspan class="bold">` for test binary options.</tspan>
+    <tspan x="10px" y="1180px"><tspan>Run `</tspan><tspan class="fg-bright-cyan bold">cargo test -- --help</tspan><tspan>` for test binary options.</tspan>
 </tspan>
     <tspan x="10px" y="1198px">
 </tspan>

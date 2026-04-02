@@ -78,7 +78,7 @@
 </tspan>
     <tspan x="10px" y="532px">
 </tspan>
-    <tspan x="10px" y="550px"><tspan>Run `</tspan><tspan class="fg-bright-cyan bold">cargo help metadata</tspan><tspan class="bold">` for more detailed information.</tspan>
+    <tspan x="10px" y="550px"><tspan>Run `</tspan><tspan class="fg-bright-cyan bold">cargo help metadata</tspan><tspan>` for more detailed information.</tspan>
 </tspan>
     <tspan x="10px" y="568px">
 </tspan>
