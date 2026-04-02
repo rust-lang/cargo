@@ -646,6 +646,8 @@ fn is_bracketed_with_port(pattern: &str) -> bool {
 }
 
 fn hashed_hostname_matches(host: &str, hashed: &str) -> bool {
+    use hmac::KeyInit as _;
+
     let Some((b64_salt, b64_host)) = hashed.split_once('|') else {
         return false;
     };

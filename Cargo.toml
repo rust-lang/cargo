@@ -57,7 +57,7 @@ glob = "0.3.3"
 handlebars = { version = "6.4.0", features = ["dir_source"] }
 heck = "0.5.0"
 hex = "0.4.3"
-hmac = "0.12.1"
+hmac = "0.13.0"
 home = "0.5.12"
 http-auth = { version = "0.1.10", default-features = false }
 ignore = "0.4.25"
@@ -85,10 +85,10 @@ proptest = "1.11.0"
 pulldown-cmark = { version = "0.13.3", default-features = false, features = ["html"] }
 rand = "0.10.0"
 regex = "1.12.3"
-rusqlite = { version = "0.38.0", features = ["bundled"] }
+rusqlite = { version = "0.39.0", features = ["bundled"] }
 rustc-hash = "2.1.2"
 rustc-stable-hash = "0.1.2"
-rustfix = { version = "0.9.5", path = "crates/rustfix" }
+rustfix = { version = "0.9.6", path = "crates/rustfix" }
 same-file = "1.0.6"
 schemars = "1.2.1"
 security-framework = "3.7.0"
@@ -99,10 +99,9 @@ serde-untagged = "0.1.9"
 serde-value = "0.7.0"
 serde_ignored = "0.1.14"
 serde_json = "1.0.149"
-sha1 = "0.10.6"
-sha2 = "0.10.9"
+sha1 = "0.11.0"
+sha2 = "0.11.0"
 shell-escape = "0.1.5"
-similar = "2.7.0"
 supports-hyperlinks = "3.2.0"
 supports-unicode = "3.0.0"
 snapbox = { version = "1.2.0", features = ["diff", "dir", "term-svg", "regex", "json"] }
@@ -122,7 +121,7 @@ url = "2.5.8"
 varisat = "0.2.2"
 walkdir = "2.5.0"
 windows-sys = "0.61"
-winnow = "0.7.15"
+winnow = "1.0.1"
 
 [workspace.lints.rust]
 rust_2018_idioms = "warn" # TODO: could this be removed?
