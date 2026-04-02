@@ -9,6 +9,8 @@
 //!
 //! This module impl that cache in all the gory details
 
+use crate::GlobalContext;
+use crate::core::compiler::standard_lib::std_crates;
 use crate::core::resolver::context::ResolverContext;
 use crate::core::resolver::errors::describe_path_in_context;
 use crate::core::resolver::types::{ConflictReason, DepInfo, FeaturesSet};
@@ -27,6 +29,7 @@ use crate::util::interning::{INTERNED_DEFAULT, InternedString};
 use anyhow::Context as _;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fmt::Write;
+use std::path::PathBuf;
 use std::rc::Rc;
 use std::task::Poll;
 use tracing::debug;
@@ -48,6 +51,9 @@ pub struct RegistryQueryer<'a, T: Registry> {
     >,
     /// all the cases we ended up using a supplied replacement
     used_replacements: HashMap<PackageId, Summary>,
+    /// Cached builtin dependencies that should be injected. Empty implies that builtins shouldn't
+    /// be injected
+    builtins: Vec<Dependency>,
 }
 
 impl<'a, T: Registry> RegistryQueryer<'a, T> {
@@ -55,7 +61,20 @@ impl<'a, T: Registry> RegistryQueryer<'a, T> {
         registry: &'a mut T,
         replacements: &'a [(PackageIdSpec, Dependency)],
         version_prefs: &'a VersionPreferences,
+        builtins_root: Option<&PathBuf>,
+        gctx: Option<&GlobalContext>,
     ) -> Self {
+        // TODO: Hack - default should come from TargetInfo
+        // units is fine empty as we don't need to inject test here, but it looks weird.
+        let buildstd_crates = gctx.and_then(|gctx| gctx.cli_unstable().build_std.as_ref());
+        let builtins = match (builtins_root, buildstd_crates) {
+            (Some(root), Some(crates)) => std_crates(&crates, "std", &[])
+                .iter()
+                .map(|&krate| Dependency::new_injected_builtin(krate.into(), root))
+                .collect(),
+            (_, _) => vec![],
+        };
+
         RegistryQueryer {
             registry,
             replacements,
@@ -63,6 +82,7 @@ impl<'a, T: Registry> RegistryQueryer<'a, T> {
             registry_cache: HashMap::new(),
             summary_cache: HashMap::new(),
             used_replacements: HashMap::new(),
+            builtins,
         }
     }
 
@@ -238,10 +258,11 @@ impl<'a, T: Registry> RegistryQueryer<'a, T> {
         {
             return Ok(out.0.clone());
         }
+
         // First, figure out our set of dependencies based on the requested set
         // of features. This also calculates what features we're going to enable
         // for our own dependencies.
-        let (used_features, deps) = resolve_features(parent, candidate, opts)?;
+        let (used_features, deps) = resolve_features(parent, candidate, opts, &self.builtins)?;
 
         // Next, transform all dependencies into a list of possible candidates
         // which can satisfy that dependency.
@@ -291,10 +312,20 @@ pub fn resolve_features<'b>(
     parent: Option<PackageId>,
     s: &'b Summary,
     opts: &'b ResolveOpts,
+    builtins: &[Dependency],
 ) -> ActivateResult<(HashSet<InternedString>, Vec<(Dependency, FeaturesSet)>)> {
     // First, filter by dev-dependencies.
     let deps = s.dependencies();
-    let deps = deps.iter().filter(|d| d.is_transitive() || opts.dev_deps);
+
+    let deps = deps
+        .into_iter()
+        .filter(|d| d.is_transitive() || opts.dev_deps);
+    let builtin_deps = if s.source_id().is_builtin() {
+        // Don't add builtin deps to dummy builtin packages
+        None
+    } else {
+        Some(builtins.iter())
+    };
 
     let reqs = build_requirements(parent, s, opts)?;
     let mut ret = Vec::new();
@@ -302,7 +333,7 @@ pub fn resolve_features<'b>(
     let mut valid_dep_names = HashSet::new();
 
     // Next, collect all actually enabled dependencies and their features.
-    for dep in deps {
+    for dep in deps.chain(builtin_deps.into_iter().flatten()) {
         // Skip optional dependencies, but not those enabled through a
         // feature
         if dep.is_optional() && !reqs.deps.contains_key(&dep.name_in_toml()) {
