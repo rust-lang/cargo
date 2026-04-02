@@ -1786,6 +1786,10 @@ lockfiles should be stored in different directories.
 
 *as a new `resolver.lockfile-path` entry in config.md*
 
+*Keep in mind, the `[resolver]` section has this clarification:*
+
+> *The `[resolver]` table overrides dependency resolution behavior for local development (e.g. excludes `cargo install`).*
+
 #### `resolver.lockfile-path`
 
 * Type: string (path)
