@@ -186,7 +186,6 @@ fn compile<'gctx>(
     exec: &Arc<dyn Executor>,
     force_rebuild: bool,
 ) -> CargoResult<()> {
-    let bcx = build_runner.bcx;
     if !build_runner.compiled.insert(unit.clone()) {
         return Ok(());
     }
@@ -221,18 +220,14 @@ fn compile<'gctx>(
                 };
                 work.then(link_targets(build_runner, unit, false)?)
             } else {
-                // We always replay the output cache,
-                // since it might contain future-incompat-report messages
-                let show_diagnostics = unit.show_warnings(bcx.gctx)
-                    && build_runner.bcx.gctx.warning_handling()? != WarningHandling::Allow;
+                let output_options = OutputOptions::for_fresh(build_runner, unit);
                 let manifest = ManifestErrorContext::new(build_runner, unit);
                 let work = replay_output_cache(
                     unit.pkg.package_id(),
                     manifest,
                     &unit.target,
                     build_runner.files().message_cache_path(unit),
-                    build_runner.bcx.build_config.message_format,
-                    show_diagnostics,
+                    output_options,
                 );
                 // Need to link targets on both the dirty and fresh.
                 work.then(link_targets(build_runner, unit, true)?)
@@ -322,7 +317,7 @@ fn rustc(
     let rustc_dep_info_loc = root.join(dep_info_name);
     let dep_info_loc = fingerprint::dep_info_loc(build_runner, unit);
 
-    let mut output_options = OutputOptions::new(build_runner, unit);
+    let mut output_options = OutputOptions::for_dirty(build_runner, unit);
     let package_id = unit.pkg.package_id();
     let target = Target::clone(&unit.target);
     let mode = unit.mode;
@@ -998,7 +993,7 @@ fn rustdoc(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<W
     let env_config = Arc::clone(build_runner.bcx.gctx.env_config()?);
     let rustdoc_depinfo_enabled = build_runner.bcx.gctx.cli_unstable().rustdoc_depinfo;
 
-    let mut output_options = OutputOptions::new(build_runner, unit);
+    let mut output_options = OutputOptions::for_dirty(build_runner, unit);
     let script_metadatas = build_runner.find_build_script_metadatas(unit);
     let scrape_outputs = if should_include_scrape_units(build_runner.bcx, unit) {
         Some(
@@ -2025,15 +2020,39 @@ struct OutputOptions {
 }
 
 impl OutputOptions {
-    fn new(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> OutputOptions {
+    fn for_dirty(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> OutputOptions {
         let path = build_runner.files().message_cache_path(unit);
         // Remove old cache, ignore ENOENT, which is the common case.
         drop(fs::remove_file(&path));
         let cache_cell = Some((path, OnceCell::new()));
+
         let show_diagnostics =
             build_runner.bcx.gctx.warning_handling().unwrap_or_default() != WarningHandling::Allow;
+
+        let format = build_runner.bcx.build_config.message_format;
+
         OutputOptions {
-            format: build_runner.bcx.build_config.message_format,
+            format,
+            cache_cell,
+            show_diagnostics,
+            warnings_seen: 0,
+            errors_seen: 0,
+        }
+    }
+
+    fn for_fresh(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> OutputOptions {
+        let cache_cell = None;
+
+        // We always replay the output cache,
+        // since it might contain future-incompat-report messages
+        let show_diagnostics = unit.show_warnings(build_runner.bcx.gctx)
+            && build_runner.bcx.gctx.warning_handling().unwrap_or_default()
+                != WarningHandling::Allow;
+
+        let format = build_runner.bcx.build_config.message_format;
+
+        OutputOptions {
+            format,
             cache_cell,
             show_diagnostics,
             warnings_seen: 0,
@@ -2537,17 +2556,9 @@ fn replay_output_cache(
     manifest: ManifestErrorContext,
     target: &Target,
     path: PathBuf,
-    format: MessageFormat,
-    show_diagnostics: bool,
+    mut output_options: OutputOptions,
 ) -> Work {
     let target = target.clone();
-    let mut options = OutputOptions {
-        format,
-        cache_cell: None,
-        show_diagnostics,
-        warnings_seen: 0,
-        errors_seen: 0,
-    };
     Work::new(move |state| {
         if !path.exists() {
             // No cached output, probably didn't emit anything.
@@ -2565,7 +2576,14 @@ fn replay_output_cache(
                 break;
             }
             let trimmed = line.trim_end_matches(&['\n', '\r'][..]);
-            on_stderr_line(state, trimmed, package_id, &manifest, &target, &mut options)?;
+            on_stderr_line(
+                state,
+                trimmed,
+                package_id,
+                &manifest,
+                &target,
+                &mut output_options,
+            )?;
             line.clear();
         }
         Ok(())
