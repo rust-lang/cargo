@@ -109,7 +109,7 @@ struct Summaries {
 
     /// All known versions of a crate, keyed from their `Version` to the
     /// possibly parsed or unparsed version of the full summary.
-    versions: HashMap<Version, MaybeIndexSummary>,
+    versions: Vec<(Version, MaybeIndexSummary)>,
 }
 
 /// A lazily parsed [`IndexSummary`].
@@ -549,7 +549,7 @@ impl Summaries {
                     };
                     let version = summary.package_id().version().clone();
                     cache.versions.push((version.clone(), line));
-                    ret.versions.insert(version, summary.into());
+                    ret.versions.push((version, summary.into()));
                 }
                 if let Some(index_version) = index_version {
                     tracing::trace!("caching index_version {}", index_version);
@@ -586,7 +586,7 @@ impl Summaries {
         for (version, summary) in cache.versions {
             let (start, end) = subslice_bounds(&contents, summary);
             ret.versions
-                .insert(version, MaybeIndexSummary::Unparsed { start, end });
+                .push((version, MaybeIndexSummary::Unparsed { start, end }));
         }
         ret.raw_data = contents;
         return Ok((ret, index_version));
