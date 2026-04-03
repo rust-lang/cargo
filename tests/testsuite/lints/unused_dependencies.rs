@@ -1373,18 +1373,6 @@ fn config_ignore() {
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(
             str![[r#"
-[WARNING] unused dependency
- --> Cargo.toml:9:13
-  |
-9 |             unused_build = "0.1.0"
-  |             ^^^^^^^^^^^^^^^^^^^^^^
-  |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
-[HELP] remove the dependency
-  |
-9 -             unused_build = "0.1.0"
-  |
-[WARNING] unused manifest key: `lints.cargo.unused_dependencies.ignore`
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
@@ -1392,17 +1380,6 @@ fn config_ignore() {
 [DOWNLOADED] unused v0.1.0 (registry `dummy-registry`)
 [CHECKING] unused v0.1.0
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[WARNING] unused dependency
-  --> Cargo.toml:12:13
-   |
-12 |             unused_renamed = { package = "unused", version = "0.1.0" }
-   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
-[HELP] remove the dependency
-   |
-12 -             unused_renamed = { package = "unused", version = "0.1.0" }
-   |
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]]

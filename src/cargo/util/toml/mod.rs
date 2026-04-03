@@ -2706,8 +2706,7 @@ supported tools: {}",
                     // manually report unused manifest key warning since we collect all the "extra"
                     // keys and values inside the config table
                     let expected = EXPECTED_LINT_CONFIG.contains(&(tool, name, config_name));
-                    if !expected
-                    {
+                    if !expected {
                         let message =
                             format!("unused manifest key: `lints.{tool}.{name}.{config_name}`");
                         warnings.push(message);
@@ -2721,6 +2720,7 @@ supported tools: {}",
 }
 
 static EXPECTED_LINT_CONFIG: &[(&str, &str, &str)] = &[
+    ("cargo", "unused_dependencies", "ignore"),
     // forwarded to rustc/rustdoc
     ("rust", "unexpected_cfgs", "check-cfg"),
 ];

@@ -70,6 +70,10 @@ Should be written as:
 [package]
 name = "foo"
 ```
+
+### Configuration
+
+- `ignore`: a list of dependency names to allow the lint on
 "#,
     ),
 };
@@ -110,6 +114,23 @@ pub fn unused_build_dependencies_no_build_rs(
     let document = manifest.document();
     let contents = manifest.contents();
 
+    let mut ignore = Vec::new();
+    if let Some(unused_dependencies) = cargo_lints.get("unused_dependencies") {
+        if let Some(config) = unused_dependencies.config() {
+            if let Some(config_ignore) = config.get("ignore") {
+                if let Ok(config_ignore) =
+                    toml::Value::try_into::<Vec<String>>(config_ignore.clone())
+                {
+                    ignore = config_ignore
+                } else {
+                    anyhow::bail!(
+                        "`lints.cargo.unused_dependencies.ignore` must be a list of string"
+                    );
+                }
+            }
+        }
+    }
+
     for (i, dep_name) in manifest
         .normalized_toml()
         .build_dependencies()
@@ -117,6 +138,10 @@ pub fn unused_build_dependencies_no_build_rs(
         .flat_map(|m| m.keys())
         .enumerate()
     {
+        if ignore.contains(&dep_name) {
+            continue;
+        }
+
         let level = lint_level.to_diagnostic_level();
         let emitted_source = LINT.emitted_source(lint_level, reason);
 
