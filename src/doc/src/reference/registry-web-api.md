@@ -38,9 +38,11 @@ be null. The endpoints are versioned with the `v1` component of the path, and
 Cargo is responsible for handling backwards compatibility fallbacks should any
 be required in the future.
 
-Cargo sets the following headers for all requests:
+Cargo sets the following headers for requests:
 
-- `Content-Type`: `application/json` (for requests with a body payload)
+- `Content-Type`: `application/json` for JSON body payloads, or
+  `application/octet-stream` for the [publish](#publish) endpoint (which uses a
+  custom binary format). Not set for requests without a body.
 - `Accept`: `application/json`
 - `User-Agent`: The Cargo version such as `cargo/1.32.0 (8610973aa
   2019-01-02)`. This may be modified by the user in a configuration value.
