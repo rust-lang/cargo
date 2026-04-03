@@ -2705,9 +2705,8 @@ supported tools: {}",
                 for config_name in config.keys() {
                     // manually report unused manifest key warning since we collect all the "extra"
                     // keys and values inside the config table
-                    //
-                    // except for `rust.unexpected_cfgs.check-cfg` which is used by rustc/rustdoc
-                    if !(tool == "rust" && name == "unexpected_cfgs" && config_name == "check-cfg")
+                    let expected = EXPECTED_LINT_CONFIG.contains(&(tool, name, config_name));
+                    if !expected
                     {
                         let message =
                             format!("unused manifest key: `lints.{tool}.{name}.{config_name}`");
@@ -2720,6 +2719,11 @@ supported tools: {}",
 
     Ok(())
 }
+
+static EXPECTED_LINT_CONFIG: &[(&str, &str, &str)] = &[
+    // forwarded to rustc/rustdoc
+    ("rust", "unexpected_cfgs", "check-cfg"),
+];
 
 fn warn_for_cargo_lint_feature(gctx: &GlobalContext, warnings: &mut Vec<String>) {
     use std::fmt::Write as _;
