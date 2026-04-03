@@ -101,7 +101,7 @@ pub use crate::core::compiler::unit::Unit;
 pub use crate::core::compiler::unit::UnitIndex;
 pub use crate::core::compiler::unit::UnitInterner;
 use crate::core::manifest::TargetSourcePath;
-use crate::core::profiles::{PanicStrategy, Profile, StripInner};
+use crate::core::profiles::{FramePointers, PanicStrategy, Profile, StripInner};
 use crate::core::{Feature, PackageId, Target};
 use crate::lints::get_key_value;
 use crate::util::OnceExt;
@@ -1223,6 +1223,7 @@ fn build_base_args(
         rustflags: profile_rustflags,
         trim_paths,
         hint_mostly_unused: profile_hint_mostly_unused,
+        frame_pointers,
         ..
     } = unit.profile.clone();
     let hints = unit.pkg.hints().cloned().unwrap_or_default();
@@ -1443,6 +1444,14 @@ fn build_base_args(
     let strip = strip.into_inner();
     if strip != StripInner::None {
         cmd.arg("-C").arg(format!("strip={}", strip));
+    }
+
+    if let Some(frame_pointers) = frame_pointers {
+        let val = match frame_pointers {
+            FramePointers::ForceOn => "on",
+            FramePointers::ForceOff => "off",
+        };
+        cmd.arg("-C").arg(format!("force-frame-pointers={}", val));
     }
 
     if unit.is_std {
