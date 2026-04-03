@@ -756,6 +756,62 @@ c v1.0.0
 }
 
 #[cargo_test]
+fn invert_without_package_name() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("tree -i")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] The `-i` flag requires a package name.
+
+The `-i` flag is used to inspect the reverse dependencies of a specific
+package. It will invert the tree and display the packages that depend on the
+given package.
+
+Note that in a workspace, by default it will only display the package's
+reverse dependencies inside the tree of the workspace member in the current
+directory. The --workspace flag can be used to extend it so that it will show
+the package's reverse dependencies across the entire workspace. The -p flag
+can be used to display the package's reverse dependencies only with the
+subtree of the package given to -p.
+
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn invert_without_package_name_workspace() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("tree --workspace -i")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] The `-i` flag requires a package name.
+
+The `-i` flag is used to inspect the reverse dependencies of a specific
+package. It will invert the tree and display the packages that depend on the
+given package.
+
+Note that in a workspace, by default it will only display the package's
+reverse dependencies inside the tree of the workspace member in the current
+directory. The --workspace flag can be used to extend it so that it will show
+the package's reverse dependencies across the entire workspace. The -p flag
+can be used to display the package's reverse dependencies only with the
+subtree of the package given to -p.
+
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn invert_with_build_dep() {
     // -i for a common dependency between normal and build deps.
     Package::new("common", "1.0.0").publish();
