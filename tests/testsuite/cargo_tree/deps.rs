@@ -765,18 +765,17 @@ fn invert_without_package_name() {
     p.cargo("tree -i")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] The `-i` flag requires a package name.
+[ERROR] a package name is required for `-i` but none was supplied
 
-The `-i` flag is used to inspect the reverse dependencies of a specific
-package. It will invert the tree and display the packages that depend on the
-given package.
+[NOTE] `-p <spec> -i` is not supported; pass the package name to `-i` directly.
 
-Note that in a workspace, by default it will only display the package's
-reverse dependencies inside the tree of the workspace member in the current
-directory. The --workspace flag can be used to extend it so that it will show
-the package's reverse dependencies across the entire workspace. The -p flag
-can be used to display the package's reverse dependencies only with the
-subtree of the package given to -p.
+[HELP] to inspect the reverse dependencies of a specific package, pass the name directly to `-i`:
+
+    cargo tree -i <spec>
+
+[HELP] if you are in a workspace and want to search across all members, use:
+
+    cargo tree --workspace -i <spec>
 
 
 "#]])
@@ -793,18 +792,17 @@ fn invert_without_package_name_workspace() {
     p.cargo("tree --workspace -i")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] The `-i` flag requires a package name.
+[ERROR] a package name is required for `-i` but none was supplied
 
-The `-i` flag is used to inspect the reverse dependencies of a specific
-package. It will invert the tree and display the packages that depend on the
-given package.
+[NOTE] `-p <spec> -i` is not supported; pass the package name to `-i` directly.
 
-Note that in a workspace, by default it will only display the package's
-reverse dependencies inside the tree of the workspace member in the current
-directory. The --workspace flag can be used to extend it so that it will show
-the package's reverse dependencies across the entire workspace. The -p flag
-can be used to display the package's reverse dependencies only with the
-subtree of the package given to -p.
+[HELP] to inspect the reverse dependencies of a specific package, pass the name directly to `-i`:
+
+    cargo tree -i <spec>
+
+[HELP] if you are in a workspace and want to search across all members, use:
+
+    cargo tree --workspace -i <spec>
 
 
 "#]])

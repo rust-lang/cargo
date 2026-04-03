@@ -204,19 +204,18 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
             }
             _ => {
                 return Err(format_err!(
-                    "The `-i` flag requires a package name.\n\
-\n\
-The `-i` flag is used to inspect the reverse dependencies of a specific\n\
-package. It will invert the tree and display the packages that depend on the\n\
-given package.\n\
-\n\
-Note that in a workspace, by default it will only display the package's\n\
-reverse dependencies inside the tree of the workspace member in the current\n\
-directory. The --workspace flag can be used to extend it so that it will show\n\
-the package's reverse dependencies across the entire workspace. The -p flag\n\
-can be used to display the package's reverse dependencies only with the\n\
-subtree of the package given to -p.\n\
-"
+                    r#"a package name is required for `-i` but none was supplied
+
+note: `-p <spec> -i` is not supported; pass the package name to `-i` directly.
+
+help: to inspect the reverse dependencies of a specific package, pass the name directly to `-i`:
+
+    cargo tree -i <spec>
+
+help: if you are in a workspace and want to search across all members, use:
+
+    cargo tree --workspace -i <spec>
+"#
                 )
                 .into());
             }
