@@ -1212,6 +1212,8 @@ fn pinned_transitive_dep() {
 
             [dependencies]
             intermediate = "0.1.0"
+
+            [target."cfg(false)".dependencies]
             transitive = "=0.1.1"
 
             [lints.cargo]
@@ -1237,17 +1239,6 @@ fn pinned_transitive_dep() {
 [CHECKING] transitive v0.1.1
 [CHECKING] intermediate v0.1.0
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[WARNING] unused dependency
-  --> Cargo.toml:10:13
-   |
-10 |             transitive = "=0.1.1"
-   |             ^^^^^^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
-[HELP] remove the dependency
-   |
-10 -             transitive = "=0.1.1"
-   |
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])

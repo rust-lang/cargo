@@ -52,7 +52,8 @@ Examples:
 
 There can be false positives when depending on a transitive dependency to activate a feature.
 
-There an be false positives when pinning the version of a transitive dependency in `Cargo.toml`.
+For false positives from pinning the version of a transitive dependency in `Cargo.toml`,
+move the dependency to the `target."cfg(false)".dependencies` table.
 
 ### Example
 
