@@ -212,9 +212,8 @@ A successful response includes the JSON object:
 - Method: PUT
 - Authorization: Included
 - Headers:
-    - `Content-Type`: `application/json`
     - `Accept`: `application/json`
-- Body: ""
+- Body: None
 
 The unyank endpoint will set the `yank` field of the given version of a crate
 to `false` in the index.
