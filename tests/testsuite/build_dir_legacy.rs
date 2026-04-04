@@ -550,6 +550,7 @@ fn cargo_doc_json_should_output_to_target_dir() {
 
     p.cargo("doc --no-deps -Zunstable-options --output-format json")
         .masquerade_as_nightly_cargo(&["rustdoc-output-format"])
+        .env("__CARGO_TEMPORARY_BUILD_DIR_NEW_LAYOUT_OPT_OUT", "1")
         .enable_mac_dsym()
         .run();
 
