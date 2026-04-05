@@ -38,19 +38,21 @@ be null. The endpoints are versioned with the `v1` component of the path, and
 Cargo is responsible for handling backwards compatibility fallbacks should any
 be required in the future.
 
-Cargo sets the following headers for all requests:
+Cargo sets the `User-Agent` header for all requests to the Cargo version such
+as `cargo/1.32.0 (8610973aa 2019-01-02)`. This may be modified by the user in
+a configuration value. Added in 1.29.
 
-- `Content-Type`: `application/json` (for requests with a body payload)
-- `Accept`: `application/json`
-- `User-Agent`: The Cargo version such as `cargo/1.32.0 (8610973aa
-  2019-01-02)`. This may be modified by the user in a configuration value.
-  Added in 1.29.
+Other headers vary by endpoint and are documented below.
 
 ## Publish
 
 - Endpoint: `/api/v1/crates/new`
 - Method: PUT
 - Authorization: Included
+- Headers:
+    - `Content-Type`: `application/octet-stream`
+    - `Accept`: `application/json`
+- Body: Included (see below)
 
 The publish endpoint is used to publish a new version of a crate. The server
 should validate the crate, make it available for download, and add it to the
@@ -188,6 +190,9 @@ A successful response includes the JSON object:
 - Endpoint: `/api/v1/crates/{crate_name}/{version}/yank`
 - Method: DELETE
 - Authorization: Included
+- Headers:
+    - `Accept`: `application/json`
+- Body: None
 
 The yank endpoint will set the `yank` field of the given version of a crate to
 `true` in the index.
@@ -206,6 +211,9 @@ A successful response includes the JSON object:
 - Endpoint: `/api/v1/crates/{crate_name}/{version}/unyank`
 - Method: PUT
 - Authorization: Included
+- Headers:
+    - `Accept`: `application/json`
+- Body: None
 
 The unyank endpoint will set the `yank` field of the given version of a crate
 to `false` in the index.
@@ -232,6 +240,9 @@ how [crates.io] handles owners via GitHub users and teams.
 - Endpoint: `/api/v1/crates/{crate_name}/owners`
 - Method: GET
 - Authorization: Included
+- Headers:
+    - `Accept`: `application/json`
+- Body: None
 
 The owners endpoint returns a list of owners of the crate.
 
@@ -259,6 +270,10 @@ A successful response includes the JSON object:
 - Endpoint: `/api/v1/crates/{crate_name}/owners`
 - Method: PUT
 - Authorization: Included
+- Headers:
+    - `Content-Type`: `application/json`
+    - `Accept`: `application/json`
+- Body: Included (see below)
 
 A PUT request will send a request to the registry to add a new owner to a
 crate. It is up to the registry how to handle the request. For example,
@@ -290,6 +305,10 @@ A successful response includes the JSON object:
 - Endpoint: `/api/v1/crates/{crate_name}/owners`
 - Method: DELETE
 - Authorization: Included
+- Headers:
+    - `Content-Type`: `application/json`
+    - `Accept`: `application/json`
+- Body: Included (see below)
 
 A DELETE request will remove an owner from a crate. The request should include
 the following JSON object:
@@ -316,6 +335,10 @@ A successful response includes the JSON object:
 
 - Endpoint: `/api/v1/crates`
 - Method: GET
+- Authorization: Not Included
+- Headers:
+    - `Accept`: `application/json`
+- Body: None
 - Query Parameters:
     - `q`: The search query string.
     - `per_page`: Number of results, default 10, max 100.

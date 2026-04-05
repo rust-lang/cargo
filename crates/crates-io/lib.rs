@@ -244,7 +244,7 @@ impl Registry {
 
     pub fn add_owners(&mut self, krate: &str, owners: &[&str]) -> Result<String> {
         let body = serde_json::to_string(&OwnersReq { users: owners })?;
-        let body = self.put(&format!("/crates/{}/owners", krate), body.as_bytes())?;
+        let body = self.put(&format!("/crates/{}/owners", krate), Some(body.as_bytes()))?;
         assert!(serde_json::from_str::<OwnerResponse>(&body)?.ok);
         Ok(serde_json::from_str::<OwnerResponse>(&body)?.msg)
     }
@@ -293,6 +293,7 @@ impl Registry {
         self.handle.url(&url)?;
         self.handle.in_filesize(size as u64)?;
         let mut headers = List::new();
+        headers.append("Content-Type: application/octet-stream")?;
         headers.append("Accept: application/json")?;
         headers.append(&format!("Authorization: {}", self.token()?))?;
         self.handle.http_headers(headers)?;
@@ -364,14 +365,14 @@ impl Registry {
     }
 
     pub fn unyank(&mut self, krate: &str, version: &str) -> Result<()> {
-        let body = self.put(&format!("/crates/{}/{}/unyank", krate, version), &[])?;
+        let body = self.put(&format!("/crates/{}/{}/unyank", krate, version), None)?;
         assert!(serde_json::from_str::<R>(&body)?.ok);
         Ok(())
     }
 
-    fn put(&mut self, path: &str, b: &[u8]) -> Result<String> {
+    fn put(&mut self, path: &str, b: Option<&[u8]>) -> Result<String> {
         self.handle.put(true)?;
-        self.req(path, Some(b), Auth::Authorized)
+        self.req(path, b, Auth::Authorized)
     }
 
     fn get(&mut self, path: &str) -> Result<String> {
