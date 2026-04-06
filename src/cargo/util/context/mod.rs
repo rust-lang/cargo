@@ -72,7 +72,7 @@ use std::io::prelude::*;
 use std::mem;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
-use std::sync::{Arc, Mutex, MutexGuard, Once, OnceLock};
+use std::sync::{Arc, LazyLock, Mutex, MutexGuard, OnceLock};
 use std::time::Instant;
 
 use self::ConfigValue as CV;
@@ -239,7 +239,7 @@ pub struct GlobalContext {
     /// continue operating if possible.
     offline: bool,
     /// A global static IPC control mechanism (used for managing parallel builds)
-    jobserver: Option<jobserver::Client>,
+    jobserver: Option<&'static jobserver::Client>,
     /// Cli flags of the form "-Z something" merged with config file values
     unstable_flags: CliUnstable,
     /// Cli flags of the form "-Z something"
@@ -308,17 +308,47 @@ impl GlobalContext {
     ///
     /// This does only minimal initialization. In particular, it does not load
     /// any config files from disk. Those will be loaded lazily as-needed.
-    pub fn new(shell: Shell, cwd: PathBuf, homedir: PathBuf) -> GlobalContext {
-        static mut GLOBAL_JOBSERVER: *mut jobserver::Client = 0 as *mut _;
-        static INIT: Once = Once::new();
+    pub fn new(mut shell: Shell, cwd: PathBuf, homedir: PathBuf) -> GlobalContext {
+        static GLOBAL_JOBSERVER: LazyLock<CargoResult<Option<jobserver::Client>>> = LazyLock::new(
+            || {
+                use jobserver::FromEnvErrorKind;
+                // Note that this is unsafe because it may misinterpret file descriptors
+                // on Unix as jobserver file descriptors. We hopefully execute this near
+                // the beginning of the process though to ensure we don't get false
+                // positives, or in other words we try to execute this before we open
+                // any file descriptors ourselves.
+                let jobserver::FromEnv { client, var } =
+                    unsafe { jobserver::Client::from_env_ext(true) };
 
-        // This should be called early on in the process, so in theory the
-        // unsafety is ok here. (taken ownership of random fds)
-        INIT.call_once(|| unsafe {
-            if let Some(client) = jobserver::Client::from_env() {
-                GLOBAL_JOBSERVER = Box::into_raw(Box::new(client));
+                match client {
+                    Ok(client) => return Ok(Some(client)),
+                    Err(e)
+                        if matches!(
+                            e.kind(),
+                            FromEnvErrorKind::NoEnvVar
+                                | FromEnvErrorKind::NoJobserver
+                                | FromEnvErrorKind::NegativeFd
+                                | FromEnvErrorKind::Unsupported
+                        ) =>
+                    {
+                        Ok(None)
+                    }
+                    Err(e) => {
+                        let (name, value) = var.unwrap();
+                        Err(anyhow::anyhow!(
+                            "failed to connect to jobserver from environment variable `{name}={value:?}`: {e}"
+                        ))
+                    }
+                }
+            },
+        );
+        let jobserver = match &*GLOBAL_JOBSERVER {
+            Ok(jobserver) => jobserver.as_ref(),
+            Err(e) => {
+                let _ = shell.warn(e);
+                None
             }
-        });
+        };
 
         let env = Env::new();
 
@@ -342,13 +372,7 @@ impl GlobalContext {
             frozen: false,
             locked: false,
             offline: false,
-            jobserver: unsafe {
-                if GLOBAL_JOBSERVER.is_null() {
-                    None
-                } else {
-                    Some((*GLOBAL_JOBSERVER).clone())
-                }
-            },
+            jobserver,
             unstable_flags: CliUnstable::default(),
             unstable_flags_cli: None,
             easy: Default::default(),
@@ -1880,7 +1904,7 @@ impl GlobalContext {
     }
 
     pub fn jobserver_from_env(&self) -> Option<&jobserver::Client> {
-        self.jobserver.as_ref()
+        self.jobserver
     }
 
     pub fn http(&self) -> CargoResult<&Mutex<Easy>> {

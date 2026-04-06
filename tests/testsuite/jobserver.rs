@@ -411,7 +411,6 @@ all:
         .run();
 }
 
-
 #[cargo_test]
 fn jobserver_invalid_fd_warning() {
     let p = project()
@@ -423,6 +422,7 @@ fn jobserver_invalid_fd_warning() {
     p.cargo("check")
     .env("MAKEFLAGS", "--jobserver-auth=200001,200002")
         .with_stderr_data(str![[r#"
+[WARNING] failed to connect to jobserver from environment variable `MAKEFLAGS="--jobserver-auth=200001,200002"`: [..]
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
