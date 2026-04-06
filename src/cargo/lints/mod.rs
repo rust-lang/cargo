@@ -250,6 +250,12 @@ impl AsIndex for &str {
     }
 }
 
+impl AsIndex for String {
+    fn as_index<'i>(&'i self) -> TomlIndex<'i> {
+        TomlIndex::Key(self.as_str())
+    }
+}
+
 impl AsIndex for usize {
     fn as_index<'i>(&'i self) -> TomlIndex<'i> {
         TomlIndex::Offset(*self)
@@ -451,7 +457,7 @@ impl Lint {
         (l, r)
     }
 
-    fn emitted_source(&self, lint_level: LintLevel, reason: LintLevelReason) -> String {
+    pub fn emitted_source(&self, lint_level: LintLevel, reason: LintLevelReason) -> String {
         format!("`cargo::{}` is set to `{lint_level}` {reason}", self.name,)
     }
 }
@@ -476,6 +482,10 @@ impl Display for LintLevel {
 }
 
 impl LintLevel {
+    pub fn is_warn(&self) -> bool {
+        self == &LintLevel::Warn
+    }
+
     pub fn is_error(&self) -> bool {
         self == &LintLevel::Forbid || self == &LintLevel::Deny
     }
@@ -489,7 +499,7 @@ impl LintLevel {
         }
     }
 
-    fn force(self) -> bool {
+    pub fn force(self) -> bool {
         match self {
             Self::Allow => false,
             Self::Warn => true,
