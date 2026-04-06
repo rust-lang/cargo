@@ -358,6 +358,7 @@ private_dep = "2.0.0" # Will be 'private' by default
 
 Documentation updates:
 - For workspace's "The `dependencies` table" section, include `public` as an unsupported field for `workspace.dependencies`
+- Required MSRV for use of `public` is 1.83 (see [#14507](https://github.com/rust-lang/cargo/pull/14507))
 
 ## msrv-policy
 - [RFC: MSRV-aware Resolver](https://rust-lang.github.io/rfcs/3537-msrv-resolver.html)
