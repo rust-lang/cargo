@@ -47,6 +47,7 @@ use crate::util::toml_mut::dependency::WorkspaceSource;
 use crate::util::toml_mut::manifest::DepTable;
 use crate::util::toml_mut::manifest::LocalManifest;
 use crate_spec::CrateSpec;
+use crate_spec::VersionSpec;
 
 const MAX_FEATURE_PRINTS: usize = 30;
 
@@ -349,6 +350,10 @@ fn resolve_dependency(
         .as_deref()
         .map(CrateSpec::resolve)
         .transpose()?;
+    let request_latest = crate_spec
+        .as_ref()
+        .is_some_and(|crate_spec| matches!(crate_spec.version(), Some(VersionSpec::Latest)));
+
     let mut selected_dep = if let Some(url) = &arg.git {
         let mut src = GitSource::new(url);
         if let Some(branch) = &arg.branch {
@@ -362,9 +367,9 @@ fn resolve_dependency(
         }
 
         let selected = if let Some(crate_spec) = &crate_spec {
-            if let Some(v) = crate_spec.version_req() {
+            if let Some(version) = crate_spec.version() {
                 // crate specifier includes a version (e.g. `docopt@0.8`)
-                anyhow::bail!("cannot specify a git URL (`{url}`) with a version (`{v}`).");
+                anyhow::bail!("cannot specify a git URL (`{url}`) with a version (`{version}`).");
             }
             let dependency = crate_spec.to_dependency()?.set_source(src);
             let selected = select_package(&dependency, gctx, registry)?;
@@ -399,9 +404,9 @@ fn resolve_dependency(
         }
 
         let selected = if let Some(crate_spec) = &crate_spec {
-            if let Some(v) = crate_spec.version_req() {
+            if let Some(version) = crate_spec.version() {
                 // crate specifier includes a version (e.g. `docopt@0.8`)
-                anyhow::bail!("cannot specify a path (`{raw_path}`) with a version (`{v}`).");
+                anyhow::bail!("cannot specify a path (`{raw_path}`) with a version (`{version}`).");
             }
             let dependency = crate_spec.to_dependency()?.set_source(src);
             let selected = select_package(&dependency, gctx, registry)?;
@@ -423,7 +428,14 @@ fn resolve_dependency(
         };
         selected
     } else if let Some(crate_spec) = &crate_spec {
-        crate_spec.to_dependency()?
+        if request_latest {
+            // `latest` is not a dependency requirement we can write to the manifest.
+            // Build an unconstrained dependency and let the dedicated diagnostics below
+            // explain what the user should do instead.
+            Dependency::new(crate_spec.name())
+        } else {
+            crate_spec.to_dependency()?
+        }
     } else {
         anyhow::bail!("dependency name is required");
     };
@@ -511,6 +523,49 @@ fn resolve_dependency(
     if !version_required && !preserve_existing_version && version_optional_in_section {
         // dev-dependencies do not need the version populated
         dependency = dependency.clear_version();
+    }
+
+    // Check if user tried to use @latest and provide helpful error.
+    if request_latest {
+        // The diagnostics below compare against the resolved and latest published registry
+        // versions, so they only apply to registry dependencies.
+        if !matches!(dependency.source(), Some(Source::Registry(_))) {
+            anyhow::bail!("invalid version requirement `latest`");
+        }
+
+        // Get the exact version that `cargo add <name>` would resolve to,
+        // respecting MSRV and existing version constraints.
+        let resolved =
+            get_latest_dependency(spec, &dependency, honor_rust_version, gctx, registry)?;
+        let resolved_version = resolved
+            .version()
+            .expect("resolved dependency should have version");
+        // Get the actual latest non-prerelease, non-yanked version from the registry,
+        // ignoring MSRV and existing version constraints.
+        // Only name + registry matter; `Dependency::query` ignores other fields.
+        let mut unconstrained_dep = Dependency::new(&dependency.name);
+        if let Some(registry_name) = dependency.registry() {
+            unconstrained_dep = unconstrained_dep.set_registry(registry_name);
+        }
+        let latest = get_latest_dependency(spec, &unconstrained_dep, Some(false), gctx, registry)?;
+        let latest_version = latest
+            .version()
+            .expect("latest dependency should have version");
+        if resolved_version == latest_version {
+            anyhow::bail!(
+                "invalid version requirement `latest`\n\n\
+                 help: to add the latest version `{latest_version}`, run `cargo add {}`",
+                dependency.name,
+            );
+        } else {
+            anyhow::bail!(
+                "invalid version requirement `latest`\n\n\
+                 help: to use `{resolved_version}`, run `cargo add {}`\n\
+                 help: to use the latest version, run `cargo add {}@{latest_version}`",
+                dependency.name,
+                dependency.name,
+            );
+        }
     }
 
     let query = query_dependency(ws, gctx, &mut dependency)?;

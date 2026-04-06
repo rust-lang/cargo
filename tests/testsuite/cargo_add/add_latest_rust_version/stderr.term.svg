@@ -1,8 +1,10 @@
-<svg width="740px" height="110px" xmlns="http://www.w3.org/2000/svg">
+<svg width="1096px" height="146px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
     .bg { fill: #000000 }
+    .fg-bright-green { fill: #55FF55 }
     .fg-bright-red { fill: #FF5555 }
+    .fg-yellow { fill: #AA5500 }
     .container {
       padding: 0 10px;
       line-height: 18px;
@@ -18,15 +20,19 @@
   <rect width="100%" height="100%" y="0" rx="4.5" class="bg" />
 
   <text xml:space="preserve" class="container fg">
-    <tspan x="10px" y="28px"><tspan class="fg-bright-red bold">error</tspan><tspan>: invalid version requirement `latest`</tspan>
+    <tspan x="10px" y="28px"><tspan class="fg-bright-green bold">    Updating</tspan><tspan> `dummy-registry` index</tspan>
 </tspan>
-    <tspan x="10px" y="46px">
+    <tspan x="10px" y="46px"><tspan class="fg-yellow bold">warning</tspan><tspan>: ignoring rust-version-user@0.2.1 (which requires rustc 1.72) to maintain cargo-list-test-fixture's rust-version of 1.70</tspan>
 </tspan>
-    <tspan x="10px" y="64px"><tspan>Caused by:</tspan>
+    <tspan x="10px" y="64px"><tspan class="fg-bright-red bold">error</tspan><tspan>: invalid version requirement `latest`</tspan>
 </tspan>
-    <tspan x="10px" y="82px"><tspan>  unexpected character 'l' while parsing major version number</tspan>
+    <tspan x="10px" y="82px">
 </tspan>
-    <tspan x="10px" y="100px">
+    <tspan x="10px" y="100px"><tspan>help: to use `0.1.0`, run `cargo add rust-version-user`</tspan>
+</tspan>
+    <tspan x="10px" y="118px"><tspan>help: to use the latest version, run `cargo add rust-version-user@0.2.1`</tspan>
+</tspan>
+    <tspan x="10px" y="136px">
 </tspan>
   </text>
 
