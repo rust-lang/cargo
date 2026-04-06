@@ -756,6 +756,60 @@ c v1.0.0
 }
 
 #[cargo_test]
+fn invert_without_package_name() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("tree -i")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] a package name is required for `-i` but none was supplied
+
+[NOTE] `-p <spec> -i` is not supported; pass the package name to `-i` directly.
+
+[HELP] to inspect the reverse dependencies of a specific package, pass the name directly to `-i`:
+
+    cargo tree -i <spec>
+
+[HELP] if you are in a workspace and want to search across all members, use:
+
+    cargo tree --workspace -i <spec>
+
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn invert_without_package_name_workspace() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("tree --workspace -i")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] a package name is required for `-i` but none was supplied
+
+[NOTE] `-p <spec> -i` is not supported; pass the package name to `-i` directly.
+
+[HELP] to inspect the reverse dependencies of a specific package, pass the name directly to `-i`:
+
+    cargo tree -i <spec>
+
+[HELP] if you are in a workspace and want to search across all members, use:
+
+    cargo tree --workspace -i <spec>
+
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn invert_with_build_dep() {
     // -i for a common dependency between normal and build deps.
     Package::new("common", "1.0.0").publish();
