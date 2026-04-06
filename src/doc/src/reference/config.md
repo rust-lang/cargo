@@ -1345,9 +1345,9 @@ Specifies the linker which is passed to `rustc` (via [`-C linker`]) when the
 
 #### `target.<cfg>.linker`
 This is similar to the [target linker](#targettriplelinker), but using
-a [`cfg()` expression]. If both a [`<triple>`] and `<cfg>` runner match,
+a [`cfg()` expression]. If both a [`<triple>`] and `<cfg>` linker match,
 the `<triple>` will take precedence. It is an error if more than one
-`<cfg>` runner matches the current target.
+`<cfg>` linker matches the current target.
 
 #### `target.<triple>.runner`
 * Type: string or array of strings ([program path with args])
