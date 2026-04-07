@@ -4,6 +4,7 @@ use std::fs;
 
 use crate::prelude::*;
 use cargo_test_support::compare::assert_e2e;
+use cargo_test_support::git;
 use cargo_test_support::publish::validate_alt_upload;
 use cargo_test_support::registry::{self, Package, RegistryBuilder};
 use cargo_test_support::str;
@@ -227,13 +228,32 @@ fn registry_and_path_dep_works() {
 }
 
 #[cargo_test]
-fn registry_incompatible_with_git() {
-    registry::alt_init();
+fn registry_and_git_dep_works() {
+    let _reg = RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        .alternative()
+        .build();
+
+    let bar = git::repo(&paths::root().join("bar"))
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
 
     let p = project()
         .file(
             "Cargo.toml",
-            r#"
+            &format!(
+                r#"
                 [package]
                 name = "foo"
                 version = "0.0.1"
@@ -241,20 +261,25 @@ fn registry_incompatible_with_git() {
                 edition = "2015"
 
                 [dependencies.bar]
-                git = ""
+                version = "0.0.1"
                 registry = "alternative"
+                git="{}"
             "#,
+                bar.url(),
+            ),
         )
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("check")
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+    Package::new("bar", "0.0.1").alternative(true).publish();
 
-Caused by:
-  dependency (bar) specification is ambiguous. Only one of `git` or `registry` is allowed.
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[UPDATING] git repository `[ROOTURL]/bar`
+[LOCKING] 1 package to latest compatible version
+[CHECKING] bar v0.0.1 ([ROOTURL]/bar#[..])
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -632,6 +657,111 @@ fn publish_with_crates_io_dep() {
             "homepage": null,
             "keywords": [],
             "license": "MIT",
+            "license_file": null,
+            "links": null,
+            "name": "foo",
+            "readme": null,
+            "readme_file": null,
+            "repository": null,
+            "homepage": null,
+            "documentation": null,
+            "rust_version": null,
+            "vers": "0.0.1"
+        }"#,
+        "foo-0.0.1.crate",
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+    );
+}
+
+#[cargo_test]
+fn publish_with_git_and_registry_dep() {
+    let _reg = RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        .alternative()
+        .build();
+
+    let bar = git::repo(&paths::root().join("bar"))
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                edition = "2015"
+
+                [dependencies.bar]
+                version = "0.0.1"
+                registry = "alternative"
+                git="{}"
+            "#,
+                bar.url(),
+            ),
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    Package::new("bar", "0.0.1").alternative(true).publish();
+
+    p.cargo("publish --registry alternative")
+        .with_stderr_data(str![[r#"
+[UPDATING] `alternative` index
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[UPDATING] `alternative` index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.1 (registry `alternative`)
+[COMPILING] bar v0.0.1 (registry `alternative`)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[UPLOADING] foo v0.0.1 ([ROOT]/foo)
+[UPLOADED] foo v0.0.1 to registry `alternative`
+[NOTE] waiting for foo v0.0.1 to be available at registry `alternative`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
+[PUBLISHED] foo v0.0.1 at registry `alternative`
+
+"#]])
+        .run();
+
+    validate_alt_upload(
+        r#"{
+            "authors": [],
+            "badges": {},
+            "categories": [],
+            "deps": [
+                {
+                    "default_features": true,
+                    "features": [],
+                    "kind": "normal",
+                    "name": "bar",
+                    "optional": false,
+                    "target": null,
+                    "version_req": "^0.0.1"
+                }
+            ],
+            "description": null,
+            "documentation": null,
+            "features": {},
+            "homepage": null,
+            "keywords": [],
+            "license": null,
             "license_file": null,
             "links": null,
             "name": "foo",

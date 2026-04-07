@@ -46,7 +46,6 @@ fn case() {
         ])
         .current_dir(cwd)
         .assert()
-        .failure()
         .stdout_eq(str![""])
         .stderr_eq(file!["stderr.term.svg"]);
 

@@ -2362,21 +2362,17 @@ fn to_dependency_source_id<P: ResolveToPath + Clone>(
         orig.registry.as_deref(),
         orig.registry_index.as_ref(),
     ) {
-        (Some(_git), _, Some(_registry), _) | (Some(_git), _, _, Some(_registry)) => bail!(
-            "dependency ({name_in_toml}) specification is ambiguous. \
-                 Only one of `git` or `registry` is allowed.",
-        ),
-        (_, _, Some(_registry), Some(_registry_index)) => bail!(
-            "dependency ({name_in_toml}) specification is ambiguous. \
-                 Only one of `registry` or `registry-index` is allowed.",
-        ),
-        (Some(_git), Some(_path), None, None) => {
+        (Some(_git), Some(_path), _, _) => {
             bail!(
                 "dependency ({name_in_toml}) specification is ambiguous. \
                      Only one of `git` or `path` is allowed.",
             );
         }
-        (Some(git), None, None, None) => {
+        (_, _, Some(_registry), Some(_registry_index)) => bail!(
+            "dependency ({name_in_toml}) specification is ambiguous. \
+                 Only one of `registry` or `registry-index` is allowed.",
+        ),
+        (Some(git), None, _, _) => {
             let n_details = [&orig.branch, &orig.tag, &orig.rev]
                 .iter()
                 .filter(|d| d.is_some())
