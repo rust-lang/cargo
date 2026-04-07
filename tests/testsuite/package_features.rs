@@ -780,6 +780,32 @@ fn non_member() {
 }
 
 #[cargo_test]
+fn non_member_typo() {
+    // -p with a mistyped package name currently shows a misleading error
+    // without any hint about similar workspace member names.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["bar"]
+            resolver = "2"
+            "#,
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "1.0.0"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("build -p barr --all-features")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] cannot specify features for packages outside of workspace
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn resolver1_member_features() {
     // --features member-name/feature-name with resolver="1"
     let p = project()
