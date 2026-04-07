@@ -400,6 +400,8 @@ pub struct AuthorizationError {
     reason: AuthorizationErrorReason,
     /// Should `cargo login` and the `_TOKEN` env var be included when displaying this error?
     supports_cargo_token_credential_provider: bool,
+    /// Whether the cached token appears to lack an authentication scheme (no space found).
+    token_lacks_scheme: Option<bool>,
 }
 
 impl AuthorizationError {
@@ -416,12 +418,17 @@ impl AuthorizationError {
             credential_provider(gctx, &sid, false, false)?
                 .iter()
                 .any(|p| p.first().map(String::as_str) == Some("cargo:token"));
+        let cache = gctx.credential_cache();
+        let token_lacks_scheme = cache
+            .get(sid.canonical_url())
+            .map(|entry| !entry.token_value.as_deref().expose().contains(' '));
         Ok(AuthorizationError {
             sid,
             default_registry: gctx.default_registry()?,
             login_url,
             reason,
             supports_cargo_token_credential_provider,
+            token_lacks_scheme,
         })
     }
 }
@@ -460,6 +467,15 @@ impl fmt::Display for AuthorizationError {
                     f,
                     "\nYou may need to log in using this registry's credential provider"
                 )?;
+            }
+
+            if self.reason == AuthorizationErrorReason::TokenRejected {
+                if self.token_lacks_scheme == Some(true) {
+                    write!(
+                        f,
+                        "\nnote: the token does not include an authentication scheme"
+                    )?;
+                }
             }
             Ok(())
         } else if self.reason == AuthorizationErrorReason::TokenMissing {
