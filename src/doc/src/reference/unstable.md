@@ -82,7 +82,6 @@ Each new feature described below should explain how to use it.
     * [lockfile-publish-time](#lockfile-publish-time) --- Limit resolver to packages older than the specified time
 * Output behavior
     * [artifact-dir](#artifact-dir) --- Adds a directory where artifacts are copied to.
-    * [build-dir-new-layout](#build-dir-new-layout) --- Enables the new build-dir filesystem layout
     * [Different binary name](#different-binary-name) --- Assign a name to the built binary that is separate from the crate name.
     * [root-dir](#root-dir) --- Controls the root directory relative to which paths are printed
 * Compile behavior
@@ -2017,14 +2016,6 @@ The following commands are available under `-Zbuild-analysis`:
 - `cargo report rebuilds` --- Reports why crates were rebuilt,
   helping diagnose unexpected recompilations.
 
-## build-dir-new-layout
-
-* Tracking Issue: [#15010](https://github.com/rust-lang/cargo/issues/15010)
-
-Enables the new build-dir filesystem layout.
-This layout change unblocks work towards caching and locking improvements.
-
-
 ## compile-time-deps
 
 This permanently-unstable flag to only build proc-macros and build scripts (and their required dependencies),
@@ -2338,6 +2329,10 @@ Multi-package publishing has been stabilized in Rust 1.90.0.
 
 Support for `build.build-dir` was stabilized in the 1.91 release.
 See the [config documentation](config.md#buildbuild-dir) for information about changing the build-dir
+
+## build-dir-new-layout
+
+The new build-dir filesystem layout was stabilized in the 1.97.0 release.
 
 ## Build-plan
 

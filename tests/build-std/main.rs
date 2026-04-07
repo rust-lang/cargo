@@ -168,9 +168,9 @@ fn basic() {
 [COMPILING] [..]
 ...
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/[HOST_TARGET]/debug/deps/foo-[HASH])
-[RUNNING] unittests src/main.rs (target/[HOST_TARGET]/debug/deps/foo-[HASH])
-[RUNNING] tests/smoke.rs (target/[HOST_TARGET]/debug/deps/smoke-[HASH])
+[RUNNING] unittests src/lib.rs (target/[HOST_TARGET]/debug/build/foo/[HASH]/out/foo-[HASH])
+[RUNNING] unittests src/main.rs (target/[HOST_TARGET]/debug/build/foo/[HASH]/out/foo-[HASH])
+[RUNNING] tests/smoke.rs (target/[HOST_TARGET]/debug/build/foo/[HASH]/out/smoke-[HASH])
 [DOCTEST] foo
 
 "#]])
@@ -180,9 +180,9 @@ fn basic() {
     let deps_dir = Path::new("target")
         .join(rustc_host())
         .join("debug")
-        .join("deps");
-    assert!(p.glob(deps_dir.join("*.rlib")).count() > 0);
-    assert_eq!(p.glob(deps_dir.join("*.dylib")).count(), 0);
+        .join("build");
+    assert!(p.glob(deps_dir.join("**/*.rlib")).count() > 0);
+    assert_eq!(p.glob(deps_dir.join("**/*.dylib")).count(), 0);
 }
 
 #[cargo_test(build_std_real)]
@@ -432,7 +432,7 @@ fn test_proc_macro() {
 ...
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH])
+[RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/out/foo-[HASH])
 
 "#]])
         .run();

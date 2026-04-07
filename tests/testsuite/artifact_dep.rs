@@ -620,12 +620,12 @@ fn build_script_with_bin_artifacts() {
         assert_e2e().eq(
             &build_script_output,
             str![[r#"
-[ROOT]/foo/target/debug/deps/artifact/bar-[HASH]/bin/baz[EXE]
-[ROOT]/foo/target/debug/deps/artifact/bar-[HASH]/staticlib/bar-[HASH].lib
-[ROOT]/foo/target/debug/deps/artifact/bar-[HASH]/cdylib/bar.dll
-[ROOT]/foo/target/debug/deps/artifact/bar-[HASH]/bin
-[ROOT]/foo/target/debug/deps/artifact/bar-[HASH]/bin/bar[EXE]
-[ROOT]/foo/target/debug/deps/artifact/bar-[HASH]/bin/bar[EXE]
+[ROOT]/foo/target/debug/build/bar/[HASH]/artifact/bin/baz[EXE]
+[ROOT]/foo/target/debug/build/bar/[HASH]/artifact/staticlib/bar-[HASH].lib
+[ROOT]/foo/target/debug/build/bar/[HASH]/artifact/cdylib/bar.dll
+[ROOT]/foo/target/debug/build/bar/[HASH]/artifact/bin
+[ROOT]/foo/target/debug/build/bar/[HASH]/artifact/bin/bar[EXE]
+[ROOT]/foo/target/debug/build/bar/[HASH]/artifact/bin/bar[EXE]
 
 "#]],
         );
@@ -633,12 +633,12 @@ fn build_script_with_bin_artifacts() {
         assert_e2e().eq(
             &build_script_output,
             str![[r#"
-[ROOT]/foo/target/debug/deps/artifact/bar-[HASH]/bin/baz-[HASH][EXE]
-[ROOT]/foo/target/debug/deps/artifact/bar-[HASH]/staticlib/libbar-[HASH].a
-[ROOT]/foo/target/debug/deps/artifact/bar-[HASH]/cdylib/[..]bar.[..]
-[ROOT]/foo/target/debug/deps/artifact/bar-[HASH]/bin
-[ROOT]/foo/target/debug/deps/artifact/bar-[HASH]/bin/bar-[HASH][EXE]
-[ROOT]/foo/target/debug/deps/artifact/bar-[HASH]/bin/bar-[HASH][EXE]
+[ROOT]/foo/target/debug/build/bar/[HASH]/artifact/bin/baz[EXE]
+[ROOT]/foo/target/debug/build/bar/[HASH]/artifact/staticlib/libbar-[HASH].a
+[ROOT]/foo/target/debug/build/bar/[HASH]/artifact/cdylib/[..]bar.[..]
+[ROOT]/foo/target/debug/build/bar/[HASH]/artifact/bin
+[ROOT]/foo/target/debug/build/bar/[HASH]/artifact/bin/bar[EXE]
+[ROOT]/foo/target/debug/build/bar/[HASH]/artifact/bin/bar[EXE]
 
 "#]],
         );
@@ -810,8 +810,8 @@ fn build_script_with_selected_dashed_bin_artifact_and_lib_true() {
         assert_e2e().eq(
             &build_script_output,
             str![[r#"
-[ROOT]/foo/target/debug/deps/artifact/bar-baz-[HASH]/bin
-[ROOT]/foo/target/debug/deps/artifact/bar-baz-[HASH]/bin/baz_suffix[EXE]
+[ROOT]/foo/target/debug/build/bar-baz/[HASH]/artifact/bin
+[ROOT]/foo/target/debug/build/bar-baz/[HASH]/artifact/bin/baz_suffix[EXE]
 
 "#]],
         );
@@ -819,8 +819,8 @@ fn build_script_with_selected_dashed_bin_artifact_and_lib_true() {
         assert_e2e().eq(
             &build_script_output,
             str![[r#"
-[ROOT]/foo/target/debug/deps/artifact/bar-baz-[HASH]/bin
-[ROOT]/foo/target/debug/deps/artifact/bar-baz-[HASH]/bin/baz_suffix-[HASH][EXE]
+[ROOT]/foo/target/debug/build/bar-baz/[HASH]/artifact/bin
+[ROOT]/foo/target/debug/build/bar-baz/[HASH]/artifact/bin/baz_suffix[EXE]
 
 "#]],
         );
@@ -830,7 +830,7 @@ fn build_script_with_selected_dashed_bin_artifact_and_lib_true() {
         !p.bin("bar").is_file(),
         "artifacts are located in their own directory, exclusively, and won't be lifted up"
     );
-    assert_artifact_executable_output(&p, "debug", "bar", "baz_suffix");
+    assert_artifact_executable_output(&p, "debug", "bar-baz", "baz_suffix");
 }
 
 #[cargo_test]
@@ -904,7 +904,7 @@ fn lib_with_selected_dashed_bin_artifact_and_lib_true() {
         !p.bin("bar").is_file(),
         "artifacts are located in their own directory, exclusively, and won't be lifted up"
     );
-    assert_artifact_executable_output(&p, "debug", "bar", "baz_suffix");
+    assert_artifact_executable_output(&p, "debug", "bar-baz", "baz_suffix");
 }
 
 #[cargo_test]
@@ -947,7 +947,7 @@ fn allow_artifact_and_no_artifact_dep_to_same_package_within_different_dep_categ
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
 [DOCTEST] foo
 
 "#]])
@@ -1296,7 +1296,7 @@ fn cross_doctests_works_with_artifacts() {
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/[HOST_TARGET]/debug/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/[HOST_TARGET]/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
 [DOCTEST] foo
 
 "#]])
@@ -1320,7 +1320,7 @@ fn cross_doctests_works_with_artifacts() {
 [RUNNING] `rustc --crate-name foo [..]
 [RUNNING] `rustc --crate-name foo [..]
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/[ALT_TARGET]/debug/deps/foo-[HASH][EXE]`
+[RUNNING] `[ROOT]/foo/target/[ALT_TARGET]/debug/build/foo/[HASH]/out/foo-[HASH][EXE]`
 [DOCTEST] foo
 [RUNNING] `rustdoc [..]--test src/lib.rs --test-run-directory [ROOT]/foo --target [ALT_TARGET] [..]
 
@@ -1426,7 +1426,7 @@ fn profile_override_basic() {
 [RUNNING] `rustc --crate-name bar --edition=2015 bar/src/lib.rs [..] -C opt-level=1 [..]`
 [RUNNING] `rustc --crate-name bar --edition=2015 bar/src/lib.rs [..] -C opt-level=3 [..]`
 [RUNNING] `rustc --crate-name foo [..] -C opt-level=3 [..]`
-[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/build_script_build`
 [FINISHED] `dev` profile [optimized + debuginfo] target(s) in [ELAPSED]s
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 
@@ -2211,8 +2211,8 @@ fn env_vars_and_build_products_for_various_build_targets() {
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
-[RUNNING] tests/main.rs (target/debug/deps/main-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
+[RUNNING] tests/main.rs (target/debug/build/foo/[HASH]/out/main-[HASH][EXE])
 [DOCTEST] foo
 
 "#]])
@@ -2420,7 +2420,11 @@ fn doc_lib_true() {
 
     // Verify that it emits rmeta for the bin and lib dependency.
     assert_eq!(p.glob("target/debug/artifact/*.rlib").count(), 0);
-    assert_eq!(p.glob("target/debug/deps/libbar-*.rmeta").count(), 2);
+    assert_eq!(
+        p.glob("target/debug/build/bar/*/out/libbar-*.rmeta")
+            .count(),
+        2
+    );
 
     p.cargo("doc -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
@@ -2512,7 +2516,7 @@ fn assert_artifact_executable_output(
     if cfg!(target_env = "msvc") {
         assert_eq!(
             p.glob(format!(
-                "target/{}/deps/artifact/{}-*/bin/{}{}",
+                "target/{}/build/{}/*/artifact/bin/{}{}",
                 target_name,
                 dep_name,
                 bin_name,
@@ -2525,7 +2529,7 @@ fn assert_artifact_executable_output(
     } else {
         assert_eq!(
             p.glob(format!(
-                "target/{}/deps/artifact/{}-*/bin/{}-*{}",
+                "target/{}/build/{}/*/artifact/bin/{}{}",
                 target_name,
                 dep_name,
                 bin_name,
@@ -2542,7 +2546,7 @@ fn assert_artifact_executable_output(
 
 fn build_script_output_string(p: &Project, package_name: &str) -> String {
     let paths = p
-        .glob(format!("target/debug/build/{}-*/output", package_name))
+        .glob(format!("target/debug/build/{}/*/run/stdout", package_name))
         .collect::<Result<Vec<_>, _>>()
         .unwrap();
     assert_eq!(paths.len(), 1);
@@ -2826,7 +2830,7 @@ fn with_assumed_host_target_and_optional_build_dep() {
 [COMPILING] d1 v0.0.1 ([ROOT]/foo/d1)
 [RUNNING] `rustc --crate-name build_script_build --edition=2021 [..]--crate-type bin[..]
 [RUNNING] `rustc --crate-name d1 --edition=2021 [..]--crate-type bin[..]
-[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/build_script_build`
 [RUNNING] `rustc --crate-name foo --edition=2021 [..]--cfg[..]d1[..]
 [FINISHED] `dev` profile [..]
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
@@ -3493,7 +3497,7 @@ fn artifact_dep_target_does_not_propagate_to_deps_of_build_script() {
 [COMPILING] artifact v0.0.1 ([ROOT]/foo/artifact)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/main.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/main.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
 
 "#]])
         .masquerade_as_nightly_cargo(&["bindeps"])
@@ -3585,7 +3589,7 @@ fn artifact_dep_target_does_not_propagate_to_proc_macro() {
 [COMPILING] artifact v0.0.1 ([ROOT]/foo/artifact)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/main.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/main.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
 
 "#]])
         .masquerade_as_nightly_cargo(&["bindeps"])

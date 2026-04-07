@@ -1197,9 +1197,9 @@ fn cfg_rustflags_normal_source() {
 [RUNNING] `rustc [..] --cfg bar`
 [RUNNING] `rustc [..] --cfg bar`
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[EXECUTABLE] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
-[EXECUTABLE] `[ROOT]/foo/target/debug/deps/a-[HASH][EXE]`
-[EXECUTABLE] `[ROOT]/foo/target/debug/deps/c-[HASH][EXE]`
+[EXECUTABLE] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/foo-[HASH][EXE]`
+[EXECUTABLE] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/a-[HASH][EXE]`
+[EXECUTABLE] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/c-[HASH][EXE]`
 
 "#]])
         .run();
@@ -1211,8 +1211,8 @@ fn cfg_rustflags_normal_source() {
 [RUNNING] `rustc [..] --cfg bar`
 [RUNNING] `rustc [..] --cfg bar`
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[EXECUTABLE] `[ROOT]/foo/target/release/deps/foo-[HASH][EXE]`
-[EXECUTABLE] `[ROOT]/foo/target/release/deps/a-[HASH][EXE]`
+[EXECUTABLE] `[ROOT]/foo/target/release/build/foo/[HASH]/out/foo-[HASH][EXE]`
+[EXECUTABLE] `[ROOT]/foo/target/release/build/foo/[HASH]/out/a-[HASH][EXE]`
 
 "#]])
         .run();
@@ -1279,9 +1279,9 @@ fn cfg_rustflags_precedence() {
 [RUNNING] `rustc [..] --cfg bar`
 [RUNNING] `rustc [..] --cfg bar`
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[EXECUTABLE] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
-[EXECUTABLE] `[ROOT]/foo/target/debug/deps/a-[HASH][EXE]`
-[EXECUTABLE] `[ROOT]/foo/target/debug/deps/c-[HASH][EXE]`
+[EXECUTABLE] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/foo-[HASH][EXE]`
+[EXECUTABLE] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/a-[HASH][EXE]`
+[EXECUTABLE] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/c-[HASH][EXE]`
 
 "#]])
         .run();
@@ -1293,8 +1293,8 @@ fn cfg_rustflags_precedence() {
 [RUNNING] `rustc [..] --cfg bar`
 [RUNNING] `rustc [..] --cfg bar`
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[EXECUTABLE] `[ROOT]/foo/target/release/deps/foo-[HASH][EXE]`
-[EXECUTABLE] `[ROOT]/foo/target/release/deps/a-[HASH][EXE]`
+[EXECUTABLE] `[ROOT]/foo/target/release/build/foo/[HASH]/out/foo-[HASH][EXE]`
+[EXECUTABLE] `[ROOT]/foo/target/release/build/foo/[HASH]/out/a-[HASH][EXE]`
 
 "#]])
         .run();
@@ -1783,7 +1783,7 @@ fn host_config_shared_build_dep() {
 [RUNNING] `rustc --crate-name cc [..]--cfg from_target[..]`
 [COMPILING] bootstrap v0.0.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name build_script_build [..]--cfg from_host[..]`
-[RUNNING] `[ROOT]/foo/target/debug/build/bootstrap-[HASH]/build-script-build`
+[RUNNING] `[ROOT]/foo/target/debug/build/bootstrap/[HASH]/out/build_script_build`
 [RUNNING] `rustc --crate-name bootstrap[..]--cfg from_target[..]`
 [FINISHED] `dev` profile [unoptimized] target(s) in [ELAPSED]s
 

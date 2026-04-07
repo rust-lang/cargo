@@ -420,7 +420,7 @@ fn build_std_with_no_arg_for_core_only_target() {
 [COMPILING] core v0.1.0 ([..]/library/core)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `[..] rustc --crate-name build_script_build [..]/compiler_builtins/build.rs [..]`
-[RUNNING] `[ROOT]/foo/target/debug/build/compiler_builtins-[HASH]/build-script-build`
+[RUNNING] `[ROOT]/foo/target/debug/build/compiler_builtins/[HASH]/out/build_script_build`
 [RUNNING] `[..] rustc --crate-name compiler_builtins [..]--target aarch64-unknown-none[..]`
 [RUNNING] `[..] rustc --crate-name core [..]--target aarch64-unknown-none[..]`
 [RUNNING] `[..] rustc --crate-name foo [..]--target aarch64-unknown-none[..]`
@@ -459,8 +459,8 @@ fn build_std_with_no_arg_for_core_only_target() {
 [COMPILING] registry-dep-using-alloc v1.0.0
 [COMPILING] std v0.1.0 ([..]/library/std)
 [RUNNING] `[..] rustc --crate-name build_script_build [..]/compiler_builtins/build.rs [..]`
-[RUNNING] `[ROOT]/foo/target/debug/build/compiler_builtins-[HASH]/build-script-build`
-[RUNNING] `[ROOT]/foo/target/debug/build/compiler_builtins-[HASH]/build-script-build`
+[RUNNING] `[ROOT]/foo/target/debug/build/compiler_builtins/[HASH]/out/build_script_build`
+[RUNNING] `[ROOT]/foo/target/debug/build/compiler_builtins/[HASH]/out/build_script_build`
 [RUNNING] `[..]rustc --crate-name compiler_builtins [..]--target aarch64-unknown-none[..]`
 [RUNNING] `[..]rustc --crate-name core [..]--target aarch64-unknown-none[..]`
 [RUNNING] `[..]rustc --crate-name foo [..]--target aarch64-unknown-none[..]`

@@ -18,16 +18,10 @@ fn cargo_clean_simple() {
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
 
-    p.cargo("build")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .run();
+    p.cargo("build").run();
     assert!(p.build_dir().is_dir());
 
-    p.cargo("clean")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .run();
+    p.cargo("clean").run();
     assert!(!p.build_dir().is_dir());
 }
 
@@ -39,10 +33,7 @@ fn different_dir() {
         .file("src/bar/a.rs", "")
         .build();
 
-    p.cargo("build")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .run();
+    p.cargo("build").run();
     assert!(p.build_dir().is_dir());
 
     p.cargo("clean")
@@ -51,8 +42,6 @@ fn different_dir() {
 [REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
 
 "#]])
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .run();
     assert!(!p.build_dir().is_dir());
 }
@@ -85,10 +74,7 @@ fn clean_multiple_packages() {
         .file("d2/src/main.rs", "fn main() { println!(\"d2\"); }")
         .build();
 
-    p.cargo("build -p d1 -p d2 -p foo")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .run();
+    p.cargo("build -p d1 -p d2 -p foo").run();
 
     let d1_path = &p
         .build_dir()
@@ -109,8 +95,6 @@ fn clean_multiple_packages() {
 [REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
 
 "#]])
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .run();
     assert!(p.bin("foo").is_file());
     assert!(!d1_path.is_file());
@@ -132,16 +116,11 @@ fn clean_multiple_packages_in_glob_char_path() {
     let file_glob = "foo/*/out/foo.pdb";
 
     // Assert that build artifacts are produced
-    p.cargo("build")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .run();
+    p.cargo("build").run();
     assert_ne!(get_build_artifacts(foo_path, file_glob).len(), 0);
 
     // Assert that build artifacts are destroyed
     p.cargo("clean -p foo")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .with_stderr_data(str![[r#"
 [REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
 
@@ -186,10 +165,7 @@ fn clean_p_only_cleans_specified_package() {
 
     let units_path = &p.build_dir().join("debug").join("build");
 
-    p.cargo("build -p foo -p foo_core -p foo-base")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .run();
+    p.cargo("build -p foo -p foo_core -p foo-base").run();
 
     let mut fingerprint_names = get_fingerprints_without_hashes(units_path);
 
@@ -206,10 +182,7 @@ fn clean_p_only_cleans_specified_package() {
         .count();
     assert_ne!(num_foo_base_artifacts, 0);
 
-    p.cargo("clean -p foo")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .run();
+    p.cargo("clean -p foo").run();
 
     fingerprint_names = get_fingerprints_without_hashes(units_path);
 
@@ -264,48 +237,28 @@ fn clean_release() {
         .file("a/src/lib.rs", "")
         .build();
 
-    p.cargo("build --release")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .run();
+    p.cargo("build --release").run();
 
-    p.cargo("clean -p foo")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .run();
+    p.cargo("clean -p foo").run();
     p.cargo("build --release")
         .with_stderr_data(str![[r#"
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 
 "#]])
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .run();
 
-    p.cargo("clean -p foo --release")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .run();
+    p.cargo("clean -p foo --release").run();
     p.cargo("build --release")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 
 "#]])
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .run();
 
-    p.cargo("build")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .run();
+    p.cargo("build").run();
 
-    p.cargo("clean")
-        .arg("--release")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .run();
+    p.cargo("clean").arg("--release").run();
     assert!(p.build_dir().is_dir());
     assert!(p.build_dir().join("debug").is_dir());
     assert!(!p.build_dir().join("release").is_dir());
@@ -332,10 +285,7 @@ fn clean_doc() {
         .file("a/src/lib.rs", "")
         .build();
 
-    p.cargo("doc")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .run();
+    p.cargo("doc").run();
 
     let doc_path = &p.build_dir().join("doc");
 
@@ -346,8 +296,6 @@ fn clean_doc() {
 [REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
 
 "#]])
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .run();
 
     assert!(!doc_path.is_dir());
@@ -388,15 +336,8 @@ fn build_script() {
         .file("a/src/lib.rs", "")
         .build();
 
-    p.cargo("build")
-        .env("FIRST", "1")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .run();
-    p.cargo("clean -p foo")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .run();
+    p.cargo("build").env("FIRST", "1").run();
+    p.cargo("clean -p foo").run();
     p.cargo("build -v")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
@@ -406,8 +347,6 @@ fn build_script() {
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .run();
 }
 
@@ -439,22 +378,14 @@ fn clean_git() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .run();
+    p.cargo("build").run();
     p.cargo("clean -p dep")
         .with_stderr_data(str![[r#"
 [REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
 
 "#]])
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .run();
-    p.cargo("build")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .run();
+    p.cargo("build").run();
 }
 
 #[cargo_test]
@@ -478,22 +409,14 @@ fn registry() {
 
     Package::new("bar", "0.1.0").publish();
 
-    p.cargo("build")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .run();
+    p.cargo("build").run();
     p.cargo("clean -p bar")
         .with_stderr_data(str![[r#"
 [REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
 
 "#]])
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .run();
-    p.cargo("build")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .run();
+    p.cargo("build").run();
 }
 
 #[cargo_test]
@@ -516,23 +439,15 @@ fn clean_verbose() {
 
     Package::new("bar", "0.1.0").publish();
 
-    p.cargo("build")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .run();
+    p.cargo("build").run();
     p.cargo("clean -p bar --verbose")
         .with_stderr_data(str![[r#"
 [REMOVING] [ROOT]/foo/target/debug/build/bar
 [REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
 
 "#]])
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .run();
-    p.cargo("build")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .run();
+    p.cargo("build").run();
 }
 
 #[cargo_test]
@@ -550,10 +465,7 @@ fn clean_remove_rlib_rmeta() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .run();
+    p.cargo("build").run();
     assert!(p.target_debug_dir().join("libfoo.rlib").exists());
     let rmeta = p
         .glob("target/debug/build/*/*/out/*.rmeta")
@@ -561,10 +473,7 @@ fn clean_remove_rlib_rmeta() {
         .unwrap()
         .unwrap();
     assert!(rmeta.exists());
-    p.cargo("clean -p foo")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .run();
+    p.cargo("clean -p foo").run();
     assert!(!p.target_debug_dir().join("libfoo.rlib").exists());
     assert!(!rmeta.exists());
 }
@@ -594,14 +503,8 @@ fn package_cleans_all_the_things() {
             )
             .file("src/lib.rs", "")
             .build();
-        p.cargo("build")
-            .arg("-Zbuild-dir-new-layout")
-            .masquerade_as_nightly_cargo(&["new build-dir layout"])
-            .run();
-        p.cargo("clean -p foo-bar")
-            .arg("-Zbuild-dir-new-layout")
-            .masquerade_as_nightly_cargo(&["new build-dir layout"])
-            .run();
+        p.cargo("build").run();
+        p.cargo("clean -p foo-bar").run();
         assert_all_clean(&p.build_dir());
     }
     let p = project()
@@ -644,36 +547,21 @@ fn package_cleans_all_the_things() {
 
     p.cargo("build --all-targets")
         .env("CARGO_INCREMENTAL", "1")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .run();
     p.cargo("test --all-targets")
         .env("CARGO_INCREMENTAL", "1")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .run();
     p.cargo("check --all-targets")
         .env("CARGO_INCREMENTAL", "1")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .run();
-    p.cargo("clean -p foo-bar")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .run();
+    p.cargo("clean -p foo-bar").run();
     assert_all_clean(&p.build_dir());
 
     // Try some targets.
     p.cargo("build --all-targets --target")
         .arg(rustc_host())
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .run();
-    p.cargo("clean -p foo-bar --target")
-        .arg(rustc_host())
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .run();
+    p.cargo("clean -p foo-bar --target").arg(rustc_host()).run();
     assert_all_clean(&p.build_dir());
 }
 
@@ -739,10 +627,7 @@ fn clean_spec_version() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .run();
+    p.cargo("build").run();
 
     // Check suggestion for bad pkgid.
     p.cargo("clean -p baz")
@@ -753,8 +638,6 @@ fn clean_spec_version() {
 [HELP] a package with a similar name exists: `bar`
 
 "#]])
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .run();
 
     p.cargo("clean -p bar:0.1.0")
@@ -763,8 +646,6 @@ fn clean_spec_version() {
 [REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
 
 "#]])
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .run();
     let mut walker = walkdir::WalkDir::new(p.build_dir())
         .into_iter()
@@ -801,10 +682,7 @@ fn clean_spec_partial_version() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .run();
+    p.cargo("build").run();
 
     // Check suggestion for bad pkgid.
     p.cargo("clean -p baz")
@@ -815,8 +693,6 @@ fn clean_spec_partial_version() {
 [HELP] a package with a similar name exists: `bar`
 
 "#]])
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .run();
 
     p.cargo("clean -p bar:0.1")
@@ -825,8 +701,6 @@ fn clean_spec_partial_version() {
 [REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
 
 "#]])
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .run();
     let mut walker = walkdir::WalkDir::new(p.build_dir())
         .into_iter()
@@ -863,10 +737,7 @@ fn clean_spec_partial_version_ambiguous() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .run();
+    p.cargo("build").run();
 
     // Check suggestion for bad pkgid.
     p.cargo("clean -p baz")
@@ -877,8 +748,6 @@ fn clean_spec_partial_version_ambiguous() {
 [HELP] a package with a similar name exists: `bar`
 
 "#]])
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .run();
 
     p.cargo("clean -p bar:0")
@@ -887,8 +756,6 @@ fn clean_spec_partial_version_ambiguous() {
 [REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
 
 "#]])
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .run();
     let mut walker = walkdir::WalkDir::new(p.build_dir())
         .into_iter()
@@ -929,10 +796,7 @@ fn clean_spec_reserved() {
         .file("tests/build.rs", "")
         .build();
 
-    p.cargo("build --all-targets")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .run();
+    p.cargo("build --all-targets").run();
     assert!(p.target_debug_dir().join("build").is_dir());
     let build_test = p
         .glob("target/debug/build/*/*/out/build-*")
@@ -943,10 +807,7 @@ fn clean_spec_reserved() {
     // Tests are never "uplifted".
     assert!(p.glob("target/debug/build-*").next().is_none());
 
-    p.cargo("clean -p foo")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .run();
+    p.cargo("clean -p foo").run();
     // Should not delete this.
     assert!(p.target_debug_dir().join("build").is_dir());
 
@@ -961,8 +822,6 @@ fn clean_spec_reserved() {
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .run();
 }
 
@@ -994,13 +853,8 @@ fn clean_dry_run() {
 [WARNING] no files deleted due to --dry-run
 
 "#]])
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .run();
-    p.cargo("check")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .run();
+    p.cargo("check").run();
     let before = p.build_dir().ls_r();
     p.cargo("clean --dry-run")
         .with_stderr_data(str![[r#"
@@ -1008,8 +862,6 @@ fn clean_dry_run() {
 [WARNING] no files deleted due to --dry-run
 
 "#]])
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .run();
     // Verify it didn't delete anything.
     let after = p.build_dir().ls_r();
@@ -1027,8 +879,6 @@ fn clean_dry_run() {
 [WARNING] no files deleted due to --dry-run
 
 "#]])
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .run();
 }
 
@@ -1042,8 +892,6 @@ fn doc_with_package_selection() {
 [ERROR] --doc cannot be used with -p
 
 "#]])
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .run();
 }
 
@@ -1056,15 +904,10 @@ fn quiet_does_not_show_summary() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .run();
+    p.cargo("check").run();
     p.cargo("clean --quiet --dry-run")
         .with_stdout_data("")
         .with_stderr_data("")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .run();
     // Verify exact same command without -q would actually display something.
     p.cargo("clean --dry-run")
@@ -1074,8 +917,6 @@ fn quiet_does_not_show_summary() {
 [WARNING] no files deleted due to --dry-run
 
 "#]])
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .run();
 }
 
@@ -1090,8 +931,6 @@ fn explicit_target_dir_tag_not_present() {
         .build();
 
     p.cargo("clean --target-dir bar")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
 [ERROR] cannot clean `[ROOT]/foo/bar`: missing or invalid `CACHEDIR.TAG` file
@@ -1112,8 +951,6 @@ fn explicit_target_dir_tag_invalid_signature() {
         .build();
 
     p.cargo("clean --target-dir bar")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
 [ERROR] cannot clean `[ROOT]/foo/bar`: invalid signature in `CACHEDIR.TAG` file
@@ -1138,8 +975,6 @@ fn explicit_target_dir_tag_symlink() {
         .build();
 
     p.cargo("clean --target-dir bar")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
 [ERROR] cannot clean `[ROOT]/foo/bar`: expect `CACHEDIR.TAG` to be a regular file, got a symlink
@@ -1162,10 +997,7 @@ fn explicit_target_dir_tag_valid() {
         )
         .build();
 
-    p.cargo("clean --target-dir bar")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .run();
+    p.cargo("clean --target-dir bar").run();
 }
 
 #[cargo_test]
@@ -1179,8 +1011,6 @@ fn env_target_dir_tag_not_present() {
         .build();
 
     p.cargo("clean")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .env("CARGO_TARGET_DIR", "bar")
         .with_stderr_data(str![[r#"
 [REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
@@ -1198,8 +1028,6 @@ fn env_target_dir_tag_invalid_signature() {
         .build();
 
     p.cargo("clean")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .env("CARGO_TARGET_DIR", "bar")
         .with_stderr_data(str![[r#"
 [REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
@@ -1221,8 +1049,6 @@ fn env_target_dir_tag_symlink() {
         .build();
 
     p.cargo("clean")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .env("CARGO_TARGET_DIR", "bar")
         .with_stderr_data(str![[r#"
 [REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
@@ -1242,11 +1068,7 @@ fn env_target_dir_tag_valid() {
         )
         .build();
 
-    p.cargo("clean")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .env("CARGO_TARGET_DIR", "bar")
-        .run();
+    p.cargo("clean").env("CARGO_TARGET_DIR", "bar").run();
 }
 
 #[cargo_test]
@@ -1265,8 +1087,6 @@ fn config_target_dir_tag_not_present() {
         .build();
 
     p.cargo("clean")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .with_stderr_data(str![[r#"
 [REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
 
@@ -1288,8 +1108,6 @@ fn config_target_dir_tag_invalid_signature() {
         .build();
 
     p.cargo("clean")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .with_stderr_data(str![[r#"
 [REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
 
@@ -1315,8 +1133,6 @@ fn config_target_dir_tag_symlink() {
         .build();
 
     p.cargo("clean")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .with_stderr_data(str![[r#"
 [REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
 
@@ -1340,8 +1156,5 @@ fn config_target_dir_tag_valid() {
         )
         .build();
 
-    p.cargo("clean")
-        .arg("-Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .run();
+    p.cargo("clean").run();
 }

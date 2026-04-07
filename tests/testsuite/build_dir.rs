@@ -33,10 +33,7 @@ fn binary_with_debug() {
         )
         .build();
 
-    p.cargo("-Zbuild-dir-new-layout build")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .enable_mac_dsym()
-        .run();
+    p.cargo("build").enable_mac_dsym().run();
 
     assert_not_exists(&p.root().join("target"));
 
@@ -79,10 +76,7 @@ fn binary_with_release() {
         )
         .build();
 
-    p.cargo("-Zbuild-dir-new-layout build --release")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .enable_mac_dsym()
-        .run();
+    p.cargo("build --release").enable_mac_dsym().run();
 
     assert_exists_patterns_with_base_dir(
         &p.root(),
@@ -184,10 +178,7 @@ fn libs() {
             )
             .build();
 
-        p.cargo("-Zbuild-dir-new-layout build")
-            .masquerade_as_nightly_cargo(&["new build-dir layout"])
-            .enable_mac_dsym()
-            .run();
+        p.cargo("build").enable_mac_dsym().run();
 
         // Verify lib artifacts were copied into the artifact dir
         assert_exists_patterns_with_base_dir(&p.root().join("target-dir/debug"), &expected_files);
@@ -200,10 +191,7 @@ fn should_default_to_target() {
         .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
         .build();
 
-    p.cargo("-Zbuild-dir-new-layout build")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .enable_mac_dsym()
-        .run();
+    p.cargo("build").enable_mac_dsym().run();
 
     p.root().join("target").assert_build_dir_layout(str![[r#"
 [ROOT]/foo/target/.rustc_info.json
@@ -229,8 +217,7 @@ fn should_respect_env_var() {
         .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
         .build();
 
-    p.cargo("-Zbuild-dir-new-layout build")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
+    p.cargo("build")
         .env("CARGO_BUILD_BUILD_DIR", "build-dir")
         .enable_mac_dsym()
         .run();
@@ -245,6 +232,61 @@ fn should_respect_env_var() {
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/invoked.timestamp
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/foo[..][EXE]
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/foo[..].d
+
+"#]]);
+}
+
+#[cargo_test]
+fn build_script_should_output_to_build_dir() {
+    let p = project()
+        .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
+        .file(
+            "build.rs",
+            r#"
+            fn main() {
+                std::fs::write(
+                    format!("{}/foo.txt", std::env::var("OUT_DIR").unwrap()),
+                    "Hello, world!",
+                )
+                .unwrap();
+            }
+            "#,
+        )
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [build]
+            target-dir = "target-dir"
+            build-dir = "build-dir"
+            "#,
+        )
+        .build();
+
+    p.cargo("build").enable_mac_dsym().run();
+
+    p.root().join("build-dir").assert_build_dir_layout(str![[r#"
+[ROOT]/foo/build-dir/CACHEDIR.TAG
+[ROOT]/foo/build-dir/debug/.cargo-build-lock
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/foo.txt
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/build_script_build.d
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/build_script_build[EXE]
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/foo[..][EXE]
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/foo[..].d
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/invoked.timestamp
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/dep-bin-foo
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo.json
+[ROOT]/foo/build-dir/.rustc_info.json
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/run-build-script-build-script-build
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/run-build-script-build-script-build.json
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/invoked.timestamp
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/dep-build-script-build-script-build
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/build-script-build-script-build
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/build-script-build-script-build.json
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/run/invoked.timestamp
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/run/stdout
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/run/root-output
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/run/stderr
 
 "#]]);
 }
@@ -276,10 +318,7 @@ fn cargo_tmpdir_should_output_to_build_dir() {
         )
         .build();
 
-    p.cargo("-Zbuild-dir-new-layout test")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .enable_mac_dsym()
-        .run();
+    p.cargo("test").enable_mac_dsym().run();
 
     p.root().join("build-dir").assert_build_dir_layout(str![[r#"
 [ROOT]/foo/build-dir/CACHEDIR.TAG
@@ -333,10 +372,7 @@ fn examples_should_output_to_build_dir_and_uplift_to_target_dir() {
         )
         .build();
 
-    p.cargo("-Zbuild-dir-new-layout build --examples")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .enable_mac_dsym()
-        .run();
+    p.cargo("build --examples").enable_mac_dsym().run();
 
     p.root().join("build-dir").assert_build_dir_layout(str![[r#"
 [ROOT]/foo/build-dir/.rustc_info.json
@@ -380,10 +416,7 @@ fn benches_should_output_to_build_dir() {
         )
         .build();
 
-    p.cargo("-Zbuild-dir-new-layout build --bench=foo")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .enable_mac_dsym()
-        .run();
+    p.cargo("build --bench=foo").enable_mac_dsym().run();
 
     p.root().join("build-dir").assert_build_dir_layout(str![[r#"
 [ROOT]/foo/build-dir/CACHEDIR.TAG
@@ -429,10 +462,7 @@ fn cargo_doc_should_output_to_target_dir() {
         )
         .build();
 
-    p.cargo("-Zbuild-dir-new-layout doc")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .enable_mac_dsym()
-        .run();
+    p.cargo("doc").enable_mac_dsym().run();
 
     let docs_dir = p.root().join("target-dir/doc");
 
@@ -454,10 +484,7 @@ fn cargo_package_should_build_in_build_dir_and_output_to_target_dir() {
         )
         .build();
 
-    p.cargo("-Zbuild-dir-new-layout package")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .enable_mac_dsym()
-        .run();
+    p.cargo("package").enable_mac_dsym().run();
 
     let package_artifact_dir = p.root().join("target-dir/package");
     assert_exists(&package_artifact_dir);
@@ -511,8 +538,7 @@ fn cargo_publish_should_only_touch_build_dir() {
         )
         .build();
 
-    p.cargo("-Zbuild-dir-new-layout publish")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
+    p.cargo("publish")
         .replace_crates_io(registry.index_url())
         .enable_mac_dsym()
         .run();
@@ -540,10 +566,7 @@ fn cargo_clean_should_clean_the_target_dir_and_build_dir() {
         )
         .build();
 
-    p.cargo("-Zbuild-dir-new-layout build")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .enable_mac_dsym()
-        .run();
+    p.cargo("build").enable_mac_dsym().run();
 
     p.root().join("build-dir").assert_build_dir_layout(str![[r#"
 [ROOT]/foo/build-dir/.rustc_info.json
@@ -569,10 +592,7 @@ fn cargo_clean_should_clean_the_target_dir_and_build_dir() {
 
 "#]]);
 
-    p.cargo("-Zbuild-dir-new-layout clean")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .enable_mac_dsym()
-        .run();
+    p.cargo("clean").enable_mac_dsym().run();
 
     assert_not_exists(&p.root().join("build-dir"));
     assert_not_exists(&p.root().join("target-dir"));
@@ -610,10 +630,7 @@ fn cargo_clean_should_remove_correct_files() {
         )
         .build();
 
-    p.cargo("-Zbuild-dir-new-layout build")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .enable_mac_dsym()
-        .run();
+    p.cargo("build").enable_mac_dsym().run();
 
     p.root().join("build-dir").assert_build_dir_layout(str![[r#"
 [ROOT]/foo/build-dir/.rustc_info.json
@@ -635,10 +652,7 @@ fn cargo_clean_should_remove_correct_files() {
 
 "#]]);
 
-    p.cargo("-Zbuild-dir-new-layout clean -p bar")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .enable_mac_dsym()
-        .run();
+    p.cargo("clean -p bar").enable_mac_dsym().run();
 
     p.root().join("build-dir").assert_build_dir_layout(str![[r#"
 [ROOT]/foo/build-dir/.rustc_info.json
@@ -668,10 +682,7 @@ fn timings_report_should_output_to_target_dir() {
         )
         .build();
 
-    p.cargo("-Zbuild-dir-new-layout build --timings")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .enable_mac_dsym()
-        .run();
+    p.cargo("build --timings").enable_mac_dsym().run();
 
     assert_exists(&p.root().join("target-dir/cargo-timings/cargo-timing.html"));
 }
@@ -693,8 +704,7 @@ fn future_incompat_should_output_to_build_dir() {
         )
         .build();
 
-    p.cargo("-Zbuild-dir-new-layout build")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
+    p.cargo("build")
         .arg("--future-incompat-report")
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
         .run();
@@ -716,8 +726,7 @@ fn template_should_error_for_invalid_variables() {
         )
         .build();
 
-    p.cargo("-Zbuild-dir-new-layout build")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
+    p.cargo("build")
         .enable_mac_dsym()
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -742,8 +751,7 @@ fn template_should_suggest_nearest_variable() {
         )
         .build();
 
-    p.cargo("-Zbuild-dir-new-layout build")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
+    p.cargo("build")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] unexpected variable `workspace-ro` in build.build-dir path `{workspace-ro}/build-dir`
@@ -768,10 +776,7 @@ fn template_workspace_root() {
         )
         .build();
 
-    p.cargo("-Zbuild-dir-new-layout build")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .enable_mac_dsym()
-        .run();
+    p.cargo("build").enable_mac_dsym().run();
 
     // Verify the binary was uplifted to the target-dir
     assert_exists(&p.root().join(&format!("target-dir/debug/foo{EXE_SUFFIX}")));
@@ -814,10 +819,7 @@ fn template_cargo_cache_home() {
         )
         .build();
 
-    p.cargo("-Zbuild-dir-new-layout build")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .enable_mac_dsym()
-        .run();
+    p.cargo("build").enable_mac_dsym().run();
 
     // Verify the binary was uplifted to the target-dir
     assert_exists(&p.root().join(&format!("target-dir/debug/foo{EXE_SUFFIX}")));
@@ -872,10 +874,7 @@ fn template_workspace_path_hash() {
         )
         .build();
 
-    p.cargo("-Zbuild-dir-new-layout build")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .enable_mac_dsym()
-        .run();
+    p.cargo("build").enable_mac_dsym().run();
 
     let foo_dir = p.root().join("foo");
     assert_exists(&foo_dir);
@@ -943,10 +942,7 @@ fn template_workspace_path_hash_should_handle_symlink() {
         .build();
 
     // Build from the non-symlinked directory
-    p.cargo("-Zbuild-dir-new-layout check")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .enable_mac_dsym()
-        .run();
+    p.cargo("check").enable_mac_dsym().run();
 
     // Parse and verify the hash dir created from the non-symlinked dir
     let foo_dir = p.root().join("foo");
@@ -982,11 +978,7 @@ fn template_workspace_path_hash_should_handle_symlink() {
     foo_dir.rm_rf();
 
     // Run cargo from the symlinked dir
-    p.cargo("-Zbuild-dir-new-layout check")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
-        .enable_mac_dsym()
-        .cwd(&symlinked_dir)
-        .run();
+    p.cargo("check").enable_mac_dsym().cwd(&symlinked_dir).run();
 
     // Parse and verify the hash created from the symlinked dir
     assert_exists(&foo_dir);
@@ -1028,7 +1020,7 @@ fn template_should_handle_reject_unmatched_brackets() {
         )
         .build();
 
-    p.cargo("-Zbuild-dir-new-layout build")
+    p.cargo("build")
         .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -1107,8 +1099,8 @@ fn artifact_deps() {
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("run -Zbuild-dir-new-layout -Z bindeps")
-        .masquerade_as_nightly_cargo(&["bindeps", "build-dir-new-layout"])
+    p.cargo("run -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
         .enable_mac_dsym()
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to latest compatible version
@@ -1173,7 +1165,7 @@ fn should_work_with_cargo_default_lib_metadata() {
         )
         .build();
 
-    p.cargo("-Zbuild-dir-new-layout build")
+    p.cargo("build")
         .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .env("__CARGO_DEFAULT_LIB_METADATA", "true")
         .enable_mac_dsym()
@@ -1225,9 +1217,8 @@ fn new_layout_opt_out_nightly() {
         )
         .build();
 
-    p.cargo("-Zbuild-dir-new-layout build")
+    p.cargo("build")
         .env("__CARGO_TEMPORARY_BUILD_DIR_NEW_LAYOUT_OPT_OUT", "1")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .enable_mac_dsym()
         .run();
 

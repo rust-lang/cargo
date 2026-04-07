@@ -230,7 +230,7 @@ fn custom_runner() {
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..]`
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `nonexistent-runner -r [ROOT]/foo/target/debug/deps/test-[HASH][EXE] --param`
+[RUNNING] `nonexistent-runner -r [ROOT]/foo/target/debug/build/foo/[HASH]/out/test-[HASH][EXE] --param`
 ...
 "#]])
         .run();
@@ -242,7 +242,7 @@ fn custom_runner() {
 [RUNNING] `rustc [..]`
 [RUNNING] `rustc [..]`
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] `nonexistent-runner -r [ROOT]/foo/target/release/deps/bench-[HASH][EXE] --param --bench`
+[RUNNING] `nonexistent-runner -r [ROOT]/foo/target/release/build/foo/[HASH]/out/bench-[HASH][EXE] --param --bench`
 ...
 "#]])
         .run();

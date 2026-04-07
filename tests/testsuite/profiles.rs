@@ -29,7 +29,7 @@ fn profile_overrides() {
         .build();
     p.cargo("build -v").with_stderr_data(str![[r#"
 [COMPILING] test v0.0.0 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name test --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..] -C opt-level=1[..] -C debug-assertions=on[..] -C metadata=[..] -C rpath --out-dir [ROOT]/foo/target/debug/deps [..] -L dependency=[ROOT]/foo/target/debug/deps`
+[RUNNING] `rustc --crate-name test --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..] -C opt-level=1[..] -C debug-assertions=on[..] -C metadata=[..] -C rpath --out-dir [ROOT]/foo/target/debug/build/test/[HASH]/out [..] -L dependency=[ROOT]/foo/target/debug/build/test/[HASH]/out`
 [FINISHED] `dev` profile [optimized] target(s) in [ELAPSED]s
 
 "#]]).run();
@@ -56,7 +56,7 @@ fn opt_level_override_0() {
         .build();
     p.cargo("build -v").with_stderr_data(str![[r#"
 [COMPILING] test v0.0.0 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name test --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=2 [..] -C metadata=[..] --out-dir [ROOT]/foo/target/debug/deps -L dependency=[ROOT]/foo/target/debug/deps`
+[RUNNING] `rustc --crate-name test --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=2 [..] -C metadata=[..] --out-dir [ROOT]/foo/target/debug/build/test/[HASH]/out -L dependency=[ROOT]/foo/target/debug/build/test/[HASH]/out`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]]).run();
@@ -82,7 +82,7 @@ fn debug_override_1() {
         .build();
     p.cargo("build -v").with_stderr_data(str![[r#"
 [COMPILING] test v0.0.0 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name test --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=1 [..]-C metadata=[..] --out-dir [ROOT]/foo/target/debug/deps -L dependency=[ROOT]/foo/target/debug/deps`
+[RUNNING] `rustc --crate-name test --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=1 [..]-C metadata=[..] --out-dir [ROOT]/foo/target/debug/build/test/[HASH]/out -L dependency=[ROOT]/foo/target/debug/build/test/[HASH]/out`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]]).run();
@@ -120,7 +120,7 @@ fn check_opt_level_override(profile_level: &str, rustc_level: &str) {
         -C debug-assertions=on[..] \
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=[ROOT]/foo/target/debug/deps`
+        -L dependency=[ROOT]/foo/target/debug/build/test/[HASH]/out`
 [FINISHED] `dev` profile [..]+ debuginfo] target(s) in [ELAPSED]s
 ",
             level = rustc_level
@@ -196,8 +196,8 @@ fn top_level_overrides_deps() {
         -C opt-level=1[..]\
         -C debuginfo=2 [..]\
         -C metadata=[..] \
-        --out-dir [ROOT]/foo/target/release/deps \
-        -L dependency=[ROOT]/foo/target/release/deps`
+        --out-dir [ROOT]/foo/target/release/build/foo/[HASH]/out \
+        -L dependency=[ROOT]/foo/target/release/build/foo/[HASH]/out`
 [COMPILING] test v0.0.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name test --edition=2015 src/lib.rs [..]--crate-type lib \
         --emit=[..]link \
@@ -205,10 +205,11 @@ fn top_level_overrides_deps() {
         -C debuginfo=2 [..]\
         -C metadata=[..] \
         --out-dir [..] \
-        -L dependency=[ROOT]/foo/target/release/deps \
-        --extern foo=[ROOT]/foo/target/release/deps/\
+        -L dependency=[ROOT]/foo/target/release/build/foo/[HASH]/out \
+        -L dependency=[ROOT]/foo/target/release/build/test/[HASH]/out \
+        --extern foo=[ROOT]/foo/target/release/build/foo/[HASH]/out/\
                      {prefix}foo[..]{suffix} \
-        --extern foo=[ROOT]/foo/target/release/deps/libfoo.rlib`
+        --extern foo=[ROOT]/foo/target/release/build/foo/[HASH]/out/libfoo.rlib`
 [FINISHED] `release` profile [optimized + debuginfo] target(s) in [ELAPSED]s
 ",
             prefix = env::consts::DLL_PREFIX,
@@ -429,9 +430,9 @@ fn panic_unwind_does_not_build_twice() {
 [RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..] --test [..]`
 [RUNNING] `rustc --crate-name t1 --edition=2015 tests/t1.rs [..]`
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[EXECUTABLE] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
-[EXECUTABLE] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
-[EXECUTABLE] `[ROOT]/foo/target/debug/deps/t1-[HASH][EXE]`
+[EXECUTABLE] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/foo-[HASH][EXE]`
+[EXECUTABLE] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/foo-[HASH][EXE]`
+[EXECUTABLE] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/t1-[HASH][EXE]`
 
 "#]]
             .unordered(),

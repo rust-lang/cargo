@@ -128,7 +128,7 @@ fn rustc_bootstrap() {
     // RUSTC_BOOTSTRAP unset on stable should error
     p.cargo("check")
         .with_stderr_data(str![[r#"
-[COMPILING] has-dashes v0.0.1 ([ROOT]/foo)
+...
 [ERROR] cannot set `RUSTC_BOOTSTRAP=1` from build script of `has-dashes v0.0.1 ([ROOT]/foo)`.
 [NOTE] crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.
 [HELP] If you're sure you want to do this in your project, set the environment variable `RUSTC_BOOTSTRAP=has_dashes` before running cargo instead.
@@ -154,6 +154,7 @@ fn rustc_bootstrap() {
     p.cargo("check")
         .env("RUSTC_BOOTSTRAP", "has_dashes")
         .with_stderr_data(str![[r#"
+...
 [WARNING] has-dashes@0.0.1: cannot set `RUSTC_BOOTSTRAP=1` from build script of `has-dashes v0.0.1 ([ROOT]/foo)`.
 [NOTE] crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -164,6 +165,7 @@ fn rustc_bootstrap() {
     p.cargo("check")
         .env("RUSTC_BOOTSTRAP", "bar")
         .with_stderr_data(str![[r#"
+...
 [ERROR] cannot set `RUSTC_BOOTSTRAP=1` from build script of `has-dashes v0.0.1 ([ROOT]/foo)`.
 [NOTE] crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.
 [HELP] If you're sure you want to do this in your project, set the environment variable `RUSTC_BOOTSTRAP=has_dashes` before running cargo instead.
@@ -188,7 +190,7 @@ fn rustc_bootstrap() {
         // (this matters when tests are being run with a beta or stable cargo)
         .env("RUSTC_BOOTSTRAP", "1")
         .with_stderr_data(str![[r#"
-[COMPILING] foo v0.0.1 ([ROOT]/foo)
+...
 [WARNING] foo@0.0.1: cannot set `RUSTC_BOOTSTRAP=1` from build script of `foo v0.0.1 ([ROOT]/foo)`.
 [NOTE] crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -199,6 +201,7 @@ fn rustc_bootstrap() {
     p.cargo("check")
         .env("RUSTC_BOOTSTRAP", "foo")
         .with_stderr_data(str![[r#"
+...
 [ERROR] cannot set `RUSTC_BOOTSTRAP=1` from build script of `foo v0.0.1 ([ROOT]/foo)`.
 [NOTE] crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.
 [HELP] If you're sure you want to do this in your project, set the environment variable `RUSTC_BOOTSTRAP=1` before running cargo instead.
@@ -223,7 +226,7 @@ fn build_script_env_verbose() {
         .with_stderr_data(
             "\
 ...
-[RUNNING] `[..]CARGO=[..]build-script-build`
+[RUNNING] `[..]CARGO=[..]build_script_build`
 ...",
         )
         .run();
