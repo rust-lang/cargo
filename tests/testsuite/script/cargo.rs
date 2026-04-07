@@ -414,6 +414,7 @@ rustc = "non-existent-rustc"
         .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
         .with_stderr_data(str![[r#"
+[WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `2024`)
 [ERROR] could not execute process `non-existent-rustc -vV` (never executed)
 
 Caused by:
@@ -449,7 +450,10 @@ arg0: [..]
 args: ["-NotAnArg"]
 
 "#]])
-        .with_stderr_data("")
+        .with_stderr_data(str![[r#"
+[WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
+
+"#]])
         .run();
 }
 
@@ -468,7 +472,10 @@ arg0: [..]
 args: ["-NotAnArg"]
 
 "#]])
-        .with_stderr_data("")
+        .with_stderr_data(str![[r#"
+[WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
+
+"#]])
         .run();
 }
 

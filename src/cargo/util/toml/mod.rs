@@ -636,7 +636,7 @@ fn normalize_package_toml<'a>(
                 let report = [Group::with_title(Level::WARNING.secondary_title(format!(
                     "`package.edition` is unspecified, defaulting to the latest edition (currently `{DEFAULT_EDITION}`)"
                 )))];
-                let _ = gctx.shell().print_report(&report, false);
+                let _ = gctx.shell().print_report(&report, true);
                 Some(manifest::InheritableField::Value(
                     DEFAULT_EDITION.to_string(),
                 ))
