@@ -747,6 +747,8 @@ fn non_member() {
         .with_stderr_data(str![[r#"
 [ERROR] cannot specify features for packages outside of workspace
 
+[HELP] a workspace member with a similar name exists: `foo`
+
 "#]])
         .run();
 
@@ -755,6 +757,8 @@ fn non_member() {
         .with_stderr_data(str![[r#"
 [ERROR] cannot specify features for packages outside of workspace
 
+[HELP] a workspace member with a similar name exists: `foo`
+
 "#]])
         .run();
 
@@ -762,6 +766,8 @@ fn non_member() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] cannot specify features for packages outside of workspace
+
+[HELP] a workspace member with a similar name exists: `foo`
 
 "#]])
         .run();
@@ -781,8 +787,8 @@ fn non_member() {
 
 #[cargo_test]
 fn non_member_typo() {
-    // -p with a mistyped package name currently shows a misleading error
-    // without any hint about similar workspace member names.
+    // -p with a mistyped package name shows a helpful error hint
+    // about similarly named workspace members.
     let p = project()
         .file(
             "Cargo.toml",
@@ -800,6 +806,8 @@ fn non_member_typo() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] cannot specify features for packages outside of workspace
+
+[HELP] a workspace member with a similar name exists: `bar`
 
 "#]])
         .run();
@@ -988,6 +996,8 @@ fn non_member_feature() {
         .with_stderr_data(str![[r#"
 [ERROR] cannot specify features for packages outside of workspace
 
+[HELP] a workspace member with a similar name exists: `foo`
+
 "#]])
         .run();
 
@@ -1009,6 +1019,8 @@ fn non_member_feature() {
         .with_stderr_data(str![[r#"
 [ERROR] cannot specify features for packages outside of workspace
 
+[HELP] a workspace member with a similar name exists: `foo`
+
 "#]])
         .run();
     p.cargo("check -p bar --features bar/jazz")
@@ -1016,12 +1028,16 @@ fn non_member_feature() {
         .with_stderr_data(str![[r#"
 [ERROR] cannot specify features for packages outside of workspace
 
+[HELP] a workspace member with a similar name exists: `foo`
+
 "#]])
         .run();
     p.cargo("check -p bar --features foo/bar")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] cannot specify features for packages outside of workspace
+
+[HELP] a workspace member with a similar name exists: `foo`
 
 "#]])
         .run();
