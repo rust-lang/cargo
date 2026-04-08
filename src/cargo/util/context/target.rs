@@ -13,6 +13,7 @@ use std::rc::Rc;
 pub struct TargetCfgConfig {
     pub runner: OptValue<PathAndArgs>,
     pub rustflags: OptValue<StringList>,
+    pub rustdocflags: OptValue<StringList>,
     pub linker: OptValue<ConfigRelativePath>,
     // This is here just to ignore fields from normal `TargetConfig` because
     // all `[target]` tables are getting deserialized, whether they start with

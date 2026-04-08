@@ -194,7 +194,7 @@ fn not_affected_by_target_rustflags() {
 }
 
 #[cargo_test]
-fn target_cfg_rustdocflags_is_ignored() {
+fn target_cfg_rustdocflags_works() {
     let p = project()
         .file("src/lib.rs", "")
         .file(
@@ -211,22 +211,21 @@ fn target_cfg_rustdocflags_is_ignored() {
 
     p.cargo("doc -v")
         .with_stderr_data(str![[r#"
-[WARNING] unused key `rustdocflags` in [target] config table `cfg(true)`
 ...
-[RUNNING] `rustdoc [..] --cfg from_build[..]`
+[RUNNING] `rustdoc [..] --cfg from_target_cfg[..]`
 ...
 "#]])
         .run();
 }
 
 #[cargo_test]
-fn target_cfg_rustdocflags_is_ignored_through_cargo_test() {
+fn target_cfg_rustdocflags_works_through_cargo_test() {
     let p = project()
         .file(
             "src/lib.rs",
             r#"
                 //! ```
-                //! assert!(cfg!(from_build));
+                //! assert!(cfg!(from_target_cfg));
                 //! ```
             "#,
         )
@@ -244,9 +243,9 @@ fn target_cfg_rustdocflags_is_ignored_through_cargo_test() {
 
     p.cargo("test --doc -v")
         .with_stderr_data(str![[r#"
-[WARNING] unused key `rustdocflags` in [target] config table `cfg(true)`
 ...
-[RUNNING] `rustdoc[..]--test[..]--cfg[..]from_build[..]`
+[RUNNING] `rustdoc[..]--test[..]--cfg[..]from_target_cfg[..]`
+
 "#]])
         .with_stdout_data(str![[r#"
 

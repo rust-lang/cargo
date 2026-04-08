@@ -870,15 +870,15 @@ fn rustflags_from_target(
     if let Some(target_cfg) = target_cfg {
         gctx.target_cfgs()?
             .iter()
-            .filter_map(|(key, cfg)| {
-                match flag {
-                    Flags::Rust => cfg
-                        .rustflags
-                        .as_ref()
-                        .map(|rustflags| (key, &rustflags.val)),
-                    // `target.cfg(…).rustdocflags` is currently not supported.
-                    Flags::Rustdoc => None,
-                }
+            .filter_map(|(key, cfg)| match flag {
+                Flags::Rust => cfg
+                    .rustflags
+                    .as_ref()
+                    .map(|rustflags| (key, &rustflags.val)),
+                Flags::Rustdoc => cfg
+                    .rustdocflags
+                    .as_ref()
+                    .map(|rustdocflags| (key, &rustdocflags.val)),
             })
             .filter(|(key, _rustflags)| CfgExpr::matches_key(key, target_cfg))
             .for_each(|(_key, cfg_rustflags)| {
