@@ -1458,6 +1458,7 @@ pub trait TestEnvCommandExt: Sized {
             .env_remove("RUSTDOC")
             .env_remove("RUSTDOCFLAGS")
             .env_remove("RUSTFLAGS")
+            .env_remove("RUSTUP_TOOLCHAIN_SOURCE")
             .env_remove("SSH_AUTH_SOCK") // ensure an outer agent is never contacted
             .env_remove("USER") // not set on some rust-lang docker images
             .env_remove("XDG_CONFIG_HOME") // see #2345
