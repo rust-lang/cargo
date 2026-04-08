@@ -914,9 +914,14 @@ fn use_extra_filename(bcx: &BuildContext<'_, '_>, unit: &Unit) -> bool {
             // These always use metadata.
             return true;
         }
+
+        if unit.target.is_custom_build() {
+            // Build scripts never use metadata
+            return false;
+        }
         // No metadata in these cases:
         //
-        // - dylib, cdylib, executable, build-scripts: `pkg_dir` avoids collisions for us and rustc isn't
+        // - dylib, cdylib, executable: `pkg_dir` avoids collisions for us and rustc isn't
         // looking these up by `-Cextra-filename`
         //
         // The __CARGO_DEFAULT_LIB_METADATA env var is used to override this to
@@ -926,10 +931,7 @@ fn use_extra_filename(bcx: &BuildContext<'_, '_>, unit: &Unit) -> bool {
         // installs. In addition it prevents accidentally loading a libstd of a
         // different compiler at runtime.
         // See https://github.com/rust-lang/cargo/issues/3005
-        if (unit.target.is_dylib()
-            || unit.target.is_cdylib()
-            || unit.target.is_executable()
-            || unit.target.is_custom_build())
+        if (unit.target.is_dylib() || unit.target.is_cdylib() || unit.target.is_executable())
             && bcx.gctx.get_env("__CARGO_DEFAULT_LIB_METADATA").is_err()
         {
             return false;
