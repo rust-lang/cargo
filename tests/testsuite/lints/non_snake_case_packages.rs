@@ -61,6 +61,7 @@ fn main() {}"#,
         .masquerade_as_nightly_cargo(&["cargo-lints", "script"])
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
+[HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/foo-bar`
 [WARNING] packages should have a snake-case name
  --> foo-bar
   = [NOTE] `cargo::non_snake_case_packages` is set to `warn` in `[lints]`

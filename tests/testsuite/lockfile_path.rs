@@ -447,6 +447,7 @@ fn config_run_embed() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
+[HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/src/main.rs`
 [ERROR] failed to parse lock file at: [ROOT]/foo/Cargo.lock
 ...
 "#]])

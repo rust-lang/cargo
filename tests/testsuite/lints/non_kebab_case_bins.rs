@@ -154,6 +154,7 @@ fn main() {}"#,
         .masquerade_as_nightly_cargo(&["cargo-lints", "script"])
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
+[HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/foo_bar`
 [WARNING] binaries should have a kebab-case name
   |
 1 | [ROOT]/home/.cargo/build/[HASH]/target/.../foo_bar[EXE]

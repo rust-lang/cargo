@@ -3091,6 +3091,7 @@ fn script_without_frontmatter() {
         .with_stdout_data(str![""])
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
+[HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/echo.rs`
 [FIXED] echo.rs (1 fix)
 [CHECKING] echo v0.0.0 ([ROOT]/foo/echo.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -3129,6 +3130,7 @@ fn main() {}",
         .with_stdout_data(str![""])
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
+[HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/echo.rs`
 [FIXED] echo.rs (1 fix)
 [CHECKING] echo v0.0.0 ([ROOT]/foo/echo.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -3169,6 +3171,7 @@ fn main() {}"#,
         .with_stdout_data(str![""])
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
+[HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/echo.rs`
 [FIXED] echo.rs (1 fix)
 [CHECKING] foo v0.0.0 ([ROOT]/foo/echo.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -3208,6 +3211,7 @@ fn main() {}"#,
         .with_stdout_data(str![""])
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
+[HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/echo.rs`
 [FIXED] echo.rs (1 fix)
 [CHECKING] foo v0.0.0 ([ROOT]/foo/echo.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s

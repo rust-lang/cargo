@@ -1,7 +1,8 @@
-<svg width="810px" height="92px" xmlns="http://www.w3.org/2000/svg">
+<svg width="1549px" height="128px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
     .bg { fill: #000000 }
+    .fg-bright-cyan { fill: #55FFFF }
     .fg-bright-green { fill: #55FF55 }
     .fg-yellow { fill: #AA5500 }
     .container {
@@ -21,11 +22,15 @@
   <text xml:space="preserve" class="container fg">
     <tspan x="10px" y="28px"><tspan class="fg-yellow bold">warning</tspan><tspan>: `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)</tspan>
 </tspan>
-    <tspan x="10px" y="46px"><tspan class="fg-bright-green bold">    Removing</tspan><tspan> docopt from dependencies</tspan>
+    <tspan x="10px" y="46px"><tspan class="fg-bright-cyan bold">help</tspan><tspan>: to pin the edition, run `cargo fix --manifest-path [ROOT]/case/cargo-remove-test-fixture.rs`</tspan>
 </tspan>
-    <tspan x="10px" y="64px"><tspan class="fg-yellow bold">warning</tspan><tspan>: `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)</tspan>
+    <tspan x="10px" y="64px"><tspan class="fg-bright-green bold">    Removing</tspan><tspan> docopt from dependencies</tspan>
 </tspan>
-    <tspan x="10px" y="82px">
+    <tspan x="10px" y="82px"><tspan class="fg-yellow bold">warning</tspan><tspan>: `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)</tspan>
+</tspan>
+    <tspan x="10px" y="100px"><tspan class="fg-bright-cyan bold">help</tspan><tspan>: to pin the edition, run `cargo fix --manifest-path [ROOT]/case/cargo-remove-test-fixture.rs`</tspan>
+</tspan>
+    <tspan x="10px" y="118px">
 </tspan>
   </text>
 
