@@ -194,6 +194,72 @@ fn not_affected_by_target_rustflags() {
 }
 
 #[cargo_test]
+fn target_cfg_rustdocflags_works() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config.toml",
+            r#"
+                    [target.'cfg(true)']
+                    rustdocflags = ["--cfg", "from_target_cfg"]
+
+                    [build]
+                    rustdocflags = ["--cfg", "from_build"]
+                "#,
+        )
+        .build();
+
+    p.cargo("doc -v")
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `rustdoc [..] --cfg from_target_cfg[..]`
+...
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn target_cfg_rustdocflags_works_through_cargo_test() {
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"
+                //! ```
+                //! assert!(cfg!(from_target_cfg));
+                //! ```
+            "#,
+        )
+        .file(
+            ".cargo/config.toml",
+            r#"
+                    [target.'cfg(true)']
+                    rustdocflags = ["--cfg", "from_target_cfg"]
+
+                    [build]
+                    rustdocflags = ["--cfg", "from_build"]
+                "#,
+        )
+        .build();
+
+    p.cargo("test --doc -v")
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `rustdoc[..]--test[..]--cfg[..]from_target_cfg[..]`
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test src/lib.rs - (line 2) ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn target_triple_rustdocflags_works() {
     let host = rustc_host();
     let host_env = rustc_host_env();
