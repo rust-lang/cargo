@@ -1219,6 +1219,61 @@ CARGO_BIN_FILE_BAR_bar=[ROOT]/foo/build-dir/debug/build/bar/[HASH]/artifact/bin/
 "#]]);
 }
 
+/// __CARGO_DEFAULT_LIB_METADATA is internal but used by rustc bootstrap and Miri
+/// Regression test for https://github.com/rust-lang/cargo/issues/16854
+#[cargo_test]
+fn should_work_with_cargo_default_lib_metadata() {
+    let p = project()
+        .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
+        .file("build.rs", r#"fn main() { }"#)
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [build]
+            target-dir = "target-dir"
+            build-dir = "build-dir"
+            "#,
+        )
+        .build();
+
+    p.cargo("-Zbuild-dir-new-layout build")
+        .masquerade_as_nightly_cargo(&["new build-dir layout"])
+        .env("__CARGO_DEFAULT_LIB_METADATA", "true")
+        .enable_mac_dsym()
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    // NOTE: build_script_build[EXE] does not contain a hash in the filename
+    p.root().join("build-dir").assert_build_dir_layout(str![[r#"
+[ROOT]/foo/build-dir/.rustc_info.json
+[ROOT]/foo/build-dir/CACHEDIR.TAG
+[ROOT]/foo/build-dir/debug/.cargo-build-lock
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo.json
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/dep-bin-foo
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/invoked.timestamp
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/foo[..][EXE]
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/foo[..].d
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/run-build-script-build-script-build
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/run-build-script-build-script-build.json
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/run/invoked.timestamp
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/run/root-output
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/run/stderr
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/run/stdout
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/build-script-build-script-build
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/build-script-build-script-build.json
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/dep-build-script-build-script-build
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/invoked.timestamp
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/build_script_build[EXE]
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/build_script_build.d
+
+"#]]);
+}
+
 fn parse_workspace_manifest_path_hash(hash_dir: &PathBuf) -> PathBuf {
     // Since the hash will change between test runs simply find the first directories and assume
     // that is the hash dir. The format is a 2 char directory followed by the remaining hash in the
