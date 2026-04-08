@@ -1548,7 +1548,7 @@ impl<'gctx> Workspace<'gctx> {
         found_features: &mut BTreeSet<FeatureValue>,
     ) -> CliFeatures {
         if cli_features.features.is_empty() {
-            return cli_features.clone();
+            return Workspace::with_default_bin_required_features(member, cli_features.clone());
         }
 
         // Only include features this member defines.
@@ -1613,11 +1613,41 @@ impl<'gctx> Workspace<'gctx> {
                 }
             }
         }
-        CliFeatures {
-            features: Rc::new(features),
-            all_features: cli_features.all_features,
-            uses_default_features: cli_features.uses_default_features,
+        Workspace::with_default_bin_required_features(
+            member,
+            CliFeatures {
+                features: Rc::new(features),
+                all_features: cli_features.all_features,
+                uses_default_features: cli_features.uses_default_features,
+            },
+        )
+    }
+
+    fn with_default_bin_required_features(
+        member: &Package,
+        mut cli_features: CliFeatures,
+    ) -> CliFeatures {
+        if !cli_features.uses_default_features || cli_features.all_features {
+            return cli_features;
         }
+
+        let mut features = (*cli_features.features).clone();
+        let original_len = features.len();
+        features.extend(
+            member
+                .targets()
+                .iter()
+                .filter(|target| target.is_bin())
+                .filter_map(|target| target.required_features())
+                .flatten()
+                .cloned()
+                .map(Into::into)
+                .map(FeatureValue::new),
+        );
+        if features.len() != original_len {
+            cli_features.features = Rc::new(features);
+        }
+        cli_features
     }
 
     fn missing_feature_spelling_suggestions(
@@ -1959,11 +1989,14 @@ impl<'gctx> Workspace<'gctx> {
                     // The features passed on the command-line only apply to
                     // the "current" package (determined by the cwd).
                     Some(current) if member_id == current.package_id() => {
-                        let feats = CliFeatures {
-                            features: Rc::new(cwd_features.clone()),
-                            all_features: cli_features.all_features,
-                            uses_default_features: cli_features.uses_default_features,
-                        };
+                        let feats = Workspace::with_default_bin_required_features(
+                            member,
+                            CliFeatures {
+                                features: Rc::new(cwd_features.clone()),
+                                all_features: cli_features.all_features,
+                                uses_default_features: cli_features.uses_default_features,
+                            },
+                        );
                         Some((member, feats))
                     }
                     _ => {
@@ -1978,15 +2011,18 @@ impl<'gctx> Workspace<'gctx> {
                             // "current" package. As an extension, this allows
                             // member-name/feature-name to set member-specific
                             // features, which should be backwards-compatible.
-                            let feats = CliFeatures {
-                                features: Rc::new(
-                                    member_specific_features
-                                        .remove(member.name().as_str())
-                                        .unwrap_or_default(),
-                                ),
-                                uses_default_features: true,
-                                all_features: cli_features.all_features,
-                            };
+                            let feats = Workspace::with_default_bin_required_features(
+                                member,
+                                CliFeatures {
+                                    features: Rc::new(
+                                        member_specific_features
+                                            .remove(member.name().as_str())
+                                            .unwrap_or_default(),
+                                    ),
+                                    uses_default_features: true,
+                                    all_features: cli_features.all_features,
+                                },
+                            );
                             Some((member, feats))
                         } else {
                             // This member was not requested on the command-line, skip.
