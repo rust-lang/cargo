@@ -14,8 +14,8 @@ use crate::util::{GlobalContext, IntoUrl, MetricsCounter, Progress, network};
 use anyhow::{Context as _, anyhow};
 use cargo_util::{ProcessBuilder, paths};
 use cargo_util_terminal::Verbosity;
+use curl::easy::List;
 use git2::{ErrorClass, ObjectType, Oid};
-use http::{Request, StatusCode};
 use tracing::{debug, info};
 use url::Url;
 
@@ -1580,20 +1580,36 @@ fn github_fast_path(
         "https://api.github.com/repos/{}/{}/commits/{}",
         username, repository, github_branch_name,
     );
+    let mut handle = gctx.http()?.lock().unwrap();
     debug!("attempting GitHub fast path for {}", url);
-    let mut request = Request::get(url);
-    request = request.header(http::header::ACCEPT, "application/vnd.github.3.sha");
-    if let Some(local_object) = local_object {
-        request = request.header(http::header::IF_NONE_MATCH, &format!("\"{local_object}\""));
-    }
-    let request = request.body(Vec::new())?;
-    let response = crate::util::block_on(gctx.http_async()?.request(request))?;
-    let response_code = response.status();
-    if response_code == StatusCode::NOT_MODIFIED {
+    handle.get(true)?;
+    handle.url(&url)?;
+    handle.useragent("cargo")?;
+    handle.follow_location(true)?; // follow redirects
+    handle.http_headers({
+        let mut headers = List::new();
+        headers.append("Accept: application/vnd.github.3.sha")?;
+        if let Some(local_object) = local_object {
+            headers.append(&format!("If-None-Match: \"{}\"", local_object))?;
+        }
+        headers
+    })?;
+
+    let mut response_body = Vec::new();
+    let mut transfer = handle.transfer();
+    transfer.write_function(|data| {
+        response_body.extend_from_slice(data);
+        Ok(data.len())
+    })?;
+    transfer.perform()?;
+    drop(transfer); // end borrow of handle so that response_code can be called
+
+    let response_code = handle.response_code()?;
+    if response_code == 304 {
         debug!("github fast path up-to-date");
         Ok(FastPathRev::UpToDate)
-    } else if response_code == StatusCode::OK
-        && let Some(oid_to_fetch) = rev_to_oid(str::from_utf8(&response.body())?)
+    } else if response_code == 200
+        && let Some(oid_to_fetch) = rev_to_oid(str::from_utf8(&response_body)?)
     {
         // response expected to be a full hash hexstring (40 or 64 chars)
         debug!("github fast path fetch {oid_to_fetch}");
