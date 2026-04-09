@@ -375,6 +375,7 @@ pub trait CommandExt: Sized {
     fn arg_manifest_path_without_unsupported_path_tip(self) -> Self {
         self._arg(
             opt("manifest-path", "Path to Cargo.toml")
+                .short('m')
                 .value_name("PATH")
                 .help_heading(heading::MANIFEST_OPTIONS)
                 .add(clap_complete::engine::ArgValueCompleter::new(

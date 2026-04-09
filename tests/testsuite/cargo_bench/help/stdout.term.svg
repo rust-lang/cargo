@@ -128,7 +128,7 @@
 </tspan>
     <tspan x="10px" y="982px"><tspan class="fg-bright-green bold">Manifest Options:</tspan>
 </tspan>
-    <tspan x="10px" y="1000px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--manifest-path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan><tspan>  Path to Cargo.toml</tspan>
+    <tspan x="10px" y="1000px"><tspan>  </tspan><tspan class="fg-bright-cyan bold">-m</tspan><tspan>, </tspan><tspan class="fg-bright-cyan bold">--manifest-path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan><tspan>  Path to Cargo.toml</tspan>
 </tspan>
     <tspan x="10px" y="1018px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--ignore-rust-version</tspan><tspan>   Ignore `rust-version` specification in packages</tspan>
 </tspan>

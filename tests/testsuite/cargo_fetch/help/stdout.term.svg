@@ -54,7 +54,7 @@
 </tspan>
     <tspan x="10px" y="316px"><tspan class="fg-bright-green bold">Manifest Options:</tspan>
 </tspan>
-    <tspan x="10px" y="334px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--manifest-path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan><tspan>  Path to Cargo.toml</tspan>
+    <tspan x="10px" y="334px"><tspan>  </tspan><tspan class="fg-bright-cyan bold">-m</tspan><tspan>, </tspan><tspan class="fg-bright-cyan bold">--manifest-path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan><tspan>  Path to Cargo.toml</tspan>
 </tspan>
     <tspan x="10px" y="352px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--locked</tspan><tspan>                Assert that `Cargo.lock` will remain unchanged</tspan>
 </tspan>

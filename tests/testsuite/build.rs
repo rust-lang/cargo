@@ -302,16 +302,8 @@ fn cargo_compile_with_manifest_path_shorthand() {
 
     p.cargo("build -m foo/Cargo.toml")
         .cwd(p.root().parent().unwrap())
-        .with_stderr_data(str![[r#"
-[ERROR] unexpected argument '-m' found
-
-Usage: cargo build [OPTIONS]
-
-For more information, try '--help'.
-
-"#]])
-        .with_status(1)
         .run();
+    assert!(p.bin("foo").is_file());
 }
 
 #[cargo_test]
