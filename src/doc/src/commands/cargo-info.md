@@ -173,7 +173,7 @@ details on environment variables that Cargo reads.
 2. Inspect the `serde` package with version `1.0.0`:
 
         cargo info serde@1.0.0
-3. Inspect the `serde` package form the local registry:
+3. Inspect the `serde` package from the local registry:
 
         cargo info serde --registry my-registry
 
