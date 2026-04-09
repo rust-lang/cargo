@@ -4,6 +4,7 @@
 //! or `CARGO_PUBLIC_NETWORK_TESTS`.
 
 use crate::prelude::*;
+use crate::utils::cargo_process;
 use cargo_test_support::containers::Container;
 use cargo_test_support::project;
 use cargo_test_support::str;
@@ -160,6 +161,20 @@ fn github_works() {
 [UPDATING] git repository `https://github.com/rust-lang/bitflags.git`
 [LOCKING] 1 package to latest compatible version
 
+"#]])
+        .run();
+}
+
+#[cargo_test(public_network_test)]
+fn github_works_cargo_install() {
+    cargo_process("install --git https://github.com/rust-lang/bitflags.git bitflags-smoke-test")
+        .with_stderr_data(str![[r#"
+[UPDATING] git repository `https://github.com/rust-lang/bitflags.git`
+[INSTALLING] bitflags-smoke-test [..]
+[LOCKING] 1 package to latest compatible version
+...
+[INSTALLED] package [..]
+...
 "#]])
         .run();
 }
