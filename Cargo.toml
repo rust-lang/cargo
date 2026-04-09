@@ -17,7 +17,7 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/rust-lang/cargo"
 
 [workspace.dependencies]
-annotate-snippets = { version = "0.12.13", features = ["simd"] }
+annotate-snippets = { version = "0.12.15", features = ["simd"] }
 anstream = "1.0.0"
 anstyle = "1.0.14"
 anstyle-hyperlink = "1.0.2"
