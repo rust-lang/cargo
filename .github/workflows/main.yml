@@ -58,7 +58,7 @@ jobs:
   rustfmt:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - run: rustup update stable && rustup default stable
     - run: rustup component add rustfmt
     - run: cargo fmt --all --check
@@ -77,7 +77,7 @@ jobs:
     name: Clippy ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - run: rustup update stable && rustup default stable
       - run: rustup component add clippy
       - run: cargo clippy --workspace --all-targets --no-deps -- -D warnings
@@ -85,14 +85,14 @@ jobs:
   stale-label:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - run: rustup update stable && rustup default stable
       - run: cargo stale-label
 
   lint-docs:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - run: rustup update stable && rustup default stable
       - run: cargo lint-docs --check
 
@@ -100,7 +100,7 @@ jobs:
   lockfile:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - run: rustup update stable && rustup default stable
       - run: cargo update -p cargo --locked
 
@@ -111,7 +111,7 @@ jobs:
       BASE_SHA: ${{ github.event.pull_request.base.sha }}
       HEAD_SHA: ${{ github.event.pull_request.head.sha != '' && github.event.pull_request.head.sha || github.sha  }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - run: rustup update stable && rustup default stable
@@ -185,7 +185,7 @@ jobs:
           other: i686-pc-windows-gnu
     name: Tests ${{ matrix.name }}
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - name: Dump Environment
       run: ci/dump-environment.sh
     # Some tests require stable. Make sure it is set to the most recent stable
@@ -251,21 +251,21 @@ jobs:
   schema:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - run: rustup update stable && rustup default stable
     - run: cargo test -p cargo-util-schemas -F unstable-schema
 
   resolver:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - run: rustup update stable && rustup default stable
     - run: cargo test -p resolver-tests
 
   test_gitoxide:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - run: rustup update --no-self-update stable && rustup default stable
       - run: rustup target add i686-unknown-linux-gnu
       - run: rustup target add wasm32-unknown-unknown
@@ -278,7 +278,7 @@ jobs:
   build_std:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - run: rustup update nightly && rustup default nightly
     - run: rustup component add rust-src
     - run: cargo build
@@ -288,7 +288,7 @@ jobs:
   docs:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - run: rustup update nightly && rustup default nightly
     - run: rustup update stable
     - run: rustup component add rust-docs
@@ -316,7 +316,7 @@ jobs:
   msrv:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - uses: taiki-e/install-action@cargo-hack
     - run: cargo hack check --all-targets --rust-version --workspace --ignore-private --locked
 
@@ -325,7 +325,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Actions Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
     - name: Spell Check Repo
       uses: crate-ci/typos@v1.44.0
 
@@ -333,7 +333,7 @@ jobs:
     name: Timing HTML report
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - run: rustup update nightly && rustup default nightly
     - run: cargo build
     - name: Generate timing report for rustfix
