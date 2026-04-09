@@ -1268,30 +1268,9 @@ fn gitignored_nested_repo_not_treated_as_uncommitted() {
     // uncommitted changes in the nested repository.
     p.cargo("publish --no-verify --dry-run")
         .replace_crates_io(registry.index_url())
-        .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
-[ERROR] 16 files in the working directory contain changes that were not yet committed into git:
-
-tests/fixtures/generated-do-not-edit/many/613585535-unix/slash-in-root-and-negated/.git/HEAD
-tests/fixtures/generated-do-not-edit/many/613585535-unix/slash-in-root-and-negated/.git/config
-tests/fixtures/generated-do-not-edit/many/613585535-unix/slash-in-root-and-negated/.git/description
-tests/fixtures/generated-do-not-edit/many/613585535-unix/slash-in-root-and-negated/.git/hooks/README.sample
-tests/fixtures/generated-do-not-edit/many/613585535-unix/slash-in-root-and-negated/.git/index
-tests/fixtures/generated-do-not-edit/many/613585535-unix/slash-in-root-and-negated/.git/info/exclude
-tests/fixtures/generated-do-not-edit/many/613585535-unix/slash-in-root-and-negated/.git/logs/HEAD
-tests/fixtures/generated-do-not-edit/many/613585535-unix/slash-in-root-and-negated/.git/logs/refs/heads/master
-tests/fixtures/generated-do-not-edit/many/613585535-unix/slash-in-root-and-negated/.git/objects/[HASH]10fed060c122cf7d8271f951
-tests/fixtures/generated-do-not-edit/many/613585535-unix/slash-in-root-and-negated/.git/objects/[HASH]e5171d475112ed13476845d0
-tests/fixtures/generated-do-not-edit/many/613585535-unix/slash-in-root-and-negated/.git/objects/[HASH]88faebfe21fe59b13eec16e9
-tests/fixtures/generated-do-not-edit/many/613585535-unix/slash-in-root-and-negated/.git/objects/[HASH]d3b7a78a414b3c5e05ae0bc0
-tests/fixtures/generated-do-not-edit/many/613585535-unix/slash-in-root-and-negated/.git/refs/heads/master
-tests/fixtures/generated-do-not-edit/many/613585535-unix/slash-in-root-and-negated/.github/untracked-in-hidden-dir
-tests/fixtures/generated-do-not-edit/many/613585535-unix/slash-in-root-and-negated/.github/workflow.yml
-tests/fixtures/generated-do-not-edit/many/613585535-unix/slash-in-root-and-negated/untracked-in-root
-
-to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
-
+...
 "#]])
         .run();
 }
@@ -1322,16 +1301,15 @@ fn include_does_not_pick_up_gitignored_files() {
     p.change_file(".venv/some-package/LICENSE", "other license");
 
     p.cargo("package --list")
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[ERROR] 1 files in the working directory contain changes that were not yet committed into git:
-
-.venv/some-package/LICENSE
-
-to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
-
-"#]])
+        .with_stderr_data("")
         .with_stdout_data(str![[r#"
+.cargo_vcs_info.json
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+LICENSE
+src/lib.rs
+
 "#]])
         .run();
 }

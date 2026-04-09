@@ -604,6 +604,19 @@ fn _list_files(pkg: &Package, gctx: &GlobalContext) -> CargoResult<Vec<PathEntry
     }
     let ignore_include = include_builder.build()?;
 
+    let gitignore_for_include = if !no_include_option {
+        let gitignore_path = root.join(".gitignore");
+        if gitignore_path.exists() {
+            let mut builder = GitignoreBuilder::new(root);
+            builder.add(&gitignore_path);
+            Some(builder.build()?)
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
     let ignore_should_package = |relative_path: &Path, is_dir: bool| {
         // "Include" and "exclude" options are mutually exclusive.
         if no_include_option {
@@ -612,6 +625,17 @@ fn _list_files(pkg: &Package, gctx: &GlobalContext) -> CargoResult<Vec<PathEntry
                 .is_ignore()
         } else {
             if is_dir {
+                if let Some(ref gitignore) = gitignore_for_include {
+                    if gitignore
+                        .matched_path_or_any_parents(relative_path, is_dir)
+                        .is_ignore()
+                        && !ignore_include
+                            .matched_path_or_any_parents(relative_path, is_dir)
+                            .is_ignore()
+                    {
+                        return false;
+                    }
+                }
                 // Generally, include directives don't list every
                 // directory (nor should they!). Just skip all directory
                 // checks, and only check files.
@@ -896,6 +920,11 @@ fn list_files_walk(
 
             // Don't recurse into any sub-packages that we have.
             if !at_root && path.join("Cargo.toml").exists() {
+                return false;
+            }
+
+            // Skip nested git repositories (see rust-lang/cargo#16547).
+            if !at_root && path.join(".git").exists() {
                 return false;
             }
 
