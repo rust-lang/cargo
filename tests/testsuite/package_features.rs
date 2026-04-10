@@ -747,6 +747,8 @@ fn non_member() {
         .with_stderr_data(str![[r#"
 [ERROR] cannot specify features for packages outside of workspace
 
+[HELP] a workspace member with a similar name exists: `foo`
+
 "#]])
         .run();
 
@@ -755,6 +757,8 @@ fn non_member() {
         .with_stderr_data(str![[r#"
 [ERROR] cannot specify features for packages outside of workspace
 
+[HELP] a workspace member with a similar name exists: `foo`
+
 "#]])
         .run();
 
@@ -762,6 +766,8 @@ fn non_member() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] cannot specify features for packages outside of workspace
+
+[HELP] a workspace member with a similar name exists: `foo`
 
 "#]])
         .run();
@@ -774,6 +780,34 @@ fn non_member() {
 [DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
 [CHECKING] dep v1.0.0
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn non_member_typo() {
+    // -p with a mistyped package name shows a helpful error hint
+    // about similarly named workspace members.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["bar"]
+            resolver = "2"
+            "#,
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "1.0.0"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("build -p barr --all-features")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] cannot specify features for packages outside of workspace
+
+[HELP] a workspace member with a similar name exists: `bar`
 
 "#]])
         .run();
@@ -962,6 +996,8 @@ fn non_member_feature() {
         .with_stderr_data(str![[r#"
 [ERROR] cannot specify features for packages outside of workspace
 
+[HELP] a workspace member with a similar name exists: `foo`
+
 "#]])
         .run();
 
@@ -983,6 +1019,8 @@ fn non_member_feature() {
         .with_stderr_data(str![[r#"
 [ERROR] cannot specify features for packages outside of workspace
 
+[HELP] a workspace member with a similar name exists: `foo`
+
 "#]])
         .run();
     p.cargo("check -p bar --features bar/jazz")
@@ -990,12 +1028,16 @@ fn non_member_feature() {
         .with_stderr_data(str![[r#"
 [ERROR] cannot specify features for packages outside of workspace
 
+[HELP] a workspace member with a similar name exists: `foo`
+
 "#]])
         .run();
     p.cargo("check -p bar --features foo/bar")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] cannot specify features for packages outside of workspace
+
+[HELP] a workspace member with a similar name exists: `foo`
 
 "#]])
         .run();

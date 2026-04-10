@@ -47,8 +47,8 @@ use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
 use crate::util::toml::{InheritableFields, read_manifest};
 use crate::util::{
-    Filesystem, GlobalContext, IntoUrl, context::CargoResolverConfig, context::ConfigRelativePath,
-    context::IncompatibleRustVersions,
+    Filesystem, GlobalContext, IntoUrl, closest_msg, context::CargoResolverConfig,
+    context::ConfigRelativePath, context::IncompatibleRustVersions,
 };
 
 use cargo_util::paths;
@@ -1890,7 +1890,19 @@ impl<'gctx> Workspace<'gctx> {
                 && !cli_features.all_features
                 && cli_features.uses_default_features)
             {
-                bail!("cannot specify features for packages outside of workspace");
+                let hint = specs
+                    .iter()
+                    .map(|spec| {
+                        closest_msg(
+                            spec.name(),
+                            self.members(),
+                            |m| m.name().as_str(),
+                            "workspace member",
+                        )
+                    })
+                    .find(|msg| !msg.is_empty())
+                    .unwrap_or_default();
+                bail!("cannot specify features for packages outside of workspace{hint}");
             }
             // Add all members from the workspace so we can ensure `-p nonmember`
             // is in the resolve graph.
