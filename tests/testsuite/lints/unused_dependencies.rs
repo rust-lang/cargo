@@ -48,7 +48,7 @@ fn unused_dep_normal() {
 9 |             unused = "0.1.0"
   |             ^^^^^^^^^^^^^^^^
   |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] remove the dependency
   |
 9 -             unused = "0.1.0"
@@ -108,7 +108,7 @@ fn unused_dep_build() {
 9 |             unused = "0.1.0"
   |             ^^^^^^^^^^^^^^^^
   |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] remove the dependency
   |
 9 -             unused = "0.1.0"
@@ -156,7 +156,7 @@ fn unused_dep_build_no_build_rs() {
 9 |             unused = "0.1.0"
   |             ^^^^^^^^^^^^^^^^
   |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] remove the dependency
   |
 9 -             unused = "0.1.0"
@@ -241,7 +241,7 @@ fn unused_dep_lib_bins() {
 9 |             unused = "0.1.0"
   |             ^^^^^^^^^^^^^^^^
   |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] remove the dependency
   |
 9 -             unused = "0.1.0"
@@ -332,7 +332,7 @@ fn unused_dep_build_with_used_dep_normal() {
 9 |             unused_build = "0.1.0"
   |             ^^^^^^^^^^^^^^^^^^^^^^
   |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] remove the dependency
   |
 9 -             unused_build = "0.1.0"
@@ -395,7 +395,7 @@ fn unused_dep_normal_but_implicit_used_dep_dev() {
 9 |             used_dev = "0.1.0"
   |             ^^^^^^^^^^^^^^^^^^
   |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] remove the dependency
   |
 9 -             used_dev = "0.1.0"
@@ -461,7 +461,7 @@ fn unused_dep_normal_but_explicit_used_dep_dev() {
 9 |             used_once = "0.1.0"
   |             ^^^^^^^^^^^^^^^^^^^
   |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] remove the dependency
   |
 9 -             used_once = "0.1.0"
@@ -592,7 +592,7 @@ fn optional_dependency() {
 9 |             unused = { version = "0.1.0", optional = true }
   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] remove the dependency
   |
 9 -             unused = { version = "0.1.0", optional = true }
@@ -655,7 +655,7 @@ fn unused_dep_renamed() {
 9 |             baz = { package = "bar", version = "0.1.0" }
   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] remove the dependency
   |
 9 -             baz = { package = "bar", version = "0.1.0" }
@@ -711,7 +711,7 @@ fn warning_replay() {
 9 |             unused = "0.1.0"
   |             ^^^^^^^^^^^^^^^^
   |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] remove the dependency
   |
 9 -             unused = "0.1.0"
@@ -730,7 +730,7 @@ fn warning_replay() {
 9 |             unused = "0.1.0"
   |             ^^^^^^^^^^^^^^^^
   |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] remove the dependency
   |
 9 -             unused = "0.1.0"
@@ -795,7 +795,7 @@ fn unused_dep_target() {
 9 |             unused = "0.1.0"
   |             ^^^^^^^^^^^^^^^^
   |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] remove the dependency
   |
 9 -             unused = "0.1.0"
@@ -1076,7 +1076,7 @@ fn package_selection() {
 9 |             unused = "0.1.0"
   |             ^^^^^^^^^^^^^^^^
   |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] remove the dependency
   |
 9 -             unused = "0.1.0"
@@ -1087,7 +1087,7 @@ fn package_selection() {
 11 |             bar.path = "../bar"
    |             ^^^
    |
-   = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] remove the dependency
    |
 11 -             bar.path = "../bar"
@@ -1131,7 +1131,7 @@ fn package_selection() {
 11 |             bar.path = "../bar"
    |             ^^^
    |
-   = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] remove the dependency
    |
 11 -             bar.path = "../bar"
@@ -1175,7 +1175,7 @@ fn package_selection() {
 9 |             unused = "0.1.0"
   |             ^^^^^^^^^^^^^^^^
   |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] remove the dependency
   |
 9 -             unused = "0.1.0"
@@ -1316,7 +1316,7 @@ pub fn fun() -> &'static str {
 10 |             transitive = { version = "0.1.1", features = ["a"] }
    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    |
-   = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] remove the dependency
    |
 10 -             transitive = { version = "0.1.1", features = ["a"] }
@@ -1424,7 +1424,7 @@ fn allow_rustflags() {
 9 |             unused = "0.1.0"
   |             ^^^^^^^^^^^^^^^^
   |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] remove the dependency
   |
 9 -             unused = "0.1.0"
@@ -1480,7 +1480,7 @@ fn allow_attribute() {
 9 |             unused = "0.1.0"
   |             ^^^^^^^^^^^^^^^^
   |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] remove the dependency
   |
 9 -             unused = "0.1.0"
@@ -1536,7 +1536,7 @@ fn deny_rustflags() {
 9 |             unused = "0.1.0"
   |             ^^^^^^^^^^^^^^^^
   |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] remove the dependency
   |
 9 -             unused = "0.1.0"
@@ -1592,7 +1592,7 @@ fn deny_attribute() {
 9 |             unused = "0.1.0"
   |             ^^^^^^^^^^^^^^^^
   |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] remove the dependency
   |
 9 -             unused = "0.1.0"
@@ -1648,7 +1648,7 @@ fn forbid_rustflags() {
 9 |             unused = "0.1.0"
   |             ^^^^^^^^^^^^^^^^
   |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] remove the dependency
   |
 9 -             unused = "0.1.0"
@@ -1704,7 +1704,7 @@ fn forbid_attribute() {
 9 |             unused = "0.1.0"
   |             ^^^^^^^^^^^^^^^^
   |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] remove the dependency
   |
 9 -             unused = "0.1.0"

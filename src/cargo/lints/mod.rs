@@ -452,7 +452,14 @@ impl Lint {
         let (_, (l, s, _)) = max_by_key(
             (self.name, lint_level_priority),
             (self.primary_group.name, group_level_priority),
-            |(n, (l, _, p))| (l == &LintLevel::Forbid, *p, Reverse(*n)),
+            |(n, (l, s, p))| {
+                (
+                    l == &LintLevel::Forbid,
+                    *s != LintLevelSource::Default,
+                    *p,
+                    Reverse(*n),
+                )
+            },
         );
         (l, s)
     }
@@ -591,8 +598,8 @@ mod tests {
         let features = Features::default();
 
         let (level, source) = lint.level(&pkg_lints, None, &features);
-        assert_eq!(level, LintLevel::Warn);
-        assert_eq!(source, LintLevelSource::Default);
+        assert_eq!(level, LintLevel::Deny);
+        assert_eq!(source, LintLevelSource::Package);
     }
 
     #[test]
@@ -607,8 +614,8 @@ mod tests {
         let features = Features::default();
 
         let (level, source) = lint.level(&pkg_lints, None, &features);
-        assert_eq!(level, LintLevel::Warn);
-        assert_eq!(source, LintLevelSource::Default);
+        assert_eq!(level, LintLevel::Deny);
+        assert_eq!(source, LintLevelSource::Package);
     }
 
     #[test]

@@ -56,7 +56,7 @@ workspace = true
 8 | rust-version = "1.0"
   | ^^^^^^^^^^^^
   |
-  = [NOTE] `cargo::unused_workspace_package_fields` is set to `warn` by default
+  = [NOTE] `cargo::unused_workspace_package_fields` is set to `warn` in `[lints]`
 [HELP] consider removing the unused field
   |
 8 - rust-version = "1.0"

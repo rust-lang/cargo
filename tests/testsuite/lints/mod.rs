@@ -489,6 +489,7 @@ fn explicit_lint_level_overrides_default() {
 
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
+        .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
@@ -496,18 +497,17 @@ fn explicit_lint_level_overrides_default() {
 [DOWNLOADED] unused v0.1.0 (registry `dummy-registry`)
 [CHECKING] unused v0.1.0
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[WARNING] unused dependency
+[ERROR] unused dependency
  --> Cargo.toml:9:13
   |
 9 |             unused = "0.1.0"
   |             ^^^^^^^^^^^^^^^^
   |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+  = [NOTE] `cargo::unused_dependencies` is set to `deny` in `[lints]`
 [HELP] remove the dependency
   |
 9 -             unused = "0.1.0"
   |
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
