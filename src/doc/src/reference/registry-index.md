@@ -34,7 +34,7 @@ The keys are:
   `/{crate}/{version}/download` is appended to the end.
 - `api`: This is the base URL for the web API. This key is optional, but if it
   is not specified, commands such as [`cargo publish`] will not work. The web
-  API is described below.
+  API is described below. This URL should not have a trailing slash.
 - `auth-required`: indicates whether this is a private registry that requires
   all operations to be authenticated including API requests, crate downloads
   and sparse index updates.
@@ -307,7 +307,7 @@ can go to get a token.
 Registries that require authentication must set `auth-required: true` in `config.json`.
 
 #### Caching
-Cargo caches the crate metadata files, and captures the `ETag` or `Last-Modified` 
+Cargo caches the crate metadata files, and captures the `ETag` or `Last-Modified`
 HTTP header from the server for each entry. When refreshing crate metadata, Cargo
 sends the `If-None-Match` or `If-Modified-Since` header to allow the server to respond
 with HTTP 304 "Not Modified" if the local cache is valid, saving time and bandwidth.
@@ -325,7 +325,7 @@ or 451 "Unavailable For Legal Reasons" code.
 
 #### Sparse Limitations
 Since the URL of the registry is stored in the lockfile, it's not recommended to offer
-a registry with both protocols. Discussion about a transition plan is ongoing in issue 
+a registry with both protocols. Discussion about a transition plan is ongoing in issue
 [#10964]. The [crates.io] registry is an exception, since Cargo internally substitutes
 the equivalent git URL when the sparse protocol is used.
 
