@@ -5,6 +5,7 @@ use std::path::Path;
 
 use crate::prelude::*;
 use crate::utils::cargo_process;
+use cargo_test_support::git::repo;
 use cargo_test_support::publish::validate_crate_contents;
 use cargo_test_support::registry::{self, Package};
 use cargo_test_support::{
@@ -1187,6 +1188,71 @@ src/build/mod.rs
 src/lib.rs
 
 "#]])
+        .run();
+}
+
+#[cargo_test]
+fn gitignored_nested_repo_not_treated_as_uncommitted() {
+    // Verifies that a nested git repository which is .gitignored is NOT
+    // treated as uncommitted changes by `cargo publish` when `include` is used.
+
+    let registry = registry::init();
+    let p = project().no_manifest().build();
+
+    let main_repo = repo(&p.root())
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                documentation = "foo"
+                homepage = "foo"
+                repository = "foo"
+                include = ["src/**/*", "tests/**/*"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(".gitignore", "**/generated-do-not-edit/")
+        .build();
+
+    let repo_base = main_repo
+        .root()
+        .join("tests/fixtures/generated-do-not-edit/nested-repo/");
+    fs::create_dir_all(&repo_base).unwrap();
+    let nested_repo = git::init(&repo_base);
+
+    let content_dir = repo_base.join(".github");
+    fs::create_dir_all(&content_dir).unwrap();
+    fs::write(content_dir.join("workflow.yml"), "# workflow file").unwrap();
+
+    git::add(&nested_repo);
+    git::commit(&nested_repo);
+
+    fs::write(
+        content_dir.join("untracked-in-hidden-dir"),
+        "not needed for reproduction",
+    )
+    .unwrap();
+
+    fs::write(
+        repo_base.join("untracked-in-root"),
+        "not needed for reproduction",
+    )
+    .unwrap();
+
+    // TODO: This asserts not expected behavior. (Exact matching makes it brittle because of commit hashes. So use contains to verify the error instead.)
+    p.cargo("publish --no-verify --dry-run")
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr_contains("[ERROR] [..] files in the working directory contain changes that were not yet committed into git:")
+        .with_stderr_contains("[..]tests/fixtures/generated-do-not-edit/nested-repo/.github/untracked-in-hidden-dir")
+        .with_stderr_contains("[..]tests/fixtures/generated-do-not-edit/nested-repo/.github/workflow.yml")
+        .with_stderr_contains("[..]tests/fixtures/generated-do-not-edit/nested-repo/untracked-in-root")
         .run();
 }
 
