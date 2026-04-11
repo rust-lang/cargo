@@ -1191,6 +1191,46 @@ src/lib.rs
 }
 
 #[cargo_test]
+fn include_does_not_pick_up_gitignored_files() {
+    // Ensures `include` directives do not traverse into `.gitignore`d directories.
+    let (p, _repo) = git::new_repo("foo", |p| {
+        p.file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2024"
+                description = "foo"
+                license = "MIT"
+                documentation = "foo"
+                include = ["src/**/*", "Cargo.toml", "LICENSE"]
+            "#,
+        )
+            .file("src/lib.rs", "")
+            .file("LICENSE", "license text")
+            .file(".gitignore", ".venv/")
+    });
+
+    p.change_file(".venv/some-package/LICENSE", "other license");
+
+    // TODO: not expected behavior
+    p.cargo("package --list")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] 1 files in the working directory contain changes that were not yet committed into git:
+
+.venv/some-package/LICENSE
+
+to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
+
+"#]])
+        .with_stdout_data(str![[r#"
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn vcs_status_check_for_each_workspace_member() {
     // Cargo checks VCS status separately for each workspace member.
     // This ensure one file changed in a package won't affect the other.
