@@ -1229,6 +1229,43 @@ src/lib.rs
 }
 
 #[cargo_test]
+fn include_overrides_gitignore() {
+    // Verifies that a file ignored by `.gitignore` is still packaged
+    // if it is explicitly specified in `package.include`.
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2024"
+                authors = []
+                license = "MIT"
+                description = "foo"
+                include = ["src/main.rs", "ignored_dir/included_file.rs"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(".gitignore", "ignored_dir/\n")
+        .file("ignored_dir/included_file.rs", "")
+        .file("ignored_dir/ignored_file.rs", "")
+        .build();
+
+    p.cargo("package --list --allow-dirty")
+        .with_stdout_data(str![[r#"
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+ignored_dir/included_file.rs
+src/main.rs
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn vcs_status_check_for_each_workspace_member() {
     // Cargo checks VCS status separately for each workspace member.
     // This ensure one file changed in a package won't affect the other.
