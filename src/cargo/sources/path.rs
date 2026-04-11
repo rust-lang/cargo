@@ -22,7 +22,7 @@ use filetime::FileTime;
 use gix::bstr::{BString, ByteVec};
 use gix::dir::entry::Status;
 use gix::index::entry::Stage;
-use ignore::gitignore::GitignoreBuilder;
+use ignore::gitignore::{Gitignore, GitignoreBuilder};
 use tracing::{debug, info, trace, warn};
 use walkdir::WalkDir;
 
@@ -577,6 +577,34 @@ pub fn list_files(pkg: &Package, gctx: &GlobalContext) -> CargoResult<Vec<PathEn
         )
     })
 }
+fn build_gitignore_for_include(root: &Path) -> CargoResult<Option<Gitignore>> {
+    let repo_workdir =
+        discover_gix_repo(root)?.and_then(|repo| repo.workdir().map(|p| p.to_path_buf()));
+    let ignore_root = repo_workdir.as_deref().unwrap_or(root);
+
+    let mut builder = GitignoreBuilder::new(ignore_root);
+    let mut has_rules = false;
+
+    let repo_gitignore = ignore_root.join(".gitignore");
+    if repo_gitignore.exists() {
+        builder.add(&repo_gitignore);
+        has_rules = true;
+    }
+
+    if ignore_root != root {
+        let pkg_gitignore = root.join(".gitignore");
+        if pkg_gitignore.exists() {
+            builder.add(&pkg_gitignore);
+            has_rules = true;
+        }
+    }
+
+    if has_rules {
+        Ok(Some(builder.build()?))
+    } else {
+        Ok(None)
+    }
+}
 
 /// See [`PathSource::list_files`].
 fn _list_files(pkg: &Package, gctx: &GlobalContext) -> CargoResult<Vec<PathEntry>> {
@@ -604,6 +632,19 @@ fn _list_files(pkg: &Package, gctx: &GlobalContext) -> CargoResult<Vec<PathEntry
     }
     let ignore_include = include_builder.build()?;
 
+    let gitignore_for_include = if !no_include_option {
+        build_gitignore_for_include(root)?
+    } else {
+        None
+    };
+
+    let include_rules: Vec<String> = pkg
+        .manifest()
+        .include()
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+
     let ignore_should_package = |relative_path: &Path, is_dir: bool| {
         // "Include" and "exclude" options are mutually exclusive.
         if no_include_option {
@@ -612,6 +653,24 @@ fn _list_files(pkg: &Package, gctx: &GlobalContext) -> CargoResult<Vec<PathEntry
                 .is_ignore()
         } else {
             if is_dir {
+                if let Some(ref gitignore) = gitignore_for_include {
+                    if gitignore
+                        .matched_path_or_any_parents(relative_path, is_dir)
+                        .is_ignore()
+                    {
+                        let dominated_by_include = ignore_include
+                            .matched_path_or_any_parents(relative_path, is_dir)
+                            .is_ignore();
+                        let normalized = relative_path.to_string_lossy().replace('\\', "/");
+                        let prefix = format!("{}/", normalized);
+                        let include_references_inside = include_rules.iter().any(|rule| {
+                            rule.starts_with(&prefix) || rule.starts_with(&format!("/{}", prefix))
+                        });
+                        if !dominated_by_include && !include_references_inside {
+                            return false;
+                        }
+                    }
+                }
                 // Generally, include directives don't list every
                 // directory (nor should they!). Just skip all directory
                 // checks, and only check files.

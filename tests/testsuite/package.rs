@@ -1207,25 +1207,23 @@ fn include_does_not_pick_up_gitignored_files() {
                 include = ["src/**/*", "Cargo.toml", "LICENSE"]
             "#,
         )
-            .file("src/lib.rs", "")
-            .file("LICENSE", "license text")
-            .file(".gitignore", ".venv/")
+        .file("src/lib.rs", "")
+        .file("LICENSE", "license text")
+        .file(".gitignore", ".venv/")
     });
 
     p.change_file(".venv/some-package/LICENSE", "other license");
 
-    // TODO: not expected behavior
     p.cargo("package --list")
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[ERROR] 1 files in the working directory contain changes that were not yet committed into git:
-
-.venv/some-package/LICENSE
-
-to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
-
-"#]])
+        .with_stderr_data("")
         .with_stdout_data(str![[r#"
+.cargo_vcs_info.json
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+LICENSE
+src/lib.rs
+
 "#]])
         .run();
 }
