@@ -1245,14 +1245,12 @@ fn gitignored_nested_repo_not_treated_as_uncommitted() {
     )
     .unwrap();
 
-    // TODO: This asserts not expected behavior. (Exact matching makes it brittle because of commit hashes. So use contains to verify the error instead.)
     p.cargo("publish --no-verify --dry-run")
         .replace_crates_io(registry.index_url())
-        .with_status(101)
-        .with_stderr_contains("[ERROR] [..] files in the working directory contain changes that were not yet committed into git:")
-        .with_stderr_contains("[..]tests/fixtures/generated-do-not-edit/nested-repo/.github/untracked-in-hidden-dir")
-        .with_stderr_contains("[..]tests/fixtures/generated-do-not-edit/nested-repo/.github/workflow.yml")
-        .with_stderr_contains("[..]tests/fixtures/generated-do-not-edit/nested-repo/untracked-in-root")
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+...
+"#]])
         .run();
 }
 

@@ -899,6 +899,10 @@ fn list_files_walk(
                 return false;
             }
 
+            if !at_root && path.join(".git").exists() {
+                return false;
+            }
+
             // Skip root Cargo artifacts.
             if is_root
                 && entry.depth() == 1
