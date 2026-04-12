@@ -148,6 +148,42 @@ Caused by:
 }
 
 #[cargo_test]
+fn unknown_value_in_config_file() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2021"
+            "#,
+        )
+        .file("src/main.rs", "fn main() { let x = 3; }")
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [build]
+                warnings = "forbid"
+            "#,
+        )
+        .build();
+
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["warnings"])
+        .arg("-Zwarnings")
+        .with_stderr_data(str![[r#"
+[ERROR] error in [ROOT]/foo/.cargo/config.toml: could not load config key `build.warnings`
+
+Caused by:
+  unknown variant `forbid`, expected one of `warn`, `allow`, `deny`
+
+"#]])
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test]
 fn keep_going() {
     let p = project()
         .file(
