@@ -13,9 +13,10 @@ use cargo_util_terminal::report::Level;
 use indexmap::{IndexMap, IndexSet};
 
 use std::ffi::OsString;
-use std::fs;
+use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
+use std::{fs, io};
 
 pub struct CleanOptions<'gctx> {
     pub gctx: &'gctx GlobalContext,
@@ -31,6 +32,8 @@ pub struct CleanOptions<'gctx> {
     pub doc: bool,
     /// If set, doesn't delete anything.
     pub dry_run: bool,
+    /// true if target-dir was was explicitly specified via --target-dir
+    pub explicit_target_dir_arg: bool,
 }
 
 pub struct CleanContext<'gctx> {
@@ -58,6 +61,22 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         // do not error if target_dir is symlink; let cargo delete it
         if !meta.is_symlink() && !meta.is_dir() {
             let title = format!("cannot clean `{}`: not a directory", target_dir.display());
+            let report = [Level::ERROR
+                .primary_title(title)
+                .element(Level::NOTE.message(CLEAN_ABORT_NOTE))];
+            gctx.shell().print_report(&report, false)?;
+            return Err(crate::AlreadyPrintedError::new(anyhow::anyhow!("")).into());
+        }
+    }
+
+    // do some validation on target_dir if it was specified via --target-dir
+    if opts.explicit_target_dir_arg {
+        let target_dir_path = target_dir.as_path_unlocked();
+
+        // check if the target directory has a valid CACHEDIR.TAG
+        if let Err(err) = validate_target_dir_tag(target_dir_path) {
+            // if target_dir was passed explicitly via --target-dir, then hard error if validation fails
+            let title = format!("cannot clean `{}`: {err}", target_dir_path.display());
             let report = [Level::ERROR
                 .primary_title(title)
                 .element(Level::NOTE.message(CLEAN_ABORT_NOTE))];
@@ -119,6 +138,37 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     }
 
     clean_ctx.display_summary()?;
+    Ok(())
+}
+
+fn validate_target_dir_tag(target_dir_path: &Path) -> CargoResult<()> {
+    const TAG_SIGNATURE: &[u8] = b"Signature: 8a477f597d28d172789f06886806bc55";
+
+    let tag_path = target_dir_path.join("CACHEDIR.TAG");
+
+    // per https://bford.info/cachedir the tag file must not be a symlink
+    if tag_path.is_symlink() {
+        bail!("expect `CACHEDIR.TAG` to be a regular file, got a symlink");
+    }
+
+    if !tag_path.is_file() {
+        bail!("missing or invalid `CACHEDIR.TAG` file");
+    }
+
+    let mut file = fs::File::open(&tag_path)
+        .map_err(|err| anyhow::anyhow!("failed to open `{}`: {}", tag_path.display(), err))?;
+
+    let mut buf = [0u8; TAG_SIGNATURE.len()];
+    match file.read_exact(&mut buf) {
+        Ok(()) if &buf[..] == TAG_SIGNATURE => {}
+        Err(e) if e.kind() != io::ErrorKind::UnexpectedEof => {
+            bail!("failed to read `{}`: {e}", tag_path.display());
+        }
+        _ => {
+            bail!("invalid signature in `CACHEDIR.TAG` file");
+        }
+    }
+
     Ok(())
 }
 
