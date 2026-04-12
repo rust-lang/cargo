@@ -15,41 +15,45 @@ env:
   MDBOOK_VERSION: 0.5.1
 
 jobs:
-  deploy:
-    permissions:
-      contents: write  # for Git to git push
+  build:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
-      with:
-        fetch-depth: 0
     - name: Install mdbook
       run: |
         mkdir mdbook
         curl -Lf https://github.com/rust-lang/mdBook/releases/download/v${MDBOOK_VERSION}/mdbook-v${MDBOOK_VERSION}-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=./mdbook
         echo `pwd`/mdbook >> $GITHUB_PATH
-    - name: Deploy docs
+    - name: Build
       run: |
         GENERATE_PY="$(pwd)/ci/generate.py"
 
         cd src/doc/contrib
         mdbook build
 
-        # Override previous ref to avoid keeping history.
-        git worktree add --orphan -B gh-pages gh-pages
-        git config user.name "Deploy from CI"
-        git config user.email ""
+        mkdir gh-pages
         cd gh-pages
         mv ../book contrib
-        git add contrib
 
         # Generate HTML for link redirections.
         python3 "$GENERATE_PY"
-        git add *.html
-        # WARN: The CNAME file is for GitHub to redirect requests to the custom domain.
-        # Missing this may entail security hazard and domain takeover.
-        # See <https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site#securing-your-custom-domain>
-        git add CNAME
+    - name: Upload Artifact
+      uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9  # v5.0.0
+      with:
+        path: src/doc/contrib/gh-pages
 
-        git commit -m "Deploy $GITHUB_SHA to gh-pages"
-        git push origin +gh-pages
+  deploy:
+    needs: build
+
+    permissions:
+      pages: write # to deploy to Pages
+      id-token: write # to verify the deployment originates from an appropriate source
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    runs-on: ubuntu-latest
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128  # v5.0.0
