@@ -529,6 +529,7 @@ fn resolve_dependency(
             .expect("resolved dependency should have version");
         // Get the actual latest non-prerelease, non-yanked version from the registry,
         // ignoring MSRV and existing version constraints.
+        // Only name + registry matter; `Dependency::query` ignores other fields.
         let mut unconstrained_dep = Dependency::new(&dependency.name);
         if let Some(registry_name) = dependency.registry() {
             unconstrained_dep = unconstrained_dep.set_registry(registry_name);
