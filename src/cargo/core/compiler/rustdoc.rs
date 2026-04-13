@@ -228,6 +228,16 @@ pub fn add_root_urls(
         }
         Some(RustdocExternMode::Url(s)) => Some(s.to_string()),
     };
+
+    if matches!(std_url, Some(_))
+        || map
+            .registries
+            .iter()
+            .any(|(registry, _)| registry != CRATES_IO_REGISTRY)
+    {
+        rustdoc.arg("--extern-html-root-takes-precedence");
+    }
+
     if let Some(url) = std_url {
         for name in &["std", "core", "alloc", "proc_macro"] {
             rustdoc.arg("--extern-html-root-url");
