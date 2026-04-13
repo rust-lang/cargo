@@ -837,7 +837,7 @@ fn prepare_rustc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResult
     if build_runner.bcx.gctx.cli_unstable().cargo_lints {
         // Added last to reduce the risk of RUSTFLAGS or `[lints]` from interfering with
         // `unused_dependencies` tracking
-        base.arg("-Wunused_crate_dependencies");
+        base.arg("--force-warn=unused_crate_dependencies");
     }
 
     Ok(base)

@@ -1378,3 +1378,339 @@ fn config_ignore() {
         )
         .run();
 }
+
+#[cargo_test]
+fn allow_rustflags() {
+    // The most basic case where there is an unused dependency
+    Package::new("unused", "0.1.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+            edition = "2018"
+
+            [dependencies]
+            unused = "0.1.0"
+
+            [lints.cargo]
+            unused_dependencies = "warn"
+        "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {}
+            "#,
+        )
+        .build();
+
+    p.cargo("check -Zcargo-lints")
+        .env("RUSTFLAGS", "-Aunused_crate_dependencies")
+        .masquerade_as_nightly_cargo(&["cargo-lints"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] unused v0.1.0 (registry `dummy-registry`)
+[CHECKING] unused v0.1.0
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[WARNING] unused dependency
+ --> Cargo.toml:9:13
+  |
+9 |             unused = "0.1.0"
+  |             ^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+[HELP] remove the dependency
+  |
+9 -             unused = "0.1.0"
+  |
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn allow_attribute() {
+    // The most basic case where there is an unused dependency
+    Package::new("unused", "0.1.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+            edition = "2018"
+
+            [dependencies]
+            unused = "0.1.0"
+
+            [lints.cargo]
+            unused_dependencies = "warn"
+        "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+            #![allow(unused_crate_dependencies)]
+            fn main() {}
+            "#,
+        )
+        .build();
+
+    p.cargo("check -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] unused v0.1.0 (registry `dummy-registry`)
+[CHECKING] unused v0.1.0
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[WARNING] unused dependency
+ --> Cargo.toml:9:13
+  |
+9 |             unused = "0.1.0"
+  |             ^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+[HELP] remove the dependency
+  |
+9 -             unused = "0.1.0"
+  |
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn deny_rustflags() {
+    // The most basic case where there is an unused dependency
+    Package::new("unused", "0.1.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+            edition = "2018"
+
+            [dependencies]
+            unused = "0.1.0"
+
+            [lints.cargo]
+            unused_dependencies = "warn"
+        "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {}
+            "#,
+        )
+        .build();
+
+    p.cargo("check -Zcargo-lints")
+        .env("RUSTFLAGS", "-Dunused_crate_dependencies")
+        .masquerade_as_nightly_cargo(&["cargo-lints"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] unused v0.1.0 (registry `dummy-registry`)
+[CHECKING] unused v0.1.0
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[WARNING] unused dependency
+ --> Cargo.toml:9:13
+  |
+9 |             unused = "0.1.0"
+  |             ^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+[HELP] remove the dependency
+  |
+9 -             unused = "0.1.0"
+  |
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn deny_attribute() {
+    // The most basic case where there is an unused dependency
+    Package::new("unused", "0.1.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+            edition = "2018"
+
+            [dependencies]
+            unused = "0.1.0"
+
+            [lints.cargo]
+            unused_dependencies = "warn"
+        "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+            #![deny(unused_crate_dependencies)]
+            fn main() {}
+            "#,
+        )
+        .build();
+
+    p.cargo("check -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] unused v0.1.0 (registry `dummy-registry`)
+[CHECKING] unused v0.1.0
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[WARNING] unused dependency
+ --> Cargo.toml:9:13
+  |
+9 |             unused = "0.1.0"
+  |             ^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+[HELP] remove the dependency
+  |
+9 -             unused = "0.1.0"
+  |
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn forbid_rustflags() {
+    // The most basic case where there is an unused dependency
+    Package::new("unused", "0.1.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+            edition = "2018"
+
+            [dependencies]
+            unused = "0.1.0"
+
+            [lints.cargo]
+            unused_dependencies = "warn"
+        "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {}
+            "#,
+        )
+        .build();
+
+    p.cargo("check -Zcargo-lints")
+        .env("RUSTFLAGS", "-Funused_crate_dependencies")
+        .masquerade_as_nightly_cargo(&["cargo-lints"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] unused v0.1.0 (registry `dummy-registry`)
+[CHECKING] unused v0.1.0
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[WARNING] unused dependency
+ --> Cargo.toml:9:13
+  |
+9 |             unused = "0.1.0"
+  |             ^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+[HELP] remove the dependency
+  |
+9 -             unused = "0.1.0"
+  |
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn forbid_attribute() {
+    // The most basic case where there is an unused dependency
+    Package::new("unused", "0.1.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+            edition = "2018"
+
+            [dependencies]
+            unused = "0.1.0"
+
+            [lints.cargo]
+            unused_dependencies = "warn"
+        "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+            #![forbid(unused_crate_dependencies)]
+            fn main() {}
+            "#,
+        )
+        .build();
+
+    p.cargo("check -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] unused v0.1.0 (registry `dummy-registry`)
+[CHECKING] unused v0.1.0
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[WARNING] unused dependency
+ --> Cargo.toml:9:13
+  |
+9 |             unused = "0.1.0"
+  |             ^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
+[HELP] remove the dependency
+  |
+9 -             unused = "0.1.0"
+  |
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
