@@ -566,6 +566,51 @@ mod tests {
     use snapbox::ToDebug;
     use std::collections::HashSet;
 
+    use super::*;
+
+    fn test_lint(name: &'static str, group: &'static LintGroup) -> Lint {
+        Lint {
+            name,
+            desc: "test lint",
+            primary_group: group,
+            msrv: None,
+            feature_gate: None,
+            docs: None,
+        }
+    }
+
+    #[test]
+    fn lint_level_prefers_user_specified_over_default() {
+        let lint = test_lint("unused_dependencies", &STYLE);
+
+        let mut pkg_lints = TomlToolLints::new();
+        pkg_lints.insert(
+            "unused_dependencies".to_string(),
+            cargo_util_schemas::manifest::TomlLint::Level(TomlLintLevel::Deny),
+        );
+        let features = Features::default();
+
+        let (level, reason) = lint.level(&pkg_lints, None, &features);
+        assert_eq!(level, LintLevel::Warn);
+        assert_eq!(reason, LintLevelReason::Default);
+    }
+
+    #[test]
+    fn lint_level_group_overrides_default() {
+        let lint = test_lint("non_kebab_case_bins", &STYLE);
+
+        let mut pkg_lints = TomlToolLints::new();
+        pkg_lints.insert(
+            "style".to_string(),
+            cargo_util_schemas::manifest::TomlLint::Level(TomlLintLevel::Deny),
+        );
+        let features = Features::default();
+
+        let (level, reason) = lint.level(&pkg_lints, None, &features);
+        assert_eq!(level, LintLevel::Warn);
+        assert_eq!(reason, LintLevelReason::Default);
+    }
+
     #[test]
     fn ensure_lint_groups_do_not_default_to_forbid() {
         let forbid_groups = super::LINT_GROUPS
