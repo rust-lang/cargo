@@ -1,5 +1,6 @@
 mod add_basic;
 mod add_latest;
+mod add_latest_alt_registry;
 mod add_latest_no_existing;
 mod add_latest_rust_version;
 mod add_multiple;
