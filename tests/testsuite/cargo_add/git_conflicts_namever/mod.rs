@@ -39,3 +39,25 @@ fn case() {
 
     assert_ui().subset_matches(current_dir!().join("out"), &project_root);
 }
+
+#[cargo_test]
+fn latest() {
+    let project = Project::from_template(current_dir!().join("in"));
+    let project_root = project.root();
+    let cwd = &project_root;
+
+    snapbox::cmd::Command::cargo_ui()
+        .arg("add")
+        .args([
+            "my-package@latest",
+            "--git",
+            "https://github.com/dcjanus/invalid",
+        ])
+        .current_dir(cwd)
+        .assert()
+        .code(101)
+        .stdout_eq(str![""])
+        .stderr_eq(file!["stderr_latest.term.svg"]);
+
+    assert_ui().subset_matches(current_dir!().join("out"), &project_root);
+}
