@@ -220,6 +220,7 @@ use std::path::{Path, PathBuf};
 pub struct Layout {
     artifact_dir: Option<ArtifactDirLayout>,
     build_dir: BuildDirLayout,
+    _lock: Option<FileLock>,
 }
 
 impl Layout {
@@ -281,6 +282,15 @@ impl Layout {
         let deps = build_dest.join("deps");
         let artifact = deps.join("artifact");
 
+        // We take a shared lock on `.cargo-lock` to make sure we don't run currently with
+        // older versions of Cargo (including tools that use Cargo as a library) that don't support
+        // `.cargo-build-lock`.
+        let lock = if is_on_nfs_mount(root.as_path_unlocked()) {
+            None
+        } else {
+            Some(dest.open_ro_shared_create(".cargo-lock", ws.gctx(), "artifact directory")?)
+        };
+
         let artifact_dir = if must_take_artifact_dir_lock {
             // For now we don't do any more finer-grained locking on the artifact
             // directory, so just lock the entire thing for the duration of this
@@ -289,7 +299,7 @@ impl Layout {
                 None
             } else {
                 Some(dest.open_rw_exclusive_create(
-                    ".cargo-lock",
+                    ".cargo-artifact-lock",
                     ws.gctx(),
                     "artifact directory",
                 )?)
@@ -320,6 +330,7 @@ impl Layout {
                 _lock: build_dir_lock,
                 is_new_layout,
             },
+            _lock: lock,
         })
     }
 
