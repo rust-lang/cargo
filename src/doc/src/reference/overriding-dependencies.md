@@ -165,7 +165,7 @@ uuid = { git = 'https://github.com/uuid-rs/uuid.git' }
 ```
 
 Remember that `[patch]` is applicable *transitively* but can only be defined at
-the *top level* so we consumers of `my-library` have to repeat the `[patch]` section
+the *top level* so the consumers of `my-library` have to repeat the `[patch]` section
 if necessary. Here, though, the new `uuid` crate applies to *both* our dependency on
 `uuid` and the `my-library -> uuid` dependency. The `uuid` crate will be resolved to
 one version for this entire crate graph, 1.0.1, and it'll be pulled from the git
