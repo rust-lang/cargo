@@ -84,7 +84,7 @@ workspace = true
 12 | not-inherited = "1"
    | ^^^^^^^^^^^^^
    |
-   = [NOTE] `cargo::unused_workspace_dependencies` is set to `warn` by default
+   = [NOTE] `cargo::unused_workspace_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the unused dependency
    |
 12 - not-inherited = "1"

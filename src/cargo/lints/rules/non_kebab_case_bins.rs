@@ -15,7 +15,7 @@ use crate::core::Workspace;
 use crate::lints::AsIndex;
 use crate::lints::Lint;
 use crate::lints::LintLevel;
-use crate::lints::LintLevelReason;
+use crate::lints::LintLevelSource;
 use crate::lints::STYLE;
 use crate::lints::get_key_value_span;
 use crate::lints::rel_cwd_manifest_path;
@@ -69,7 +69,7 @@ pub fn non_kebab_case_bins(
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let (lint_level, reason) = LINT.level(
+    let (lint_level, source) = LINT.level(
         cargo_lints,
         pkg.rust_version(),
         pkg.manifest().unstable_features(),
@@ -86,7 +86,7 @@ pub fn non_kebab_case_bins(
         pkg,
         &manifest_path,
         lint_level,
-        reason,
+        source,
         error_count,
         gctx,
     )
@@ -97,7 +97,7 @@ pub fn lint_package(
     pkg: &Package,
     manifest_path: &str,
     lint_level: LintLevel,
-    reason: LintLevelReason,
+    source: LintLevelSource,
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
@@ -115,7 +115,7 @@ pub fn lint_package(
         let document = manifest.document();
         let contents = manifest.contents();
         let level = lint_level.to_diagnostic_level();
-        let emitted_source = LINT.emitted_source(lint_level, reason);
+        let emitted_source = LINT.emitted_source(lint_level, source);
 
         let mut primary_source = ws.target_dir().as_path_unlocked().to_owned();
         // Elide profile/platform as we don't have that context

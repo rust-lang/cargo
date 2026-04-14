@@ -49,7 +49,7 @@ pub fn output_unknown_lints(
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let (lint_level, reason) = manifest.lint_level(cargo_lints, LINT);
+    let (lint_level, source) = manifest.lint_level(cargo_lints, LINT);
     if lint_level == LintLevel::Allow {
         return Ok(());
     }
@@ -97,7 +97,7 @@ pub fn output_unknown_lints(
         }
 
         if emitted_source.is_none() {
-            emitted_source = Some(LINT.emitted_source(lint_level, reason));
+            emitted_source = Some(LINT.emitted_source(lint_level, source));
             group = group.element(Level::NOTE.message(emitted_source.as_ref().unwrap()));
         }
         if let Some(help) = help.as_ref() {

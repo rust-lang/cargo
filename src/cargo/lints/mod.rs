@@ -44,7 +44,7 @@ pub enum ManifestFor<'a> {
 }
 
 impl ManifestFor<'_> {
-    fn lint_level(&self, pkg_lints: &TomlToolLints, lint: &Lint) -> (LintLevel, LintLevelReason) {
+    fn lint_level(&self, pkg_lints: &TomlToolLints, lint: &Lint) -> (LintLevel, LintLevelSource) {
         lint.level(pkg_lints, self.rust_version(), self.unstable_features())
     }
 
@@ -111,10 +111,10 @@ pub fn analyze_cargo_lints_table(
             continue;
         };
 
-        let (_, reason, _) = level_priority(name, *default_level, cargo_lints);
+        let (_, source, _) = level_priority(name, *default_level, cargo_lints);
 
         // Only run analysis on user-specified lints
-        if !reason.is_user_specified() {
+        if !source.is_user_specified() {
             continue;
         }
 
@@ -423,20 +423,20 @@ impl Lint {
         pkg_lints: &TomlToolLints,
         pkg_rust_version: Option<&RustVersion>,
         unstable_features: &Features,
-    ) -> (LintLevel, LintLevelReason) {
+    ) -> (LintLevel, LintLevelSource) {
         // We should return `Allow` if a lint is behind a feature, but it is
         // not enabled, that way the lint does not run.
         if self
             .feature_gate
             .is_some_and(|f| !unstable_features.is_enabled(f))
         {
-            return (LintLevel::Allow, LintLevelReason::Default);
+            return (LintLevel::Allow, LintLevelSource::Default);
         }
 
         if let (Some(msrv), Some(pkg_rust_version)) = (&self.msrv, pkg_rust_version) {
             let pkg_rust_version = pkg_rust_version.to_partial();
             if !msrv.is_compatible_with(&pkg_rust_version) {
-                return (LintLevel::Allow, LintLevelReason::Default);
+                return (LintLevel::Allow, LintLevelSource::Default);
             }
         }
 
@@ -449,16 +449,23 @@ impl Lint {
             pkg_lints,
         );
 
-        let (_, (l, r, _)) = max_by_key(
+        let (_, (l, s, _)) = max_by_key(
             (self.name, lint_level_priority),
             (self.primary_group.name, group_level_priority),
-            |(n, (l, _, p))| (l == &LintLevel::Forbid, *p, Reverse(*n)),
+            |(n, (l, s, p))| {
+                (
+                    l == &LintLevel::Forbid,
+                    *s != LintLevelSource::Default,
+                    *p,
+                    Reverse(*n),
+                )
+            },
         );
-        (l, r)
+        (l, s)
     }
 
-    pub fn emitted_source(&self, lint_level: LintLevel, reason: LintLevelReason) -> String {
-        format!("`cargo::{}` is set to `{lint_level}` {reason}", self.name,)
+    pub fn emitted_source(&self, lint_level: LintLevel, source: LintLevelSource) -> String {
+        format!("`cargo::{}` is set to `{lint_level}` {source}", self.name,)
     }
 }
 
@@ -521,25 +528,25 @@ impl From<TomlLintLevel> for LintLevel {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum LintLevelReason {
+pub enum LintLevelSource {
     Default,
     Package,
 }
 
-impl Display for LintLevelReason {
+impl Display for LintLevelSource {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            LintLevelReason::Default => write!(f, "by default"),
-            LintLevelReason::Package => write!(f, "in `[lints]`"),
+            LintLevelSource::Default => write!(f, "by default"),
+            LintLevelSource::Package => write!(f, "in `[lints]`"),
         }
     }
 }
 
-impl LintLevelReason {
+impl LintLevelSource {
     fn is_user_specified(&self) -> bool {
         match self {
-            LintLevelReason::Default => false,
-            LintLevelReason::Package => true,
+            LintLevelSource::Default => false,
+            LintLevelSource::Package => true,
         }
     }
 }
@@ -548,15 +555,15 @@ fn level_priority(
     name: &str,
     default_level: LintLevel,
     pkg_lints: &TomlToolLints,
-) -> (LintLevel, LintLevelReason, i8) {
+) -> (LintLevel, LintLevelSource, i8) {
     if let Some(defined_level) = pkg_lints.get(name) {
         (
             defined_level.level().into(),
-            LintLevelReason::Package,
+            LintLevelSource::Package,
             defined_level.priority(),
         )
     } else {
-        (default_level, LintLevelReason::Default, 0)
+        (default_level, LintLevelSource::Default, 0)
     }
 }
 
@@ -565,6 +572,51 @@ mod tests {
     use itertools::Itertools;
     use snapbox::ToDebug;
     use std::collections::HashSet;
+
+    use super::*;
+
+    fn test_lint(name: &'static str, group: &'static LintGroup) -> Lint {
+        Lint {
+            name,
+            desc: "test lint",
+            primary_group: group,
+            msrv: None,
+            feature_gate: None,
+            docs: None,
+        }
+    }
+
+    #[test]
+    fn lint_level_prefers_user_specified_over_default() {
+        let lint = test_lint("unused_dependencies", &STYLE);
+
+        let mut pkg_lints = TomlToolLints::new();
+        pkg_lints.insert(
+            "unused_dependencies".to_string(),
+            cargo_util_schemas::manifest::TomlLint::Level(TomlLintLevel::Deny),
+        );
+        let features = Features::default();
+
+        let (level, source) = lint.level(&pkg_lints, None, &features);
+        assert_eq!(level, LintLevel::Deny);
+        assert_eq!(source, LintLevelSource::Package);
+    }
+
+    #[test]
+    fn lint_level_group_overrides_default() {
+        let lint = test_lint("non_kebab_case_bins", &STYLE);
+
+        let mut pkg_lints = TomlToolLints::new();
+        pkg_lints.insert(
+            "style".to_string(),
+            cargo_util_schemas::manifest::TomlLint::Level(TomlLintLevel::Deny),
+        );
+        let features = Features::default();
+
+        let (level, source) = lint.level(&pkg_lints, None, &features);
+        assert_eq!(level, LintLevel::Deny);
+        assert_eq!(source, LintLevelSource::Package);
+    }
 
     #[test]
     fn ensure_lint_groups_do_not_default_to_forbid() {

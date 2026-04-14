@@ -62,7 +62,7 @@ pub fn blanket_hint_mostly_unused(
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let (lint_level, reason) = LINT.level(
+    let (lint_level, source) = LINT.level(
         pkg_lints,
         ws.lowest_rust_version(),
         maybe_pkg.unstable_features(),
@@ -169,7 +169,7 @@ pub fn blanket_hint_mostly_unused(
 
         if i == 0 {
             primary_group =
-                primary_group.element(Level::NOTE.message(LINT.emitted_source(lint_level, reason)));
+                primary_group.element(Level::NOTE.message(LINT.emitted_source(lint_level, source)));
         }
 
         // The primary group should always be first
