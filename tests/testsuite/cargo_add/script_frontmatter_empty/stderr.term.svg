@@ -1,7 +1,8 @@
-<svg width="810px" height="128px" xmlns="http://www.w3.org/2000/svg">
+<svg width="1574px" height="164px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
     .bg { fill: #000000 }
+    .fg-bright-cyan { fill: #55FFFF }
     .fg-bright-green { fill: #55FF55 }
     .fg-yellow { fill: #AA5500 }
     .container {
@@ -21,15 +22,19 @@
   <text xml:space="preserve" class="container fg">
     <tspan x="10px" y="28px"><tspan class="fg-yellow bold">warning</tspan><tspan>: `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)</tspan>
 </tspan>
-    <tspan x="10px" y="46px"><tspan class="fg-bright-green bold">    Updating</tspan><tspan> `dummy-registry` index</tspan>
+    <tspan x="10px" y="46px"><tspan class="fg-bright-cyan bold">help</tspan><tspan>: to pin the edition, run `cargo fix --manifest-path [ROOT]/case/cargo-test-fixture.rs`</tspan>
 </tspan>
-    <tspan x="10px" y="64px"><tspan class="fg-bright-green bold">      Adding</tspan><tspan> my-package v99999.0.0 to dependencies</tspan>
+    <tspan x="10px" y="64px"><tspan class="fg-bright-green bold">    Updating</tspan><tspan> `dummy-registry` index</tspan>
 </tspan>
-    <tspan x="10px" y="82px"><tspan class="fg-yellow bold">warning</tspan><tspan>: `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)</tspan>
+    <tspan x="10px" y="82px"><tspan class="fg-bright-green bold">      Adding</tspan><tspan> my-package v99999.0.0 to dependencies</tspan>
 </tspan>
-    <tspan x="10px" y="100px"><tspan class="fg-bright-green bold">     Locking</tspan><tspan> 1 package to latest Rust [..] compatible version</tspan>
+    <tspan x="10px" y="100px"><tspan class="fg-yellow bold">warning</tspan><tspan>: `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)</tspan>
 </tspan>
-    <tspan x="10px" y="118px">
+    <tspan x="10px" y="118px"><tspan class="fg-bright-cyan bold">help</tspan><tspan>: to pin the edition, run `cargo fix --manifest-path [ROOT]/case/cargo-test-fixture.rs`</tspan>
+</tspan>
+    <tspan x="10px" y="136px"><tspan class="fg-bright-green bold">     Locking</tspan><tspan> 1 package to latest Rust [..] compatible version</tspan>
+</tspan>
+    <tspan x="10px" y="154px">
 </tspan>
   </text>
 
