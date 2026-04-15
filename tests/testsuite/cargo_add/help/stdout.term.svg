@@ -172,7 +172,7 @@
 </tspan>
     <tspan x="10px" y="1378px"><tspan class="fg-bright-green bold">Manifest Options:</tspan>
 </tspan>
-    <tspan x="10px" y="1396px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--manifest-path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan>
+    <tspan x="10px" y="1396px"><tspan>  </tspan><tspan class="fg-bright-cyan bold">-m</tspan><tspan>, </tspan><tspan class="fg-bright-cyan bold">--manifest-path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan>
 </tspan>
     <tspan x="10px" y="1414px"><tspan>          Path to Cargo.toml</tspan>
 </tspan>

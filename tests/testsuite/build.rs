@@ -294,6 +294,19 @@ For more information, try '--help'.
 }
 
 #[cargo_test]
+fn cargo_compile_with_manifest_path_shorthand() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .build();
+
+    p.cargo("build -m foo/Cargo.toml")
+        .cwd(p.root().parent().unwrap())
+        .run();
+    assert!(p.bin("foo").is_file());
+}
+
+#[cargo_test]
 fn chdir_gated() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
