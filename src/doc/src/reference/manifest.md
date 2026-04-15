@@ -398,6 +398,9 @@ If `include` is not specified, then the following files will be excluded:
   [gitignore] rules of the repository and global git configuration will be
   skipped.
 
+If `include` is specified,
+gitignore rules of the repository and global git configuration are not applied.
+
 Regardless of whether `exclude` or `include` is specified, the following files
 are always excluded:
 
