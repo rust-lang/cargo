@@ -1715,6 +1715,7 @@ fn check_build_should_not_output_files_to_artifact_dir() {
         .join("target-dir")
         .assert_build_dir_layout(str![[r#"
 [ROOT]/foo/target-dir/CACHEDIR.TAG
+[ROOT]/foo/target-dir/debug/.cargo-lock
 
 "#]]);
 }
@@ -1745,8 +1746,12 @@ fn check_build_should_not_lock_artifact_dir_when_build_dir_is_not_same_dir() {
 
     p.cargo("check").enable_mac_dsym().run();
 
-    // Verify we did NOT take the build-dir lock
-    assert!(!p.root().join("target-dir/debug/.cargo-lock").exists());
+    // Verify we did NOT take the artifact-dir lock
+    assert!(
+        !p.root()
+            .join("target-dir/debug/.cargo-artifact-lock")
+            .exists()
+    );
     // Verify we did take the build-dir lock
     assert!(p.root().join("build-dir/debug/.cargo-build-lock").exists());
 }
@@ -1838,6 +1843,7 @@ fn check_build_should_not_uplift_proc_macro_dylib_deps() {
         .join("target-dir")
         .assert_build_dir_layout(str![[r#"
 [ROOT]/foo/target-dir/CACHEDIR.TAG
+[ROOT]/foo/target-dir/debug/.cargo-lock
 
 "#]]);
 }
