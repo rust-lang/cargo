@@ -1,5 +1,50 @@
 # Changelog
 
+## Cargo 1.97 (2026-07-09)
+[eb94155a...HEAD](https://github.com/rust-lang/cargo/compare/eb94155a...HEAD)
+
+
+### Added
+
+- Add `-m` shorthand for `--manifest-path`
+  [#16858](https://github.com/rust-lang/cargo/pull/16858)
+
+### Changed
+
+- Improved error message for mistyped `-p` to suggest similar workspace member names
+  [#16844](https://github.com/rust-lang/cargo/pull/16844)
+- cargo-clean: Error when `--target-dir` doesn't look like a Cargo target directory.
+  This prevents accidental deletion of non-target directories.
+  [#16712](https://github.com/rust-lang/cargo/pull/16712)
+  [#16878](https://github.com/rust-lang/cargo/pull/16878)
+
+### Fixed
+
+### Nightly only
+
+- `-Zscript`: Teach users how to pin edition
+  [#16851](https://github.com/rust-lang/cargo/pull/16851)
+- `-Zcargo-lints`: Prefer defined lint levels over default
+  [#16879](https://github.com/rust-lang/cargo/pull/16879)
+- `-Zcargo-lints`: `unused_dependencies` ignore rustc's
+  `unused_crate_dependencies` lint status
+  [#16877](https://github.com/rust-lang/cargo/pull/16877)
+
+### Documentation
+
+- Clarified "api" in registry's `config.json` should not include a trailing slash.
+  [#16869](https://github.com/rust-lang/cargo/pull/16869)
+
+### Internal
+
+- Update dependencies.
+  [#16883](https://github.com/rust-lang/cargo/pull/16883)
+- ci: Pin GitHub Actions to commit SHAs
+  [#16867](https://github.com/rust-lang/cargo/pull/16867)
+  [#16868](https://github.com/rust-lang/cargo/pull/16868)
+- test: Add test for cargo install with github fastpath
+  [#16866](https://github.com/rust-lang/cargo/pull/16866)
+
 ## Cargo 1.96 (2026-05-28)
 [f298b8c8...rust-1.96.0](https://github.com/rust-lang/cargo/compare/f298b8c8...rust-1.96.0)
 
