@@ -3588,6 +3588,9 @@ internal server error
 [LOCKING] 3 packages to latest compatible versions
    [..] DEBUG cargo::core::resolver::restarting: pending=0
 [DOWNLOADING] crates ...
+   [..] DEBUG network::fetch: url="http://[..]/dl/bar/0.0.1/download"
+   [..] DEBUG network::fetch: url="http://[..]/dl/dep1/0.0.1/download"
+   [..] DEBUG network::fetch: url="http://[..]/dl/dep2/0.0.1/download"
 [DOWNLOADED] [..] v0.0.1 (registry `dummy-registry`)
 [DOWNLOADED] [..] v0.0.1 (registry `dummy-registry`)
 [DOWNLOADED] [..] v0.0.1 (registry `dummy-registry`)
