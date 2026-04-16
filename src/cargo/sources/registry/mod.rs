@@ -403,7 +403,7 @@ pub trait RegistryData {
     /// `finish_download`. For already downloaded `.crate` files, it does not
     /// validate the checksum, assuming the filesystem does not suffer from
     /// corruption or manipulation.
-    fn download(&self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock>;
+    async fn download(&self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock>;
 
     /// Finish a download by saving a `.crate` file to disk.
     ///
@@ -413,7 +413,12 @@ pub trait RegistryData {
     /// the given data to the on-disk cache.
     ///
     /// Returns a [`File`] handle to the `.crate` file, positioned at the start.
-    fn finish_download(&self, pkg: PackageId, checksum: &str, data: &[u8]) -> CargoResult<File>;
+    async fn finish_download(
+        &self,
+        pkg: PackageId,
+        checksum: &str,
+        data: &[u8],
+    ) -> CargoResult<File>;
 
     /// Returns whether or not the `.crate` file is already downloaded.
     fn is_crate_downloaded(&self, _pkg: PackageId) -> bool {
@@ -709,13 +714,13 @@ impl<'gctx> RegistrySource<'gctx> {
     /// should only be called after doing integrity check. That is to say,
     /// you need to call either [`RegistryData::download`] or
     /// [`RegistryData::finish_download`] before calling this method.
-    fn get_pkg(&self, package: PackageId, path: &File) -> CargoResult<Package> {
+    async fn get_pkg(&self, package: PackageId, path: &File) -> CargoResult<Package> {
         let path = self
             .unpack_package(package, path)
             .with_context(|| format!("failed to unpack package `{}`", package))?;
         let src = PathSource::new(&path, self.source_id, self.gctx);
         src.load()?;
-        let mut pkg = match src.download(package)? {
+        let mut pkg = match src.download(package).await? {
             MaybePackage::Ready(pkg) => pkg,
             MaybePackage::Download { .. } => unreachable!(),
         };
@@ -921,10 +926,10 @@ impl<'gctx> Source for RegistrySource<'gctx> {
         self.ops.set_quiet(quiet);
     }
 
-    fn download(&self, package: PackageId) -> CargoResult<MaybePackage> {
-        let hash = crate::util::block_on(self.index.hash(package, &*self.ops))?;
-        match self.ops.download(package, &hash)? {
-            MaybeLock::Ready(file) => self.get_pkg(package, &file).map(MaybePackage::Ready),
+    async fn download(&self, package: PackageId) -> CargoResult<MaybePackage> {
+        let hash = self.index.hash(package, &*self.ops).await?;
+        match self.ops.download(package, &hash).await? {
+            MaybeLock::Ready(file) => self.get_pkg(package, &file).await.map(MaybePackage::Ready),
             MaybeLock::Download {
                 url,
                 descriptor,
@@ -937,10 +942,10 @@ impl<'gctx> Source for RegistrySource<'gctx> {
         }
     }
 
-    fn finish_download(&self, package: PackageId, data: Vec<u8>) -> CargoResult<Package> {
-        let hash = crate::util::block_on(self.index.hash(package, &*self.ops))?;
-        let file = self.ops.finish_download(package, &hash, &data)?;
-        self.get_pkg(package, &file)
+    async fn finish_download(&self, package: PackageId, data: Vec<u8>) -> CargoResult<Package> {
+        let hash = self.index.hash(package, &*self.ops).await?;
+        let file = self.ops.finish_download(package, &hash, &data).await?;
+        self.get_pkg(package, &file).await
     }
 
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {

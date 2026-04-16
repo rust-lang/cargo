@@ -423,8 +423,8 @@ impl<'gctx> RegistryData for RemoteRegistry<'gctx> {
         self.is_updated()
     }
 
-    fn download(&self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock> {
-        let registry_config = crate::util::block_on(self.config())?.unwrap();
+    async fn download(&self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock> {
+        let registry_config = self.config().await?.unwrap();
 
         download::download(
             &self.cache_path,
@@ -436,7 +436,12 @@ impl<'gctx> RegistryData for RemoteRegistry<'gctx> {
         )
     }
 
-    fn finish_download(&self, pkg: PackageId, checksum: &str, data: &[u8]) -> CargoResult<File> {
+    async fn finish_download(
+        &self,
+        pkg: PackageId,
+        checksum: &str,
+        data: &[u8],
+    ) -> CargoResult<File> {
         download::finish_download(
             &self.cache_path,
             &self.gctx,

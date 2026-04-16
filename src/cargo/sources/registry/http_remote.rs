@@ -302,8 +302,8 @@ impl<'gctx> RegistryData for HttpRegistry<'gctx> {
         self.inner().progress.replace(None);
     }
 
-    fn download(&self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock> {
-        let registry_config = crate::util::block_on(self.config())?;
+    async fn download(&self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock> {
+        let registry_config = self.config().await?;
         download::download(
             &self.inner().crate_cache_path,
             &self.inner().gctx,
@@ -314,7 +314,12 @@ impl<'gctx> RegistryData for HttpRegistry<'gctx> {
         )
     }
 
-    fn finish_download(&self, pkg: PackageId, checksum: &str, data: &[u8]) -> CargoResult<File> {
+    async fn finish_download(
+        &self,
+        pkg: PackageId,
+        checksum: &str,
+        data: &[u8],
+    ) -> CargoResult<File> {
         download::finish_download(
             &self.inner().crate_cache_path,
             &self.inner().gctx,

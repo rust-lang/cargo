@@ -707,8 +707,7 @@ impl<'a, 'gctx> Downloads<'a, 'gctx> {
         let source = sources
             .get(id.source_id())
             .ok_or_else(|| internal(format!("couldn't find source for `{}`", id)))?;
-        let pkg = source
-            .download(id)
+        let pkg = crate::util::block_on(source.download(id))
             .context("unable to get packages from source")?;
         let (url, descriptor, authorization) = match pkg {
             MaybePackage::Ready(pkg) => {
@@ -925,7 +924,7 @@ impl<'a, 'gctx> Downloads<'a, 'gctx> {
             .get(dl.id.source_id())
             .ok_or_else(|| internal(format!("couldn't find source for `{}`", dl.id)))?;
         let start = Instant::now();
-        let pkg = source.finish_download(dl.id, data)?;
+        let pkg = crate::util::block_on(source.finish_download(dl.id, data))?;
 
         // Assume that no time has passed while we were calling
         // `finish_download`, update all speed checks and timeout limits of all

@@ -86,32 +86,37 @@ impl<'gctx> Source for DependencyConfusionThreatOverlaySource<'gctx> {
         self.remote.set_quiet(quiet);
     }
 
-    fn download(
+    async fn download(
         &self,
         package: crate::core::PackageId,
     ) -> crate::CargoResult<super::source::MaybePackage> {
         let local_source = self.local.source_id();
         let remote_source = self.remote.source_id();
 
-        self.local
+        if let Ok(pkg) = self
+            .local
             .download(package.map_source(remote_source, local_source))
+            .await
             .map(|maybe_pkg| match maybe_pkg {
                 MaybePackage::Ready(pkg) => {
                     MaybePackage::Ready(pkg.map_source(local_source, remote_source))
                 }
                 x => x,
             })
-            .or_else(|_| self.remote.download(package))
+        {
+            return Ok(pkg);
+        }
+        self.remote.download(package).await
     }
 
-    fn finish_download(
+    async fn finish_download(
         &self,
         pkg_id: crate::core::PackageId,
         contents: Vec<u8>,
     ) -> crate::CargoResult<crate::core::Package> {
         // The local registry should never return MaybePackage::Download from `download`, so any
         // downloads that need to be finished come from the remote registry.
-        self.remote.finish_download(pkg_id, contents)
+        self.remote.finish_download(pkg_id, contents).await
     }
 
     fn fingerprint(&self, pkg: &crate::core::Package) -> crate::CargoResult<String> {
