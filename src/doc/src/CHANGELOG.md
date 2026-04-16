@@ -79,6 +79,9 @@
   [#16575](https://github.com/rust-lang/cargo/pull/16575)
 - Respect Clippy CLI arguments `CLIPPY_ARGS` in suggested fix message.
   [#16652](https://github.com/rust-lang/cargo/pull/16652)
+- Fix `cargo package` producing corrupt `.crate` files when
+  overwriting a larger existing one.
+  [#16713](https://github.com/rust-lang/cargo/pull/16713)
 
 ### Nightly only
 
