@@ -1797,17 +1797,18 @@ fn proc_macro_in_artifact_dep() {
 
     p.cargo("check -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_stderr_data(
-            r#"...
+        .with_stderr_data(str![[r#"
+...
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
+[DOWNLOADED] bin-uses-pm v1.0.0 (registry `dummy-registry`)
 [ERROR] failed to download from `[ROOTURL]/dl/pm/1.0.0/download`
 
 Caused by:
   [37] Could[..]t read a file:// file (Could[..]t open file [ROOT]/dl/pm/1.0.0/download)
-"#,
-        )
+
+"#]])
         .with_status(101)
         .run();
 }

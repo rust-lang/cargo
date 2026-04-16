@@ -1,7 +1,7 @@
 use std::cell::OnceCell;
 use std::cell::{Cell, Ref, RefCell};
 use std::cmp::Ordering;
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
 use std::fmt;
 use std::hash;
 use std::mem;
@@ -313,7 +313,7 @@ pub struct Downloads<'a, 'gctx> {
     /// temporary holding area, needed because curl can report multiple
     /// downloads at once, but the main loop (`wait`) is written to only
     /// handle one at a time.
-    results: Vec<(usize, Result<(), curl::Error>)>,
+    results: VecDeque<(usize, Result<(), curl::Error>)>,
     /// The next ID to use for creating a token (see `Download::token`).
     next: usize,
     /// Progress bar.
@@ -436,7 +436,7 @@ impl<'gctx> PackageSet<'gctx> {
             pending: HashMap::new(),
             pending_ids: HashSet::new(),
             sleeping: SleepTracker::new(),
-            results: Vec::new(),
+            results: VecDeque::new(),
             progress: RefCell::new(Some(Progress::with_style(
                 "Downloading",
                 ProgressStyle::Ratio,
@@ -989,13 +989,13 @@ impl<'a, 'gctx> Downloads<'a, 'gctx> {
                 let token = msg.token().expect("failed to read token");
                 let handle = &pending[&token].1;
                 if let Some(result) = msg.result_for(handle) {
-                    results.push((token, result));
+                    results.push_back((token, result));
                 } else {
                     debug!(target: "network", "message without a result (?)");
                 }
             });
 
-            if let Some(pair) = results.pop() {
+            if let Some(pair) = results.pop_front() {
                 break Ok(pair);
             }
             assert_ne!(self.remaining(), 0);

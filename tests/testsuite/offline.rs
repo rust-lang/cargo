@@ -360,7 +360,7 @@ Caused by:
     p.cargo("check --offline")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to download `bar v0.1.0`
+[ERROR] failed to download `baz v1.0.0`
 
 Caused by:
   attempting to make an HTTP request, but --offline was specified

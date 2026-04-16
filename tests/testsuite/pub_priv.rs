@@ -568,8 +568,8 @@ fn publish_package_with_public_dependency() {
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
-[DOWNLOADED] pub_bar v0.1.0 (registry `dummy-registry`)
 [DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
+[DOWNLOADED] pub_bar v0.1.0 (registry `dummy-registry`)
 [CHECKING] pub_bar v0.1.0
 [CHECKING] bar v0.1.0
 [CHECKING] foo v0.0.1 ([ROOT]/foo)

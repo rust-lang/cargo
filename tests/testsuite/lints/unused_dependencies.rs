@@ -1234,8 +1234,8 @@ fn pinned_transitive_dep() {
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
-[DOWNLOADED] transitive v0.1.1 (registry `dummy-registry`)
 [DOWNLOADED] intermediate v0.1.0 (registry `dummy-registry`)
+[DOWNLOADED] transitive v0.1.1 (registry `dummy-registry`)
 [CHECKING] transitive v0.1.1
 [CHECKING] intermediate v0.1.0
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
@@ -1305,8 +1305,8 @@ pub fn fun() -> &'static str {
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
-[DOWNLOADED] transitive v0.1.1 (registry `dummy-registry`)
 [DOWNLOADED] intermediate v0.1.0 (registry `dummy-registry`)
+[DOWNLOADED] transitive v0.1.1 (registry `dummy-registry`)
 [CHECKING] transitive v0.1.1
 [CHECKING] intermediate v0.1.0
 [CHECKING] foo v0.1.0 ([ROOT]/foo)

@@ -1682,9 +1682,9 @@ fn ambiguous_name() {
 [LOCKING] 3 packages to latest compatible versions
 [ADDING] dep v1.0.0 (available: v2.0.0)
 [DOWNLOADING] crates ...
-[DOWNLOADED] dep v2.0.0 (registry `dummy-registry`)
-[DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] dep v2.0.0 (registry `dummy-registry`)
 [ERROR] specification `dep` is ambiguous
 [HELP] re-run this command with one of the following specifications
   dep@1.0.0
