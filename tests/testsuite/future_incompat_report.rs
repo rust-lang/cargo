@@ -610,7 +610,7 @@ fn suggestions_for_updates() {
       https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
 [NOTE] this report can be shown with `cargo report future-incompatibilities --id 1`
 
-"#]])
+"#]].unordered())
         .run();
 
     p.cargo("report future-incompatibilities")

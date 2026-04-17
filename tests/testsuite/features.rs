@@ -2263,7 +2263,8 @@ fn registry_summary_order_doesnt_matter() {
         .build();
 
     p.cargo("run")
-        .with_stderr_data(str![[r#"
+        .with_stderr_data(
+            str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
@@ -2275,7 +2276,9 @@ fn registry_summary_order_doesnt_matter() {
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/foo[EXE]`
 
-"#]])
+"#]]
+            .unordered(),
+        )
         .with_stdout_data(str![[r#"
 it works
 

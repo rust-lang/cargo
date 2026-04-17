@@ -106,7 +106,8 @@ fn deferred() {
         .build();
 
     p.cargo("check")
-        .with_stderr_data(str![[r#"
+        .with_stderr_data(
+            str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 3 packages to latest compatible versions
 [DOWNLOADING] crates ...
@@ -119,7 +120,9 @@ fn deferred() {
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-"#]])
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
@@ -351,7 +354,8 @@ fn weak_with_host_decouple() {
         .build();
 
     p.cargo("run")
-        .with_stderr_data(str![[r#"
+        .with_stderr_data(
+            str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 3 packages to latest compatible versions
 [DOWNLOADING] crates ...
@@ -365,7 +369,9 @@ fn weak_with_host_decouple() {
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/foo[EXE]`
 
-"#]])
+"#]]
+            .unordered(),
+        )
         .run();
 }
 

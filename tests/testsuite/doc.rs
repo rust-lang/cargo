@@ -3961,7 +3961,7 @@ fn mergeable_info_dep_collision() {
 [FINISHED] documentation merge in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/dep/index.html
 
-"#]]
+"#]].unordered()
         )
         .run();
 

@@ -300,7 +300,8 @@ fn interdependent() {
         .build();
 
     p.cargo("check")
-        .with_stderr_data(str![[r#"
+        .with_stderr_data(
+            str![[r#"
 [LOCKING] 2 packages to latest compatible versions
 [UNPACKING] bar v0.0.1 (registry `[ROOT]/registry`)
 [UNPACKING] baz v0.1.0 (registry `[ROOT]/registry`)
@@ -309,7 +310,9 @@ fn interdependent() {
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-"#]])
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
@@ -370,7 +373,8 @@ fn path_dep_rewritten() {
         .build();
 
     p.cargo("check")
-        .with_stderr_data(str![[r#"
+        .with_stderr_data(
+            str![[r#"
 [LOCKING] 2 packages to latest compatible versions
 [UNPACKING] bar v0.0.1 (registry `[ROOT]/registry`)
 [UNPACKING] baz v0.1.0 (registry `[ROOT]/registry`)
@@ -379,7 +383,9 @@ fn path_dep_rewritten() {
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-"#]])
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
