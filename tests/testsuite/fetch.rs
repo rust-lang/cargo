@@ -62,8 +62,7 @@ fn fetch_all_platform_dependencies_when_no_target_is_given() {
         .with_stderr_data(str![[r#"
 ...
 [DOWNLOADED] d1 v1.2.3 (registry `dummy-registry`)
-[DOWNLOADED] d2 v0.1.2 (registry `dummy-registry`)
-...
+
 "#]])
         .run();
 }

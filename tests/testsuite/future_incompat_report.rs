@@ -580,9 +580,9 @@ fn suggestions_for_updates() {
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
         .with_stderr_data(str![[r#"
 [DOWNLOADING] crates ...
-[DOWNLOADED] without_updates v1.0.0 (registry `dummy-registry`)
-[DOWNLOADED] with_updates v1.0.0 (registry `dummy-registry`)
 [DOWNLOADED] big_update v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] with_updates v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] without_updates v1.0.0 (registry `dummy-registry`)
 [CHECKING] with_updates v1.0.0
 [CHECKING] big_update v1.0.0
 [CHECKING] without_updates v1.0.0

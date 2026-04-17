@@ -36,8 +36,8 @@ fn dependency_with_crate_syntax() {
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
-[DOWNLOADED] baz v1.0.0 (registry `dummy-registry`)
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] baz v1.0.0 (registry `dummy-registry`)
 [CHECKING] baz v1.0.0
 [CHECKING] bar v1.0.0
 [CHECKING] foo v0.1.0 ([ROOT]/foo)

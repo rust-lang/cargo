@@ -110,9 +110,9 @@ fn deferred() {
 [UPDATING] `dummy-registry` index
 [LOCKING] 3 packages to latest compatible versions
 [DOWNLOADING] crates ...
-[DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
-[DOWNLOADED] bar_activator v1.0.0 (registry `dummy-registry`)
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] bar_activator v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
 [CHECKING] bar v1.0.0
 [CHECKING] dep v1.0.0
 [CHECKING] bar_activator v1.0.0
@@ -355,9 +355,9 @@ fn weak_with_host_decouple() {
 [UPDATING] `dummy-registry` index
 [LOCKING] 3 packages to latest compatible versions
 [DOWNLOADING] crates ...
-[DOWNLOADED] common v1.0.0 (registry `dummy-registry`)
-[DOWNLOADED] bar_activator v1.0.0 (registry `dummy-registry`)
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] bar_activator v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] common v1.0.0 (registry `dummy-registry`)
 [COMPILING] bar v1.0.0
 [COMPILING] common v1.0.0
 [COMPILING] bar_activator v1.0.0

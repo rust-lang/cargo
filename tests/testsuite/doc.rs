@@ -3951,8 +3951,8 @@ fn mergeable_info_dep_collision() {
 [LOCKING] 2 packages to latest compatible versions
 [ADDING] dep v0.1.0 (available: v0.2.0)
 [DOWNLOADING] crates ...
-[DOWNLOADED] dep v0.2.0 (registry `dummy-registry`)
 [DOWNLOADED] dep v0.1.0 (registry `dummy-registry`)
+[DOWNLOADED] dep v0.2.0 (registry `dummy-registry`)
 [DOCUMENTING] dep v0.1.0
 [RUNNING] `rustdoc [..]--crate-name dep [..]--merge=none --parts-out-dir=[ROOT]/foo/target/debug/build/dep-[HASH]/out [..]--crate-version 0.1.0`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s

@@ -91,8 +91,8 @@ fn depend_on_alt_registry_depends_on_same_registry_no_index() {
 [UPDATING] `alternative` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
-[DOWNLOADED] baz v0.0.1 (registry `alternative`)
 [DOWNLOADED] bar v0.0.1 (registry `alternative`)
+[DOWNLOADED] baz v0.0.1 (registry `alternative`)
 [CHECKING] baz v0.0.1 (registry `alternative`)
 [CHECKING] bar v0.0.1 (registry `alternative`)
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
@@ -134,8 +134,8 @@ fn depend_on_alt_registry_depends_on_same_registry() {
 [UPDATING] `alternative` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
-[DOWNLOADED] baz v0.0.1 (registry `alternative`)
 [DOWNLOADED] bar v0.0.1 (registry `alternative`)
+[DOWNLOADED] baz v0.0.1 (registry `alternative`)
 [CHECKING] baz v0.0.1 (registry `alternative`)
 [CHECKING] bar v0.0.1 (registry `alternative`)
 [CHECKING] foo v0.0.1 ([ROOT]/foo)

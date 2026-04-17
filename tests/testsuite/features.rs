@@ -2267,8 +2267,8 @@ fn registry_summary_order_doesnt_matter() {
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
-[DOWNLOADED] dep v0.1.0 (registry `dummy-registry`)
 [DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
+[DOWNLOADED] dep v0.1.0 (registry `dummy-registry`)
 [COMPILING] dep v0.1.0
 [COMPILING] bar v0.1.0
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
