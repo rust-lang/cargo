@@ -476,11 +476,6 @@ impl<'gctx> HttpBackend<'gctx> {
         if self.offline() {
             return Ok(LoadResponse::NotFound);
         }
-
-        if !self.fresh.borrow_mut().insert(path.to_string()) {
-            warn!("downloaded the index file `{path}` twice");
-        }
-
         let mut r = Retry::new(self.gctx)?;
         self.pending.update(|v| v + 1);
         let response = loop {
@@ -494,6 +489,9 @@ impl<'gctx> HttpBackend<'gctx> {
             }
         };
         self.pending.update(|v| v - 1);
+        if !self.fresh.borrow_mut().insert(path.to_string()) {
+            warn!("downloaded the index file `{path}` twice");
+        }
         response
     }
 
