@@ -1,7 +1,10 @@
 use anyhow::Error;
 use curl::easy::Easy;
+use http::Response;
 use std::fmt::{self, Write};
 use std::path::PathBuf;
+
+use crate::util::network::http_async::ResponsePartsExtensions;
 
 use super::truncate_with_ellipsis;
 
@@ -52,6 +55,24 @@ impl HttpNotSuccessful {
             .to_string();
         HttpNotSuccessful {
             code: handle.response_code().unwrap_or(0),
+            url,
+            ip,
+            body,
+            headers,
+        }
+    }
+
+    pub fn new_from_response(response: Response<Vec<u8>>, url: &str) -> HttpNotSuccessful {
+        let ip = response.client_ip().map(str::to_string);
+        let url = response.effective_url().unwrap_or(url).to_string();
+        let (head, body) = response.into_parts();
+        let headers = head
+            .headers
+            .into_iter()
+            .filter_map(|(k, v)| Some(format!("{}: {}", k?.as_str(), v.to_str().ok()?)))
+            .collect();
+        HttpNotSuccessful {
+            code: head.status.as_u16() as u32,
             url,
             ip,
             body,

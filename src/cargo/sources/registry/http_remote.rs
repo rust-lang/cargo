@@ -18,7 +18,6 @@ use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
 use crate::util::errors::HttpNotSuccessful;
 use crate::util::interning::InternedString;
-use crate::util::network::http_async::ResponsePartsExtensions;
 use crate::util::network::retry::Retry;
 use crate::util::network::retry::RetryResult;
 use anyhow::Context as _;
@@ -27,6 +26,7 @@ use cargo_util::paths;
 use futures::lock::Mutex;
 use http::HeaderName;
 use http::HeaderValue;
+use http::Response;
 use std::cell::Cell;
 use std::cell::RefCell;
 use std::collections::HashSet;
@@ -599,17 +599,10 @@ impl<'gctx> HttpBackend<'gctx> {
                     }
                 }
 
-                let mut err = Err(HttpNotSuccessful {
-                    code: http::StatusCode::UNAUTHORIZED.as_u16() as u32,
-                    body: body,
-                    url: full_url,
-                    ip: None,
-                    headers: response
-                        .headers
-                        .iter()
-                        .map(|(k, v)| format!("{}: {}", k, v.to_str().unwrap_or_default()))
-                        .collect(),
-                }
+                let mut err = Err(HttpNotSuccessful::new_from_response(
+                    Response::from_parts(response, body),
+                    &full_url,
+                )
                 .into());
                 if self.auth_required.get() {
                     let auth_error = auth::AuthorizationError::new(
@@ -622,17 +615,10 @@ impl<'gctx> HttpBackend<'gctx> {
                 }
                 err
             }
-            code => Err(HttpNotSuccessful {
-                code: code.as_u16() as u32,
-                body: body,
-                url: full_url,
-                ip: response.client_ip().map(str::to_owned),
-                headers: response
-                    .headers
-                    .iter()
-                    .map(|(k, v)| format!("{}: {}", k, v.to_str().unwrap_or_default()))
-                    .collect(),
-            }
+            _ => Err(HttpNotSuccessful::new_from_response(
+                Response::from_parts(response, body),
+                &full_url,
+            )
             .into()),
         }
     }
