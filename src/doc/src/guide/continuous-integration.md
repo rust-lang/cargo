@@ -204,7 +204,34 @@ This tries to balance thoroughness with turnaround time:
 - `cargo check` is used as most issues contributors will run into are API availability and not behavior.
 - Unpublished packages are skipped as this assumes only consumers of the verified project, through a registry, will care about `rust-version`.
 
+## Checking for warnings
+
+Customarily, projects want to be "warnings clean" on official branches while being lax for local development.
+[`build.warnings = "deny"`] can be used to fail a CI job if warnings are present.
+
+An example CI job to check for warnings using GitHub Actions:
+```yaml
+jobs:
+  warnings:
+    runs-on: ubuntu-latest
+    env:
+      CARGO_BUILD_WARNINGS: deny
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup update stable && rustup default stable
+      - run: rustup component add clippy
+      - run: cargo clippy --all-targets --all-features --keep-going
+```
+
+Considerations:
+- CI can fail due to new toolchain versions because there are limited compatibility guarantees around warnings.
+  Consider pinning the toolchain version with an automated job that creates a PR to upgrade the toolchain on new releases.
+- Balance between exhaustiveness and turnaround time in selecting the combinations of platforms, features, and package/build-target combinations to check
+- Some CI systems have direct integration for reporting lints, e.g. using [`clippy-sarif`] with GitHub
+
+[`build.warnings = "deny"`]: ../reference/config.md#buildwarnings
 [`cargo add`]: ../commands/cargo-add.md
 [`cargo install`]: ../commands/cargo-install.md
+[`clippy-sarif`]: https://crates.io/crates/clippy-sarif
 [Dependabot]: https://docs.github.com/en/code-security/dependabot/working-with-dependabot
 [RenovateBot]: https://renovatebot.com/

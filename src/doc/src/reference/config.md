@@ -64,6 +64,7 @@ recursive_example = "rr --example recursions"
 space_example = ["run", "--release", "--", "\"command list\""]
 
 [build]
+warnings = "warn"             # adjust the effective lint level for warnings
 jobs = 1                      # number of parallel jobs, defaults to # of CPUs
 rustc = "rustc"               # the rust compiler tool
 rustc-wrapper = "…"           # run this wrapper instead of `rustc`
@@ -456,6 +457,23 @@ recursive_example = "rr --example recursions"
 ### `[build]`
 
 The `[build]` table controls build-time operations and compiler settings.
+
+### `build.warnings`
+* Type: string
+* Default: `"warn"`
+* Environment: `CARGO_BUILD_WARNINGS`
+
+Adjust the effective level of lint warnings for local packages.
+Allowed levels are:
+* `"warn"`: continue to emit the lints as warnings (default).
+* `"allow"`: hide the lints.
+* `"deny"`: emit an error for a crate that has lint warnings.
+  Use `--keep-going` to see the lint warnings for all dependent crates.
+
+Only warnings that are lints (i.e. level is adjustable) are affected,
+e.g. leaving as-is non-lint warnings or warnings from dependencies visible through `--verbose --verbose`.
+
+> **MSRV:** Respected as of 1.97.
 
 #### `build.jobs`
 * Type: integer or string
