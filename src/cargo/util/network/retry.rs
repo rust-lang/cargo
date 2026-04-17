@@ -42,6 +42,7 @@
 //! - <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Retry-After>
 
 use crate::util::errors::{GitCliError, HttpNotSuccessful};
+use crate::util::network::http_async;
 use crate::{CargoResult, GlobalContext};
 use anyhow::Error;
 use rand::RngExt;
@@ -185,6 +186,26 @@ impl<'a> Retry<'a> {
 }
 
 fn maybe_spurious(err: &Error) -> bool {
+    fn maybe_spurious_curl(curl_err: &curl::Error) -> bool {
+        curl_err.is_couldnt_connect()
+            || curl_err.is_couldnt_resolve_proxy()
+            || curl_err.is_couldnt_resolve_host()
+            || curl_err.is_operation_timedout()
+            || curl_err.is_recv_error()
+            || curl_err.is_send_error()
+            || curl_err.is_http2_error()
+            || curl_err.is_http2_stream_error()
+            || curl_err.is_ssl_connect_error()
+            || curl_err.is_partial_file()
+    }
+    if let Some(async_http_error) = err.downcast_ref::<http_async::Error>() {
+        match async_http_error {
+            http_async::Error::Easy(error) => return maybe_spurious_curl(error),
+            http_async::Error::TooSlow { .. } => return true,
+            http_async::Error::Multi(_) => {}
+            http_async::Error::BadHeader { .. } => {}
+        }
+    }
     if let Some(git_err) = err.downcast_ref::<git2::Error>() {
         match git_err.class() {
             git2::ErrorClass::Net
@@ -195,17 +216,7 @@ fn maybe_spurious(err: &Error) -> bool {
         }
     }
     if let Some(curl_err) = err.downcast_ref::<curl::Error>() {
-        if curl_err.is_couldnt_connect()
-            || curl_err.is_couldnt_resolve_proxy()
-            || curl_err.is_couldnt_resolve_host()
-            || curl_err.is_operation_timedout()
-            || curl_err.is_recv_error()
-            || curl_err.is_send_error()
-            || curl_err.is_http2_error()
-            || curl_err.is_http2_stream_error()
-            || curl_err.is_ssl_connect_error()
-            || curl_err.is_partial_file()
-        {
+        if maybe_spurious_curl(curl_err) {
             return true;
         }
     }
