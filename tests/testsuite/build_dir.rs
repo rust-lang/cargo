@@ -534,6 +534,7 @@ fn cargo_rustdoc_json_should_output_to_target_dir() {
 [ROOT]/foo/build-dir/debug/.fingerprint/foo-[HASH]/doc-lib-foo
 [ROOT]/foo/build-dir/debug/.fingerprint/foo-[HASH]/doc-lib-foo.json
 [ROOT]/foo/build-dir/debug/.fingerprint/foo-[HASH]/invoked.timestamp
+[ROOT]/foo/build-dir/debug/build/foo-[HASH]/out/foo.json
 
 "#
     ]);

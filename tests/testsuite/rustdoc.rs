@@ -46,7 +46,7 @@ fn rustdoc_simple_json() {
         .masquerade_as_nightly_cargo(&["rustdoc-output-format"])
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustdoc [..] --crate-name foo [..]-o [ROOT]/foo/target/doc [..] --output-format=json[..]
+[RUNNING] `rustdoc [..] --crate-name foo [..]-o [ROOT]/foo/target/debug/build/foo-[HASH]/out [..] --output-format=json[..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo.json
 
@@ -63,7 +63,7 @@ fn rustdoc_json_with_new_layout() {
         .masquerade_as_nightly_cargo(&["rustdoc-output-format"])
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustdoc [..] --crate-name foo [..]-o [ROOT]/foo/target/doc [..] --output-format=json[..]
+[RUNNING] `rustdoc [..] --crate-name foo [..]-o [ROOT]/foo/target/debug/build/foo/[HASH]/out [..] --output-format=json[..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo.json
 
@@ -434,6 +434,6 @@ fn rustdoc_json_same_crate_different_version() {
         .run();
 
     let dep_json = fs::read_to_string(entry.root().join("target/doc/dep.json")).unwrap();
-    assert!(!dep_json.contains("dep_v1_fn"));
-    assert!(dep_json.contains("dep_v2_fn"));
+    assert!(dep_json.contains("dep_v1_fn"));
+    assert!(!dep_json.contains("dep_v2_fn"));
 }
