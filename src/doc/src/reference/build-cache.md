@@ -70,9 +70,10 @@ change. Some of these directories are:
 
 Directory | Description
 ----------|------------
-<code style="white-space: nowrap">\<build-dir>/debug/deps/</code> | Dependencies and other artifacts.
 <code style="white-space: nowrap">\<build-dir>/debug/incremental/</code> | `rustc` [incremental output], a cache used to speed up subsequent builds.
-<code style="white-space: nowrap">\<build-dir>/debug/build/</code> | Output from [build scripts].
+<code style="white-space: nowrap">\<build-dir>/debug/build/</code> | Compilation artifacts and [build script] output.
+
+> **Note**: The build-dir layout was changed in Cargo 1.97.0, thus prior versions use a different layout. (see [#15010](https://github.com/rust-lang/cargo/issues/15010))
 
 ## Dep-info files
 
@@ -107,7 +108,7 @@ configuration][config]. Refer to sccache documentation for more details.
 [`cargo doc`]: ../commands/cargo-doc.md
 [`cargo package`]: ../commands/cargo-package.md
 [`cargo publish`]: ../commands/cargo-publish.md
-[build scripts]: ../reference/build-scripts.md
+[build script]: ../reference/build-scripts.md
 [config]: ../reference/config.md
 [def-workspace]:  ../appendix/glossary.md#workspace  '"workspace" (glossary entry)'
 [target]: ../appendix/glossary.md#target '"target" (glossary entry)'

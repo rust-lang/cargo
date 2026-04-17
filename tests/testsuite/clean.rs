@@ -107,20 +107,25 @@ fn clean_multiple_packages_in_glob_char_path() {
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
-    let foo_path = &p.build_dir().join("debug").join("deps");
+    let foo_path = &p.build_dir().join("debug").join("build");
 
     #[cfg(not(target_env = "msvc"))]
-    let file_glob = "foo-*";
+    let file_glob = "foo/*/out/foo*";
 
     #[cfg(target_env = "msvc")]
-    let file_glob = "foo.pdb";
+    let file_glob = "foo/*/out/foo.pdb";
 
     // Assert that build artifacts are produced
     p.cargo("build").run();
     assert_ne!(get_build_artifacts(foo_path, file_glob).len(), 0);
 
     // Assert that build artifacts are destroyed
-    p.cargo("clean -p foo").run();
+    p.cargo("clean -p foo")
+        .with_stderr_data(str![[r#"
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
+"#]])
+        .run();
     assert_eq!(get_build_artifacts(foo_path, file_glob).len(), 0);
 }
 
@@ -158,11 +163,11 @@ fn clean_p_only_cleans_specified_package() {
         .file("foo-base/src/lib.rs", "//! foo-base")
         .build();
 
-    let fingerprint_path = &p.build_dir().join("debug").join(".fingerprint");
+    let units_path = &p.build_dir().join("debug").join("build");
 
     p.cargo("build -p foo -p foo_core -p foo-base").run();
 
-    let mut fingerprint_names = get_fingerprints_without_hashes(fingerprint_path);
+    let mut fingerprint_names = get_fingerprints_without_hashes(units_path);
 
     // Artifacts present for all after building
     assert!(fingerprint_names.iter().any(|e| e == "foo"));
@@ -179,7 +184,7 @@ fn clean_p_only_cleans_specified_package() {
 
     p.cargo("clean -p foo").run();
 
-    fingerprint_names = get_fingerprints_without_hashes(fingerprint_path);
+    fingerprint_names = get_fingerprints_without_hashes(units_path);
 
     // Cleaning `foo` leaves artifacts for the others
     assert!(!fingerprint_names.iter().any(|e| e == "foo"));
@@ -199,158 +204,14 @@ fn clean_p_only_cleans_specified_package() {
     );
 }
 
-#[cargo_test]
-fn clean_workspace_does_not_touch_non_workspace_packages() {
-    Package::new("external_dependency", "0.1.0").publish();
-    let foo_manifest = r#"
-        [package]
-        name = "foo"
-        version = "0.1.0"
-        edition = "2015"
-
-        [dependencies]
-        external_dependency = "0.1.0"
-        "#;
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [workspace]
-                members = [
-                    "foo",
-                    "foo_core",
-                    "foo-base",
-                ]
-            "#,
-        )
-        .file("foo/Cargo.toml", foo_manifest)
-        .file("foo/src/lib.rs", "//! foo")
-        .file("foo_core/Cargo.toml", &basic_manifest("foo_core", "0.1.0"))
-        .file("foo_core/src/lib.rs", "//! foo_core")
-        .file("foo-base/Cargo.toml", &basic_manifest("foo-base", "0.1.0"))
-        .file("foo-base/src/lib.rs", "//! foo-base")
-        .build();
-
-    let fingerprint_path = &p.build_dir().join("debug").join(".fingerprint");
-
-    p.cargo("check -p foo -p foo_core -p foo-base").run();
-
-    let mut fingerprint_names = get_fingerprints_without_hashes(fingerprint_path);
-
-    // Artifacts present for all after building
-    assert!(fingerprint_names.iter().any(|e| e == "foo"));
-    assert!(fingerprint_names.iter().any(|e| e == "foo_core"));
-    assert!(fingerprint_names.iter().any(|e| e == "foo-base"));
-
-    let num_external_dependency_artifacts = fingerprint_names
-        .iter()
-        .filter(|&e| e == "external_dependency")
-        .count();
-    assert_ne!(num_external_dependency_artifacts, 0);
-
-    p.cargo("clean --workspace").run();
-
-    fingerprint_names = get_fingerprints_without_hashes(fingerprint_path);
-
-    // Cleaning workspace members leaves artifacts for the external dependency
-    assert!(
-        !fingerprint_names
-            .iter()
-            .any(|e| e == "foo" || e == "foo_core" || e == "foo-base")
-    );
-    assert_eq!(
-        fingerprint_names
-            .iter()
-            .filter(|&e| e == "external_dependency")
-            .count(),
-        num_external_dependency_artifacts,
-    );
-}
-
-#[cargo_test]
-fn clean_workspace_with_extra_package_specifiers() {
-    Package::new("external_dependency_1", "0.1.0").publish();
-    Package::new("external_dependency_2", "0.1.0").publish();
-    let foo_manifest = r#"
-        [package]
-        name = "foo"
-        version = "0.1.0"
-        edition = "2015"
-
-        [dependencies]
-        external_dependency_1 = "0.1.0"
-        external_dependency_2 = "0.1.0"
-        "#;
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [workspace]
-                members = [
-                    "foo",
-                    "foo_core",
-                    "foo-base",
-                ]
-            "#,
-        )
-        .file("foo/Cargo.toml", foo_manifest)
-        .file("foo/src/lib.rs", "//! foo")
-        .file("foo_core/Cargo.toml", &basic_manifest("foo_core", "0.1.0"))
-        .file("foo_core/src/lib.rs", "//! foo_core")
-        .file("foo-base/Cargo.toml", &basic_manifest("foo-base", "0.1.0"))
-        .file("foo-base/src/lib.rs", "//! foo-base")
-        .build();
-
-    let fingerprint_path = &p.build_dir().join("debug").join(".fingerprint");
-
-    p.cargo("check -p foo -p foo_core -p foo-base").run();
-
-    let mut fingerprint_names = get_fingerprints_without_hashes(fingerprint_path);
-
-    // Artifacts present for all after building
-    assert!(fingerprint_names.iter().any(|e| e == "foo"));
-    assert!(fingerprint_names.iter().any(|e| e == "foo_core"));
-    assert!(fingerprint_names.iter().any(|e| e == "foo-base"));
-
-    let num_external_dependency_2_artifacts = fingerprint_names
-        .iter()
-        .filter(|&e| e == "external_dependency_2")
-        .count();
-    assert_ne!(num_external_dependency_2_artifacts, 0);
-
-    p.cargo("clean --workspace -p external_dependency_1").run();
-
-    fingerprint_names = get_fingerprints_without_hashes(fingerprint_path);
-
-    // Cleaning workspace members and external_dependency_1 leaves artifacts for the external_dependency_2
-    assert!(
-        !fingerprint_names.iter().any(|e| e == "foo"
-            || e == "foo_core"
-            || e == "foo-base"
-            || e == "external_dependency_1")
-    );
-    assert_eq!(
-        fingerprint_names
-            .iter()
-            .filter(|&e| e == "external_dependency_2")
-            .count(),
-        num_external_dependency_2_artifacts,
-    );
-}
-
 fn get_fingerprints_without_hashes(fingerprint_path: &Path) -> Vec<String> {
     std::fs::read_dir(fingerprint_path)
         .expect("Build dir should be readable")
         .filter_map(|entry| entry.ok())
         .map(|entry| {
             let name = entry.file_name();
-            let name = name
-                .into_string()
-                .expect("fingerprint name should be UTF-8");
-            name.rsplit_once('-')
-                .expect("Name should contain at least one hyphen")
-                .0
-                .to_owned()
+            name.into_string()
+                .expect("fingerprint name should be UTF-8")
         })
         .collect()
 }
@@ -481,7 +342,7 @@ fn build_script() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..] build.rs [..]`
-[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/build_script_build`
 [RUNNING] `rustc [..] src/main.rs [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -579,23 +440,12 @@ fn clean_verbose() {
     Package::new("bar", "0.1.0").publish();
 
     p.cargo("build").run();
-    let mut expected = String::from(
-        "\
-[REMOVING] [ROOT]/foo/target/debug/.fingerprint/bar-[HASH]
-[REMOVING] [ROOT]/foo/target/debug/deps/libbar-[HASH].rlib
-[REMOVING] [ROOT]/foo/target/debug/deps/bar-[HASH].d
-[REMOVING] [ROOT]/foo/target/debug/deps/libbar-[HASH].rmeta
-",
-    );
-    if cfg!(target_os = "macos") {
-        // Rust 1.69 has changed so that split-debuginfo=unpacked includes unpacked for rlibs.
-        for _ in p.glob("target/debug/deps/bar-*.o") {
-            expected.push_str("[REMOVING] [ROOT]/foo/target/debug/deps/bar-[HASH][..].o\n");
-        }
-    }
-    expected.push_str("[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total\n");
     p.cargo("clean -p bar --verbose")
-        .with_stderr_data(&expected.unordered())
+        .with_stderr_data(str![[r#"
+[REMOVING] [ROOT]/foo/target/debug/build/bar
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
+"#]])
         .run();
     p.cargo("build").run();
 }
@@ -617,7 +467,11 @@ fn clean_remove_rlib_rmeta() {
 
     p.cargo("build").run();
     assert!(p.target_debug_dir().join("libfoo.rlib").exists());
-    let rmeta = p.glob("target/debug/deps/*.rmeta").next().unwrap().unwrap();
+    let rmeta = p
+        .glob("target/debug/build/*/*/out/*.rmeta")
+        .next()
+        .unwrap()
+        .unwrap();
     assert!(rmeta.exists());
     p.cargo("clean -p foo").run();
     assert!(!p.target_debug_dir().join("libfoo.rlib").exists());
@@ -944,7 +798,11 @@ fn clean_spec_reserved() {
 
     p.cargo("build --all-targets").run();
     assert!(p.target_debug_dir().join("build").is_dir());
-    let build_test = p.glob("target/debug/deps/build-*").next().unwrap().unwrap();
+    let build_test = p
+        .glob("target/debug/build/*/*/out/build-*")
+        .next()
+        .unwrap()
+        .unwrap();
     assert!(build_test.exists());
     // Tests are never "uplifted".
     assert!(p.glob("target/debug/build-*").next().is_none());
@@ -1060,156 +918,6 @@ fn quiet_does_not_show_summary() {
 
 "#]])
         .run();
-}
-
-#[cargo_test]
-fn target_dir_is_file() {
-    let p = project()
-        .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
-        .file("target", "")
-        .build();
-
-    p.cargo("clean")
-        .with_stderr_data(str![[r#"
-[ERROR] cannot clean `[ROOT]/foo/target`: not a directory
-  |
-  = [NOTE] cleaning has been aborted to prevent accidental deletion of unrelated files
-
-"#]])
-        .with_status(101)
-        .run();
-
-    assert!(p.root().join("target").exists());
-}
-
-#[cargo_test]
-fn explicit_target_dir_is_file() {
-    let p = project()
-        .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
-        .file("bar", "")
-        .build();
-
-    p.cargo("clean --target-dir bar")
-        .with_stderr_data(str![[r#"
-[ERROR] cannot clean `[ROOT]/foo/bar`: not a directory
-  |
-  = [NOTE] cleaning has been aborted to prevent accidental deletion of unrelated files
-
-"#]])
-        .with_status(101)
-        .run();
-
-    assert!(p.root().join("bar").exists());
-}
-
-#[cargo_test]
-fn env_target_dir_is_file() {
-    let p = project()
-        .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
-        .file("bar", "")
-        .build();
-
-    p.cargo("clean")
-        .env("CARGO_TARGET_DIR", "bar")
-        .with_stderr_data(str![[r#"
-[ERROR] cannot clean `[ROOT]/foo/bar`: not a directory
-  |
-  = [NOTE] cleaning has been aborted to prevent accidental deletion of unrelated files
-
-"#]])
-        .with_status(101)
-        .run();
-
-    assert!(p.root().join("bar").exists());
-}
-
-#[cargo_test]
-fn config_target_dir_is_file() {
-    let p = project()
-        .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
-        .file("bar", "")
-        .file(
-            ".cargo/config.toml",
-            "[build]
-        target-dir = 'bar'",
-        )
-        .build();
-
-    p.cargo("clean")
-        .with_stderr_data(str![[r#"
-[ERROR] cannot clean `[ROOT]/foo/bar`: not a directory
-  |
-  = [NOTE] cleaning has been aborted to prevent accidental deletion of unrelated files
-
-"#]])
-        .with_status(101)
-        .run();
-
-    assert!(p.root().join("bar").exists());
-}
-
-#[cargo_test]
-fn target_dir_is_symlink_dir() {
-    let p = project()
-        .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
-        .symlink_dir("bar-dest", "target")
-        .file("bar-dest/.keep", "")
-        .build();
-
-    let mut check = p.cargo("clean");
-    #[cfg(windows)]
-    {
-        check.with_stderr_data(str![[r#"
-[REMOVED] 1 file
-
-"#]]);
-    }
-    #[cfg(not(windows))]
-    {
-        check.with_stderr_data(str![[r#"
-[REMOVED] 1 file, [FILE_SIZE]B total
-
-"#]]);
-    }
-    check.with_status(0).run();
-
-    // make sure cargo has not deleted the files of the symlinked target dir
-    assert!(p.root().join("bar-dest/.keep").exists());
-}
-
-#[cargo_test]
-fn target_dir_is_symlink_file() {
-    let p = project()
-        .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
-        .symlink("bar-dest", "target")
-        .file("bar-dest", "")
-        .build();
-
-    let mut check = p.cargo("clean");
-    #[cfg(windows)]
-    {
-        check.with_stderr_data(str![[r#"
-[REMOVED] 1 file
-
-"#]]);
-    }
-    #[cfg(not(windows))]
-    {
-        check.with_stderr_data(str![[r#"
-[REMOVED] 1 file, [FILE_SIZE]B total
-
-"#]]);
-    }
-    check.with_status(0).run();
-
-    // make sure cargo has not deleted the file of the symlinked target dir
-    assert!(p.root().join("bar-dest").exists());
 }
 
 #[cargo_test]

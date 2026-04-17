@@ -280,7 +280,7 @@ fn changing_profiles_caches_targets() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
 [DOCTEST] foo
 
 "#]])
@@ -298,7 +298,7 @@ fn changing_profiles_caches_targets() {
     p.cargo("test foo")
         .with_stderr_data(str![[r#"
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
 
 "#]])
         .run();
@@ -545,26 +545,13 @@ feature on
         .run();
 
     /* Targets should be cached from the first build */
-
-    let mut e = p.cargo("build -v");
-
-    // MSVC does not include hash in binary filename, so it gets recompiled.
-    if cfg!(target_env = "msvc") {
-        e.with_stderr_data(str![[r#"
-[DIRTY] foo v0.0.1 ([ROOT]/foo): the list of features changed
-[COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-
-"#]]);
-    } else {
-        e.with_stderr_data(str![[r#"
+    p.cargo("build -v")
+        .with_stderr_data(str![[r#"
 [FRESH] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-"#]]);
-    }
-    e.run();
+"#]])
+        .run();
     p.rename_run("foo", "off2")
         .with_stdout_data(str![[r#"
 feature off
@@ -572,23 +559,13 @@ feature off
 "#]])
         .run();
 
-    let mut e = p.cargo("build --features foo -v");
-    if cfg!(target_env = "msvc") {
-        e.with_stderr_data(str![[r#"
-[DIRTY] foo v0.0.1 ([ROOT]/foo): the list of features changed
-[COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-
-"#]]);
-    } else {
-        e.with_stderr_data(str![[r#"
+    p.cargo("build --features foo -v")
+        .with_stderr_data(str![[r#"
 [FRESH] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-"#]]);
-    }
-    e.run();
+"#]])
+        .run();
     p.rename_run("foo", "on2")
         .with_stdout_data(str![[r#"
 feature on
@@ -617,7 +594,7 @@ fn rebuild_tests_if_lib_changes() {
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo_test [..]`
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/debug/deps/foo_test-[HASH][EXE]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/foo_test-[HASH][EXE]`
 
 "#]])
         .run();
@@ -682,8 +659,8 @@ fn no_rebuild_transitive_target_deps() {
 [COMPILING] b v0.0.1 ([ROOT]/foo/b)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[EXECUTABLE] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
-[EXECUTABLE] tests/foo.rs (target/debug/deps/foo-[HASH][EXE])
+[EXECUTABLE] unittests src/lib.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
+[EXECUTABLE] tests/foo.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
 
 "#]])
         .run();
@@ -1267,7 +1244,7 @@ fn reuse_workspace_lib() {
 [COMPILING] baz v0.1.1 ([ROOT]/foo/baz)
 [RUNNING] `rustc --crate-name baz [..]
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[EXECUTABLE] `[ROOT]/foo/target/debug/deps/baz-[HASH][EXE]`
+[EXECUTABLE] `[ROOT]/foo/target/debug/build/baz/[HASH]/out/baz-[HASH][EXE]`
 
 "#]])
         .run();
@@ -1458,21 +1435,23 @@ fn fingerprint_cleaner(mut dir: PathBuf, timestamp: filetime::FileTime) {
     // if all the files in the fingerprint's folder are older then a time stamp without
     // effecting any builds that happened since that time stamp.
     let mut cleaned = false;
-    dir.push(".fingerprint");
-    for fingerprint in fs::read_dir(&dir).unwrap() {
-        let fingerprint = fingerprint.unwrap();
-
-        let outdated = |f: io::Result<fs::DirEntry>| {
-            filetime::FileTime::from_last_modification_time(&f.unwrap().metadata().unwrap())
-                <= timestamp
-        };
-        if fs::read_dir(fingerprint.path()).unwrap().all(outdated) {
-            fs::remove_dir_all(fingerprint.path()).unwrap();
-            println!("remove: {:?}", fingerprint.path());
-            // a real cleaner would remove the big files in deps and build as well
-            // but fingerprint is sufficient for our tests
-            cleaned = true;
-        } else {
+    dir.push("build");
+    let outdated = |f: io::Result<fs::DirEntry>| {
+        filetime::FileTime::from_last_modification_time(&f.unwrap().metadata().unwrap())
+            <= timestamp
+    };
+    for build_unit in fs::read_dir(&dir).unwrap() {
+        let build_unit = build_unit.unwrap();
+        for hash_dir in fs::read_dir(&build_unit.path()).unwrap() {
+            let hash_dir = hash_dir.unwrap();
+            let fingerprint = hash_dir.path().join("fingerprint");
+            if fs::read_dir(fingerprint).unwrap().all(outdated) {
+                fs::remove_dir_all(hash_dir.path()).unwrap();
+                println!("remove: {:?}", hash_dir.path());
+                // a real cleaner would remove the big files in deps and build as well
+                // but fingerprint is sufficient for our tests
+                cleaned = true;
+            }
         }
     }
     assert!(
@@ -1585,10 +1564,10 @@ fn reuse_panic_build_dep_test() {
 [RUNNING] `rustc --crate-name bar [..]
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name build_script_build [..]
-[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/build_script_build`
 [RUNNING] `rustc --crate-name foo [..] src/lib.rs [..]--test[..]
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[EXECUTABLE] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+[EXECUTABLE] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/foo-[HASH][EXE]`
 
 "#]])
         .run();
@@ -2100,7 +2079,7 @@ fn simulated_docker_deps_stay_cached() {
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [FRESH] regdep_rerun [..]
 [FRESH] regdep_old_style [..]
-[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/build_script_build`
 [RUNNING] `rustc --crate-name foo [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -2269,7 +2248,10 @@ fn edition_change_invalidates() {
 
 "#]])
         .run();
-    assert_eq!(p.glob("target/debug/deps/libfoo-*.rlib").count(), 1);
+    assert_eq!(
+        p.glob("target/debug/build/foo/*/out/libfoo-*.rlib").count(),
+        1
+    );
 }
 
 #[cargo_test]
@@ -2437,7 +2419,7 @@ fn rerun_if_changes() {
         .with_stderr_data(str![[r#"
 [DIRTY] foo v0.0.1 ([ROOT]/foo): the env variable FOO changed
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/build_script_build`
 [RUNNING] `rustc [..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -2457,7 +2439,7 @@ fn rerun_if_changes() {
         .with_stderr_data(str![[r#"
 [DIRTY] foo v0.0.1 ([ROOT]/foo): the env variable BAR changed
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/build_script_build`
 [RUNNING] `rustc [..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -2477,7 +2459,7 @@ fn rerun_if_changes() {
         .with_stderr_data(str![[r#"
 [DIRTY] foo v0.0.1 ([ROOT]/foo): the env variable FOO changed
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/build_script_build`
 [RUNNING] `rustc [..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -2782,7 +2764,7 @@ fn linking_interrupted() {
 [RUNNING] `rustc --crate-name foo [..]
 [RUNNING] `rustc --crate-name t1 [..]
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/debug/deps/t1-[HASH][EXE]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/t1-[HASH][EXE]`
 
 "#]])
         .run();
@@ -3218,7 +3200,7 @@ fn incremental_build_script_execution_got_new_mtime_and_cargo_check() {
         .with_stderr_data(str![[r#"
 [DIRTY] foo v0.0.1 ([ROOT]/foo): the file `touch-me` has changed ([TIME_DIFF_AFTER_LAST_BUILD])
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/build_script_build`
 [RUNNING] `rustc --crate-name foo [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 

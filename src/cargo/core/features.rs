@@ -814,7 +814,7 @@ macro_rules! unstable_cli_options {
         /// Cargo, like `rustc`, accepts a suite of `-Z` flags which are intended for
         /// gating unstable functionality to Cargo. These flags are only available on
         /// the nightly channel of Cargo.
-        #[derive(Default, Debug, Deserialize)]
+        #[derive(Debug, Deserialize)]
         #[serde(default, rename_all = "kebab-case")]
         pub struct CliUnstable {
             $(
@@ -848,6 +848,70 @@ macro_rules! unstable_cli_options {
                 let actual = format!("{:#?}", vec![$(stringify!($element)),*]);
                 snapbox::assert_data_eq!(actual, expected);
             }
+        }
+    }
+}
+
+// TODO: Move this back to derive(Default) once `build_dir_new_layout` is stabilized and the old
+// layout has been removed.
+impl Default for CliUnstable {
+    fn default() -> Self {
+        Self {
+            build_dir_new_layout: !is_new_build_dir_layout_opt_out(),
+
+            allow_features: Default::default(),
+            print_im_a_teapot: Default::default(),
+            advanced_env: Default::default(),
+            any_build_script_metadata: Default::default(),
+            asymmetric_token: Default::default(),
+            avoid_dev_deps: Default::default(),
+            binary_dep_depinfo: Default::default(),
+            bindeps: Default::default(),
+            build_analysis: Default::default(),
+            build_std: Default::default(),
+            build_std_features: Default::default(),
+            cargo_lints: Default::default(),
+            checksum_freshness: Default::default(),
+            codegen_backend: Default::default(),
+            direct_minimal_versions: Default::default(),
+            dual_proc_macros: Default::default(),
+            feature_unification: Default::default(),
+            features: Default::default(),
+            fine_grain_locking: Default::default(),
+            fix_edition: Default::default(),
+            gc: Default::default(),
+            git: Default::default(),
+            gitoxide: Default::default(),
+            host_config: Default::default(),
+            json_target_spec: Default::default(),
+            lockfile_path: Default::default(),
+            minimal_versions: Default::default(),
+            msrv_policy: Default::default(),
+            mtime_on_use: Default::default(),
+            next_lockfile_bump: Default::default(),
+            no_embed_metadata: Default::default(),
+            no_index_update: Default::default(),
+            panic_abort_tests: Default::default(),
+            panic_immediate_abort: Default::default(),
+            profile_hint_mostly_unused: Default::default(),
+            profile_rustflags: Default::default(),
+            public_dependency: Default::default(),
+            publish_timeout: Default::default(),
+            root_dir: Default::default(),
+            rustc_unicode: Default::default(),
+            rustdoc_depinfo: Default::default(),
+            rustdoc_map: Default::default(),
+            rustdoc_mergeable_info: Default::default(),
+            rustdoc_scrape_examples: Default::default(),
+            sbom: Default::default(),
+            script: Default::default(),
+            section_timings: Default::default(),
+            separate_nightlies: Default::default(),
+            skip_rustdoc_fingerprint: Default::default(),
+            target_applies_to_host: Default::default(),
+            trim_paths: Default::default(),
+            unstable_options: Default::default(),
+            warnings: Default::default(),
         }
     }
 }
@@ -1000,6 +1064,8 @@ const STABILIZED_PACKAGE_WORKSPACE: &str =
 const STABILIZED_BUILD_DIR: &str = "build.build-dir is now always enabled.";
 
 const STABILIZED_CONFIG_INCLUDE: &str = "The `include` config key is now always available";
+
+const STABILIZED_BUILD_DIR_NEW_LAYOUT: &str = "build.build-dir-new-layout is now always enabled.";
 
 fn deserialize_comma_separated_list<'de, D>(
     deserializer: D,
@@ -1266,6 +1332,12 @@ impl CliUnstable {
             self.gitoxide = GitoxideFeatures::safe().into();
         }
 
+        // NOTE: We set this before `implicitly_enable_features_if_needed` as `-Zfine-grain-locking`
+        //       must use the new layout so that takes priority.
+        if is_new_build_dir_layout_opt_out() {
+            self.build_dir_new_layout = false;
+        }
+
         self.implicitly_enable_features_if_needed();
 
         Ok(warnings)
@@ -1389,6 +1461,7 @@ impl CliUnstable {
             "package-workspace" => stabilized_warn(k, "1.89", STABILIZED_PACKAGE_WORKSPACE),
             "build-dir" => stabilized_warn(k, "1.91", STABILIZED_BUILD_DIR),
             "config-include" => stabilized_warn(k, "1.93", STABILIZED_CONFIG_INCLUDE),
+            "build-dir-new-layout" => stabilized_warn(k, "1.97", STABILIZED_BUILD_DIR_NEW_LAYOUT),
 
             // Unstable features
             // Sorted alphabetically:
@@ -1399,7 +1472,6 @@ impl CliUnstable {
             "binary-dep-depinfo" => self.binary_dep_depinfo = parse_empty(k, v)?,
             "bindeps" => self.bindeps = parse_empty(k, v)?,
             "build-analysis" => self.build_analysis = parse_empty(k, v)?,
-            "build-dir-new-layout" => self.build_dir_new_layout = parse_empty(k, v)?,
             "build-std" => self.build_std = Some(parse_list(v)),
             "build-std-features" => self.build_std_features = Some(parse_list(v)),
             "cargo-lints" => self.cargo_lints = parse_empty(k, v)?,
@@ -1584,6 +1656,14 @@ pub fn channel() -> String {
 )]
 fn cargo_use_gitoxide_instead_of_git2() -> bool {
     std::env::var_os("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2").map_or(false, |value| value == "1")
+}
+
+#[expect(
+    clippy::disallowed_methods,
+    reason = "Temporary opt out that is not part of the public interface"
+)]
+fn is_new_build_dir_layout_opt_out() -> bool {
+    std::env::var("__CARGO_TEMPORARY_BUILD_DIR_NEW_LAYOUT_OPT_OUT").as_deref() == Ok("1")
 }
 
 /// Generate a link to Cargo documentation for the current release channel

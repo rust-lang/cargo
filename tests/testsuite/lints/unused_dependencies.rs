@@ -925,8 +925,8 @@ fn unused_dev_deps() {
 [COMPILING] doctest_used v0.1.0
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[EXECUTABLE] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
-[EXECUTABLE] tests/hello.rs (target/debug/deps/hello-[HASH][EXE])
+[EXECUTABLE] unittests src/lib.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
+[EXECUTABLE] tests/hello.rs (target/debug/build/foo/[HASH]/out/hello-[HASH][EXE])
 
 "#]]
             .unordered(),
@@ -939,10 +939,10 @@ fn unused_dev_deps() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[EXECUTABLE] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
-[EXECUTABLE] tests/hello.rs (target/debug/deps/hello-[HASH][EXE])
-[EXECUTABLE] benches/hello.rs (target/debug/deps/hello-[HASH][EXE])
-[EXECUTABLE] unittests examples/hello.rs (target/debug/examples/hello-[HASH][EXE])
+[EXECUTABLE] unittests src/lib.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
+[EXECUTABLE] tests/hello.rs (target/debug/build/foo/[HASH]/out/hello-[HASH][EXE])
+[EXECUTABLE] benches/hello.rs (target/debug/build/foo/[HASH]/out/hello-[HASH][EXE])
+[EXECUTABLE] unittests examples/hello.rs (target/debug/build/foo/[HASH]/out/hello-[HASH][EXE])
 
 "#]])
         .run();
@@ -953,8 +953,8 @@ fn unused_dev_deps() {
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
-[RUNNING] tests/hello.rs (target/debug/deps/hello-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
+[RUNNING] tests/hello.rs (target/debug/build/foo/[HASH]/out/hello-[HASH][EXE])
 [DOCTEST] foo
 
 "#]])
