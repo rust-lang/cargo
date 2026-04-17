@@ -8,6 +8,7 @@ use std::io::Cursor;
 use std::io::Read;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::sync::atomic::AtomicI64;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
 use std::sync::mpsc;
@@ -63,6 +64,7 @@ struct Message {
 
 #[derive(Default)]
 struct Stats {
+    dl_remaining: AtomicI64,
     dl_transferred: AtomicU64,
 }
 
@@ -107,6 +109,7 @@ impl Client {
 
         handle.url(&url)?;
         handle.follow_location(true)?;
+        handle.progress(true)?;
 
         match parts.method {
             http::Method::HEAD => handle.nobody(true)?,
@@ -146,6 +149,15 @@ impl Client {
 
         self.channel.as_ref().unwrap().send(req).unwrap();
         receiver.await.unwrap()
+    }
+
+    /// Returns the number pending bytes across all active transfers.
+    pub fn bytes_pending(&self) -> u64 {
+        self.stats
+            .dl_remaining
+            .load(Ordering::Acquire)
+            .try_into()
+            .unwrap()
     }
 }
 
@@ -393,6 +405,8 @@ struct Collector {
     debug: bool,
     /// Global transfer statistics.
     global_stats: Arc<Stats>,
+    /// How much has this particular transfer added to global `dl_remaining` stats.
+    dl_remaining_delta: i64,
 }
 
 impl Collector {
@@ -402,6 +416,7 @@ impl Collector {
             request_body: Cursor::new(Vec::new()),
             debug: false,
             global_stats: stats,
+            dl_remaining_delta: 0,
         }
     }
 }
@@ -435,8 +450,29 @@ impl Handler for Collector {
         }
     }
 
-    fn progress(&mut self, _dltotal: f64, _dlnow: f64, _ultotal: f64, _ulnow: f64) -> bool {
+    fn progress(&mut self, dltotal: f64, dlnow: f64, _ultotal: f64, _ulnow: f64) -> bool {
+        if dlnow > dltotal {
+            return true;
+        }
+        let dl_total = dltotal as i64;
+        let dl_current = dlnow as i64;
+
+        let remaining = dl_total - dl_current;
+
+        self.global_stats
+            .dl_remaining
+            .fetch_add(remaining - self.dl_remaining_delta, Ordering::Release);
+        self.dl_remaining_delta = remaining;
         true
+    }
+}
+
+impl Drop for Collector {
+    fn drop(&mut self) {
+        // Zero out this transfer's contribution to the global dl_remaining.
+        self.global_stats
+            .dl_remaining
+            .fetch_add(-self.dl_remaining_delta, Ordering::Release);
     }
 }
 
