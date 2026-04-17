@@ -887,7 +887,6 @@ unstable_cli_options!(
     gitoxide: Option<GitoxideFeatures> = ("Use gitoxide for the given git interactions, or all of them if no argument is given"),
     host_config: bool = ("Enable the `[host]` section in the .cargo/config.toml file"),
     json_target_spec: bool = ("Enable `.json` target spec files"),
-    lockfile_path: bool = ("Enable the `resolver.lockfile-path` config option"),
     minimal_versions: bool = ("Resolve minimal dependency versions instead of maximum"),
     msrv_policy: bool = ("Enable rust-version aware policy within cargo"),
     mtime_on_use: bool = ("Configure Cargo to update the mtime of used files"),
@@ -1000,6 +999,8 @@ const STABILIZED_PACKAGE_WORKSPACE: &str =
 const STABILIZED_BUILD_DIR: &str = "build.build-dir is now always enabled.";
 
 const STABILIZED_CONFIG_INCLUDE: &str = "The `include` config key is now always available";
+
+const STABILIZED_LOCKFILE_PATH: &str = "The `lockfile-path` config key is now always available";
 
 fn deserialize_comma_separated_list<'de, D>(
     deserializer: D,
@@ -1389,6 +1390,7 @@ impl CliUnstable {
             "package-workspace" => stabilized_warn(k, "1.89", STABILIZED_PACKAGE_WORKSPACE),
             "build-dir" => stabilized_warn(k, "1.91", STABILIZED_BUILD_DIR),
             "config-include" => stabilized_warn(k, "1.93", STABILIZED_CONFIG_INCLUDE),
+            "lockfile-path" => stabilized_warn(k, "1.97", STABILIZED_LOCKFILE_PATH),
 
             // Unstable features
             // Sorted alphabetically:
@@ -1427,7 +1429,6 @@ impl CliUnstable {
             }
             "host-config" => self.host_config = parse_empty(k, v)?,
             "json-target-spec" => self.json_target_spec = parse_empty(k, v)?,
-            "lockfile-path" => self.lockfile_path = parse_empty(k, v)?,
             "next-lockfile-bump" => self.next_lockfile_bump = parse_empty(k, v)?,
             "minimal-versions" => self.minimal_versions = parse_empty(k, v)?,
             "msrv-policy" => self.msrv_policy = parse_empty(k, v)?,
