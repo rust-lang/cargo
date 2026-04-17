@@ -250,12 +250,6 @@ pub fn add_output_format(
     build_runner: &BuildRunner<'_, '_>,
     rustdoc: &mut ProcessBuilder,
 ) -> CargoResult<()> {
-    let gctx = build_runner.bcx.gctx;
-    if !gctx.cli_unstable().unstable_options {
-        tracing::debug!("`unstable-options` is ignored, required -Zunstable-options flag");
-        return Ok(());
-    }
-
     if build_runner.bcx.build_config.intent.wants_doc_json_output() {
         rustdoc.arg("-Zunstable-options");
         rustdoc.arg("--output-format=json");
