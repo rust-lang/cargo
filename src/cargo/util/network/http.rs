@@ -53,7 +53,7 @@ pub struct HandleConfiguration {
     useragent: String,
     ssl_version: Option<SslVersion>,
     ssl_min_max_version: Option<(SslVersion, SslVersion)>,
-    timeout: HttpTimeout,
+    pub timeout: HttpTimeout,
     pub verbose: bool,
     pub multiplexing: bool,
 }
@@ -226,7 +226,6 @@ impl HandleConfiguration {
             handle.verbose(true)?;
             tracing::debug!(target: "network", "{:#?}", curl::Version::get());
         }
-        self.timeout.configure2(handle)?;
 
         // Enable HTTP/2 if possible.
         crate::try_old_curl_http2_pipewait!(self.multiplexing, handle);
@@ -285,6 +284,7 @@ pub(crate) fn debug(kind: InfoType, data: &[u8]) {
 }
 
 #[must_use]
+#[derive(Clone)]
 pub struct HttpTimeout {
     pub dur: Duration,
     pub low_speed_limit: u32,
