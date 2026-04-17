@@ -1,5 +1,7 @@
 //! Tests for the `cargo rustdoc` command.
 
+use std::fs;
+
 use crate::prelude::*;
 use cargo_test_support::str;
 use cargo_test_support::{basic_manifest, cross_compile, project};
@@ -44,7 +46,24 @@ fn rustdoc_simple_json() {
         .masquerade_as_nightly_cargo(&["rustdoc-output-format"])
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustdoc [..] --crate-name foo [..]-o [ROOT]/foo/target/doc [..] --output-format=json[..]
+[RUNNING] `rustdoc [..] --crate-name foo [..]-o [ROOT]/foo/target/debug/build/foo-[HASH]/out [..] --output-format=json[..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo.json
+
+"#]])
+        .run();
+    assert!(p.root().join("target/doc/foo.json").is_file());
+}
+
+#[cargo_test(nightly, reason = "--output-format is unstable")]
+fn rustdoc_json_with_new_layout() {
+    let p = project().file("src/lib.rs", "").build();
+
+    p.cargo("rustdoc -Z unstable-options -Z build-dir-new-layout  --output-format json -v")
+        .masquerade_as_nightly_cargo(&["rustdoc-output-format"])
+        .with_stderr_data(str![[r#"
+[DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustdoc [..] --crate-name foo [..]-o [ROOT]/foo/target/debug/build/foo/[HASH]/out [..] --output-format=json[..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo.json
 
@@ -321,4 +340,100 @@ fn fail_with_glob() {
 
 "#]])
         .run();
+}
+
+#[cargo_test(nightly, reason = "--output-format is unstable")]
+fn rustdoc_json_same_crate_different_version() {
+    let entry = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "entry"
+                version = "0.1.0"
+                edition = "2021"
+
+                [dependencies]
+                dep_v1 = { path = "../dep_v1", package = "dep" }
+                dep_v2 = { path = "../dep_v2", package = "dep" }
+            "#,
+        )
+        .file("src/lib.rs", "pub fn entry() {}")
+        .build();
+
+    let _dep_v1 = project()
+        .at("dep_v1")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "dep"
+                version = "1.0.0"
+                edition = "2021"
+            "#,
+        )
+        .file("src/lib.rs", "pub fn dep_v1_fn() {}")
+        .build();
+
+    let _dep_v2 = project()
+        .at("dep_v2")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "dep"
+                version = "2.0.0"
+                edition = "2021"
+            "#,
+        )
+        .file("src/lib.rs", "pub fn dep_v2_fn() {}")
+        .build();
+
+    entry
+        .cargo("rustdoc -v -Z unstable-options --output-format json -p dep@1.0.0")
+        .masquerade_as_nightly_cargo(&["rustdoc-output-format"])
+        .with_stderr_data(str![[r#"
+[LOCKING] 2 packages to latest compatible versions
+[DOCUMENTING] dep v1.0.0 ([ROOT]/dep_v1)
+[RUNNING] `rustdoc [..] --crate-name dep [ROOT]/dep_v1/src/lib.rs [..] --output-format=json[..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/dep.json
+
+"#]])
+        .run();
+
+    let dep_json = fs::read_to_string(entry.root().join("target/doc/dep.json")).unwrap();
+    assert!(dep_json.contains("dep_v1_fn"));
+    assert!(!dep_json.contains("dep_v2_fn"));
+
+    entry
+        .cargo("rustdoc -v -Z unstable-options --output-format json -p dep@2.0.0")
+        .masquerade_as_nightly_cargo(&["rustdoc-output-format"])
+        .with_stderr_data(str![[r#"
+[DOCUMENTING] dep v2.0.0 ([ROOT]/dep_v2)
+[RUNNING] `rustdoc [..] --crate-name dep [ROOT]/dep_v2/src/lib.rs [..] --output-format=json[..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/dep.json
+
+"#]])
+        .run();
+
+    let dep_json = fs::read_to_string(entry.root().join("target/doc/dep.json")).unwrap();
+    assert!(!dep_json.contains("dep_v1_fn"));
+    assert!(dep_json.contains("dep_v2_fn"));
+
+    entry
+        .cargo("rustdoc -v -Z unstable-options --output-format json -p dep@1.0.0")
+        .masquerade_as_nightly_cargo(&["rustdoc-output-format"])
+        .with_stderr_data(str![[r#"
+[FRESH] dep v1.0.0 ([ROOT]/dep_v1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/dep.json
+
+"#]])
+        .run();
+
+    let dep_json = fs::read_to_string(entry.root().join("target/doc/dep.json")).unwrap();
+    assert!(dep_json.contains("dep_v1_fn"));
+    assert!(!dep_json.contains("dep_v2_fn"));
 }

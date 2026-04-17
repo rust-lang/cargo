@@ -870,7 +870,16 @@ fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResu
     add_cap_lints(bcx, unit, &mut rustdoc);
 
     unit.kind.add_target_arg(&mut rustdoc);
-    let doc_dir = build_runner.files().output_dir(unit);
+
+    let doc_dir = if build_runner.bcx.build_config.intent.wants_doc_json_output() {
+        // Always use new layout for '--output-format=json'.
+        // In fix for https://github.com/rust-lang/cargo/issues/16291
+
+        build_runner.files().out_dir_new_layout(unit)
+    } else {
+        build_runner.files().output_dir(unit)
+    };
+
     rustdoc.arg("-o").arg(&doc_dir);
     rustdoc.args(&features_args(unit));
     rustdoc.args(&check_cfg_args(unit));
@@ -974,6 +983,7 @@ fn rustdoc(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<W
     let mut rustdoc = prepare_rustdoc(build_runner, unit)?;
 
     let crate_name = unit.target.crate_name();
+    let is_json_output = build_runner.bcx.build_config.intent.wants_doc_json_output();
     let doc_dir = build_runner.files().output_dir(unit);
     // Create the documentation directory ahead of time as rustdoc currently has
     // a bug where concurrent invocations will race to create this directory if
@@ -1057,13 +1067,15 @@ fn rustdoc(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<W
             }
         }
 
-        let crate_dir = doc_dir.join(&crate_name);
-        if crate_dir.exists() {
-            // Remove output from a previous build. This ensures that stale
-            // files for removed items are removed.
-            debug!("removing pre-existing doc directory {:?}", crate_dir);
-            paths::remove_dir_all(crate_dir)?;
-        }
+        if !is_json_output {
+            let crate_dir = doc_dir.join(&crate_name);
+            if crate_dir.exists() {
+                // Remove output from a previous build. This ensures that stale
+                // files for removed items are removed.
+                debug!("removing pre-existing doc directory {:?}", crate_dir);
+                paths::remove_dir_all(&crate_dir)?;
+            }
+        };
         state.running(&rustdoc);
         let timestamp = paths::set_invocation_time(&fingerprint_dir)?;
 

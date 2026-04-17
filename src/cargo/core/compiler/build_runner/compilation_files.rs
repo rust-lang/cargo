@@ -523,18 +523,33 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
                 vec![]
             }
             CompileMode::Doc => {
-                let path = if bcx.build_config.intent.wants_doc_json_output() {
-                    self.output_dir(unit)
-                        .join(format!("{}.json", unit.target.crate_name()))
+                let wants_json_doc = bcx.build_config.intent.wants_doc_json_output();
+
+                let path = if wants_json_doc {
+                    // Always use 'new' layout for '--output-format=json'.
+                    let crate_name = unit.target.crate_name();
+                    self.out_dir_new_layout(unit)
+                        .join(format!("{crate_name}.json"))
                 } else {
                     self.output_dir(unit)
                         .join(unit.target.crate_name())
                         .join("index.html")
                 };
 
+                // Uplift if output is json, from 'new' layout location for backward compatibility
+                // See #16773.
+                let hardlink = if wants_json_doc {
+                    Some(
+                        self.output_dir(unit)
+                            .join(format!("{}.json", unit.target.crate_name())),
+                    )
+                } else {
+                    None
+                };
+
                 let mut outputs = vec![OutputFile {
                     path,
-                    hardlink: None,
+                    hardlink,
                     export_path: None,
                     flavor: FileFlavor::Normal,
                 }];

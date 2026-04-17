@@ -465,6 +465,45 @@ fn cargo_doc_should_output_to_target_dir() {
     assert_exists(&docs_dir.join("foo/index.html"));
 }
 
+#[cargo_test(nightly, reason = "--output-format is unstable")]
+fn cargo_rustdoc_json_should_output_to_target_dir() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [build]
+            target-dir = "target-dir"
+            build-dir = "build-dir"
+            "#,
+        )
+        .build();
+
+    p.cargo("rustdoc -Zunstable-options --output-format json")
+        .masquerade_as_nightly_cargo(&["rustdoc-output-format"])
+        .enable_mac_dsym()
+        .run();
+
+    let docs_dir = p.root().join("target-dir/doc");
+
+    assert_exists(&docs_dir);
+    assert_exists(&docs_dir.join("foo.json"));
+
+    p.root().join("build-dir").assert_build_dir_layout(str![
+        r#"
+[ROOT]/foo/build-dir/.rustc_info.json
+[ROOT]/foo/build-dir/.rustdoc_fingerprint.json
+[ROOT]/foo/build-dir/CACHEDIR.TAG
+[ROOT]/foo/build-dir/debug/.cargo-build-lock
+[ROOT]/foo/build-dir/debug/.fingerprint/foo-[HASH]/doc-lib-foo
+[ROOT]/foo/build-dir/debug/.fingerprint/foo-[HASH]/doc-lib-foo.json
+[ROOT]/foo/build-dir/debug/.fingerprint/foo-[HASH]/invoked.timestamp
+[ROOT]/foo/build-dir/debug/build/foo-[HASH]/out/foo.json
+
+"#
+    ]);
+}
+
 #[cargo_test]
 fn cargo_package_should_build_in_build_dir_and_output_to_target_dir() {
     let p = project()
