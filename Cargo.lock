@@ -563,6 +563,7 @@ dependencies = [
  "jobserver",
  "libc",
  "miow",
+ "portable-atomic",
  "same-file",
  "sha2 0.11.0",
  "shell-escape",
