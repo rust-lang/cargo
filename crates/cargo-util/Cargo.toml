@@ -12,6 +12,7 @@ anyhow.workspace = true
 filetime.workspace = true
 hex.workspace = true
 ignore.workspace = true
+portable-atomic.workspace = true
 jobserver.workspace = true
 same-file.workspace = true
 sha2.workspace = true
