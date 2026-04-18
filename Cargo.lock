@@ -419,6 +419,7 @@ dependencies = [
  "os_info",
  "pasetors",
  "pathdiff",
+ "portable-atomic",
  "rand 0.10.1",
  "regex",
  "rusqlite",

@@ -84,6 +84,7 @@ openssl-src = "=300.5.4"
 os_info = { version = "3.14.0", default-features = false }
 pasetors = { version = "0.7.8", features = ["v3", "paserk", "std", "serde"] }
 pathdiff = "0.2.3"
+portable-atomic = "1.13.1"
 percent-encoding = "2.3.2"
 proptest = "1.11.0"
 pulldown-cmark = { version = "0.13.3", default-features = false, features = ["html"] }
@@ -204,6 +205,7 @@ opener.workspace = true
 os_info.workspace = true
 pasetors.workspace = true
 pathdiff.workspace = true
+portable-atomic.workspace = true
 rand.workspace = true
 regex.workspace = true
 rusqlite = { workspace = true, features = ["fallible_uint"] }

@@ -8,8 +8,6 @@ use std::io::Cursor;
 use std::io::Read;
 use std::str::FromStr;
 use std::sync::Arc;
-use std::sync::atomic::AtomicI64;
-use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
 use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
@@ -25,6 +23,8 @@ use curl::easy::WriteError;
 use curl::multi::Easy2Handle;
 use curl::multi::Multi;
 use futures::channel::oneshot;
+use portable_atomic::AtomicI64;
+use portable_atomic::AtomicU64;
 use tracing::{debug, error, trace, warn};
 
 use crate::util::network::http::HandleConfiguration;
