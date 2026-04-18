@@ -139,6 +139,7 @@ all = { level = "allow", priority = -2 }
 correctness = { level = "warn", priority = -1 }
 dbg_macro = "warn"
 disallowed_methods = "warn"
+disallowed_types = "warn"
 print_stderr = "warn"
 print_stdout = "warn"
 self_named_module_files = "warn"
