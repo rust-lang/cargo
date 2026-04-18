@@ -7,5 +7,6 @@ disallowed-methods = [
     { path = "std::env::vars_os", reason = "not recommended to use in Cargo. See rust-lang/cargo#11588" },
 ]
 disallowed-types = [
-    { path = "std::sync::atomic::AtomicU64", reason = "not portable. See rust-lang/cargo#12988" },
+    { path = "std::sync::atomic::AtomicU64", reason = "not portable; See rust-lang/cargo#12988", replacement = "portable_atomic::AtomicU64" },
+    { path = "std::sync::atomic::AtomicI64", reason = "not portable; See rust-lang/cargo#12988", replacement = "portable_atomic::AtomicI64" },
 ]
