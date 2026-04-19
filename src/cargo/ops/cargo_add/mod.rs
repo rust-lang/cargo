@@ -349,6 +349,8 @@ fn resolve_dependency(
         .as_deref()
         .map(CrateSpec::resolve)
         .transpose()?;
+    let request_latest = crate_spec.as_ref().map_or(false, |c| c.req_latest());
+
     let mut selected_dep = if let Some(url) = &arg.git {
         let mut src = GitSource::new(url);
         if let Some(branch) = &arg.branch {
@@ -362,7 +364,7 @@ fn resolve_dependency(
         }
 
         let selected = if let Some(crate_spec) = &crate_spec {
-            if let Some(v) = crate_spec.version_req() {
+            if let Some(v) = crate_spec.specified_version() {
                 // crate specifier includes a version (e.g. `docopt@0.8`)
                 anyhow::bail!("cannot specify a git URL (`{url}`) with a version (`{v}`).");
             }
@@ -399,7 +401,7 @@ fn resolve_dependency(
         }
 
         let selected = if let Some(crate_spec) = &crate_spec {
-            if let Some(v) = crate_spec.version_req() {
+            if let Some(v) = crate_spec.specified_version() {
                 // crate specifier includes a version (e.g. `docopt@0.8`)
                 anyhow::bail!("cannot specify a path (`{raw_path}`) with a version (`{v}`).");
             }
@@ -515,6 +517,43 @@ fn resolve_dependency(
 
     let query = query_dependency(ws, gctx, &mut dependency)?;
     let dependency = populate_available_features(dependency, &query, registry)?;
+
+    // Check if user tried to use @latest and provide helpful error.
+    if request_latest {
+        // Get the exact version that `cargo add <name>` would resolve to,
+        // respecting MSRV and existing version constraints.
+        let resolved =
+            get_latest_dependency(spec, &dependency, honor_rust_version, gctx, registry)?;
+        let resolved_version = resolved
+            .version()
+            .expect("resolved dependency should have version");
+        // Get the actual latest non-prerelease, non-yanked version from the registry,
+        // ignoring MSRV and existing version constraints.
+        // Only name + registry matter; `Dependency::query` ignores other fields.
+        let mut unconstrained_dep = Dependency::new(&dependency.name);
+        if let Some(registry_name) = dependency.registry() {
+            unconstrained_dep = unconstrained_dep.set_registry(registry_name);
+        }
+        let latest = get_latest_dependency(spec, &unconstrained_dep, Some(false), gctx, registry)?;
+        let latest_version = latest
+            .version()
+            .expect("latest dependency should have version");
+        if resolved_version == latest_version {
+            anyhow::bail!(
+                "invalid version requirement `latest`\n\n\
+                     help: to add the latest version `{latest_version}`, run `cargo add {}`",
+                dependency.name,
+            );
+        } else {
+            anyhow::bail!(
+                "invalid version requirement `latest`\n\n\
+                     help: to use `{resolved_version}`, run `cargo add {}`\n\
+                     help: to use the latest version, run `cargo add {}@{latest_version}`",
+                dependency.name,
+                dependency.name,
+            );
+        }
+    }
 
     Ok(dependency)
 }

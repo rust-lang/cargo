@@ -18,6 +18,8 @@ pub struct CrateSpec {
     name: String,
     /// Optional version requirement
     version_req: Option<String>,
+    /// Request the latest version
+    req_latest: bool,
 }
 
 impl CrateSpec {
@@ -47,6 +49,13 @@ impl CrateSpec {
         package_name?;
 
         if let Some(version) = version {
+            if version == "latest" {
+                return Ok(Self {
+                    name: name.to_owned(),
+                    version_req: None,
+                    req_latest: true,
+                });
+            }
             semver::VersionReq::parse(version).with_context(|| {
                 if let Some(stripped) = version.strip_prefix("v") {
                     return format!(
@@ -62,6 +71,7 @@ impl CrateSpec {
         let id = Self {
             name: name.to_owned(),
             version_req: version.map(|s| s.to_owned()),
+            req_latest: false,
         };
 
         Ok(id)
@@ -82,5 +92,17 @@ impl CrateSpec {
 
     pub fn version_req(&self) -> Option<&str> {
         self.version_req.as_deref()
+    }
+
+    pub fn specified_version(&self) -> Option<&str> {
+        if self.req_latest {
+            Some("latest")
+        } else {
+            self.version_req()
+        }
+    }
+
+    pub fn req_latest(&self) -> bool {
+        self.req_latest
     }
 }
