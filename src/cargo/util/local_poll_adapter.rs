@@ -103,7 +103,22 @@ where
 #[cfg(test)]
 mod tests {
     use super::LocalPollAdapter;
-    use std::{rc::Rc, task::Poll, time::Duration};
+    use std::{rc::Rc, task::Poll};
+
+    /// Future that yields once.
+    fn yield_once() -> impl std::future::Future<Output = ()> {
+        let mut yielded = false;
+
+        std::future::poll_fn(move |cx| {
+            if yielded {
+                Poll::Ready(())
+            } else {
+                yielded = true;
+                cx.waker().wake_by_ref();
+                Poll::Pending
+            }
+        })
+    }
 
     struct Thing {}
 
@@ -111,7 +126,7 @@ mod tests {
         async fn widen(&self, i: &i32) -> Result<i64, ()> {
             if *i > 10 {
                 // Big numbers take longer to process (need to test futures that yield).
-                futures_timer::Delay::new(Duration::from_millis(1)).await
+                yield_once().await;
             }
             if *i % 2 != 0 {
                 // Odd numbers are not supported (need to test errors).
