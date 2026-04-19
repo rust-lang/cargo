@@ -564,7 +564,8 @@ fn publish_package_with_public_dependency() {
 
     p.cargo("check --message-format=short")
         .masquerade_as_nightly_cargo(&["public-dependency"])
-        .with_stderr_data(str![[r#"
+        .with_stderr_data(
+            str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
@@ -575,7 +576,9 @@ fn publish_package_with_public_dependency() {
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-"#]])
+"#]]
+            .unordered(),
+        )
         .run();
 }
 

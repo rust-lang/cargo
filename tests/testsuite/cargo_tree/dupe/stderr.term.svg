@@ -24,11 +24,11 @@
 </tspan>
     <tspan x="10px" y="64px"><tspan class="fg-bright-green bold"> Downloading</tspan><tspan> crates ...</tspan>
 </tspan>
-    <tspan x="10px" y="82px"><tspan class="fg-bright-green bold">  Downloaded</tspan><tspan> a v1.0.0 (registry `dummy-registry`)</tspan>
+    <tspan x="10px" y="82px"><tspan class="fg-bright-green bold">  Downloaded</tspan><tspan> [..] v1.0.0 (registry `dummy-registry`)</tspan>
 </tspan>
-    <tspan x="10px" y="100px"><tspan class="fg-bright-green bold">  Downloaded</tspan><tspan> b v1.0.0 (registry `dummy-registry`)</tspan>
+    <tspan x="10px" y="100px"><tspan class="fg-bright-green bold">  Downloaded</tspan><tspan> [..] v1.0.0 (registry `dummy-registry`)</tspan>
 </tspan>
-    <tspan x="10px" y="118px"><tspan class="fg-bright-green bold">  Downloaded</tspan><tspan> c v1.0.0 (registry `dummy-registry`)</tspan>
+    <tspan x="10px" y="118px"><tspan class="fg-bright-green bold">  Downloaded</tspan><tspan> [..] v1.0.0 (registry `dummy-registry`)</tspan>
 </tspan>
     <tspan x="10px" y="136px">
 </tspan>

@@ -11,7 +11,6 @@ pub mod http;
 pub mod http_async;
 pub mod proxy;
 pub mod retry;
-pub mod sleep;
 
 /// LOCALHOST constants for both IPv4 and IPv6.
 pub const LOCALHOST: [SocketAddr; 2] = [

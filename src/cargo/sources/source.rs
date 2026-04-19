@@ -81,7 +81,7 @@ pub trait Source {
     /// In the case where [`MaybePackage::Download`] is returned, then the
     /// package downloader will call [`Source::finish_download`] after the
     /// download has finished.
-    fn download(&self, package: PackageId) -> CargoResult<MaybePackage>;
+    async fn download(&self, package: PackageId) -> CargoResult<MaybePackage>;
 
     /// Gives the source the downloaded `.crate` file.
     ///
@@ -90,7 +90,7 @@ pub trait Source {
     /// the results of the download of the given URL. The source is
     /// responsible for saving to disk, and returning the appropriate
     /// [`Package`].
-    fn finish_download(&self, pkg_id: PackageId, contents: Vec<u8>) -> CargoResult<Package>;
+    async fn finish_download(&self, pkg_id: PackageId, contents: Vec<u8>) -> CargoResult<Package>;
 
     /// Generates a unique string which represents the fingerprint of the
     /// current state of the source.
@@ -214,12 +214,12 @@ impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
         (**self).set_quiet(quiet)
     }
 
-    fn download(&self, id: PackageId) -> CargoResult<MaybePackage> {
-        (**self).download(id)
+    async fn download(&self, id: PackageId) -> CargoResult<MaybePackage> {
+        (**self).download(id).await
     }
 
-    fn finish_download(&self, id: PackageId, data: Vec<u8>) -> CargoResult<Package> {
-        (**self).finish_download(id, data)
+    async fn finish_download(&self, id: PackageId, data: Vec<u8>) -> CargoResult<Package> {
+        (**self).finish_download(id, data).await
     }
 
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {

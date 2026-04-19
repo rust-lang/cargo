@@ -212,7 +212,7 @@ impl<'gctx> Source for DirectorySource<'gctx> {
         self.source_id
     }
 
-    fn download(&self, id: PackageId) -> CargoResult<MaybePackage> {
+    async fn download(&self, id: PackageId) -> CargoResult<MaybePackage> {
         self.packages
             .borrow()
             .get(&id)
@@ -222,7 +222,7 @@ impl<'gctx> Source for DirectorySource<'gctx> {
             .ok_or_else(|| anyhow::format_err!("failed to find package with id: {}", id))
     }
 
-    fn finish_download(&self, _id: PackageId, _data: Vec<u8>) -> CargoResult<Package> {
+    async fn finish_download(&self, _id: PackageId, _data: Vec<u8>) -> CargoResult<Package> {
         panic!("no downloads to do")
     }
 

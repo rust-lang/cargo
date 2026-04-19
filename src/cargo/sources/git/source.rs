@@ -413,7 +413,7 @@ impl<'gctx> Source for GitSource<'gctx> {
         *self.source_id.borrow()
     }
 
-    fn download(&self, id: PackageId) -> CargoResult<MaybePackage> {
+    async fn download(&self, id: PackageId) -> CargoResult<MaybePackage> {
         trace!(
             "getting packages for package ID `{}` from `{:?}`",
             id, self.remote
@@ -424,9 +424,10 @@ impl<'gctx> Source for GitSource<'gctx> {
             .as_mut()
             .expect("BUG: `update()` must be called before `get()`")
             .download(id)
+            .await
     }
 
-    fn finish_download(&self, _id: PackageId, _data: Vec<u8>) -> CargoResult<Package> {
+    async fn finish_download(&self, _id: PackageId, _data: Vec<u8>) -> CargoResult<Package> {
         panic!("no download should have started")
     }
 

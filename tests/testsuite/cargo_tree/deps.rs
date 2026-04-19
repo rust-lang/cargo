@@ -1677,7 +1677,8 @@ fn ambiguous_name() {
         .build();
 
     p.cargo("tree -p dep")
-        .with_stderr_data(str![[r#"
+        .with_stderr_data(
+            str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 3 packages to latest compatible versions
 [ADDING] dep v1.0.0 (available: v2.0.0)
@@ -1690,7 +1691,9 @@ fn ambiguous_name() {
   dep@1.0.0
   dep@2.0.0
 
-"#]])
+"#]]
+            .unordered(),
+        )
         .with_status(101)
         .run();
 }

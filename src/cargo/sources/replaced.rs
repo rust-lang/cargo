@@ -96,9 +96,9 @@ impl<'gctx> Source for ReplacedSource<'gctx> {
         self.inner.set_quiet(quiet);
     }
 
-    fn download(&self, id: PackageId) -> CargoResult<MaybePackage> {
+    async fn download(&self, id: PackageId) -> CargoResult<MaybePackage> {
         let id = id.with_source_id(self.replace_with);
-        let pkg = self.inner.download(id).map_err(|e| {
+        let pkg = self.inner.download(id).await.map_err(|e| {
             if self.is_builtin_replacement() {
                 e
             } else {
@@ -116,9 +116,9 @@ impl<'gctx> Source for ReplacedSource<'gctx> {
         })
     }
 
-    fn finish_download(&self, id: PackageId, data: Vec<u8>) -> CargoResult<Package> {
+    async fn finish_download(&self, id: PackageId, data: Vec<u8>) -> CargoResult<Package> {
         let id = id.with_source_id(self.replace_with);
-        let pkg = self.inner.finish_download(id, data).map_err(|e| {
+        let pkg = self.inner.finish_download(id, data).await.map_err(|e| {
             if self.is_builtin_replacement() {
                 e
             } else {

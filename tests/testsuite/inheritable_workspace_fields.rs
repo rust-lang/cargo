@@ -1167,7 +1167,8 @@ fn inherit_dependency_features() {
         .build();
 
     p.cargo("check")
-        .with_stderr_data(str![[r#"
+        .with_stderr_data(
+            str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
@@ -1178,7 +1179,9 @@ fn inherit_dependency_features() {
 [CHECKING] bar v0.2.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-"#]])
+"#]]
+            .unordered(),
+        )
         .run();
 
     let lockfile = p.read_lockfile();
@@ -1546,7 +1549,7 @@ fn warn_inherit_def_feat_true_member_def_feat_false() {
 [CHECKING] bar v0.2.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-"#]]).run();
+"#]].unordered()).run();
 }
 
 #[cargo_test]
@@ -1638,7 +1641,7 @@ fn warn_inherit_simple_member_def_feat_false() {
 [CHECKING] bar v0.2.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-"#]]).run();
+"#]].unordered()).run();
 }
 
 #[cargo_test]
@@ -1719,7 +1722,8 @@ fn inherit_def_feat_false_member_def_feat_true() {
         .build();
 
     p.cargo("check")
-        .with_stderr_data(str![[r#"
+        .with_stderr_data(
+            str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
@@ -1730,7 +1734,9 @@ fn inherit_def_feat_false_member_def_feat_true() {
 [CHECKING] bar v0.2.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-"#]])
+"#]]
+            .unordered(),
+        )
         .run();
 }
 

@@ -171,7 +171,7 @@ impl<'gctx> RegistryData for LocalRegistry<'gctx> {
         true
     }
 
-    fn download(&self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock> {
+    async fn download(&self, pkg: PackageId, checksum: &str) -> CargoResult<MaybeLock> {
         // Note that the usage of `into_path_unlocked` here is because the local
         // crate files here never change in that we're not the one writing them,
         // so it's not our responsibility to synchronize access to them.
@@ -201,7 +201,12 @@ impl<'gctx> RegistryData for LocalRegistry<'gctx> {
         Ok(MaybeLock::Ready(crate_file))
     }
 
-    fn finish_download(&self, _pkg: PackageId, _checksum: &str, _data: &[u8]) -> CargoResult<File> {
+    async fn finish_download(
+        &self,
+        _pkg: PackageId,
+        _checksum: &str,
+        _data: &[u8],
+    ) -> CargoResult<File> {
         panic!("this source doesn't download")
     }
 }

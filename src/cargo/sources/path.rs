@@ -171,7 +171,7 @@ impl<'gctx> Source for PathSource<'gctx> {
         self.source_id
     }
 
-    fn download(&self, id: PackageId) -> CargoResult<MaybePackage> {
+    async fn download(&self, id: PackageId) -> CargoResult<MaybePackage> {
         trace!("getting packages; id={}", id);
         self.load()?;
         let pkg = self.package.borrow();
@@ -181,7 +181,7 @@ impl<'gctx> Source for PathSource<'gctx> {
             .ok_or_else(|| internal(format!("failed to find {} in path source", id)))
     }
 
-    fn finish_download(&self, _id: PackageId, _data: Vec<u8>) -> CargoResult<Package> {
+    async fn finish_download(&self, _id: PackageId, _data: Vec<u8>) -> CargoResult<Package> {
         panic!("no download should have started")
     }
 
@@ -370,7 +370,7 @@ impl<'gctx> Source for RecursivePathSource<'gctx> {
         self.source_id
     }
 
-    fn download(&self, id: PackageId) -> CargoResult<MaybePackage> {
+    async fn download(&self, id: PackageId) -> CargoResult<MaybePackage> {
         trace!("getting packages; id={}", id);
         self.load()?;
         let pkgs = self.packages.borrow();
@@ -382,7 +382,7 @@ impl<'gctx> Source for RecursivePathSource<'gctx> {
         .ok_or_else(|| internal(format!("failed to find {} in path source", id)))
     }
 
-    fn finish_download(&self, _id: PackageId, _data: Vec<u8>) -> CargoResult<Package> {
+    async fn finish_download(&self, _id: PackageId, _data: Vec<u8>) -> CargoResult<Package> {
         panic!("no download should have started")
     }
 
