@@ -1715,6 +1715,7 @@ fn check_build_should_not_output_files_to_artifact_dir() {
         .join("target-dir")
         .assert_build_dir_layout(str![[r#"
 [ROOT]/foo/target-dir/CACHEDIR.TAG
+[ROOT]/foo/target-dir/.gitignore
 [ROOT]/foo/target-dir/debug/.cargo-lock
 
 "#]]);
@@ -1843,6 +1844,7 @@ fn check_build_should_not_uplift_proc_macro_dylib_deps() {
         .join("target-dir")
         .assert_build_dir_layout(str![[r#"
 [ROOT]/foo/target-dir/CACHEDIR.TAG
+[ROOT]/foo/target-dir/.gitignore
 [ROOT]/foo/target-dir/debug/.cargo-lock
 
 "#]]);

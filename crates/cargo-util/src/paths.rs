@@ -766,6 +766,7 @@ pub fn create_dir_all_excluded_from_backups_atomic(p: impl AsRef<Path>) -> Resul
     let tempdir = TempFileBuilder::new().prefix(base).tempdir_in(parent)?;
     exclude_from_backups(tempdir.path());
     exclude_from_content_indexing(tempdir.path());
+    exclude_from_version_control(tempdir.path());
     // Previously std::fs::create_dir_all() (through paths::create_dir_all()) was used
     // here to create the directory directly and fs::create_dir_all() explicitly treats
     // the directory being created concurrently by another thread or process as success,
@@ -839,6 +840,28 @@ fn exclude_from_content_indexing(path: &Path) {
     #[cfg(not(windows))]
     {
         let _ = path;
+    }
+}
+
+/// Marks the directory as ignored by Git and compatible VCS.
+///
+/// This is recommended to prevent derived/temporary files from bloating VCS
+/// repositories. It is achieved by writing the content "*" to a ".gitignore"
+/// file in the directory.
+///
+/// Another way to do this is to write the path to the top-level .gitignore
+/// file. Cargo already does this, but it has a downside: When a previous
+/// revision of a project is checked out where the path was not yet added
+/// to the top-level .gitignore file, the directory may accidentally become
+/// tracked later. Adding a .gitignore file with the content "*" to the ignored
+/// directory itself avoids this problem, since it will still be present if an
+/// old revision is checked out.
+fn exclude_from_version_control(path: &Path) {
+    let file = path.join(".gitignore");
+    if !file.exists() {
+        // Similarly to exclude_from_time_machine_and_cloud_sync() we ignore
+        // errors here as it's an optional feature.
+        let _ = std::fs::write(file, "*\n");
     }
 }
 
