@@ -2170,9 +2170,9 @@ fn tracks_target_dir_on_build() {
     p.cargo("build").run();
 
     let target_dirs = target_dir_timestamps();
-    let has_entry = target_dirs
-        .iter()
-        .any(|(_, target_dir, _)| target_dir.ends_with("/target") || target_dir.ends_with("\\target"));
+    let has_entry = target_dirs.iter().any(|(_, target_dir, _)| {
+        target_dir.ends_with("/target") || target_dir.ends_with("\\target")
+    });
     assert!(
         has_entry,
         "Expected target directory entry but found: {:?}",
@@ -2193,7 +2193,9 @@ fn tracks_target_dir_on_check() {
     let rows = target_dir_timestamps();
     let first = rows
         .iter()
-        .find(|(_, target_dir, _)| target_dir.ends_with("/target") || target_dir.ends_with("\\target"))
+        .find(|(_, target_dir, _)| {
+            target_dir.ends_with("/target") || target_dir.ends_with("\\target")
+        })
         .cloned()
         .expect("missing target dir row after check");
 
@@ -2207,7 +2209,10 @@ fn tracks_target_dir_on_check() {
         .cloned()
         .expect("missing target dir row after second check");
 
-    assert!(second.2 > first.2, "expected check to refresh target dir timestamp: {first:?} -> {second:?}");
+    assert!(
+        second.2 > first.2,
+        "expected check to refresh target dir timestamp: {first:?} -> {second:?}"
+    );
 }
 
 #[cargo_test]
@@ -2223,7 +2228,9 @@ fn tracks_target_dir_on_doc() {
     let rows = target_dir_timestamps();
     let first = rows
         .iter()
-        .find(|(_, target_dir, _)| target_dir.ends_with("/target") || target_dir.ends_with("\\target"))
+        .find(|(_, target_dir, _)| {
+            target_dir.ends_with("/target") || target_dir.ends_with("\\target")
+        })
         .cloned()
         .expect("missing target dir row after doc");
 
@@ -2237,7 +2244,10 @@ fn tracks_target_dir_on_doc() {
         .cloned()
         .expect("missing target dir row after second doc");
 
-    assert!(second.2 > first.2, "expected doc to refresh target dir timestamp: {first:?} -> {second:?}");
+    assert!(
+        second.2 > first.2,
+        "expected doc to refresh target dir timestamp: {first:?} -> {second:?}"
+    );
 }
 
 #[cargo_test]
@@ -2314,9 +2324,16 @@ fn clean_target_dir_gc_skips_invalid_cachedir_tag() {
 "#]])
         .run();
 
-    assert!(target_dir.exists(), "target dir with invalid CACHEDIR.TAG should be skipped by gc");
+    assert!(
+        target_dir.exists(),
+        "target dir with invalid CACHEDIR.TAG should be skipped by gc"
+    );
     let rows = target_dir_rows_for_path(&target_dir);
-    assert_eq!(rows.len(), 1, "tracking row should remain when unsafe target dir is skipped: {rows:?}");
+    assert_eq!(
+        rows.len(),
+        1,
+        "tracking row should remain when unsafe target dir is skipped: {rows:?}"
+    );
 }
 
 #[cargo_test]
@@ -2545,7 +2562,11 @@ fn clean_target_dir_leaked_preserves_valid() {
 
     let all_rows = target_dir_timestamps();
     let before = target_dir_rows_for_path(&shared_target);
-    assert_eq!(before.len(), 2, "expected two associations before gc: {before:?}; all rows: {all_rows:?}");
+    assert_eq!(
+        before.len(),
+        2,
+        "expected two associations before gc: {before:?}; all rows: {all_rows:?}"
+    );
 
     // Verify shared target exists
     assert!(shared_target.exists());
@@ -2564,13 +2585,23 @@ fn clean_target_dir_leaked_preserves_valid() {
     // Shared target should still exist and valid associations should remain intact.
     assert!(shared_target.exists());
     let after = target_dir_rows_for_path(&shared_target);
-    assert_eq!(after.len(), 2, "expected valid shared-target associations to remain after gc: {after:?}");
+    assert_eq!(
+        after.len(),
+        2,
+        "expected valid shared-target associations to remain after gc: {after:?}"
+    );
     assert!(
-        after.iter().any(|(manifest, _, _)| manifest.ends_with("/foo/Cargo.toml") || manifest.ends_with("\\foo\\Cargo.toml")),
+        after
+            .iter()
+            .any(|(manifest, _, _)| manifest.ends_with("/foo/Cargo.toml")
+                || manifest.ends_with("\\foo\\Cargo.toml")),
         "expected foo workspace association to remain: {after:?}"
     );
     assert!(
-        after.iter().any(|(manifest, _, _)| manifest.ends_with("/bar/Cargo.toml") || manifest.ends_with("\\bar\\Cargo.toml")),
+        after
+            .iter()
+            .any(|(manifest, _, _)| manifest.ends_with("/bar/Cargo.toml")
+                || manifest.ends_with("\\bar\\Cargo.toml")),
         "expected bar workspace association to remain: {after:?}"
     );
 }
@@ -2600,7 +2631,11 @@ fn clean_target_dir_age_shared_deletes_when_all_stale() {
         .run();
 
     let before = target_dir_rows_for_path(&shared_target);
-    assert_eq!(before.len(), 2, "expected two associations before gc: {before:?}");
+    assert_eq!(
+        before.len(),
+        2,
+        "expected two associations before gc: {before:?}"
+    );
     assert!(shared_target.exists());
 
     p1.cargo("clean gc -v -Zgc")
@@ -2616,7 +2651,10 @@ fn clean_target_dir_age_shared_deletes_when_all_stale() {
 
     assert!(!shared_target.exists());
     let after = target_dir_rows_for_path(&shared_target);
-    assert!(after.is_empty(), "expected rows for deleted shared target to be removed: {after:?}");
+    assert!(
+        after.is_empty(),
+        "expected rows for deleted shared target to be removed: {after:?}"
+    );
 }
 
 #[cargo_test]
@@ -2657,7 +2695,10 @@ fn clean_target_dir_size_counts_shared_dir_once() {
     let other_size = cargo_util::du(&p3.root().join("target"), &[]).unwrap();
 
     let threshold = shared_size + other_size + 1;
-    assert!(threshold < shared_size * 2 + other_size, "test setup requires threshold between single-count and double-count totals");
+    assert!(
+        threshold < shared_size * 2 + other_size,
+        "test setup requires threshold between single-count and double-count totals"
+    );
 
     p1.cargo("clean gc -v -Zgc")
         .env("CARGO_TARGET_DIR", shared_target.as_os_str())
@@ -2669,10 +2710,20 @@ fn clean_target_dir_size_counts_shared_dir_once() {
 "#]])
         .run();
 
-    assert!(shared_target.exists(), "shared target should remain if counted once");
-    assert!(p3.root().join("target").exists(), "other target should remain");
+    assert!(
+        shared_target.exists(),
+        "shared target should remain if counted once"
+    );
+    assert!(
+        p3.root().join("target").exists(),
+        "other target should remain"
+    );
     let rows = target_dir_rows_for_path(&shared_target);
-    assert_eq!(rows.len(), 2, "shared target rows should remain intact: {rows:?}");
+    assert_eq!(
+        rows.len(),
+        2,
+        "shared target rows should remain intact: {rows:?}"
+    );
 }
 
 #[cargo_test]
@@ -2688,7 +2739,11 @@ fn clean_target_dir_size_shared_deletes_once_when_over_threshold() {
         .file("src/lib.rs", "")
         .build();
 
-    let shared_target = p1.root().parent().unwrap().join("shared-target-size-delete");
+    let shared_target = p1
+        .root()
+        .parent()
+        .unwrap()
+        .join("shared-target-size-delete");
 
     p1.cargo("build")
         .env("CARGO_TARGET_DIR", shared_target.as_os_str())
@@ -2700,13 +2755,20 @@ fn clean_target_dir_size_shared_deletes_once_when_over_threshold() {
         .run();
 
     let before = target_dir_rows_for_path(&shared_target);
-    assert_eq!(before.len(), 2, "expected two associations before gc: {before:?}");
+    assert_eq!(
+        before.len(),
+        2,
+        "expected two associations before gc: {before:?}"
+    );
     assert!(shared_target.exists());
     let shared_size = cargo_util::du(&shared_target, &[]).unwrap();
 
     p1.cargo("clean gc -v -Zgc")
         .env("CARGO_TARGET_DIR", shared_target.as_os_str())
-        .arg(format!("--max-target-dir-size={}", shared_size.saturating_sub(1)))
+        .arg(format!(
+            "--max-target-dir-size={}",
+            shared_size.saturating_sub(1)
+        ))
         .masquerade_as_nightly_cargo(&["gc"])
         .with_stderr_data(str![[r#"
 [REMOVING] [ROOT]/shared-target-size-delete
@@ -2717,7 +2779,10 @@ fn clean_target_dir_size_shared_deletes_once_when_over_threshold() {
 
     assert!(!shared_target.exists());
     let after = target_dir_rows_for_path(&shared_target);
-    assert!(after.is_empty(), "expected rows for deleted shared target to be removed: {after:?}");
+    assert!(
+        after.is_empty(),
+        "expected rows for deleted shared target to be removed: {after:?}"
+    );
 }
 
 #[cargo_test]
@@ -2733,8 +2798,16 @@ fn clean_target_dir_leaked_row_cleanup_is_scoped_to_target_dir() {
         .file("src/lib.rs", "")
         .build();
 
-    let shared_target = p1.root().parent().unwrap().join("shared-target-scoped-leak");
-    let leaked_target = p1.root().parent().unwrap().join("leaked-target-scoped-leak");
+    let shared_target = p1
+        .root()
+        .parent()
+        .unwrap()
+        .join("shared-target-scoped-leak");
+    let leaked_target = p1
+        .root()
+        .parent()
+        .unwrap()
+        .join("leaked-target-scoped-leak");
 
     p1.cargo("build")
         .env("CARGO_TARGET_DIR", shared_target.as_os_str())
@@ -2767,17 +2840,31 @@ fn clean_target_dir_leaked_row_cleanup_is_scoped_to_target_dir() {
 "#]])
         .run();
 
-    assert!(shared_target.exists(), "shared target should be preserved by bar association");
-    assert!(!leaked_target.exists(), "leaked solo target should be deleted");
+    assert!(
+        shared_target.exists(),
+        "shared target should be preserved by bar association"
+    );
+    assert!(
+        !leaked_target.exists(),
+        "leaked solo target should be deleted"
+    );
 
     let shared_rows = target_dir_rows_for_path(&shared_target);
-    assert_eq!(shared_rows.len(), 1, "only bar association should remain for shared target: {shared_rows:?}");
+    assert_eq!(
+        shared_rows.len(),
+        1,
+        "only bar association should remain for shared target: {shared_rows:?}"
+    );
     assert!(
-        shared_rows[0].0.ends_with("/bar/Cargo.toml") || shared_rows[0].0.ends_with("\\bar\\Cargo.toml"),
+        shared_rows[0].0.ends_with("/bar/Cargo.toml")
+            || shared_rows[0].0.ends_with("\\bar\\Cargo.toml"),
         "expected remaining shared-target row to belong to bar: {shared_rows:?}"
     );
     let leaked_rows = target_dir_rows_for_path(&leaked_target);
-    assert!(leaked_rows.is_empty(), "leaked target rows should be removed after deletion: {leaked_rows:?}");
+    assert!(
+        leaked_rows.is_empty(),
+        "leaked target rows should be removed after deletion: {leaked_rows:?}"
+    );
 }
 
 #[cargo_test]
@@ -2793,7 +2880,11 @@ fn clean_target_dir_shared_path_spelling_is_grouped() {
         .file("src/lib.rs", "")
         .build();
 
-    let normalized_shared_target = p1.root().parent().unwrap().join("shared-target-path-spelling");
+    let normalized_shared_target = p1
+        .root()
+        .parent()
+        .unwrap()
+        .join("shared-target-path-spelling");
     let dotted_shared_target = p2.root().join("../shared-target-path-spelling");
 
     p1.cargo("build")
@@ -2807,7 +2898,11 @@ fn clean_target_dir_shared_path_spelling_is_grouped() {
 
     assert!(normalized_shared_target.exists());
     let rows = target_dir_timestamps();
-    assert_eq!(rows.len(), 2, "expected both associations to be recorded: {rows:?}");
+    assert_eq!(
+        rows.len(),
+        2,
+        "expected both associations to be recorded: {rows:?}"
+    );
 
     p1.cargo("clean gc -v -Zgc")
         .env("CARGO_TARGET_DIR", normalized_shared_target.as_os_str())
@@ -2819,7 +2914,10 @@ fn clean_target_dir_shared_path_spelling_is_grouped() {
 "#]])
         .run();
 
-    assert!(normalized_shared_target.exists(), "recent association via alternate path spelling should protect the shared target dir");
+    assert!(
+        normalized_shared_target.exists(),
+        "recent association via alternate path spelling should protect the shared target dir"
+    );
 }
 
 #[cargo_test]
@@ -2944,8 +3042,15 @@ fn clean_target_dir_size_multiple_dirs() {
     let size2 = cargo_util::du(&p2.root().join("target"), &[]).unwrap();
 
     // Set threshold above either individual dir but below their combined size.
-    let threshold = if size1 > size2 { size1 + 100 } else { size2 + 100 };
-    assert!(size1 + size2 > threshold, "test setup requires combined size over threshold");
+    let threshold = if size1 > size2 {
+        size1 + 100
+    } else {
+        size2 + 100
+    };
+    assert!(
+        size1 + size2 > threshold,
+        "test setup requires combined size over threshold"
+    );
 
     // Clean with threshold that should delete the oldest target dir first.
     p1.cargo("clean gc -v -Zgc")
@@ -2958,6 +3063,12 @@ fn clean_target_dir_size_multiple_dirs() {
 "#]])
         .run();
 
-    assert!(!p1.root().join("target").exists(), "oldest target dir should be removed first");
-    assert!(p2.root().join("target").exists(), "newer target dir should remain");
+    assert!(
+        !p1.root().join("target").exists(),
+        "oldest target dir should be removed first"
+    );
+    assert!(
+        p2.root().join("target").exists(),
+        "newer target dir should remain"
+    );
 }

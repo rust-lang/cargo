@@ -115,8 +115,8 @@
 //! There are checks for read-only filesystems, which is generally ignored.
 
 use crate::core::gc::GcOpts;
-use crate::ops::cargo_clean::validate_target_dir_tag;
 use crate::ops::CleanContext;
+use crate::ops::cargo_clean::validate_target_dir_tag;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::interning::InternedString;
 use crate::util::sqlite::{self, Migration, basic_migration};
@@ -637,7 +637,11 @@ impl GlobalCacheTracker {
         if let Some(max_age) = gc_opts.max_target_dir_age {
             if max_age == Duration::ZERO {
                 // Special case: max_age=0 means delete all entries
-                Self::get_target_dirs_to_clean_age(&tx, i64::MAX as Timestamp, &mut target_dir_delete_groups)?;
+                Self::get_target_dirs_to_clean_age(
+                    &tx,
+                    i64::MAX as Timestamp,
+                    &mut target_dir_delete_groups,
+                )?;
             } else {
                 let max_age = now - max_age.as_secs();
                 Self::get_target_dirs_to_clean_age(&tx, max_age, &mut target_dir_delete_groups)?;
@@ -1402,12 +1406,10 @@ impl GlobalCacheTracker {
     }
 
     /// Returns all target directories from the database.
-    pub fn target_directory_all(
-        &self,
-    ) -> CargoResult<Vec<(TargetDirectory, Timestamp)>> {
-        let mut stmt = self.conn.prepare(
-            "SELECT workspace_manifest, target_dir, timestamp FROM target_directory",
-        )?;
+    pub fn target_directory_all(&self) -> CargoResult<Vec<(TargetDirectory, Timestamp)>> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT workspace_manifest, target_dir, timestamp FROM target_directory")?;
         let rows = stmt.query_map([], |row| {
             let workspace_manifest: String = row.get_unwrap(0);
             let target_dir: String = row.get_unwrap(1);
@@ -1424,9 +1426,7 @@ impl GlobalCacheTracker {
     }
 
     /// Loads all target-directory association rows.
-    fn target_directory_rows(
-        conn: &Connection,
-    ) -> CargoResult<Vec<(String, String, Timestamp)>> {
+    fn target_directory_rows(conn: &Connection) -> CargoResult<Vec<(String, String, Timestamp)>> {
         let mut stmt = conn.prepare_cached(
             "SELECT workspace_manifest, target_dir, timestamp FROM target_directory",
         )?;
@@ -1460,15 +1460,17 @@ impl GlobalCacheTracker {
         grouped: &GroupedTargetDirectory,
     ) -> CargoResult<()> {
         for assoc in &grouped.associations {
-            Self::delete_target_directory_row(conn, &assoc.workspace_manifest, &assoc.raw_target_dir)?;
+            Self::delete_target_directory_row(
+                conn,
+                &assoc.workspace_manifest,
+                &assoc.raw_target_dir,
+            )?;
         }
         Ok(())
     }
 
     /// Groups target-directory association rows by physical target dir path.
-    fn grouped_target_directories(
-        conn: &Connection,
-    ) -> CargoResult<Vec<GroupedTargetDirectory>> {
+    fn grouped_target_directories(conn: &Connection) -> CargoResult<Vec<GroupedTargetDirectory>> {
         let mut grouped = HashMap::<PathBuf, Vec<TargetDirectoryAssociation>>::new();
         for (workspace_manifest, target_dir, timestamp) in Self::target_directory_rows(conn)? {
             let raw_target_dir = PathBuf::from(target_dir);
@@ -1517,7 +1519,11 @@ impl GlobalCacheTracker {
             }
 
             for assoc in leaked {
-                Self::delete_target_directory_row(conn, &assoc.workspace_manifest, &assoc.raw_target_dir)?;
+                Self::delete_target_directory_row(
+                    conn,
+                    &assoc.workspace_manifest,
+                    &assoc.raw_target_dir,
+                )?;
             }
         }
         Ok(())
@@ -1548,7 +1554,11 @@ impl GlobalCacheTracker {
 
             if !valid.is_empty() {
                 for assoc in leaked {
-                    Self::delete_target_directory_row(conn, &assoc.workspace_manifest, &assoc.raw_target_dir)?;
+                    Self::delete_target_directory_row(
+                        conn,
+                        &assoc.workspace_manifest,
+                        &assoc.raw_target_dir,
+                    )?;
                 }
             }
 
