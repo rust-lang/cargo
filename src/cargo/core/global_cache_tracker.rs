@@ -115,6 +115,7 @@
 //! There are checks for read-only filesystems, which is generally ignored.
 
 use crate::core::gc::GcOpts;
+use crate::ops::cargo_clean::validate_target_dir_tag;
 use crate::ops::CleanContext;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::interning::InternedString;
@@ -587,6 +588,7 @@ impl GlobalCacheTracker {
         trace!(target: "gc", "cleaning {gc_opts:?}");
         let tx = self.conn.transaction()?;
         let mut delete_paths = Vec::new();
+        let mut target_dir_delete_groups = Vec::new();
         // This can be an expensive operation, so only perform it if necessary.
         if gc_opts.is_download_cache_opt_set() {
             // TODO: Investigate how slow this might be.
@@ -632,6 +634,15 @@ impl GlobalCacheTracker {
             let max_age = now - max_age.as_secs();
             Self::get_git_co_items_to_clean(&tx, max_age, &base.git_co, &mut delete_paths)?;
         }
+        if let Some(max_age) = gc_opts.max_target_dir_age {
+            if max_age == Duration::ZERO {
+                // Special case: max_age=0 means delete all entries
+                Self::get_target_dirs_to_clean_age(&tx, i64::MAX as Timestamp, &mut target_dir_delete_groups)?;
+            } else {
+                let max_age = now - max_age.as_secs();
+                Self::get_target_dirs_to_clean_age(&tx, max_age, &mut target_dir_delete_groups)?;
+            }
+        }
         // Size collection must happen after date collection so that dates
         // have precedence, since size constraints are a more blunt
         // instrument.
@@ -668,6 +679,18 @@ impl GlobalCacheTracker {
         }
         if let Some(max_size) = gc_opts.max_download_size {
             Self::get_registry_items_to_clean_size_both(&tx, max_size, &base, &mut delete_paths)?;
+        }
+        if let Some(max_size) = gc_opts.max_target_dir_size {
+            Self::get_target_dirs_to_clean_size(&tx, max_size, &mut target_dir_delete_groups)?;
+        }
+
+        for grouped in target_dir_delete_groups {
+            // Match `cargo clean` behavior for non-explicit target dirs: unsafe target
+            // directories are skipped instead of aborting the whole GC operation.
+            if validate_target_dir_tag(&grouped.path).is_ok() {
+                Self::delete_grouped_target_directory_rows(&tx, &grouped)?;
+                delete_paths.push(grouped.path);
+            }
         }
 
         clean_ctx.remove_paths(&delete_paths)?;
@@ -1400,6 +1423,182 @@ impl GlobalCacheTracker {
         rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
     }
 
+    /// Loads all target-directory association rows.
+    fn target_directory_rows(
+        conn: &Connection,
+    ) -> CargoResult<Vec<(String, String, Timestamp)>> {
+        let mut stmt = conn.prepare_cached(
+            "SELECT workspace_manifest, target_dir, timestamp FROM target_directory",
+        )?;
+        stmt.query_map([], |row| {
+            let workspace_manifest: String = row.get_unwrap(0);
+            let target_dir: String = row.get_unwrap(1);
+            let timestamp: Timestamp = row.get_unwrap(2);
+            Ok((workspace_manifest, target_dir, timestamp))
+        })?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(Into::into)
+    }
+
+    fn delete_target_directory_row(
+        conn: &Connection,
+        workspace_manifest: &Path,
+        target_dir: &Path,
+    ) -> CargoResult<()> {
+        conn.execute(
+            "DELETE FROM target_directory WHERE workspace_manifest = ?1 AND target_dir = ?2",
+            [
+                workspace_manifest.to_string_lossy().to_string(),
+                target_dir.to_string_lossy().to_string(),
+            ],
+        )?;
+        Ok(())
+    }
+
+    fn delete_grouped_target_directory_rows(
+        conn: &Connection,
+        grouped: &GroupedTargetDirectory,
+    ) -> CargoResult<()> {
+        for assoc in &grouped.associations {
+            Self::delete_target_directory_row(conn, &assoc.workspace_manifest, &assoc.raw_target_dir)?;
+        }
+        Ok(())
+    }
+
+    /// Groups target-directory association rows by physical target dir path.
+    fn grouped_target_directories(
+        conn: &Connection,
+    ) -> CargoResult<Vec<GroupedTargetDirectory>> {
+        let mut grouped = HashMap::<PathBuf, Vec<TargetDirectoryAssociation>>::new();
+        for (workspace_manifest, target_dir, timestamp) in Self::target_directory_rows(conn)? {
+            let raw_target_dir = PathBuf::from(target_dir);
+            let normalized_target_dir = paths::normalize_path(&raw_target_dir);
+            grouped
+                .entry(normalized_target_dir)
+                .or_default()
+                .push(TargetDirectoryAssociation {
+                    workspace_manifest: PathBuf::from(workspace_manifest),
+                    raw_target_dir,
+                    timestamp,
+                });
+        }
+        Ok(grouped
+            .into_iter()
+            .map(|(path, associations)| GroupedTargetDirectory { path, associations })
+            .collect())
+    }
+
+    /// Adds paths to delete from `target_directory` whose effective last use is
+    /// older than the given timestamp, while preserving a shared target dir if
+    /// any valid recent association remains.
+    fn get_target_dirs_to_clean_age(
+        conn: &Connection,
+        max_age: Timestamp,
+        delete_groups: &mut Vec<GroupedTargetDirectory>,
+    ) -> CargoResult<()> {
+        debug!(target: "gc", "cleaning target_directory since {max_age:?}");
+        for grouped in Self::grouped_target_directories(conn)? {
+            let (valid, leaked): (Vec<_>, Vec<_>) = grouped
+                .associations
+                .iter()
+                .cloned()
+                .partition(|assoc| assoc.workspace_manifest.exists());
+
+            let effective_timestamp = valid
+                .iter()
+                .map(|assoc| assoc.timestamp)
+                .max()
+                .or_else(|| leaked.iter().map(|assoc| assoc.timestamp).max())
+                .unwrap();
+
+            if effective_timestamp < max_age {
+                delete_groups.push(grouped);
+                continue;
+            }
+
+            for assoc in leaked {
+                Self::delete_target_directory_row(conn, &assoc.workspace_manifest, &assoc.raw_target_dir)?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Adds paths to delete from target_directory to keep total size under max_size.
+    fn get_target_dirs_to_clean_size(
+        conn: &Connection,
+        max_size: u64,
+        delete_groups: &mut Vec<GroupedTargetDirectory>,
+    ) -> CargoResult<()> {
+        debug!(target: "gc", "cleaning target_directory till under {max_size:?}");
+
+        let mut grouped = Vec::new();
+        for grouped_target in Self::grouped_target_directories(conn)? {
+            let (valid, leaked): (Vec<_>, Vec<_>) = grouped_target
+                .associations
+                .iter()
+                .cloned()
+                .partition(|assoc| assoc.workspace_manifest.exists());
+
+            let effective_timestamp = valid
+                .iter()
+                .map(|assoc| assoc.timestamp)
+                .max()
+                .or_else(|| leaked.iter().map(|assoc| assoc.timestamp).max())
+                .unwrap();
+
+            if !valid.is_empty() {
+                for assoc in leaked {
+                    Self::delete_target_directory_row(conn, &assoc.workspace_manifest, &assoc.raw_target_dir)?;
+                }
+            }
+
+            let size = cargo_util::du(&grouped_target.path, &[]).unwrap_or(0);
+            grouped.push(TargetDirectorySizeEntry {
+                grouped: grouped_target,
+                effective_timestamp,
+                size,
+            });
+        }
+
+        grouped.sort_by(|a, b| a.effective_timestamp.cmp(&b.effective_timestamp));
+
+        let mut total_size: u64 = grouped.iter().map(|entry| entry.size).sum();
+        debug!(target: "gc", "total target_directory size appears to be {total_size}");
+
+        if total_size <= max_size {
+            return Ok(());
+        }
+
+        for entry in grouped {
+            if total_size <= max_size {
+                break;
+            }
+            delete_groups.push(entry.grouped);
+            total_size = total_size.saturating_sub(entry.size);
+        }
+
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug)]
+struct TargetDirectoryAssociation {
+    workspace_manifest: PathBuf,
+    raw_target_dir: PathBuf,
+    timestamp: Timestamp,
+}
+
+#[derive(Debug)]
+struct GroupedTargetDirectory {
+    path: PathBuf,
+    associations: Vec<TargetDirectoryAssociation>,
+}
+
+#[derive(Debug)]
+struct TargetDirectorySizeEntry {
+    grouped: GroupedTargetDirectory,
+    effective_timestamp: Timestamp,
+    size: u64,
 }
 
 /// Helper to generate the upsert for the parent tables.

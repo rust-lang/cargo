@@ -127,6 +127,24 @@ pub fn cli() -> Command {
                     )
                     .value_name("SIZE")
                     .value_parser(parse_human_size),
+                )
+                .arg(
+                    opt(
+                        "max-target-dir-age",
+                        "Deletes target directories that have not been used \
+                        since the given age (unstable)",
+                    )
+                    .value_name("DURATION")
+                    .value_parser(parse_time_span),
+                )
+                .arg(
+                    opt(
+                        "max-target-dir-size",
+                        "Deletes target directories until the total size is under \
+                        the given size (unstable)",
+                    )
+                    .value_name("SIZE")
+                    .value_parser(parse_human_size),
                 ),
         )
         .after_help(color_print::cstr!(
@@ -190,6 +208,8 @@ fn gc(gctx: &GlobalContext, args: &ArgMatches) -> CliResult {
         max_crate_size: size_opt("max-crate-size"),
         max_git_size: size_opt("max-git-size"),
         max_download_size: size_opt("max-download-size"),
+        max_target_dir_age: duration_opt("max-target-dir-age"),
+        max_target_dir_size: size_opt("max-target-dir-size"),
     };
     if let Some(age) = duration_opt("max-download-age") {
         gc_opts.set_max_download_age(age);
