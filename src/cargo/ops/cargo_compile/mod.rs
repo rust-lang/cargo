@@ -50,7 +50,7 @@ use crate::core::compiler::{DepKindSet, UnitIndex};
 use crate::core::profiles::Profiles;
 use crate::core::resolver::features::{self, CliFeatures, FeaturesFor};
 use crate::core::resolver::{ForceAllTargets, HasDevUnits, Resolve};
-use crate::core::{PackageId, PackageSet, SourceId, TargetKind, Workspace};
+use crate::core::{PackageId, PackageSet, SourceId, TargetDirectory, TargetKind, Workspace};
 use crate::drop_println;
 use crate::ops;
 use crate::ops::resolve::{SpecsAndResolvedFeatures, WorkspaceResolve};
@@ -61,6 +61,7 @@ use crate::util::log_message::LogMessage;
 use crate::util::{CargoResult, StableHasher};
 
 mod compile_filter;
+use cargo_util::paths;
 use cargo_util_terminal::report::{Group, Level, Origin};
 pub use compile_filter::{CompileFilter, FilterRule, LibRule};
 
@@ -353,6 +354,14 @@ pub fn create_bcx<'a, 'gctx>(
     // passed in with `-p` or the defaults from the workspace), and convert
     // Vec<PackageIdSpec> to a Vec<PackageId>.
     let to_build_ids = resolve.specs_to_ids(&specs)?;
+    {
+        let mut deferred = gctx.deferred_global_last_use()?;
+        let target_dir_path = paths::normalize_path(&ws.target_dir().into_path_unlocked());
+        deferred.mark_target_directory_used(TargetDirectory {
+            workspace_manifest: InternedString::new(&ws.root_manifest().to_string_lossy()),
+            target_dir: InternedString::new(&target_dir_path.to_string_lossy()),
+        });
+    }
     // Now get the `Package` for each `PackageId`. This may trigger a download
     // if the user specified `-p` for a dependency that is not downloaded.
     // Dependencies will be downloaded during build_unit_dependencies.

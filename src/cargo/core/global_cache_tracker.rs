@@ -209,6 +209,15 @@ pub struct GitCheckout {
     pub size: Option<u64>,
 }
 
+/// The key for a target directory entry stored in the database.
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
+pub struct TargetDirectory {
+    /// The workspace manifest path (Cargo.toml or cargo script).
+    pub workspace_manifest: InternedString,
+    /// The target directory path.
+    pub target_dir: InternedString,
+}
+
 /// Filesystem paths in the global cache.
 ///
 /// Accessing these assumes a lock has already been acquired.
@@ -303,6 +312,20 @@ fn migrations() -> Vec<Migration> {
             )?;
             Ok(())
         }),
+        // Target directory tracking
+        //
+        // Tracks target directories associated with workspaces. Neither field alone
+        // is unique: CARGO_TARGET_DIR can be shared across workspaces, and one
+        // workspace can have multiple target dirs (e.g., rust-analyzer).
+        basic_migration(
+            "CREATE TABLE target_directory (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                workspace_manifest TEXT NOT NULL,
+                target_dir TEXT NOT NULL,
+                timestamp INTEGER NOT NULL,
+                UNIQUE (workspace_manifest, target_dir)
+             )",
+        ),
     ]
 }
 
@@ -1354,6 +1377,29 @@ impl GlobalCacheTracker {
         }
         Ok(())
     }
+
+    /// Returns all target directories from the database.
+    pub fn target_directory_all(
+        &self,
+    ) -> CargoResult<Vec<(TargetDirectory, Timestamp)>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT workspace_manifest, target_dir, timestamp FROM target_directory",
+        )?;
+        let rows = stmt.query_map([], |row| {
+            let workspace_manifest: String = row.get_unwrap(0);
+            let target_dir: String = row.get_unwrap(1);
+            let timestamp: Timestamp = row.get_unwrap(2);
+            Ok((
+                TargetDirectory {
+                    workspace_manifest: InternedString::new(&workspace_manifest),
+                    target_dir: InternedString::new(&target_dir),
+                },
+                timestamp,
+            ))
+        })?;
+        rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
+    }
+
 }
 
 /// Helper to generate the upsert for the parent tables.
@@ -1442,6 +1488,8 @@ pub struct DeferredGlobalLastUse {
     git_db_timestamps: HashMap<GitDb, Timestamp>,
     /// New git checkout entries to insert.
     git_checkout_timestamps: HashMap<GitCheckout, Timestamp>,
+    /// New target directory entries to insert.
+    target_directory_timestamps: HashMap<TargetDirectory, Timestamp>,
     /// This is used so that a warning about failing to update the database is
     /// only displayed once.
     save_err_has_warned: bool,
@@ -1460,6 +1508,7 @@ impl DeferredGlobalLastUse {
             registry_src_timestamps: HashMap::new(),
             git_db_timestamps: HashMap::new(),
             git_checkout_timestamps: HashMap::new(),
+            target_directory_timestamps: HashMap::new(),
             save_err_has_warned: false,
             now: now(),
         }
@@ -1471,6 +1520,7 @@ impl DeferredGlobalLastUse {
             && self.registry_src_timestamps.is_empty()
             && self.git_db_timestamps.is_empty()
             && self.git_checkout_timestamps.is_empty()
+            && self.target_directory_timestamps.is_empty()
     }
 
     fn clear(&mut self) {
@@ -1479,6 +1529,7 @@ impl DeferredGlobalLastUse {
         self.registry_src_timestamps.clear();
         self.git_db_timestamps.clear();
         self.git_checkout_timestamps.clear();
+        self.target_directory_timestamps.clear();
     }
 
     /// Indicates the given [`RegistryIndex`] has been used right now.
@@ -1571,6 +1622,23 @@ impl DeferredGlobalLastUse {
         self.git_checkout_timestamps.insert(git_checkout, timestamp);
     }
 
+    /// Indicates the given [`TargetDirectory`] has been used right now.
+    pub fn mark_target_directory_used(&mut self, target_dir: TargetDirectory) {
+        self.mark_target_directory_used_stamp(target_dir, None);
+    }
+
+    /// Indicates the given [`TargetDirectory`] has been used with the given
+    /// time (or "now" if `None`).
+    pub fn mark_target_directory_used_stamp(
+        &mut self,
+        target_dir: TargetDirectory,
+        timestamp: Option<&SystemTime>,
+    ) {
+        let timestamp = timestamp.map_or(self.now, to_timestamp);
+        self.target_directory_timestamps
+            .insert(target_dir, timestamp);
+    }
+
     /// Saves all of the deferred information to the database.
     ///
     /// This will also clear the state of `self`.
@@ -1587,6 +1655,7 @@ impl DeferredGlobalLastUse {
         self.insert_registry_crate_from_cache(&tx)?;
         self.insert_registry_src_from_cache(&tx)?;
         self.insert_git_checkout_from_cache(&tx)?;
+        self.insert_target_directory_from_cache(&tx)?;
         tx.commit()?;
         trace!(target: "gc", "last-use save complete");
         Ok(())
@@ -1717,6 +1786,29 @@ impl DeferredGlobalLastUse {
                 git_id,
                 git_checkout.short_name,
                 git_checkout.size,
+                timestamp,
+                timestamp - UPDATE_RESOLUTION
+            ])?;
+        }
+
+        Ok(())
+    }
+
+    /// Flushes all of the `target_directory_timestamps` to the database,
+    /// clearing `target_directory_timestamps`.
+    fn insert_target_directory_from_cache(&mut self, conn: &Connection) -> CargoResult<()> {
+        let target_directory_timestamps = std::mem::take(&mut self.target_directory_timestamps);
+        for (target_dir, timestamp) in target_directory_timestamps {
+            trace!(target: "gc", "insert target directory {target_dir:?} {timestamp}");
+            let mut stmt = conn.prepare_cached(
+                "INSERT INTO target_directory (workspace_manifest, target_dir, timestamp)
+                 VALUES (?1, ?2, ?3)
+                 ON CONFLICT DO UPDATE SET timestamp=excluded.timestamp
+                    WHERE timestamp < ?4",
+            )?;
+            stmt.execute(params![
+                target_dir.workspace_manifest,
+                target_dir.target_dir,
                 timestamp,
                 timestamp - UPDATE_RESOLUTION
             ])?;
