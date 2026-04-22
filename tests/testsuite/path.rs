@@ -1918,3 +1918,150 @@ foo v1.0.0 ([ROOT]/foo)
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn path_dep_wrong_package_name() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2024"
+            [dependencies]
+            definitely_not_bar = { path = "bar" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+            edition = "2024"
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(
+            "\
+[ERROR] no matching package named `definitely_not_bar` found
+location searched: [ROOT]/foo/bar
+required by package `foo v0.1.0 ([ROOT]/foo)`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn path_dep_package_in_subdirectory() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2024"
+            [dependencies]
+            definitely_not_bar = { path = "bar" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/definitely_not_bar/Cargo.toml",
+            r#"
+            [package]
+            name = "definitely_not_bar"
+            version = "0.1.0"
+            edition = "2024"
+            "#,
+        )
+        .file("bar/definitely_not_bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(
+            "\
+[ERROR] failed to get `definitely_not_bar` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
+
+Caused by:
+  failed to load source for dependency `definitely_not_bar`
+
+Caused by:
+  unable to update [ROOT]/foo/bar
+
+Caused by:
+  failed to read `[ROOT]/foo/bar/Cargo.toml`
+
+Caused by:
+  [NOT_FOUND]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn path_dep_other_packages_nearby() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2024"
+            [dependencies]
+            definitely_not_bar = { path = "bar" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/alice/Cargo.toml",
+            r#"
+            [package]
+            name = "alice"
+            version = "0.1.0"
+            edition = "2024"
+            "#,
+        )
+        .file("bar/alice/src/lib.rs", "")
+        .file(
+            "bar/bob/Cargo.toml",
+            r#"
+            [package]
+            name = "bob"
+            version = "0.1.0"
+            edition = "2024"
+            "#,
+        )
+        .file("bar/bob/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(
+            "\
+[ERROR] failed to get `definitely_not_bar` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
+
+Caused by:
+  failed to load source for dependency `definitely_not_bar`
+
+Caused by:
+  unable to update [ROOT]/foo/bar
+
+Caused by:
+  failed to read `[ROOT]/foo/bar/Cargo.toml`
+
+Caused by:
+  [NOT_FOUND]
+",
+        )
+        .run();
+}
