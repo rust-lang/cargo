@@ -2127,3 +2127,166 @@ fn resilient_to_unexpected_files() {
 "#]])
         .run();
 }
+
+fn target_dir_timestamps() -> Vec<(String, String, u64)> {
+    let gctx = GlobalContextBuilder::new().build();
+    let _lock = gctx
+        .acquire_package_cache_lock(CacheLockMode::MutateExclusive)
+        .unwrap();
+    let tracker = GlobalCacheTracker::new(&gctx).unwrap();
+    let mut rows = tracker
+        .target_directory_all()
+        .unwrap()
+        .into_iter()
+        .map(|(td, ts)| {
+            (
+                td.workspace_manifest.as_str().to_owned(),
+                td.target_dir.as_str().to_owned(),
+                ts,
+            )
+        })
+        .collect::<Vec<_>>();
+    rows.sort();
+    rows
+}
+
+fn target_dir_rows_for_path(path: &Path) -> Vec<(String, String, u64)> {
+    let path = path.to_string_lossy().to_string();
+    target_dir_timestamps()
+        .into_iter()
+        .filter(|(_, target_dir, _)| target_dir == &path)
+        .collect()
+}
+
+#[cargo_test]
+fn tracks_target_dir_on_build() {
+    // Verifies that building a project creates a target_directory entry
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
+        .file("src/lib.rs", "")
+        .build();
+
+    // Build to create the target directory
+    p.cargo("build").run();
+
+    let target_dirs = target_dir_timestamps();
+    let has_entry = target_dirs
+        .iter()
+        .any(|(_, target_dir, _)| target_dir.ends_with("/target") || target_dir.ends_with("\\target"));
+    assert!(
+        has_entry,
+        "Expected target directory entry but found: {:?}",
+        target_dirs
+    );
+}
+
+#[cargo_test]
+fn tracks_target_dir_on_check() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+    let rows = target_dir_timestamps();
+    let first = rows
+        .iter()
+        .find(|(_, target_dir, _)| target_dir.ends_with("/target") || target_dir.ends_with("\\target"))
+        .cloned()
+        .expect("missing target dir row after check");
+
+    p.cargo("check")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(1))
+        .run();
+    let rows = target_dir_timestamps();
+    let second = rows
+        .iter()
+        .find(|(_, target_dir, _)| target_dir == &first.1)
+        .cloned()
+        .expect("missing target dir row after second check");
+
+    assert!(second.2 > first.2, "expected check to refresh target dir timestamp: {first:?} -> {second:?}");
+}
+
+#[cargo_test]
+fn tracks_target_dir_on_doc() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("doc")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+    let rows = target_dir_timestamps();
+    let first = rows
+        .iter()
+        .find(|(_, target_dir, _)| target_dir.ends_with("/target") || target_dir.ends_with("\\target"))
+        .cloned()
+        .expect("missing target dir row after doc");
+
+    p.cargo("doc")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(1))
+        .run();
+    let rows = target_dir_timestamps();
+    let second = rows
+        .iter()
+        .find(|(_, target_dir, _)| target_dir == &first.1)
+        .cloned()
+        .expect("missing target dir row after second doc");
+
+    assert!(second.2 > first.2, "expected doc to refresh target dir timestamp: {first:?} -> {second:?}");
+}
+
+#[cargo_test]
+fn does_not_track_target_dir_on_fetch() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    Package::new("bar", "1.0.0").publish();
+
+    p.cargo("fetch")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+
+    let rows = target_dir_timestamps();
+    assert!(
+        rows.is_empty(),
+        "fetch should not create target-directory entries, found: {:?}",
+        rows
+    );
+}
+
+#[cargo_test]
+fn does_not_track_target_dir_on_metadata() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("metadata --format-version=1")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+
+    let rows = target_dir_timestamps();
+    assert!(
+        rows.is_empty(),
+        "metadata should not create target-directory entries, found: {:?}",
+        rows
+    );
+}
+
