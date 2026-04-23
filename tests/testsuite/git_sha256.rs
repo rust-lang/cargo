@@ -2,6 +2,7 @@
 
 use cargo_test_support::basic_manifest;
 use cargo_test_support::git;
+use cargo_test_support::paths;
 use cargo_test_support::project;
 use cargo_test_support::str;
 
@@ -45,10 +46,10 @@ Caused by:
   unable to update [ROOTURL]/dep1
 
 Caused by:
-  failed to clone into: [ROOT]/home/.cargo/git/db/dep1-[HASH]
+  failed to clone into: [ROOT]/home/.cargo/git/db/dep1-[HASH]-sha256
 
 Caused by:
-  unexpected data at the end of the pack; class=Indexer (15)
+  SHA256 git repositories require `-Zgit=sha256` to be enabled
 
 "#]])
         .run();
@@ -56,6 +57,13 @@ Caused by:
 
 #[cargo_test]
 fn sha256_gated_with_cached_db() {
+    if cargo_uses_gitoxide() {
+        eprintln!(
+            "gitoxide hasn't yet supported sha256; ignore __CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2"
+        );
+        return;
+    }
+
     let (git_dep, _repo) = git::new_sha256_repo("dep1", |p| {
         p.file("Cargo.toml", &basic_manifest("dep1", "1.0.0"))
             .file("src/lib.rs", "")
@@ -82,25 +90,11 @@ fn sha256_gated_with_cached_db() {
     // Populate the SHA256 db cache
     p.cargo("check -Zgit=sha256")
         .masquerade_as_nightly_cargo(&["git=sha256"])
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[UPDATING] git repository `[ROOTURL]/dep1`
-[ERROR] failed to get `dep1` as a dependency of package `foo v0.0.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `dep1`
-
-Caused by:
-  unable to update [ROOTURL]/dep1
-
-Caused by:
-  failed to clone into: [ROOT]/home/.cargo/git/db/dep1-[HASH]
-
-Caused by:
-  unexpected data at the end of the pack; class=Indexer (15)
-
-"#]])
         .run();
+
+    // Remove lockfile
+    // so object format hint must derive from the local git db
+    std::fs::remove_file(p.root().join("Cargo.lock")).unwrap();
 
     p.cargo("check")
         .with_status(101)
@@ -115,10 +109,10 @@ Caused by:
   unable to update [ROOTURL]/dep1
 
 Caused by:
-  failed to fetch into: [ROOT]/home/.cargo/git/db/dep1-[HASH]
+  failed to fetch into: [ROOT]/home/.cargo/git/db/dep1-[HASH]-sha256
 
 Caused by:
-  unexpected data at the end of the pack; class=Indexer (15)
+  SHA256 git repositories require `-Zgit=sha256` to be enabled
 
 "#]])
         .run();
@@ -152,25 +146,12 @@ fn sha256_gated_with_lockfile() {
     // Generate a lockfile with a SHA256 rev
     p.cargo("check -Zgit=sha256")
         .masquerade_as_nightly_cargo(&["git=sha256"])
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[UPDATING] git repository `[ROOTURL]/dep1`
-[ERROR] failed to get `dep1` as a dependency of package `foo v0.0.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `dep1`
-
-Caused by:
-  unable to update [ROOTURL]/dep1
-
-Caused by:
-  failed to clone into: [ROOT]/home/.cargo/git/db/dep1-[HASH]
-
-Caused by:
-  unexpected data at the end of the pack; class=Indexer (15)
-
-"#]])
         .run();
+
+    // Remove local git db
+    // so object format hint must derive from the lockfile's locked revision
+    let git_dir = paths::cargo_home().join("git");
+    std::fs::remove_dir_all(&git_dir).unwrap();
 
     p.cargo("check")
         .with_status(101)
@@ -182,13 +163,13 @@ Caused by:
   failed to load source for dependency `dep1`
 
 Caused by:
-  unable to update [ROOTURL]/dep1
+  unable to update [ROOTURL]/dep1#[..]
 
 Caused by:
-  failed to fetch into: [ROOT]/home/.cargo/git/db/dep1-[HASH]
+  failed to clone into: [ROOT]/home/.cargo/git/db/dep1-[HASH]-sha256
 
 Caused by:
-  unexpected data at the end of the pack; class=Indexer (15)
+  SHA256 git repositories require `-Zgit=sha256` to be enabled
 
 "#]])
         .run();
@@ -233,10 +214,10 @@ Caused by:
   unable to update [ROOTURL]/dep1
 
 Caused by:
-  failed to clone into: [ROOT]/home/.cargo/git/db/dep1-[HASH]
+  failed to clone into: [ROOT]/home/.cargo/git/db/dep1-[..]-sha256
 
 Caused by:
-  failed to fill whole buffer
+  gitoxide does not yet support SHA256 repositories
 
 "#]])
         .run();
@@ -267,6 +248,8 @@ fn sha256_gated_gitoxide_without_sha256_flag() {
         .file("src/lib.rs", "")
         .build();
 
+    // gitoxide doesn't support SHA256 yet — Cargo bails early
+    // with a clear message before attempting the fetch.
     p.cargo("check -Zgitoxide=fetch")
         .masquerade_as_nightly_cargo(&["gitoxide=fetch"])
         .with_status(101)
@@ -281,10 +264,10 @@ Caused by:
   unable to update [ROOTURL]/dep1
 
 Caused by:
-  failed to clone into: [ROOT]/home/.cargo/git/db/dep1-[HASH]
+  failed to clone into: [ROOT]/home/.cargo/git/db/dep1-[HASH]-sha256
 
 Caused by:
-  failed to fill whole buffer
+  gitoxide does not yet support SHA256 repositories
 
 "#]])
         .run();
@@ -317,22 +300,77 @@ fn sha256_basic() {
 
     p.cargo("check -Zgit=sha256")
         .masquerade_as_nightly_cargo(&["git=sha256"])
-        .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `[ROOTURL]/dep1`
-[ERROR] failed to get `dep1` as a dependency of package `foo v0.0.0 ([ROOT]/foo)`
+[LOCKING] 1 package to latest compatible version
+[CHECKING] dep1 v1.0.0 ([ROOTURL]/dep1#[..])
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-Caused by:
-  failed to load source for dependency `dep1`
+"#]])
+        .run();
+}
 
-Caused by:
-  unable to update [ROOTURL]/dep1
+#[cargo_test]
+fn sha256_lockfile_and_cache_dir() {
+    let (git_dep, _repo) = git::new_sha256_repo("dep1", |p| {
+        p.file("Cargo.toml", &basic_manifest("dep1", "1.0.0"))
+            .file("src/lib.rs", "")
+    });
 
-Caused by:
-  failed to clone into: [ROOT]/home/.cargo/git/db/dep1-[HASH]
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    edition = "2021"
 
-Caused by:
-  unexpected data at the end of the pack; class=Indexer (15)
+                    [dependencies]
+                    dep1 = {{ git = '{}' }}
+                "#,
+                git_dep.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // Generate a lockfile
+    p.cargo("check -Zgit=sha256")
+        .masquerade_as_nightly_cargo(&["git=sha256"])
+        .run();
+
+    // Verify lockfile contains a 64-char SHA256 revision
+    let lock = p.read_lockfile();
+    let rev_line = lock
+        .lines()
+        .find(|l| l.contains("dep1") && l.contains('#'))
+        .expect("lockfile must with a rev");
+    let rev = rev_line.rsplit('#').next().unwrap().trim_matches('"');
+    assert_eq!(rev.len(), 64, "expect SHA256 revision, got {rev:?}");
+
+    // Verify cache db ends with `-sha256`
+    let db_paths: Vec<_> = glob::glob(paths::cargo_home().join("git/db/dep1-*").to_str().unwrap())
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(
+        db_paths.len(),
+        1,
+        "expected exactly one db dir: {db_paths:?}"
+    );
+    let db_dir_name = db_paths[0].file_name().unwrap().to_str().unwrap();
+    assert!(
+        db_dir_name.ends_with("-sha256"),
+        "db dir should end with -sha256, got {db_dir_name:?}"
+    );
+
+    // Second build should not re-fetch
+    p.cargo("check -Zgit=sha256")
+        .masquerade_as_nightly_cargo(&["git=sha256"])
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -368,22 +406,108 @@ fn sha256_dep_with_rev() {
 
     p.cargo("check -Zgit=sha256")
         .masquerade_as_nightly_cargo(&["git=sha256"])
-        .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `[ROOTURL]/dep1`
-[ERROR] failed to get `dep1` as a dependency of package `foo v0.0.0 ([ROOT]/foo)`
+[LOCKING] 1 package to latest compatible version
+[CHECKING] dep1 v1.0.0 ([ROOTURL]/dep1?rev=[..]#[..])
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-Caused by:
-  failed to load source for dependency `dep1`
+"#]])
+        .run();
+}
 
-Caused by:
-  unable to update [ROOTURL]/dep1?rev=[..]
+#[cargo_test]
+fn sha256_update_dep() {
+    let (git_dep, repo) = git::new_sha256_repo("dep1", |p| {
+        p.file("Cargo.toml", &basic_manifest("dep1", "1.0.0"))
+            .file("src/lib.rs", "")
+    });
 
-Caused by:
-  failed to clone into: [ROOT]/home/.cargo/git/db/dep1-[HASH]
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    edition = "2021"
 
-Caused by:
-  unexpected data at the end of the pack; class=Indexer (15)
+                    [dependencies]
+                    dep1 = {{ git = '{}' }}
+                "#,
+                git_dep.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Zgit=sha256")
+        .masquerade_as_nightly_cargo(&["git=sha256"])
+        .run();
+
+    // Modify dep and commit
+    git_dep.change_file("src/lib.rs", "// updated");
+    git::add(&repo);
+    git::commit(&repo);
+
+    // Update and rebuild
+    p.cargo("update -Zgit=sha256")
+        .masquerade_as_nightly_cargo(&["git=sha256"])
+        .with_stderr_data(str![[r#"
+[UPDATING] git repository `[ROOTURL]/dep1`
+[LOCKING] 1 package to latest compatible version
+[UPDATING] dep1 v1.0.0 ([ROOTURL]/dep1#[..]) -> #[..]
+
+"#]])
+        .run();
+
+    p.cargo("check -Zgit=sha256")
+        .masquerade_as_nightly_cargo(&["git=sha256"])
+        .with_stderr_data(str![[r#"
+[CHECKING] dep1 v1.0.0 ([ROOTURL]/dep1#[..])
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn sha256_offline_with_cached_db() {
+    let (git_dep, _repo) = git::new_sha256_repo("dep1", |p| {
+        p.file("Cargo.toml", &basic_manifest("dep1", "1.0.0"))
+            .file("src/lib.rs", "")
+    });
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    edition = "2021"
+
+                    [dependencies]
+                    dep1 = {{ git = '{}' }}
+                "#,
+                git_dep.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // populates cache first
+    p.cargo("check -Zgit=sha256")
+        .masquerade_as_nightly_cargo(&["git=sha256"])
+        .run();
+
+    // offline works
+    p.cargo("check -Zgit=sha256 --frozen")
+        .masquerade_as_nightly_cargo(&["git=sha256"])
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -423,169 +547,19 @@ fn sha256_and_sha1_deps_coexist() {
 
     p.cargo("check -Zgit=sha256")
         .masquerade_as_nightly_cargo(&["git=sha256"])
-        .with_status(101)
-        .with_stderr_data(str![[r#"
+        .with_stderr_data(
+            str![[r#"
 [UPDATING] git repository `[ROOTURL]/dep1`
 [UPDATING] git repository `[ROOTURL]/dep256`
-[ERROR] failed to get `dep256` as a dependency of package `foo v0.0.0 ([ROOT]/foo)`
+[LOCKING] 2 packages to latest compatible versions
+[CHECKING] dep256 v1.0.0 ([ROOTURL]/dep256#[..])
+[CHECKING] dep1 v1.0.0 ([ROOTURL]/dep1#[..])
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-Caused by:
-  failed to load source for dependency `dep256`
-
-Caused by:
-  unable to update [ROOTURL]/dep256
-
-Caused by:
-  failed to clone into: [ROOT]/home/.cargo/git/db/dep256-[HASH]
-
-Caused by:
-  unexpected data at the end of the pack; class=Indexer (15)
-
-"#]])
-        .run();
-}
-
-#[cargo_test]
-fn sha256_lockfile_and_cache_dir() {
-    let (git_dep, _repo) = git::new_sha256_repo("dep1", |p| {
-        p.file("Cargo.toml", &basic_manifest("dep1", "1.0.0"))
-            .file("src/lib.rs", "")
-    });
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            &format!(
-                r#"
-                    [package]
-                    name = "foo"
-                    edition = "2021"
-
-                    [dependencies]
-                    dep1 = {{ git = '{}' }}
-                "#,
-                git_dep.url()
-            ),
+"#]]
+            .unordered(),
         )
-        .file("src/lib.rs", "")
-        .build();
-
-    p.cargo("check -Zgit=sha256")
-        .masquerade_as_nightly_cargo(&["git=sha256"])
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[UPDATING] git repository `[ROOTURL]/dep1`
-[ERROR] failed to get `dep1` as a dependency of package `foo v0.0.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `dep1`
-
-Caused by:
-  unable to update [ROOTURL]/dep1
-
-Caused by:
-  failed to clone into: [ROOT]/home/.cargo/git/db/dep1-[HASH]
-
-Caused by:
-  unexpected data at the end of the pack; class=Indexer (15)
-
-"#]])
-        .run();
-}
-
-#[cargo_test]
-fn sha256_update_dep() {
-    let (git_dep, _repo) = git::new_sha256_repo("dep1", |p| {
-        p.file("Cargo.toml", &basic_manifest("dep1", "1.0.0"))
-            .file("src/lib.rs", "")
-    });
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            &format!(
-                r#"
-                    [package]
-                    name = "foo"
-                    edition = "2021"
-
-                    [dependencies]
-                    dep1 = {{ git = '{}' }}
-                "#,
-                git_dep.url()
-            ),
-        )
-        .file("src/lib.rs", "")
-        .build();
-
-    p.cargo("check -Zgit=sha256")
-        .masquerade_as_nightly_cargo(&["git=sha256"])
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[UPDATING] git repository `[ROOTURL]/dep1`
-[ERROR] failed to get `dep1` as a dependency of package `foo v0.0.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `dep1`
-
-Caused by:
-  unable to update [ROOTURL]/dep1
-
-Caused by:
-  failed to clone into: [ROOT]/home/.cargo/git/db/dep1-[HASH]
-
-Caused by:
-  unexpected data at the end of the pack; class=Indexer (15)
-
-"#]])
-        .run();
-}
-
-#[cargo_test]
-fn sha256_offline_with_cached_db() {
-    let (git_dep, _repo) = git::new_sha256_repo("dep1", |p| {
-        p.file("Cargo.toml", &basic_manifest("dep1", "1.0.0"))
-            .file("src/lib.rs", "")
-    });
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            &format!(
-                r#"
-                    [package]
-                    name = "foo"
-                    edition = "2021"
-
-                    [dependencies]
-                    dep1 = {{ git = '{}' }}
-                "#,
-                git_dep.url()
-            ),
-        )
-        .file("src/lib.rs", "")
-        .build();
-
-    p.cargo("check -Zgit=sha256")
-        .masquerade_as_nightly_cargo(&["git=sha256"])
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[UPDATING] git repository `[ROOTURL]/dep1`
-[ERROR] failed to get `dep1` as a dependency of package `foo v0.0.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `dep1`
-
-Caused by:
-  unable to update [ROOTURL]/dep1
-
-Caused by:
-  failed to clone into: [ROOT]/home/.cargo/git/db/dep1-[HASH]
-
-Caused by:
-  unexpected data at the end of the pack; class=Indexer (15)
-
-"#]])
         .run();
 }
 
@@ -617,30 +591,15 @@ fn sha256_fetch_with_cli() {
     p.cargo("check -v -Zgit=sha256")
         .env("CARGO_NET_GIT_FETCH_WITH_CLI", "true")
         .masquerade_as_nightly_cargo(&["git=sha256"])
-        .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `[ROOTURL]/dep1`
-[RUNNING] `git fetch --no-tags --verbose --force --update-head-ok '[ROOTURL]/dep1' '+HEAD:refs/remotes/origin/HEAD'`
-fatal: mismatched algorithms: client sha1; server sha256
-[WARNING] spurious network error (3 tries remaining): process didn't exit successfully: `git fetch --no-tags --verbose --force --update-head-ok '[ROOTURL]/dep1' '+HEAD:refs/remotes/origin/HEAD'` ([EXIT_STATUS]: 128)
-fatal: mismatched algorithms: client sha1; server sha256
-[WARNING] spurious network error (2 tries remaining): process didn't exit successfully: `git fetch --no-tags --verbose --force --update-head-ok '[ROOTURL]/dep1' '+HEAD:refs/remotes/origin/HEAD'` ([EXIT_STATUS]: 128)
-fatal: mismatched algorithms: client sha1; server sha256
-[WARNING] spurious network error (1 try remaining): process didn't exit successfully: `git fetch --no-tags --verbose --force --update-head-ok '[ROOTURL]/dep1' '+HEAD:refs/remotes/origin/HEAD'` ([EXIT_STATUS]: 128)
-fatal: mismatched algorithms: client sha1; server sha256
-[ERROR] failed to get `dep1` as a dependency of package `foo v0.0.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `dep1`
-
-Caused by:
-  unable to update [ROOTURL]/dep1
-
-Caused by:
-  failed to clone into: [ROOT]/home/.cargo/git/db/dep1-[HASH]
-
-Caused by:
-  process didn't exit successfully: `git fetch --no-tags --verbose --force --update-head-ok '[ROOTURL]/dep1' '+HEAD:refs/remotes/origin/HEAD'` ([EXIT_STATUS]: 128)
+[RUNNING] `git fetch --no-tags --verbose --force --update-head-ok [..][ROOTURL]/dep1[..] [..]+HEAD:refs/remotes/origin/HEAD[..]`
+...
+[CHECKING] dep1 v1.0.0 ([ROOTURL]/dep1#[..])
+[RUNNING] `rustc --crate-name dep1 [..] [ROOT]/home/.cargo/git/checkouts/dep1-[HASH]-sha256/[..]/src/lib.rs [..]`
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

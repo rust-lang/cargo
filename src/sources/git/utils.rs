@@ -16,7 +16,9 @@ use crate::workspace::{GitReference, SourceId};
 use anyhow::{Context as _, anyhow};
 use cargo_util::{ProcessBuilder, paths};
 use cargo_util_terminal::Verbosity;
-use git2::{ErrorClass, ObjectType, Oid};
+use git2::ErrorClass;
+use git2::ObjectType;
+use git2::Oid;
 use http::{Request, StatusCode};
 use tracing::{debug, info};
 use url::Url;
@@ -115,6 +117,7 @@ impl GitRemote {
         db: Option<GitDatabase>,
         manifest_reference: &GitReference,
         reference: &GitReference,
+        object_format: git2::ObjectFormat,
         gctx: &GlobalContext,
     ) -> CargoResult<(GitDatabase, git2::Oid)> {
         if let Some(mut db) = db {
@@ -140,7 +143,7 @@ impl GitRemote {
             paths::remove_dir_all(into)?;
         }
         paths::create_dir_all(into)?;
-        let mut repo = init(into, true)?;
+        let mut repo = init(into, true, object_format)?;
         fetch(
             &mut repo,
             self.url(),
@@ -213,6 +216,11 @@ impl GitDatabase {
     /// Checks if the database contains the object of this `oid`..
     pub fn contains(&self, oid: git2::Oid) -> bool {
         self.repo.revparse_single(&oid.to_string()).is_ok()
+    }
+
+    /// Gets the object format for this database.
+    pub fn object_format(&self) -> git2::ObjectFormat {
+        self.repo.object_format()
     }
 
     /// [`resolve_ref`]s this reference with this database.
@@ -482,7 +490,10 @@ impl<'a> GitCheckout<'a> {
                 Err(..) => {
                     let path = parent.workdir().unwrap().join(child.path());
                     let _ = paths::remove_dir_all(&path);
-                    init(&path, false)?
+                    // Inherit the parent repo's object format.
+                    // Git does not support mixed-format submodules as of Git 2.54.
+                    // https://github.com/git/git/blob/94f057755b7941b321fd11fec1b2e3ca5313a4e0/object-file.c#L1747
+                    init(&path, false, head.object_format())?
                 }
             };
             // Fetch submodule database and checkout to target revision
@@ -901,6 +912,9 @@ fn reset(repo: &git2::Repository, obj: &git2::Object<'_>, gctx: &GlobalContext) 
 ///
 /// The callback is provided a fetch options, which can be used by the actual
 /// git fetch.
+///
+/// NOTE: The auth/certificate_check setup is duplicated in
+/// [`probe_remote_object_format`]. Keep them in sync.
 pub fn with_fetch_options(
     git_config: &git2::Config,
     url: &str,
@@ -989,6 +1003,67 @@ pub fn with_fetch_options(
         }
         auth_result?;
         Ok(())
+    })
+}
+
+/// Probes a remote for its object format (SHA-1 vs SHA-256) without fetching.
+///
+/// NOTE: The auth/certificate_check setup is duplicated from
+/// [`with_fetch_options`] above. Keep them in sync.
+pub(crate) fn probe_remote_object_format(
+    remote_url: &Url,
+    gctx: &GlobalContext,
+) -> CargoResult<git2::ObjectFormat> {
+    let git_config = git2::Config::open_default()?;
+    let ssh_config = gctx.net_config()?.ssh.as_ref();
+    let config_known_hosts = ssh_config.and_then(|ssh| ssh.known_hosts.as_ref());
+    let diagnostic_home_config = gctx.diagnostic_home_config();
+    let remote_url = remote_url.as_str();
+    network::retry::with_retry(gctx, || {
+        // Hack: libgit2 disallows overriding the error from check_cb since v1.8.0,
+        // so we store the error additionally and unwrap it later
+        let mut check_cb_result = Ok(());
+        let auth_result = with_authentication(gctx, remote_url, &git_config, |f| {
+            let port = Url::parse(remote_url).ok().and_then(|url| url.port());
+            let mut rcb = git2::RemoteCallbacks::new();
+            rcb.credentials(f);
+            rcb.certificate_check(|cert, host| {
+                match super::known_hosts::certificate_check(
+                    gctx,
+                    cert,
+                    host,
+                    port,
+                    config_known_hosts,
+                    &diagnostic_home_config,
+                ) {
+                    Ok(status) => Ok(status),
+                    Err(e) => {
+                        check_cb_result = Err(e);
+                        // This is not really used because it'll be overridden by libgit2
+                        // See https://github.com/libgit2/libgit2/commit/9a9f220119d9647a352867b24b0556195cb26548
+                        Err(git2::Error::from_str(
+                            "invalid or unknown remote ssh hostkey",
+                        ))
+                    }
+                }
+            });
+
+            let proxy_options = git2::ProxyOptions::new();
+            // FIXME: Remove this comment when https://github.com/libgit2/libgit2/pull/7195 merges
+            // This doesn't respect insteadOf from global gitconfig
+            // If libgit2 can't get this fixed timely, we need to switch to
+            // probing a temporary on-disk repo.
+            let mut remote = git2::Remote::create_detached(remote_url)?;
+            let mut conn =
+                remote.connect_auth(git2::Direction::Fetch, Some(rcb), Some(proxy_options))?;
+            // Query while connected — libgit2's local transport frees the
+            // repo handle on disconnect, causing a SIGSEGV if queried after.
+            Ok(conn.remote().object_format()?)
+        });
+        if auth_result.is_err() {
+            check_cb_result?;
+        }
+        auth_result
     })
 }
 
@@ -1095,11 +1170,17 @@ pub fn fetch(
     }
 
     debug!("doing a fetch for {remote_url}");
+    let format = repo.object_format();
     let result = if let Some(true) = gctx.net_config()?.git_fetch_with_cli {
+        ensure_sha256_allowed(format, gctx)?;
         fetch_with_cli(repo, remote_url, &refspecs, tags, shallow, gctx)
     } else if gctx.cli_unstable().gitoxide.map_or(false, |git| git.fetch) {
+        if matches!(format, git2::ObjectFormat::Sha256) {
+            anyhow::bail!("gitoxide does not yet support SHA256 repositories");
+        }
         fetch_with_gitoxide(repo, remote_url, refspecs, tags, shallow, gctx)
     } else {
+        ensure_sha256_allowed(format, gctx)?;
         fetch_with_libgit2(repo, remote_url, refspecs, tags, shallow, gctx)
     };
 
@@ -1109,6 +1190,15 @@ pub fn fetch(
         }
     }
     result
+}
+
+fn ensure_sha256_allowed(format: git2::ObjectFormat, gctx: &GlobalContext) -> CargoResult<()> {
+    if matches!(format, git2::ObjectFormat::Sha256)
+        && !gctx.cli_unstable().git.map_or(false, |git| git.sha256)
+    {
+        anyhow::bail!("SHA256 git repositories require `-Zgit=sha256` to be enabled");
+    }
+    Ok(())
 }
 
 /// `gitoxide` uses shallow locks to assure consistency when fetching to and to avoid races, and to write
@@ -1493,6 +1583,7 @@ fn clean_repo_temp_files(repo: &git2::Repository) {
 /// Reinitializes a given Git repository. This is useful when a Git repository
 /// seems corrupted and we want to start over.
 fn reinitialize(repo: &mut git2::Repository) -> CargoResult<()> {
+    let format = repo.object_format();
     // Here we want to drop the current repository object pointed to by `repo`,
     // so we initialize temporary repository in a sub-folder, blow away the
     // existing git folder, and then recreate the git repo. Finally we blow away
@@ -1501,7 +1592,7 @@ fn reinitialize(repo: &mut git2::Repository) -> CargoResult<()> {
     debug!("reinitializing git repo at {:?}", path);
     let tmp = path.join("tmp");
     let bare = !repo.path().ends_with(".git");
-    *repo = init(&tmp, false)?;
+    *repo = init(&tmp, false, format)?;
     for entry in path.read_dir()? {
         let entry = entry?;
         if entry.file_name().to_str() == Some("tmp") {
@@ -1510,19 +1601,20 @@ fn reinitialize(repo: &mut git2::Repository) -> CargoResult<()> {
         let path = entry.path();
         drop(paths::remove_file(&path).or_else(|_| paths::remove_dir_all(&path)));
     }
-    *repo = init(&path, bare)?;
+    *repo = init(&path, bare, format)?;
     paths::remove_dir_all(&tmp)?;
     Ok(())
 }
 
 /// Initializes a Git repository at `path`.
-fn init(path: &Path, bare: bool) -> CargoResult<git2::Repository> {
+fn init(path: &Path, bare: bool, format: git2::ObjectFormat) -> CargoResult<git2::Repository> {
     let mut opts = git2::RepositoryInitOptions::new();
     // Skip anything related to templates, they just call all sorts of issues as
     // we really don't want to use them yet they insist on being used. See #6240
     // for an example issue that comes up.
     opts.external_template(false);
     opts.bare(bare);
+    opts.object_format(format);
     Ok(git2::Repository::init_opts(&path, &opts)?)
 }
 
