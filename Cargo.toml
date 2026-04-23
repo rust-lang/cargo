@@ -51,7 +51,7 @@ filetime = "0.2.27"
 flate2 = { version = "1.1.9", default-features = false, features = ["zlib-rs"] }
 futures = { version = "0.3.32", default-features = false, features = ["std", "executor", "async-await"]}
 futures-timer = "3.0.3"
-git2 = { version = "0.21.0", features = ["https", "ssh"] }
+git2 = { version = "0.21.0", features = ["https", "ssh", "unstable-sha256"] }
 git2-curl = "0.22.0"
 # When updating this, also see if `gix-transport` further down needs updating or some auth-related tests will fail.
 gix = { version = "0.85.0", default-features = false, features = ["sha1", "progress-tree", "parallel", "dirwalk", "status"] }

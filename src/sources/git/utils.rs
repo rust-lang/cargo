@@ -1834,7 +1834,10 @@ mod tests {
 /// * <https://github.com/rust-lang/cargo/issues/13188>
 /// * <https://github.com/rust-lang/cargo/issues/13968>
 pub(super) fn rev_to_oid(rev: &str) -> Option<Oid> {
-    Oid::from_str(rev)
-        .ok()
-        .filter(|oid| oid.as_bytes().len() * 2 == rev.len())
+    let format = match rev.len() {
+        40 => git2::ObjectFormat::Sha1,
+        64 => git2::ObjectFormat::Sha256,
+        _ => return None,
+    };
+    Oid::from_str_ext(rev, format).ok()
 }
