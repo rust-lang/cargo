@@ -1995,7 +1995,7 @@ fn git_features() {
 error in environment variable `CARGO_UNSTABLE_GIT`: could not load config key `unstable.git`
 
 Caused by:
-  unstable 'git' only takes `shallow-index` and `shallow-deps` as valid inputs
+  unstable 'git' only takes `shallow-index` and `shallow-deps` and `sha256` as valid inputs
 "#]],
     );
 
@@ -2007,6 +2007,7 @@ Caused by:
         Some(GitFeatures {
             shallow_index: false,
             shallow_deps: true,
+            sha256: false,
         }),
     ));
 
@@ -2051,6 +2052,7 @@ git = 'shallow-index'
         Some(GitFeatures {
             shallow_index: true,
             shallow_deps: false,
+            sha256: false,
         }),
     ));
 
