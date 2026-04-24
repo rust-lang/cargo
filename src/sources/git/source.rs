@@ -226,16 +226,7 @@ impl<'gctx> GitSource<'gctx> {
                     );
                 }
 
-                if !self.quiet {
-                    let scope = if is_submodule {
-                        "submodule"
-                    } else {
-                        "repository"
-                    };
-                    self.gctx
-                        .shell()
-                        .status("Updating", format!("git {scope} `{}`", self.remote.url()))?;
-                }
+                self.show_update_status(is_submodule)?;
 
                 trace!("updating git source `{:?}`", self.remote);
 
@@ -246,6 +237,20 @@ impl<'gctx> GitSource<'gctx> {
             }
         };
         Ok((db, actual_rev))
+    }
+
+    fn show_update_status(&self, is_submodule: bool) -> CargoResult<()> {
+        if self.quiet {
+            return Ok(());
+        }
+        let scope = if is_submodule {
+            "submodule"
+        } else {
+            "repository"
+        };
+        self.gctx
+            .shell()
+            .status("Updating", format!("git {scope} `{}`", self.remote.url()))
     }
 
     fn update(&self) -> CargoResult<()> {
