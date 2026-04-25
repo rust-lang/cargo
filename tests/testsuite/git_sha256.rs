@@ -2,6 +2,7 @@
 
 use cargo_test_support::basic_manifest;
 use cargo_test_support::git;
+use cargo_test_support::git::cargo_uses_gitoxide;
 use cargo_test_support::paths;
 use cargo_test_support::project;
 use cargo_test_support::str;
@@ -10,6 +11,13 @@ use crate::prelude::*;
 
 #[cargo_test]
 fn sha256_gated_libgit2() {
+    if cargo_uses_gitoxide() {
+        eprintln!(
+            "gitoxide hasn't yet supported sha256; ignore __CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2"
+        );
+        return;
+    }
+
     let (git_dep, _repo) = git::new_sha256_repo("dep1", |p| {
         p.file("Cargo.toml", &basic_manifest("dep1", "1.0.0"))
             .file("src/lib.rs", "")
@@ -120,6 +128,13 @@ Caused by:
 
 #[cargo_test]
 fn sha256_gated_with_lockfile() {
+    if cargo_uses_gitoxide() {
+        eprintln!(
+            "gitoxide hasn't yet supported sha256; ignore __CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2"
+        );
+        return;
+    }
+
     let (git_dep, _repo) = git::new_sha256_repo("dep1", |p| {
         p.file("Cargo.toml", &basic_manifest("dep1", "1.0.0"))
             .file("src/lib.rs", "")
@@ -275,6 +290,13 @@ Caused by:
 
 #[cargo_test]
 fn sha256_basic() {
+    if cargo_uses_gitoxide() {
+        eprintln!(
+            "gitoxide hasn't yet supported sha256; ignore __CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2"
+        );
+        return;
+    }
+
     let (git_dep, _repo) = git::new_sha256_repo("dep1", |p| {
         p.file("Cargo.toml", &basic_manifest("dep1", "1.0.0"))
             .file("src/lib.rs", "")
@@ -313,6 +335,13 @@ fn sha256_basic() {
 
 #[cargo_test]
 fn sha256_lockfile_and_cache_dir() {
+    if cargo_uses_gitoxide() {
+        eprintln!(
+            "gitoxide hasn't yet supported sha256; ignore __CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2"
+        );
+        return;
+    }
+
     let (git_dep, _repo) = git::new_sha256_repo("dep1", |p| {
         p.file("Cargo.toml", &basic_manifest("dep1", "1.0.0"))
             .file("src/lib.rs", "")
@@ -378,6 +407,13 @@ fn sha256_lockfile_and_cache_dir() {
 
 #[cargo_test]
 fn sha256_dep_with_rev() {
+    if cargo_uses_gitoxide() {
+        eprintln!(
+            "gitoxide hasn't yet supported sha256; ignore __CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2"
+        );
+        return;
+    }
+
     let (git_dep, repo) = git::new_sha256_repo("dep1", |p| {
         p.file("Cargo.toml", &basic_manifest("dep1", "1.0.0"))
             .file("src/lib.rs", "")
@@ -419,6 +455,13 @@ fn sha256_dep_with_rev() {
 
 #[cargo_test]
 fn sha256_update_dep() {
+    if cargo_uses_gitoxide() {
+        eprintln!(
+            "gitoxide hasn't yet supported sha256; ignore __CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2"
+        );
+        return;
+    }
+
     let (git_dep, repo) = git::new_sha256_repo("dep1", |p| {
         p.file("Cargo.toml", &basic_manifest("dep1", "1.0.0"))
             .file("src/lib.rs", "")
@@ -475,6 +518,13 @@ fn sha256_update_dep() {
 
 #[cargo_test]
 fn sha256_offline_with_cached_db() {
+    if cargo_uses_gitoxide() {
+        eprintln!(
+            "gitoxide hasn't yet supported sha256; ignore __CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2"
+        );
+        return;
+    }
+
     let (git_dep, _repo) = git::new_sha256_repo("dep1", |p| {
         p.file("Cargo.toml", &basic_manifest("dep1", "1.0.0"))
             .file("src/lib.rs", "")
@@ -515,6 +565,13 @@ fn sha256_offline_with_cached_db() {
 
 #[cargo_test]
 fn sha256_and_sha1_deps_coexist() {
+    if cargo_uses_gitoxide() {
+        eprintln!(
+            "gitoxide hasn't yet supported sha256; ignore __CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2"
+        );
+        return;
+    }
+
     let (sha256_dep, _repo256) = git::new_sha256_repo("dep256", |p| {
         p.file("Cargo.toml", &basic_manifest("dep256", "1.0.0"))
             .file("src/lib.rs", "")
