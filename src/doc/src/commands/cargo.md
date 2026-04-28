@@ -319,7 +319,9 @@ for more information about configuration files.
 `.cargo/config.toml`\
 &nbsp;&nbsp;&nbsp;&nbsp;Cargo automatically searches for a file named `.cargo/config.toml` in the
 current directory, and all parent directories. These configuration files
-will be merged with the global configuration file.
+will be merged with the global configuration file. Set `CARGO_CONFIG_STOP_SEARCH_PATH`
+to prevent Cargo from searching above a specific directory and from loading
+the global configuration file.
 
 `$CARGO_HOME/credentials.toml`\
 &nbsp;&nbsp;&nbsp;&nbsp;Private authentication information for logging in to a registry.

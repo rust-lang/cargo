@@ -20,6 +20,11 @@ system:
   location of this directory. Once a crate is cached it is not removed by the
   clean command.
   For more details refer to the [guide](../guide/cargo-home.md).
+* `CARGO_CONFIG_STOP_SEARCH_PATH` --- Cargo stops searching for
+  `.cargo/config.toml` files after reaching this directory, inclusive. Ancestor
+  directories above this path will not be searched. Relative paths are resolved
+  relative to the current working directory. When this is set, Cargo also does
+  not load `$CARGO_HOME/config.toml`.
 * `CARGO_TARGET_DIR` --- Location of where to place all generated artifacts,
   relative to the current working directory. See [`build.target-dir`] to set
   via config.

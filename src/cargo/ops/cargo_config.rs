@@ -283,13 +283,15 @@ fn print_toml_unmerged(
     //
     // * CARGO
     // * CARGO_HOME
+    // * CARGO_CONFIG_STOP_SEARCH_PATH
     // * CARGO_NAME
     // * CARGO_EMAIL
     // * CARGO_INCREMENTAL
     // * CARGO_TARGET_DIR
     // * CARGO_CACHE_RUSTC_INFO
     //
-    // All of these except CARGO, CARGO_HOME, and CARGO_CACHE_RUSTC_INFO are
+    // All of these except CARGO, CARGO_HOME, CARGO_CONFIG_STOP_SEARCH_PATH,
+    // and CARGO_CACHE_RUSTC_INFO are
     // actually part of the config, but they are special-cased in the code.
     //
     // TODO: It might be a good idea to teach the Config loader to support

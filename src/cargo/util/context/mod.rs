@@ -138,6 +138,8 @@ pub use schema::*;
 
 use super::auth::RegistryConfig;
 
+const CARGO_CONFIG_STOP_SEARCH_PATH_ENV: &str = "CARGO_CONFIG_STOP_SEARCH_PATH";
+
 /// Helper macro for creating typed access methods.
 macro_rules! get_value_typed {
     ($name:ident, $ty:ty, $variant:ident, $expected:expr) => {
@@ -652,6 +654,34 @@ impl GlobalContext {
         let path = path.into();
         debug_assert!(self.cwd.starts_with(&path));
         self.search_stop_path = Some(path);
+    }
+
+    fn search_stop_path_from_env(&self) -> Option<PathBuf> {
+        let path = PathBuf::from(
+            self.get_env_os(CARGO_CONFIG_STOP_SEARCH_PATH_ENV)
+                .filter(|path| !path.is_empty())?,
+        );
+        let path = if path.is_absolute() {
+            path
+        } else {
+            self.cwd.join(path)
+        };
+        Some(paths::normalize_path(&path))
+    }
+
+    fn effective_search_stop_path(
+        &self,
+        pwd: &Path,
+        env_stop_path: Option<&Path>,
+    ) -> Option<PathBuf> {
+        let pwd = paths::normalize_path(pwd);
+        self.search_stop_path
+            .iter()
+            .cloned()
+            .chain(env_stop_path.map(PathBuf::from))
+            .map(|path| paths::normalize_path(&path))
+            .filter(|path| pwd.starts_with(path))
+            .max_by_key(|path| path.components().count())
     }
 
     /// Switches the working directory to [`std::env::current_dir`]
@@ -1680,8 +1710,10 @@ impl GlobalContext {
         F: FnMut(&Path) -> CargoResult<()>,
     {
         let mut seen_dir = HashSet::new();
+        let env_stop_path = self.search_stop_path_from_env();
+        let search_stop_path = self.effective_search_stop_path(pwd, env_stop_path.as_deref());
 
-        for current in paths::ancestors(pwd, self.search_stop_path.as_deref()) {
+        for current in paths::ancestors(pwd, search_stop_path.as_deref()) {
             let config_root = current.join(".cargo");
             if let Some(path) = self.get_file_path(&config_root, "config", true)? {
                 walk(&path)?;
@@ -1696,7 +1728,10 @@ impl GlobalContext {
         // Once we're done, also be sure to walk the home directory even if it's not
         // in our history to be sure we pick up that standard location for
         // information.
-        if !seen_dir.contains(&canonical_home) && !seen_dir.contains(home) {
+        if env_stop_path.is_none()
+            && !seen_dir.contains(&canonical_home)
+            && !seen_dir.contains(home)
+        {
             if let Some(path) = self.get_file_path(home, "config", true)? {
                 walk(&path)?;
             }

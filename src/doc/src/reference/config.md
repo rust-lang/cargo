@@ -25,6 +25,11 @@ With this structure, you can specify configuration per-package, and even
 possibly check it into version control. You can also specify personal defaults
 with a configuration file in your home directory.
 
+The upward search can be stopped at a specific directory by setting the
+`CARGO_CONFIG_STOP_SEARCH_PATH` environment variable. The directory named by
+that variable is still searched, but its ancestors are not. When this is set,
+Cargo also does not load `$CARGO_HOME/config.toml`.
+
 If a key is specified in multiple config files, the values will get merged
 together. Numbers, strings, and booleans will use the value in the deeper
 config directory taking precedence over ancestor directories, where the

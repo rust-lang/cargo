@@ -1354,6 +1354,24 @@ Caused by:
 }
 
 #[cargo_test]
+fn config_stop_search_path_env() {
+    write_config_at(".cargo/config.toml", "parent = true");
+    write_config_at("foo/.cargo/config.toml", "project = true");
+    write_config_at(paths::cargo_home().join("config.toml"), "home = true");
+
+    for stop_path in [paths::root().join("foo").display().to_string(), "..".into()] {
+        let gctx = GlobalContextBuilder::new()
+            .cwd("foo/bar")
+            .env("CARGO_CONFIG_STOP_SEARCH_PATH", stop_path)
+            .build();
+
+        assert_eq!(gctx.get::<Option<bool>>("parent").unwrap(), None);
+        assert_eq!(gctx.get::<Option<bool>>("project").unwrap(), Some(true));
+        assert_eq!(gctx.get::<Option<bool>>("home").unwrap(), None);
+    }
+}
+
+#[cargo_test]
 fn struct_with_opt_inner_struct() {
     // Struct with a key that is Option of another struct.
     // Check that can be defined with environment variable.

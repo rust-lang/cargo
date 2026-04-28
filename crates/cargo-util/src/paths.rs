@@ -436,18 +436,21 @@ pub fn ancestors<'a>(path: &'a Path, stop_root_at: Option<&Path>) -> PathAncesto
 
 pub struct PathAncestors<'a> {
     current: Option<&'a Path>,
-    stop_at: Option<PathBuf>,
+    stop_at: Vec<PathBuf>,
 }
 
 impl<'a> PathAncestors<'a> {
     fn new(path: &'a Path, stop_root_at: Option<&Path>) -> PathAncestors<'a> {
-        let stop_at = env::var("__CARGO_TEST_ROOT")
-            .ok()
-            .map(PathBuf::from)
-            .or_else(|| stop_root_at.map(|p| p.to_path_buf()));
+        let mut stop_at = Vec::new();
+        if let Some(stop_root_at) = stop_root_at {
+            stop_at.push(stop_root_at.to_path_buf());
+        }
+        if let Ok(test_root) = env::var("__CARGO_TEST_ROOT") {
+            // HACK: avoid reading `~/.cargo/config` when testing Cargo itself.
+            stop_at.push(PathBuf::from(test_root));
+        }
         PathAncestors {
             current: Some(path),
-            //HACK: avoid reading `~/.cargo/config` when testing Cargo itself.
             stop_at,
         }
     }
@@ -460,10 +463,8 @@ impl<'a> Iterator for PathAncestors<'a> {
         if let Some(path) = self.current {
             self.current = path.parent();
 
-            if let Some(ref stop_at) = self.stop_at {
-                if path == stop_at {
-                    self.current = None;
-                }
+            if self.stop_at.iter().any(|stop_at| path == stop_at) {
+                self.current = None;
             }
 
             Some(path)
