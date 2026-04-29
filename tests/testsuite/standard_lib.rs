@@ -246,7 +246,7 @@ fn basic() {
 }
 
 #[cargo_test(build_std_mock)]
-fn shared_std_dependency_rebuild() {
+fn shared_std_dependency() {
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
     let setup = setup();
     let p = project()
@@ -261,7 +261,11 @@ fn shared_std_dependency_rebuild() {
 
                 [build-dependencies]
                 dep_test = {{ path = \"{}/tests/testsuite/mock-std/dep_test\" }}
+
+                [dependencies]
+                dep_test = {{ path = \"{}/tests/testsuite/mock-std/dep_test\" }}
             ",
+                manifest_dir.replace('\\', "/"),
                 manifest_dir.replace('\\', "/")
             )
             .as_str(),
@@ -284,6 +288,26 @@ fn shared_std_dependency_rebuild() {
         )
         .build();
 
+    // One build each for the:
+    //  - Build-std build
+    //  - Build-time user crate dependency (with the sysroot std)
+    //  - Runtime user crate dependency (with the build-std std)
+    p.cargo("build -v")
+        .build_std(&setup)
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `[..] rustc --crate-name dep_test [..]`
+...
+[RUNNING] `[..] rustc --crate-name dep_test [..]`
+...
+[RUNNING] `[..] rustc --crate-name dep_test [..]`
+...
+"#]])
+        .run();
+
+    p.cargo("clean").run();
+
+    // Sanity check for `rebuild_unit_graph_shared`
     p.cargo("build -v")
         .build_std(&setup)
         .target_host()
@@ -293,18 +317,9 @@ fn shared_std_dependency_rebuild() {
 ...
 [RUNNING] `[..] rustc --crate-name dep_test [..]`
 ...
+[RUNNING] `[..] rustc --crate-name dep_test [..]`
+...
 "#]])
-        .run();
-
-    p.cargo("build -v")
-        .build_std(&setup)
-        .with_stderr_does_not_contain(str![[r#"
-    ...
-    [RUNNING] `[..] rustc --crate-name dep_test [..]`
-    ...
-    [RUNNING] `[..] rustc --crate-name dep_test [..]`
-    ...
-    "#]])
         .run();
 }
 

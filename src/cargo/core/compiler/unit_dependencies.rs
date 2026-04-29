@@ -321,15 +321,17 @@ fn compute_deps(
         } else {
             // if builtin, return from state.opaque_roots
             let unit_dep = if dep_pkg_id.source_id().is_builtin() {
-                let unit: Vec<_> = state.opaque_roots[&unit.kind.for_target(dep_lib)]
+                if unit_for.is_for_host() {
+                    // Build scripts/proc_macros shouldn't use build-std
+                    continue;
+                }
+                let unit = state
+                    .opaque_roots
+                    .get(&unit.kind.for_target(dep_lib))
+                    .expect("Std was resolved for all requested targets")
                     .iter()
-                    .filter(|&u| u.pkg.name() == dep_pkg_id.name())
-                    .collect();
-                assert!(
-                    unit.len() == 1,
-                    "libstd was resolved with all possible builtin deps as roots"
-                );
-                let unit = unit[0];
+                    .find(|&u| u.pkg.name() == dep_pkg_id.name())
+                    .expect("libstd was resolved with all possible builtin deps as roots");
                 UnitDep {
                     unit: unit.clone(),
                     unit_for: UnitFor::new_normal(unit.kind),
@@ -368,27 +370,28 @@ fn compute_deps(
     }
     state.dev_dependency_edges.extend(dev_deps);
 
-    if unit.mode.is_rustc_test() && unit.target.harness() {
-        let unit: Vec<_> = state.opaque_roots[&unit.kind]
+    if state.gctx.cli_unstable().build_std.is_some()
+        && unit.mode.is_rustc_test()
+        && unit.target.harness()
+        && !unit_for.is_for_host()
+    {
+        // If test isn't found, we were probably compiling for no-std.
+        if let Some(test) = state.opaque_roots[&unit.kind]
             .iter()
-            .filter(|&u| u.pkg.name() == "test")
-            .collect();
-        assert!(
-            unit.len() == 1,
-            "libstd was resolved with test crate as root"
-        );
-        let unit = unit[0];
-        let unitdep = UnitDep {
-            unit: unit.clone(),
-            unit_for: UnitFor::new_normal(unit.kind),
-            extern_crate_name: unit.pkg.name(),
-            dep_name: None,
-            public: true,
-            noprelude: true,
-            nounused: true,
-            manifest_deps: Unhashed(None),
-        };
-        ret.push(unitdep);
+            .find(|u| u.pkg.name() == "test")
+        {
+            let unitdep = UnitDep {
+                unit: test.clone(),
+                unit_for: UnitFor::new_normal(test.kind),
+                extern_crate_name: test.pkg.name(),
+                dep_name: None,
+                public: true,
+                noprelude: true,
+                nounused: true,
+                manifest_deps: Unhashed(None),
+            };
+            ret.push(unitdep);
+        }
     }
 
     // If this target is a build script, then what we've collected so far is
@@ -675,6 +678,10 @@ fn compute_deps_doc(
     // the documentation of the library being built.
     let mut ret = Vec::new();
     for (id, deps) in state.deps(unit, unit_for) {
+        if id.source_id().is_builtin() {
+            // Build-std for cargo doc is not yet implemented
+            continue;
+        }
         let Some(dep_lib) = calc_artifact_deps(unit, unit_for, id, &deps, state, &mut ret)? else {
             continue;
         };

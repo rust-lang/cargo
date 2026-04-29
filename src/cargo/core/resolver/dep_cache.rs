@@ -192,6 +192,8 @@ pub struct RegistryQueryer<'a, T: Registry> {
         (Option<PackageId>, Summary, ResolveOpts),
         (Rc<(HashSet<InternedString>, Rc<Vec<DepInfo>>)>, bool),
     >,
+    /// The set of builtin dependencies to inject when appropriate
+    implicit_builtin_deps: &'a [Dependency],
 }
 
 impl<'a, T: Registry> RegistryQueryer<'a, T> {
@@ -199,6 +201,7 @@ impl<'a, T: Registry> RegistryQueryer<'a, T> {
         registry: &'a T,
         replacements: &'a [(PackageIdSpec, Dependency)],
         version_prefs: &'a VersionPreferences,
+        implicit_builtin_deps: &'a [Dependency],
     ) -> Self {
         let inner = Rc::new(RegistryQueryerAsync::new(
             registry,
@@ -209,6 +212,7 @@ impl<'a, T: Registry> RegistryQueryer<'a, T> {
             inner: inner.clone(),
             poller: LocalPollAdapter::new(inner),
             summary_cache: HashMap::new(),
+            implicit_builtin_deps,
         }
     }
 
@@ -265,7 +269,6 @@ impl<'a, T: Registry> RegistryQueryer<'a, T> {
         candidate: &Summary,
         opts: &ResolveOpts,
         first_version: Option<VersionOrdering>,
-        injected_builtins: &[Dependency],
     ) -> ActivateResult<Rc<(HashSet<InternedString>, Rc<Vec<DepInfo>>)>> {
         // if we have calculated a result before, then we can just return it,
         // as it is a "pure" query of its arguments.
@@ -303,8 +306,8 @@ impl<'a, T: Registry> RegistryQueryer<'a, T> {
             })
             .collect::<CargoResult<Vec<DepInfo>>>()?;
 
-        if !candidate.source_id().is_builtin() {
-            for dep in injected_builtins {
+        if opts.inject_builtins {
+            for dep in self.implicit_builtin_deps {
                 // TODO: This kicks off multiple queries per package searched. What's the
                 // performance impact?
                 let candidates = self

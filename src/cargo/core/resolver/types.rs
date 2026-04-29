@@ -148,6 +148,10 @@ pub struct ResolveOpts {
     pub dev_deps: bool,
     /// Set of features requested on the command-line.
     pub features: RequestedFeatures,
+    /// Whether or not to inject builtin dependencies. Host deps like proc_macros and build scripts
+    /// should not use build-std, so therefore build-dependencies and transitive
+    /// dependencies via a build-dependencies do not have builtin dependencies.
+    pub inject_builtins: bool,
 }
 
 impl ResolveOpts {
@@ -156,11 +160,16 @@ impl ResolveOpts {
         ResolveOpts {
             dev_deps: true,
             features: RequestedFeatures::CliFeatures(CliFeatures::new_all(true)),
+            inject_builtins: true,
         }
     }
 
-    pub fn new(dev_deps: bool, features: RequestedFeatures) -> ResolveOpts {
-        ResolveOpts { dev_deps, features }
+    pub fn new(dev_deps: bool, features: RequestedFeatures, inject_builtins: bool) -> ResolveOpts {
+        ResolveOpts {
+            dev_deps,
+            features,
+            inject_builtins,
+        }
     }
 }
 
@@ -220,6 +229,7 @@ impl PackageId {
 pub struct DepsFrame {
     pub parent: Summary,
     pub just_for_error_messages: bool,
+    pub inject_builtins: bool,
     pub remaining_siblings: RcVecIter<DepInfo>,
 }
 
@@ -296,7 +306,7 @@ impl RemainingDeps {
         self.data.insert((x, insertion_time));
         self.time += 1;
     }
-    pub fn pop_most_constrained(&mut self) -> Option<(bool, (Summary, DepInfo))> {
+    pub fn pop_most_constrained(&mut self) -> Option<(bool, (Summary, bool, DepInfo))> {
         while let Some((mut deps_frame, insertion_time)) = self.data.remove_min() {
             let just_here_for_the_error_messages = deps_frame.just_for_error_messages;
 
@@ -306,8 +316,12 @@ impl RemainingDeps {
             let sibling = deps_frame.remaining_siblings.iter().next().cloned();
             if let Some(sibling) = sibling {
                 let parent = Summary::clone(&deps_frame.parent);
+                let inject_builtins = deps_frame.inject_builtins;
                 self.data.insert((deps_frame, insertion_time));
-                return Some((just_here_for_the_error_messages, (parent, sibling)));
+                return Some((
+                    just_here_for_the_error_messages,
+                    (parent, inject_builtins, sibling),
+                ));
             }
         }
         None

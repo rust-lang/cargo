@@ -530,6 +530,7 @@ pub fn resolve_with_previous<'gctx>(
                     summary,
                     ResolveOpts {
                         dev_deps,
+                        inject_builtins: builtins_root.is_some(),
                         features: RequestedFeatures::CliFeatures(features),
                     },
                 )
@@ -573,10 +574,15 @@ fn get_builtin_summaries<'gctx>(ws: Workspace<'gctx>) -> CargoResult<Vec<Summary
         .build_std
         .as_ref()
         .expect("build-std is enabled");
+
+    // In general, we don't know exactly what standard library packages to depend on at this point.
+    // For example, we may be builting for multiple targets which default to different set of
+    // builtin crates, but at the resolve is target-independent.
+    // We also can't tell if a Summary is actually a proc-macro (host-only) dependency which doesn't
+    // support build-std at all. This is handled properly by unit generation.
     let dep_names: HashSet<_> = std_crates(
         crates,
-        "std", // Default to std even if all targets don't need it - we'll work that out
-        // during unit generation
+        "std",
         &[], // Units are only used to work out if test needs to be inserted, which we handle during
              // unit generation
     )
