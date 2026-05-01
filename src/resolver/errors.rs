@@ -1,7 +1,9 @@
 use std::fmt;
 use std::fmt::Write as _;
+use std::path::{Path, PathBuf};
 
 use crate::sources::IndexSummary;
+use crate::sources::path::RecursivePathSource;
 use crate::sources::source::QueryKind;
 use crate::util::edit_distance::{closest, edit_distance};
 use crate::util::errors::CargoResult;
@@ -375,6 +377,51 @@ pub(super) fn activation_error(
                 "\nnote: perhaps a crate was updated and forgotten to be re-vendored?"
             );
         }
+    } else if let Some(packages) = alt_paths(dep, gctx) {
+        let path = dep.source_id().url().to_file_path().unwrap();
+        let _ = writeln!(
+            &mut msg,
+            "no matching package named `{}` found",
+            dep.package_name()
+        );
+
+        let mut exact_match: Option<PathBuf> = None;
+        let mut found_dir: Option<String> = None;
+        let mut names_found: Vec<(String, PathBuf)> = vec![];
+
+        for pkg in &packages {
+            let manifest_dir = pkg.manifest_path().parent().unwrap();
+            let p_name = pkg.name().as_str();
+            if p_name == dep.package_name().as_str() {
+                exact_match = Some(manifest_dir.to_path_buf());
+                break;
+            } else if manifest_dir == path {
+                found_dir = Some(p_name.to_string());
+            } else {
+                names_found.push((p_name.to_string(), manifest_dir.to_path_buf()));
+            }
+        }
+
+        let mut add_hint = |name: &str, p: &Path| {
+            let _ = writeln!(&mut hints);
+            let _ = write!(
+                &mut hints,
+                "help: package `{}` exists at `{}`",
+                name,
+                p.display()
+            );
+        };
+
+        if let Some(dir) = exact_match {
+            add_hint(dep.package_name().as_str(), &dir);
+        } else if let Some(dir_pkg) = found_dir {
+            add_hint(&dir_pkg, &path);
+        } else {
+            names_found.sort_by(|a, b| a.0.cmp(&b.0));
+            for (name, p) in names_found.iter() {
+                add_hint(name, p);
+            }
+        }
     } else if let Some(name_candidates) = alt_names(registry, dep) {
         let name_candidates = match name_candidates {
             Ok(c) => c,
@@ -545,6 +592,31 @@ fn alt_names(
         None
     } else {
         Some(Ok(name_candidates))
+    }
+}
+
+/// For path dependencies, scan the dependency directory for any packages
+/// that exist in subdirectories. This helps when the user points to a
+/// directory without a Cargo.toml or with the wrong package name.
+fn alt_paths(
+    dep: &Dependency,
+    gctx: Option<&GlobalContext>,
+) -> Option<Vec<crate::workspace::Package>> {
+    let gctx = gctx?;
+    if !dep.source_id().is_path() {
+        return None;
+    }
+    let path = dep.source_id().url().to_file_path().ok()?;
+    if !path.is_dir() {
+        return None;
+    }
+    let source_id = dep.source_id();
+    let mut source = RecursivePathSource::new(&path, source_id, gctx);
+    let packages = source.read_packages().ok()?;
+    if packages.is_empty() {
+        None
+    } else {
+        Some(packages)
     }
 }
 
