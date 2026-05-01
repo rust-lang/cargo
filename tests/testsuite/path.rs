@@ -1652,8 +1652,7 @@ fn invalid_path_dep_in_workspace_with_lockfile() {
 [ERROR] no matching package named `bar` found
 location searched: [ROOT]/foo/foo
 required by package `foo v0.5.0 ([ROOT]/foo/foo)`
-[HELP] packages with similar names: foo
-
+[HELP] package `foo` exists at `[ROOT]/foo/foo`
 
 "#]])
         .run();
@@ -1923,6 +1922,7 @@ fn path_dep_wrong_package_name() {
 [ERROR] no matching package named `definitely_not_bar` found
 location searched: [ROOT]/foo/bar
 required by package `foo v0.1.0 ([ROOT]/foo)`
+[HELP] package `bar` exists at `[ROOT]/foo/bar`
 ",
         )
         .run();
@@ -1962,6 +1962,7 @@ fn path_dep_package_in_subdirectory() {
 [ERROR] no matching package named `definitely_not_bar` found
 location searched: [ROOT]/foo/bar
 required by package `foo v0.1.0 ([ROOT]/foo)`
+[HELP] package `definitely_not_bar` exists at `[ROOT]/foo/bar/definitely_not_bar`
 ",
         )
         .run();
@@ -2011,6 +2012,8 @@ fn path_dep_other_packages_nearby() {
 [ERROR] no matching package named `definitely_not_bar` found
 location searched: [ROOT]/foo/bar
 required by package `foo v0.1.0 ([ROOT]/foo)`
+[HELP] package `alice` exists at `[ROOT]/foo/bar/alice`
+[HELP] package `bob` exists at `[ROOT]/foo/bar/bob`
 ",
         )
         .run();
