@@ -1104,6 +1104,7 @@ fn ignore_files() {
         csum,
         str![[r#"
 {
+  "$comment": "This file only protects against accidental modifications. It is not a security mechanism and does not protect against malicious changes.",
   "files": {
     ".cargo_vcs_info.json": "[..]",
     "Cargo.toml": "[..]",
