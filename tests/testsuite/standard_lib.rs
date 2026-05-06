@@ -402,25 +402,7 @@ fn check_core() {
 #[cargo_test(build_std_mock)]
 fn build_std_does_not_change_lockfile() {
     let setup = setup();
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.1.0"
-                edition = "2021"
-            "#,
-        )
-        .file(
-            "src/main.rs",
-            r#"
-                fn main() {
-                    std::custom_api();
-                }
-            "#,
-        )
-        .build();
+    let p = project().file("src/lib.rs", "").build();
 
     p.cargo("generate-lockfile").run();
     let lockfile = p.read_lockfile();
@@ -432,6 +414,38 @@ fn build_std_does_not_change_lockfile() {
     assert!(!build_std_lockfile.contains("name = \"core\""));
     assert!(!build_std_lockfile.contains("name = \"std\""));
     assert!(!build_std_lockfile.contains("name = \"alloc\""));
+}
+
+#[cargo_test(build_std_mock)]
+fn builtins_do_not_show_in_status_messages() {
+    let setup = setup();
+    let p = project()
+        .file("src/lib.rs", "#![no_std]")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                registry-dep-using-core = "1.0"
+            "#,
+        )
+        .build();
+
+    // New lockfile
+    p.cargo("c")
+        .build_std_arg(&setup, "core")
+        .with_stderr_contains("[LOCKING] 1 package [..]")
+        .run();
+
+    // Updating lockfile
+    p.cargo("add registry-dep-using-alloc")
+        .build_std_arg(&setup, "core,alloc")
+        .with_stderr_contains("[ADDING] registry-dep-using-alloc [..]")
+        .with_stderr_contains("[LOCKING] 1 package [..]")
+        .run();
 }
 
 #[cargo_test(build_std_mock)]

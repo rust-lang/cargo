@@ -1109,7 +1109,7 @@ impl PackageDiff {
     pub fn new(resolve: &Resolve) -> impl Iterator<Item = Self> {
         let mut changes = BTreeMap::new();
         let empty = Self::default();
-        for dep in resolve.iter() {
+        for dep in resolve.iter().filter(|id| !id.source_id().is_builtin()) {
             changes
                 .entry(Self::key(dep))
                 .or_insert_with(|| empty.clone())
@@ -1159,14 +1159,17 @@ impl PackageDiff {
         // Map `(package name, package source)` to `(removed versions, added versions)`.
         let mut changes = BTreeMap::new();
         let empty = Self::default();
-        for dep in previous_resolve.iter() {
+        for dep in previous_resolve
+            .iter()
+            .filter(|id| !id.source_id().is_builtin())
+        {
             changes
                 .entry(Self::key(dep))
                 .or_insert_with(|| empty.clone())
                 .removed
                 .push(dep);
         }
-        for dep in resolve.iter() {
+        for dep in resolve.iter().filter(|id| !id.source_id().is_builtin()) {
             changes
                 .entry(Self::key(dep))
                 .or_insert_with(|| empty.clone())
