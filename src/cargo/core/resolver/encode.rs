@@ -514,6 +514,7 @@ impl ser::Serialize for Resolve {
 
         let encodable = ids
             .iter()
+            .filter(|&p_id| !p_id.source_id().is_builtin())
             .map(|&id| encodable_resolve_node(id, self, &state))
             .collect::<Vec<_>>();
 
@@ -607,6 +608,7 @@ fn encodable_resolve_node(
         None => {
             let mut deps = resolve
                 .deps_not_replaced(id)
+                .filter(|(id, _)| !id.source_id().is_builtin())
                 .map(|(id, _)| encodable_package_id(id, state, resolve.version()))
                 .collect::<Vec<_>>();
             deps.sort();
@@ -661,7 +663,7 @@ pub fn encodable_package_id(
 }
 
 fn encodable_source_id(id: SourceId, version: ResolveVersion) -> Option<TomlLockfileSourceId> {
-    if id.is_path() {
+    if id.is_path() || id.is_builtin() {
         None
     } else {
         Some(
