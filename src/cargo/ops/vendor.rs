@@ -338,6 +338,8 @@ fn sync(
 
         // Finally, emit the metadata about this package
         let json = serde_json::json!({
+            "$comment": "This file only protects against accidental modifications. \
+                It is not a security mechanism and does not protect against malicious changes.",
             "package": checksums.get(id),
             "files": file_cksums,
         });
