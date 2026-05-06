@@ -145,9 +145,9 @@ directory containing a number of other directories which contain the source code
 for crates (the unpacked version of `*.crate` files). Currently no restriction
 is placed on the name of each directory.
 
-Each crate in a directory source also has an associated metadata file indicating
-the checksum of each file in the crate to protect against accidental
-modifications.
+Each crate in a directory source also has an associated metadata file
+`.cargo-checksum.json` to protect against accidental modifications.
+It is not a security mechanism and does not protect against malicious changes.
 
 ## Git sources
 
