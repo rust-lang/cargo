@@ -8,6 +8,7 @@ use cargo_util_terminal::report::Level;
 use cargo_util_terminal::report::Origin;
 use cargo_util_terminal::report::Patch;
 use cargo_util_terminal::report::Snippet;
+use tracing::instrument;
 
 use crate::CargoResult;
 use crate::GlobalContext;
@@ -54,6 +55,7 @@ hint-mostly-unused = true
     ),
 };
 
+#[instrument(skip_all)]
 pub fn blanket_hint_mostly_unused(
     ws: &Workspace<'_>,
     maybe_pkg: &MaybePackage,

@@ -7,6 +7,7 @@ use cargo_util_terminal::report::Level;
 use cargo_util_terminal::report::Origin;
 use cargo_util_terminal::report::Patch;
 use cargo_util_terminal::report::Snippet;
+use tracing::instrument;
 
 use crate::CargoResult;
 use crate::GlobalContext;
@@ -55,6 +56,7 @@ foo-bar = []
     ),
 };
 
+#[instrument(skip_all)]
 pub fn non_kebab_case_features(
     pkg: &Package,
     manifest_path: &Path,
@@ -77,7 +79,7 @@ pub fn non_kebab_case_features(
     lint_package(pkg, &manifest_path, lint_level, source, error_count, gctx)
 }
 
-pub fn lint_package(
+fn lint_package(
     pkg: &Package,
     manifest_path: &str,
     lint_level: LintLevel,

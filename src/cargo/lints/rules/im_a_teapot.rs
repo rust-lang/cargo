@@ -6,6 +6,7 @@ use cargo_util_terminal::report::Group;
 use cargo_util_terminal::report::Level;
 use cargo_util_terminal::report::Origin;
 use cargo_util_terminal::report::Snippet;
+use tracing::instrument;
 
 use crate::CargoResult;
 use crate::GlobalContext;
@@ -27,6 +28,7 @@ pub static LINT: &Lint = &Lint {
     docs: None,
 };
 
+#[instrument(skip_all)]
 pub fn check_im_a_teapot(
     pkg: &Package,
     path: &Path,

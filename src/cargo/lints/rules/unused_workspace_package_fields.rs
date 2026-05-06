@@ -8,6 +8,7 @@ use cargo_util_terminal::report::Origin;
 use cargo_util_terminal::report::Patch;
 use cargo_util_terminal::report::Snippet;
 use indexmap::IndexSet;
+use tracing::instrument;
 
 use crate::CargoResult;
 use crate::GlobalContext;
@@ -45,6 +46,7 @@ name = "foo"
     ),
 };
 
+#[instrument(skip_all)]
 pub fn unused_workspace_package_fields(
     ws: &Workspace<'_>,
     maybe_pkg: &MaybePackage,

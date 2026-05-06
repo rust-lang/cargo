@@ -7,6 +7,7 @@ use cargo_util_terminal::report::Level;
 use cargo_util_terminal::report::Origin;
 use cargo_util_terminal::report::Patch;
 use cargo_util_terminal::report::Snippet;
+use tracing::instrument;
 
 use crate::CargoResult;
 use crate::GlobalContext;
@@ -61,6 +62,7 @@ name = "foo-bar"
     ),
 };
 
+#[instrument(skip_all)]
 pub fn non_kebab_case_bins(
     ws: &Workspace<'_>,
     pkg: &Package,
@@ -92,7 +94,7 @@ pub fn non_kebab_case_bins(
     )
 }
 
-pub fn lint_package(
+fn lint_package(
     ws: &Workspace<'_>,
     pkg: &Package,
     manifest_path: &str,

@@ -12,6 +12,7 @@ use toml_parser::decoder::Encoding;
 use toml_parser::parser::Event;
 use toml_parser::parser::EventKind;
 use toml_parser::parser::EventReceiver;
+use tracing::instrument;
 
 use crate::CargoResult;
 use crate::GlobalContext;
@@ -46,6 +47,7 @@ by default we deny their use.
     ),
 };
 
+#[instrument(skip_all)]
 pub fn text_direction_codepoint_in_literal(
     manifest: ManifestFor<'_>,
     manifest_path: &Path,
