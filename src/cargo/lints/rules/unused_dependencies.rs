@@ -8,6 +8,7 @@ use cargo_util_terminal::report::Level;
 use cargo_util_terminal::report::Origin;
 use cargo_util_terminal::report::Patch;
 use cargo_util_terminal::report::Snippet;
+use tracing::instrument;
 
 use crate::CargoResult;
 use crate::GlobalContext;
@@ -81,6 +82,7 @@ name = "foo"
 ///
 /// This must be determined independent of the compiler since there are no build targets to pass to
 /// rustc to report on these.
+#[instrument(skip_all)]
 pub fn unused_build_dependencies_no_build_rs(
     pkg: &Package,
     manifest_path: &Path,

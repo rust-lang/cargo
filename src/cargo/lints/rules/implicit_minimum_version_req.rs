@@ -11,6 +11,7 @@ use cargo_util_terminal::report::Origin;
 use cargo_util_terminal::report::Patch;
 use cargo_util_terminal::report::Snippet;
 use toml::de::DeValue;
+use tracing::instrument;
 
 use crate::CargoResult;
 use crate::GlobalContext;
@@ -82,6 +83,7 @@ serde = "1.0.219"
     ),
 };
 
+#[instrument(skip_all)]
 pub fn implicit_minimum_version_req_pkg(
     pkg: &Package,
     manifest_path: &Path,
@@ -148,6 +150,7 @@ pub fn implicit_minimum_version_req_pkg(
     Ok(())
 }
 
+#[instrument(skip_all)]
 pub fn implicit_minimum_version_req_ws(
     ws: &Workspace<'_>,
     maybe_pkg: &MaybePackage,

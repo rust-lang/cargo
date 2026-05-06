@@ -4,6 +4,7 @@ use cargo_util_terminal::report::Group;
 use cargo_util_terminal::report::Level;
 use cargo_util_terminal::report::Origin;
 use cargo_util_terminal::report::Snippet;
+use tracing::instrument;
 
 use crate::CargoResult;
 use crate::GlobalContext;
@@ -41,6 +42,7 @@ this-lint-does-not-exist = "warn"
     ),
 };
 
+#[instrument(skip_all)]
 pub fn output_unknown_lints(
     unknown_lints: Vec<&String>,
     manifest: &ManifestFor<'_>,

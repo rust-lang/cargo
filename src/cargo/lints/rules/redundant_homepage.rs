@@ -8,6 +8,7 @@ use cargo_util_terminal::report::Level;
 use cargo_util_terminal::report::Origin;
 use cargo_util_terminal::report::Patch;
 use cargo_util_terminal::report::Snippet;
+use tracing::instrument;
 
 use crate::CargoResult;
 use crate::GlobalContext;
@@ -59,6 +60,7 @@ repository = "https://github.com/rust-lang/cargo/"
     ),
 };
 
+#[instrument(skip_all)]
 pub fn redundant_homepage(
     pkg: &Package,
     manifest_path: &Path,

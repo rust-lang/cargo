@@ -7,6 +7,7 @@ use cargo_util_terminal::report::Level;
 use cargo_util_terminal::report::Origin;
 use cargo_util_terminal::report::Patch;
 use cargo_util_terminal::report::Snippet;
+use tracing::instrument;
 
 use crate::CargoResult;
 use crate::GlobalContext;
@@ -55,6 +56,7 @@ foo_bar = []
     ),
 };
 
+#[instrument(skip_all)]
 pub fn non_snake_case_features(
     pkg: &Package,
     manifest_path: &Path,

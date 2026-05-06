@@ -6,6 +6,7 @@ use cargo_util_terminal::report::Level;
 use cargo_util_terminal::report::Origin;
 use cargo_util_terminal::report::Patch;
 use cargo_util_terminal::report::Snippet;
+use tracing::instrument;
 
 use crate::CargoResult;
 use crate::GlobalContext;
@@ -52,6 +53,7 @@ workspace = true
     ),
 };
 
+#[instrument(skip_all)]
 pub fn missing_lints_inheritance(
     ws: &Workspace<'_>,
     pkg: &Package,
