@@ -81,7 +81,7 @@ pub fn redundant_homepage(
     lint_package(pkg, &manifest_path, lint_level, source, error_count, gctx)
 }
 
-pub fn lint_package(
+fn lint_package(
     pkg: &Package,
     manifest_path: &str,
     lint_level: LintLevel,

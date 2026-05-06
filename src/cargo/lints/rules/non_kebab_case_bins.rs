@@ -92,7 +92,7 @@ pub fn non_kebab_case_bins(
     )
 }
 
-pub fn lint_package(
+fn lint_package(
     ws: &Workspace<'_>,
     pkg: &Package,
     manifest_path: &str,
