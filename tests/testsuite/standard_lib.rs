@@ -424,6 +424,39 @@ fn build_std_does_not_change_lockfile() {
 }
 
 #[cargo_test(build_std_mock)]
+fn builtins_do_not_show_in_status_messages() {
+    let setup = setup();
+    let p = project()
+        .file("src/lib.rs", "#![no_std]")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                registry-dep-using-core = "1.0"
+            "#,
+        )
+        .build();
+
+    // New lockfile
+    p.cargo("c")
+        .build_std_arg(&setup, "core")
+        .with_stderr_contains("[LOCKING] 1 package [..]")
+        .with_stderr_does_not_contain("[ADDING] core")
+        .run();
+
+    // Updating lockfile
+    p.cargo("add registry-dep-using-alloc")
+        .build_std_arg(&setup, "core,alloc")
+        .with_stderr_contains("[ADDING] registry-dep-using-alloc [..]")
+        .with_stderr_contains("[LOCKING] 1 package [..]")
+        .run();
+}
+
+#[cargo_test(build_std_mock)]
 fn build_std_with_no_arg_for_core_only_target() {
     let target = "aarch64-unknown-none";
     if !cross_compile::requires_target_installed(target) {
