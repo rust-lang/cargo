@@ -62,7 +62,7 @@ pub fn run_verify(
     // Manufacture an ephemeral workspace to ensure that even if the top-level
     // package has a workspace we can still build our new crate.
     let id = SourceId::for_path(&dst)?;
-    let mut src = PathSource::new(&dst, id, ws.gctx());
+    let src = PathSource::new(&dst, id, ws.gctx());
     let new_pkg = src.root_package()?;
     let pkg_fingerprint = hash_all(&dst)?;
 

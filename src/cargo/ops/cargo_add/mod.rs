@@ -413,7 +413,7 @@ fn resolve_dependency(
             }
             selected
         } else {
-            let mut source = crate::sources::PathSource::new(&src.path, src.source_id()?, gctx);
+            let source = crate::sources::PathSource::new(&src.path, src.source_id()?, gctx);
             let package = source.root_package()?;
             let mut selected = Dependency::from(package.summary());
             if let Some(Source::Path(selected_src)) = &mut selected.source {

@@ -133,7 +133,7 @@ impl<'gctx> DirectorySource<'gctx> {
                 continue;
             }
 
-            let mut src = PathSource::new(&path, self.source_id, self.gctx);
+            let src = PathSource::new(&path, self.source_id, self.gctx);
             src.load()?;
             let mut pkg = src.root_package()?;
 

@@ -69,7 +69,7 @@ impl<'gctx> PathSource<'gctx> {
     }
 
     /// Gets the package on the root path.
-    pub fn root_package(&mut self) -> CargoResult<Package> {
+    pub fn root_package(&self) -> CargoResult<Package> {
         trace!("root_package; source={:?}", self);
 
         self.load()?;
