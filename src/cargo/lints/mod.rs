@@ -158,39 +158,33 @@ fn report_feature_not_enabled(
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let dash_feature_name = feature_gate.name().replace("_", "-");
-    let title = format!("use of unstable lint `{}`", lint_name);
-    let label = format!(
-        "this is behind `{}`, which is not enabled",
-        dash_feature_name
-    );
-    let help = format!(
-        "consider adding `cargo-features = [\"{}\"]` to the top of the manifest",
-        dash_feature_name
-    );
 
-    let key_path = match manifest {
-        ManifestFor::Package(_) => &["lints", "cargo", lint_name][..],
-        ManifestFor::Workspace { .. } => &["workspace", "lints", "cargo", lint_name][..],
-    };
-
-    let mut error = Group::with_title(Level::ERROR.primary_title(title));
+    let mut error = Group::with_title(
+        Level::ERROR.primary_title(format!("use of unstable lint `{lint_name}`")),
+    );
 
     if let Some(document) = manifest.document()
         && let Some(contents) = manifest.contents()
     {
+        let key_path = match manifest {
+            ManifestFor::Package(_) => &["lints", "cargo", lint_name][..],
+            ManifestFor::Workspace { .. } => &["workspace", "lints", "cargo", lint_name][..],
+        };
         let Some(span) = get_key_value_span(document, key_path) else {
             // This lint is handled by either package or workspace lint.
             return Ok(());
         };
 
-        error = error.element(
-            Snippet::source(contents)
-                .path(manifest_path)
-                .annotation(AnnotationKind::Primary.span(span.key).label(label)),
-        )
+        error = error.element(Snippet::source(contents).path(manifest_path).annotation(
+            AnnotationKind::Primary.span(span.key).label(format!(
+                "this is behind `{dash_feature_name}`, which is not enabled"
+            )),
+        ))
     }
 
-    let report = [error.element(Level::HELP.message(help))];
+    let report = [error.element(Level::HELP.message(format!(
+        "consider adding `cargo-features = [\"{dash_feature_name}\"]` to the top of the manifest"
+    )))];
 
     *error_count += 1;
     gctx.shell().print_report(&report, true)?;
