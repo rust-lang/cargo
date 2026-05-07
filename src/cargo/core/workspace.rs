@@ -21,7 +21,7 @@ use crate::core::{
     PatchLocation,
 };
 use crate::core::{EitherManifest, Package, SourceId, VirtualManifest};
-use crate::lints::analyze_cargo_lints_table;
+use crate::lints::missing_lints_features;
 use crate::lints::rules::blanket_hint_mostly_unused;
 use crate::lints::rules::check_im_a_teapot;
 use crate::lints::rules::implicit_minimum_version_req_pkg;
@@ -39,6 +39,7 @@ use crate::lints::rules::text_direction_codepoint_in_literal;
 use crate::lints::rules::unused_build_dependencies_no_build_rs;
 use crate::lints::rules::unused_workspace_dependencies;
 use crate::lints::rules::unused_workspace_package_fields;
+use crate::lints::unknown_lints;
 use crate::ops;
 use crate::ops::lockfile::LOCKFILE_NAME;
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY, PathSource, SourceConfigMap};
@@ -1351,7 +1352,14 @@ impl<'gctx> Workspace<'gctx> {
         if self.gctx.cli_unstable().cargo_lints {
             let mut verify_error_count = 0;
 
-            analyze_cargo_lints_table(
+            missing_lints_features(
+                pkg.into(),
+                &path,
+                &cargo_lints,
+                &mut verify_error_count,
+                self.gctx,
+            )?;
+            unknown_lints(
                 pkg.into(),
                 &path,
                 &cargo_lints,
@@ -1454,7 +1462,14 @@ impl<'gctx> Workspace<'gctx> {
         if self.gctx.cli_unstable().cargo_lints {
             let mut verify_error_count = 0;
 
-            analyze_cargo_lints_table(
+            missing_lints_features(
+                (self, self.root_maybe()).into(),
+                self.root_manifest(),
+                &cargo_lints,
+                &mut verify_error_count,
+                self.gctx,
+            )?;
+            unknown_lints(
                 (self, self.root_maybe()).into(),
                 self.root_manifest(),
                 &cargo_lints,
