@@ -210,6 +210,15 @@ fn report_feature_not_enabled(
     Ok(())
 }
 
+/// Gets the relative path to a manifest from the current working directory, or
+/// the absolute path of the manifest if a relative path cannot be constructed
+pub fn rel_cwd_manifest_path(path: &Path, gctx: &GlobalContext) -> String {
+    diff_paths(path, gctx.cwd())
+        .unwrap_or_else(|| path.to_path_buf())
+        .display()
+        .to_string()
+}
+
 pub fn get_key_value<'doc, 'i>(
     document: &'doc toml::Spanned<toml::de::DeTable<'static>>,
     path: &[impl AsIndex],
@@ -306,15 +315,6 @@ impl AsIndex for usize {
     fn as_index<'i>(&'i self) -> TomlIndex<'i> {
         TomlIndex::Offset(*self)
     }
-}
-
-/// Gets the relative path to a manifest from the current working directory, or
-/// the absolute path of the manifest if a relative path cannot be constructed
-pub fn rel_cwd_manifest_path(path: &Path, gctx: &GlobalContext) -> String {
-    diff_paths(path, gctx.cwd())
-        .unwrap_or_else(|| path.to_path_buf())
-        .display()
-        .to_string()
 }
 
 #[derive(Clone, Debug)]
