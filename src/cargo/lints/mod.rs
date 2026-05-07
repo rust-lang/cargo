@@ -20,18 +20,6 @@ use crate::{CargoResult, GlobalContext};
 pub mod rules;
 pub use rules::LINTS;
 
-pub static LINT_GROUPS: &[LintGroup] = &[
-    COMPLEXITY,
-    CORRECTNESS,
-    NURSERY,
-    PEDANTIC,
-    PERF,
-    RESTRICTION,
-    STYLE,
-    SUSPICIOUS,
-    TEST_DUMMY_UNSTABLE,
-];
-
 /// Scope at which a lint runs: package-level or workspace-level.
 pub enum ManifestFor<'a> {
     /// Lint runs for a specific package.
@@ -325,6 +313,18 @@ pub struct LintGroup {
     pub feature_gate: Option<&'static Feature>,
     pub hidden: bool,
 }
+
+pub static LINT_GROUPS: &[LintGroup] = &[
+    COMPLEXITY,
+    CORRECTNESS,
+    NURSERY,
+    PEDANTIC,
+    PERF,
+    RESTRICTION,
+    STYLE,
+    SUSPICIOUS,
+    TEST_DUMMY_UNSTABLE,
+];
 
 const COMPLEXITY: LintGroup = LintGroup {
     name: "complexity",
