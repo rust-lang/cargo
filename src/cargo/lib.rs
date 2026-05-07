@@ -155,7 +155,7 @@ pub const CARGO_ENV: &str = "CARGO";
 mod macros;
 
 pub mod core;
-pub mod lints;
+pub mod diagnostics;
 pub mod ops;
 pub mod sources;
 pub mod util;

@@ -19,10 +19,10 @@ use crate::core::PackageId;
 use crate::core::compiler::build_config::CompileMode;
 use crate::core::dependency::DepKind;
 use crate::core::manifest::TargetKind;
-use crate::lints::LintLevel;
-use crate::lints::get_key_value_span;
-use crate::lints::rel_cwd_manifest_path;
-use crate::lints::rules::unused_dependencies::LINT;
+use crate::diagnostics::LintLevel;
+use crate::diagnostics::get_key_value_span;
+use crate::diagnostics::rel_cwd_manifest_path;
+use crate::diagnostics::rules::unused_dependencies::LINT;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 

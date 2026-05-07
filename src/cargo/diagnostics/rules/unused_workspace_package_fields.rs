@@ -1,6 +1,5 @@
 use std::path::Path;
 
-use cargo_util_schemas::manifest::InheritableDependency;
 use cargo_util_schemas::manifest::TomlToolLints;
 use cargo_util_terminal::report::AnnotationKind;
 use cargo_util_terminal::report::Group;
@@ -16,38 +15,39 @@ use crate::CargoResult;
 use crate::GlobalContext;
 use crate::core::MaybePackage;
 use crate::core::Workspace;
-use crate::lints::Lint;
-use crate::lints::LintLevel;
-use crate::lints::get_key_value_span;
-use crate::lints::rel_cwd_manifest_path;
+use crate::diagnostics::Lint;
+use crate::diagnostics::LintLevel;
+use crate::diagnostics::get_key_value_span;
+use crate::diagnostics::rel_cwd_manifest_path;
 
 pub static LINT: &Lint = &Lint {
-    name: "unused_workspace_dependencies",
-    desc: "unused workspace dependency",
+    name: "unused_workspace_package_fields",
+    desc: "unused field in `workspace.package`",
     primary_group: &SUSPICIOUS,
     msrv: Some(super::CARGO_LINTS_MSRV),
     feature_gate: None,
     docs: Some(
         r#"
 ### What it does
-Checks for any entry in `[workspace.dependencies]` that has not been inherited
+Checks for any fields in `[workspace.package]` that has not been inherited
 
 ### Why it is bad
-They can give the false impression that these dependencies are used
+They can give the false impression that these fields are used
 
 ### Example
 ```toml
-[workspace.dependencies]
-regex = "1"
+[workspace.package]
+edition = "2024"
 
-[dependencies]
+[package]
+name = "foo"
 ```
 "#,
     ),
 };
 
 #[instrument(skip_all)]
-pub fn unused_workspace_dependencies(
+pub fn unused_workspace_package_fields(
     ws: &Workspace<'_>,
     maybe_pkg: &MaybePackage,
     manifest_path: &Path,
@@ -64,72 +64,41 @@ pub fn unused_workspace_dependencies(
         return Ok(());
     }
 
-    let workspace_deps: IndexSet<_> = maybe_pkg
-        .original_toml()
-        .and_then(|t| t.workspace.as_ref())
-        .and_then(|w| w.dependencies.as_ref())
+    let workspace_package_fields: IndexSet<_> = maybe_pkg
+        .document()
+        .and_then(|d| d.get_ref().get("workspace"))
+        .and_then(|w| w.get_ref().get("package"))
+        .and_then(|p| p.get_ref().as_table())
         .iter()
         .flat_map(|d| d.keys())
         .collect();
 
-    let mut inherited_deps = IndexSet::new();
+    let mut inherited_fields = IndexSet::new();
     for member in ws.members() {
-        let Some(original_toml) = member.manifest().original_toml() else {
-            return Ok(());
-        };
-        inherited_deps.extend(
-            original_toml
-                .build_dependencies()
-                .into_iter()
-                .flatten()
-                .filter(|(_, d)| is_inherited(d))
-                .map(|(name, _)| name),
-        );
-        inherited_deps.extend(
-            original_toml
-                .dependencies
+        inherited_fields.extend(
+            member
+                .manifest()
+                .document()
+                .and_then(|w| w.get_ref().get("package"))
+                .and_then(|p| p.get_ref().as_table())
                 .iter()
-                .flatten()
-                .filter(|(_, d)| is_inherited(d))
-                .map(|(name, _)| name),
+                .flat_map(|d| {
+                    d.iter()
+                        .filter(|(_, v)| {
+                            v.get_ref()
+                                .get("workspace")
+                                .and_then(|w| w.get_ref().as_bool())
+                                == Some(true)
+                        })
+                        .map(|(k, _)| k)
+                }),
         );
-        inherited_deps.extend(
-            original_toml
-                .dev_dependencies()
-                .into_iter()
-                .flatten()
-                .filter(|(_, d)| is_inherited(d))
-                .map(|(name, _)| name),
-        );
-        for target in original_toml.target.iter().flat_map(|t| t.values()) {
-            inherited_deps.extend(
-                target
-                    .build_dependencies()
-                    .into_iter()
-                    .flatten()
-                    .filter(|(_, d)| is_inherited(d))
-                    .map(|(name, _)| name),
-            );
-            inherited_deps.extend(
-                target
-                    .dependencies
-                    .iter()
-                    .flatten()
-                    .filter(|(_, d)| is_inherited(d))
-                    .map(|(name, _)| name),
-            );
-            inherited_deps.extend(
-                target
-                    .dev_dependencies()
-                    .into_iter()
-                    .flatten()
-                    .filter(|(_, d)| is_inherited(d))
-                    .map(|(name, _)| name),
-            );
-        }
     }
 
-    for (i, unused) in workspace_deps.difference(&inherited_deps).enumerate() {
+    for (i, unused) in workspace_package_fields
+        .difference(&inherited_fields)
+        .enumerate()
+    {
         let document = maybe_pkg.document();
         let contents = maybe_pkg.contents();
         let level = lint_level.to_diagnostic_level();
@@ -142,7 +111,7 @@ pub fn unused_workspace_dependencies(
         {
             let mut snippet = Snippet::source(contents).path(&manifest_path);
             if let Some(span) =
-                get_key_value_span(document, &["workspace", "dependencies", unused.as_str()])
+                get_key_value_span(document, &["workspace", "package", unused.as_ref()])
             {
                 snippet = snippet.annotation(AnnotationKind::Primary.span(span.key));
             }
@@ -158,11 +127,11 @@ pub fn unused_workspace_dependencies(
             && let Some(contents) = contents
         {
             let mut help = Group::with_title(
-                Level::HELP.secondary_title("consider removing the unused dependency"),
+                Level::HELP.secondary_title("consider removing the unused field"),
             );
             let mut snippet = Snippet::source(contents).path(&manifest_path);
             if let Some(span) =
-                get_key_value_span(document, &["workspace", "dependencies", unused.as_str()])
+                get_key_value_span(document, &["workspace", "package", unused.as_ref()])
             {
                 snippet = snippet.patch(Patch::new(span.key.start..span.value.end, ""));
             }
@@ -177,8 +146,4 @@ pub fn unused_workspace_dependencies(
     }
 
     Ok(())
-}
-
-fn is_inherited(dep: &InheritableDependency) -> bool {
-    matches!(dep, InheritableDependency::Inherit(_))
 }

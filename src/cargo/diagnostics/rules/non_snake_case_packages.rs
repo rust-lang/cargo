@@ -1,6 +1,5 @@
 use std::path::Path;
 
-use cargo_util_schemas::manifest::InheritableField;
 use cargo_util_schemas::manifest::TomlToolLints;
 use cargo_util_terminal::report::AnnotationKind;
 use cargo_util_terminal::report::Group;
@@ -10,58 +9,55 @@ use cargo_util_terminal::report::Patch;
 use cargo_util_terminal::report::Snippet;
 use tracing::instrument;
 
-use super::STYLE;
+use super::RESTRICTION;
 use crate::CargoResult;
 use crate::GlobalContext;
 use crate::core::Package;
-use crate::lints::Lint;
-use crate::lints::LintLevel;
-use crate::lints::LintLevelSource;
-use crate::lints::get_key_value_span;
-use crate::lints::rel_cwd_manifest_path;
+use crate::diagnostics::Lint;
+use crate::diagnostics::LintLevel;
+use crate::diagnostics::LintLevelSource;
+use crate::diagnostics::get_key_value_span;
+use crate::diagnostics::rel_cwd_manifest_path;
 
 pub static LINT: &Lint = &Lint {
-    name: "redundant_homepage",
-    desc: "`package.homepage` is redundant with another manifest field",
-    primary_group: &STYLE,
-    msrv: Some(super::CARGO_LINTS_MSRV),
+    name: "non_snake_case_packages",
+    desc: "packages should have a snake-case name",
+    primary_group: &RESTRICTION,
+    msrv: None,
     feature_gate: None,
     docs: Some(
         r#"
 ### What it does
 
-Checks if the value of `package.homepage` is already covered by another field.
-
-See also [`package.homepage` reference documentation](manifest.md#the-homepage-field).
+Detect package names that are not snake-case.
 
 ### Why it is bad
 
-When package browsers render each link, a redundant link adds visual noise.
+Having multiple naming styles within a workspace can be confusing.
 
 ### Drawbacks
+
+Users have to mentally translate package names to namespaces in Rust.
 
 ### Example
 
 ```toml
 [package]
-name = "foo"
-homepage = "https://github.com/rust-lang/cargo/"
-repository = "https://github.com/rust-lang/cargo/"
+name = "foo_bar"
 ```
 
 Should be written as:
 
 ```toml
 [package]
-name = "foo"
-repository = "https://github.com/rust-lang/cargo/"
+name = "foo-bar"
 ```
 "#,
     ),
 };
 
 #[instrument(skip_all)]
-pub fn redundant_homepage(
+pub fn non_snake_case_packages(
     pkg: &Package,
     manifest_path: &Path,
     cargo_lints: &TomlToolLints,
@@ -93,24 +89,11 @@ fn lint_package(
 ) -> CargoResult<()> {
     let manifest = pkg.manifest();
 
-    let Some(normalized_pkg) = &manifest.normalized_toml().package else {
+    let original_name = &*manifest.name();
+    let snake_case = heck::ToSnakeCase::to_snake_case(original_name);
+    if snake_case == original_name {
         return Ok(());
-    };
-    let Some(InheritableField::Value(homepage)) = &normalized_pkg.homepage else {
-        return Ok(());
-    };
-
-    let other_field = if let Some(InheritableField::Value(repository)) = &normalized_pkg.repository
-        && repository == homepage
-    {
-        "repository"
-    } else if let Some(InheritableField::Value(documentation)) = &normalized_pkg.documentation
-        && documentation == homepage
-    {
-        "documentation"
-    } else {
-        return Ok(());
-    };
+    }
 
     let document = manifest.document();
     let contents = manifest.contents();
@@ -120,15 +103,13 @@ fn lint_package(
     let mut primary = Group::with_title(level.primary_title(LINT.desc));
     if let Some(document) = document
         && let Some(contents) = contents
-        && let Some(span) = get_key_value_span(document, &["package", "homepage"])
+        && let Some(span) = get_key_value_span(document, &["package", "name"])
     {
-        let mut snippet = Snippet::source(contents)
-            .path(manifest_path)
-            .annotation(AnnotationKind::Primary.span(span.value));
-        if let Some(span) = get_key_value_span(document, &["package", other_field]) {
-            snippet = snippet.annotation(AnnotationKind::Context.span(span.value));
-        }
-        primary = primary.element(snippet);
+        primary = primary.element(
+            Snippet::source(contents)
+                .path(manifest_path)
+                .annotation(AnnotationKind::Primary.span(span.value)),
+        );
     } else {
         primary = primary.element(Origin::path(manifest_path));
     }
@@ -136,22 +117,33 @@ fn lint_package(
     let mut report = vec![primary];
     if let Some(document) = document
         && let Some(contents) = contents
-        && let Some(span) = get_key_value_span(document, &["package", "homepage"])
+        && let Some(span) = get_key_value_span(document, &["package", "name"])
     {
-        let span = if let Some(workspace_span) =
-            get_key_value_span(document, &["package", "homepage", "workspace"])
-        {
-            span.key.start..workspace_span.value.end
-        } else {
-            span.key.start..span.value.end
-        };
         let mut help =
-            Group::with_title(Level::HELP.secondary_title("consider removing `package.homepage`"));
+            Group::with_title(Level::HELP.secondary_title(
+                "to change the package name to snake case, convert `package.name`",
+            ));
         help = help.element(
             Snippet::source(contents)
                 .path(manifest_path)
-                .patch(Patch::new(span, "")),
+                .patch(Patch::new(span.value, format!("\"{snake_case}\""))),
         );
+        report.push(help);
+    } else {
+        let path = pkg.manifest_path();
+        let display_path = path.as_os_str().to_string_lossy();
+        let end = display_path.len() - if display_path.ends_with(".rs") { 3 } else { 0 };
+        let start = path
+            .parent()
+            .map(|p| {
+                let p = p.as_os_str().to_string_lossy();
+                // Account for trailing slash that was removed
+                p.len() + if p.is_empty() { 0 } else { 1 }
+            })
+            .unwrap_or(0);
+        let help = Level::HELP
+            .secondary_title("to change the package name to snake case, convert the file stem")
+            .element(Snippet::source(display_path).patch(Patch::new(start..end, snake_case)));
         report.push(help);
     }
 

@@ -1,8 +1,8 @@
 use std::fmt::Write;
 use std::path::PathBuf;
 
-use cargo::lints::Lint;
-use cargo::lints::LintLevel;
+use cargo::diagnostics::Lint;
+use cargo::diagnostics::LintLevel;
 use cargo::util::command_prelude::{ArgMatchesExt, flag};
 use itertools::Itertools;
 
@@ -20,7 +20,10 @@ fn main() -> anyhow::Result<()> {
     let mut forbid = Vec::new();
 
     let mut lint_docs = String::new();
-    for lint in cargo::lints::LINTS.iter().sorted_by_key(|lint| lint.name) {
+    for lint in cargo::diagnostics::LINTS
+        .iter()
+        .sorted_by_key(|lint| lint.name)
+    {
         if lint.docs.is_some() {
             let sectipn = match lint.primary_group.default_level {
                 LintLevel::Allow => &mut allow,
@@ -72,15 +75,15 @@ fn main() -> anyhow::Result<()> {
 }
 
 fn lint_groups(buf: &mut String) -> anyhow::Result<()> {
-    let (max_name_len, max_desc_len) = cargo::lints::LINT_GROUPS.iter().filter(|g| !g.hidden).fold(
-        (0, 0),
-        |(max_name_len, max_desc_len), group| {
+    let (max_name_len, max_desc_len) = cargo::diagnostics::LINT_GROUPS
+        .iter()
+        .filter(|g| !g.hidden)
+        .fold((0, 0), |(max_name_len, max_desc_len), group| {
             // We add 9 to account for the "cargo::" prefix and backticks
             let name_len = group.name.chars().count() + 9;
             let desc_len = group.desc.chars().count();
             (max_name_len.max(name_len), max_desc_len.max(desc_len))
-        },
-    );
+        });
     let default_level_len = "Default level".chars().count();
     writeln!(buf, "\n")?;
     writeln!(
@@ -95,7 +98,7 @@ fn lint_groups(buf: &mut String) -> anyhow::Result<()> {
         "-".repeat(max_desc_len),
         "-".repeat(default_level_len)
     )?;
-    for group in cargo::lints::LINT_GROUPS.iter() {
+    for group in cargo::diagnostics::LINT_GROUPS.iter() {
         if group.hidden {
             continue;
         }

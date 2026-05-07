@@ -11,9 +11,9 @@ use super::find_lint_or_group;
 use crate::CargoResult;
 use crate::GlobalContext;
 use crate::core::Feature;
-use crate::lints::ManifestFor;
-use crate::lints::get_key_value_span;
-use crate::lints::rel_cwd_manifest_path;
+use crate::diagnostics::ManifestFor;
+use crate::diagnostics::get_key_value_span;
+use crate::diagnostics::rel_cwd_manifest_path;
 
 #[instrument(skip_all)]
 pub fn missing_lints_features(
@@ -29,7 +29,8 @@ pub fn missing_lints_features(
             continue;
         };
 
-        let (_, source, _) = crate::lints::lint::level_priority(name, *default_level, cargo_lints);
+        let (_, source, _) =
+            crate::diagnostics::lint::level_priority(name, *default_level, cargo_lints);
 
         // Only run analysis on user-specified lints
         if !source.is_user_specified() {

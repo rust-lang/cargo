@@ -13,10 +13,10 @@ use crate::CargoResult;
 use crate::GlobalContext;
 use crate::core::Feature;
 use crate::core::Package;
-use crate::lints::Lint;
-use crate::lints::LintLevel;
-use crate::lints::get_key_value_span;
-use crate::lints::rel_cwd_manifest_path;
+use crate::diagnostics::Lint;
+use crate::diagnostics::LintLevel;
+use crate::diagnostics::get_key_value_span;
+use crate::diagnostics::rel_cwd_manifest_path;
 
 /// This lint is only to be used for testing purposes
 pub static LINT: &Lint = &Lint {

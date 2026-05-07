@@ -14,11 +14,11 @@ use super::SUSPICIOUS;
 use super::find_lint_or_group;
 use crate::CargoResult;
 use crate::GlobalContext;
-use crate::lints::Lint;
-use crate::lints::LintLevel;
-use crate::lints::ManifestFor;
-use crate::lints::get_key_value_span;
-use crate::lints::rel_cwd_manifest_path;
+use crate::diagnostics::Lint;
+use crate::diagnostics::LintLevel;
+use crate::diagnostics::ManifestFor;
+use crate::diagnostics::get_key_value_span;
+use crate::diagnostics::rel_cwd_manifest_path;
 
 pub static LINT: &Lint = &Lint {
     name: "unknown_lints",
