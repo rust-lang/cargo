@@ -126,6 +126,7 @@ pub fn resolve(
     version_prefs: &VersionPreferences,
     resolve_version: ResolveVersion,
     gctx: Option<&GlobalContext>,
+    implicit_builtin_deps: &[Dependency],
 ) -> CargoResult<Resolve> {
     let first_version = match gctx {
         Some(config) if config.cli_unstable().direct_minimal_versions => {
@@ -144,6 +145,7 @@ pub fn resolve(
             summaries,
             first_version,
             gctx,
+            &implicit_builtin_deps,
             &mut past_conflicting_activations,
         )?;
         if registry.wait()? {
@@ -196,6 +198,7 @@ fn activate_deps_loop(
     summaries: &[(Summary, ResolveOpts)],
     first_version: Option<VersionOrdering>,
     gctx: Option<&GlobalContext>,
+    builtin_deps: &[Dependency],
     past_conflicting_activations: &mut conflict_cache::ConflictCache,
 ) -> CargoResult<ResolverContext> {
     let mut resolver_ctx = ResolverContext::new();
@@ -212,6 +215,7 @@ fn activate_deps_loop(
             summary.clone(),
             first_version,
             opts,
+            builtin_deps,
         );
         match res {
             Ok(Some((frame, _))) => remaining_deps.push(frame),
@@ -413,6 +417,7 @@ fn activate_deps_loop(
                 candidate,
                 first_version,
                 &opts,
+                builtin_deps,
             );
 
             let successfully_activated = match res {
@@ -625,6 +630,7 @@ fn activate(
     candidate: Summary,
     first_version: Option<VersionOrdering>,
     opts: &ResolveOpts,
+    implicit_builtins: &[Dependency],
 ) -> ActivateResult<Option<(DepsFrame, Duration)>> {
     let candidate_pid = candidate.package_id();
     cx.age += 1;
@@ -672,6 +678,7 @@ fn activate(
         &candidate,
         opts,
         first_version,
+        implicit_builtins,
     )?;
 
     // Record what list of features is active for this package.

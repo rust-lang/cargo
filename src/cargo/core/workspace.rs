@@ -23,7 +23,9 @@ use crate::core::{
 use crate::core::{EitherManifest, Package, SourceId, VirtualManifest};
 use crate::ops;
 use crate::ops::lockfile::LOCKFILE_NAME;
-use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY, PathSource, SourceConfigMap};
+use crate::sources::{
+    BuiltinSource, CRATES_IO_INDEX, CRATES_IO_REGISTRY, PathSource, SourceConfigMap,
+};
 use crate::util::context;
 use crate::util::context::{FeatureUnification, Value};
 use crate::util::edit_distance;
@@ -129,6 +131,9 @@ pub struct Workspace<'gctx> {
 
     /// Local overlay configuration. See [`crate::sources::overlay`].
     local_overlays: HashMap<SourceId, PathBuf>,
+
+    /// Whether this is the standard library's workspace
+    is_std: bool,
 }
 
 // Separate structure for tracking loaded packages (to avoid loading anything
@@ -264,6 +269,7 @@ impl<'gctx> Workspace<'gctx> {
             resolve_publish_time: None,
             custom_metadata: None,
             local_overlays: HashMap::new(),
+            is_std: false,
         }
     }
 
@@ -300,6 +306,30 @@ impl<'gctx> Workspace<'gctx> {
         ws.member_ids.insert(id);
         ws.default_members.push(ws.current_manifest.clone());
         ws.set_resolve_behavior()?;
+        Ok(ws)
+    }
+
+    /// Used for discovering standard library crates, this workspace constructor is very minimal
+    /// TODO: This constructor should be expanded so it can be passed to the main std resolve in
+    /// order to avoid parsing manifests twice
+    pub fn new_standard_library(
+        manifest_path: &Path,
+        gctx: &'gctx GlobalContext,
+    ) -> CargoResult<Workspace<'gctx>> {
+        let mut ws = Workspace::new_default(manifest_path.to_path_buf(), gctx);
+        ws.is_ephemeral = true;
+        ws.is_std = true;
+
+        if manifest_path.is_relative() {
+            bail!(
+                "manifest_path:{:?} is not an absolute path. Please provide an absolute path.",
+                manifest_path
+            )
+        } else {
+            ws.root_manifest = ws.find_root(manifest_path)?;
+        }
+
+        ws.find_members()?;
         Ok(ws)
     }
 
@@ -642,6 +672,19 @@ impl<'gctx> Workspace<'gctx> {
         })
     }
 
+    /// Drops the Workspace and returns its members. Useful for th resolver, which only creates
+    /// an ephemeral workspace to look up the standard library workspace members
+    pub fn into_members(self) -> Vec<Package> {
+        let mut packages = self.packages.packages;
+        self.members
+            .iter()
+            .filter_map(move |path| match packages.remove(path) {
+                Some(MaybePackage::Package(p)) => Some(p),
+                _ => None,
+            })
+            .collect()
+    }
+
     /// Returns an iterator over default packages in this workspace
     pub fn default_members<'a>(&'a self) -> impl Iterator<Item = &'a Package> {
         let packages = &self.packages;
@@ -685,6 +728,15 @@ impl<'gctx> Workspace<'gctx> {
 
     pub fn is_ephemeral(&self) -> bool {
         self.is_ephemeral
+    }
+
+    pub fn is_std(&self) -> bool {
+        self.is_std
+    }
+
+    pub fn set_is_std(&mut self, is_std: bool) -> &mut Workspace<'gctx> {
+        self.is_std = is_std;
+        self
     }
 
     pub fn require_optional_deps(&self) -> bool {
@@ -1270,6 +1322,26 @@ impl<'gctx> Workspace<'gctx> {
                 MaybePackage::Virtual(_) => continue,
             };
             let src = PathSource::preload_with(pkg, self.gctx);
+            registry.add_preloaded(Box::new(src));
+        }
+    }
+
+    /// Similar to the regular `preload` method, but preloads packages as `builtins` in order to
+    /// satisfy builtin dependencies later.
+    pub fn preload_builtins(&self, registry: &mut PackageRegistry<'gctx>) {
+        for pkg in self.packages.packages.values() {
+            let mut pkg = match *pkg {
+                MaybePackage::Package(ref p) => p.clone(),
+                MaybePackage::Virtual(_) => continue,
+            };
+            let summary = pkg
+                .summary()
+                .clone()
+                .to_opaque_builtin_summary()
+                .expect("workspace members should be path sources");
+            *pkg.manifest_mut().summary_mut() = summary;
+            let src =
+                BuiltinSource::preload_with(pkg, self.gctx).expect("builtin summary can be built");
             registry.add_preloaded(Box::new(src));
         }
     }

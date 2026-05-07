@@ -24,6 +24,7 @@ use crate::util::LocalPollAdapter;
 use crate::util::closest_msg;
 use crate::util::errors::CargoResult;
 use crate::util::interning::{INTERNED_DEFAULT, InternedString};
+use crate::util::network::PollExt;
 
 use anyhow::Context as _;
 use std::cell::RefCell;
@@ -264,6 +265,7 @@ impl<'a, T: Registry> RegistryQueryer<'a, T> {
         candidate: &Summary,
         opts: &ResolveOpts,
         first_version: Option<VersionOrdering>,
+        injected_builtins: &[Dependency],
     ) -> ActivateResult<Rc<(HashSet<InternedString>, Rc<Vec<DepInfo>>)>> {
         // if we have calculated a result before, then we can just return it,
         // as it is a "pure" query of its arguments.
@@ -300,6 +302,19 @@ impl<'a, T: Registry> RegistryQueryer<'a, T> {
                 })),
             })
             .collect::<CargoResult<Vec<DepInfo>>>()?;
+
+        if !candidate.source_id().is_builtin() {
+            for dep in injected_builtins {
+                // TODO: This kicks off multiple queries per package searched. What's the
+                // performance impact?
+                let candidates = self
+                    .query(dep, first_version)
+                    .expect("Builtin packages should be immediately available")
+                    .expect("Builtin names should be valid by this point");
+
+                deps.push((dep.clone(), candidates, Rc::new(Default::default())));
+            }
+        }
 
         // Attempt to resolve dependencies with fewer candidates before trying
         // dependencies with more candidates. This way if the dependency with

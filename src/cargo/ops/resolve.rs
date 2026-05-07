@@ -63,6 +63,8 @@ use crate::core::PackageIdSpecQuery;
 use crate::core::PackageSet;
 use crate::core::SourceId;
 use crate::core::Workspace;
+use crate::core::compiler::standard_lib::detect_sysroot_src_path;
+use crate::core::compiler::standard_lib::std_crates;
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::registry::{LockedPatchDependency, PackageRegistry};
 use crate::core::resolver::features::{
@@ -85,6 +87,7 @@ use cargo_util_terminal::report::Group;
 use cargo_util_terminal::report::Level;
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
+use std::path::PathBuf;
 use std::rc::Rc;
 use tracing::{debug, trace};
 
@@ -133,7 +136,15 @@ version. This may also occur with an optional dependency that is not enabled.";
 /// `package`, which don't specify any options or features.
 pub fn resolve_ws<'a>(ws: &Workspace<'a>, dry_run: bool) -> CargoResult<(PackageSet<'a>, Resolve)> {
     let mut registry = ws.package_registry()?;
-    let resolve = resolve_with_registry(ws, &mut registry, dry_run)?;
+    //TODO: This is overkill just to get the sysroot
+    let builtins_root = match (ws.is_std(), &ws.gctx().cli_unstable().build_std) {
+        (false, Some(_)) => {
+            let target_data = RustcTargetData::new(ws, &[])?;
+            Some(&detect_sysroot_src_path(&target_data)?)
+        }
+        (_, _) => None,
+    };
+    let resolve = resolve_with_registry(ws, &mut registry, dry_run, builtins_root)?;
     let packages = get_resolved_packages(&resolve, registry)?;
     Ok((packages, resolve))
 }
@@ -173,6 +184,11 @@ pub fn resolve_ws_with_opts<'gctx>(
         .cloned()
         .collect();
     let specs = &specs[..];
+    let builtins_root = match (ws.is_std(), &ws.gctx().cli_unstable().build_std) {
+        (false, Some(_)) => Some(detect_sysroot_src_path(&target_data)?),
+        _ => None,
+    };
+    let builtins_root = builtins_root.as_ref();
     let mut registry = ws.package_registry()?;
     let (resolve, resolved_with_overrides) = if ws.ignore_lock() {
         let add_patches = true;
@@ -186,13 +202,14 @@ pub fn resolve_ws_with_opts<'gctx>(
             None,
             specs,
             add_patches,
+            builtins_root,
         )?;
         ops::print_lockfile_changes(ws, None, &resolved_with_overrides, &mut registry)?;
         (resolve, resolved_with_overrides)
     } else if ws.require_optional_deps() {
         // First, resolve the root_package's *listed* dependencies, as well as
         // downloading and updating all remotes and such.
-        let resolve = resolve_with_registry(ws, &mut registry, dry_run)?;
+        let resolve = resolve_with_registry(ws, &mut registry, dry_run, builtins_root)?;
         // No need to add patches again, `resolve_with_registry` has done it.
         let add_patches = false;
 
@@ -244,6 +261,7 @@ pub fn resolve_ws_with_opts<'gctx>(
             None,
             specs,
             add_patches,
+            builtins_root,
         )?;
         (Some(resolve), resolved_with_overrides)
     } else {
@@ -258,6 +276,7 @@ pub fn resolve_ws_with_opts<'gctx>(
             None,
             specs,
             add_patches,
+            builtins_root,
         )?;
         // Skipping `print_lockfile_changes` as there are cases where this prints irrelevant
         // information
@@ -352,6 +371,7 @@ fn resolve_with_registry<'gctx>(
     ws: &Workspace<'gctx>,
     registry: &mut PackageRegistry<'gctx>,
     dry_run: bool,
+    builtins_root: Option<&PathBuf>,
 ) -> CargoResult<Resolve> {
     let prev = ops::load_pkg_lockfile(ws)?;
     let mut resolve = resolve_with_previous(
@@ -363,6 +383,7 @@ fn resolve_with_registry<'gctx>(
         None,
         &[],
         true,
+        builtins_root,
     )?;
 
     let print = if !ws.is_ephemeral() && ws.require_optional_deps() {
@@ -410,6 +431,7 @@ pub fn resolve_with_previous<'gctx>(
     keep_previous: Option<Keep<'_>>,
     specs: &[PackageIdSpec],
     register_patches: bool,
+    builtins_root: Option<&PathBuf>,
 ) -> CargoResult<Resolve> {
     // We only want one Cargo at a time resolving a crate graph since this can
     // involve a lot of frobbing of the global caches.
@@ -427,9 +449,24 @@ pub fn resolve_with_previous<'gctx>(
         registry.add_sources(Some(member.package_id().source_id()))?;
     }
 
+    let implicit_builtin_deps = if let Some(p) = builtins_root {
+        let builtin_ws = Workspace::new_standard_library(&p.join("Cargo.toml"), ws.gctx())?;
+        // As above, preloading packages avoids parsing manifests multiple times
+        builtin_ws.preload_builtins(registry);
+        let summaries = get_builtin_summaries(builtin_ws)?;
+        summaries
+            .into_iter()
+            .map(|s| {
+                registry.add_sources(Some(s.package_id().source_id()))?;
+                Dependency::new_for_builtin_summary(s)
+            })
+            .collect::<CargoResult<_>>()?
+    } else {
+        vec![]
+    };
+
     // Try to keep all from previous resolve if no instruction given.
     let keep_previous = keep_previous.unwrap_or(&|_| true);
-
     // While registering patches, we will record preferences for particular versions
     // of various packages.
     let mut version_prefs = VersionPreferences::default();
@@ -509,6 +546,7 @@ pub fn resolve_with_previous<'gctx>(
         &version_prefs,
         ResolveVersion::with_rust_version(ws.lowest_rust_version()),
         Some(ws.gctx()),
+        &implicit_builtin_deps,
     )?;
 
     let patches = registry.patches().values().flat_map(|v| v.iter());
@@ -525,6 +563,31 @@ pub fn resolve_with_previous<'gctx>(
     let mut deferred = gctx.deferred_global_last_use()?;
     deferred.save_no_error(gctx);
     Ok(resolved)
+}
+
+fn get_builtin_summaries<'gctx>(ws: Workspace<'gctx>) -> CargoResult<Vec<Summary>> {
+    // Test is injected during unit generation
+    let crates = ws
+        .gctx()
+        .cli_unstable()
+        .build_std
+        .as_ref()
+        .expect("build-std is enabled");
+    let dep_names: HashSet<_> = std_crates(
+        crates,
+        "std", // Default to std even if all targets don't need it - we'll work that out
+        // during unit generation
+        &[], // Units are only used to work out if test needs to be inserted, which we handle during
+             // unit generation
+    )
+    .into_iter()
+    .collect();
+
+    ws.into_members()
+        .into_iter()
+        .filter(|p| dep_names.contains(p.name().as_str()))
+        .map(|p| p.summary().clone().to_opaque_builtin_summary())
+        .collect::<CargoResult<_>>()
 }
 
 /// Read the `paths` configuration variable to discover all path overrides that
