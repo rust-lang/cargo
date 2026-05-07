@@ -4,6 +4,7 @@ use crate::prelude::*;
 use crate::utils::cargo_process;
 use cargo_test_support::registry::{RegistryBuilder, Response};
 use cargo_test_support::str;
+use std::sync::{Arc, Mutex};
 
 const SEARCH_API_RESPONSE: &[u8] = br#"
 {
@@ -208,6 +209,91 @@ fn auth_required() {
 
     cargo_process("search postgres")
         .replace_crates_io(server.index_url())
+        .with_stdout_data(SEARCH_RESULTS)
+        .run();
+}
+
+#[cargo_test]
+fn auth_required_cross_origin_redirect_does_not_forward_auth() {
+    let redirected_auth = Arc::new(Mutex::new(Vec::new()));
+    let redirected_auth_cb = redirected_auth.clone();
+    let target = RegistryBuilder::new()
+        .alternative_named("redirect-target")
+        .no_configure_registry()
+        .no_configure_token()
+        .http_api()
+        .add_responder("/api/v1/crates", move |req, _| {
+            redirected_auth_cb
+                .lock()
+                .unwrap()
+                .push(req.authorization.clone());
+            if req.authorization.is_some() {
+                Response {
+                    code: 403,
+                    headers: vec![],
+                    body: b"unexpected auth on redirected request".to_vec(),
+                }
+            } else {
+                Response {
+                    code: 200,
+                    headers: vec![],
+                    body: SEARCH_API_RESPONSE.to_vec(),
+                }
+            }
+        })
+        .build();
+
+    let initial_auth = Arc::new(Mutex::new(Vec::new()));
+    let initial_auth_cb = initial_auth.clone();
+    let redirect_to = format!("{}api/v1/crates?q=postgres&per_page=10", target.api_url());
+    let server = RegistryBuilder::new()
+        .http_api()
+        .auth_required()
+        .add_responder("/api/v1/crates", move |req, _| {
+            initial_auth_cb
+                .lock()
+                .unwrap()
+                .push(req.authorization.clone());
+            Response {
+                code: 302,
+                headers: vec![format!("Location: {redirect_to}")],
+                body: Vec::new(),
+            }
+        })
+        .build();
+
+    cargo_process("search postgres")
+        .replace_crates_io(server.index_url())
+        .with_stdout_data(SEARCH_RESULTS)
+        .run();
+
+    let initial_auth = initial_auth.lock().unwrap();
+    assert!(initial_auth[0].is_some());
+    assert_eq!(&*redirected_auth.lock().unwrap(), &[None]);
+}
+
+#[cargo_test]
+fn follows_redirect() {
+    let _registry = RegistryBuilder::new()
+        .http_api()
+        .add_responder("/api/v1/crates", |req, _server| {
+            let query = req.url.query().unwrap_or("");
+            let redirect_url = format!("/api/v1/crates/redirected?{}", query);
+            Response {
+                code: 302,
+                headers: vec![format!("Location: {}", redirect_url)],
+                body: vec![],
+            }
+        })
+        .add_responder("/api/v1/crates/redirected", |_, _| Response {
+            code: 200,
+            headers: vec![],
+            body: SEARCH_API_RESPONSE.to_vec(),
+        })
+        .build();
+
+    cargo_process("search postgres")
+        .replace_crates_io(&_registry.index_url())
         .with_stdout_data(SEARCH_RESULTS)
         .run();
 }
