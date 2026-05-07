@@ -304,6 +304,7 @@ impl BuildTargetConfig {
 /// ```toml
 /// [resolver]
 /// incompatible-rust-versions = "fallback"
+/// incompatible-publish-age = "deny"
 /// feature-unification = "workspace"
 /// lockfile-path = "my/Cargo.lock"
 /// ```
@@ -311,6 +312,7 @@ impl BuildTargetConfig {
 #[serde(rename_all = "kebab-case")]
 pub struct CargoResolverConfig {
     pub incompatible_rust_versions: Option<IncompatibleRustVersions>,
+    pub incompatible_publish_age: Option<IncompatiblePublishAge>,
     pub feature_unification: Option<FeatureUnification>,
     pub lockfile_path: Option<ConfigRelativePath>,
 }
@@ -320,6 +322,13 @@ pub struct CargoResolverConfig {
 pub enum IncompatibleRustVersions {
     Allow,
     Fallback,
+}
+
+#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum IncompatiblePublishAge {
+    Allow,
+    Deny,
 }
 
 #[derive(Copy, Clone, Debug, Deserialize)]

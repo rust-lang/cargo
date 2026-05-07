@@ -167,7 +167,7 @@ fn warns_on_resolver_config_without_flag() {
 
     p.cargo("generate-lockfile")
         .with_stderr_data(str![[r#"
-[WARNING] unused config key `resolver.incompatible-publish-age` in `[ROOT]/foo/.cargo/config.toml`
+[WARNING] ignoring `resolver.incompatible-publish-age` without `-Zmin-publish-age`
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 
@@ -268,7 +268,6 @@ fn incompatible_publish_age_allow() {
         .masquerade_as_nightly_cargo(&["min-publish-age"])
         .env("__CARGO_TEST_INVOCATION_TIME", NOW)
         .with_stderr_data(str![[r#"
-[WARNING] unused config key `resolver.incompatible-publish-age` in `[ROOT]/foo/.cargo/config.toml`
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 
@@ -332,7 +331,6 @@ fn incompatible_publish_age_deny() {
         .masquerade_as_nightly_cargo(&["min-publish-age"])
         .env("__CARGO_TEST_INVOCATION_TIME", NOW)
         .with_stderr_data(str![[r#"
-[WARNING] unused config key `resolver.incompatible-publish-age` in `[ROOT]/foo/.cargo/config.toml`
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 
@@ -446,7 +444,6 @@ fn report_unchanged_too_new_version() {
         .masquerade_as_nightly_cargo(&["min-publish-age"])
         .env("__CARGO_TEST_INVOCATION_TIME", NOW)
         .with_stderr_data(str![[r#"
-[WARNING] unused config key `resolver.incompatible-publish-age` in `[ROOT]/foo/.cargo/config.toml`
 [UPDATING] `dummy-registry` index
 [LOCKING] 0 packages to latest compatible versions
 [NOTE] to see how you depend on a package, run `cargo tree --invert <dep>@<ver>`
@@ -498,7 +495,6 @@ fn report_rust_version_note_over_too_new_note() {
         .masquerade_as_nightly_cargo(&["min-publish-age"])
         .env("__CARGO_TEST_INVOCATION_TIME", NOW)
         .with_stderr_data(str![[r#"
-[WARNING] unused config key `resolver.incompatible-publish-age` in `[ROOT]/foo/.cargo/config.toml`
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [ADDING] bar v1.1.0 (requires Rust 1.99.0)

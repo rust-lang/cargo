@@ -351,6 +351,12 @@ impl<'gctx> Workspace<'gctx> {
                 .warn("ignoring `resolver.feature-unification` without `-Zfeature-unification`")?;
         };
 
+        if !self.gctx().cli_unstable().min_publish_age && config.incompatible_publish_age.is_some() {
+            self.gctx().shell().warn(
+                "ignoring `resolver.incompatible-publish-age` without `-Zmin-publish-age`",
+            )?;
+        }
+
         if let Some(lockfile_path) = config.lockfile_path {
             // Reserve the ability to add templates in the future.
             let replacements: [(&str, &str); 0] = [];
