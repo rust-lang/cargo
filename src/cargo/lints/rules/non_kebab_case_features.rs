@@ -9,13 +9,13 @@ use cargo_util_terminal::report::Patch;
 use cargo_util_terminal::report::Snippet;
 use tracing::instrument;
 
+use super::RESTRICTION;
 use crate::CargoResult;
 use crate::GlobalContext;
 use crate::core::Package;
 use crate::lints::Lint;
 use crate::lints::LintLevel;
 use crate::lints::LintLevelSource;
-use crate::lints::RESTRICTION;
 use crate::lints::get_key_value_span;
 use crate::lints::rel_cwd_manifest_path;
 

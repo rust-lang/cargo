@@ -6,14 +6,14 @@ use cargo_util_terminal::report::Origin;
 use cargo_util_terminal::report::Snippet;
 use tracing::instrument;
 
+use super::LINT_GROUPS;
+use super::LINTS;
+use super::SUSPICIOUS;
 use crate::CargoResult;
 use crate::GlobalContext;
-use crate::lints::LINT_GROUPS;
-use crate::lints::LINTS;
 use crate::lints::Lint;
 use crate::lints::LintLevel;
 use crate::lints::ManifestFor;
-use crate::lints::SUSPICIOUS;
 use crate::lints::get_key_value_span;
 
 pub static LINT: &Lint = &Lint {

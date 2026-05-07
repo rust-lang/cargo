@@ -8,13 +8,13 @@ use cargo_util_terminal::report::Patch;
 use cargo_util_terminal::report::Snippet;
 use tracing::instrument;
 
+use super::SUSPICIOUS;
 use crate::CargoResult;
 use crate::GlobalContext;
 use crate::core::Package;
 use crate::core::Workspace;
 use crate::lints::Lint;
 use crate::lints::LintLevel;
-use crate::lints::SUSPICIOUS;
 use crate::lints::rel_cwd_manifest_path;
 
 pub static LINT: &Lint = &Lint {

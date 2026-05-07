@@ -13,6 +13,7 @@ use cargo_util_terminal::report::Snippet;
 use toml::de::DeValue;
 use tracing::instrument;
 
+use super::PEDANTIC;
 use crate::CargoResult;
 use crate::GlobalContext;
 use crate::core::Manifest;
@@ -22,7 +23,6 @@ use crate::core::Workspace;
 use crate::lints::Lint;
 use crate::lints::LintLevel;
 use crate::lints::LintLevelSource;
-use crate::lints::PEDANTIC;
 use crate::lints::get_key_value;
 use crate::lints::rel_cwd_manifest_path;
 use crate::util::OptVersionReq;
