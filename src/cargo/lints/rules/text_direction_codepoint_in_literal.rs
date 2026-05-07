@@ -14,10 +14,10 @@ use toml_parser::parser::EventKind;
 use toml_parser::parser::EventReceiver;
 use tracing::instrument;
 
+use super::CORRECTNESS;
 use crate::CargoResult;
 use crate::GlobalContext;
 use crate::core::MaybePackage;
-use crate::lints::CORRECTNESS;
 use crate::lints::Lint;
 use crate::lints::LintLevel;
 use crate::lints::ManifestFor;
