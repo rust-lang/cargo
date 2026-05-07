@@ -305,15 +305,6 @@ impl AsIndex for usize {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct LintGroup {
-    pub name: &'static str,
-    pub default_level: LintLevel,
-    pub desc: &'static str,
-    pub feature_gate: Option<&'static Feature>,
-    pub hidden: bool,
-}
-
 pub static LINT_GROUPS: &[LintGroup] = &[
     COMPLEXITY,
     CORRECTNESS,
@@ -565,6 +556,15 @@ fn level_priority(
     } else {
         (default_level, LintLevelSource::Default, 0)
     }
+}
+
+#[derive(Clone, Debug)]
+pub struct LintGroup {
+    pub name: &'static str,
+    pub default_level: LintLevel,
+    pub desc: &'static str,
+    pub feature_gate: Option<&'static Feature>,
+    pub hidden: bool,
 }
 
 #[cfg(test)]
