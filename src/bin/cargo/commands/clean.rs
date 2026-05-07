@@ -1,7 +1,10 @@
 use crate::command_prelude::*;
 use crate::util::cache_lock::CacheLockMode;
+use crate::util::time_span::parse_time_span;
+
 use cargo::core::gc::Gc;
-use cargo::core::gc::{GcOpts, parse_human_size, parse_time_span};
+use cargo::core::gc::GcOpts;
+use cargo::core::gc::parse_human_size;
 use cargo::core::global_cache_tracker::GlobalCacheTracker;
 use cargo::ops::CleanContext;
 use cargo::ops::{self, CleanOptions};
