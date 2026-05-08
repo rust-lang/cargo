@@ -47,7 +47,6 @@ im-a-teapot = "warn"
     foo.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints", "test-dummy-unstable"])
         .with_stderr_data(str![[r#"
-[WARNING] workspace (manifest) generated 1 warning
 [WARNING] unknown lint: `im-a-teapot`
   --> Cargo.toml:12:1
    |

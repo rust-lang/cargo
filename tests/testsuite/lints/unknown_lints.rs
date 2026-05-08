@@ -24,7 +24,6 @@ this-lint-does-not-exist = "warn"
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] workspace (manifest) generated 1 warning
 [WARNING] unknown lint: `this-lint-does-not-exist`
  --> Cargo.toml:9:1
   |
@@ -80,7 +79,6 @@ workspace = true
   |
   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
 [WARNING] workspace (manifest) generated 1 warning
-[WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.0.1 ([ROOT]/foo/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 

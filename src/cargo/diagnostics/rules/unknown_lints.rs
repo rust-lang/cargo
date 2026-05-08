@@ -73,7 +73,6 @@ pub fn unknown_lints(
     let level = lint_level.to_diagnostic_level();
     let mut emitted_source = None;
     for lint_name in unknown_lints {
-        stats.record_lint(lint_level);
         let title = format!("{}: `{lint_name}`", LINT.desc);
         let underscore_lint_name = lint_name.replace("-", "_");
         let matching = if let Some(lint) = LINTS.iter().find(|l| l.name == underscore_lint_name) {
@@ -119,6 +118,7 @@ pub fn unknown_lints(
         }
         report.push(group);
 
+        stats.record_lint(lint_level);
         gctx.shell().print_report(&report, lint_level.force())?;
     }
 

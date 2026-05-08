@@ -92,8 +92,6 @@ pub fn text_direction_codepoint_in_comment(
     let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
     let mut emitted_source = None;
     for event in events {
-        stats.record_lint(lint_level);
-
         let token_span = event.token.span();
         let token_span = token_span.start()..token_span.end();
         let mut snippet = Snippet::source(contents).path(&manifest_path).annotation(
@@ -115,6 +113,8 @@ pub fn text_direction_codepoint_in_comment(
         }
 
         let report = [primary];
+
+        stats.record_lint(lint_level);
         gctx.shell().print_report(&report, lint_level.force())?;
     }
 

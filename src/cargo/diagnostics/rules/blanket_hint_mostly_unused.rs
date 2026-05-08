@@ -121,7 +121,6 @@ pub fn blanket_hint_mostly_unused(
     }
 
     for (i, (path, show_per_pkg_suggestion)) in paths.iter().enumerate() {
-        stats.record_lint(lint_level);
         let title = "`hint-mostly-unused` is being blanket applied to all dependencies";
         let help_txt =
             "scope `hint-mostly-unused` to specific packages with a lot of unused object code";
@@ -176,6 +175,7 @@ pub fn blanket_hint_mostly_unused(
         // The primary group should always be first
         report.insert(0, primary_group);
 
+        stats.record_lint(lint_level);
         gctx.shell().print_report(&report, lint_level.force())?;
     }
 
