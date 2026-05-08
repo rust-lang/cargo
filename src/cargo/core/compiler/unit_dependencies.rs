@@ -330,17 +330,23 @@ fn compute_deps(
                     .get(&unit.kind.for_target(dep_lib))
                     .expect("Std was resolved for all requested targets")
                     .iter()
-                    .find(|&u| u.pkg.name() == dep_pkg_id.name())
-                    .expect("libstd was resolved with all possible builtin deps as roots");
-                UnitDep {
-                    unit: unit.clone(),
-                    unit_for: UnitFor::new_normal(unit.kind),
-                    extern_crate_name: unit.pkg.name(),
-                    dep_name: None,
-                    public: true,
-                    noprelude: true,
-                    nounused: true,
-                    manifest_deps: Unhashed(None),
+                    .find(|&u| u.pkg.name() == dep_pkg_id.name());
+                if let Some(unit) = unit {
+                    UnitDep {
+                        unit: unit.clone(),
+                        unit_for: UnitFor::new_normal(unit.kind),
+                        extern_crate_name: unit.pkg.name(),
+                        dep_name: None,
+                        public: true,
+                        noprelude: true,
+                        nounused: true,
+                        manifest_deps: Unhashed(None),
+                    }
+                } else {
+                    // In this case, a builtin crate is present as an inferred dependency but std
+                    // wasn't resolved with it. This is probably because the target does not default
+                    // to all std crates, but that isn't known at resolve time.
+                    continue;
                 }
             } else {
                 new_unit_dep(
