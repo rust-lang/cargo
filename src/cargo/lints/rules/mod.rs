@@ -1,6 +1,7 @@
 mod blanket_hint_mostly_unused;
 mod im_a_teapot;
 mod implicit_minimum_version_req;
+mod missing_lints_features;
 mod missing_lints_inheritance;
 mod non_kebab_case_bins;
 mod non_kebab_case_features;
@@ -20,6 +21,7 @@ pub use blanket_hint_mostly_unused::blanket_hint_mostly_unused;
 pub use im_a_teapot::check_im_a_teapot;
 pub use implicit_minimum_version_req::implicit_minimum_version_req_pkg;
 pub use implicit_minimum_version_req::implicit_minimum_version_req_ws;
+pub use missing_lints_features::missing_lints_features;
 pub use missing_lints_inheritance::missing_lints_inheritance;
 pub use non_kebab_case_bins::non_kebab_case_bins;
 pub use non_kebab_case_features::non_kebab_case_features;
@@ -30,13 +32,14 @@ pub use redundant_homepage::redundant_homepage;
 pub use redundant_readme::redundant_readme;
 pub use text_direction_codepoint_in_comment::text_direction_codepoint_in_comment;
 pub use text_direction_codepoint_in_literal::text_direction_codepoint_in_literal;
-pub use unknown_lints::output_unknown_lints;
+pub use unknown_lints::unknown_lints;
 pub use unused_dependencies::unused_build_dependencies_no_build_rs;
 pub use unused_workspace_dependencies::unused_workspace_dependencies;
 pub use unused_workspace_package_fields::unused_workspace_package_fields;
 
 use super::LintGroup;
 use super::LintLevel;
+use crate::core::Feature;
 
 pub static LINTS: &[&crate::lints::Lint] = &[
     blanket_hint_mostly_unused::LINT,
@@ -150,6 +153,22 @@ const TEST_DUMMY_UNSTABLE: LintGroup = LintGroup {
     hidden: true,
 };
 
+fn find_lint_or_group<'a>(
+    name: &str,
+) -> Option<(&'static str, &LintLevel, &Option<&'static Feature>)> {
+    if let Some(lint) = LINTS.iter().find(|l| l.name == name) {
+        Some((
+            lint.name,
+            &lint.primary_group.default_level,
+            &lint.feature_gate,
+        ))
+    } else if let Some(group) = LINT_GROUPS.iter().find(|g| g.name == name) {
+        Some((group.name, &group.default_level, &group.feature_gate))
+    } else {
+        None
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use itertools::Itertools;
@@ -213,6 +232,11 @@ mod tests {
             let entry = entry.unwrap();
             let path = entry.path();
             if path.ends_with("mod.rs") {
+                continue;
+            }
+            let content = std::fs::read_to_string(&path).unwrap();
+            if !content.contains("LINT") {
+                // diagnostic
                 continue;
             }
             let lint_name = path.file_stem().unwrap().to_string_lossy();

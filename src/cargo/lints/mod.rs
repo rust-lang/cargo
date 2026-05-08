@@ -1,15 +1,8 @@
-use std::path::Path;
-
 use cargo_util_schemas::manifest::RustVersion;
 use cargo_util_schemas::manifest::TomlToolLints;
-use cargo_util_terminal::report::AnnotationKind;
-use cargo_util_terminal::report::Group;
-use cargo_util_terminal::report::Level;
-use cargo_util_terminal::report::Snippet;
 
 use crate::core::Workspace;
-use crate::core::{Edition, Feature, Features, MaybePackage, Package};
-use crate::{CargoResult, GlobalContext};
+use crate::core::{Edition, Features, MaybePackage, Package};
 
 mod lint;
 mod report;
@@ -82,118 +75,4 @@ impl<'a> From<(&'a Workspace<'a>, &'a MaybePackage)> for ManifestFor<'a> {
     fn from((ws, maybe_pkg): (&'a Workspace<'a>, &'a MaybePackage)) -> ManifestFor<'a> {
         ManifestFor::Workspace { ws, maybe_pkg }
     }
-}
-
-pub fn analyze_cargo_lints_table(
-    manifest: ManifestFor<'_>,
-    manifest_path: &Path,
-    cargo_lints: &TomlToolLints,
-    error_count: &mut usize,
-    gctx: &GlobalContext,
-) -> CargoResult<()> {
-    let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
-    let mut unknown_lints = Vec::new();
-    for lint_name in cargo_lints.keys().map(|name| name) {
-        let Some((name, default_level, feature_gate)) = find_lint_or_group(lint_name) else {
-            unknown_lints.push(lint_name);
-            continue;
-        };
-
-        let (_, source, _) = lint::level_priority(name, *default_level, cargo_lints);
-
-        // Only run analysis on user-specified lints
-        if !source.is_user_specified() {
-            continue;
-        }
-
-        // Only run this on lints that are gated by a feature
-        if let Some(feature_gate) = feature_gate
-            && !manifest.unstable_features().is_enabled(feature_gate)
-        {
-            report_feature_not_enabled(
-                name,
-                feature_gate,
-                &manifest,
-                &manifest_path,
-                error_count,
-                gctx,
-            )?;
-        }
-    }
-
-    rules::output_unknown_lints(
-        unknown_lints,
-        &manifest,
-        &manifest_path,
-        cargo_lints,
-        error_count,
-        gctx,
-    )?;
-
-    Ok(())
-}
-
-fn find_lint_or_group<'a>(
-    name: &str,
-) -> Option<(&'static str, &LintLevel, &Option<&'static Feature>)> {
-    if let Some(lint) = LINTS.iter().find(|l| l.name == name) {
-        Some((
-            lint.name,
-            &lint.primary_group.default_level,
-            &lint.feature_gate,
-        ))
-    } else if let Some(group) = LINT_GROUPS.iter().find(|g| g.name == name) {
-        Some((group.name, &group.default_level, &group.feature_gate))
-    } else {
-        None
-    }
-}
-
-fn report_feature_not_enabled(
-    lint_name: &str,
-    feature_gate: &Feature,
-    manifest: &ManifestFor<'_>,
-    manifest_path: &str,
-    error_count: &mut usize,
-    gctx: &GlobalContext,
-) -> CargoResult<()> {
-    let dash_feature_name = feature_gate.name().replace("_", "-");
-    let title = format!("use of unstable lint `{}`", lint_name);
-    let label = format!(
-        "this is behind `{}`, which is not enabled",
-        dash_feature_name
-    );
-    let help = format!(
-        "consider adding `cargo-features = [\"{}\"]` to the top of the manifest",
-        dash_feature_name
-    );
-
-    let key_path = match manifest {
-        ManifestFor::Package(_) => &["lints", "cargo", lint_name][..],
-        ManifestFor::Workspace { .. } => &["workspace", "lints", "cargo", lint_name][..],
-    };
-
-    let mut error = Group::with_title(Level::ERROR.primary_title(title));
-
-    if let Some(document) = manifest.document()
-        && let Some(contents) = manifest.contents()
-    {
-        let Some(span) = get_key_value_span(document, key_path) else {
-            // This lint is handled by either package or workspace lint.
-            return Ok(());
-        };
-
-        error = error.element(
-            Snippet::source(contents)
-                .path(manifest_path)
-                .annotation(AnnotationKind::Primary.span(span.key).label(label)),
-        )
-    }
-
-    let report = [error.element(Level::HELP.message(help))];
-
-    *error_count += 1;
-    gctx.shell().print_report(&report, true)?;
-
-    Ok(())
 }

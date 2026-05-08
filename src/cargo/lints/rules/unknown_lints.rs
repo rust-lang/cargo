@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use cargo_util_schemas::manifest::TomlToolLints;
 use cargo_util_terminal::report::AnnotationKind;
 use cargo_util_terminal::report::Group;
@@ -9,12 +11,14 @@ use tracing::instrument;
 use super::LINT_GROUPS;
 use super::LINTS;
 use super::SUSPICIOUS;
+use super::find_lint_or_group;
 use crate::CargoResult;
 use crate::GlobalContext;
 use crate::lints::Lint;
 use crate::lints::LintLevel;
 use crate::lints::ManifestFor;
 use crate::lints::get_key_value_span;
+use crate::lints::rel_cwd_manifest_path;
 
 pub static LINT: &Lint = &Lint {
     name: "unknown_lints",
@@ -43,17 +47,26 @@ this-lint-does-not-exist = "warn"
 };
 
 #[instrument(skip_all)]
-pub fn output_unknown_lints(
-    unknown_lints: Vec<&String>,
-    manifest: &ManifestFor<'_>,
-    manifest_path: &str,
+pub fn unknown_lints(
+    manifest: ManifestFor<'_>,
+    manifest_path: &Path,
     cargo_lints: &TomlToolLints,
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let (lint_level, source) = manifest.lint_level(cargo_lints, LINT);
+
     if lint_level == LintLevel::Allow {
         return Ok(());
+    }
+
+    let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
+    let mut unknown_lints = Vec::new();
+    for lint_name in cargo_lints.keys().map(|name| name) {
+        let Some(_) = find_lint_or_group(lint_name) else {
+            unknown_lints.push(lint_name);
+            continue;
+        };
     }
 
     let level = lint_level.to_diagnostic_level();
@@ -91,11 +104,11 @@ pub fn output_unknown_lints(
             };
             group = group.element(
                 Snippet::source(contents)
-                    .path(manifest_path)
+                    .path(&manifest_path)
                     .annotation(AnnotationKind::Primary.span(span.key)),
             );
         } else {
-            group = group.element(Origin::path(manifest_path));
+            group = group.element(Origin::path(&manifest_path));
         }
 
         if emitted_source.is_none() {
