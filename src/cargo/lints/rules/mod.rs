@@ -232,6 +232,11 @@ mod tests {
             if path.ends_with("mod.rs") {
                 continue;
             }
+            let content = std::fs::read_to_string(&path).unwrap();
+            if !content.contains("LINT") {
+                // diagnostic
+                continue;
+            }
             let lint_name = path.file_stem().unwrap().to_string_lossy();
             assert!(expected.insert(lint_name.into()), "duplicate lint found");
         }
