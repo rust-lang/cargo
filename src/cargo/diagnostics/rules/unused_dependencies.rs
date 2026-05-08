@@ -14,6 +14,7 @@ use super::STYLE;
 use crate::CargoResult;
 use crate::GlobalContext;
 use crate::core::Package;
+use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevel;
 use crate::diagnostics::get_key_value_span;
@@ -87,7 +88,7 @@ pub fn unused_build_dependencies_no_build_rs(
     pkg: &Package,
     manifest_path: &Path,
     cargo_lints: &TomlToolLints,
-    error_count: &mut usize,
+    stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let (lint_level, reason) = LINT.level(
@@ -155,9 +156,7 @@ pub fn unused_build_dependencies_no_build_rs(
             report.push(help);
         }
 
-        if lint_level.is_error() {
-            *error_count += 1;
-        }
+        stats.record_lint(lint_level);
         gctx.shell().print_report(&report, lint_level.force())?;
     }
 

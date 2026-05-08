@@ -13,6 +13,33 @@ pub use lint::{Lint, LintGroup, LintLevel, LintLevelSource};
 pub use report::{AsIndex, get_key_value, get_key_value_span, rel_cwd_manifest_path};
 pub use rules::{LINT_GROUPS, LINTS};
 
+pub struct DiagnosticStats {
+    error_count: usize,
+}
+
+impl DiagnosticStats {
+    pub fn new() -> Self {
+        Self { error_count: 0 }
+    }
+
+    pub fn error_count(&self) -> usize {
+        self.error_count
+    }
+
+    pub fn record_error(&mut self) {
+        self.error_count += 1;
+    }
+
+    pub fn record_lint(&mut self, lint: LintLevel) {
+        match lint {
+            LintLevel::Forbid | LintLevel::Deny => {
+                self.record_error();
+            }
+            LintLevel::Warn | LintLevel::Allow => {}
+        }
+    }
+}
+
 /// Scope at which a lint runs: package-level or workspace-level.
 pub enum ManifestFor<'a> {
     /// Lint runs for a specific package.

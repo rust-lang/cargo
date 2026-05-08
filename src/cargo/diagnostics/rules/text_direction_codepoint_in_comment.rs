@@ -17,6 +17,7 @@ use super::CORRECTNESS;
 use crate::CargoResult;
 use crate::GlobalContext;
 use crate::core::MaybePackage;
+use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevel;
 use crate::diagnostics::ManifestFor;
@@ -51,7 +52,7 @@ pub fn text_direction_codepoint_in_comment(
     manifest: ManifestFor<'_>,
     manifest_path: &Path,
     cargo_lints: &TomlToolLints,
-    error_count: &mut usize,
+    stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let (lint_level, source) = manifest.lint_level(cargo_lints, LINT);
@@ -91,9 +92,7 @@ pub fn text_direction_codepoint_in_comment(
     let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
     let mut emitted_source = None;
     for event in events {
-        if lint_level.is_error() {
-            *error_count += 1;
-        }
+        stats.record_lint(lint_level);
 
         let token_span = event.token.span();
         let token_span = token_span.start()..token_span.end();

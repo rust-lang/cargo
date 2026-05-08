@@ -13,6 +13,7 @@ use crate::CargoResult;
 use crate::GlobalContext;
 use crate::core::Package;
 use crate::core::Workspace;
+use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevel;
 use crate::diagnostics::rel_cwd_manifest_path;
@@ -59,7 +60,7 @@ pub fn missing_lints_inheritance(
     pkg: &Package,
     manifest_path: &Path,
     cargo_lints: &TomlToolLints,
-    error_count: &mut usize,
+    stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let (lint_level, source) = LINT.level(
@@ -119,9 +120,7 @@ pub fn missing_lints_inheritance(
         report.push(help);
     }
 
-    if lint_level.is_error() {
-        *error_count += 1;
-    }
+    stats.record_lint(lint_level);
     gctx.shell().print_report(&report, lint_level.force())?;
 
     Ok(())
