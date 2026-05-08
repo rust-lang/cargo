@@ -63,26 +63,6 @@ pub fn unknown_lints(
         };
     }
 
-    output_unknown_lints(
-        unknown_lints,
-        &manifest,
-        &manifest_path,
-        cargo_lints,
-        error_count,
-        gctx,
-    )?;
-
-    Ok(())
-}
-
-fn output_unknown_lints(
-    unknown_lints: Vec<&String>,
-    manifest: &ManifestFor<'_>,
-    manifest_path: &str,
-    cargo_lints: &TomlToolLints,
-    error_count: &mut usize,
-    gctx: &GlobalContext,
-) -> CargoResult<()> {
     let (lint_level, source) = manifest.lint_level(cargo_lints, LINT);
     if lint_level == LintLevel::Allow {
         return Ok(());
@@ -123,11 +103,11 @@ fn output_unknown_lints(
             };
             group = group.element(
                 Snippet::source(contents)
-                    .path(manifest_path)
+                    .path(&manifest_path)
                     .annotation(AnnotationKind::Primary.span(span.key)),
             );
         } else {
-            group = group.element(Origin::path(manifest_path));
+            group = group.element(Origin::path(&manifest_path));
         }
 
         if emitted_source.is_none() {
