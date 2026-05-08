@@ -20,11 +20,11 @@ use crate::core::Manifest;
 use crate::core::MaybePackage;
 use crate::core::Package;
 use crate::core::Workspace;
-use crate::lints::Lint;
-use crate::lints::LintLevel;
-use crate::lints::LintLevelSource;
-use crate::lints::get_key_value;
-use crate::lints::rel_cwd_manifest_path;
+use crate::diagnostics::Lint;
+use crate::diagnostics::LintLevel;
+use crate::diagnostics::LintLevelSource;
+use crate::diagnostics::get_key_value;
+use crate::diagnostics::rel_cwd_manifest_path;
 use crate::util::OptVersionReq;
 
 pub static LINT: &Lint = &Lint {

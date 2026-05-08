@@ -105,7 +105,7 @@ pub use crate::core::compiler::unit::UnitInterner;
 use crate::core::manifest::TargetSourcePath;
 use crate::core::profiles::{FramePointers, PanicStrategy, Profile, StripInner};
 use crate::core::{Feature, PackageId, Target};
-use crate::lints::get_key_value;
+use crate::diagnostics::get_key_value;
 use crate::util::OnceExt;
 use crate::util::errors::{CargoResult, VerboseError};
 use crate::util::interning::InternedString;

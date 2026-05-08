@@ -41,7 +41,7 @@ use super::LintGroup;
 use super::LintLevel;
 use crate::core::Feature;
 
-pub static LINTS: &[&crate::lints::Lint] = &[
+pub static LINTS: &[&crate::diagnostics::Lint] = &[
     blanket_hint_mostly_unused::LINT,
     implicit_minimum_version_req::LINT,
     im_a_teapot::LINT,

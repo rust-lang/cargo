@@ -1,5 +1,7 @@
 use std::path::Path;
 
+use cargo_util_schemas::manifest::InheritableField;
+use cargo_util_schemas::manifest::StringOrBool;
 use cargo_util_schemas::manifest::TomlToolLints;
 use cargo_util_terminal::report::AnnotationKind;
 use cargo_util_terminal::report::Group;
@@ -9,55 +11,59 @@ use cargo_util_terminal::report::Patch;
 use cargo_util_terminal::report::Snippet;
 use tracing::instrument;
 
-use super::RESTRICTION;
+use super::STYLE;
 use crate::CargoResult;
 use crate::GlobalContext;
 use crate::core::Package;
-use crate::lints::Lint;
-use crate::lints::LintLevel;
-use crate::lints::LintLevelSource;
-use crate::lints::get_key_value_span;
-use crate::lints::rel_cwd_manifest_path;
+use crate::diagnostics::Lint;
+use crate::diagnostics::LintLevel;
+use crate::diagnostics::LintLevelSource;
+use crate::diagnostics::get_key_value_span;
+use crate::diagnostics::rel_cwd_manifest_path;
+use crate::util::toml::DEFAULT_README_FILES;
 
 pub static LINT: &Lint = &Lint {
-    name: "non_snake_case_packages",
-    desc: "packages should have a snake-case name",
-    primary_group: &RESTRICTION,
-    msrv: None,
+    name: "redundant_readme",
+    desc: "explicit `package.readme` can be inferred",
+    primary_group: &STYLE,
+    msrv: Some(super::CARGO_LINTS_MSRV),
     feature_gate: None,
     docs: Some(
         r#"
 ### What it does
 
-Detect package names that are not snake-case.
+Checks for `package.readme` fields that can be inferred.
+
+See also [`package.readme` reference documentation](manifest.md#the-readme-field).
 
 ### Why it is bad
 
-Having multiple naming styles within a workspace can be confusing.
+Adds boilerplate.
 
 ### Drawbacks
 
-Users have to mentally translate package names to namespaces in Rust.
+It might not be obvious if they named their file correctly.
 
 ### Example
 
 ```toml
 [package]
-name = "foo_bar"
+name = "foo"
+readme = "README.md"
 ```
 
 Should be written as:
 
 ```toml
 [package]
-name = "foo-bar"
+name = "foo"
 ```
 "#,
     ),
 };
 
 #[instrument(skip_all)]
-pub fn non_snake_case_packages(
+pub fn redundant_readme(
     pkg: &Package,
     manifest_path: &Path,
     cargo_lints: &TomlToolLints,
@@ -89,9 +95,24 @@ fn lint_package(
 ) -> CargoResult<()> {
     let manifest = pkg.manifest();
 
-    let original_name = &*manifest.name();
-    let snake_case = heck::ToSnakeCase::to_snake_case(original_name);
-    if snake_case == original_name {
+    // Must check `original_toml`, before any inferring happened
+    let Some(original_toml) = manifest.original_toml() else {
+        return Ok(());
+    };
+    let Some(original_pkg) = &original_toml.package else {
+        return Ok(());
+    };
+    let Some(readme) = &original_pkg.readme else {
+        return Ok(());
+    };
+
+    let InheritableField::Value(StringOrBool::String(readme)) = readme else {
+        // Not checking inheritance because at most one package can be identified from the lint and
+        // consistency of inheritance is likely best.
+        return Ok(());
+    };
+
+    if !DEFAULT_README_FILES.contains(&readme.as_str()) {
         return Ok(());
     }
 
@@ -103,12 +124,13 @@ fn lint_package(
     let mut primary = Group::with_title(level.primary_title(LINT.desc));
     if let Some(document) = document
         && let Some(contents) = contents
-        && let Some(span) = get_key_value_span(document, &["package", "name"])
+        && let Some(span) = get_key_value_span(document, &["package", "readme"])
     {
+        let span = span.key.start..span.value.end;
         primary = primary.element(
             Snippet::source(contents)
                 .path(manifest_path)
-                .annotation(AnnotationKind::Primary.span(span.value)),
+                .annotation(AnnotationKind::Primary.span(span)),
         );
     } else {
         primary = primary.element(Origin::path(manifest_path));
@@ -117,33 +139,22 @@ fn lint_package(
     let mut report = vec![primary];
     if let Some(document) = document
         && let Some(contents) = contents
-        && let Some(span) = get_key_value_span(document, &["package", "name"])
+        && let Some(span) = get_key_value_span(document, &["package", "readme"])
     {
+        let span = if let Some(workspace_span) =
+            get_key_value_span(document, &["package", "readme", "workspace"])
+        {
+            span.key.start..workspace_span.value.end
+        } else {
+            span.key.start..span.value.end
+        };
         let mut help =
-            Group::with_title(Level::HELP.secondary_title(
-                "to change the package name to snake case, convert `package.name`",
-            ));
+            Group::with_title(Level::HELP.secondary_title("consider removing `package.readme`"));
         help = help.element(
             Snippet::source(contents)
                 .path(manifest_path)
-                .patch(Patch::new(span.value, format!("\"{snake_case}\""))),
+                .patch(Patch::new(span, "")),
         );
-        report.push(help);
-    } else {
-        let path = pkg.manifest_path();
-        let display_path = path.as_os_str().to_string_lossy();
-        let end = display_path.len() - if display_path.ends_with(".rs") { 3 } else { 0 };
-        let start = path
-            .parent()
-            .map(|p| {
-                let p = p.as_os_str().to_string_lossy();
-                // Account for trailing slash that was removed
-                p.len() + if p.is_empty() { 0 } else { 1 }
-            })
-            .unwrap_or(0);
-        let help = Level::HELP
-            .secondary_title("to change the package name to snake case, convert the file stem")
-            .element(Snippet::source(display_path).patch(Patch::new(start..end, snake_case)));
         report.push(help);
     }
 
