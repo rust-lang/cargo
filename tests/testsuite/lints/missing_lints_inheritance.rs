@@ -78,6 +78,7 @@ edition = "2015"
 5 ~ edition = "2015"
 6 + [lints]
   |
+[WARNING] `bar` (manifest) generated 1 warning
 [CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 

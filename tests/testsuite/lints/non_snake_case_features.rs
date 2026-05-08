@@ -40,6 +40,7 @@ non_snake_case_features = "warn"
 9 - foo-bar = []
 9 + foo_bar = []
   |
+[WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -82,6 +83,7 @@ non_snake_case_features = "warn"
   |
   = [NOTE] see also <https://doc.rust-lang.org/cargo/reference/features.html#optional-dependencies>
   = [NOTE] `cargo::non_snake_case_features` is set to `warn` in `[lints]`
+[WARNING] `foo` (manifest) generated 1 warning
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [CHECKING] foo v0.0.1 ([ROOT]/foo)

@@ -36,6 +36,7 @@ non_snake_case_packages = "warn"
 3 - name = "foo-bar"
 3 + name = "foo_bar"
   |
+[WARNING] `foo-bar` (manifest) generated 1 warning
 [CHECKING] foo-bar v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -70,6 +71,7 @@ fn main() {}"#,
 1 - [ROOT]/foo/foo-bar
 1 + [ROOT]/foo/foo_bar
   |
+[WARNING] `foo-bar` (manifest) generated 1 warning
 [CHECKING] foo-bar v0.0.0 ([ROOT]/foo/foo-bar)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 

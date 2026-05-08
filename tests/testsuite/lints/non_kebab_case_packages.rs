@@ -36,6 +36,7 @@ non_kebab_case_packages = "warn"
 3 - name = "foo_bar"
 3 + name = "foo-bar"
   |
+[WARNING] `foo_bar` (manifest) generated 1 warning
 [CHECKING] foo_bar v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -81,6 +82,7 @@ fn main() {}"#,
 1 - foo_bar
 1 + foo-bar
   |
+[WARNING] `foo_bar` (manifest) generated 2 warnings
 [CHECKING] foo_bar v0.0.0 ([ROOT]/foo/foo_bar)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 

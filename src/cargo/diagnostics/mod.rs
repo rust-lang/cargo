@@ -5,6 +5,7 @@ use cargo_util_schemas::manifest::TomlToolLints;
 use crate::CargoResult;
 use crate::core::Workspace;
 use crate::core::{Edition, Features, MaybePackage, Package};
+use crate::util::GlobalContext;
 
 mod lint;
 mod report;
@@ -16,12 +17,20 @@ pub use report::{AsIndex, get_key_value, get_key_value_span, rel_cwd_manifest_pa
 pub use rules::{LINT_GROUPS, LINTS};
 
 pub struct DiagnosticStats {
+    warning_count: usize,
     error_count: usize,
 }
 
 impl DiagnosticStats {
     pub fn new() -> Self {
-        Self { error_count: 0 }
+        Self {
+            warning_count: 0,
+            error_count: 0,
+        }
+    }
+
+    pub fn record_warning(&mut self) {
+        self.warning_count += 1;
     }
 
     pub fn record_error(&mut self) {
@@ -33,11 +42,30 @@ impl DiagnosticStats {
             LintLevel::Forbid | LintLevel::Deny => {
                 self.record_error();
             }
-            LintLevel::Warn | LintLevel::Allow => {}
+            LintLevel::Warn => {
+                self.record_warning();
+            }
+            LintLevel::Allow => {}
         }
     }
 
-    pub fn report_summary(&self, action: &str, name: Option<&str>) -> CargoResult<()> {
+    pub fn report_summary(
+        &self,
+        action: &str,
+        name: Option<&str>,
+        gctx: &GlobalContext,
+    ) -> CargoResult<()> {
+        if 0 < self.warning_count {
+            let plural = if self.warning_count == 1 { "" } else { "s" };
+            let name = name
+                .map(|n| format!("`{n}`"))
+                .unwrap_or_else(|| "workspace".to_owned());
+            gctx.shell().warn(format!(
+                "{name} (manifest) generated {} warning{plural}",
+                self.warning_count
+            ))?;
+        }
+
         if 0 < self.error_count {
             let plural = if self.error_count == 1 { "" } else { "s" };
             let name = name

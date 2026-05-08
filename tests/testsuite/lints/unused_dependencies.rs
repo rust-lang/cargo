@@ -161,6 +161,7 @@ fn unused_dep_build_no_build_rs() {
   |
 9 -             unused = "0.1.0"
   |
+[WARNING] `foo` (manifest) generated 1 warning
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
