@@ -1471,7 +1471,7 @@ implicit_minimum_version_req = "deny"
   |
 7 | dep = "1.0.0"
   |         ++++
-[ERROR] encountered 1 error while running lints
+[ERROR] could not parse `foo` (manifest) due to 1 previous error
 
 "#]])
         .run();

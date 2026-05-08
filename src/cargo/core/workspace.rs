@@ -1368,7 +1368,7 @@ impl<'gctx> Workspace<'gctx> {
                 self.gctx,
             )?;
 
-            verify_stats.report_summary("verifying")?;
+            verify_stats.report_summary("parse", Some(&*pkg.name()))?;
 
             let mut run_stats = DiagnosticStats::new();
 
@@ -1404,7 +1404,7 @@ impl<'gctx> Workspace<'gctx> {
                 self.gctx,
             )?;
 
-            run_stats.report_summary("running")?;
+            run_stats.report_summary("parse", Some(&*pkg.name()))?;
         }
 
         Ok(())
@@ -1452,7 +1452,7 @@ impl<'gctx> Workspace<'gctx> {
                 self.gctx,
             )?;
 
-            verify_stats.report_summary("verifying")?;
+            verify_stats.report_summary("parse", None)?;
 
             unused_workspace_package_fields(
                 self,
@@ -1508,7 +1508,7 @@ impl<'gctx> Workspace<'gctx> {
             )?;
         }
 
-        run_stats.report_summary("running")?;
+        run_stats.report_summary("parse", None)?;
         Ok(())
     }
 

@@ -37,11 +37,14 @@ impl DiagnosticStats {
         }
     }
 
-    pub fn report_summary(&self, action: &str) -> CargoResult<()> {
+    pub fn report_summary(&self, action: &str, name: Option<&str>) -> CargoResult<()> {
         if 0 < self.error_count {
             let plural = if self.error_count == 1 { "" } else { "s" };
+            let name = name
+                .map(|n| format!("`{n}`"))
+                .unwrap_or_else(|| "workspace".to_owned());
             bail!(
-                "encountered {} error{plural} while {action} lints",
+                "could not {action} {name} (manifest) due to {} previous error{plural}",
                 self.error_count
             )
         }

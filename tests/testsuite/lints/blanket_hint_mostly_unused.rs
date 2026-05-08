@@ -203,7 +203,7 @@ blanket_hint_mostly_unused = "deny"
   |
 7 | [profile.dev.package.<pkg_name>]
   |             +++++++++++++++++++
-[ERROR] encountered 1 error while running lints
+[ERROR] could not parse workspace (manifest) due to 1 previous error
 
 "#]])
         .run();

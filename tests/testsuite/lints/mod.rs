@@ -96,7 +96,7 @@ test_dummy_unstable = { level = "forbid", priority = -1 }
   | ^^^^^^^^^^^^^^^^^^
   |
   = [NOTE] `cargo::im_a_teapot` is set to `forbid` in `[lints]`
-[ERROR] encountered 1 error while running lints
+[ERROR] could not parse `foo` (manifest) due to 1 previous error
 
 "#]])
         .run();
@@ -139,7 +139,7 @@ workspace = true
    | ^^^^^^^^^^^^^^^^^^
    |
    = [NOTE] `cargo::im_a_teapot` is set to `forbid` in `[lints]`
-[ERROR] encountered 1 error while running lints
+[ERROR] could not parse `foo` (manifest) due to 1 previous error
 
 "#]])
         .run();
@@ -296,7 +296,7 @@ im_a_teapot = "warn"
   | ^^^^^^^^^^^ this is behind `test-dummy-unstable`, which is not enabled
   |
   = [HELP] consider adding `cargo-features = ["test-dummy-unstable"]` to the top of the manifest
-[ERROR] encountered 1 error while verifying lints
+[ERROR] could not parse `foo` (manifest) due to 1 previous error
 
 "#]])
         .run();
@@ -350,7 +350,7 @@ workspace = true
   | ^^^^^^^^^^^^^^^^^^^ this is behind `test-dummy-unstable`, which is not enabled
   |
   = [HELP] consider adding `cargo-features = ["test-dummy-unstable"]` to the top of the manifest
-[ERROR] encountered 2 errors while verifying lints
+[ERROR] could not parse workspace (manifest) due to 2 previous errors
 
 "#]])
         .run();
@@ -415,7 +415,7 @@ authors = []
 7 ~             
 8 + [lints]
   |
-[ERROR] encountered 2 errors while verifying lints
+[ERROR] could not parse workspace (manifest) due to 2 previous errors
 
 "#]])
         .run();
