@@ -93,7 +93,7 @@ pub fn missing_lints_features(
 ) -> CargoResult<()> {
     let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
     for lint_name in cargo_lints.keys().map(|name| name) {
-        let Some((name, default_level, feature_gate)) = find_lint_or_group(lint_name) else {
+        let Some((name, default_level, feature_gate)) = rules::find_lint_or_group(lint_name) else {
             continue;
         };
 
@@ -120,50 +120,6 @@ pub fn missing_lints_features(
     }
 
     Ok(())
-}
-
-pub fn unknown_lints(
-    manifest: ManifestFor<'_>,
-    manifest_path: &Path,
-    cargo_lints: &TomlToolLints,
-    error_count: &mut usize,
-    gctx: &GlobalContext,
-) -> CargoResult<()> {
-    let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
-    let mut unknown_lints = Vec::new();
-    for lint_name in cargo_lints.keys().map(|name| name) {
-        let Some(_) = find_lint_or_group(lint_name) else {
-            unknown_lints.push(lint_name);
-            continue;
-        };
-    }
-
-    rules::output_unknown_lints(
-        unknown_lints,
-        &manifest,
-        &manifest_path,
-        cargo_lints,
-        error_count,
-        gctx,
-    )?;
-
-    Ok(())
-}
-
-fn find_lint_or_group<'a>(
-    name: &str,
-) -> Option<(&'static str, &LintLevel, &Option<&'static Feature>)> {
-    if let Some(lint) = LINTS.iter().find(|l| l.name == name) {
-        Some((
-            lint.name,
-            &lint.primary_group.default_level,
-            &lint.feature_gate,
-        ))
-    } else if let Some(group) = LINT_GROUPS.iter().find(|g| g.name == name) {
-        Some((group.name, &group.default_level, &group.feature_gate))
-    } else {
-        None
-    }
 }
 
 fn report_feature_not_enabled(

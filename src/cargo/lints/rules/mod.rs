@@ -30,13 +30,14 @@ pub use redundant_homepage::redundant_homepage;
 pub use redundant_readme::redundant_readme;
 pub use text_direction_codepoint_in_comment::text_direction_codepoint_in_comment;
 pub use text_direction_codepoint_in_literal::text_direction_codepoint_in_literal;
-pub use unknown_lints::output_unknown_lints;
+pub use unknown_lints::unknown_lints;
 pub use unused_dependencies::unused_build_dependencies_no_build_rs;
 pub use unused_workspace_dependencies::unused_workspace_dependencies;
 pub use unused_workspace_package_fields::unused_workspace_package_fields;
 
 use super::LintGroup;
 use super::LintLevel;
+use crate::core::Feature;
 
 pub static LINTS: &[&crate::lints::Lint] = &[
     blanket_hint_mostly_unused::LINT,
@@ -149,6 +150,22 @@ const TEST_DUMMY_UNSTABLE: LintGroup = LintGroup {
     feature_gate: Some(crate::core::Feature::test_dummy_unstable()),
     hidden: true,
 };
+
+pub fn find_lint_or_group<'a>(
+    name: &str,
+) -> Option<(&'static str, &LintLevel, &Option<&'static Feature>)> {
+    if let Some(lint) = LINTS.iter().find(|l| l.name == name) {
+        Some((
+            lint.name,
+            &lint.primary_group.default_level,
+            &lint.feature_gate,
+        ))
+    } else if let Some(group) = LINT_GROUPS.iter().find(|g| g.name == name) {
+        Some((group.name, &group.default_level, &group.feature_gate))
+    } else {
+        None
+    }
+}
 
 #[cfg(test)]
 mod tests {
