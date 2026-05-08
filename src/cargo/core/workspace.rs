@@ -21,11 +21,11 @@ use crate::core::{
     PatchLocation,
 };
 use crate::core::{EitherManifest, Package, SourceId, VirtualManifest};
-use crate::lints::missing_lints_features;
 use crate::lints::rules::blanket_hint_mostly_unused;
 use crate::lints::rules::check_im_a_teapot;
 use crate::lints::rules::implicit_minimum_version_req_pkg;
 use crate::lints::rules::implicit_minimum_version_req_ws;
+use crate::lints::rules::missing_lints_features;
 use crate::lints::rules::missing_lints_inheritance;
 use crate::lints::rules::non_kebab_case_bins;
 use crate::lints::rules::non_kebab_case_features;

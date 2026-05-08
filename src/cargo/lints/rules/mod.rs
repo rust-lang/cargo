@@ -1,6 +1,7 @@
 mod blanket_hint_mostly_unused;
 mod im_a_teapot;
 mod implicit_minimum_version_req;
+mod missing_lints_features;
 mod missing_lints_inheritance;
 mod non_kebab_case_bins;
 mod non_kebab_case_features;
@@ -20,6 +21,7 @@ pub use blanket_hint_mostly_unused::blanket_hint_mostly_unused;
 pub use im_a_teapot::check_im_a_teapot;
 pub use implicit_minimum_version_req::implicit_minimum_version_req_pkg;
 pub use implicit_minimum_version_req::implicit_minimum_version_req_ws;
+pub use missing_lints_features::missing_lints_features;
 pub use missing_lints_inheritance::missing_lints_inheritance;
 pub use non_kebab_case_bins::non_kebab_case_bins;
 pub use non_kebab_case_features::non_kebab_case_features;
@@ -151,7 +153,7 @@ const TEST_DUMMY_UNSTABLE: LintGroup = LintGroup {
     hidden: true,
 };
 
-pub fn find_lint_or_group<'a>(
+fn find_lint_or_group<'a>(
     name: &str,
 ) -> Option<(&'static str, &LintLevel, &Option<&'static Feature>)> {
     if let Some(lint) = LINTS.iter().find(|l| l.name == name) {
