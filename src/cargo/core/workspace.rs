@@ -1368,17 +1368,7 @@ impl<'gctx> Workspace<'gctx> {
                 self.gctx,
             )?;
 
-            if verify_stats.error_count() > 0 {
-                let plural = if verify_stats.error_count() == 1 {
-                    ""
-                } else {
-                    "s"
-                };
-                bail!(
-                    "encountered {} error{plural} while verifying lints",
-                    verify_stats.error_count()
-                )
-            }
+            verify_stats.report_summary("verifying")?;
 
             let mut run_stats = DiagnosticStats::new();
 
@@ -1414,17 +1404,7 @@ impl<'gctx> Workspace<'gctx> {
                 self.gctx,
             )?;
 
-            if run_stats.error_count() > 0 {
-                let plural = if run_stats.error_count() == 1 {
-                    ""
-                } else {
-                    "s"
-                };
-                bail!(
-                    "encountered {} error{plural} while running lints",
-                    run_stats.error_count()
-                )
-            }
+            run_stats.report_summary("running")?;
         }
 
         Ok(())
@@ -1472,17 +1452,7 @@ impl<'gctx> Workspace<'gctx> {
                 self.gctx,
             )?;
 
-            if verify_stats.error_count() > 0 {
-                let plural = if verify_stats.error_count() == 1 {
-                    ""
-                } else {
-                    "s"
-                };
-                bail!(
-                    "encountered {} error{plural} while verifying lints",
-                    verify_stats.error_count()
-                )
-            }
+            verify_stats.report_summary("verifying")?;
 
             unused_workspace_package_fields(
                 self,
@@ -1538,19 +1508,8 @@ impl<'gctx> Workspace<'gctx> {
             )?;
         }
 
-        if run_stats.error_count() > 0 {
-            let plural = if run_stats.error_count() == 1 {
-                ""
-            } else {
-                "s"
-            };
-            bail!(
-                "encountered {} error{plural} while running lints",
-                run_stats.error_count()
-            )
-        } else {
-            Ok(())
-        }
+        run_stats.report_summary("running")?;
+        Ok(())
     }
 
     pub fn set_target_dir(&mut self, target_dir: Filesystem) {

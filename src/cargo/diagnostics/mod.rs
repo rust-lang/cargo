@@ -1,6 +1,8 @@
+use anyhow::bail;
 use cargo_util_schemas::manifest::RustVersion;
 use cargo_util_schemas::manifest::TomlToolLints;
 
+use crate::CargoResult;
 use crate::core::Workspace;
 use crate::core::{Edition, Features, MaybePackage, Package};
 
@@ -22,10 +24,6 @@ impl DiagnosticStats {
         Self { error_count: 0 }
     }
 
-    pub fn error_count(&self) -> usize {
-        self.error_count
-    }
-
     pub fn record_error(&mut self) {
         self.error_count += 1;
     }
@@ -37,6 +35,18 @@ impl DiagnosticStats {
             }
             LintLevel::Warn | LintLevel::Allow => {}
         }
+    }
+
+    pub fn report_summary(&self, action: &str) -> CargoResult<()> {
+        if 0 < self.error_count {
+            let plural = if self.error_count == 1 { "" } else { "s" };
+            bail!(
+                "encountered {} error{plural} while {action} lints",
+                self.error_count
+            )
+        }
+
+        Ok(())
     }
 }
 
