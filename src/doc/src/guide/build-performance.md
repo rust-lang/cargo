@@ -175,7 +175,7 @@ it can be easy to miss that a dependency is no longer used and can be removed.
 Trade-offs:
 - ✅ Faster full build and link times
 - ❌ **Requires using nightly Rust and an [unstable Cargo feature][cargo-lints] when reviewing unused dependencies**
-- ❌ It takes effort to identifier unused dependencies from among the false positives
+- ❌ It takes effort to identify unused dependencies from among the false positives
 
 [cargo-lints]: ../reference/unstable.md#lintscargo
 [`cargo::unused_dependencies`]: ../reference/lints.md#unused_dependencies
