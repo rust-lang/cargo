@@ -54,6 +54,12 @@ pub fn unknown_lints(
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
+    let (lint_level, source) = manifest.lint_level(cargo_lints, LINT);
+
+    if lint_level == LintLevel::Allow {
+        return Ok(());
+    }
+
     let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
     let mut unknown_lints = Vec::new();
     for lint_name in cargo_lints.keys().map(|name| name) {
@@ -61,11 +67,6 @@ pub fn unknown_lints(
             unknown_lints.push(lint_name);
             continue;
         };
-    }
-
-    let (lint_level, source) = manifest.lint_level(cargo_lints, LINT);
-    if lint_level == LintLevel::Allow {
-        return Ok(());
     }
 
     let level = lint_level.to_diagnostic_level();
