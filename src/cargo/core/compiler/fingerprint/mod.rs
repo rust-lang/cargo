@@ -88,6 +88,7 @@
 //! `is_std`                                   |             | ✓                        | ✓
 //! `[lints]` table[^6]                        | ✓           |                          |
 //! `[lints.rust.unexpected_cfgs.check-cfg]`   | ✓           |                          |
+//! `--extern priv:`                           | ✓           |                          |
 //!
 //! [^1]: Bin dependencies are not included.
 //!
@@ -1651,6 +1652,12 @@ fn calculate_normal(
     if let Some(allow_features) = &build_runner.bcx.gctx.cli_unstable().allow_features {
         allow_features.hash(&mut config);
     }
+    // -Zpublic-dependency changes how library units pass dependency privacy
+    // to rustc via `--extern`.
+    (unit.target.is_lib()
+        && build_runner.unit_deps(unit).iter().any(|dep| !dep.public)
+        && super::is_public_dependency_enabled(build_runner, unit))
+    .hash(&mut config);
     // -Zno-embed-metadata changes how all units are compiled, and it also changes how we tell
     // rustc to link to deps using `--extern`. If it changes, we should rebuild everything.
     build_runner
