@@ -8,6 +8,7 @@ use crate::core::resolver::features::{CliFeatures, FeaturesFor, ResolvedFeatures
 use crate::core::{FeatureMap, FeatureValue, Package, PackageId, PackageIdSpec, Workspace};
 use crate::util::CargoResult;
 use crate::util::interning::{INTERNED_DEFAULT, InternedString};
+use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Copy, Clone)]
@@ -619,19 +620,14 @@ fn add_cli_features(
     // NOTE: Recursive enabling of features will be handled by
     // add_internal_features.
 
-    // Create a set of feature names requested on the command-line.
-    let mut to_add: HashSet<FeatureValue> = HashSet::new();
-    if cli_features.all_features {
-        to_add.extend(feature_map.keys().map(|feat| FeatureValue::Feature(*feat)));
+    // Ensure default can show up as enabled even if does not exist.
+    let mut feature_map = Cow::Borrowed(feature_map);
+    if !feature_map.contains_key(&INTERNED_DEFAULT) {
+        feature_map.to_mut().insert(INTERNED_DEFAULT, Vec::new());
     }
-
-    if cli_features.uses_default_features {
-        to_add.insert(FeatureValue::Feature(INTERNED_DEFAULT));
-    }
-    to_add.extend(cli_features.features.iter().cloned());
 
     // Add each feature as a node, and mark as "from command-line" in graph.cli_features.
-    for fv in to_add {
+    for fv in cli_features.resolve_requested(&feature_map) {
         match fv {
             FeatureValue::Feature(feature) => {
                 let feature_edge = Edge {

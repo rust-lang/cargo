@@ -2457,3 +2457,60 @@ required-features = ["feat"]
     p.cargo(&format!("check --target={host} --examples --frozen"))
         .run();
 }
+
+#[cargo_test]
+fn test_feature_disable() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2018"
+
+                [features]
+                default = ["a", "b", "c"]
+                a = []
+                b = []
+                c = []
+                x = []
+                y = ["z"]
+                z = []
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {
+                    assert!(!cfg!(feature = "default"));
+                    assert!(cfg!(feature = "a"));
+                    assert!(!cfg!(feature = "b"));
+                    assert!(cfg!(feature = "c"));
+                    assert!(!cfg!(feature = "x"));
+                    assert!(cfg!(feature = "y"));
+                    assert!(cfg!(feature = "z"));
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("run --features -b,x,y,z --features -x -Zfeature-disabling")
+        .masquerade_as_nightly_cargo(&["feature-disabling"])
+        .run();
+    p.cargo("run --all-features --features -b,-x -Zfeature-disabling")
+        .masquerade_as_nightly_cargo(&["feature-disabling"])
+        .run();
+    p.cargo("run --features +a,+c,+y,-default -Zfeature-disabling")
+        .masquerade_as_nightly_cargo(&["feature-disabling"])
+        .run();
+    p.cargo("run --no-default-features --features a,c,y,-z -Zfeature-disabling")
+        .masquerade_as_nightly_cargo(&["feature-disabling"])
+        .with_stderr_data(str![[r#"
+[WARNING] disabled feature `z` was enabled transitively in package `foo`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo`
+
+"#]])
+        .run();
+}

@@ -1585,8 +1585,9 @@ impl<'gctx> Workspace<'gctx> {
         member: &Package,
         cli_features: &CliFeatures,
         found_features: &mut BTreeSet<FeatureValue>,
+        found_disabled_features: &mut BTreeSet<InternedString>,
     ) -> CliFeatures {
-        if cli_features.features.is_empty() {
+        if cli_features.features.is_empty() && cli_features.disabled_features.is_empty() {
             return cli_features.clone();
         }
 
@@ -1652,8 +1653,18 @@ impl<'gctx> Workspace<'gctx> {
                 }
             }
         }
+
+        let mut disabled_features = BTreeSet::new();
+        for feature in cli_features.disabled_features.iter() {
+            if summary_features.contains_key(feature) {
+                disabled_features.insert(feature.clone());
+                found_disabled_features.insert(feature.clone());
+            }
+        }
+
         CliFeatures {
             features: Rc::new(features),
+            disabled_features: Rc::new(disabled_features),
             all_features: cli_features.all_features,
             uses_default_features: cli_features.uses_default_features,
         }
@@ -1662,7 +1673,7 @@ impl<'gctx> Workspace<'gctx> {
     fn missing_feature_spelling_suggestions(
         &self,
         selected_members: &[&Package],
-        cli_features: &CliFeatures,
+        specified_features: &BTreeSet<FeatureValue>,
         found_features: &BTreeSet<FeatureValue>,
     ) -> Vec<String> {
         // Keeps track of which features were contained in summary of `member` to suggest similar features in errors
@@ -1721,8 +1732,7 @@ impl<'gctx> Workspace<'gctx> {
             edit_distance(a.as_str(), b.as_str(), 3).is_some()
         };
 
-        cli_features
-            .features
+        specified_features
             .difference(found_features)
             .map(|feature| match feature {
                 // Simple feature, check if any of the optional dependency features or member features are close enough
@@ -1811,7 +1821,7 @@ impl<'gctx> Workspace<'gctx> {
             .unique()
             .filter(|element| {
                 let feature = FeatureValue::new(element.into());
-                !cli_features.features.contains(&feature) && !found_features.contains(&feature)
+                !specified_features.contains(&feature) && !found_features.contains(&feature)
             })
             .sorted()
             .take(5)
@@ -1821,11 +1831,10 @@ impl<'gctx> Workspace<'gctx> {
     fn report_unknown_features_error(
         &self,
         specs: &[PackageIdSpec],
-        cli_features: &CliFeatures,
+        specified_features: &BTreeSet<FeatureValue>,
         found_features: &BTreeSet<FeatureValue>,
     ) -> CargoResult<()> {
-        let unknown: Vec<_> = cli_features
-            .features
+        let unknown: Vec<_> = specified_features
             .difference(found_features)
             .map(|feature| feature.to_string())
             .sorted()
@@ -1880,7 +1889,7 @@ impl<'gctx> Workspace<'gctx> {
         } else {
             let suggestions = self.missing_feature_spelling_suggestions(
                 &selected_members,
-                cli_features,
+                specified_features,
                 found_features,
             );
             if !suggestions.is_empty() {
@@ -1910,6 +1919,7 @@ impl<'gctx> Workspace<'gctx> {
         // Keeps track of which features matched `member` to produce an error
         // if any of them did not match anywhere.
         let mut found_features = Default::default();
+        let mut found_disabled_features = Default::default();
 
         let members: Vec<(&Package, CliFeatures)> = self
             .members()
@@ -1917,7 +1927,12 @@ impl<'gctx> Workspace<'gctx> {
             .map(|m| {
                 (
                     m,
-                    Workspace::collect_matching_features(m, cli_features, &mut found_features),
+                    Workspace::collect_matching_features(
+                        m,
+                        cli_features,
+                        &mut found_features,
+                        &mut found_disabled_features,
+                    ),
                 )
             })
             .collect();
@@ -1951,7 +1966,14 @@ impl<'gctx> Workspace<'gctx> {
                 .collect());
         }
         if *cli_features.features != found_features {
-            self.report_unknown_features_error(specs, cli_features, &found_features)?;
+            self.report_unknown_features_error(specs, &cli_features.features, &found_features)?;
+        } else if *cli_features.disabled_features != found_disabled_features {
+            let specified_feats = cli_features
+                .disabled_features
+                .iter()
+                .map(|f| FeatureValue::Feature(f.clone()))
+                .collect();
+            self.report_unknown_features_error(specs, &specified_feats, &found_features)?;
         }
         Ok(members)
     }
@@ -2012,6 +2034,7 @@ impl<'gctx> Workspace<'gctx> {
                     Some(current) if member_id == current.package_id() => {
                         let feats = CliFeatures {
                             features: Rc::new(cwd_features.clone()),
+                            disabled_features: cli_features.disabled_features.clone(),
                             all_features: cli_features.all_features,
                             uses_default_features: cli_features.uses_default_features,
                         };
@@ -2035,6 +2058,7 @@ impl<'gctx> Workspace<'gctx> {
                                         .remove(member.name().as_str())
                                         .unwrap_or_default(),
                                 ),
+                                disabled_features: cli_features.disabled_features.clone(),
                                 uses_default_features: true,
                                 all_features: cli_features.all_features,
                             };

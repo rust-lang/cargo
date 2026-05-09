@@ -22,6 +22,7 @@ use crate::util::GlobalContext;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::context::{ConfigRelativePath, Definition};
 use crate::util::errors::CargoResult;
+use crate::util::interning::InternedString;
 use crate::util::{FileLock, Filesystem};
 
 /// On-disk tracking for which package installed which binary.
@@ -73,6 +74,7 @@ struct InstallInfo {
     bins: BTreeSet<String>,
     /// Set of features explicitly enabled.
     features: BTreeSet<String>,
+    disabled_features: BTreeSet<String>,
     all_features: bool,
     no_default_features: bool,
     /// Either "debug" or "release".
@@ -457,6 +459,7 @@ impl CrateListingV2 {
             info.bins.append(&mut bins.clone());
             info.version_req = version_req;
             info.features = feature_set(&opts.cli_features.features);
+            info.disabled_features = disabled_feature_set(&opts.cli_features.disabled_features);
             info.all_features = opts.cli_features.all_features;
             info.no_default_features = !opts.cli_features.uses_default_features;
             info.profile = opts.build_config.requested_profile.to_string();
@@ -469,6 +472,7 @@ impl CrateListingV2 {
                     version_req,
                     bins: bins.clone(),
                     features: feature_set(&opts.cli_features.features),
+                    disabled_features: disabled_feature_set(&opts.cli_features.disabled_features),
                     all_features: opts.cli_features.all_features,
                     no_default_features: !opts.cli_features.uses_default_features,
                     profile: opts.build_config.requested_profile.to_string(),
@@ -521,6 +525,7 @@ impl InstallInfo {
             version_req: None,
             bins: set.clone(),
             features: BTreeSet::new(),
+            disabled_features: BTreeSet::new(),
             all_features: false,
             no_default_features: false,
             profile: "release".to_string(),
@@ -535,6 +540,7 @@ impl InstallInfo {
     /// This does not do Package/Source/Version checking.
     fn is_up_to_date(&self, opts: &CompileOptions, target: &str, exes: &BTreeSet<String>) -> bool {
         self.features == feature_set(&opts.cli_features.features)
+            && self.disabled_features == disabled_feature_set(&opts.cli_features.disabled_features)
             && self.all_features == opts.cli_features.all_features
             && self.no_default_features != opts.cli_features.uses_default_features
             && self.profile.as_str() == opts.build_config.requested_profile.as_str()
@@ -779,6 +785,10 @@ where
 /// Helper to convert features to a `BTreeSet`.
 fn feature_set(features: &Rc<BTreeSet<FeatureValue>>) -> BTreeSet<String> {
     features.iter().map(|s| s.to_string()).collect()
+}
+
+fn disabled_feature_set(disabled_features: &Rc<BTreeSet<InternedString>>) -> BTreeSet<String> {
+    disabled_features.iter().map(|s| s.to_string()).collect()
 }
 
 /// Helper to get the executable names from a filter.

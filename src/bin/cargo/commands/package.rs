@@ -91,7 +91,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
             targets: args.targets()?,
             jobs: args.jobs()?,
             keep_going: args.keep_going(),
-            cli_features: args.cli_features()?,
+            cli_features: args.cli_features(gctx)?,
             reg_or_index,
             dry_run: false,
         },

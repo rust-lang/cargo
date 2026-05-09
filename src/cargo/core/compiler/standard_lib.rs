@@ -87,7 +87,7 @@ pub fn resolve_std<'gctx>(
         ],
     };
     let cli_features = CliFeatures::from_command_line(
-        &features, /*all_features*/ false, /*uses_default_features*/ false,
+        gctx, &features, /*all_features*/ false, /*uses_default_features*/ false,
     )?;
     let dry_run = false;
     let mut resolve = ops::resolve_ws_with_opts(

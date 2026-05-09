@@ -876,6 +876,7 @@ unstable_cli_options!(
     codegen_backend: bool = ("Enable the `codegen-backend` option in profiles in .cargo/config.toml file"),
     direct_minimal_versions: bool = ("Resolve minimal dependency versions instead of maximum (direct dependencies only)"),
     dual_proc_macros: bool = ("Build proc-macros for both the host and the target"),
+    feature_disabling: bool = ("Allow specific features to be disabled"),
     feature_unification: bool = ("Enable new feature unification modes in workspaces"),
     features: Option<Vec<String>>,
     fine_grain_locking: bool = ("Use fine grain locking instead of locking the entire build cache"),
@@ -1410,6 +1411,7 @@ impl CliUnstable {
             "codegen-backend" => self.codegen_backend = parse_empty(k, v)?,
             "direct-minimal-versions" => self.direct_minimal_versions = parse_empty(k, v)?,
             "dual-proc-macros" => self.dual_proc_macros = parse_empty(k, v)?,
+            "feature-disabling" => self.feature_disabling = parse_empty(k, v)?,
             "feature-unification" => self.feature_unification = parse_empty(k, v)?,
             "fine-grain-locking" => self.fine_grain_locking = parse_empty(k, v)?,
             "fix-edition" => {

@@ -282,6 +282,7 @@ pub trait CommandExt: Sized {
             )
             .short('F')
             .help_heading(heading::FEATURE_SELECTION)
+            .allow_hyphen_values(true)
             .add(clap_complete::ArgValueCandidates::new(|| {
                 get_feature_candidates().unwrap_or_default()
             })),
@@ -831,7 +832,7 @@ Run `{cmd}` to see possible targets."
 
         let opts = CompileOptions {
             build_config,
-            cli_features: self.cli_features()?,
+            cli_features: self.cli_features(gctx)?,
             spec,
             filter: CompileFilter::from_raw_arguments(
                 self.flag("lib"),
@@ -867,8 +868,9 @@ Run `{cmd}` to see possible targets."
         Ok(opts)
     }
 
-    fn cli_features(&self) -> CargoResult<CliFeatures> {
+    fn cli_features(&self, gctx: &GlobalContext) -> CargoResult<CliFeatures> {
         CliFeatures::from_command_line(
+            gctx,
             &self._values_of("features"),
             self.flag("all-features"),
             !self.flag("no-default-features"),

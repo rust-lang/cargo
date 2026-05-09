@@ -13,7 +13,7 @@ use crate::core::resolver::context::ResolverContext;
 use crate::core::resolver::errors::describe_path_in_context;
 use crate::core::resolver::types::{ConflictReason, DepInfo, FeaturesSet};
 use crate::core::resolver::{
-    ActivateError, ActivateResult, CliFeatures, RequestedFeatures, ResolveOpts, VersionOrdering,
+    ActivateError, ActivateResult, RequestedFeatures, ResolveOpts, VersionOrdering,
     VersionPreferences,
 };
 use crate::core::{
@@ -381,36 +381,13 @@ fn build_requirements<'a, 'b: 'a>(
     opts: &'b ResolveOpts,
 ) -> ActivateResult<Requirements<'a>> {
     let mut reqs = Requirements::new(s);
-
-    let handle_default = |uses_default_features, reqs: &mut Requirements<'_>| {
-        if uses_default_features && s.features().contains_key("default") {
-            if let Err(e) = reqs.require_feature(INTERNED_DEFAULT) {
-                return Err(e.into_activate_error(parent, s));
-            }
-        }
-        Ok(())
-    };
-
     match &opts.features {
-        RequestedFeatures::CliFeatures(CliFeatures {
-            features,
-            all_features,
-            uses_default_features,
-        }) => {
-            if *all_features {
-                for key in s.features().keys() {
-                    if let Err(e) = reqs.require_feature(*key) {
-                        return Err(e.into_activate_error(parent, s));
-                    }
-                }
-            }
-
-            for fv in features.iter() {
-                if let Err(e) = reqs.require_value(fv) {
+        RequestedFeatures::CliFeatures(cli_features) => {
+            for fv in cli_features.resolve_requested(s.features()) {
+                if let Err(e) = reqs.require_value(&fv) {
                     return Err(e.into_activate_error(parent, s));
                 }
             }
-            handle_default(*uses_default_features, &mut reqs)?;
         }
         RequestedFeatures::DepFeatures {
             features,
@@ -421,7 +398,11 @@ fn build_requirements<'a, 'b: 'a>(
                     return Err(e.into_activate_error(parent, s));
                 }
             }
-            handle_default(*uses_default_features, &mut reqs)?;
+            if *uses_default_features && s.features().contains_key("default") {
+                if let Err(e) = reqs.require_feature(INTERNED_DEFAULT) {
+                    return Err(e.into_activate_error(parent, s));
+                }
+            }
         }
     }
 

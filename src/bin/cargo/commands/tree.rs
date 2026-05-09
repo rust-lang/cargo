@@ -240,7 +240,7 @@ help: if you are in a workspace and want to search across all members, use:
         }
     }
     let opts = tree::TreeOptions {
-        cli_features: args.cli_features()?,
+        cli_features: args.cli_features(gctx)?,
         packages,
         target,
         edge_kinds,

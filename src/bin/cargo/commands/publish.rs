@@ -69,7 +69,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
             jobs: args.jobs()?,
             keep_going: args.keep_going(),
             dry_run: args.dry_run(),
-            cli_features: args.cli_features()?,
+            cli_features: args.cli_features(gctx)?,
         },
     )?;
     Ok(())

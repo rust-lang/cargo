@@ -47,7 +47,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     };
 
     let options = OutputMetadataOptions {
-        cli_features: args.cli_features()?,
+        cli_features: args.cli_features(gctx)?,
         no_deps: args.flag("no-deps"),
         filter_platforms: args._values_of("filter-platform"),
         version,

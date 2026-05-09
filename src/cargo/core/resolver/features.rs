@@ -38,11 +38,12 @@
 //! [new feature resolver]: https://doc.rust-lang.org/nightly/cargo/reference/resolver.html#feature-resolver-version-2
 //! [`resolve_ws_with_opts`]: crate::ops::resolve_ws_with_opts
 
+use crate::GlobalContext;
 use crate::core::compiler::{CompileKind, CompileTarget, RustcTargetData};
 use crate::core::dependency::{ArtifactTarget, DepKind, Dependency};
 use crate::core::resolver::types::FeaturesSet;
 use crate::core::resolver::{Resolve, ResolveBehavior};
-use crate::core::{FeatureValue, PackageId, PackageIdSpec, PackageSet, Workspace};
+use crate::core::{FeatureMap, FeatureValue, PackageId, PackageIdSpec, PackageSet, Workspace};
 use crate::util::CargoResult;
 use crate::util::interning::{INTERNED_DEFAULT, InternedString};
 use anyhow::{Context, bail};
@@ -252,40 +253,79 @@ pub enum RequestedFeatures {
 pub struct CliFeatures {
     /// Features from the `--features` flag.
     pub features: Rc<BTreeSet<FeatureValue>>,
+    /// Features from the `--features` flag that were specified to be removed.
+    pub disabled_features: Rc<BTreeSet<InternedString>>,
     /// The `--all-features` flag.
     pub all_features: bool,
     /// Inverse of `--no-default-features` flag.
     pub uses_default_features: bool,
 }
 
+enum CliFeaturePrefix {
+    Enable,
+    Disable,
+}
+
 impl CliFeatures {
     /// Creates a new `CliFeatures` from the given command-line flags.
     pub fn from_command_line(
+        gctx: &GlobalContext,
         features: &[String],
         all_features: bool,
-        uses_default_features: bool,
+        mut uses_default_features: bool,
     ) -> CargoResult<CliFeatures> {
-        let features = Rc::new(CliFeatures::split_features(features));
-        // Some early validation to ensure correct syntax.
-        for feature in features.iter() {
-            match feature {
-                // Maybe call validate_feature_name here once it is an error?
-                FeatureValue::Feature(_) => {}
-                FeatureValue::Dep { .. } => {
-                    bail!(
-                        "feature `{}` is not allowed to use explicit `dep:` syntax",
-                        feature
-                    );
+        // Process all the features in order, to correctly handle enables/disables
+        // that are cancelled by later flags. We also do some early validation to
+        // ensure correct syntax.
+        let mut enabled_features = BTreeSet::new();
+        let mut disabled_features = BTreeSet::new();
+        for (prefix, feature) in CliFeatures::split_features(gctx, features)? {
+            match prefix {
+                CliFeaturePrefix::Enable => {
+                    match feature {
+                        // Maybe call validate_feature_name here once it is an error?
+                        FeatureValue::Feature(f) => {
+                            disabled_features.remove(&f);
+                            enabled_features.insert(feature);
+                        }
+                        FeatureValue::Dep { .. } => {
+                            bail!(
+                                "feature `{feature}` is not allowed to use explicit `dep:` syntax"
+                            );
+                        }
+                        FeatureValue::DepFeature { dep_feature, .. } => {
+                            if dep_feature.contains('/') {
+                                bail!("multiple slashes in feature `{feature}` is not allowed");
+                            }
+                            enabled_features.insert(feature);
+                        }
+                    }
                 }
-                FeatureValue::DepFeature { dep_feature, .. } => {
-                    if dep_feature.contains('/') {
-                        bail!("multiple slashes in feature `{}` is not allowed", feature);
+                CliFeaturePrefix::Disable => {
+                    match feature {
+                        // Maybe call validate_feature_name here once it is an error?
+                        FeatureValue::Feature(f) => {
+                            if f == INTERNED_DEFAULT {
+                                uses_default_features = false;
+                            }
+                            enabled_features.remove(&feature);
+                            disabled_features.insert(f.clone());
+                        }
+                        FeatureValue::Dep { .. } => {
+                            bail!("`dep:` features are not allowed to be negative (`-{feature}`)");
+                        }
+                        FeatureValue::DepFeature { .. } => {
+                            bail!(
+                                "dependency features are not allowed to be negative (`-{feature}`)"
+                            );
+                        }
                     }
                 }
             }
         }
         Ok(CliFeatures {
-            features,
+            features: Rc::new(enabled_features),
+            disabled_features: Rc::new(disabled_features),
             all_features,
             uses_default_features,
         })
@@ -295,20 +335,88 @@ impl CliFeatures {
     pub fn new_all(all_features: bool) -> CliFeatures {
         CliFeatures {
             features: Rc::new(BTreeSet::new()),
+            disabled_features: Rc::new(BTreeSet::new()),
             all_features,
             uses_default_features: true,
         }
     }
 
-    fn split_features(features: &[String]) -> BTreeSet<FeatureValue> {
+    fn split_features(
+        gctx: &GlobalContext,
+        features: &[String],
+    ) -> CargoResult<Vec<(CliFeaturePrefix, FeatureValue)>> {
         features
             .iter()
             .flat_map(|s| s.split_whitespace())
             .flat_map(|s| s.split(','))
             .filter(|s| !s.is_empty())
-            .map(|s| s.into())
-            .map(FeatureValue::new)
+            .map(|s| {
+                if !gctx.cli_unstable().feature_disabling {
+                    if s.starts_with('-') {
+                        bail!("specifying `-feature`  requires `-Zfeature-disabling`");
+                    } else if s.starts_with('+') {
+                        bail!(
+                            "specifying `+feature` requires `-Zfeature-disabling` (you can omit the `+`)"
+                        );
+                    }
+                }
+
+                let (prefix, s) = match s.strip_prefix('-') {
+                    Some(s) => (CliFeaturePrefix::Disable, s),
+                    None => (CliFeaturePrefix::Enable, s.strip_prefix('+').unwrap_or(s)),
+                };
+                Ok((prefix, FeatureValue::new(s.into())))
+            })
             .collect()
+    }
+
+    /// Resolves the requested CLI features given the feature map of a crate.
+    ///
+    /// Only resolves the directly requested features, including the default and
+    /// all-features flags, does not resolve transitive relationships.
+    pub fn resolve_requested(&self, feature_map: &FeatureMap) -> BTreeSet<FeatureValue> {
+        let mut result = (*self.features).clone();
+
+        // Turn off the "default" feature if one of its directly implied
+        // features has been explicitly turned off, but still add the other
+        // features if uses_default_features is true.
+        let default_feats = feature_map
+            .get(&INTERNED_DEFAULT)
+            .map(|v| v.as_slice())
+            .unwrap_or_default();
+        let non_excluded_default_feats: Vec<&FeatureValue> = default_feats
+            .iter()
+            .filter(|f| match f {
+                FeatureValue::Feature(s) => !self.disabled_features.contains(s),
+                FeatureValue::Dep { .. } | FeatureValue::DepFeature { .. } => true,
+            })
+            .collect();
+        let default_disabled = non_excluded_default_feats.len() != default_feats.len();
+
+        if self.all_features {
+            result.extend(
+                feature_map
+                    .keys()
+                    .filter(|f| {
+                        if **f == INTERNED_DEFAULT {
+                            !default_disabled
+                        } else {
+                            !self.disabled_features.contains(*f)
+                        }
+                    })
+                    .map(|k| FeatureValue::Feature(*k)),
+            );
+        }
+
+        if self.uses_default_features {
+            if default_disabled {
+                result.extend(non_excluded_default_feats.into_iter().cloned());
+            } else if feature_map.contains_key(&INTERNED_DEFAULT) {
+                result.insert(FeatureValue::Feature(INTERNED_DEFAULT));
+            }
+        }
+
+        result
     }
 }
 
@@ -504,6 +612,19 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
                 FeaturesFor::default()
             };
             self.activate_pkg(member.package_id(), fk, &fvs)?;
+        }
+
+        // Warn if any disabled feature was enabled transitively.
+        let mut unwarned_disabled_features = (*cli_features.disabled_features).clone();
+        for ((pkg_id, _dep_kind), feats) in self.activated_features.iter() {
+            for feat in feats {
+                if unwarned_disabled_features.remove(feat) {
+                    self.ws.gctx().shell().warn(format!(
+                        "disabled feature `{feat}` was enabled transitively in package `{}`",
+                        pkg_id.name()
+                    ))?;
+                }
+            }
         }
         Ok(())
     }
@@ -757,17 +878,10 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
     ) -> Vec<FeatureValue> {
         let summary = self.resolve.summary(pkg_id);
         let feature_map = summary.features();
-
-        let mut result: Vec<FeatureValue> = cli_features.features.iter().cloned().collect();
-        if cli_features.uses_default_features && feature_map.contains_key(&INTERNED_DEFAULT) {
-            result.push(FeatureValue::Feature(INTERNED_DEFAULT));
-        }
-
-        if cli_features.all_features {
-            result.extend(feature_map.keys().map(|k| FeatureValue::Feature(*k)))
-        }
-
-        result
+        cli_features
+            .resolve_requested(feature_map)
+            .into_iter()
+            .collect()
     }
 
     /// Returns the dependencies for a package, filtering out inactive targets.
