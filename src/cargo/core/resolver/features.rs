@@ -614,13 +614,13 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
             self.activate_pkg(member.package_id(), fk, &fvs)?;
         }
 
-        // Warn if any disabled feature was enabled transitively.
+        // Warn if any disabled feature was re-enabled transitively.
         let mut unwarned_disabled_features = (*cli_features.disabled_features).clone();
         for ((pkg_id, _dep_kind), feats) in self.activated_features.iter() {
             for feat in feats {
                 if unwarned_disabled_features.remove(feat) {
                     self.ws.gctx().shell().warn(format!(
-                        "disabled feature `{feat}` was enabled transitively in package `{}`",
+                        "disabled feature `{feat}` was re-enabled transitively in package `{}`",
                         pkg_id.name()
                     ))?;
                 }

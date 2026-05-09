@@ -2507,7 +2507,7 @@ fn test_feature_disable() {
     p.cargo("run --no-default-features --features a,c,y,-z -Zfeature-disabling")
         .masquerade_as_nightly_cargo(&["feature-disabling"])
         .with_stderr_data(str![[r#"
-[WARNING] disabled feature `z` was enabled transitively in package `foo`
+[WARNING] disabled feature `z` was re-enabled transitively in package `foo`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/foo`
 
