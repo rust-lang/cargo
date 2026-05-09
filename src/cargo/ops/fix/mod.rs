@@ -233,8 +233,9 @@ fn check_version_control(gctx: &GlobalContext, opts: &FixOptions) -> CargoResult
         return Ok(());
     }
 
-    let mut dirty_files = Vec::new();
-    let mut staged_files = Vec::new();
+    let mut dirty_files: Vec<String> = Vec::new();
+    let mut staged_files: Vec<String> = Vec::new();
+    #[cfg(not(cargo_wasm_cli))]
     if let Ok(repo) = git2::Repository::discover(gctx.cwd()) {
         let mut repo_opts = git2::StatusOptions::new();
         repo_opts.include_ignored(false);

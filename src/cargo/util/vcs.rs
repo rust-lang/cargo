@@ -9,20 +9,28 @@ use std::path::Path;
 //    path in that repo.
 // 2. We are in an HG repo.
 pub fn existing_vcs_repo(path: &Path, cwd: &Path) -> bool {
-    fn in_git_repo(path: &Path, cwd: &Path) -> bool {
-        if let Ok(repo) = GitRepo::discover(path, cwd) {
-            // Don't check if the working directory itself is ignored.
-            if repo.workdir().map_or(false, |workdir| workdir == path) {
-                true
-            } else {
-                !repo.is_path_ignored(path).unwrap_or(false)
-            }
-        } else {
-            false
-        }
+    #[cfg(cargo_wasm_cli)]
+    {
+        let _ = path;
+        HgRepo::discover(path, cwd).is_ok()
     }
+    #[cfg(not(cargo_wasm_cli))]
+    {
+        fn in_git_repo(path: &Path, cwd: &Path) -> bool {
+            if let Ok(repo) = GitRepo::discover(path, cwd) {
+                // Don't check if the working directory itself is ignored.
+                if repo.workdir().map_or(false, |workdir| workdir == path) {
+                    true
+                } else {
+                    !repo.is_path_ignored(path).unwrap_or(false)
+                }
+            } else {
+                false
+            }
+        }
 
-    in_git_repo(path, cwd) || HgRepo::discover(path, cwd).is_ok()
+        in_git_repo(path, cwd) || HgRepo::discover(path, cwd).is_ok()
+    }
 }
 
 pub struct HgRepo;
@@ -31,10 +39,24 @@ pub struct PijulRepo;
 pub struct FossilRepo;
 
 impl GitRepo {
+    #[cfg(not(cargo_wasm_cli))]
     pub fn init(path: &Path, _: &Path) -> CargoResult<GitRepo> {
         git2::Repository::init(path)?;
         Ok(GitRepo)
     }
+
+    #[cfg(cargo_wasm_cli)]
+    pub fn init(path: &Path, cwd: &Path) -> CargoResult<GitRepo> {
+        ProcessBuilder::new("git")
+            .cwd(cwd)
+            .arg("init")
+            .arg("--")
+            .arg(path)
+            .exec()?;
+        Ok(GitRepo)
+    }
+
+    #[cfg(not(cargo_wasm_cli))]
     pub fn discover(path: &Path, _: &Path) -> Result<git2::Repository, git2::Error> {
         git2::Repository::discover(path)
     }

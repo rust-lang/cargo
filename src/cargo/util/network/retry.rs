@@ -42,6 +42,8 @@
 //! - <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Retry-After>
 
 use crate::util::errors::{GitCliError, HttpNotSuccessful};
+#[cfg(cargo_wasm_cli)]
+use crate::wasm_curl as curl;
 use crate::{CargoResult, GlobalContext};
 use anyhow::Error;
 use rand::Rng;
@@ -185,6 +187,7 @@ impl<'a> Retry<'a> {
 }
 
 fn maybe_spurious(err: &Error) -> bool {
+    #[cfg(not(cargo_wasm_cli))]
     if let Some(git_err) = err.downcast_ref::<git2::Error>() {
         match git_err.class() {
             git2::ErrorClass::Net
@@ -215,9 +218,9 @@ fn maybe_spurious(err: &Error) -> bool {
         }
     }
 
-    use gix::protocol::transport::IsSpuriousError;
-
+    #[cfg(not(cargo_wasm_cli))]
     if let Some(err) = err.downcast_ref::<crate::sources::git::fetch::Error>() {
+        use gix::protocol::transport::IsSpuriousError;
         if err.is_spurious() {
             return true;
         }

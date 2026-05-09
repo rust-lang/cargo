@@ -139,6 +139,8 @@
 //! [The Cargo Book]: https://doc.rust-lang.org/cargo/
 //! [Cargo Contributor Guide]: https://doc.crates.io/contrib/
 
+#![cfg_attr(cargo_wasm_cli, allow(dead_code, unused_imports, unused_mut))]
+
 use crate::core::Shell;
 use crate::core::shell::Verbosity;
 use crate::core::shell::Verbosity::Verbose;
@@ -160,6 +162,10 @@ pub mod ops;
 pub mod sources;
 pub mod util;
 mod version;
+#[cfg(cargo_wasm_cli)]
+pub(crate) mod wasm_curl;
+#[cfg(cargo_wasm_cli)]
+pub(crate) mod wasm_curl_sys;
 
 pub fn exit_with_error(err: CliError, shell: &mut Shell) -> ! {
     debug!("exit_with_error; err={:?}", err);

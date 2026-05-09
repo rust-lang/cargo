@@ -187,3 +187,24 @@ mod imp {
         unsafe { slice::from_raw_parts_mut(v.as_mut_ptr().add(v.len()), v.capacity() - v.len()) }
     }
 }
+
+#[cfg(all(target_arch = "wasm32", target_os = "wasi"))]
+mod imp {
+    use std::io;
+    use std::io::prelude::*;
+    use std::process::{ChildStderr, ChildStdout};
+
+    pub fn read2(
+        mut out_pipe: ChildStdout,
+        mut err_pipe: ChildStderr,
+        data: &mut dyn FnMut(bool, &mut Vec<u8>, bool),
+    ) -> io::Result<()> {
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        out_pipe.read_to_end(&mut out)?;
+        data(true, &mut out, true);
+        err_pipe.read_to_end(&mut err)?;
+        data(false, &mut err, true);
+        Ok(())
+    }
+}

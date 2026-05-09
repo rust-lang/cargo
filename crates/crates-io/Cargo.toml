@@ -14,12 +14,14 @@ name = "crates_io"
 path = "lib.rs"
 
 [dependencies]
-curl.workspace = true
 percent-encoding.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 thiserror.workspace = true
 url.workspace = true
+
+[target.'cfg(not(all(target_arch = "wasm32", target_os = "wasi")))'.dependencies]
+curl.workspace = true
 
 [lints]
 workspace = true

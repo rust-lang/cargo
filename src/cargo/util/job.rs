@@ -46,6 +46,15 @@ mod imp {
     }
 }
 
+#[cfg(all(target_arch = "wasm32", target_os = "wasi"))]
+mod imp {
+    pub type Setup = ();
+
+    pub unsafe fn setup() -> Option<()> {
+        Some(())
+    }
+}
+
 #[cfg(windows)]
 mod imp {
     use std::io;

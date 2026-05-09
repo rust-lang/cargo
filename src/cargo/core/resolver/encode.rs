@@ -459,7 +459,7 @@ fn build_path_deps(
         }
     }
     for (_, dep) in ws.root_replace() {
-        build_dep(dep, ws, &mut ret, &mut visited);
+        build_dep(&dep, ws, &mut ret, &mut visited);
     }
 
     return Ok(ret);

@@ -1,11 +1,120 @@
 //! > This crate is maintained by the Cargo team for use by the wider
 //! > ecosystem. This crate follows semver compatibility for its APIs.
+#![cfg_attr(all(target_arch = "wasm32", target_os = "wasi"), allow(dead_code))]
 
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::{Cursor, SeekFrom};
 use std::time::Instant;
+
+#[cfg(all(target_arch = "wasm32", target_os = "wasi"))]
+mod curl {
+    use std::fmt;
+
+    #[derive(Debug)]
+    pub struct Error;
+
+    impl fmt::Display for Error {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.write_str("crates.io HTTP is not available in the WASI Cargo shim")
+        }
+    }
+
+    impl std::error::Error for Error {}
+
+    pub mod easy {
+        use super::Error;
+
+        #[derive(Debug, Default)]
+        pub struct Easy {
+            response_code: u32,
+        }
+
+        #[derive(Debug, Default)]
+        pub struct List;
+
+        impl List {
+            pub fn new() -> List {
+                List
+            }
+
+            pub fn append(&mut self, _header: &str) -> Result<(), Error> {
+                Ok(())
+            }
+        }
+
+        impl Easy {
+            pub fn put(&mut self, _value: bool) -> Result<(), Error> {
+                Ok(())
+            }
+
+            pub fn get(&mut self, _value: bool) -> Result<(), Error> {
+                Ok(())
+            }
+
+            pub fn custom_request(&mut self, _request: &str) -> Result<(), Error> {
+                Ok(())
+            }
+
+            pub fn url(&mut self, _url: &str) -> Result<(), Error> {
+                Ok(())
+            }
+
+            pub fn http_headers(&mut self, _headers: List) -> Result<(), Error> {
+                Ok(())
+            }
+
+            pub fn upload(&mut self, _value: bool) -> Result<(), Error> {
+                Ok(())
+            }
+
+            pub fn in_filesize(&mut self, _size: u64) -> Result<(), Error> {
+                Ok(())
+            }
+
+            pub fn transfer(&mut self) -> Transfer<'_> {
+                Transfer { easy: self }
+            }
+
+            pub fn response_code(&mut self) -> Result<u32, Error> {
+                Ok(self.response_code)
+            }
+        }
+
+        pub struct Transfer<'a> {
+            easy: &'a mut Easy,
+        }
+
+        impl<'a> Transfer<'a> {
+            pub fn read_function<F>(&mut self, _f: F) -> Result<(), Error>
+            where
+                F: FnMut(&mut [u8]) -> Result<usize, std::io::Error>,
+            {
+                Ok(())
+            }
+
+            pub fn write_function<F>(&mut self, _f: F) -> Result<(), Error>
+            where
+                F: FnMut(&[u8]) -> Result<usize, std::io::Error>,
+            {
+                Ok(())
+            }
+
+            pub fn header_function<F>(&mut self, _f: F) -> Result<(), Error>
+            where
+                F: FnMut(&[u8]) -> bool,
+            {
+                Ok(())
+            }
+
+            pub fn perform(&mut self) -> Result<(), Error> {
+                self.easy.response_code = 0;
+                Ok(())
+            }
+        }
+    }
+}
 
 use curl::easy::{Easy, List};
 use percent_encoding::{NON_ALPHANUMERIC, percent_encode};
@@ -143,6 +252,11 @@ pub enum Error {
     #[error(transparent)]
     Curl(#[from] curl::Error),
 
+    /// Registry HTTP calls are not yet wired to the WASI host.
+    #[cfg(all(target_arch = "wasm32", target_os = "wasi"))]
+    #[error("{0}")]
+    Unsupported(&'static str),
+
     /// Error from serializing the request payload and deserializing the
     /// response body (like response body didn't match expected structure).
     #[error(transparent)]
@@ -208,6 +322,7 @@ impl Registry {
     /// handle.useragent("my_crawler (example.com/info)");
     /// let mut reg = Registry::new_handle(String::from("https://crates.io"), None, handle, true);
     /// ```
+    #[cfg(not(all(target_arch = "wasm32", target_os = "wasi")))]
     pub fn new_handle(
         host: String,
         token: Option<String>,
@@ -218,6 +333,21 @@ impl Registry {
             host,
             token,
             handle,
+            auth_required,
+        }
+    }
+
+    #[cfg(all(target_arch = "wasm32", target_os = "wasi"))]
+    pub fn new_handle<T>(
+        host: String,
+        token: Option<String>,
+        _handle: T,
+        auth_required: bool,
+    ) -> Registry {
+        Registry {
+            host,
+            token,
+            handle: Easy::default(),
             auth_required,
         }
     }
@@ -370,18 +500,48 @@ impl Registry {
     }
 
     fn put(&mut self, path: &str, b: &[u8]) -> Result<String> {
-        self.handle.put(true)?;
-        self.req(path, Some(b), Auth::Authorized)
+        #[cfg(all(target_arch = "wasm32", target_os = "wasi"))]
+        {
+            let _ = (path, b);
+            return Err(Error::Unsupported(
+                "crates.io HTTP is not available in the WASI Cargo CLI yet",
+            ));
+        }
+        #[cfg(not(all(target_arch = "wasm32", target_os = "wasi")))]
+        {
+            self.handle.put(true)?;
+            self.req(path, Some(b), Auth::Authorized)
+        }
     }
 
     fn get(&mut self, path: &str) -> Result<String> {
-        self.handle.get(true)?;
-        self.req(path, None, Auth::Authorized)
+        #[cfg(all(target_arch = "wasm32", target_os = "wasi"))]
+        {
+            let _ = path;
+            return Err(Error::Unsupported(
+                "crates.io HTTP is not available in the WASI Cargo CLI yet",
+            ));
+        }
+        #[cfg(not(all(target_arch = "wasm32", target_os = "wasi")))]
+        {
+            self.handle.get(true)?;
+            self.req(path, None, Auth::Authorized)
+        }
     }
 
     fn delete(&mut self, path: &str, b: Option<&[u8]>) -> Result<String> {
-        self.handle.custom_request("DELETE")?;
-        self.req(path, b, Auth::Authorized)
+        #[cfg(all(target_arch = "wasm32", target_os = "wasi"))]
+        {
+            let _ = (path, b);
+            return Err(Error::Unsupported(
+                "crates.io HTTP is not available in the WASI Cargo CLI yet",
+            ));
+        }
+        #[cfg(not(all(target_arch = "wasm32", target_os = "wasi")))]
+        {
+            self.handle.custom_request("DELETE")?;
+            self.req(path, b, Auth::Authorized)
+        }
     }
 
     fn req(&mut self, path: &str, body: Option<&[u8]>, authorized: Auth) -> Result<String> {

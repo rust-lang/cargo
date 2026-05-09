@@ -686,6 +686,17 @@ mod tests {
     }
 }
 
+#[cfg(all(target_arch = "wasm32", target_os = "wasi"))]
+mod imp {
+    use super::{Shell, TtyWidth};
+
+    pub fn stderr_width() -> TtyWidth {
+        TtyWidth::NoTty
+    }
+
+    pub fn err_erase_line(_shell: &mut Shell) {}
+}
+
 pub struct Hyperlink<D: fmt::Display> {
     url: Option<D>,
 }

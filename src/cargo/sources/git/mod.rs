@@ -7,14 +7,25 @@
 //!
 //! [CVE-2022-46176]: https://blog.rust-lang.org/2023/01/10/cve-2022-46176.html
 
+#[cfg(not(cargo_wasm_cli))]
 pub use self::source::GitSource;
+#[cfg(cargo_wasm_cli)]
+pub use self::unsupported::{GitCheckout, GitDatabase, GitRemote, GitSource, fetch, resolve_ref};
+#[cfg(not(cargo_wasm_cli))]
 pub use self::utils::{GitCheckout, GitDatabase, GitRemote, fetch, resolve_ref};
+#[cfg(not(cargo_wasm_cli))]
 mod known_hosts;
+#[cfg(not(cargo_wasm_cli))]
 mod oxide;
+#[cfg(not(cargo_wasm_cli))]
 mod source;
+#[cfg(cargo_wasm_cli)]
+mod unsupported;
+#[cfg(not(cargo_wasm_cli))]
 mod utils;
 
 /// For `-Zgitoxide` integration.
+#[cfg(not(cargo_wasm_cli))]
 pub mod fetch {
     use crate::GlobalContext;
     use crate::core::features::GitFeatures;
@@ -58,4 +69,24 @@ pub mod fetch {
     }
 
     pub type Error = gix::env::collate::fetch::Error<gix::refspec::parse::Error>;
+}
+
+#[cfg(cargo_wasm_cli)]
+pub mod fetch {
+    use crate::GlobalContext;
+
+    /// The kind remote repository to fetch.
+    #[derive(Debug, Copy, Clone)]
+    pub enum RemoteKind {
+        /// A repository belongs to a git dependency.
+        GitDependency,
+        /// A repository belongs to a Cargo registry.
+        Registry,
+    }
+
+    pub type Error = anyhow::Error;
+
+    impl RemoteKind {
+        pub(crate) fn to_shallow_setting(&self, _repo_is_shallow: bool, _gctx: &GlobalContext) {}
+    }
 }

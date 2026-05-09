@@ -9,6 +9,10 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
+#[cfg(cargo_wasm_cli)]
+use crate::wasm_curl as curl;
+#[cfg(cargo_wasm_cli)]
+use crate::wasm_curl_sys as curl_sys;
 use anyhow::Context as _;
 use cargo_util_schemas::manifest::{Hints, RustVersion};
 use curl::easy::Easy;

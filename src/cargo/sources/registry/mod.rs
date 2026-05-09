@@ -450,10 +450,18 @@ pub enum MaybeLock {
 }
 
 mod download;
+#[cfg(not(cargo_wasm_cli))]
+mod http_remote;
+#[cfg(cargo_wasm_cli)]
+#[path = "http_remote_wasm.rs"]
 mod http_remote;
 pub(crate) mod index;
 pub use index::IndexSummary;
 mod local;
+#[cfg(not(cargo_wasm_cli))]
+mod remote;
+#[cfg(cargo_wasm_cli)]
+#[path = "remote_wasm.rs"]
 mod remote;
 
 /// Generates a unique name for [`SourceId`] to have a unique path to put their

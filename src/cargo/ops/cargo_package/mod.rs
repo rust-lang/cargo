@@ -42,6 +42,10 @@ use tar::{Builder, EntryType, Header, HeaderMode};
 use tracing::debug;
 use unicase::Ascii as UncasedAscii;
 
+#[cfg(not(cargo_wasm_cli))]
+mod vcs;
+#[cfg(cargo_wasm_cli)]
+#[path = "vcs_wasm.rs"]
 mod vcs;
 mod verify;
 

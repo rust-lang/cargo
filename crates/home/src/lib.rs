@@ -75,6 +75,11 @@ fn home_dir_inner() -> Option<PathBuf> {
     std::env::home_dir()
 }
 
+#[cfg(all(target_arch = "wasm32", target_os = "wasi"))]
+fn home_dir_inner() -> Option<PathBuf> {
+    std::env::var_os("HOME").map(PathBuf::from)
+}
+
 /// Returns the storage directory used by Cargo, often known as
 /// `.cargo` or `CARGO_HOME`.
 ///

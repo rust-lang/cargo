@@ -3,6 +3,8 @@
 use std::str;
 use std::time::Duration;
 
+#[cfg(cargo_wasm_cli)]
+use crate::wasm_curl as curl;
 use anyhow::bail;
 use curl::easy::Easy;
 use curl::easy::InfoType;

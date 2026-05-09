@@ -1,6 +1,8 @@
 use cargo::core::features;
 use cargo::core::shell::Shell;
+#[cfg(not(cargo_wasm_cli))]
 use cargo::util::network::http::http_handle;
+#[cfg(not(cargo_wasm_cli))]
 use cargo::util::network::http::needs_custom_http_transport;
 use cargo::util::{self, CargoResult, closest_msg, command_prelude};
 use cargo_util::{ProcessBuilder, ProcessError};
@@ -353,6 +355,10 @@ fn is_executable<P: AsRef<Path>>(path: P) -> bool {
 fn is_executable<P: AsRef<Path>>(path: P) -> bool {
     path.as_ref().is_file()
 }
+#[cfg(all(target_arch = "wasm32", target_os = "wasi"))]
+fn is_executable<P: AsRef<Path>>(path: P) -> bool {
+    path.as_ref().is_file()
+}
 
 fn search_directories(gctx: &GlobalContext) -> Vec<PathBuf> {
     let mut path_dirs = if let Some(val) = gctx.get_env_os("PATH") {
@@ -380,6 +386,7 @@ fn search_directories(gctx: &GlobalContext) -> Vec<PathBuf> {
 }
 
 /// Initialize libgit2.
+#[cfg(not(cargo_wasm_cli))]
 #[tracing::instrument(skip_all)]
 fn init_git(gctx: &GlobalContext) {
     // Disabling the owner validation in git can, in theory, lead to code execution
@@ -412,6 +419,7 @@ fn init_git(gctx: &GlobalContext) {
 /// If the user has a non-default network configuration, then libgit2 will be
 /// configured to use libcurl instead of the built-in networking support so
 /// that those configuration settings can be used.
+#[cfg(not(cargo_wasm_cli))]
 #[tracing::instrument(skip_all)]
 fn init_git_transports(gctx: &GlobalContext) {
     match needs_custom_http_transport(gctx) {

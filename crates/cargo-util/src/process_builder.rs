@@ -651,6 +651,21 @@ mod imp {
     }
 }
 
+#[cfg(all(target_arch = "wasm32", target_os = "wasi"))]
+mod imp {
+    use super::ProcessBuilder;
+    use anyhow::Result;
+    use std::io;
+
+    pub fn exec_replace(process_builder: &ProcessBuilder) -> Result<()> {
+        process_builder.exec()
+    }
+
+    pub fn command_line_too_big(_err: &io::Error) -> bool {
+        false
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::ProcessBuilder;

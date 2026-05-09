@@ -94,6 +94,7 @@ pub fn main(gctx: &mut GlobalContext) -> CliResult {
             global_args,
             Some(&exec),
         )?;
+        #[cfg(not(cargo_wasm_cli))]
         super::init_git(gctx);
 
         exec.exec(gctx, subcommand_args)?;
@@ -214,7 +215,9 @@ pub fn get_version_string(is_verbose: bool) -> String {
             version_string.push_str(&format!("commit-date: {}\n", ci.commit_date));
         }
         writeln!(version_string, "host: {}", env!("RUST_HOST_TARGET")).unwrap();
+        #[cfg(not(cargo_wasm_cli))]
         add_libgit2(&mut version_string);
+        #[cfg(not(cargo_wasm_cli))]
         add_curl(&mut version_string);
         add_ssl(&mut version_string);
         writeln!(version_string, "os: {}", os_info::get()).unwrap();
@@ -222,6 +225,7 @@ pub fn get_version_string(is_verbose: bool) -> String {
     version_string
 }
 
+#[cfg(not(cargo_wasm_cli))]
 fn add_libgit2(version_string: &mut String) {
     let git2_v = git2::Version::get();
     let lib_v = git2_v.libgit2_version();
@@ -242,6 +246,7 @@ fn add_libgit2(version_string: &mut String) {
     .unwrap();
 }
 
+#[cfg(not(cargo_wasm_cli))]
 fn add_curl(version_string: &mut String) {
     let curl_v = curl::Version::get();
     let vendored = if curl_v.vendored() {

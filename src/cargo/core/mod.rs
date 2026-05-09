@@ -20,6 +20,10 @@ pub mod compiler;
 pub mod dependency;
 pub mod features;
 pub mod gc;
+#[cfg(not(cargo_wasm_cli))]
+pub mod global_cache_tracker;
+#[cfg(cargo_wasm_cli)]
+#[path = "global_cache_tracker_wasm.rs"]
 pub mod global_cache_tracker;
 pub mod manifest;
 pub mod package;

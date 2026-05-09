@@ -19,8 +19,11 @@ use crate::util::toml::read_manifest;
 use anyhow::Context as _;
 use cargo_util::paths;
 use filetime::FileTime;
+#[cfg(not(cargo_wasm_cli))]
 use gix::bstr::{BString, ByteVec};
+#[cfg(not(cargo_wasm_cli))]
 use gix::dir::entry::Status;
+#[cfg(not(cargo_wasm_cli))]
 use gix::index::entry::Stage;
 use ignore::gitignore::GitignoreBuilder;
 use tracing::{debug, info, trace, warn};
@@ -404,7 +407,7 @@ impl<'gctx> Source for RecursivePathSource<'gctx> {
     }
 }
 
-/// Type that abstracts over [`gix::dir::entry::Kind`] and [`fs::FileType`].
+/// Type that abstracts over git directory entries and [`fs::FileType`].
 #[derive(Debug, Clone, Copy)]
 enum FileType {
     File { maybe_symlink: bool },
@@ -429,6 +432,7 @@ impl From<fs::FileType> for FileType {
     }
 }
 
+#[cfg(not(cargo_wasm_cli))]
 impl From<gix::dir::entry::Kind> for FileType {
     fn from(value: gix::dir::entry::Kind) -> Self {
         use gix::dir::entry::Kind;
@@ -569,11 +573,14 @@ pub fn list_files(pkg: &Package, gctx: &GlobalContext) -> CargoResult<Vec<PathEn
 fn _list_files(pkg: &Package, gctx: &GlobalContext) -> CargoResult<Vec<PathEntry>> {
     let root = pkg.root();
     let no_include_option = pkg.manifest().include().is_empty();
+    #[cfg(not(cargo_wasm_cli))]
     let git_repo = if no_include_option {
         discover_gix_repo(root)?
     } else {
         None
     };
+    #[cfg(cargo_wasm_cli)]
+    let git_repo: Option<()> = None;
 
     let mut exclude_builder = GitignoreBuilder::new(root);
     if no_include_option && git_repo.is_none() {
@@ -624,6 +631,7 @@ fn _list_files(pkg: &Package, gctx: &GlobalContext) -> CargoResult<Vec<PathEntry
     };
 
     // Attempt Git-prepopulate only if no `include` (see rust-lang/cargo#4135).
+    #[cfg(not(cargo_wasm_cli))]
     if no_include_option {
         if let Some(repo) = git_repo {
             return list_files_gix(pkg, &repo, &filter, gctx);
@@ -637,6 +645,7 @@ fn _list_files(pkg: &Package, gctx: &GlobalContext) -> CargoResult<Vec<PathEntry
 /// Returns [`Some(gix::Repository)`](gix::Repository) if the discovered repository
 /// (searched upwards from `root`) contains a tracked `<root>/Cargo.toml`.
 /// Otherwise, the caller should fall back on full file list.
+#[cfg(not(cargo_wasm_cli))]
 fn discover_gix_repo(root: &Path) -> CargoResult<Option<gix::Repository>> {
     let repo = match gix::ThreadSafeRepository::discover(root) {
         Ok(repo) => repo.to_thread_local(),
@@ -685,6 +694,7 @@ fn discover_gix_repo(root: &Path) -> CargoResult<Option<gix::Repository>> {
 /// This looks into Git sub-repositories as well, resolving them to individual files.
 /// Symlinks to directories will also be resolved, but walked as repositories if they
 /// point to one to avoid picking up `.git` directories.
+#[cfg(not(cargo_wasm_cli))]
 fn list_files_gix(
     pkg: &Package,
     repo: &gix::Repository,

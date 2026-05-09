@@ -133,6 +133,27 @@ mod imp {
     }
 }
 
+#[cfg(all(target_arch = "wasm32", target_os = "wasi"))]
+mod imp {
+    use super::Stdio;
+    use std::{fs::File, io::Error};
+
+    pub const IN_DEVICE: &str = "/dev/null";
+    pub const OUT_DEVICE: &str = "/dev/null";
+    pub const NULL_DEVICE: &str = "/dev/null";
+
+    pub struct ReplacementGuard;
+
+    impl ReplacementGuard {
+        pub(super) fn new(
+            _stdio: Stdio,
+            _replacement: &mut File,
+        ) -> Result<ReplacementGuard, Error> {
+            Ok(ReplacementGuard)
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use std::fs::OpenOptions;

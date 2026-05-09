@@ -12,6 +12,8 @@ use crate::util::network::http::http_handle;
 use crate::util::network::retry::{Retry, RetryResult};
 use crate::util::network::sleep::SleepTracker;
 use crate::util::{Filesystem, GlobalContext, IntoUrl, Progress, ProgressStyle, auth};
+#[cfg(cargo_wasm_cli)]
+use crate::wasm_curl as curl;
 use anyhow::Context as _;
 use cargo_credential::Operation;
 use cargo_util::paths;

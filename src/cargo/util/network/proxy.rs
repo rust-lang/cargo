@@ -19,6 +19,11 @@ pub fn http_proxy(http: &CargoHttpConfig) -> Option<String> {
     if let Some(s) = &http.proxy {
         return Some(s.into());
     }
+    #[cfg(cargo_wasm_cli)]
+    {
+        return None;
+    }
+    #[cfg(not(cargo_wasm_cli))]
     git2::Config::open_default()
         .and_then(|cfg| cfg.get_string("http.proxy"))
         .ok()

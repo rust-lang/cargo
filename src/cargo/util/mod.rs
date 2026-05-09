@@ -67,6 +67,7 @@ pub mod restricted_names;
 pub mod rustc;
 mod semver_eval_ext;
 mod semver_ext;
+#[cfg(not(cargo_wasm_cli))]
 pub mod sqlite;
 pub mod style;
 pub mod toml;

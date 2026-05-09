@@ -13,6 +13,10 @@ fn main() {
         reason = "not `cargo`, not needing to load from config"
     )]
     let target = std::env::var("TARGET").unwrap();
+    println!("cargo:rustc-check-cfg=cfg(cargo_wasm_cli)");
+    if target.starts_with("wasm32-wasi") {
+        println!("cargo:rustc-cfg=cargo_wasm_cli");
+    }
     println!("cargo:rustc-env=RUST_HOST_TARGET={target}");
 }
 

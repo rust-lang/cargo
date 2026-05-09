@@ -10,6 +10,8 @@ use std::io::prelude::*;
 use std::iter;
 use std::path::{Component, Path, PathBuf};
 use tempfile::Builder as TempFileBuilder;
+#[cfg(all(target_arch = "wasm32", target_os = "wasi"))]
+use walkdir::WalkDir;
 
 /// Joins paths into a string suitable for the `PATH` environment variable.
 ///
@@ -391,6 +393,13 @@ pub fn set_invocation_time(path: &Path) -> Result<FileTime> {
 
 /// Converts a path to UTF-8 bytes.
 pub fn path2bytes(path: &Path) -> Result<&[u8]> {
+    #[cfg(all(target_arch = "wasm32", target_os = "wasi"))]
+    {
+        path.as_os_str()
+            .to_str()
+            .map(|s| s.as_bytes())
+            .ok_or_else(|| anyhow::format_err!("invalid non-unicode path: {}", path.display()))
+    }
     #[cfg(unix)]
     {
         use std::os::unix::prelude::*;
@@ -410,6 +419,14 @@ pub fn path2bytes(path: &Path) -> Result<&[u8]> {
 
 /// Converts UTF-8 bytes to a path.
 pub fn bytes2path(bytes: &[u8]) -> Result<PathBuf> {
+    #[cfg(all(target_arch = "wasm32", target_os = "wasi"))]
+    {
+        use std::str;
+        match str::from_utf8(bytes) {
+            Ok(s) => Ok(PathBuf::from(s)),
+            Err(..) => Err(anyhow::format_err!("invalid non-unicode path")),
+        }
+    }
     #[cfg(unix)]
     {
         use std::os::unix::prelude::*;
@@ -621,9 +638,22 @@ fn _link_or_copy(src: &Path, dst: &Path) -> Result<()> {
         remove_file(&dst)?;
     }
 
+    #[cfg(all(target_arch = "wasm32", target_os = "wasi"))]
+    if src.is_dir() {
+        copy_dir_all(src, dst)?;
+        return Ok(());
+    }
+
     let link_result = if src.is_dir() {
         #[cfg(unix)]
         use std::os::unix::fs::symlink;
+        #[cfg(all(target_arch = "wasm32", target_os = "wasi"))]
+        let symlink = |_src: &Path, _dst: &Path| -> io::Result<()> {
+            Err(io::Error::new(
+                io::ErrorKind::Unsupported,
+                "directory symlinks are not available in this WASI Cargo build",
+            ))
+        };
         #[cfg(windows)]
         // FIXME: This should probably panic or have a copy fallback. Symlinks
         // are not supported in all windows environments. Currently symlinking
@@ -683,6 +713,25 @@ fn _link_or_copy(src: &Path, dst: &Path) -> Result<()> {
                 dst.display()
             )
         })?;
+    Ok(())
+}
+
+#[cfg(all(target_arch = "wasm32", target_os = "wasi"))]
+fn copy_dir_all(src: &Path, dst: &Path) -> Result<()> {
+    fs::create_dir_all(dst)?;
+    for entry in WalkDir::new(src) {
+        let entry = entry?;
+        let relative = entry.path().strip_prefix(src)?;
+        let target = dst.join(relative);
+        if entry.file_type().is_dir() {
+            fs::create_dir_all(&target)?;
+        } else if entry.file_type().is_file() {
+            if let Some(parent) = target.parent() {
+                fs::create_dir_all(parent)?;
+            }
+            fs::copy(entry.path(), &target)?;
+        }
+    }
     Ok(())
 }
 

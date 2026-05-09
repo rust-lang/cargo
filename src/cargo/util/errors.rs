@@ -1,3 +1,5 @@
+#[cfg(cargo_wasm_cli)]
+use crate::wasm_curl as curl;
 use anyhow::Error;
 use curl::easy::Easy;
 use std::fmt::{self, Write};

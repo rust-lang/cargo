@@ -109,6 +109,11 @@ impl ProcessError {
 pub fn exit_status_to_string(status: ExitStatus) -> String {
     return status_to_string(status);
 
+    #[cfg(all(target_arch = "wasm32", target_os = "wasi"))]
+    fn status_to_string(status: ExitStatus) -> String {
+        status.to_string()
+    }
+
     #[cfg(unix)]
     fn status_to_string(status: ExitStatus) -> String {
         use std::os::unix::process::*;
