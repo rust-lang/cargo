@@ -1968,12 +1968,12 @@ impl<'gctx> Workspace<'gctx> {
         if *cli_features.features != found_features {
             self.report_unknown_features_error(specs, &cli_features.features, &found_features)?;
         } else if *cli_features.disabled_features != found_disabled_features {
-            let specified_feats = cli_features
-                .disabled_features
-                .iter()
-                .map(|f| FeatureValue::Feature(f.clone()))
-                .collect();
-            self.report_unknown_features_error(specs, &specified_feats, &found_features)?;
+            let conv = |f: &BTreeSet<InternedString>| {
+                f.iter().map(|f| FeatureValue::Feature(f.clone())).collect()
+            };
+            let specified_disabled = conv(&cli_features.disabled_features);
+            let found_disabled = conv(&found_disabled_features);
+            self.report_unknown_features_error(specs, &specified_disabled, &found_disabled)?;
         }
         Ok(members)
     }
