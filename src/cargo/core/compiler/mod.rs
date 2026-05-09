@@ -1887,6 +1887,15 @@ pub fn lib_search_paths(
     Ok(lib_search_paths)
 }
 
+fn is_public_dependency_enabled(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> bool {
+    unit.pkg
+        .manifest()
+        .unstable_features()
+        .require(Feature::public_dependency())
+        .is_ok()
+        || build_runner.bcx.gctx.cli_unstable().public_dependency
+}
+
 /// Generates a list of `--extern` arguments.
 pub fn extern_args(
     build_runner: &BuildRunner<'_, '_>,
@@ -1897,6 +1906,7 @@ pub fn extern_args(
     let deps = build_runner.unit_deps(unit);
 
     let no_embed_metadata = build_runner.bcx.gctx.cli_unstable().no_embed_metadata;
+    let public_dependency_enabled = is_public_dependency_enabled(build_runner, unit);
 
     // Closure to add one dependency to `result`.
     let mut link_to = |dep: &UnitDep,
@@ -1906,14 +1916,7 @@ pub fn extern_args(
      -> CargoResult<()> {
         let mut value = OsString::new();
         let mut opts = Vec::new();
-        let is_public_dependency_enabled = unit
-            .pkg
-            .manifest()
-            .unstable_features()
-            .require(Feature::public_dependency())
-            .is_ok()
-            || build_runner.bcx.gctx.cli_unstable().public_dependency;
-        if !dep.public && unit.target.is_lib() && is_public_dependency_enabled {
+        if !dep.public && unit.target.is_lib() && public_dependency_enabled {
             opts.push("priv");
             *unstable_opts = true;
         }
