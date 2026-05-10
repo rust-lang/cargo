@@ -127,6 +127,10 @@ fn simple_with_message_format() {
             str![[r#"
 [
   {
+    "reason": "build-plan",
+    "...": "{...}"
+  },
+  {
     "executable": null,
     "features": [],
     "filenames": "{...}",

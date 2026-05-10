@@ -189,6 +189,9 @@ pub fn compile_ws<'a>(
         unit_graph::emit_serialized_unit_graph(&bcx.roots, &bcx.unit_graph, ws.gctx())?;
         return Compilation::new(&bcx);
     }
+    if options.build_config.emit_json() {
+        unit_graph::emit_build_plan_message(&bcx.roots, &bcx.unit_graph, ws.gctx())?;
+    }
     crate::core::gc::auto_gc(bcx.gctx);
     let build_runner = BuildRunner::new(&bcx)?;
     if options.build_config.dry_run {

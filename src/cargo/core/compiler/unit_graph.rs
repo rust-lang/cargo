@@ -12,6 +12,7 @@ use crate::core::dependency::Dependency;
 use crate::core::profiles::{Profile, UnitFor};
 use crate::util::CargoResult;
 use crate::util::Unhashed;
+use crate::util::machine_message::Message as _;
 use crate::util::interning::InternedString;
 use std::collections::HashMap;
 
@@ -60,6 +61,19 @@ struct SerializedUnitGraph<'a> {
 }
 
 #[derive(serde::Serialize)]
+struct SerializedBuildPlan<'a> {
+    unit_count: usize,
+    #[serde(flatten)]
+    graph: SerializedUnitGraph<'a>,
+}
+
+impl<'a> crate::util::machine_message::Message for SerializedBuildPlan<'a> {
+    fn reason(&self) -> &str {
+        "build-plan"
+    }
+}
+
+#[derive(serde::Serialize)]
 struct SerializedUnit<'a> {
     pkg_id: PackageIdSpec,
     target: &'a Target,
@@ -96,6 +110,31 @@ pub fn emit_serialized_unit_graph(
     unit_graph: &UnitGraph,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
+    gctx.shell()
+        .print_json(&serialized_unit_graph(root_units, unit_graph, gctx))
+}
+
+/// Emits the resolved build plan as a line-delimited JSON machine message.
+pub fn emit_build_plan_message(
+    root_units: &[Unit],
+    unit_graph: &UnitGraph,
+    gctx: &GlobalContext,
+) -> CargoResult<()> {
+    let graph = serialized_unit_graph(root_units, unit_graph, gctx);
+    let msg = SerializedBuildPlan {
+        unit_count: graph.units.len(),
+        graph,
+    };
+    let mut shell = gctx.shell();
+    writeln!(shell.out(), "{}", msg.to_json_string())?;
+    Ok(())
+}
+
+fn serialized_unit_graph<'a>(
+    root_units: &'a [Unit],
+    unit_graph: &'a UnitGraph,
+    gctx: &GlobalContext,
+) -> SerializedUnitGraph<'a> {
     let mut units: Vec<(&Unit, &Vec<UnitDep>)> = unit_graph.iter().collect();
     units.sort_unstable();
     // Create a map for quick lookup for dependencies.
@@ -143,9 +182,9 @@ pub fn emit_serialized_unit_graph(
         })
         .collect();
 
-    gctx.shell().print_json(&SerializedUnitGraph {
+    SerializedUnitGraph {
         version: VERSION,
         units: ser_units,
         roots,
-    })
+    }
 }

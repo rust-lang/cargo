@@ -40,8 +40,14 @@ information during the build:
 
 * results of the build scripts (for example, native dependencies).
 
+Cargo also emits a `build-plan` message before compilation starts. This message
+contains Cargo's resolved unit graph and a `unit_count` value matching the build
+progress denominator.
+
 The output goes to stdout in the JSON object per line format. The `reason` field
 distinguishes different kinds of messages.
+Consumers should ignore message reasons they do not recognize so Cargo can add
+new message kinds over time.
 The `package_id` field is a unique identifier for referring to the package, and
 as the `--package` argument to many commands. The syntax grammar can be found in
 chapter [Package ID Specifications].

@@ -47,6 +47,48 @@ fn double_json_works() {
 }
 
 #[cargo_test]
+fn json_emits_build_plan_before_work() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check --message-format json")
+        .with_stdout_data(
+            str![[r#"
+[
+  {
+    "reason": "build-plan",
+    "roots": [
+      0
+    ],
+    "unit_count": 1,
+    "units": [
+      {
+        "mode": "check",
+        "pkg_id": "path+[ROOTURL]/foo#0.1.0",
+        "...": "{...}"
+      }
+    ],
+    "version": 1
+  },
+  {
+    "reason": "compiler-artifact",
+    "...": "{...}"
+  },
+  {
+    "reason": "build-finished",
+    "success": true
+  }
+]
+"#]]
+            .is_json()
+            .against_jsonlines(),
+        )
+        .run();
+}
+
+#[cargo_test]
 fn cargo_renders() {
     let p = project()
         .file(
@@ -70,6 +112,10 @@ fn cargo_renders() {
         .with_stdout_data(
             str![[r#"
 [
+  {
+    "reason": "build-plan",
+    "...": "{...}"
+  },
   {
     "reason": "compiler-artifact",
     "...": "{...}"

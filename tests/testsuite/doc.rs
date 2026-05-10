@@ -1879,6 +1879,10 @@ fn doc_message_format() {
             str![[r##"
 [
   {
+    "reason": "build-plan",
+    "...": "{...}"
+  },
+  {
     "manifest_path": "[ROOT]/foo/Cargo.toml",
     "message": {
       "$message_type": "diagnostic",
