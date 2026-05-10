@@ -219,7 +219,7 @@ fn cargo_rustfmt_suggestion() {
         .with_stderr_data(str![[r#"
 [ERROR] no such command: `rustfmt`
 
-[HELP] a command with a similar name exists: `rustc`
+[HELP] a command with a similar name exists: `fmt`
 
 [HELP] view all installed commands with `cargo --list`
 [HELP] find a package to install `rustfmt` with `cargo search cargo-rustfmt`
