@@ -2509,7 +2509,7 @@ fn test_feature_disable() {
         .with_stderr_data(str![[r#"
 [WARNING] disabled feature `z` was re-enabled transitively in package `foo`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `target/debug/foo`
+[RUNNING] `target/debug/foo[EXE]`
 
 "#]])
         .run();
