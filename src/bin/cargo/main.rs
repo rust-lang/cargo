@@ -278,7 +278,11 @@ fn execute_external_subcommand(gctx: &GlobalContext, cmd: &str, args: &[&OsStr])
                 )
             } else {
                 let suggestions = list_commands(gctx);
-                let did_you_mean = closest_msg(cmd, suggestions.keys(), |c| c, "command");
+                let did_you_mean = if cmd == "rustfmt" {
+                    "\n\nhelp: a command with a similar name exists: `fmt`".to_string()
+                } else {
+                    closest_msg(cmd, suggestions.keys(), |c| c, "command")
+                };
 
                 anyhow::format_err!(
                     "no such command: `{cmd}`{did_you_mean}\n\n\

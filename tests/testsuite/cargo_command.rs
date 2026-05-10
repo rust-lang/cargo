@@ -213,6 +213,22 @@ fn find_closest_capital_b_to_b() {
 }
 
 #[cargo_test]
+fn cargo_rustfmt_suggestion() {
+    cargo_process("rustfmt")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] no such command: `rustfmt`
+
+[HELP] a command with a similar name exists: `fmt`
+
+[HELP] view all installed commands with `cargo --list`
+[HELP] find a package to install `rustfmt` with `cargo search cargo-rustfmt`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn find_closest_biuld_to_build() {
     cargo_process("biuld")
         .with_status(101)
