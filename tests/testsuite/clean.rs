@@ -723,15 +723,15 @@ fn clean_p_respects_build_target_config() {
         .build();
 
     p.cargo("build").run();
-    // FIXME: should match target-specific artifacts, but currently reports 0 files
-    // because `build.target` config is ignored by `clean -p`.
     p.cargo("clean -p foo --dry-run")
         .with_stderr_data(str![[r#"
-[SUMMARY] 0 files
+[SUMMARY] [FILE_NUM] files, [FILE_SIZE]B total
 [WARNING] no files deleted due to --dry-run
 
 "#]])
         .run();
+    p.cargo("clean -p foo").run();
+    assert_all_clean(&p.build_dir().join(rustc_host()));
 }
 
 // Ensures that all files for the package have been deleted.
