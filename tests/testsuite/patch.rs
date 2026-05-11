@@ -3430,3 +3430,43 @@ foo v0.5.0 ([ROOT]/foo/foo)
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn unused_patch_same_dependency_different_sources() {
+    Package::new("bar", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+
+                [dependencies]
+                bar = "0.1.0"
+
+                [patch.crates-io]
+                bar = { path = "my-bar" }
+
+                [patch.'https://github.com/example/bar']
+                bar = { path = "my-bar" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("my-bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("my-bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
+[CHECKING] bar v0.1.0 ([ROOT]/foo/my-bar)
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
