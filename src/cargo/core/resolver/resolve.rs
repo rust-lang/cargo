@@ -3,6 +3,7 @@ use cargo_util_schemas::manifest::RustVersion;
 
 use crate::core::dependency::DepKind;
 use crate::core::{Dependency, PackageId, PackageIdSpec, PackageIdSpecQuery, Summary, Target};
+use crate::util::CanonicalUrl;
 use crate::util::Graph;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
@@ -201,11 +202,24 @@ impl Resolve {
         self.graph.path_to_top(pkg)
     }
 
-    pub fn register_used_patches<'a>(&mut self, patches: impl Iterator<Item = &'a Summary>) {
-        for summary in patches {
-            if !self.graph.contains(&summary.package_id()) {
-                self.unused_patches.push(summary.package_id())
-            };
+    pub fn register_used_patches(&mut self, patches: &HashMap<CanonicalUrl, Vec<Summary>>) {
+        let mut used_patches = HashSet::new();
+        for pkg in self.iter() {
+            for (dep_pkg_id, deps) in self.deps_not_replaced(pkg) {
+                for dep in deps {
+                    used_patches.insert((dep.source_id().canonical_url().clone(), dep_pkg_id));
+                }
+            }
+        }
+
+        for (url, summaries) in patches {
+            for summary in summaries {
+                if !used_patches.contains(&(url.clone(), summary.package_id()))
+                    && !self.unused_patches.contains(&summary.package_id())
+                {
+                    self.unused_patches.push(summary.package_id());
+                }
+            }
         }
     }
 

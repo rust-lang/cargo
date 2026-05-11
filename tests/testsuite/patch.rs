@@ -3462,6 +3462,10 @@ fn unused_patch_same_dependency_different_sources() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
+[WARNING] patch `bar v0.1.0 ([ROOT]/foo/my-bar)` was not used in the crate graph
+  |
+  = [HELP] perhaps you meant one of the following:
+          	[ROOT]/foo/my-bar
 [LOCKING] 1 package to latest compatible version
 [CHECKING] bar v0.1.0 ([ROOT]/foo/my-bar)
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
