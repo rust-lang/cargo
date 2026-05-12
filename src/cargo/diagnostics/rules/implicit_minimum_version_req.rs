@@ -20,6 +20,7 @@ use crate::core::Manifest;
 use crate::core::MaybePackage;
 use crate::core::Package;
 use crate::core::Workspace;
+use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevel;
 use crate::diagnostics::LintLevelSource;
@@ -88,7 +89,7 @@ pub fn implicit_minimum_version_req_pkg(
     pkg: &Package,
     manifest_path: &Path,
     cargo_lints: &TomlToolLints,
-    error_count: &mut usize,
+    stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let (lint_level, source) = LINT.level(
@@ -141,9 +142,7 @@ pub fn implicit_minimum_version_req_pkg(
             emit_source = false;
         }
 
-        if lint_level.is_error() {
-            *error_count += 1;
-        }
+        stats.record_lint(lint_level);
         gctx.shell().print_report(&report, lint_level.force())?;
     }
 
@@ -156,7 +155,7 @@ pub fn implicit_minimum_version_req_ws(
     maybe_pkg: &MaybePackage,
     manifest_path: &Path,
     cargo_lints: &TomlToolLints,
-    error_count: &mut usize,
+    stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let (lint_level, source) = LINT.level(
@@ -225,9 +224,7 @@ pub fn implicit_minimum_version_req_ws(
             emit_source = false;
         }
 
-        if lint_level.is_error() {
-            *error_count += 1;
-        }
+        stats.record_lint(lint_level);
         gctx.shell().print_report(&report, lint_level.force())?;
     }
 

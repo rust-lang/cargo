@@ -13,6 +13,7 @@ use crate::CargoResult;
 use crate::GlobalContext;
 use crate::core::Feature;
 use crate::core::Package;
+use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevel;
 use crate::diagnostics::get_key_value_span;
@@ -33,7 +34,7 @@ pub fn check_im_a_teapot(
     pkg: &Package,
     path: &Path,
     pkg_lints: &TomlToolLints,
-    error_count: &mut usize,
+    stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let manifest = pkg.manifest();
@@ -49,9 +50,6 @@ pub fn check_im_a_teapot(
         .package()
         .is_some_and(|p| p.im_a_teapot.is_some())
     {
-        if lint_level.is_error() {
-            *error_count += 1;
-        }
         let level = lint_level.to_diagnostic_level();
         let manifest_path = rel_cwd_manifest_path(path, gctx);
         let emitted_source = LINT.emitted_source(lint_level, source);
@@ -74,6 +72,7 @@ pub fn check_im_a_teapot(
 
         let report = &[desc.element(Level::NOTE.message(&emitted_source))];
 
+        stats.record_lint(lint_level);
         gctx.shell().print_report(report, lint_level.force())?;
     }
     Ok(())

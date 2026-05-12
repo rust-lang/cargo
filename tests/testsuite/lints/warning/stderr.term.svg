@@ -1,7 +1,7 @@
-<svg width="740px" height="200px" xmlns="http://www.w3.org/2000/svg">
+<svg width="936px" height="218px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
-    .bg { background: #000000 }
+    .bg { fill: #000000 }
     .fg-bright-blue { fill: #5555FF }
     .fg-bright-green { fill: #55FF55 }
     .fg-yellow { fill: #AA5500 }
@@ -34,11 +34,13 @@
 </tspan>
     <tspan x="10px" y="136px"><tspan>  </tspan><tspan class="fg-bright-blue bold">= </tspan><tspan class="bold">note</tspan><tspan>: `cargo::im_a_teapot` is set to `warn` in `[lints]`</tspan>
 </tspan>
-    <tspan x="10px" y="154px"><tspan class="fg-bright-green bold">    Checking</tspan><tspan> foo v0.0.1 ([ROOT]/foo)</tspan>
+    <tspan x="10px" y="154px"><tspan class="fg-yellow bold">warning</tspan><tspan>: `foo` (manifest) generated 1 warning</tspan>
 </tspan>
-    <tspan x="10px" y="172px"><tspan class="fg-bright-green bold">    Finished</tspan><tspan> </tspan><tspan><a href="https://doc.rust-lang.org/cargo/reference/profiles.html#default-profiles">`dev` profile [unoptimized + debuginfo]</a></tspan><tspan> target(s) in [ELAPSED]s</tspan>
+    <tspan x="10px" y="172px"><tspan class="fg-bright-green bold">    Checking</tspan><tspan> foo v0.0.1 ([ROOT]/foo)</tspan>
 </tspan>
-    <tspan x="10px" y="190px">
+    <tspan x="10px" y="190px"><tspan class="fg-bright-green bold">    Finished</tspan><tspan> </tspan><tspan><a href="https://doc.rust-lang.org/cargo/reference/profiles.html#default-profiles">`dev` profile [unoptimized + debuginfo]</a></tspan><tspan> target(s) in [ELAPSED]s</tspan>
+</tspan>
+    <tspan x="10px" y="208px">
 </tspan>
   </text>
 

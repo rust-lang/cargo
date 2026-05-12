@@ -11,6 +11,7 @@ use super::find_lint_or_group;
 use crate::CargoResult;
 use crate::GlobalContext;
 use crate::core::Feature;
+use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::ManifestFor;
 use crate::diagnostics::get_key_value_span;
 use crate::diagnostics::rel_cwd_manifest_path;
@@ -20,7 +21,7 @@ pub fn missing_lints_features(
     manifest: ManifestFor<'_>,
     manifest_path: &Path,
     cargo_lints: &TomlToolLints,
-    error_count: &mut usize,
+    stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
@@ -41,14 +42,7 @@ pub fn missing_lints_features(
         if let Some(feature_gate) = feature_gate
             && !manifest.unstable_features().is_enabled(feature_gate)
         {
-            report_feature_not_enabled(
-                name,
-                feature_gate,
-                &manifest,
-                &manifest_path,
-                error_count,
-                gctx,
-            )?;
+            report_feature_not_enabled(name, feature_gate, &manifest, &manifest_path, stats, gctx)?;
         }
     }
 
@@ -60,7 +54,7 @@ fn report_feature_not_enabled(
     feature_gate: &Feature,
     manifest: &ManifestFor<'_>,
     manifest_path: &str,
-    error_count: &mut usize,
+    stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let dash_feature_name = feature_gate.name().replace("_", "-");
@@ -92,7 +86,7 @@ fn report_feature_not_enabled(
         "consider adding `cargo-features = [\"{dash_feature_name}\"]` to the top of the manifest"
     )))];
 
-    *error_count += 1;
+    stats.record_error();
     gctx.shell().print_report(&report, true)?;
 
     Ok(())

@@ -15,6 +15,7 @@ use crate::GlobalContext;
 use crate::core::Package;
 use crate::core::Workspace;
 use crate::diagnostics::AsIndex;
+use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevel;
 use crate::diagnostics::LintLevelSource;
@@ -68,7 +69,7 @@ pub fn non_kebab_case_bins(
     pkg: &Package,
     manifest_path: &Path,
     cargo_lints: &TomlToolLints,
-    error_count: &mut usize,
+    stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let (lint_level, source) = LINT.level(
@@ -83,15 +84,7 @@ pub fn non_kebab_case_bins(
 
     let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
 
-    lint_package(
-        ws,
-        pkg,
-        &manifest_path,
-        lint_level,
-        source,
-        error_count,
-        gctx,
-    )
+    lint_package(ws, pkg, &manifest_path, lint_level, source, stats, gctx)
 }
 
 fn lint_package(
@@ -100,7 +93,7 @@ fn lint_package(
     manifest_path: &str,
     lint_level: LintLevel,
     source: LintLevelSource,
-    error_count: &mut usize,
+    stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let manifest = pkg.manifest();
@@ -247,9 +240,7 @@ path = "src/main.rs""#
             report.push(help);
         }
 
-        if lint_level.is_error() {
-            *error_count += 1;
-        }
+        stats.record_lint(lint_level);
         gctx.shell().print_report(&report, lint_level.force())?;
     }
 

@@ -33,7 +33,7 @@
 </tspan>
     <tspan x="10px" y="136px"><tspan>  </tspan><tspan class="fg-bright-blue bold">= </tspan><tspan class="bold">help</tspan><tspan>: consider adding `cargo-features = ["test-dummy-unstable"]` to the top of the manifest</tspan>
 </tspan>
-    <tspan x="10px" y="154px"><tspan class="fg-bright-red bold">error</tspan><tspan>: encountered 1 error while verifying lints</tspan>
+    <tspan x="10px" y="154px"><tspan class="fg-bright-red bold">error</tspan><tspan>: could not parse workspace (manifest) due to 1 previous error</tspan>
 </tspan>
     <tspan x="10px" y="172px">
 </tspan>

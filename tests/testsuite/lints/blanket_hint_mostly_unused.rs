@@ -35,6 +35,7 @@ hint-mostly-unused = true
   |
 7 | [profile.dev.package.<pkg_name>]
   |             +++++++++++++++++++
+[WARNING] workspace (manifest) generated 1 warning
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -73,6 +74,7 @@ hint-mostly-unused = true
   |
   = [HELP] scope `hint-mostly-unused` to specific packages with a lot of unused object code
   = [NOTE] `cargo::blanket_hint_mostly_unused` is set to `warn` by default
+[WARNING] workspace (manifest) generated 1 warning
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -111,6 +113,7 @@ hint-mostly-unused = true
   |
   = [HELP] scope `hint-mostly-unused` to specific packages with a lot of unused object code
   = [NOTE] `cargo::blanket_hint_mostly_unused` is set to `warn` by default
+[WARNING] workspace (manifest) generated 1 warning
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -158,6 +161,7 @@ authors = []
   |
   = [HELP] scope `hint-mostly-unused` to specific packages with a lot of unused object code
   = [NOTE] `cargo::blanket_hint_mostly_unused` is set to `warn` by default
+[WARNING] workspace (manifest) generated 1 warning
 [CHECKING] foo v0.0.1 ([ROOT]/foo/foo)
 [RUNNING] `rustc --crate-name foo [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -203,7 +207,7 @@ blanket_hint_mostly_unused = "deny"
   |
 7 | [profile.dev.package.<pkg_name>]
   |             +++++++++++++++++++
-[ERROR] encountered 1 error while running lints
+[ERROR] could not parse workspace (manifest) due to 1 previous error
 
 "#]])
         .run();

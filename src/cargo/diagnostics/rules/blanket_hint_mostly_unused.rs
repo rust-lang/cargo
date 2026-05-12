@@ -15,6 +15,7 @@ use crate::CargoResult;
 use crate::GlobalContext;
 use crate::core::MaybePackage;
 use crate::core::Workspace;
+use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevel;
 use crate::diagnostics::get_key_value_span;
@@ -61,7 +62,7 @@ pub fn blanket_hint_mostly_unused(
     maybe_pkg: &MaybePackage,
     path: &Path,
     pkg_lints: &TomlToolLints,
-    error_count: &mut usize,
+    stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let (lint_level, source) = LINT.level(
@@ -120,9 +121,6 @@ pub fn blanket_hint_mostly_unused(
     }
 
     for (i, (path, show_per_pkg_suggestion)) in paths.iter().enumerate() {
-        if lint_level.is_error() {
-            *error_count += 1;
-        }
         let title = "`hint-mostly-unused` is being blanket applied to all dependencies";
         let help_txt =
             "scope `hint-mostly-unused` to specific packages with a lot of unused object code";
@@ -177,6 +175,7 @@ pub fn blanket_hint_mostly_unused(
         // The primary group should always be first
         report.insert(0, primary_group);
 
+        stats.record_lint(lint_level);
         gctx.shell().print_report(&report, lint_level.force())?;
     }
 

@@ -61,6 +61,7 @@ text_direction_codepoint_in_literal = \"allow\"
   |                                           |           |      "/u{202c}"
   |                                           |           "/u{202b}"
   |                                           this comment contains an invisible unicode text flow control codepoint
+[WARNING] `foo` (manifest) generated 3 warnings
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -134,6 +135,7 @@ text_direction_codepoint_in_literal = \"warn\"
 9 - repository = "a �repository� everywhere"  # this is a �tricky� comment
 9 + repository = "a /u{202E}repository/u{202A} everywhere"  # this is a �tricky� comment
   |
+[WARNING] `foo` (manifest) generated 3 warnings
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -250,6 +252,7 @@ edition = \"2015\"
 12 - repository = "a �repository� everywhere"  # this is a �tricky� comment
 12 + repository = "a /u{202E}repository/u{202A} everywhere"  # this is a �tricky� comment
    |
+[WARNING] `foo` (manifest) generated 6 warnings
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -375,6 +378,7 @@ workspace = true
 8 - repository = "a �repository� everywhere"  # this is a �tricky� comment
 8 + repository = "a /u{202E}repository/u{202A} everywhere"  # this is a �tricky� comment
   |
+[WARNING] workspace (manifest) generated 6 warnings
 [CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 

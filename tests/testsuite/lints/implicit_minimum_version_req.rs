@@ -44,6 +44,7 @@ implicit_minimum_version_req = "warn"
   |
 7 | dep = "1.0.0"
   |         ++++
+[WARNING] `foo` (manifest) generated 1 warning
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
@@ -103,6 +104,7 @@ implicit_minimum_version_req = "warn"
   |
 7 | dep = "1.0.0"
   |           ++
+[WARNING] `foo` (manifest) generated 1 warning
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
@@ -210,6 +212,7 @@ implicit_minimum_version_req = "warn"
   |
 7 | dep = { version = "1.0.0" }
   |                     ++++
+[WARNING] `foo` (manifest) generated 1 warning
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
@@ -269,6 +272,7 @@ implicit_minimum_version_req = "warn"
   |
 7 | dep = ">=1.0.0"
   |             ++
+[WARNING] `foo` (manifest) generated 1 warning
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
@@ -568,6 +572,7 @@ implicit_minimum_version_req = "warn"
   |
 7 | dep = ">=1.0.0, <2.0"
   |             ++
+[WARNING] `foo` (manifest) generated 1 warning
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
@@ -785,6 +790,7 @@ edition = "2021"
   |
 7 | bar = { path = "bar", version = "0.1.0" }
   |                                     ++
+[WARNING] `foo` (manifest) generated 1 warning
 [LOCKING] 1 package to latest compatible version
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
@@ -901,6 +907,7 @@ implicit_minimum_version_req = "warn"
   |
 7 | bar = { git = '[ROOTURL]/bar', version = "0.1.0" }
   |                                          [..]++
+[WARNING] `foo` (manifest) generated 1 warning
 [UPDATING] git repository `[ROOTURL]/bar`
 [LOCKING] 1 package to latest compatible version
 [CHECKING] bar v0.1.0 ([ROOTURL]/bar#[..])
@@ -958,6 +965,7 @@ implicit_minimum_version_req = "warn"
   |
 7 | dep = "1.0.0"
   |         ++++
+[WARNING] `foo` (manifest) generated 1 warning
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
@@ -1004,6 +1012,7 @@ implicit_minimum_version_req = "warn"
   |
 7 | dep = "1.0.0"
   |           ++
+[WARNING] `foo` (manifest) generated 1 warning
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
@@ -1064,6 +1073,7 @@ implicit_minimum_version_req = "warn"
   |
 8 | dep = "1.0.0"
   |         ++++
+[WARNING] `foo` (manifest) generated 1 warning
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
@@ -1116,6 +1126,7 @@ implicit_minimum_version_req = "warn"
   |
 8 | dep = "1.0.0"
   |         ++++
+[WARNING] `foo` (manifest) generated 1 warning
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
@@ -1249,6 +1260,7 @@ workspace = true
   |
 7 | dep = "1.0.0"
   |         ++++
+[WARNING] workspace (manifest) generated 1 warning
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
@@ -1331,6 +1343,7 @@ edition = "2021"
   |
 7 | dep = "1.0.0"
   |         ++++
+[WARNING] workspace (manifest) generated 2 warnings
 [CHECKING] member v0.0.0 ([ROOT]/foo/member)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1400,6 +1413,7 @@ workspace = true
   |
 7 | dep = "1.0.0"
   |         ++++
+[WARNING] workspace (manifest) generated 2 warnings
 [WARNING] dependency version requirement without an explicit minimum version
  --> member/Cargo.toml:7:7
   |
@@ -1411,6 +1425,7 @@ workspace = true
   |
 7 | dep = "1.0.0"
   |           ++
+[WARNING] `member` (manifest) generated 1 warning
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
@@ -1471,7 +1486,7 @@ implicit_minimum_version_req = "deny"
   |
 7 | dep = "1.0.0"
   |         ++++
-[ERROR] encountered 1 error while running lints
+[ERROR] could not parse `foo` (manifest) due to 1 previous error
 
 "#]])
         .run();

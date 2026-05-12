@@ -31,6 +31,7 @@ this-lint-does-not-exist = "warn"
   | ^^^^^^^^^^^^^^^^^^^^^^^^
   |
   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
+[WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -77,6 +78,7 @@ workspace = true
   | ^^^^^^^^^^^^^^^^^^^^^^^^
   |
   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
+[WARNING] workspace (manifest) generated 1 warning
 [CHECKING] foo v0.0.1 ([ROOT]/foo/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -120,6 +122,7 @@ authors = []
   | ^^^^^^^^^^^^^^^^^^^^^^^^
   |
   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
+[WARNING] workspace (manifest) generated 1 warning
 [WARNING] missing `[lints]` to inherit `[workspace.lints]`
  --> foo/Cargo.toml
   = [NOTE] `cargo::missing_lints_inheritance` is set to `warn` by default
@@ -134,6 +137,7 @@ authors = []
 7 ~             
 8 + [lints]
   |
+[WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.0.1 ([ROOT]/foo/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 

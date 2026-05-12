@@ -21,6 +21,7 @@ use crate::core::{
     PatchLocation,
 };
 use crate::core::{EitherManifest, Package, SourceId, VirtualManifest};
+use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::rules::blanket_hint_mostly_unused;
 use crate::diagnostics::rules::check_im_a_teapot;
 use crate::diagnostics::rules::implicit_minimum_version_req_pkg;
@@ -1350,93 +1351,67 @@ impl<'gctx> Workspace<'gctx> {
             .unwrap_or(manifest::TomlToolLints::default());
 
         if self.gctx.cli_unstable().cargo_lints {
-            let mut verify_error_count = 0;
+            let mut verify_stats = DiagnosticStats::new();
 
             missing_lints_features(
                 pkg.into(),
                 &path,
                 &cargo_lints,
-                &mut verify_error_count,
+                &mut verify_stats,
                 self.gctx,
             )?;
             unknown_lints(
                 pkg.into(),
                 &path,
                 &cargo_lints,
-                &mut verify_error_count,
+                &mut verify_stats,
                 self.gctx,
             )?;
 
-            if verify_error_count > 0 {
-                let plural = if verify_error_count == 1 { "" } else { "s" };
-                bail!("encountered {verify_error_count} error{plural} while verifying lints")
-            }
+            verify_stats.report_summary("parse", Some(&*pkg.name()), self.gctx)?;
 
-            let mut run_error_count = 0;
+            let mut run_stats = DiagnosticStats::new();
 
-            check_im_a_teapot(pkg, &path, &cargo_lints, &mut run_error_count, self.gctx)?;
-            implicit_minimum_version_req_pkg(
-                pkg,
-                &path,
-                &cargo_lints,
-                &mut run_error_count,
-                self.gctx,
-            )?;
-            non_kebab_case_packages(pkg, &path, &cargo_lints, &mut run_error_count, self.gctx)?;
-            non_snake_case_packages(pkg, &path, &cargo_lints, &mut run_error_count, self.gctx)?;
-            non_kebab_case_bins(
-                self,
-                pkg,
-                &path,
-                &cargo_lints,
-                &mut run_error_count,
-                self.gctx,
-            )?;
-            non_kebab_case_features(pkg, &path, &cargo_lints, &mut run_error_count, self.gctx)?;
-            non_snake_case_features(pkg, &path, &cargo_lints, &mut run_error_count, self.gctx)?;
+            check_im_a_teapot(pkg, &path, &cargo_lints, &mut run_stats, self.gctx)?;
+            implicit_minimum_version_req_pkg(pkg, &path, &cargo_lints, &mut run_stats, self.gctx)?;
+            non_kebab_case_packages(pkg, &path, &cargo_lints, &mut run_stats, self.gctx)?;
+            non_snake_case_packages(pkg, &path, &cargo_lints, &mut run_stats, self.gctx)?;
+            non_kebab_case_bins(self, pkg, &path, &cargo_lints, &mut run_stats, self.gctx)?;
+            non_kebab_case_features(pkg, &path, &cargo_lints, &mut run_stats, self.gctx)?;
+            non_snake_case_features(pkg, &path, &cargo_lints, &mut run_stats, self.gctx)?;
             unused_build_dependencies_no_build_rs(
                 pkg,
                 &path,
                 &cargo_lints,
-                &mut run_error_count,
+                &mut run_stats,
                 self.gctx,
             )?;
-            redundant_readme(pkg, &path, &cargo_lints, &mut run_error_count, self.gctx)?;
-            redundant_homepage(pkg, &path, &cargo_lints, &mut run_error_count, self.gctx)?;
-            missing_lints_inheritance(
-                self,
-                pkg,
-                &path,
-                &cargo_lints,
-                &mut run_error_count,
-                self.gctx,
-            )?;
+            redundant_readme(pkg, &path, &cargo_lints, &mut run_stats, self.gctx)?;
+            redundant_homepage(pkg, &path, &cargo_lints, &mut run_stats, self.gctx)?;
+            missing_lints_inheritance(self, pkg, &path, &cargo_lints, &mut run_stats, self.gctx)?;
             text_direction_codepoint_in_comment(
                 pkg.into(),
                 &path,
                 &cargo_lints,
-                &mut run_error_count,
+                &mut run_stats,
                 self.gctx,
             )?;
             text_direction_codepoint_in_literal(
                 pkg.into(),
                 &path,
                 &cargo_lints,
-                &mut run_error_count,
+                &mut run_stats,
                 self.gctx,
             )?;
 
-            if run_error_count > 0 {
-                let plural = if run_error_count == 1 { "" } else { "s" };
-                bail!("encountered {run_error_count} error{plural} while running lints")
-            }
+            run_stats.report_summary("parse", Some(&*pkg.name()), self.gctx)?;
         }
 
         Ok(())
     }
 
     pub fn emit_ws_lints(&self) -> CargoResult<()> {
-        let mut run_error_count = 0;
+        let mut run_stats = DiagnosticStats::new();
 
         let cargo_lints = match self.root_maybe() {
             MaybePackage::Package(pkg) => {
@@ -1460,34 +1435,31 @@ impl<'gctx> Workspace<'gctx> {
         .unwrap_or(manifest::TomlToolLints::default());
 
         if self.gctx.cli_unstable().cargo_lints {
-            let mut verify_error_count = 0;
+            let mut verify_stats = DiagnosticStats::new();
 
             missing_lints_features(
                 (self, self.root_maybe()).into(),
                 self.root_manifest(),
                 &cargo_lints,
-                &mut verify_error_count,
+                &mut verify_stats,
                 self.gctx,
             )?;
             unknown_lints(
                 (self, self.root_maybe()).into(),
                 self.root_manifest(),
                 &cargo_lints,
-                &mut verify_error_count,
+                &mut verify_stats,
                 self.gctx,
             )?;
 
-            if verify_error_count > 0 {
-                let plural = if verify_error_count == 1 { "" } else { "s" };
-                bail!("encountered {verify_error_count} error{plural} while verifying lints")
-            }
+            verify_stats.report_summary("parse", None, self.gctx)?;
 
             unused_workspace_package_fields(
                 self,
                 self.root_maybe(),
                 self.root_manifest(),
                 &cargo_lints,
-                &mut run_error_count,
+                &mut run_stats,
                 self.gctx,
             )?;
             unused_workspace_dependencies(
@@ -1495,7 +1467,7 @@ impl<'gctx> Workspace<'gctx> {
                 self.root_maybe(),
                 self.root_manifest(),
                 &cargo_lints,
-                &mut run_error_count,
+                &mut run_stats,
                 self.gctx,
             )?;
             implicit_minimum_version_req_ws(
@@ -1503,21 +1475,21 @@ impl<'gctx> Workspace<'gctx> {
                 self.root_maybe(),
                 self.root_manifest(),
                 &cargo_lints,
-                &mut run_error_count,
+                &mut run_stats,
                 self.gctx,
             )?;
             text_direction_codepoint_in_comment(
                 (self, self.root_maybe()).into(),
                 self.root_manifest(),
                 &cargo_lints,
-                &mut run_error_count,
+                &mut run_stats,
                 self.gctx,
             )?;
             text_direction_codepoint_in_literal(
                 (self, self.root_maybe()).into(),
                 self.root_manifest(),
                 &cargo_lints,
-                &mut run_error_count,
+                &mut run_stats,
                 self.gctx,
             )?;
         }
@@ -1531,17 +1503,13 @@ impl<'gctx> Workspace<'gctx> {
                 self.root_maybe(),
                 self.root_manifest(),
                 &cargo_lints,
-                &mut run_error_count,
+                &mut run_stats,
                 self.gctx,
             )?;
         }
 
-        if run_error_count > 0 {
-            let plural = if run_error_count == 1 { "" } else { "s" };
-            bail!("encountered {run_error_count} error{plural} while running lints")
-        } else {
-            Ok(())
-        }
+        run_stats.report_summary("parse", None, self.gctx)?;
+        Ok(())
     }
 
     pub fn set_target_dir(&mut self, target_dir: Filesystem) {

@@ -14,6 +14,7 @@ use super::SUSPICIOUS;
 use super::find_lint_or_group;
 use crate::CargoResult;
 use crate::GlobalContext;
+use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevel;
 use crate::diagnostics::ManifestFor;
@@ -51,7 +52,7 @@ pub fn unknown_lints(
     manifest: ManifestFor<'_>,
     manifest_path: &Path,
     cargo_lints: &TomlToolLints,
-    error_count: &mut usize,
+    stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let (lint_level, source) = manifest.lint_level(cargo_lints, LINT);
@@ -72,9 +73,6 @@ pub fn unknown_lints(
     let level = lint_level.to_diagnostic_level();
     let mut emitted_source = None;
     for lint_name in unknown_lints {
-        if lint_level.is_error() {
-            *error_count += 1;
-        }
         let title = format!("{}: `{lint_name}`", LINT.desc);
         let underscore_lint_name = lint_name.replace("-", "_");
         let matching = if let Some(lint) = LINTS.iter().find(|l| l.name == underscore_lint_name) {
@@ -120,6 +118,7 @@ pub fn unknown_lints(
         }
         report.push(group);
 
+        stats.record_lint(lint_level);
         gctx.shell().print_report(&report, lint_level.force())?;
     }
 
