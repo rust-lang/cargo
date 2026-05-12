@@ -1368,9 +1368,7 @@ impl<'gctx> Workspace<'gctx> {
                 self.gctx,
             )?;
 
-            verify_stats.report_summary("parse", Some(&*pkg.name()), self.gctx)?;
-
-            let mut run_stats = DiagnosticStats::new();
+            let mut run_stats = verify_stats;
 
             check_im_a_teapot(pkg, &path, &cargo_lints, &mut run_stats, self.gctx)?;
             implicit_minimum_version_req_pkg(pkg, &path, &cargo_lints, &mut run_stats, self.gctx)?;
@@ -1435,7 +1433,7 @@ impl<'gctx> Workspace<'gctx> {
         .unwrap_or(manifest::TomlToolLints::default());
 
         if self.gctx.cli_unstable().cargo_lints {
-            let mut verify_stats = DiagnosticStats::new();
+            let mut verify_stats = run_stats;
 
             missing_lints_features(
                 (self, self.root_maybe()).into(),
@@ -1452,7 +1450,7 @@ impl<'gctx> Workspace<'gctx> {
                 self.gctx,
             )?;
 
-            verify_stats.report_summary("parse", None, self.gctx)?;
+            run_stats = verify_stats;
 
             unused_workspace_package_fields(
                 self,
