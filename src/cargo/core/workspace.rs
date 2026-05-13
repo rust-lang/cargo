@@ -1351,67 +1351,45 @@ impl<'gctx> Workspace<'gctx> {
             .unwrap_or(manifest::TomlToolLints::default());
 
         if self.gctx.cli_unstable().cargo_lints {
-            let mut verify_stats = DiagnosticStats::new();
+            let mut stats = DiagnosticStats::new();
 
-            missing_lints_features(
-                pkg.into(),
-                &path,
-                &cargo_lints,
-                &mut verify_stats,
-                self.gctx,
-            )?;
-            unknown_lints(
-                pkg.into(),
-                &path,
-                &cargo_lints,
-                &mut verify_stats,
-                self.gctx,
-            )?;
+            missing_lints_features(pkg.into(), &path, &cargo_lints, &mut stats, self.gctx)?;
+            unknown_lints(pkg.into(), &path, &cargo_lints, &mut stats, self.gctx)?;
 
-            verify_stats.report_summary("parse", Some(&*pkg.name()), self.gctx)?;
-
-            let mut run_stats = DiagnosticStats::new();
-
-            check_im_a_teapot(pkg, &path, &cargo_lints, &mut run_stats, self.gctx)?;
-            implicit_minimum_version_req_pkg(pkg, &path, &cargo_lints, &mut run_stats, self.gctx)?;
-            non_kebab_case_packages(pkg, &path, &cargo_lints, &mut run_stats, self.gctx)?;
-            non_snake_case_packages(pkg, &path, &cargo_lints, &mut run_stats, self.gctx)?;
-            non_kebab_case_bins(self, pkg, &path, &cargo_lints, &mut run_stats, self.gctx)?;
-            non_kebab_case_features(pkg, &path, &cargo_lints, &mut run_stats, self.gctx)?;
-            non_snake_case_features(pkg, &path, &cargo_lints, &mut run_stats, self.gctx)?;
-            unused_build_dependencies_no_build_rs(
-                pkg,
-                &path,
-                &cargo_lints,
-                &mut run_stats,
-                self.gctx,
-            )?;
-            redundant_readme(pkg, &path, &cargo_lints, &mut run_stats, self.gctx)?;
-            redundant_homepage(pkg, &path, &cargo_lints, &mut run_stats, self.gctx)?;
-            missing_lints_inheritance(self, pkg, &path, &cargo_lints, &mut run_stats, self.gctx)?;
+            check_im_a_teapot(pkg, &path, &cargo_lints, &mut stats, self.gctx)?;
+            implicit_minimum_version_req_pkg(pkg, &path, &cargo_lints, &mut stats, self.gctx)?;
+            non_kebab_case_packages(pkg, &path, &cargo_lints, &mut stats, self.gctx)?;
+            non_snake_case_packages(pkg, &path, &cargo_lints, &mut stats, self.gctx)?;
+            non_kebab_case_bins(self, pkg, &path, &cargo_lints, &mut stats, self.gctx)?;
+            non_kebab_case_features(pkg, &path, &cargo_lints, &mut stats, self.gctx)?;
+            non_snake_case_features(pkg, &path, &cargo_lints, &mut stats, self.gctx)?;
+            unused_build_dependencies_no_build_rs(pkg, &path, &cargo_lints, &mut stats, self.gctx)?;
+            redundant_readme(pkg, &path, &cargo_lints, &mut stats, self.gctx)?;
+            redundant_homepage(pkg, &path, &cargo_lints, &mut stats, self.gctx)?;
+            missing_lints_inheritance(self, pkg, &path, &cargo_lints, &mut stats, self.gctx)?;
             text_direction_codepoint_in_comment(
                 pkg.into(),
                 &path,
                 &cargo_lints,
-                &mut run_stats,
+                &mut stats,
                 self.gctx,
             )?;
             text_direction_codepoint_in_literal(
                 pkg.into(),
                 &path,
                 &cargo_lints,
-                &mut run_stats,
+                &mut stats,
                 self.gctx,
             )?;
 
-            run_stats.report_summary("parse", Some(&*pkg.name()), self.gctx)?;
+            stats.report_summary("parse", Some(&*pkg.name()), self.gctx)?;
         }
 
         Ok(())
     }
 
     pub fn emit_ws_lints(&self) -> CargoResult<()> {
-        let mut run_stats = DiagnosticStats::new();
+        let mut stats = DiagnosticStats::new();
 
         let cargo_lints = match self.root_maybe() {
             MaybePackage::Package(pkg) => {
@@ -1435,31 +1413,27 @@ impl<'gctx> Workspace<'gctx> {
         .unwrap_or(manifest::TomlToolLints::default());
 
         if self.gctx.cli_unstable().cargo_lints {
-            let mut verify_stats = DiagnosticStats::new();
-
             missing_lints_features(
                 (self, self.root_maybe()).into(),
                 self.root_manifest(),
                 &cargo_lints,
-                &mut verify_stats,
+                &mut stats,
                 self.gctx,
             )?;
             unknown_lints(
                 (self, self.root_maybe()).into(),
                 self.root_manifest(),
                 &cargo_lints,
-                &mut verify_stats,
+                &mut stats,
                 self.gctx,
             )?;
-
-            verify_stats.report_summary("parse", None, self.gctx)?;
 
             unused_workspace_package_fields(
                 self,
                 self.root_maybe(),
                 self.root_manifest(),
                 &cargo_lints,
-                &mut run_stats,
+                &mut stats,
                 self.gctx,
             )?;
             unused_workspace_dependencies(
@@ -1467,7 +1441,7 @@ impl<'gctx> Workspace<'gctx> {
                 self.root_maybe(),
                 self.root_manifest(),
                 &cargo_lints,
-                &mut run_stats,
+                &mut stats,
                 self.gctx,
             )?;
             implicit_minimum_version_req_ws(
@@ -1475,21 +1449,21 @@ impl<'gctx> Workspace<'gctx> {
                 self.root_maybe(),
                 self.root_manifest(),
                 &cargo_lints,
-                &mut run_stats,
+                &mut stats,
                 self.gctx,
             )?;
             text_direction_codepoint_in_comment(
                 (self, self.root_maybe()).into(),
                 self.root_manifest(),
                 &cargo_lints,
-                &mut run_stats,
+                &mut stats,
                 self.gctx,
             )?;
             text_direction_codepoint_in_literal(
                 (self, self.root_maybe()).into(),
                 self.root_manifest(),
                 &cargo_lints,
-                &mut run_stats,
+                &mut stats,
                 self.gctx,
             )?;
         }
@@ -1503,12 +1477,12 @@ impl<'gctx> Workspace<'gctx> {
                 self.root_maybe(),
                 self.root_manifest(),
                 &cargo_lints,
-                &mut run_stats,
+                &mut stats,
                 self.gctx,
             )?;
         }
 
-        run_stats.report_summary("parse", None, self.gctx)?;
+        stats.report_summary("parse", None, self.gctx)?;
         Ok(())
     }
 
