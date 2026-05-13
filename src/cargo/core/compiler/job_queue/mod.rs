@@ -123,7 +123,9 @@ use std::time::Duration;
 use std::{env, io};
 
 use anyhow::{Context as _, format_err};
-use jobserver::{Acquired, HelperThread};
+use jobserver::Acquired;
+#[cfg(not(all(target_arch = "wasm32", target_os = "wasi")))]
+use jobserver::HelperThread;
 use semver::Version;
 use tracing::{debug, trace};
 
@@ -208,6 +210,26 @@ struct DrainState<'gctx> {
     /// How many jobs we've finished
     finished: usize,
     per_package_future_incompat_reports: Vec<FutureIncompatReportPackage>,
+}
+
+enum JobserverTokenHelper<'a> {
+    #[cfg(not(all(target_arch = "wasm32", target_os = "wasi")))]
+    Thread(&'a HelperThread),
+    #[cfg(all(target_arch = "wasm32", target_os = "wasi"))]
+    Inline(std::marker::PhantomData<&'a ()>),
+}
+
+impl JobserverTokenHelper<'_> {
+    fn request_token(&self) {
+        #[cfg(not(all(target_arch = "wasm32", target_os = "wasi")))]
+        match self {
+            JobserverTokenHelper::Thread(helper) => helper.request_token(),
+        }
+        #[cfg(all(target_arch = "wasm32", target_os = "wasi"))]
+        {
+            let _ = self;
+        }
+    }
 }
 
 /// Count of warnings, used to print a summary after the job succeeds
@@ -519,15 +541,23 @@ impl<'gctx> JobQueue<'gctx> {
             per_package_future_incompat_reports: Vec::new(),
         };
 
-        // Create a helper thread for acquiring jobserver tokens
+        // Create a helper thread for acquiring jobserver tokens. Browser-hosted
+        // WASI does not support spawning threads, so that build runs jobs one
+        // at a time using Cargo's implicit token.
+        #[cfg(not(all(target_arch = "wasm32", target_os = "wasi")))]
         let messages = state.messages.clone();
-        let helper = build_runner
+        #[cfg(not(all(target_arch = "wasm32", target_os = "wasi")))]
+        let raw_helper = build_runner
             .jobserver
             .clone()
             .into_helper_thread(move |token| {
                 messages.push(Message::Token(token));
             })
             .context("failed to create helper thread for jobserver management")?;
+        #[cfg(not(all(target_arch = "wasm32", target_os = "wasi")))]
+        let helper = JobserverTokenHelper::Thread(&raw_helper);
+        #[cfg(all(target_arch = "wasm32", target_os = "wasi"))]
+        let helper = JobserverTokenHelper::Inline(std::marker::PhantomData);
 
         // Create a helper thread to manage the diagnostics for rustfix if
         // necessary.
@@ -556,7 +586,7 @@ impl<'gctx> DrainState<'gctx> {
     fn spawn_work_if_possible<'s>(
         &mut self,
         build_runner: &mut BuildRunner<'_, '_>,
-        jobserver_helper: &HelperThread,
+        jobserver_helper: &JobserverTokenHelper<'_>,
         scope: &'s Scope<'s, '_>,
     ) -> CargoResult<()> {
         // Dequeue as much work as we can, learning about everything
@@ -768,7 +798,7 @@ impl<'gctx> DrainState<'gctx> {
         mut self,
         build_runner: &mut BuildRunner<'_, '_>,
         scope: &'s Scope<'s, '_>,
-        jobserver_helper: &HelperThread,
+        jobserver_helper: &JobserverTokenHelper<'_>,
     ) -> Option<anyhow::Error> {
         trace!("queue: {:#?}", self.queue);
 
@@ -953,7 +983,7 @@ impl<'gctx> DrainState<'gctx> {
         unit: &Unit,
         job: Job,
         build_runner: &BuildRunner<'_, '_>,
-        scope: &'s Scope<'s, '_>,
+        _scope: &'s Scope<'s, '_>,
     ) {
         let id = JobId(self.next_id);
         self.next_id = self.next_id.checked_add(1).unwrap();
@@ -979,7 +1009,14 @@ impl<'gctx> DrainState<'gctx> {
                 doit(Some(&self.diag_dedupe));
             }
             false => {
-                scope.spawn(move || doit(None));
+                #[cfg(all(target_arch = "wasm32", target_os = "wasi"))]
+                {
+                    doit(Some(&self.diag_dedupe));
+                }
+                #[cfg(not(all(target_arch = "wasm32", target_os = "wasi")))]
+                {
+                    _scope.spawn(move || doit(None));
+                }
             }
         }
     }

@@ -1,0 +1,9 @@
+package edit-dev:upstream-cargo@0.1.0;
+
+interface process {
+  run: func(request: string) -> string;
+}
+
+world runtime {
+  import process;
+}

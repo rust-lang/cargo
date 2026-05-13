@@ -1,19 +1,30 @@
 use crate::process_error::ProcessError;
+#[cfg(not(all(target_arch = "wasm32", target_os = "wasi", target_env = "p2")))]
 use crate::read2;
 
 use anyhow::{Context, Result, bail};
 use jobserver::Client;
 use shell_escape::escape;
+#[cfg(not(all(target_arch = "wasm32", target_os = "wasi", target_env = "p2")))]
 use tempfile::NamedTempFile;
 
 use std::collections::BTreeMap;
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fmt;
-use std::io::{self, Write};
+#[cfg(not(all(target_arch = "wasm32", target_os = "wasi", target_env = "p2")))]
+use std::io;
+#[cfg(not(all(target_arch = "wasm32", target_os = "wasi", target_env = "p2")))]
+use std::io::Write;
 use std::iter::once;
 use std::path::Path;
-use std::process::{Command, ExitStatus, Output, Stdio};
+#[cfg(not(all(target_arch = "wasm32", target_os = "wasi", target_env = "p2")))]
+use std::process::Stdio;
+use std::process::{Command, ExitStatus, Output};
+
+#[cfg(all(target_arch = "wasm32", target_os = "wasi", target_env = "p2"))]
+#[path = "wasm_host_process.rs"]
+mod wasm_host_process;
 
 /// A builder object for an external process, similar to [`std::process::Command`].
 #[derive(Clone, Debug)]
@@ -230,16 +241,34 @@ impl ProcessBuilder {
         self
     }
 
+    #[cfg(not(all(target_arch = "wasm32", target_os = "wasi", target_env = "p2")))]
     fn should_retry_with_argfile(&self, err: &io::Error) -> bool {
         self.retry_with_argfile && imp::command_line_too_big(err)
     }
 
     /// Like [`Command::status`] but with a better error message.
     pub fn status(&self) -> Result<ExitStatus> {
+        #[cfg(all(target_arch = "wasm32", target_os = "wasi", target_env = "p2"))]
+        {
+            let output = wasm_host_process::run(self)
+                .with_context(|| ProcessError::could_not_execute(self))?;
+            if output.success() {
+                return Ok(ExitStatus::default());
+            }
+            return Err(output
+                .process_error(
+                    &format!("process didn't exit successfully: {}", self),
+                    false,
+                )
+                .into());
+        }
+
+        #[cfg(not(all(target_arch = "wasm32", target_os = "wasi", target_env = "p2")))]
         self._status()
             .with_context(|| ProcessError::could_not_execute(self))
     }
 
+    #[cfg(not(all(target_arch = "wasm32", target_os = "wasi", target_env = "p2")))]
     fn _status(&self) -> io::Result<ExitStatus> {
         if !debug_force_argfile(self.retry_with_argfile) {
             let mut cmd = self.build_command();
@@ -291,10 +320,24 @@ impl ProcessBuilder {
 
     /// Like [`Command::output`] but with a better error message.
     pub fn output(&self) -> Result<Output> {
+        #[cfg(all(target_arch = "wasm32", target_os = "wasi", target_env = "p2"))]
+        {
+            let output = wasm_host_process::run(self)
+                .with_context(|| ProcessError::could_not_execute(self))?;
+            if output.success() {
+                return Ok(output.into_std_output());
+            }
+            return Err(output
+                .process_error(&format!("process didn't exit successfully: {}", self), true)
+                .into());
+        }
+
+        #[cfg(not(all(target_arch = "wasm32", target_os = "wasi", target_env = "p2")))]
         self._output()
             .with_context(|| ProcessError::could_not_execute(self))
     }
 
+    #[cfg(not(all(target_arch = "wasm32", target_os = "wasi", target_env = "p2")))]
     fn _output(&self) -> io::Result<Output> {
         if !debug_force_argfile(self.retry_with_argfile) {
             let mut cmd = self.build_command();
@@ -349,109 +392,149 @@ impl ProcessBuilder {
         on_stderr_line: &mut dyn FnMut(&str) -> Result<()>,
         capture_output: bool,
     ) -> Result<Output> {
-        let mut stdout = Vec::new();
-        let mut stderr = Vec::new();
-
-        let mut callback_error = None;
-        let mut stdout_pos = 0;
-        let mut stderr_pos = 0;
-
-        let spawn = |mut cmd| {
-            if !debug_force_argfile(self.retry_with_argfile) {
-                match piped(&mut cmd, false).spawn() {
-                    Err(ref e) if self.should_retry_with_argfile(e) => {}
-                    Err(e) => return Err(e),
-                    Ok(child) => return Ok((child, None)),
-                }
-            }
-            let (mut cmd, argfile) = self.build_command_with_argfile()?;
-            Ok((piped(&mut cmd, false).spawn()?, Some(argfile)))
-        };
-
-        let status = (|| {
-            let cmd = self.build_command();
-            let (mut child, argfile) = spawn(cmd)?;
-            let out = child.stdout.take().unwrap();
-            let err = child.stderr.take().unwrap();
-            read2(out, err, &mut |is_out, data, eof| {
-                let pos = if is_out {
-                    &mut stdout_pos
-                } else {
-                    &mut stderr_pos
-                };
-                let idx = if eof {
-                    data.len()
-                } else {
-                    match data[*pos..].iter().rposition(|b| *b == b'\n') {
-                        Some(i) => *pos + i + 1,
-                        None => {
-                            *pos = data.len();
-                            return;
-                        }
-                    }
-                };
-
-                let new_lines = &data[..idx];
-
-                for line in String::from_utf8_lossy(new_lines).lines() {
-                    if callback_error.is_some() {
-                        break;
-                    }
-                    let callback_result = if is_out {
-                        on_stdout_line(line)
-                    } else {
-                        on_stderr_line(line)
-                    };
-                    if let Err(e) = callback_result {
-                        callback_error = Some(e);
-                        break;
-                    }
-                }
-
-                if capture_output {
-                    let dst = if is_out { &mut stdout } else { &mut stderr };
-                    dst.extend(new_lines);
-                }
-
-                data.drain(..idx);
-                *pos = 0;
-            })?;
-            let status = child.wait();
-            if let Some(argfile) = argfile {
-                close_tempfile_and_log_error(argfile);
-            }
-            status
-        })()
-        .with_context(|| ProcessError::could_not_execute(self))?;
-        let output = Output {
-            status,
-            stdout,
-            stderr,
-        };
-
+        #[cfg(all(target_arch = "wasm32", target_os = "wasi", target_env = "p2"))]
         {
-            let to_print = if capture_output { Some(&output) } else { None };
-            if let Some(e) = callback_error {
-                let cx = ProcessError::new(
-                    &format!("failed to parse process output: {}", self),
-                    Some(output.status),
-                    to_print,
-                );
-                bail!(anyhow::Error::new(cx).context(e));
-            } else if !output.status.success() {
-                bail!(ProcessError::new(
+            let output = wasm_host_process::run(self)
+                .with_context(|| ProcessError::could_not_execute(self))?;
+            for line in String::from_utf8_lossy(&output.stdout).lines() {
+                on_stdout_line(line).map_err(|error| {
+                    anyhow::Error::new(output.process_error(
+                        &format!("failed to parse process output: {}", self),
+                        capture_output,
+                    ))
+                    .context(error)
+                })?;
+            }
+            for line in String::from_utf8_lossy(&output.stderr).lines() {
+                on_stderr_line(line).map_err(|error| {
+                    anyhow::Error::new(output.process_error(
+                        &format!("failed to parse process output: {}", self),
+                        capture_output,
+                    ))
+                    .context(error)
+                })?;
+            }
+            if !output.success() {
+                bail!(output.process_error(
                     &format!("process didn't exit successfully: {}", self),
-                    Some(output.status),
-                    to_print,
+                    capture_output,
                 ));
             }
+            let mut output = output.into_std_output();
+            if !capture_output {
+                output.stdout.clear();
+                output.stderr.clear();
+            }
+            return Ok(output);
         }
 
-        Ok(output)
+        #[cfg(not(all(target_arch = "wasm32", target_os = "wasi", target_env = "p2")))]
+        {
+            let mut stdout = Vec::new();
+            let mut stderr = Vec::new();
+
+            let mut callback_error = None;
+            let mut stdout_pos = 0;
+            let mut stderr_pos = 0;
+
+            let spawn = |mut cmd| {
+                if !debug_force_argfile(self.retry_with_argfile) {
+                    match piped(&mut cmd, false).spawn() {
+                        Err(ref e) if self.should_retry_with_argfile(e) => {}
+                        Err(e) => return Err(e),
+                        Ok(child) => return Ok((child, None)),
+                    }
+                }
+                let (mut cmd, argfile) = self.build_command_with_argfile()?;
+                Ok((piped(&mut cmd, false).spawn()?, Some(argfile)))
+            };
+
+            let status = (|| {
+                let cmd = self.build_command();
+                let (mut child, argfile) = spawn(cmd)?;
+                let out = child.stdout.take().unwrap();
+                let err = child.stderr.take().unwrap();
+                read2(out, err, &mut |is_out, data, eof| {
+                    let pos = if is_out {
+                        &mut stdout_pos
+                    } else {
+                        &mut stderr_pos
+                    };
+                    let idx = if eof {
+                        data.len()
+                    } else {
+                        match data[*pos..].iter().rposition(|b| *b == b'\n') {
+                            Some(i) => *pos + i + 1,
+                            None => {
+                                *pos = data.len();
+                                return;
+                            }
+                        }
+                    };
+
+                    let new_lines = &data[..idx];
+
+                    for line in String::from_utf8_lossy(new_lines).lines() {
+                        if callback_error.is_some() {
+                            break;
+                        }
+                        let callback_result = if is_out {
+                            on_stdout_line(line)
+                        } else {
+                            on_stderr_line(line)
+                        };
+                        if let Err(e) = callback_result {
+                            callback_error = Some(e);
+                            break;
+                        }
+                    }
+
+                    if capture_output {
+                        let dst = if is_out { &mut stdout } else { &mut stderr };
+                        dst.extend(new_lines);
+                    }
+
+                    data.drain(..idx);
+                    *pos = 0;
+                })?;
+                let status = child.wait();
+                if let Some(argfile) = argfile {
+                    close_tempfile_and_log_error(argfile);
+                }
+                status
+            })()
+            .with_context(|| ProcessError::could_not_execute(self))?;
+            let output = Output {
+                status,
+                stdout,
+                stderr,
+            };
+
+            {
+                let to_print = if capture_output { Some(&output) } else { None };
+                if let Some(e) = callback_error {
+                    let cx = ProcessError::new(
+                        &format!("failed to parse process output: {}", self),
+                        Some(output.status),
+                        to_print,
+                    );
+                    bail!(anyhow::Error::new(cx).context(e));
+                } else if !output.status.success() {
+                    bail!(ProcessError::new(
+                        &format!("process didn't exit successfully: {}", self),
+                        Some(output.status),
+                        to_print,
+                    ));
+                }
+            }
+
+            Ok(output)
+        }
     }
 
     /// Builds the command with an `@<path>` argfile that contains all the
     /// arguments. This is primarily served for rustc/rustdoc command family.
+    #[cfg(not(all(target_arch = "wasm32", target_os = "wasi", target_env = "p2")))]
     fn build_command_with_argfile(&self) -> io::Result<(Command, NamedTempFile)> {
         use std::io::Write as _;
 
@@ -560,11 +643,13 @@ impl ProcessBuilder {
 /// Forces the command to use `@path` argfile.
 ///
 /// You should set `__CARGO_TEST_FORCE_ARGFILE` to enable this.
+#[cfg(not(all(target_arch = "wasm32", target_os = "wasi", target_env = "p2")))]
 fn debug_force_argfile(retry_enabled: bool) -> bool {
     cfg!(debug_assertions) && env::var("__CARGO_TEST_FORCE_ARGFILE").is_ok() && retry_enabled
 }
 
 /// Creates new pipes for stderr, stdout, and optionally stdin.
+#[cfg(not(all(target_arch = "wasm32", target_os = "wasi", target_env = "p2")))]
 fn piped(cmd: &mut Command, pipe_stdin: bool) -> &mut Command {
     cmd.stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -575,6 +660,7 @@ fn piped(cmd: &mut Command, pipe_stdin: bool) -> &mut Command {
         })
 }
 
+#[cfg(not(all(target_arch = "wasm32", target_os = "wasi", target_env = "p2")))]
 fn close_tempfile_and_log_error(file: NamedTempFile) {
     file.close().unwrap_or_else(|e| {
         tracing::warn!("failed to close temporary file: {e}");
@@ -655,12 +741,14 @@ mod imp {
 mod imp {
     use super::ProcessBuilder;
     use anyhow::Result;
+    #[cfg(not(target_env = "p2"))]
     use std::io;
 
     pub fn exec_replace(process_builder: &ProcessBuilder) -> Result<()> {
         process_builder.exec()
     }
 
+    #[cfg(not(target_env = "p2"))]
     pub fn command_line_too_big(_err: &io::Error) -> bool {
         false
     }

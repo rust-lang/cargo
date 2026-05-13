@@ -13,6 +13,40 @@ use tempfile::Builder as TempFileBuilder;
 #[cfg(all(target_arch = "wasm32", target_os = "wasi"))]
 use walkdir::WalkDir;
 
+#[cfg(all(target_arch = "wasm32", target_os = "wasi"))]
+const PATH_SEPARATOR: u8 = b':';
+
+/// Returns a filesystem timestamp from metadata.
+///
+/// The `filetime` crate does not implement metadata timestamp extraction for
+/// wasm targets. Cargo uses these timestamps for cache invalidation, so the
+/// browser-hosted build falls back to a deterministic value and relies on
+/// content/path changes to invalidate work.
+pub fn file_time_from_last_modification_time(meta: &Metadata) -> FileTime {
+    #[cfg(all(target_arch = "wasm32", target_os = "wasi"))]
+    {
+        let _ = meta;
+        FileTime::zero()
+    }
+    #[cfg(not(all(target_arch = "wasm32", target_os = "wasi")))]
+    {
+        FileTime::from_last_modification_time(meta)
+    }
+}
+
+/// Returns a filesystem creation timestamp from metadata, when available.
+pub fn file_time_from_creation_time(meta: &Metadata) -> Option<FileTime> {
+    #[cfg(all(target_arch = "wasm32", target_os = "wasi"))]
+    {
+        let _ = meta;
+        Some(FileTime::zero())
+    }
+    #[cfg(not(all(target_arch = "wasm32", target_os = "wasi")))]
+    {
+        FileTime::from_creation_time(meta)
+    }
+}
+
 /// Joins paths into a string suitable for the `PATH` environment variable.
 ///
 /// This is equivalent to [`std::env::join_paths`], but includes a more
@@ -20,6 +54,26 @@ use walkdir::WalkDir;
 /// environment variable this is will be used for, which is included in the
 /// error message.
 pub fn join_paths<T: AsRef<OsStr>>(paths: &[T], env: &str) -> Result<OsString> {
+    #[cfg(all(target_arch = "wasm32", target_os = "wasi"))]
+    {
+        let mut joined = Vec::new();
+        for (index, path) in paths.iter().enumerate() {
+            let path = path.as_ref().as_encoded_bytes();
+            if path.contains(&PATH_SEPARATOR) {
+                anyhow::bail!(
+                    "failed to join paths from `${env}` together: path segment contains `{}`",
+                    char::from(PATH_SEPARATOR)
+                );
+            }
+            if index > 0 {
+                joined.push(PATH_SEPARATOR);
+            }
+            joined.extend_from_slice(path);
+        }
+        return Ok(unsafe { OsString::from_encoded_bytes_unchecked(joined) });
+    }
+
+    #[cfg(not(all(target_arch = "wasm32", target_os = "wasi")))]
     env::join_paths(paths.iter()).with_context(|| {
         let mut message = format!(
             "failed to join paths from `${env}` together\n\n\
@@ -70,7 +124,7 @@ pub fn dylib_path_envvar() -> &'static str {
 /// will need to be dealt with.
 pub fn dylib_path() -> Vec<PathBuf> {
     match env::var_os(dylib_path_envvar()) {
-        Some(var) => env::split_paths(&var).collect(),
+        Some(var) => split_paths(&var).collect(),
         None => Vec::new(),
     }
 }
@@ -124,7 +178,7 @@ pub fn normalize_path(path: &Path) -> PathBuf {
 pub fn resolve_executable(exec: &Path) -> Result<PathBuf> {
     if exec.components().count() == 1 {
         let paths = env::var_os("PATH").ok_or_else(|| anyhow::format_err!("no PATH"))?;
-        let candidates = env::split_paths(&paths).flat_map(|path| {
+        let candidates = split_paths(&paths).flat_map(|path| {
             let candidate = path.join(&exec);
             let with_exe = if env::consts::EXE_EXTENSION.is_empty() {
                 None
@@ -142,6 +196,23 @@ pub fn resolve_executable(exec: &Path) -> Result<PathBuf> {
         anyhow::bail!("no executable for `{}` found in PATH", exec.display())
     } else {
         Ok(exec.into())
+    }
+}
+
+pub fn split_paths(paths: &OsStr) -> impl Iterator<Item = PathBuf> {
+    #[cfg(all(target_arch = "wasm32", target_os = "wasi"))]
+    {
+        paths
+            .as_encoded_bytes()
+            .split(|byte| *byte == PATH_SEPARATOR)
+            .map(|path| PathBuf::from(unsafe { OsStr::from_encoded_bytes_unchecked(path) }))
+            .collect::<Vec<_>>()
+            .into_iter()
+    }
+
+    #[cfg(not(all(target_arch = "wasm32", target_os = "wasi")))]
+    {
+        env::split_paths(paths)
     }
 }
 
@@ -292,7 +363,7 @@ pub fn open<P: AsRef<Path>>(path: P) -> Result<File> {
 /// Returns the last modification time of a file.
 pub fn mtime(path: &Path) -> Result<FileTime> {
     let meta = metadata(path)?;
-    Ok(FileTime::from_last_modification_time(&meta))
+    Ok(file_time_from_last_modification_time(&meta))
 }
 
 /// Returns the maximum mtime of the given path, recursing into
@@ -300,7 +371,7 @@ pub fn mtime(path: &Path) -> Result<FileTime> {
 pub fn mtime_recursive(path: &Path) -> Result<FileTime> {
     let meta = metadata(path)?;
     if !meta.is_dir() {
-        return Ok(FileTime::from_last_modification_time(&meta));
+        return Ok(file_time_from_last_modification_time(&meta));
     }
     let max_meta = walkdir::WalkDir::new(path)
         .follow_links(true)
@@ -333,11 +404,11 @@ pub fn mtime_recursive(path: &Path) -> Result<FileTime> {
                         return None;
                     }
                 };
-                let sym_mtime = FileTime::from_last_modification_time(&sym_meta);
+                let sym_mtime = file_time_from_last_modification_time(&sym_meta);
                 // Walkdir follows symlinks.
                 match e.metadata() {
                     Ok(target_meta) => {
-                        let target_mtime = FileTime::from_last_modification_time(&target_meta);
+                        let target_mtime = file_time_from_last_modification_time(&target_meta);
                         Some(sym_mtime.max(target_mtime))
                     }
                     Err(err) => {
@@ -367,12 +438,12 @@ pub fn mtime_recursive(path: &Path) -> Result<FileTime> {
                         return None;
                     }
                 };
-                Some(FileTime::from_last_modification_time(&meta))
+                Some(file_time_from_last_modification_time(&meta))
             }
         })
         .max()
         // or_else handles the case where there are no files in the directory.
-        .unwrap_or_else(|| FileTime::from_last_modification_time(&meta));
+        .unwrap_or_else(|| file_time_from_last_modification_time(&meta));
     Ok(max_meta)
 }
 

@@ -6,7 +6,6 @@ use std::sync::Mutex;
 
 use anyhow::Context as _;
 use cargo_util::{ProcessBuilder, ProcessError, paths};
-use filetime::FileTime;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info, warn};
 
@@ -332,8 +331,8 @@ fn rustc_fingerprint(
 
         // Often created and modified are the same, but not all filesystems support the former,
         // and distro reproducible builds may clamp the latter, so we try to use both.
-        FileTime::from_creation_time(&meta).hash(hasher);
-        FileTime::from_last_modification_time(&meta).hash(hasher);
+        paths::file_time_from_creation_time(&meta).hash(hasher);
+        paths::file_time_from_last_modification_time(&meta).hash(hasher);
         Ok(())
     };
 
