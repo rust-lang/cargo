@@ -2478,19 +2478,9 @@ fn invalid_missing() {
     p.cargo("check -q")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to get `x` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `x`
-
-Caused by:
-  unable to update [ROOT]/foo/x
-
-Caused by:
-  failed to read `[ROOT]/foo/x/Cargo.toml`
-
-Caused by:
-  [NOT_FOUND]
+[ERROR] no matching package named `x` found
+location searched: [ROOT]/foo/x
+required by package `foo v0.1.0 ([ROOT]/foo)`
 
 "#]])
         .run();
