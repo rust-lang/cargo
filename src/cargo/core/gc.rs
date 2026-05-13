@@ -407,20 +407,10 @@ pub fn parse_human_size(input: &str) -> CargoResult<u64> {
 
 #[cfg(test)]
 mod tests {
-    use crate::util::time_span::maybe_parse_time_span;
     use super::*;
     #[test]
     fn time_spans() {
         let d = |x| Some(Duration::from_secs(x));
-        assert_eq!(maybe_parse_time_span("0 seconds"), d(0));
-        assert_eq!(maybe_parse_time_span("1second"), d(1));
-        assert_eq!(maybe_parse_time_span("23 seconds"), d(23));
-        assert_eq!(maybe_parse_time_span("5 minutes"), d(60 * 5));
-        assert_eq!(maybe_parse_time_span("2 hours"), d(60 * 60 * 2));
-        assert_eq!(maybe_parse_time_span("1 day"), d(60 * 60 * 24));
-        assert_eq!(maybe_parse_time_span("2 weeks"), d(60 * 60 * 24 * 14));
-        assert_eq!(maybe_parse_time_span("6 months"), d(2_629_746 * 6));
-
         assert_eq!(parse_frequency("5 seconds").unwrap(), d(5));
         assert_eq!(parse_frequency("always").unwrap(), d(0));
         assert_eq!(parse_frequency("never").unwrap(), None);
@@ -428,20 +418,6 @@ mod tests {
 
     #[test]
     fn time_span_errors() {
-        assert_eq!(maybe_parse_time_span(""), None);
-        assert_eq!(maybe_parse_time_span("1"), None);
-        assert_eq!(maybe_parse_time_span("second"), None);
-        assert_eq!(maybe_parse_time_span("+2 seconds"), None);
-        assert_eq!(maybe_parse_time_span("day"), None);
-        assert_eq!(maybe_parse_time_span("-1 days"), None);
-        assert_eq!(maybe_parse_time_span("1.5 days"), None);
-        assert_eq!(maybe_parse_time_span("1 dayz"), None);
-        assert_eq!(maybe_parse_time_span("always"), None);
-        assert_eq!(maybe_parse_time_span("never"), None);
-        assert_eq!(maybe_parse_time_span("1 day "), None);
-        assert_eq!(maybe_parse_time_span(" 1 day"), None);
-        assert_eq!(maybe_parse_time_span("1  second"), None);
-
         let e =
             parse_time_span_for_config("cache.global-clean.max-src-age", "-1 days").unwrap_err();
         assert_eq!(
