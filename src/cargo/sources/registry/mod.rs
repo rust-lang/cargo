@@ -210,7 +210,9 @@ use crate::sources::source::Source;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::interning::InternedString;
 use crate::util::network::PollExt;
-use crate::util::{CargoResult, Filesystem, GlobalContext, LimitErrorReader, restricted_names};
+#[cfg(windows)]
+use crate::util::restricted_names;
+use crate::util::{CargoResult, Filesystem, GlobalContext, LimitErrorReader};
 use crate::util::{VersionExt, hex};
 
 /// The `.cargo-ok` file is used to track if the source is already unpacked.
@@ -218,6 +220,10 @@ use crate::util::{VersionExt, hex};
 ///
 /// Not to be confused with `.cargo-ok` file in git sources.
 const PACKAGE_SOURCE_LOCK: &str = ".cargo-ok";
+#[cfg(cargo_wasm_cli)]
+const PACKAGE_SOURCE_LOCK_VERSION: u32 = 3;
+#[cfg(not(cargo_wasm_cli))]
+const PACKAGE_SOURCE_LOCK_VERSION: u32 = 1;
 
 pub const CRATES_IO_INDEX: &str = "https://github.com/rust-lang/crates.io-index";
 pub const CRATES_IO_HTTP_INDEX: &str = "sparse+https://index.crates.io/";
@@ -620,7 +626,7 @@ impl<'gctx> RegistrySource<'gctx> {
         let unpack_dir = path.parent().unwrap();
         match fs::read_to_string(path) {
             Ok(ok) => match serde_json::from_str::<LockMetadata>(&ok) {
-                Ok(lock_meta) if lock_meta.v == 1 => {
+                Ok(lock_meta) if lock_meta.v == PACKAGE_SOURCE_LOCK_VERSION => {
                     self.gctx
                         .deferred_global_last_use()?
                         .mark_registry_src_used(global_cache_tracker::RegistrySrc {
@@ -643,6 +649,14 @@ impl<'gctx> RegistrySource<'gctx> {
             Err(e) if e.kind() == io::ErrorKind::NotFound => {}
             Err(e) => anyhow::bail!("unable to read .cargo-ok file at {path:?}: {e}"),
         }
+        #[cfg(cargo_wasm_cli)]
+        if dst.as_path_unlocked().exists() {
+            tracing::debug!(
+                "missing .cargo-ok for {}, clearing registry source directory before unpacking",
+                dst.display()
+            );
+            paths::remove_dir_all(dst.as_path_unlocked())?;
+        }
         dst.create_dir()?;
 
         let bytes_written = unpack(self.gctx, tarball, unpack_dir, &|_| true)?;
@@ -657,7 +671,9 @@ impl<'gctx> RegistrySource<'gctx> {
             .open(&path)
             .with_context(|| format!("failed to open `{}`", path.display()))?;
 
-        let lock_meta = LockMetadata { v: 1 };
+        let lock_meta = LockMetadata {
+            v: PACKAGE_SOURCE_LOCK_VERSION,
+        };
         write!(ok, "{}", serde_json::to_string(&lock_meta).unwrap())?;
 
         self.gctx
@@ -1067,6 +1083,8 @@ fn unpack(
         let gz = LimitErrorReader::new(gz, size_limit);
         let mut tar = Archive::new(gz);
         set_mask(&mut tar);
+        #[cfg(cargo_wasm_cli)]
+        tar.set_preserve_mtime(false);
         tar
     };
     let mut bytes_written = 0;
@@ -1105,8 +1123,23 @@ fn unpack(
         }
         // Unpacking failed
         bytes_written += entry.size();
+        #[cfg(cargo_wasm_cli)]
+        let result = match entry.unpack_in(parent).map_err(anyhow::Error::from) {
+            Err(error) if is_unsupported_wasi_archive_metadata_error(&error) => {
+                tracing::trace!(
+                    "ignored unsupported WASI archive metadata operation while unpacking `{}`: {error:#}",
+                    entry_path.display()
+                );
+                Ok(true)
+            }
+            result => result,
+        };
+        #[cfg(all(not(cargo_wasm_cli), windows))]
         let mut result = entry.unpack_in(parent).map_err(anyhow::Error::from);
-        if cfg!(windows) && restricted_names::is_windows_reserved_path(&entry_path) {
+        #[cfg(all(not(cargo_wasm_cli), not(windows)))]
+        let result = entry.unpack_in(parent).map_err(anyhow::Error::from);
+        #[cfg(all(not(cargo_wasm_cli), windows))]
+        if restricted_names::is_windows_reserved_path(&entry_path) {
             result = result.with_context(|| {
                 format!(
                     "`{}` appears to contain a reserved Windows path, \
@@ -1119,6 +1152,32 @@ fn unpack(
     }
 
     Ok(bytes_written)
+}
+
+/// Detect tar metadata restoration failures from browser WASI filesystems.
+///
+/// The tar entry has already created the file or directory before it attempts
+/// chmod/mtime restoration, so these errors can be ignored for registry cache
+/// sources.
+#[cfg(cargo_wasm_cli)]
+fn is_unsupported_wasi_archive_metadata_error(error: &anyhow::Error) -> bool {
+    let mut metadata_operation = false;
+    let mut unsupported = false;
+    for cause in error.chain() {
+        let message = cause.to_string();
+        if message.contains("failed to set permissions") || message.contains("failed to set mtime")
+        {
+            metadata_operation = true;
+        }
+        if message.eq_ignore_ascii_case("not implemented")
+            || message.eq_ignore_ascii_case("wasm not implemented")
+            || message.contains("Not implemented")
+            || message.contains("Wasm not implemented")
+        {
+            unsupported = true;
+        }
+    }
+    metadata_operation && unsupported
 }
 
 /// Workaround for rust-lang/cargo#16237
