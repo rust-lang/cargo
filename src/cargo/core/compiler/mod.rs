@@ -51,11 +51,12 @@ pub mod timings;
 mod unit;
 pub mod unit_dependencies;
 pub mod unit_graph;
+#[cfg_attr(not(cargo_wasm_cli), allow(dead_code))]
+mod wasm_proc_macro;
 
 use std::borrow::Cow;
 use std::cell::OnceCell;
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fmt::Display;
 use std::fs::{self, File};
@@ -337,7 +338,20 @@ fn rustc(
         .unwrap_or_else(|| build_runner.bcx.gctx.cwd())
         .to_path_buf();
     let fingerprint_dir = build_runner.files().fingerprint_dir(unit);
-    let script_metadatas = build_runner.find_build_script_metadatas(unit);
+    let script_metadatas = {
+        #[cfg(cargo_wasm_cli)]
+        {
+            if wasm_proc_macro::proc_macro2_vendor_root(unit).is_some() {
+                None
+            } else {
+                build_runner.find_build_script_metadatas(unit)
+            }
+        }
+        #[cfg(not(cargo_wasm_cli))]
+        {
+            build_runner.find_build_script_metadatas(unit)
+        }
+    };
     let is_local = unit.is_local();
     let artifact = unit.artifact;
     let sbom_files = build_runner.sbom_output_files(unit)?;
@@ -731,7 +745,7 @@ fn add_plugin_deps(
 ) -> CargoResult<()> {
     let var = paths::dylib_path_envvar();
     let search_path = rustc.get_env(var).unwrap_or_default();
-    let mut search_path = env::split_paths(&search_path).collect::<Vec<_>>();
+    let mut search_path = paths::split_paths(&search_path).collect::<Vec<_>>();
     for (pkg_id, metadata) in &build_scripts.plugins {
         let output = build_script_outputs
             .get(*metadata)
@@ -823,7 +837,7 @@ fn prepare_rustc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResult
         base.env("CARGO_PRIMARY_PACKAGE", "1");
         let file_list = build_runner.sbom_output_files(unit)?;
         if !file_list.is_empty() {
-            let file_list = std::env::join_paths(file_list)?;
+            let file_list = paths::join_paths(&file_list, "CARGO_SBOM_PATH")?;
             base.env("CARGO_SBOM_PATH", file_list);
         }
     }
@@ -1247,25 +1261,92 @@ fn build_base_args(
             Ok(())
         }
     };
+    let wasm_proc_macro_transform: Option<wasm_proc_macro::ProcMacroTransform> = {
+        #[cfg(cargo_wasm_cli)]
+        {
+            wasm_proc_macro::prepare_proc_macro_transform(bcx.ws, unit)?
+        }
+        #[cfg(not(cargo_wasm_cli))]
+        {
+            None
+        }
+    };
+    let wasm_proc_macro2_vendor_root: Option<PathBuf> = {
+        #[cfg(cargo_wasm_cli)]
+        {
+            wasm_proc_macro::proc_macro2_vendor_root(unit)
+        }
+        #[cfg(not(cargo_wasm_cli))]
+        {
+            None
+        }
+    };
+    let using_wasm_proc_macro2_vendor = wasm_proc_macro2_vendor_root.is_some();
+    let wasm_wstd_attr_transform: Option<wasm_proc_macro::SourceTransform> = {
+        #[cfg(cargo_wasm_cli)]
+        {
+            wasm_proc_macro::prepare_wstd_attr_transform(bcx.ws, unit)?
+        }
+        #[cfg(not(cargo_wasm_cli))]
+        {
+            None
+        }
+    };
 
     cmd.arg("--crate-name").arg(&unit.target.crate_name());
 
     let edition = unit.target.edition();
-    edition.cmd_edition_arg(cmd);
+    #[cfg(cargo_wasm_cli)]
+    {
+        // The forked wasm rustc path traps on edition-2024 `#[unsafe(no_mangle)]`
+        // exports. The transformed wrapper source is edition-2021-compatible.
+        if wasm_proc_macro_transform.is_some()
+            && edition >= crate::core::features::Edition::Edition2024
+        {
+            crate::core::features::Edition::Edition2021.cmd_edition_arg(cmd);
+        } else {
+            edition.cmd_edition_arg(cmd);
+        }
+    }
+    #[cfg(not(cargo_wasm_cli))]
+    {
+        edition.cmd_edition_arg(cmd);
+    }
 
-    add_path_args(bcx.ws, unit, cmd);
+    if let Some(transform) = &wasm_proc_macro_transform {
+        cmd.arg(&transform.source_arg);
+        cmd.cwd(&transform.cwd);
+    } else if let Some(transform) = &wasm_wstd_attr_transform {
+        cmd.arg(&transform.source_arg);
+        cmd.cwd(&transform.cwd);
+    } else if let Some(vendor_root) = &wasm_proc_macro2_vendor_root {
+        cmd.arg(vendor_root.join("src/lib.rs"));
+        cmd.cwd(vendor_root);
+    } else {
+        add_path_args(bcx.ws, unit, cmd);
+    }
     add_error_format_and_color(build_runner, cmd);
     add_allow_features(build_runner, cmd);
 
     let mut contains_dy_lib = false;
     if !test {
-        for crate_type in &unit.target.rustc_crate_types() {
-            cmd.arg("--crate-type").arg(crate_type.as_str());
-            contains_dy_lib |= crate_type == &CrateType::Dylib;
+        if wasm_proc_macro_transform.is_some() {
+            cmd.arg("--crate-type").arg(CrateType::Cdylib.as_str());
+        } else if using_wasm_proc_macro2_vendor {
+            cmd.arg("--crate-type").arg(CrateType::Rlib.as_str());
+        } else {
+            for crate_type in &unit.target.rustc_crate_types() {
+                cmd.arg("--crate-type").arg(crate_type.as_str());
+                contains_dy_lib |= crate_type == &CrateType::Dylib;
+            }
         }
     }
 
-    if unit.mode.is_check() {
+    if wasm_proc_macro_transform.is_some() {
+        cmd.arg("--emit=metadata,link");
+    } else if using_wasm_proc_macro2_vendor {
+        cmd.arg("--emit=metadata,link");
+    } else if unit.mode.is_check() {
         cmd.arg("--emit=dep-info,metadata");
     } else if build_runner.bcx.gctx.cli_unstable().no_embed_metadata {
         // Nightly rustc supports the -Zembed-metadata=no flag, which tells it to avoid including
@@ -1294,10 +1375,25 @@ fn build_base_args(
         }
     }
 
-    let prefer_dynamic = (unit.target.for_host() && !unit.target.is_custom_build())
+    let prefer_dynamic = wasm_proc_macro_transform.is_none()
+        && (unit.target.for_host() && !unit.target.is_custom_build())
         || (contains_dy_lib && !build_runner.is_primary_package(unit));
     if prefer_dynamic {
         cmd.arg("-C").arg("prefer-dynamic");
+    }
+
+    if let Some(transform) = &wasm_proc_macro_transform {
+        cmd.arg("--target").arg("wasm32-wasip1");
+        cmd.arg("--watt-cdylib-proc-macro");
+        cmd.arg("-A").arg("unsafe_attr_outside_unsafe");
+        cmd.arg("-C")
+            .arg("target-feature=-bulk-memory,-reference-types,-multivalue");
+        cmd.env(
+            "CARGO_PROC_MACRO_CUSTOM_SECTION_B64",
+            &transform.custom_section_b64,
+        );
+    } else if wasm_proc_macro2_vendor_root.is_some() {
+        cmd.arg("--target").arg("wasm32-wasip1");
     }
 
     if opt_level.as_str() != "0" {
@@ -1311,7 +1407,9 @@ fn build_base_args(
         cmd.arg("-Z").arg("unstable-options");
     }
 
-    cmd.args(&lto_args(build_runner, unit));
+    if wasm_proc_macro_transform.is_none() && !using_wasm_proc_macro2_vendor {
+        cmd.args(&lto_args(build_runner, unit));
+    }
 
     if let Some(backend) = codegen_backend {
         cmd.arg("-Z").arg(&format!("codegen-backend={}", backend));
@@ -1853,13 +1951,55 @@ pub fn lib_search_paths(
 
     // Be sure that the host path is also listed. This'll ensure that proc macro
     // dependencies are correctly found (for reexported macros).
-    if !unit.kind.is_host() {
+    let needs_host_deps = {
+        #[cfg(cargo_wasm_cli)]
+        {
+            !unit.kind.is_host()
+        }
+        #[cfg(not(cargo_wasm_cli))]
+        {
+            !unit.kind.is_host()
+        }
+    };
+    if needs_host_deps {
         let mut deps = OsString::from("dependency=");
-        deps.push(build_runner.files().host_deps(unit));
+        let host_deps = build_runner.files().host_deps(unit);
+        deps.push(&host_deps);
         lib_search_paths.extend(["-L".into(), deps]);
+        #[cfg(cargo_wasm_cli)]
+        {
+            let mut deps = OsString::from("dependency=");
+            deps.push(wasm_proc_macro_target_deps_dir(&host_deps));
+            lib_search_paths.extend(["-L".into(), deps]);
+        }
     }
 
     Ok(lib_search_paths)
+}
+
+#[cfg(cargo_wasm_cli)]
+fn wasm_proc_macro_target_deps_dir(host_deps: &Path) -> PathBuf {
+    if host_deps.file_name().and_then(|name| name.to_str()) != Some("deps") {
+        return host_deps.to_path_buf();
+    }
+    let Some(profile_dir) = host_deps.parent() else {
+        return host_deps.to_path_buf();
+    };
+    let Some(profile) = profile_dir.file_name() else {
+        return host_deps.to_path_buf();
+    };
+    let Some(target_dir) = profile_dir.parent() else {
+        return host_deps.to_path_buf();
+    };
+    target_dir.join("wasm32-wasip1").join(profile).join("deps")
+}
+
+#[cfg(cargo_wasm_cli)]
+fn wasm_proc_macro_target_rmeta_path(linkable_wasm: &Path) -> Option<PathBuf> {
+    let file_name = linkable_wasm.file_name()?.to_str()?;
+    let stem = file_name.strip_suffix(".wasm")?;
+    let host_deps = linkable_wasm.parent()?;
+    Some(wasm_proc_macro_target_deps_dir(host_deps).join(format!("lib{stem}.rmeta")))
 }
 
 /// Generates a list of `--extern` arguments.
@@ -1874,77 +2014,209 @@ pub fn extern_args(
     let no_embed_metadata = build_runner.bcx.gctx.cli_unstable().no_embed_metadata;
 
     // Closure to add one dependency to `result`.
-    let mut link_to =
-        |dep: &UnitDep, extern_crate_name: InternedString, noprelude: bool| -> CargoResult<()> {
-            let mut value = OsString::new();
-            let mut opts = Vec::new();
-            let is_public_dependency_enabled = unit
-                .pkg
-                .manifest()
-                .unstable_features()
-                .require(Feature::public_dependency())
-                .is_ok()
-                || build_runner.bcx.gctx.cli_unstable().public_dependency;
-            if !dep.public && unit.target.is_lib() && is_public_dependency_enabled {
-                opts.push("priv");
-                *unstable_opts = true;
-            }
-            if noprelude {
-                opts.push("noprelude");
-                *unstable_opts = true;
-            }
-            if !opts.is_empty() {
-                value.push(opts.join(","));
-                value.push(":");
-            }
-            value.push(extern_crate_name.as_str());
-            value.push("=");
+    let mut link_to = |dep: &UnitDep,
+                       extern_crate_name: InternedString,
+                       noprelude: bool|
+     -> CargoResult<()> {
+        let mut value = OsString::new();
+        let mut opts = Vec::new();
+        let is_public_dependency_enabled = unit
+            .pkg
+            .manifest()
+            .unstable_features()
+            .require(Feature::public_dependency())
+            .is_ok()
+            || build_runner.bcx.gctx.cli_unstable().public_dependency;
+        if !dep.public && unit.target.is_lib() && is_public_dependency_enabled {
+            opts.push("priv");
+            *unstable_opts = true;
+        }
+        if noprelude {
+            opts.push("noprelude");
+            *unstable_opts = true;
+        }
+        if !opts.is_empty() {
+            value.push(opts.join(","));
+            value.push(":");
+        }
+        value.push(extern_crate_name.as_str());
+        value.push("=");
 
-            let mut pass = |file| {
-                let mut value = value.clone();
-                value.push(file);
-                result.push(OsString::from("--extern"));
-                result.push(value);
-            };
+        let mut pass = |file: &Path| {
+            let mut value = value.clone();
+            value.push(file);
+            result.push(OsString::from("--extern"));
+            result.push(value);
+        };
 
-            let outputs = build_runner.outputs(&dep.unit)?;
+        let outputs = build_runner.outputs(&dep.unit)?;
 
-            if build_runner.only_requires_rmeta(unit, &dep.unit) || dep.unit.mode.is_check() {
-                // Example: rlib dependency for an rlib, rmeta is all that is required.
-                let output = outputs
+        #[cfg(cargo_wasm_cli)]
+        {
+            let has_wasm_linkable = outputs.iter().any(|output| {
+                output.flavor == FileFlavor::Linkable
+                    && output.path.extension().and_then(|ext| ext.to_str()) == Some("wasm")
+            });
+            if dep.unit.target.proc_macro() || has_wasm_linkable {
+                if let Some(output) = outputs
                     .iter()
                     .find(|output| output.flavor == FileFlavor::Rmeta)
-                    .expect("failed to find rmeta dep for pipelined dep");
-                pass(&output.path);
-            } else {
-                // Example: a bin needs `rlib` for dependencies, it cannot use rmeta.
-                for output in outputs.iter() {
-                    if output.flavor == FileFlavor::Linkable {
-                        pass(&output.path);
-                    }
-                    // If we use -Zembed-metadata=no, we also need to pass the path to the
-                    // corresponding .rmeta file to the linkable artifact, because the
-                    // normal dependency (rlib) doesn't contain the full metadata.
-                    else if no_embed_metadata && output.flavor == FileFlavor::Rmeta {
-                        pass(&output.path);
+                {
+                    pass(&output.path);
+                    return Ok(());
+                }
+                if let Some(output) = outputs.iter().find(|output| {
+                    output.flavor == FileFlavor::Linkable
+                        && output.path.extension().and_then(|ext| ext.to_str()) == Some("wasm")
+                }) {
+                    if let Some(file_name) = output.path.file_name().and_then(|name| name.to_str())
+                    {
+                        if let Some(stem) = file_name.strip_suffix(".wasm") {
+                            let candidate = wasm_proc_macro_target_rmeta_path(&output.path)
+                                .unwrap_or_else(|| {
+                                    output.path.with_file_name(format!("lib{stem}.rmeta"))
+                                });
+                            pass(&candidate);
+                            return Ok(());
+                        }
                     }
                 }
             }
-            Ok(())
-        };
+        }
+
+        if build_runner.only_requires_rmeta(unit, &dep.unit) || dep.unit.mode.is_check() {
+            // Example: rlib dependency for an rlib, rmeta is all that is required.
+            let output = outputs
+                .iter()
+                .find(|output| output.flavor == FileFlavor::Rmeta)
+                .expect("failed to find rmeta dep for pipelined dep");
+            pass(&output.path);
+        } else {
+            // Example: a bin needs `rlib` for dependencies, it cannot use rmeta.
+            for output in outputs.iter() {
+                if output.flavor == FileFlavor::Linkable {
+                    #[cfg(cargo_wasm_cli)]
+                    {
+                        if output.path.extension().and_then(|ext| ext.to_str()) == Some("wasm") {
+                            if let Some(file_name) =
+                                output.path.file_name().and_then(|name| name.to_str())
+                            {
+                                if let Some(stem) = file_name.strip_suffix(".wasm") {
+                                    let candidate = wasm_proc_macro_target_rmeta_path(&output.path)
+                                        .unwrap_or_else(|| {
+                                            output.path.with_file_name(format!("lib{stem}.rmeta"))
+                                        });
+                                    pass(&candidate);
+                                    continue;
+                                }
+                            }
+                        }
+                    }
+                    pass(&output.path);
+                }
+                // If we use -Zembed-metadata=no, we also need to pass the path to the
+                // corresponding .rmeta file to the linkable artifact, because the
+                // normal dependency (rlib) doesn't contain the full metadata.
+                else if no_embed_metadata && output.flavor == FileFlavor::Rmeta {
+                    pass(&output.path);
+                }
+            }
+        }
+        Ok(())
+    };
 
     for dep in deps {
         if dep.unit.target.is_linkable() && !dep.unit.mode.is_doc() {
             link_to(dep, dep.extern_crate_name, dep.noprelude)?;
         }
     }
-    if unit.target.proc_macro() {
-        // Automatically import `proc_macro`.
-        result.push(OsString::from("--extern"));
-        result.push(OsString::from("proc_macro"));
+    #[cfg(cargo_wasm_cli)]
+    add_implicit_proc_macro2_extern(build_runner, unit, deps, &mut result)?;
+    #[cfg(not(cargo_wasm_cli))]
+    {
+        if unit.target.proc_macro() {
+            // Automatically import `proc_macro`.
+            result.push(OsString::from("--extern"));
+            result.push(OsString::from("proc_macro"));
+        }
     }
 
     Ok(result)
+}
+
+#[cfg(cargo_wasm_cli)]
+fn add_implicit_proc_macro2_extern(
+    build_runner: &BuildRunner<'_, '_>,
+    unit: &Unit,
+    deps: &[UnitDep],
+    result: &mut Vec<OsString>,
+) -> CargoResult<()> {
+    if !unit.target.proc_macro()
+        || deps
+            .iter()
+            .any(|dep| dep.extern_crate_name == "proc_macro2")
+    {
+        return Ok(());
+    }
+
+    let Some(proc_macro2_unit) = find_transitive_proc_macro2_unit(build_runner, unit) else {
+        anyhow::bail!(
+            "transformed proc-macro crate `{}` requires `proc-macro2`, but no `proc-macro2` unit was found in its dependency graph",
+            unit.pkg.name()
+        );
+    };
+    let outputs = build_runner.outputs(proc_macro2_unit)?;
+    let output = outputs
+        .iter()
+        .find(|output| output.flavor == FileFlavor::Linkable)
+        .or_else(|| {
+            outputs
+                .iter()
+                .find(|output| output.flavor == FileFlavor::Rmeta)
+        });
+    let Some(output) = output else {
+        anyhow::bail!(
+            "transformed proc-macro crate `{}` requires `proc-macro2`, but Cargo could not find a usable `proc-macro2` artifact",
+            unit.pkg.name()
+        );
+    };
+
+    let mut value = OsString::from("proc_macro2=");
+    value.push(&output.path);
+    result.push(OsString::from("--extern"));
+    result.push(value);
+    Ok(())
+}
+
+#[cfg(cargo_wasm_cli)]
+fn find_transitive_proc_macro2_unit<'a>(
+    build_runner: &'a BuildRunner<'_, '_>,
+    unit: &Unit,
+) -> Option<&'a Unit> {
+    let mut stack = build_runner
+        .unit_deps(unit)
+        .iter()
+        .map(|dep| &dep.unit)
+        .collect::<Vec<_>>();
+    let mut seen = HashSet::new();
+
+    while let Some(candidate) = stack.pop() {
+        if !seen.insert(candidate.clone()) {
+            continue;
+        }
+        if candidate.pkg.name().as_str() == "proc-macro2"
+            && candidate.target.crate_name() == "proc_macro2"
+            && candidate.target.is_linkable()
+            && !candidate.mode.is_doc()
+        {
+            return Some(candidate);
+        }
+        if let Some(deps) = build_runner.bcx.unit_graph.get(candidate) {
+            stack.extend(deps.iter().map(|dep| &dep.unit));
+        }
+    }
+
+    None
 }
 
 /// Adds `-C linker=<path>` if specified.
