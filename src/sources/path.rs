@@ -36,8 +36,8 @@ pub struct PathSource<'gctx> {
     source_id: SourceId,
     /// The root path of this source.
     path: PathBuf,
-    /// Packages that this sources has discovered.
-    package: RefCell<Option<Package>>,
+    /// The package discovered in this source, if any.
+    package: RefCell<Option<Option<Package>>>,
     gctx: &'gctx GlobalContext,
 }
 
@@ -63,23 +63,23 @@ impl<'gctx> PathSource<'gctx> {
         Self {
             source_id,
             path,
-            package: RefCell::new(Some(pkg)),
+            package: RefCell::new(Some(Some(pkg))),
             gctx,
         }
     }
 
-    /// Gets the package on the root path.
+    /// Returns the root package, or an error if it is missing or failed to load.
     pub fn root_package(&mut self) -> CargoResult<Package> {
         trace!("root_package; source={:?}", self);
 
         self.load()?;
 
         match &*self.package.borrow() {
-            Some(pkg) => Ok(pkg.clone()),
-            None => Err(internal(format!(
-                "no package found in source {:?}",
-                self.path
-            ))),
+            Some(Some(pkg)) => Ok(pkg.clone()),
+            Some(None) | None => Err(anyhow::format_err!(
+                "failed to read `{}`",
+                self.path.join("Cargo.toml").display()
+            )),
         }
     }
 
@@ -124,10 +124,14 @@ impl<'gctx> PathSource<'gctx> {
         Ok(())
     }
 
-    fn read_package(&self) -> CargoResult<Package> {
+    /// Reads the manifest. Returning `Ok(None)` if missing allows the resolver
+    /// to handle it as "not found" instead of an early IO error.
+    fn read_package(&self) -> CargoResult<Option<Package>> {
         let path = self.path.join("Cargo.toml");
-        let pkg = ops::read_package(&path, self.source_id, self.gctx)?;
-        Ok(pkg)
+        if !path.exists() {
+            return Ok(None);
+        }
+        Ok(Some(ops::read_package(&path, self.source_id, self.gctx)?))
     }
 }
 
@@ -146,7 +150,8 @@ impl<'gctx> Source for PathSource<'gctx> {
         f: &mut dyn FnMut(IndexSummary),
     ) -> CargoResult<()> {
         self.load()?;
-        if let Some(s) = self.package.borrow().as_ref().map(|p| p.summary()) {
+        if let Some(Some(p)) = &*self.package.borrow() {
+            let s = p.summary();
             let matched = match kind {
                 QueryKind::Exact | QueryKind::RejectedVersions => dep.matches(s),
                 QueryKind::AlternativeNames => true,
@@ -175,7 +180,10 @@ impl<'gctx> Source for PathSource<'gctx> {
         trace!("getting packages; id={}", id);
         self.load()?;
         let pkg = self.package.borrow();
-        let pkg = pkg.iter().find(|pkg| pkg.package_id() == id);
+        let pkg = pkg
+            .as_ref()
+            .and_then(|p| p.as_ref())
+            .filter(|pkg| pkg.package_id() == id);
         pkg.cloned()
             .map(MaybePackage::Ready)
             .ok_or_else(|| internal(format!("failed to find {} in path source", id)))

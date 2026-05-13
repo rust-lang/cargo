@@ -571,19 +571,9 @@ fn error_message_for_missing_manifest() {
     p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to get `bar` as a dependency of package `foo v0.5.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `bar`
-
-Caused by:
-  unable to update [ROOT]/foo/src/bar
-
-Caused by:
-  failed to read `[ROOT]/foo/src/bar/Cargo.toml`
-
-Caused by:
-  [NOT_FOUND]
+[ERROR] no matching package named `bar` found
+location searched: [ROOT]/foo/src/bar
+required by package `foo v0.5.0 ([ROOT]/foo)`
 
 "#]])
         .run();
@@ -1140,19 +1130,9 @@ fn invalid_path_with_base() {
         .masquerade_as_nightly_cargo(&["path-bases"])
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to get `bar` as a dependency of package `foo v0.5.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `bar`
-
-Caused by:
-  unable to update [ROOT]/foo/shared_proj/"
-
-Caused by:
-  failed to read `[ROOT]/foo/shared_proj/"/Cargo.toml`
-
-Caused by:
-  [NOT_FOUND]
+[ERROR] no matching package named `bar` found
+location searched: [ROOT]/foo/shared_proj/"
+required by package `foo v0.5.0 ([ROOT]/foo)`
 
 "#]])
         .run();
@@ -1753,21 +1733,11 @@ fn deep_path_error() {
     p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to get `c` as a dependency of package `b v0.1.0 ([ROOT]/foo/b)`
+[ERROR] no matching package named `c` found
+location searched: [ROOT]/foo/c
+required by package `b v0.1.0 ([ROOT]/foo/b)`
     ... which satisfies path dependency `b` of package `a v0.1.0 ([ROOT]/foo/a)`
     ... which satisfies path dependency `a` of package `foo v0.1.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `c`
-
-Caused by:
-  unable to update [ROOT]/foo/c
-
-Caused by:
-  failed to read `[ROOT]/foo/c/Cargo.toml`
-
-Caused by:
-  [NOT_FOUND]
 
 "#]])
         .run();
@@ -1989,19 +1959,9 @@ fn path_dep_package_in_subdirectory() {
         .with_status(101)
         .with_stderr_data(
             "\
-[ERROR] failed to get `definitely_not_bar` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `definitely_not_bar`
-
-Caused by:
-  unable to update [ROOT]/foo/bar
-
-Caused by:
-  failed to read `[ROOT]/foo/bar/Cargo.toml`
-
-Caused by:
-  [NOT_FOUND]
+[ERROR] no matching package named `definitely_not_bar` found
+location searched: [ROOT]/foo/bar
+required by package `foo v0.1.0 ([ROOT]/foo)`
 ",
         )
         .run();
@@ -2048,19 +2008,9 @@ fn path_dep_other_packages_nearby() {
         .with_status(101)
         .with_stderr_data(
             "\
-[ERROR] failed to get `definitely_not_bar` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `definitely_not_bar`
-
-Caused by:
-  unable to update [ROOT]/foo/bar
-
-Caused by:
-  failed to read `[ROOT]/foo/bar/Cargo.toml`
-
-Caused by:
-  [NOT_FOUND]
+[ERROR] no matching package named `definitely_not_bar` found
+location searched: [ROOT]/foo/bar
+required by package `foo v0.1.0 ([ROOT]/foo)`
 ",
         )
         .run();
