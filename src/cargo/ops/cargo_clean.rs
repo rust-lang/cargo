@@ -203,7 +203,7 @@ fn clean_specs(
         .collect::<CargoResult<_>>()?;
     // A Vec of layouts. This is a little convoluted because there can only be
     // one host_layout.
-    let layouts = if targets.is_empty() {
+    let layouts = if target_layouts.is_empty() {
         vec![(CompileKind::Host, &host_layout)]
     } else {
         target_layouts

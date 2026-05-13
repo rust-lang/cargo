@@ -711,6 +711,29 @@ fn package_cleans_all_the_things() {
     assert_all_clean(&p.build_dir());
 }
 
+#[cargo_test]
+fn clean_p_respects_build_target_config() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config.toml",
+            &format!("[build]\ntarget = \"{}\"", rustc_host()),
+        )
+        .build();
+
+    p.cargo("build").run();
+    p.cargo("clean -p foo --dry-run")
+        .with_stderr_data(str![[r#"
+[SUMMARY] [FILE_NUM] files, [FILE_SIZE]B total
+[WARNING] no files deleted due to --dry-run
+
+"#]])
+        .run();
+    p.cargo("clean -p foo").run();
+    assert_all_clean(&p.build_dir().join(rustc_host()));
+}
+
 // Ensures that all files for the package have been deleted.
 #[track_caller]
 fn assert_all_clean(build_dir: &Path) {
