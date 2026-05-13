@@ -119,6 +119,7 @@ unicode-width = "0.2.2"
 url = "2.5.7"
 varisat = "0.2.2"
 walkdir = "2.5.0"
+wasip2 = "1.0.2"
 windows-sys = "0.61"
 winnow = "0.7.14"
 
@@ -217,6 +218,9 @@ unicode-width.workspace = true
 url.workspace = true
 walkdir.workspace = true
 winnow.workspace = true
+
+[target.'cfg(all(target_arch = "wasm32", target_os = "wasi"))'.dependencies]
+wasip2.workspace = true
 
 [target.'cfg(not(all(target_arch = "wasm32", target_os = "wasi")))'.dependencies]
 curl = { workspace = true, features = ["http2"] }
