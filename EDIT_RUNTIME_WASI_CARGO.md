@@ -1,13 +1,13 @@
 # Upstream Cargo as an edit.dev WASI CLI
 
-Last updated: 2026-05-09
+Last updated: 2026-05-13
 
 This checkout contains an experimental build of upstream Cargo that can run as a
 `wasm32-wasip2` command component inside the edit.dev developer environment.
 The goal is not full Cargo parity yet. The current target is a useful Cargo CLI
-that can start, parse commands, operate on local workspace files, and support
-simple flows such as `cargo version` and `cargo new --vcs none` under a WASIp2
-command runtime.
+that can start, parse commands, operate on local workspace files, fetch sparse
+registry crates through WASI HTTP, and drive the edit-hosted rustc path for
+fixture builds under a WASIp2 command runtime.
 
 The adjacent edit repo publishes the built `cargo.wasm` into the local Web
 Assembly package registry as a CLI package named `edit-dev-env/cargo-upstream`.
@@ -16,11 +16,13 @@ Assembly package registry as a CLI package named `edit-dev-env/cargo-upstream`.
 
 - Cargo checkout: `/Users/interpretations/projects/cargo`
 - edit checkout: `/Users/interpretations/projects/integrate/edit`
+- edit test worktree used for the current fork harness:
+  `/Users/interpretations/projects/integrate/edit-deployed-may-06`
 - Cargo branch used for this work: `codex/wasm-cargo-runtime`
 - Built artifact: `/Users/interpretations/projects/cargo/target/wasm32-wasip2/release/cargo.wasm`
 - Artifact sha256 at the time of this handoff:
-  `df8157e48537fa0c84bccf5178874e5e5056311fff66431300085b64393f7dad`
-- edit local registry package version used for the WASIp2 artifact: `0.1.2`
+  `6e02981be209724a09bd2184a9f95a30fd69b7fc202bf5974ae7cc958824cbf8`
+- edit local registry package version used for the WASIp2 artifact: `0.1.16`
 
 ## Build and smoke test
 
@@ -31,31 +33,40 @@ cd /Users/interpretations/projects/cargo
 cargo build --release --target wasm32-wasip2 --bin cargo
 ```
 
-The current artifact was smoke-tested with Wasmtime:
+The current artifact imports the edit host process bridge
+`edit-dev:upstream-cargo/process@0.1.0`, so plain Wasmtime execution is no
+longer the main smoke test unless that host import is provided. Inspect imports
+with:
 
 ```sh
-wasmtime \
-  --env HOME=/private/tmp \
-  --dir /private/tmp \
-  target/wasm32-wasip2/release/cargo.wasm \
-  version
+wasm-tools component wit target/wasm32-wasip2/release/cargo.wasm
 ```
 
-Expected output shape:
+Expected Cargo version shape when run in the edit runtime or fork harness:
 
 ```text
 cargo 1.95.0 (f2d3ce0bd 2026-03-21)
 ```
 
-Simple local filesystem command smoke test:
+The fork harness in the `edit-deployed-may-06` worktree uses the built Cargo
+artifact directly:
 
 ```sh
-wasmtime \
-  --env HOME=/private/tmp \
-  --dir /private/tmp \
-  target/wasm32-wasip2/release/cargo.wasm \
-  new --vcs none /private/tmp/cargo-wasi-smoke
+cd /Users/interpretations/projects/integrate/edit-deployed-may-06/runtimes/rust/cargo/tools
+pnpm upstream-cargo -- \
+  --project ../tests/fixtures/test-json \
+  --out /private/tmp/edit-upstream-cargo/test-json-out \
+  -- build --target wasm32-wasip2
 ```
+
+The manifest currently used by that harness is:
+
+```text
+/Users/interpretations/projects/integrate/edit-deployed-may-06/runtimes/rust/cargo/tools/upstream/upstream-fixtures.json
+```
+
+As of 2026-05-13, every fixture in that manifest passes through
+`upstream-cargo-runner.ts`: `test-minimal`, `test-regex`, and `test-json`.
 
 ## Why shims are needed
 
@@ -113,6 +124,11 @@ crate so we can add WASI-specific home-directory behavior.
 `crates/crates-io/Cargo.toml` also gates its `curl` dependency so the
 `crates-io` helper crate can compile for WASI.
 
+The root `Cargo.toml` adds a WASI-only dependency on `wasip2` for registry HTTP
+requests. `crates/cargo-util/Cargo.toml` adds WASIp2-only `base64`, `serde`,
+and `serde_json` dependencies for the edit host-process bridge and proc-macro
+section injection.
+
 ### curl compatibility stubs
 
 Files:
@@ -162,19 +178,23 @@ Files:
 - `src/cargo/sources/registry/remote_wasm.rs`
 - `src/cargo/sources/registry/mod.rs`
 
-The normal sparse HTTP registry and git-index registry implementations are
-replaced under `cargo_wasm_cli`.
+The normal sparse HTTP registry implementation is replaced under
+`cargo_wasm_cli` with a WASI HTTP-backed implementation. It preserves the shape
+Cargo expects from `RegistryData`, but performs GET requests through
+`wasi:http/outgoing-handler` rather than through curl.
 
-The WASI replacements preserve the shape Cargo expects from `RegistryData`, but
-return explicit unsupported errors for:
+Current behavior:
 
-- sparse registry loading
-- git registry loading
-- crate downloads
-- `block_until_ready`
+- sparse `config.json` loads use the registry cache when present and otherwise
+  fetch over WASI HTTP when network is allowed
+- sparse index entries support ETag and Last-Modified freshness checks
+- crate downloads use Cargo's normal registry cache/download helpers after the
+  response body is fetched through WASI HTTP
+- downloaded tarballs are unpacked into the registry source cache
+- `block_until_ready` is a no-op because the WASI implementation is synchronous
 
-They still construct registry index/cache paths through `GlobalContext` so code
-that only calculates paths can continue.
+Git-index registries are still unsupported under `cargo_wasm_cli`; use sparse
+registries for the current edit runtime path.
 
 ### Git source shim
 
@@ -229,6 +249,12 @@ WASI-specific behavior:
 
 - `path2bytes` converts through UTF-8 instead of Unix `OsStrExt`.
 - `bytes2path` requires valid UTF-8.
+- `split_paths` and `join_paths` use `:` on WASI instead of relying on
+  `std::env::{split_paths,join_paths}`, which are unavailable in the browser
+  runtime.
+- filesystem timestamp helpers return deterministic zero times on WASI where
+  the `filetime` crate cannot read creation/mtime metadata; Cargo still relies
+  on content and path changes for the relevant fork-harness rebuilds.
 - directory link/copy handling falls back to recursive copy with `walkdir`.
 - directory symlink creation reports `Unsupported`.
 
@@ -241,6 +267,7 @@ directory symlinks are unavailable.
 Files:
 
 - `crates/cargo-util/src/process_builder.rs`
+- `crates/cargo-util/src/wasm_host_process.rs`
 - `crates/cargo-util/src/process_error.rs`
 - `crates/cargo-util/src/read2.rs`
 - `credential/cargo-credential/src/stdio.rs`
@@ -250,6 +277,12 @@ Files:
 
 WASI-specific behavior:
 
+- On `wasm32-wasip2`, `ProcessBuilder::{status,output,exec_with_streaming}`
+  route through the edit host import
+  `edit-dev:upstream-cargo/process@0.1.0`.
+- The host-process request serializes program, `arg0`, args, cwd, environment,
+  and optional stdin as JSON. The response carries exit code, stdout, stderr,
+  and an optional host error.
 - `ProcessBuilder::exec_replace` falls back to `exec`.
 - command-line-too-big detection returns `false`.
 - `read2` reads stdout to completion, then stderr to completion.
@@ -257,6 +290,80 @@ WASI-specific behavior:
 - terminal width reports `NoTty`; erase-line is a no-op.
 - job setup is a no-op.
 - unsupported file locking errors are recognized as unsupported.
+- Cargo's jobserver helper thread is disabled under browser WASI. Builds run
+  with Cargo's implicit token instead of creating a helper thread.
+
+The host-process bridge also has a proc-macro post-processing hook. When a
+rustc invocation carries `CARGO_PROC_MACRO_CUSTOM_SECTION_B64`, Cargo asks the
+host to run rustc, then injects the decoded custom section into the generated
+`.wasm` proc-macro artifact and mirrors the `.wasm`/`.rmeta` into the
+`wasm32-wasip1/<profile>/deps` directory that downstream rustc invocations
+search.
+
+### Host rustc and proc-macro compilation
+
+Files:
+
+- `src/cargo/core/compiler/mod.rs`
+- `src/cargo/core/compiler/wasm_proc_macro.rs`
+- `crates/cargo-util/src/wasm_host_process.rs`
+
+The fork now uses the existing edit rustc runtime through Cargo's normal
+process boundary instead of trying to execute native tools directly inside the
+component. For normal project crates, Cargo still emits ordinary rustc command
+lines and lets the host-process import run the browser-hosted rustc.
+
+Proc-macro crates need extra handling because the forked rustc path expects
+Watt-compatible wasm proc macros:
+
+- proc-macro crate sources are copied into
+  `target/cargo-proc-macro-transform/<crate>`
+- exported `#[proc_macro_derive]`, `#[proc_macro_attribute]`, and
+  `#[proc_macro]` functions are rewritten to exported `extern "C"` wrappers
+  that use `proc_macro2::TokenStream`
+- wrapper outputs are normalized through `TokenStream::to_string().parse()` so
+  downstream expansion sees stable token streams
+- the transformed proc-macro crate is compiled as a `wasm32-wasip1` `cdylib`
+  with `--watt-cdylib-proc-macro`
+- Cargo generates the rustc proc-macro declaration custom section and passes it
+  through `CARGO_PROC_MACRO_CUSTOM_SECTION_B64` for host-side injection
+- transformed proc-macro builds emit metadata and link artifacts, and Cargo
+  prefers `.rmeta` paths for downstream `--extern` wiring where appropriate
+
+`proc-macro2` is special-cased as well. When the package version has a matching
+vendored tree at `/vendor/proc-macro2-<version>`, Cargo compiles that vendored
+source for the wasm proc-macro target. Cargo also adds an implicit
+`proc_macro2` extern for transformed proc-macro crates that only receive it
+transitively through crates such as `quote`.
+
+### wstd attribute pre-expansion
+
+File:
+
+- `src/cargo/core/compiler/wasm_proc_macro.rs`
+
+During the HTTP fixture investigation, the rustc/Watt bridge consistently
+trapped on attribute macro expansion, even for tiny no-op attribute macros on
+`async fn main`. Derive macros such as `serde_derive` and `clap_derive` pass,
+but the generic attribute macro path is not healthy yet.
+
+To keep the HTTP examples testable, Cargo now pre-expands the two wstd
+attributes used by the fixtures before invoking rustc:
+
+- `#[wstd::http_server]`
+- `#[wstd::main]`
+
+For `#[wstd::http_server]`, Cargo rewrites the annotated `main` function into
+the same shape produced by wstd's macro: a `TheServer` implementation of the
+WASI HTTP incoming-handler guest interface, a `Responder`, a `runtime::block_on`
+call, and the `wstd::__internal::wasip2::http::proxy::export!` invocation.
+
+For `#[wstd::main]`, Cargo rewrites `async fn main` into a synchronous `main`
+that calls `wstd::runtime::block_on`.
+
+This is intentionally narrow. It fixes the wstd HTTP fixtures and avoids the
+known trapping path, but it is not a general fix for arbitrary proc-macro
+attributes.
 
 ### CLI startup and version output
 
@@ -346,9 +453,9 @@ Initial publish command used:
 ```sh
 cd /Users/interpretations/projects/integrate/edit
 pnpm registry:seed:local -- \
-  --version 0.1.2 \
+  --version 0.1.16 \
   --package edit-dev-env/cargo-upstream \
-  --if-exists skip
+  --if-exists fail
 ```
 
 Important: `--if-exists skip` will not replace an already-published package. If
@@ -480,34 +587,113 @@ app/src/lib/project-session/service.ts
 app/src/lib/execution/wasip2-command-process.ts
 ```
 
+## Deno fork harness status
+
+The current fork-harness work lives in:
+
+```text
+/Users/interpretations/projects/integrate/edit-deployed-may-06/runtimes/rust/cargo
+```
+
+The runner is:
+
+```text
+tools/upstream/upstream-cargo-runner.ts
+```
+
+It uses the local Cargo fork artifact by default:
+
+```text
+/Users/interpretations/projects/cargo/target/wasm32-wasip2/release/cargo.wasm
+```
+
+The current upstream harness manifest is:
+
+```text
+tools/upstream/upstream-fixtures.json
+```
+
+As of 2026-05-13, the manifest contains and passes these fixtures through
+`pnpm upstream-cargo`:
+
+- `test-minimal`
+- `test-regex`
+- `test-json`
+
+Commands used for the manifest fixtures:
+
+```sh
+cd /Users/interpretations/projects/integrate/edit-deployed-may-06/runtimes/rust/cargo/tools
+
+pnpm upstream-cargo -- \
+  --project ../tests/fixtures/test-minimal \
+  --out /private/tmp/edit-upstream-cargo/manifest-test-minimal-out \
+  -- build --target wasm32-wasip2
+
+pnpm upstream-cargo -- \
+  --project ../tests/fixtures/test-regex \
+  --out /private/tmp/edit-upstream-cargo/manifest-test-regex-out \
+  -- build --target wasm32-wasip2
+
+pnpm upstream-cargo -- \
+  --project ../tests/fixtures/test-json \
+  --out /private/tmp/edit-upstream-cargo/manifest-test-json-out \
+  -- build --target wasm32-wasip2
+```
+
+Additional non-manifest fixtures manually checked while debugging proc macros:
+
+- `test-clap`: passes
+- `test-http-request`: passes
+- `test-http-server`: passes after wstd attribute pre-expansion
+- `test-workspace`: passed earlier in the same fork-harness work
+
+Do not confuse `tools/upstream/upstream-fixtures.json` with
+`tools/parity-fixtures.json`. The parity manifest is useful for local/native
+comparisons, but it is not the current fork-harness acceptance set.
+
 ## Current known limitations
 
-- No real crates.io HTTP API support.
-- No sparse registry fetching.
+- No real crates.io publish/yank/search HTTP API support.
 - No git-index registry fetching.
 - No git dependencies.
-- No crate downloads from remote registries.
 - No SQLite global cache tracking.
 - No libgit2 or gitoxide integration.
 - Credential stdio replacement is stubbed.
+- Sparse registry fetching and remote crate downloads now use
+  `wasi:http/outgoing-handler`; the edit runtime must provide that import.
+- Registry crate unpacking disables tar mtime restoration under
+  `cargo_wasm_cli` and ignores WASI-only tar chmod/mtime restoration failures
+  after tar has created each entry. The WASI `.cargo-ok` marker version is `3`
+  so older partial unpack caches are rebuilt. If the marker is missing but the
+  source directory exists, the WASI path clears that directory before unpacking.
 - Some terminal behavior is no-op because the command runs without a native TTY.
 - Some symlink behavior falls back to recursive copy or reports unsupported.
 - External commands, including `git` and `rustc`, depend on what the edit
   runtime exposes as CLI tools.
+- The WASIp2 artifact now imports `edit-dev:upstream-cargo/process@0.1.0`.
+  edit provides that host import and routes `rustc` invocations to the existing
+  browser `rustc.wasm` runtime assets.
+- The Cargo component embeds the WIT metadata for that host import directly in
+  the wasm module. Normal project builds do not inject custom WIT or linker
+  arguments; they use rustc's standard `wasm32-wasip2` component linker path.
+- Arbitrary proc-macro attributes can still trap in the rustc/Watt bridge. The
+  current workaround only pre-expands the wstd attrs used by the HTTP fixtures.
 - The current smoke-tested reliable command surface is local CLI behavior,
-  especially `version` and `new --vcs none`.
+  especially `version`, `new --vcs none`, `check --target wasm32-wasip2`, and
+  `build --target wasm32-wasip2` for the fork-harness fixtures listed above.
 
 ## Suggested next work
 
-1. Decide how Cargo should reach registries from the edit runtime.
-   The clean direction is a runtime HTTP bridge rather than pretending the curl
-   shim is real. Once that exists, replace `wasm_curl` and the registry shims
-   with bridge-backed implementations.
+1. Validate sparse registry access inside the edit app runtime.
+   Cargo now imports `wasi:http/outgoing-handler` for registry GET requests;
+   the runtime needs to provide it and allow requests to registry hosts such as
+   `index.crates.io` and `static.crates.io`. The Deno fork harness path is
+   working for the manifest fixtures.
 
-2. Decide how Cargo should invoke Rust tools.
-   For `cargo build` inside edit, Cargo needs a visible `rustc` command and
-   target sysroots. The edit runtime already has Rust runtime assets, but this
-   upstream Cargo path still needs end-to-end validation.
+2. Investigate the generic proc-macro attribute trap.
+   wstd attrs are pre-expanded as a narrow workaround, while derive macros and
+   the current fixture set pass.
 
 3. Decide the package versioning policy for seeded local registry packages.
    `--if-exists skip` is good for idempotent setup, but it hides new artifact
@@ -537,15 +723,44 @@ To rebuild:
 
 ```sh
 cd /Users/interpretations/projects/cargo
+cargo fmt --check
 cargo build --release --target wasm32-wasip2 --bin cargo
 shasum -a 256 target/wasm32-wasip2/release/cargo.wasm
+git diff --check -- src/cargo/core/compiler/mod.rs src/cargo/core/compiler/wasm_proc_macro.rs
 ```
 
-To smoke test outside edit:
+The latest verified artifact hash was:
+
+```text
+6e02981be209724a09bd2184a9f95a30fd69b7fc202bf5974ae7cc958824cbf8  target/wasm32-wasip2/release/cargo.wasm
+```
+
+To inspect the component imports outside edit:
 
 ```sh
-wasmtime --env HOME=/private/tmp --dir /private/tmp \
-  target/wasm32-wasip2/release/cargo.wasm version
+wasm-tools component wit target/wasm32-wasip2/release/cargo.wasm
+```
+
+The artifact requires the edit host import
+`edit-dev:upstream-cargo/process@0.1.0`, so plain Wasmtime command execution is
+no longer sufficient unless that import is also provided.
+
+To verify the current fork harness manifest:
+
+```sh
+cd /Users/interpretations/projects/integrate/edit-deployed-may-06/runtimes/rust/cargo/tools
+pnpm upstream-cargo -- \
+  --project ../tests/fixtures/test-minimal \
+  --out /private/tmp/edit-upstream-cargo/manifest-test-minimal-out \
+  -- build --target wasm32-wasip2
+pnpm upstream-cargo -- \
+  --project ../tests/fixtures/test-regex \
+  --out /private/tmp/edit-upstream-cargo/manifest-test-regex-out \
+  -- build --target wasm32-wasip2
+pnpm upstream-cargo -- \
+  --project ../tests/fixtures/test-json \
+  --out /private/tmp/edit-upstream-cargo/manifest-test-json-out \
+  -- build --target wasm32-wasip2
 ```
 
 To publish into edit's local registry:
@@ -553,10 +768,14 @@ To publish into edit's local registry:
 ```sh
 cd /Users/interpretations/projects/integrate/edit
 pnpm registry:seed:local -- \
-  --version 0.1.2 \
+  --version 0.1.16 \
   --package edit-dev-env/cargo-upstream \
-  --if-exists skip
+  --if-exists fail
 ```
+
+If that version already exists locally, use a new version or reset the local
+registry. For idempotent setup, `--if-exists skip` is fine, but it preserves the
+previously published artifact bytes.
 
 To verify the edit-side argv fix:
 
@@ -572,4 +791,6 @@ In an edit shell after installing `edit-dev-env/cargo-upstream`:
 ```sh
 export HOME=/
 cargo-upstream version
+cargo-upstream check --target wasm32-wasip2
+cargo-upstream build --target wasm32-wasip2
 ```
