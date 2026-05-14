@@ -376,7 +376,7 @@ pub enum FixEdition {
     ///
     /// This mode for `cargo fix` will migrate to the `next` edition if the
     /// current edition is `initial`. After migration, it will update
-    /// `Cargo.toml` and verify that that it works on the new edition. If the
+    /// `Cargo.toml` and verify that it works on the new edition. If the
     /// current edition is not `initial`, then it immediately exits with
     /// success since we just want to ignore those packages.
     End { initial: Edition, next: Edition },
