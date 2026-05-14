@@ -1330,6 +1330,8 @@ impl<'gctx> Workspace<'gctx> {
     }
 
     pub fn emit_parse_pkg_diagnostics(&self, pkg: &Package, path: &Path) -> CargoResult<()> {
+        let mut stats = DiagnosticStats::new();
+
         let toml_lints = pkg
             .manifest()
             .normalized_toml()
@@ -1343,8 +1345,6 @@ impl<'gctx> Workspace<'gctx> {
             .unwrap_or(manifest::TomlToolLints::default());
 
         if self.gctx.cli_unstable().cargo_lints {
-            let mut stats = DiagnosticStats::new();
-
             missing_lints_features(pkg.into(), &path, &cargo_lints, &mut stats, self.gctx)?;
             unknown_lints(pkg.into(), &path, &cargo_lints, &mut stats, self.gctx)?;
 
@@ -1373,9 +1373,9 @@ impl<'gctx> Workspace<'gctx> {
                 &mut stats,
                 self.gctx,
             )?;
-
-            stats.report_summary("parse", Some(&*pkg.name()), self.gctx)?;
         }
+
+        stats.report_summary("parse", Some(&*pkg.name()), self.gctx)?;
 
         Ok(())
     }
