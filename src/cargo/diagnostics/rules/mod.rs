@@ -1,4 +1,5 @@
 mod blanket_hint_mostly_unused;
+mod deferred_parse_diagnostics;
 mod im_a_teapot;
 mod implicit_minimum_version_req;
 mod missing_lints_features;
@@ -18,6 +19,7 @@ mod unused_workspace_dependencies;
 mod unused_workspace_package_fields;
 
 pub use blanket_hint_mostly_unused::blanket_hint_mostly_unused;
+pub use deferred_parse_diagnostics::deferred_parse_diagnostics;
 pub use im_a_teapot::check_im_a_teapot;
 pub use implicit_minimum_version_req::implicit_minimum_version_req_pkg;
 pub use implicit_minimum_version_req::implicit_minimum_version_req_ws;

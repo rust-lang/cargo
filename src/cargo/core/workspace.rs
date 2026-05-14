@@ -24,6 +24,7 @@ use crate::core::{EitherManifest, Package, SourceId, VirtualManifest};
 use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::rules::blanket_hint_mostly_unused;
 use crate::diagnostics::rules::check_im_a_teapot;
+use crate::diagnostics::rules::deferred_parse_diagnostics;
 use crate::diagnostics::rules::implicit_minimum_version_req_pkg;
 use crate::diagnostics::rules::implicit_minimum_version_req_ws;
 use crate::diagnostics::rules::missing_lints_features;
@@ -1296,6 +1297,16 @@ impl<'gctx> Workspace<'gctx> {
         if let Err(e) = self.emit_ws_lints() {
             first_emitted_error = Some(e);
         }
+        if let Err(err) = deferred_parse_diagnostics(
+            (self, self.root_maybe()).into(),
+            self.root_manifest(),
+            self.root_manifest.is_some(),
+            self.gctx,
+        ) {
+            if first_emitted_error.is_none() {
+                first_emitted_error = Some(err);
+            }
+        }
 
         for (path, maybe_pkg) in &self.packages.packages {
             if let MaybePackage::Package(pkg) = maybe_pkg {
@@ -1304,28 +1315,15 @@ impl<'gctx> Workspace<'gctx> {
                 {
                     first_emitted_error = Some(e);
                 }
-            }
-            let warnings = match maybe_pkg {
-                MaybePackage::Package(pkg) => pkg.manifest().warnings().warnings(),
-                MaybePackage::Virtual(vm) => vm.warnings().warnings(),
-            };
-            for warning in warnings {
-                if warning.is_critical {
-                    let err = anyhow::format_err!("{}", warning.message);
-                    let cx =
-                        anyhow::format_err!("failed to parse manifest at `{}`", path.display());
+                if let Err(err) = deferred_parse_diagnostics(
+                    pkg.into(),
+                    path,
+                    self.root_manifest.is_some(),
+                    self.gctx,
+                ) {
                     if first_emitted_error.is_none() {
-                        first_emitted_error = Some(err.context(cx));
+                        first_emitted_error = Some(err);
                     }
-                } else {
-                    let msg = if self.root_manifest.is_none() {
-                        warning.message.to_string()
-                    } else {
-                        // In a workspace, it can be confusing where a warning
-                        // originated, so include the path.
-                        format!("{}: {}", path.display(), warning.message)
-                    };
-                    self.gctx.shell().warn(msg)?
                 }
             }
         }
