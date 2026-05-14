@@ -1300,7 +1300,6 @@ impl<'gctx> Workspace<'gctx> {
         if let Err(err) = deferred_parse_diagnostics(
             (self, self.root_maybe()).into(),
             self.root_manifest(),
-            self.root_manifest.is_some(),
             self.gctx,
         ) {
             if first_emitted_error.is_none() {
@@ -1315,12 +1314,7 @@ impl<'gctx> Workspace<'gctx> {
                 {
                     first_emitted_error = Some(e);
                 }
-                if let Err(err) = deferred_parse_diagnostics(
-                    pkg.into(),
-                    path,
-                    self.root_manifest.is_some(),
-                    self.gctx,
-                ) {
+                if let Err(err) = deferred_parse_diagnostics(pkg.into(), path, self.gctx) {
                     if first_emitted_error.is_none() {
                         first_emitted_error = Some(err);
                     }

@@ -490,7 +490,7 @@ fn linker() {
         .arg(&target)
         .with_status(101)
         .with_stderr_data(str![[r#"
-[WARNING] path `src/foo.rs` was erroneously implicitly accepted for binary `foo`,
+[WARNING] [ROOT]/Cargo.toml: path `src/foo.rs` was erroneously implicitly accepted for binary `foo`,
 please set bin.path in Cargo.toml
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo --edition=2015 src/foo.rs [..]--crate-type bin --emit=[..]link[..]-C debuginfo=2 [..] -C metadata=[..] --out-dir [ROOT]/foo/target/[ALT_TARGET]/debug/deps --target [ALT_TARGET] -C linker=my-linker-tool -L dependency=[ROOT]/foo/target/[ALT_TARGET]/debug/deps -L dependency=[ROOT]/foo/target/debug/deps`

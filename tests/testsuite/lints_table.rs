@@ -754,7 +754,7 @@ authors = []
 
     foo.cargo("check")
         .with_stderr_data(str![[r#"
-[WARNING] unused manifest key `lints.cargo` (may be supported in a future version)
+[WARNING] [ROOT]/foo/Cargo.toml: unused manifest key `lints.cargo` (may be supported in a future version)
 
 this Cargo does not support nightly features, but if you
 switch to nightly channel you can pass
@@ -790,7 +790,7 @@ im-a-teapot = true
     foo.cargo("check")
         .masquerade_as_nightly_cargo(&["cargo-lints", "test-dummy-unstable"])
         .with_stderr_data(str![[r#"
-[WARNING] unused manifest key `lints.cargo` (may be supported in a future version)
+[WARNING] [ROOT]/foo/Cargo.toml: unused manifest key `lints.cargo` (may be supported in a future version)
 
 consider passing `-Zcargo-lints` to enable this feature.
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
