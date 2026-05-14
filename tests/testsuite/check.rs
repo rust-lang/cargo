@@ -1091,7 +1091,7 @@ fn warn_manifest_with_project() {
 
     p.cargo("check")
         .with_stderr_data(str![[r#"
-[WARNING] [ROOT]/foo/Cargo.toml: `[project]` is deprecated in favor of `[package]`
+[WARNING] Cargo.toml: `[project]` is deprecated in favor of `[package]`
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1148,7 +1148,7 @@ fn warn_manifest_package_and_project() {
 
     p.cargo("check")
         .with_stderr_data(str![[r#"
-[WARNING] [ROOT]/foo/Cargo.toml: `[project]` is deprecated in favor of `[package]`
+[WARNING] Cargo.toml: `[project]` is deprecated in favor of `[package]`
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1605,13 +1605,13 @@ fn check_unused_manifest_keys() {
     p.cargo("check")
         .with_stderr_data(
             str![[r#"
-[WARNING] [ROOT]/foo/Cargo.toml: unused manifest key: dependencies.dep.wxz
-[WARNING] [ROOT]/foo/Cargo.toml: unused manifest key: dependencies.foo.abc
-[WARNING] [ROOT]/foo/Cargo.toml: unused manifest key: dev-dependencies.foo.wxz
-[WARNING] [ROOT]/foo/Cargo.toml: unused manifest key: build-dependencies.foo.wxz
-[WARNING] [ROOT]/foo/Cargo.toml: unused manifest key: target.bar.build-dependencies.foo.wxz
-[WARNING] [ROOT]/foo/Cargo.toml: unused manifest key: target.cfg(windows).dependencies.foo.wxz
-[WARNING] [ROOT]/foo/Cargo.toml: unused manifest key: target.wasm32-wasip1.dev-dependencies.foo.wxz
+[WARNING] Cargo.toml: unused manifest key: dependencies.dep.wxz
+[WARNING] Cargo.toml: unused manifest key: dependencies.foo.abc
+[WARNING] Cargo.toml: unused manifest key: dev-dependencies.foo.wxz
+[WARNING] Cargo.toml: unused manifest key: build-dependencies.foo.wxz
+[WARNING] Cargo.toml: unused manifest key: target.bar.build-dependencies.foo.wxz
+[WARNING] Cargo.toml: unused manifest key: target.cfg(windows).dependencies.foo.wxz
+[WARNING] Cargo.toml: unused manifest key: target.wasm32-wasip1.dev-dependencies.foo.wxz
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...

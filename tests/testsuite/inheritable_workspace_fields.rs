@@ -756,7 +756,7 @@ fn inherit_workspace_fields() {
 [PACKAGING] bar v1.2.3 ([ROOT]/foo/bar)
 [PACKAGED] 8 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] bar v1.2.3 ([ROOT]/foo/bar)
-[WARNING] [ROOT]/foo/target/package/bar-1.2.3/Cargo.toml: only one of `license` or `license-file` is necessary
+[WARNING] ../target/package/bar-1.2.3/Cargo.toml: only one of `license` or `license-file` is necessary
 `license` should be used if the package license can be expressed with a standard SPDX expression.
 `license-file` should be used if the package uses a non-standard license.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
@@ -1538,7 +1538,7 @@ fn warn_inherit_def_feat_true_member_def_feat_false() {
         .build();
 
     p.cargo("check").with_stderr_data(str![[r#"
-[WARNING] [ROOT]/foo/Cargo.toml: `default-features` is ignored for dep, since `default-features` was true for `workspace.dependencies.dep`, this could become a hard error in the future
+[WARNING] Cargo.toml: `default-features` is ignored for dep, since `default-features` was true for `workspace.dependencies.dep`, this could become a hard error in the future
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
@@ -1630,7 +1630,7 @@ fn warn_inherit_simple_member_def_feat_false() {
         .build();
 
     p.cargo("check").with_stderr_data(str![[r#"
-[WARNING] [ROOT]/foo/Cargo.toml: `default-features` is ignored for dep, since `default-features` was not specified for `workspace.dependencies.dep`, this could become a hard error in the future
+[WARNING] Cargo.toml: `default-features` is ignored for dep, since `default-features` was not specified for `workspace.dependencies.dep`, this could become a hard error in the future
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
@@ -1810,8 +1810,8 @@ fn warn_inherit_unused_manifest_key_dep() {
 
     p.cargo("check")
         .with_stderr_data(str![[r#"
-[WARNING] [ROOT]/foo/Cargo.toml: unused manifest key: workspace.dependencies.dep.wxz
-[WARNING] [ROOT]/foo/Cargo.toml: unused manifest key: dependencies.dep.wxz
+[WARNING] Cargo.toml: unused manifest key: workspace.dependencies.dep.wxz
+[WARNING] Cargo.toml: unused manifest key: dependencies.dep.wxz
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
@@ -1847,7 +1847,7 @@ fn warn_unused_workspace_package_field() {
 
     p.cargo("check")
         .with_stderr_data(str![[r#"
-[WARNING] [ROOT]/foo/Cargo.toml: unused manifest key: workspace.package.name
+[WARNING] Cargo.toml: unused manifest key: workspace.package.name
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1904,20 +1904,20 @@ fn warn_inherit_unused_manifest_key_package() {
 
     p.cargo("check")
         .with_stderr_data(str![[r#"
-[WARNING] [ROOT]/foo/Cargo.toml: unused manifest key: package.authors.xyz
-[WARNING] [ROOT]/foo/Cargo.toml: unused manifest key: package.categories.xyz
-[WARNING] [ROOT]/foo/Cargo.toml: unused manifest key: package.description.xyz
-[WARNING] [ROOT]/foo/Cargo.toml: unused manifest key: package.documentation.xyz
-[WARNING] [ROOT]/foo/Cargo.toml: unused manifest key: package.edition.xyz
-[WARNING] [ROOT]/foo/Cargo.toml: unused manifest key: package.exclude.xyz
-[WARNING] [ROOT]/foo/Cargo.toml: unused manifest key: package.homepage.xyz
-[WARNING] [ROOT]/foo/Cargo.toml: unused manifest key: package.include.xyz
-[WARNING] [ROOT]/foo/Cargo.toml: unused manifest key: package.keywords.xyz
-[WARNING] [ROOT]/foo/Cargo.toml: unused manifest key: package.license.xyz
-[WARNING] [ROOT]/foo/Cargo.toml: unused manifest key: package.publish.xyz
-[WARNING] [ROOT]/foo/Cargo.toml: unused manifest key: package.repository.xyz
-[WARNING] [ROOT]/foo/Cargo.toml: unused manifest key: package.rust-version.xyz
-[WARNING] [ROOT]/foo/Cargo.toml: unused manifest key: package.version.xyz
+[WARNING] Cargo.toml: unused manifest key: package.authors.xyz
+[WARNING] Cargo.toml: unused manifest key: package.categories.xyz
+[WARNING] Cargo.toml: unused manifest key: package.description.xyz
+[WARNING] Cargo.toml: unused manifest key: package.documentation.xyz
+[WARNING] Cargo.toml: unused manifest key: package.edition.xyz
+[WARNING] Cargo.toml: unused manifest key: package.exclude.xyz
+[WARNING] Cargo.toml: unused manifest key: package.homepage.xyz
+[WARNING] Cargo.toml: unused manifest key: package.include.xyz
+[WARNING] Cargo.toml: unused manifest key: package.keywords.xyz
+[WARNING] Cargo.toml: unused manifest key: package.license.xyz
+[WARNING] Cargo.toml: unused manifest key: package.publish.xyz
+[WARNING] Cargo.toml: unused manifest key: package.repository.xyz
+[WARNING] Cargo.toml: unused manifest key: package.rust-version.xyz
+[WARNING] Cargo.toml: unused manifest key: package.version.xyz
 [CHECKING] bar v1.2.3 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 

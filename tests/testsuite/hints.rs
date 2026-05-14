@@ -67,7 +67,7 @@ fn unknown_hints_warn() {
         .build();
     p.cargo("check -v")
         .with_stderr_data(str![[r#"
-[WARNING] [ROOT]/foo/Cargo.toml: unused manifest key: hints.this-is-an-unknown-hint
+[WARNING] Cargo.toml: unused manifest key: hints.this-is-an-unknown-hint
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...

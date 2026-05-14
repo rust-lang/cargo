@@ -483,7 +483,7 @@ fn cargo_compile_duplicate_build_targets() {
 
     p.cargo("build")
         .with_stderr_data(str![[r#"
-[WARNING] [ROOT]/foo/Cargo.toml: file `[ROOT]/foo/src/main.rs` found to be present in multiple build targets:
+[WARNING] Cargo.toml: file `[ROOT]/foo/src/main.rs` found to be present in multiple build targets:
   * `lib` target `main`
   * `bin` target `foo`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
@@ -634,7 +634,7 @@ fn cargo_compile_with_bin_and_crate_type() {
     p.cargo("build")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+[ERROR] failed to parse manifest at `Cargo.toml`
 
 Caused by:
   the target `the_foo_bin` is a binary and can't have any crate-types set (currently "cdylib, rlib")
@@ -722,7 +722,7 @@ fn cargo_compile_with_bin_and_proc() {
     p.cargo("build")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+[ERROR] failed to parse manifest at `Cargo.toml`
 
 Caused by:
   the target `the_foo_bin` is a binary and can't have `proc-macro` set `true`
@@ -2004,7 +2004,7 @@ fn many_crate_types_old_style_lib_location() {
         .build();
     p.cargo("build")
         .with_stderr_data(str![[r#"
-[WARNING] [ROOT]/foo/Cargo.toml: path `src/foo.rs` was erroneously implicitly accepted for library `foo`,
+[WARNING] Cargo.toml: path `src/foo.rs` was erroneously implicitly accepted for library `foo`,
 please rename the file to `src/lib.rs` or set lib.path in Cargo.toml
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -5055,7 +5055,7 @@ fn target_edition() {
 
     p.cargo("build -v")
         .with_stderr_data(str![[r#"
-[WARNING] [ROOT]/foo/Cargo.toml: `edition` is set on library `foo` which is deprecated
+[WARNING] Cargo.toml: `edition` is set on library `foo` which is deprecated
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..]--edition=2018 [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s

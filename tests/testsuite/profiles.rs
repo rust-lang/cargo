@@ -361,8 +361,8 @@ fn profile_panic_test_bench() {
 
     p.cargo("build")
         .with_stderr_data(str![[r#"
-[WARNING] [ROOT]/foo/Cargo.toml: `panic` setting is ignored for `bench` profile
-[WARNING] [ROOT]/foo/Cargo.toml: `panic` setting is ignored for `test` profile
+[WARNING] Cargo.toml: `panic` setting is ignored for `bench` profile
+[WARNING] Cargo.toml: `panic` setting is ignored for `test` profile
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -390,7 +390,7 @@ fn profile_doc_deprecated() {
 
     p.cargo("build")
         .with_stderr_data(str![[r#"
-[WARNING] [ROOT]/foo/Cargo.toml: profile `doc` is deprecated and has no effect
+[WARNING] Cargo.toml: profile `doc` is deprecated and has no effect
 ...
 "#]])
         .run();

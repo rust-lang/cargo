@@ -634,7 +634,7 @@ fn config_invalid_position() {
 
     p.cargo("check -v")
         .with_stderr_data(str![[r#"
-[WARNING] [ROOT]/foo/Cargo.toml: unused manifest key: `lints.rust.use_bracket.check-cfg`
+[WARNING] Cargo.toml: unused manifest key: `lints.rust.use_bracket.check-cfg`
 ...
 "#]])
         .with_stderr_does_not_contain(x!("rustc" => "cfg" of "has_foo"))

@@ -143,7 +143,7 @@ fn fetch_warning() {
         .build();
     p.cargo("fetch")
         .with_stderr_data(str![[r#"
-[WARNING] [ROOT]/foo/Cargo.toml: unused manifest key: package.misspelled
+[WARNING] Cargo.toml: unused manifest key: package.misspelled
 
 "#]])
         .run();
