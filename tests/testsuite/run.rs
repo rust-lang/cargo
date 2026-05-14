@@ -623,6 +623,7 @@ automatically infer them to be a target, such as in subfolders.
 
 For more information on this warning you can consult
 https://github.com/rust-lang/cargo/issues/5330
+[WARNING] `foo` (manifest) generated 1 warning
 [ERROR] no example target named `a` in default-run packages
 [HELP] available example targets:
     do_magic

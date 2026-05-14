@@ -2155,6 +2155,7 @@ script.path = "script.rs"
         .with_status(101)
         .with_stderr_data(str![[r#"
 [WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `foo` (manifest) generated 1 warning
 [ERROR] failed to get `script` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
 
 Caused by:

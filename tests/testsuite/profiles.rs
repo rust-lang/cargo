@@ -363,6 +363,7 @@ fn profile_panic_test_bench() {
         .with_stderr_data(str![[r#"
 [WARNING] Cargo.toml: `panic` setting is ignored for `bench` profile
 [WARNING] Cargo.toml: `panic` setting is ignored for `test` profile
+[WARNING] `foo` (manifest) generated 2 warnings
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 

@@ -55,6 +55,7 @@ fn reserved_windows_target_name() {
         p.cargo("check")
             .with_stderr_data(str![[r#"
 [WARNING] Cargo.toml: binary target `con` is a reserved Windows filename, this target will not work on Windows platforms
+[WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 

@@ -375,6 +375,7 @@ fn proc_macro_crate_type_warning() {
     foo.cargo("check")
         .with_stderr_data(str![[r#"
 [WARNING] Cargo.toml: library `foo` should only specify `proc-macro = true` instead of setting `crate-type`
+[WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -402,6 +403,7 @@ fn lib_plugin_unused_key_warning() {
     foo.cargo("check")
         .with_stderr_data(str![[r#"
 [WARNING] Cargo.toml: unused manifest key: lib.plugin
+[WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -429,6 +431,7 @@ fn proc_macro_crate_type_warning_plugin() {
     foo.cargo("check")
         .with_stderr_data(str![[r#"
 [WARNING] Cargo.toml: library `foo` should only specify `proc-macro = true` instead of setting `crate-type`
+[WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 

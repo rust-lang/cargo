@@ -144,6 +144,7 @@ fn fetch_warning() {
     p.cargo("fetch")
         .with_stderr_data(str![[r#"
 [WARNING] Cargo.toml: unused manifest key: package.misspelled
+[WARNING] `foo` (manifest) generated 1 warning
 
 "#]])
         .run();

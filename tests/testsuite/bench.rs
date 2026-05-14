@@ -730,6 +730,7 @@ automatically infer them to be a target, such as in subfolders.
 
 For more information on this warning you can consult
 https://github.com/rust-lang/cargo/issues/5330
+[WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
 [RUNNING] [..] (target/release/deps/foo-[HASH][EXE])
@@ -1945,6 +1946,7 @@ fn legacy_bench_name() {
         .with_stderr_data(str![[r#"
 [WARNING] Cargo.toml: path `src/bench.rs` was erroneously implicitly accepted for benchmark `bench`,
 please set bench.path in Cargo.toml
+[WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
 [RUNNING] unittests src/lib.rs (target/release/deps/foo-[HASH][EXE])

@@ -1297,15 +1297,6 @@ impl<'gctx> Workspace<'gctx> {
         if let Err(e) = self.emit_parse_ws_diagnostics() {
             first_emitted_error = Some(e);
         }
-        if let Err(err) = deferred_parse_diagnostics(
-            (self, self.root_maybe()).into(),
-            self.root_manifest(),
-            self.gctx,
-        ) {
-            if first_emitted_error.is_none() {
-                first_emitted_error = Some(err);
-            }
-        }
 
         for (path, maybe_pkg) in &self.packages.packages {
             if let MaybePackage::Package(pkg) = maybe_pkg {
@@ -1313,11 +1304,6 @@ impl<'gctx> Workspace<'gctx> {
                     && first_emitted_error.is_none()
                 {
                     first_emitted_error = Some(e);
-                }
-                if let Err(err) = deferred_parse_diagnostics(pkg.into(), path, self.gctx) {
-                    if first_emitted_error.is_none() {
-                        first_emitted_error = Some(err);
-                    }
                 }
             }
         }
@@ -1331,6 +1317,8 @@ impl<'gctx> Workspace<'gctx> {
 
     pub fn emit_parse_pkg_diagnostics(&self, pkg: &Package, path: &Path) -> CargoResult<()> {
         let mut stats = DiagnosticStats::new();
+
+        deferred_parse_diagnostics(pkg.into(), path, &mut stats, self.gctx)?;
 
         let toml_lints = pkg
             .manifest()
@@ -1382,6 +1370,13 @@ impl<'gctx> Workspace<'gctx> {
 
     pub fn emit_parse_ws_diagnostics(&self) -> CargoResult<()> {
         let mut stats = DiagnosticStats::new();
+
+        deferred_parse_diagnostics(
+            (self, self.root_maybe()).into(),
+            self.root_manifest(),
+            &mut stats,
+            self.gctx,
+        )?;
 
         let cargo_lints = match self.root_maybe() {
             MaybePackage::Package(pkg) => {

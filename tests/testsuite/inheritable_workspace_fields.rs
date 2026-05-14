@@ -760,6 +760,7 @@ fn inherit_workspace_fields() {
 `license` should be used if the package license can be expressed with a standard SPDX expression.
 `license-file` should be used if the package uses a non-standard license.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+[WARNING] `bar` (manifest) generated 1 warning
 [COMPILING] bar v1.2.3 ([ROOT]/foo/target/package/bar-1.2.3)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] bar v1.2.3 ([ROOT]/foo/bar)
@@ -1539,6 +1540,7 @@ fn warn_inherit_def_feat_true_member_def_feat_false() {
 
     p.cargo("check").with_stderr_data(str![[r#"
 [WARNING] Cargo.toml: `default-features` is ignored for dep, since `default-features` was true for `workspace.dependencies.dep`, this could become a hard error in the future
+[WARNING] `bar` (manifest) generated 1 warning
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
@@ -1631,6 +1633,7 @@ fn warn_inherit_simple_member_def_feat_false() {
 
     p.cargo("check").with_stderr_data(str![[r#"
 [WARNING] Cargo.toml: `default-features` is ignored for dep, since `default-features` was not specified for `workspace.dependencies.dep`, this could become a hard error in the future
+[WARNING] `bar` (manifest) generated 1 warning
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
@@ -1812,6 +1815,7 @@ fn warn_inherit_unused_manifest_key_dep() {
         .with_stderr_data(str![[r#"
 [WARNING] Cargo.toml: unused manifest key: workspace.dependencies.dep.wxz
 [WARNING] Cargo.toml: unused manifest key: dependencies.dep.wxz
+[WARNING] `bar` (manifest) generated 2 warnings
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
@@ -1848,6 +1852,7 @@ fn warn_unused_workspace_package_field() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [WARNING] Cargo.toml: unused manifest key: workspace.package.name
+[WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1918,6 +1923,7 @@ fn warn_inherit_unused_manifest_key_package() {
 [WARNING] Cargo.toml: unused manifest key: package.repository.xyz
 [WARNING] Cargo.toml: unused manifest key: package.rust-version.xyz
 [WARNING] Cargo.toml: unused manifest key: package.version.xyz
+[WARNING] `bar` (manifest) generated 14 warnings
 [CHECKING] bar v1.2.3 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 

@@ -486,6 +486,7 @@ fn cargo_compile_duplicate_build_targets() {
 [WARNING] Cargo.toml: file `[ROOT]/foo/src/main.rs` found to be present in multiple build targets:
   * `lib` target `main`
   * `bin` target `foo`
+[WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -634,10 +635,8 @@ fn cargo_compile_with_bin_and_crate_type() {
     p.cargo("build")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to parse manifest at `Cargo.toml`
-
-Caused by:
-  the target `the_foo_bin` is a binary and can't have any crate-types set (currently "cdylib, rlib")
+[ERROR] Cargo.toml: the target `the_foo_bin` is a binary and can't have any crate-types set (currently "cdylib, rlib")
+[ERROR] could not parse `foo` (manifest) due to 1 previous error
 
 "#]])
         .run();
@@ -722,10 +721,8 @@ fn cargo_compile_with_bin_and_proc() {
     p.cargo("build")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to parse manifest at `Cargo.toml`
-
-Caused by:
-  the target `the_foo_bin` is a binary and can't have `proc-macro` set `true`
+[ERROR] Cargo.toml: the target `the_foo_bin` is a binary and can't have `proc-macro` set `true`
+[ERROR] could not parse `foo` (manifest) due to 1 previous error
 
 "#]])
         .run();
@@ -2006,6 +2003,7 @@ fn many_crate_types_old_style_lib_location() {
         .with_stderr_data(str![[r#"
 [WARNING] Cargo.toml: path `src/foo.rs` was erroneously implicitly accepted for library `foo`,
 please rename the file to `src/lib.rs` or set lib.path in Cargo.toml
+[WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -5056,6 +5054,7 @@ fn target_edition() {
     p.cargo("build -v")
         .with_stderr_data(str![[r#"
 [WARNING] Cargo.toml: `edition` is set on library `foo` which is deprecated
+[WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..]--edition=2018 [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
