@@ -1291,10 +1291,10 @@ impl<'gctx> Workspace<'gctx> {
         }
     }
 
-    pub fn emit_warnings(&self) -> CargoResult<()> {
+    pub fn emit_parse_diagnostics(&self) -> CargoResult<()> {
         let mut first_emitted_error = None;
 
-        if let Err(e) = self.emit_ws_lints() {
+        if let Err(e) = self.emit_parse_ws_diagnostics() {
             first_emitted_error = Some(e);
         }
         if let Err(err) = deferred_parse_diagnostics(
@@ -1309,7 +1309,7 @@ impl<'gctx> Workspace<'gctx> {
 
         for (path, maybe_pkg) in &self.packages.packages {
             if let MaybePackage::Package(pkg) = maybe_pkg {
-                if let Err(e) = self.emit_pkg_lints(pkg, &path)
+                if let Err(e) = self.emit_parse_pkg_diagnostics(pkg, &path)
                     && first_emitted_error.is_none()
                 {
                     first_emitted_error = Some(e);
@@ -1329,7 +1329,7 @@ impl<'gctx> Workspace<'gctx> {
         }
     }
 
-    pub fn emit_pkg_lints(&self, pkg: &Package, path: &Path) -> CargoResult<()> {
+    pub fn emit_parse_pkg_diagnostics(&self, pkg: &Package, path: &Path) -> CargoResult<()> {
         let toml_lints = pkg
             .manifest()
             .normalized_toml()
@@ -1380,7 +1380,7 @@ impl<'gctx> Workspace<'gctx> {
         Ok(())
     }
 
-    pub fn emit_ws_lints(&self) -> CargoResult<()> {
+    pub fn emit_parse_ws_diagnostics(&self) -> CargoResult<()> {
         let mut stats = DiagnosticStats::new();
 
         let cargo_lints = match self.root_maybe() {
