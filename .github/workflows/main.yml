@@ -71,7 +71,7 @@ jobs:
         - name: Linux x86_64
           os: ubuntu-latest
         - name: macOS aarch64
-          os: macos-14
+          os: macos-15
         - name: Windows x86_64 MSVC
           os: windows-latest
     name: Clippy ${{ matrix.name }}
@@ -156,11 +156,11 @@ jobs:
           rust: nightly
           other: TODO # cross-compile tests are disabled, this shouldn't matter.
         - name: macOS aarch64 stable
-          os: macos-14
+          os: macos-15
           rust: stable
           other: x86_64-apple-darwin
         - name: macOS aarch64 nightly
-          os: macos-14
+          os: macos-15
           rust: nightly
           other: x86_64-apple-darwin
         - name: Windows x86_64 MSVC stable
