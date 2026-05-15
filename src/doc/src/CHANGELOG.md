@@ -50,10 +50,6 @@
 
 ### Added
 
-- 🎉 New `frame-pointers` profile option to control the compiler's
-  `-C force-frame-pointers` flag.
-  [docs](https://doc.rust-lang.org/nightly/cargo/reference/profiles.html#frame-pointers)
-  [#16742](https://github.com/rust-lang/cargo/pull/16742)
 - Support `target.'cfg(..)'.rustdocflags` in Cargo configuration.
   [#16846](https://github.com/rust-lang/cargo/pull/16846)
 - cargo-help: display manpages for nested subcommands.
