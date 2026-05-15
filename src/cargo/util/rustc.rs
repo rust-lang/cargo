@@ -259,41 +259,55 @@ impl Cache {
         extra_fingerprint: u64,
     ) -> CargoResult<(String, String)> {
         let key = process_fingerprint(cmd, extra_fingerprint);
-        if let std::collections::hash_map::Entry::Vacant(e) = self.data.outputs.entry(key) {
-            debug!("rustc info cache miss");
-            debug!("running {}", cmd);
-            let output = cmd.output()?;
-            let stdout = String::from_utf8(output.stdout)
-                .map_err(|e| anyhow::anyhow!("{}: {:?}", e, e.as_bytes()))
-                .with_context(|| format!("`{}` didn't return utf8 output", cmd))?;
-            let stderr = String::from_utf8(output.stderr)
-                .map_err(|e| anyhow::anyhow!("{}: {:?}", e, e.as_bytes()))
-                .with_context(|| format!("`{}` didn't return utf8 output", cmd))?;
-            e.insert(Output {
-                success: output.status.success(),
-                status: if output.status.success() {
-                    String::new()
-                } else {
-                    cargo_util::exit_status_to_string(output.status)
-                },
-                code: output.status.code(),
-                stdout,
-                stderr,
-            });
-            self.dirty = true;
-        } else {
-            debug!("rustc info cache hit");
+        match self.data.outputs.get(&key) {
+            Some(output) if output.success => {
+                debug!("rustc info cache hit");
+                return Ok((output.stdout.clone(), output.stderr.clone()));
+            }
+            Some(_) => {
+                // Previously cached a failure. Remove it so we retry the command,
+                // since failures may be transient (e.g., a rustc wrapper like
+                // sccache intermittently failing).
+                debug!("rustc info cache hit, but cached output was a failure; retrying");
+                self.data.outputs.remove(&key);
+                self.dirty = true;
+            }
+            None => {
+                debug!("rustc info cache miss");
+            }
         }
-        let output = &self.data.outputs[&key];
-        if output.success {
-            Ok((output.stdout.clone(), output.stderr.clone()))
+
+        debug!("running {}", cmd);
+        let output = cmd.output()?;
+        let stdout = String::from_utf8(output.stdout)
+            .map_err(|e| anyhow::anyhow!("{}: {:?}", e, e.as_bytes()))
+            .with_context(|| format!("`{}` didn't return utf8 output", cmd))?;
+        let stderr = String::from_utf8(output.stderr)
+            .map_err(|e| anyhow::anyhow!("{}: {:?}", e, e.as_bytes()))
+            .with_context(|| format!("`{}` didn't return utf8 output", cmd))?;
+
+        if output.status.success() {
+            self.data.outputs.insert(
+                key,
+                Output {
+                    success: true,
+                    status: String::new(),
+                    code: output.status.code(),
+                    stdout: stdout.clone(),
+                    stderr: stderr.clone(),
+                },
+            );
+            self.dirty = true;
+            Ok((stdout, stderr))
         } else {
+            // Don't cache failures — they may be transient (e.g., a wrapper
+            // process like sccache failing due to a temporary server issue).
             Err(ProcessError::new_raw(
                 &format!("process didn't exit successfully: {}", cmd),
-                output.code,
-                &output.status,
-                Some(output.stdout.as_ref()),
-                Some(output.stderr.as_ref()),
+                output.status.code(),
+                &cargo_util::exit_status_to_string(output.status),
+                Some(stdout.as_ref()),
+                Some(stderr.as_ref()),
             )
             .into())
         }
@@ -303,6 +317,9 @@ impl Cache {
 impl Drop for Cache {
     fn drop(&mut self) {
         if !self.dirty {
+            return;
+        }
+        if self.data.outputs.is_empty() && self.data.successes.is_empty() {
             return;
         }
         if let Some(ref path) = self.cache_location {

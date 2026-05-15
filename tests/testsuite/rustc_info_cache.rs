@@ -171,18 +171,87 @@ fn rustc_info_cache_with_wrappers() {
             .env(wrapper_env, &wrapper)
             .with_stderr_contains("[..]different compiler, creating new rustc info cache[..]")
             .with_stderr_contains(MISS)
-            .with_stderr_contains(UPDATE)
             .with_stderr_does_not_contain(HIT)
+            .with_stderr_does_not_contain(UPDATE)
             .with_status(101)
             .run();
+        // Failures are not cached — a subsequent run should retry the command
+        // rather than replaying the cached failure.
         p.cargo("build")
             .env("CARGO_LOG", "cargo::util::rustc=debug")
             .env(wrapper_env, &wrapper)
-            .with_stderr_contains("[..]reusing existing rustc info cache[..]")
-            .with_stderr_contains(HIT)
+            .with_stderr_contains(MISS)
+            .with_stderr_does_not_contain(HIT)
             .with_stderr_does_not_contain(UPDATE)
-            .with_stderr_does_not_contain(MISS)
             .with_status(101)
             .run();
     }
+}
+
+#[cargo_test]
+fn rustc_info_cache_transient_failure_recovery() {
+    let wrapper_project = project()
+        .at("wrapper")
+        .file("Cargo.toml", &basic_bin_manifest("wrapper"))
+        .file("src/main.rs", r#"fn main() { }"#)
+        .build();
+    let wrapper = wrapper_project.bin("wrapper");
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "test"
+                version = "0.0.0"
+                authors = []
+                [workspace]
+            "#,
+        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .build();
+
+    // Build a wrapper that fails (simulates a transient sccache failure).
+    wrapper_project.change_file(
+        "src/main.rs",
+        r#"
+        fn main() {
+            eprintln!("wrapper: error: Operation not permitted (os error 1)");
+            std::process::exit(1);
+        }
+        "#,
+    );
+    wrapper_project.cargo("build").with_status(0).run();
+
+    p.cargo("build")
+        .env("CARGO_LOG", "cargo::util::rustc=debug")
+        .env("RUSTC_WRAPPER", &wrapper)
+        .with_stderr_contains("[..]Operation not permitted[..]")
+        .with_status(101)
+        .run();
+
+    // Now fix the wrapper (simulates sccache recovering).
+    wrapper_project.change_file(
+        "src/main.rs",
+        r#"
+        fn main() {
+            let mut args = std::env::args_os();
+            let _me = args.next().unwrap();
+            let rustc = args.next().unwrap();
+            let status = std::process::Command::new(rustc).args(args).status().unwrap();
+            std::process::exit(if status.success() { 0 } else { 1 })
+        }
+        "#,
+    );
+    wrapper_project.cargo("build").with_status(0).run();
+
+    // The build should now succeed — the previous failure must not be cached.
+    p.cargo("build")
+        .env("CARGO_LOG", "cargo::util::rustc=debug")
+        .env("RUSTC_WRAPPER", &wrapper)
+        .with_stderr_contains(MISS)
+        .with_stderr_does_not_contain(HIT)
+        .with_stderr_contains(UPDATE)
+        .with_status(0)
+        .run();
 }
