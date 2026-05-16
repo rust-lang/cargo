@@ -903,16 +903,14 @@ fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResu
         if build_runner.bcx.gctx.cli_unstable().checksum_freshness {
             rustdoc.arg("-Z").arg("checksum-hash-algorithm=blake3");
         }
-
-        rustdoc.arg("-Zunstable-options");
     } else if build_runner.bcx.gctx.cli_unstable().rustdoc_mergeable_info {
         // toolchain resources are written at the end, at the same time as merging
         rustdoc.arg("--emit=html-non-static-files");
-        rustdoc.arg("-Zunstable-options");
     }
 
     if build_runner.bcx.gctx.cli_unstable().rustdoc_mergeable_info {
         // write out mergeable data to be imported
+        rustdoc.arg("-Zunstable-options");
         rustdoc.arg("--merge=none");
         let mut arg = OsString::from("--parts-out-dir=");
         // `-Zrustdoc-mergeable-info` always uses the new layout.
