@@ -1,4 +1,4 @@
-# The Manifest Format
+ # The Manifest Format
 
 The `Cargo.toml` file for each package is called its *manifest*. It is written
 in the [TOML] format. It contains metadata that is needed to compile the package. Checkout
