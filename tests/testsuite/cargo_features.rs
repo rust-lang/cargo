@@ -262,8 +262,9 @@ fn stable_feature_warns() {
         .build();
     p.cargo("check")
         .with_stderr_data(str![[r#"
-[WARNING] the cargo feature `test-dummy-stable` has been stabilized in the 1.0 release and is no longer necessary to be listed in the manifest
+[WARNING] Cargo.toml: the cargo feature `test-dummy-stable` has been stabilized in the 1.0 release and is no longer necessary to be listed in the manifest
   See https://doc.rust-lang.org/cargo/ for more information about using this feature.
+[WARNING] `a` (manifest) generated 1 warning
 [CHECKING] a v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 

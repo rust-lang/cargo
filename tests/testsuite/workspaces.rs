@@ -2448,8 +2448,9 @@ fn ws_warn_path() {
         .build();
 
     p.cargo("check").with_stderr_data(str![[r#"
-[WARNING] [ROOT]/foo/a/Cargo.toml: the cargo feature `edition` has been stabilized in the 1.31 release and is no longer necessary to be listed in the manifest
+[WARNING] a/Cargo.toml: the cargo feature `edition` has been stabilized in the 1.31 release and is no longer necessary to be listed in the manifest
   See https://doc.rust-lang.org/cargo/reference/manifest.html#the-edition-field for more information about using this feature.
+[WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.1.0 ([ROOT]/foo/a)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 

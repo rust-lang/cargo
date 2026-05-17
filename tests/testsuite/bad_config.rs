@@ -850,44 +850,45 @@ quiet = false
 
     p.cargo("check")
         .with_stderr_data(str![[r#"
-[WARNING] unused manifest key: alias
+[WARNING] Cargo.toml: unused manifest key: alias
 [HELP] alias is a valid .cargo/config.toml key
-[WARNING] unused manifest key: build
+[WARNING] Cargo.toml: unused manifest key: build
 [HELP] build is a valid .cargo/config.toml key
-[WARNING] unused manifest key: cache
+[WARNING] Cargo.toml: unused manifest key: cache
 [HELP] cache is a valid .cargo/config.toml key
-[WARNING] unused manifest key: cargo-new
+[WARNING] Cargo.toml: unused manifest key: cargo-new
 [HELP] cargo-new is a valid .cargo/config.toml key
-[WARNING] unused manifest key: credential-alias
+[WARNING] Cargo.toml: unused manifest key: credential-alias
 [HELP] credential-alias is a valid .cargo/config.toml key
-[WARNING] unused manifest key: doc
+[WARNING] Cargo.toml: unused manifest key: doc
 [HELP] doc is a valid .cargo/config.toml key
-[WARNING] unused manifest key: env
+[WARNING] Cargo.toml: unused manifest key: env
 [HELP] env is a valid .cargo/config.toml key
-[WARNING] unused manifest key: future-incompat-report
+[WARNING] Cargo.toml: unused manifest key: future-incompat-report
 [HELP] future-incompat-report is a valid .cargo/config.toml key
-[WARNING] unused manifest key: http
+[WARNING] Cargo.toml: unused manifest key: http
 [HELP] http is a valid .cargo/config.toml key
-[WARNING] unused manifest key: install
+[WARNING] Cargo.toml: unused manifest key: install
 [HELP] install is a valid .cargo/config.toml key
-[WARNING] unused manifest key: lib.build
-[WARNING] unused manifest key: net
+[WARNING] Cargo.toml: unused manifest key: lib.build
+[WARNING] Cargo.toml: unused manifest key: net
 [HELP] net is a valid .cargo/config.toml key
-[WARNING] unused manifest key: package.unused
-[WARNING] unused manifest key: paths
+[WARNING] Cargo.toml: unused manifest key: package.unused
+[WARNING] Cargo.toml: unused manifest key: paths
 [HELP] paths is a valid .cargo/config.toml key
-[WARNING] unused manifest key: registries
+[WARNING] Cargo.toml: unused manifest key: registries
 [HELP] registries is a valid .cargo/config.toml key
-[WARNING] unused manifest key: registry
+[WARNING] Cargo.toml: unused manifest key: registry
 [HELP] registry is a valid .cargo/config.toml key
-[WARNING] unused manifest key: resolver
+[WARNING] Cargo.toml: unused manifest key: resolver
 [HELP] resolver is a valid .cargo/config.toml key
-[WARNING] unused manifest key: source
+[WARNING] Cargo.toml: unused manifest key: source
 [HELP] source is a valid .cargo/config.toml key
-[WARNING] unused manifest key: target.cfg(unix).linker
-[WARNING] unused manifest key: target.foo.bar
-[WARNING] unused manifest key: term
+[WARNING] Cargo.toml: unused manifest key: target.cfg(unix).linker
+[WARNING] Cargo.toml: unused manifest key: target.foo.bar
+[WARNING] Cargo.toml: unused manifest key: term
 [HELP] term is a valid .cargo/config.toml key
+[WARNING] `foo` (manifest) generated 21 warnings
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -911,7 +912,8 @@ fn unused_keys_in_virtual_manifest() {
         .build();
     p.cargo("check --workspace")
         .with_stderr_data(str![[r#"
-[WARNING] [ROOT]/foo/Cargo.toml: unused manifest key: workspace.unused
+[WARNING] Cargo.toml: unused manifest key: workspace.unused
+[WARNING] workspace (manifest) generated 1 warning
 [CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -980,8 +982,9 @@ fn dev_dependencies2() {
         .file("a/src/lib.rs", "")
         .build();
     p.cargo("check").with_stderr_data(str![[r#"
-[WARNING] `dev_dependencies` is deprecated in favor of `dev-dependencies` and will not work in the 2024 edition
+[WARNING] Cargo.toml: `dev_dependencies` is deprecated in favor of `dev-dependencies` and will not work in the 2024 edition
 (in the `foo` package)
+[WARNING] `foo` (manifest) generated 1 warning
 [LOCKING] 1 package to latest compatible version
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1059,7 +1062,8 @@ fn dev_dependencies2_conflict() {
         .file("a/src/lib.rs", "")
         .build();
     p.cargo("check").with_stderr_data(str![[r#"
-[WARNING] `dev_dependencies` is redundant with `dev-dependencies`, preferring `dev-dependencies` in the `foo` package
+[WARNING] Cargo.toml: `dev_dependencies` is redundant with `dev-dependencies`, preferring `dev-dependencies` in the `foo` package
+[WARNING] `foo` (manifest) generated 1 warning
 [LOCKING] 1 package to latest compatible version
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1095,8 +1099,9 @@ fn build_dependencies2() {
         .file("a/src/lib.rs", "")
         .build();
     p.cargo("check").with_stderr_data(str![[r#"
-[WARNING] `build_dependencies` is deprecated in favor of `build-dependencies` and will not work in the 2024 edition
+[WARNING] Cargo.toml: `build_dependencies` is deprecated in favor of `build-dependencies` and will not work in the 2024 edition
 (in the `foo` package)
+[WARNING] `foo` (manifest) generated 1 warning
 [LOCKING] 1 package to latest compatible version
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1174,7 +1179,8 @@ fn build_dependencies2_conflict() {
         .file("a/src/lib.rs", "")
         .build();
     p.cargo("check").with_stderr_data(str![[r#"
-[WARNING] `build_dependencies` is redundant with `build-dependencies`, preferring `build-dependencies` in the `foo` package
+[WARNING] Cargo.toml: `build_dependencies` is redundant with `build-dependencies`, preferring `build-dependencies` in the `foo` package
+[WARNING] `foo` (manifest) generated 1 warning
 [LOCKING] 1 package to latest compatible version
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1203,8 +1209,9 @@ fn lib_crate_type2() {
         .build();
     p.cargo("check")
         .with_stderr_data(str![[r#"
-[WARNING] `crate_type` is deprecated in favor of `crate-type` and will not work in the 2024 edition
+[WARNING] Cargo.toml: `crate_type` is deprecated in favor of `crate-type` and will not work in the 2024 edition
 (in the `foo` library target)
+[WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1265,7 +1272,8 @@ fn lib_crate_type2_conflict() {
         .file("src/lib.rs", "pub fn foo() {}")
         .build();
     p.cargo("check").with_stderr_data(str![[r#"
-[WARNING] `crate_type` is redundant with `crate-type`, preferring `crate-type` in the `foo` library target
+[WARNING] Cargo.toml: `crate_type` is redundant with `crate-type`, preferring `crate-type` in the `foo` library target
+[WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1294,8 +1302,9 @@ fn bin_crate_type2() {
         .build();
     p.cargo("check")
         .with_stderr_data(str![[r#"
-[WARNING] `crate_type` is deprecated in favor of `crate-type` and will not work in the 2024 edition
+[WARNING] Cargo.toml: `crate_type` is deprecated in favor of `crate-type` and will not work in the 2024 edition
 (in the `foo` binary target)
+[WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1358,7 +1367,8 @@ fn bin_crate_type2_conflict() {
         .file("src/main.rs", "fn main() {}")
         .build();
     p.cargo("check").with_stderr_data(str![[r#"
-[WARNING] `crate_type` is redundant with `crate-type`, preferring `crate-type` in the `foo` binary target
+[WARNING] Cargo.toml: `crate_type` is redundant with `crate-type`, preferring `crate-type` in the `foo` binary target
+[WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1403,10 +1413,11 @@ fn examples_crate_type2() {
         .build();
     p.cargo("check")
         .with_stderr_data(str![[r#"
-[WARNING] `crate_type` is deprecated in favor of `crate-type` and will not work in the 2024 edition
+[WARNING] Cargo.toml: `crate_type` is deprecated in favor of `crate-type` and will not work in the 2024 edition
 (in the `ex` example target)
-[WARNING] `crate_type` is deprecated in favor of `crate-type` and will not work in the 2024 edition
+[WARNING] Cargo.toml: `crate_type` is deprecated in favor of `crate-type` and will not work in the 2024 edition
 (in the `goodbye` example target)
+[WARNING] `foo` (manifest) generated 2 warnings
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1502,8 +1513,9 @@ fn examples_crate_type2_conflict() {
         )
         .build();
     p.cargo("check").with_stderr_data(str![[r#"
-[WARNING] `crate_type` is redundant with `crate-type`, preferring `crate-type` in the `ex` example target
-[WARNING] `crate_type` is redundant with `crate-type`, preferring `crate-type` in the `goodbye` example target
+[WARNING] Cargo.toml: `crate_type` is redundant with `crate-type`, preferring `crate-type` in the `ex` example target
+[WARNING] Cargo.toml: `crate_type` is redundant with `crate-type`, preferring `crate-type` in the `goodbye` example target
+[WARNING] `foo` (manifest) generated 2 warnings
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1542,8 +1554,9 @@ fn cargo_platform_build_dependencies2() {
 
     p.cargo("check")
         .with_stderr_data(str![[r#"
-[WARNING] `build_dependencies` is deprecated in favor of `build-dependencies` and will not work in the 2024 edition
+[WARNING] Cargo.toml: `build_dependencies` is deprecated in favor of `build-dependencies` and will not work in the 2024 edition
 (in the `[HOST_TARGET]` platform target)
+[WARNING] `foo` (manifest) generated 1 warning
 [LOCKING] 1 package to latest compatible version
 [COMPILING] build v0.5.0 ([ROOT]/foo/build)
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
@@ -1631,7 +1644,8 @@ fn cargo_platform_build_dependencies2_conflict() {
 
     p.cargo("check")
         .with_stderr_data(str![[r#"
-[WARNING] `build_dependencies` is redundant with `build-dependencies`, preferring `build-dependencies` in the `[HOST_TARGET]` platform target
+[WARNING] Cargo.toml: `build_dependencies` is redundant with `build-dependencies`, preferring `build-dependencies` in the `[HOST_TARGET]` platform target
+[WARNING] `foo` (manifest) generated 1 warning
 [LOCKING] 1 package to latest compatible version
 [COMPILING] build v0.5.0 ([ROOT]/foo/build)
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
@@ -1673,8 +1687,9 @@ fn cargo_platform_dev_dependencies2() {
 
     p.cargo("check")
         .with_stderr_data(str![[r#"
-[WARNING] `dev_dependencies` is deprecated in favor of `dev-dependencies` and will not work in the 2024 edition
+[WARNING] Cargo.toml: `dev_dependencies` is deprecated in favor of `dev-dependencies` and will not work in the 2024 edition
 (in the `[HOST_TARGET]` platform target)
+[WARNING] `foo` (manifest) generated 1 warning
 [LOCKING] 1 package to latest compatible version
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1758,7 +1773,8 @@ fn cargo_platform_dev_dependencies2_conflict() {
 
     p.cargo("check")
         .with_stderr_data(str![[r#"
-[WARNING] `dev_dependencies` is redundant with `dev-dependencies`, preferring `dev-dependencies` in the `[HOST_TARGET]` platform target
+[WARNING] Cargo.toml: `dev_dependencies` is redundant with `dev-dependencies`, preferring `dev-dependencies` in the `[HOST_TARGET]` platform target
+[WARNING] `foo` (manifest) generated 1 warning
 [LOCKING] 1 package to latest compatible version
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1802,8 +1818,9 @@ fn default_features2() {
         .build();
 
     p.cargo("check").with_stderr_data(str![[r#"
-[WARNING] `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+[WARNING] Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
 (in the `a` dependency)
+[WARNING] `foo` (manifest) generated 1 warning
 [LOCKING] 1 package to latest compatible version
 [CHECKING] a v0.1.0 ([ROOT]/foo/a)
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
@@ -1894,7 +1911,8 @@ fn default_features2_conflict() {
         .build();
 
     p.cargo("check").with_stderr_data(str![[r#"
-[WARNING] `default_features` is redundant with `default-features`, preferring `default-features` in the `a` dependency
+[WARNING] Cargo.toml: `default_features` is redundant with `default-features`, preferring `default-features` in the `a` dependency
+[WARNING] `foo` (manifest) generated 1 warning
 [LOCKING] 1 package to latest compatible version
 [CHECKING] a v0.1.0 ([ROOT]/foo/a)
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
@@ -1977,8 +1995,9 @@ fn workspace_default_features2() {
 [CHECKING] package_only v0.1.0 ([ROOT]/foo/package_only)
 [CHECKING] workspace_only v0.1.0 ([ROOT]/foo/workspace_only)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[WARNING] [ROOT]/foo/workspace_only/Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+[WARNING] workspace_only/Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
 (in the `dep_workspace_only` dependency)
+[WARNING] `workspace_only` (manifest) generated 1 warning
 
 "#]]
             .unordered(),
@@ -2088,8 +2107,9 @@ fn lib_proc_macro2() {
 
     foo.cargo("check")
         .with_stderr_data(str![[r#"
-[WARNING] `proc_macro` is deprecated in favor of `proc-macro` and will not work in the 2024 edition
+[WARNING] Cargo.toml: `proc_macro` is deprecated in favor of `proc-macro` and will not work in the 2024 edition
 (in the `foo` library target)
+[WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -2146,7 +2166,8 @@ fn lib_proc_macro2_conflict() {
         .build();
 
     foo.cargo("check").with_stderr_data(str![[r#"
-[WARNING] `proc_macro` is redundant with `proc-macro`, preferring `proc-macro` in the `foo` library target
+[WARNING] Cargo.toml: `proc_macro` is redundant with `proc-macro`, preferring `proc-macro` in the `foo` library target
+[WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -2176,8 +2197,9 @@ fn bin_proc_macro2() {
 
     foo.cargo("check")
         .with_stderr_data(str![[r#"
-[WARNING] `proc_macro` is deprecated in favor of `proc-macro` and will not work in the 2024 edition
+[WARNING] Cargo.toml: `proc_macro` is deprecated in favor of `proc-macro` and will not work in the 2024 edition
 (in the `foo` binary target)
+[WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -2242,7 +2264,8 @@ fn bin_proc_macro2_conflict() {
         .build();
 
     foo.cargo("check").with_stderr_data(str![[r#"
-[WARNING] `proc_macro` is redundant with `proc-macro`, preferring `proc-macro` in the `foo` binary target
+[WARNING] Cargo.toml: `proc_macro` is redundant with `proc-macro`, preferring `proc-macro` in the `foo` binary target
+[WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -2374,7 +2397,8 @@ fn fragment_in_git_url() {
         // ...
         // [..]127.0.0.1[..]
         .with_stderr_data(str![[r#"
-[WARNING] URL fragment `#foo` in git URL is ignored for dependency (bar). If you were trying to specify a specific git revision, use `rev = "foo"` in the dependency declaration.
+[WARNING] Cargo.toml: URL fragment `#foo` in git URL is ignored for dependency (bar). If you were trying to specify a specific git revision, use `rev = "foo"` in the dependency declaration.
+[WARNING] `foo` (manifest) generated 1 warning
 [UPDATING] git repository `http://127.0.0.1/#foo`
 ...
 [ERROR] failed to get `bar` as a dependency of package `foo v0.0.0 ([ROOT]/foo)`
@@ -2968,7 +2992,8 @@ fn warn_semver_metadata() {
         .file("src/lib.rs", "")
         .build();
     p.cargo("check").with_stderr_data(str![[r#"
-[WARNING] version requirement `1.0.0+1234` for dependency `bar` includes semver metadata which will be ignored, removing the metadata is recommended to avoid confusion
+[WARNING] Cargo.toml: version requirement `1.0.0+1234` for dependency `bar` includes semver metadata which will be ignored, removing the metadata is recommended to avoid confusion
+[WARNING] `foo` (manifest) generated 1 warning
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
@@ -3291,12 +3316,10 @@ fn bad_example_name() {
         .cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+[ERROR] Cargo.toml: can't find `example.rs` example at `examples/example.rs.rs` or `examples/example.rs/main.rs`. Please specify example.path if you want to use a non-default path.
 
-Caused by:
-  can't find `example.rs` example at `examples/example.rs.rs` or `examples/example.rs/main.rs`. Please specify example.path if you want to use a non-default path.
-
-  [HELP] a example with a similar name exists: `example`
+[HELP] a example with a similar name exists: `example`
+[ERROR] could not parse `bad-example-name` (manifest) due to 1 previous error
 
 "#]])
         .run();
@@ -3308,12 +3331,10 @@ fn bad_test_name() {
         .cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+[ERROR] Cargo.toml: can't find `test.rs` test at `tests/test.rs.rs` or `tests/test.rs/main.rs`. Please specify test.path if you want to use a non-default path.
 
-Caused by:
-  can't find `test.rs` test at `tests/test.rs.rs` or `tests/test.rs/main.rs`. Please specify test.path if you want to use a non-default path.
-
-  [HELP] a test with a similar name exists: `test`
+[HELP] a test with a similar name exists: `test`
+[ERROR] could not parse `bad-test-name` (manifest) due to 1 previous error
 
 "#]])
         .run();
@@ -3325,12 +3346,10 @@ fn bad_bench_name() {
         .cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+[ERROR] Cargo.toml: can't find `bench.rs` bench at `benches/bench.rs.rs` or `benches/bench.rs/main.rs`. Please specify bench.path if you want to use a non-default path.
 
-Caused by:
-  can't find `bench.rs` bench at `benches/bench.rs.rs` or `benches/bench.rs/main.rs`. Please specify bench.path if you want to use a non-default path.
-
-  [HELP] a bench with a similar name exists: `bench`
+[HELP] a bench with a similar name exists: `bench`
+[ERROR] could not parse `bad-bench-name` (manifest) due to 1 previous error
 
 "#]])
         .run();
@@ -3361,10 +3380,8 @@ fn non_existing_test() {
     p.cargo("check --tests -v")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  can't find `hello` test at `tests/hello.rs` or `tests/hello/main.rs`. Please specify test.path if you want to use a non-default path.
+[ERROR] Cargo.toml: can't find `hello` test at `tests/hello.rs` or `tests/hello/main.rs`. Please specify test.path if you want to use a non-default path.
+[ERROR] could not parse `foo` (manifest) due to 1 previous error
 
 "#]])
         .run();
@@ -3395,10 +3412,8 @@ fn non_existing_example() {
     p.cargo("check --examples -v")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  can't find `hello` example at `examples/hello.rs` or `examples/hello/main.rs`. Please specify example.path if you want to use a non-default path.
+[ERROR] Cargo.toml: can't find `hello` example at `examples/hello.rs` or `examples/hello/main.rs`. Please specify example.path if you want to use a non-default path.
+[ERROR] could not parse `foo` (manifest) due to 1 previous error
 
 "#]])
         .run();
@@ -3429,10 +3444,8 @@ fn non_existing_benchmark() {
     p.cargo("check --benches -v")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  can't find `hello` bench at `benches/hello.rs` or `benches/hello/main.rs`. Please specify bench.path if you want to use a non-default path.
+[ERROR] Cargo.toml: can't find `hello` bench at `benches/hello.rs` or `benches/hello/main.rs`. Please specify bench.path if you want to use a non-default path.
+[ERROR] could not parse `foo` (manifest) due to 1 previous error
 
 "#]])
         .run();
@@ -3486,11 +3499,9 @@ fn commonly_wrong_path_of_test() {
     p.cargo("check --tests -v")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  can't find `foo` test at default paths, but found a file at `test/foo.rs`.
-  Perhaps rename the file to `tests/foo.rs` for target auto-discovery, or specify test.path if you want to use a non-default path.
+[ERROR] Cargo.toml: can't find `foo` test at default paths, but found a file at `test/foo.rs`.
+Perhaps rename the file to `tests/foo.rs` for target auto-discovery, or specify test.path if you want to use a non-default path.
+[ERROR] could not parse `foo` (manifest) due to 1 previous error
 
 "#]])
         .run();
@@ -3522,11 +3533,9 @@ fn commonly_wrong_path_of_example() {
     p.cargo("check --examples -v")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  can't find `foo` example at default paths, but found a file at `example/foo.rs`.
-  Perhaps rename the file to `examples/foo.rs` for target auto-discovery, or specify example.path if you want to use a non-default path.
+[ERROR] Cargo.toml: can't find `foo` example at default paths, but found a file at `example/foo.rs`.
+Perhaps rename the file to `examples/foo.rs` for target auto-discovery, or specify example.path if you want to use a non-default path.
+[ERROR] could not parse `foo` (manifest) due to 1 previous error
 
 "#]])
         .run();
@@ -3558,11 +3567,9 @@ fn commonly_wrong_path_of_benchmark() {
     p.cargo("check --benches -v")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  can't find `foo` bench at default paths, but found a file at `bench/foo.rs`.
-  Perhaps rename the file to `benches/foo.rs` for target auto-discovery, or specify bench.path if you want to use a non-default path.
+[ERROR] Cargo.toml: can't find `foo` bench at default paths, but found a file at `bench/foo.rs`.
+Perhaps rename the file to `benches/foo.rs` for target auto-discovery, or specify bench.path if you want to use a non-default path.
+[ERROR] could not parse `foo` (manifest) due to 1 previous error
 
 "#]])
         .run();
@@ -3655,7 +3662,7 @@ fn legacy_binary_paths_warnings() {
 
     p.cargo("check -v")
         .with_stderr_data(str![[r#"
-[WARNING] An explicit [[bin]] section is specified in Cargo.toml which currently
+[WARNING] Cargo.toml: An explicit [[bin]] section is specified in Cargo.toml which currently
 disables Cargo from automatically inferring other binary targets.
 This inference behavior will change in the Rust 2018 edition and the following
 files will be included as a binary target:
@@ -3670,8 +3677,9 @@ automatically infer them to be a target, such as in subfolders.
 
 For more information on this warning you can consult
 https://github.com/rust-lang/cargo/issues/5330
-[WARNING] path `src/main.rs` was erroneously implicitly accepted for binary `bar`,
+[WARNING] Cargo.toml: path `src/main.rs` was erroneously implicitly accepted for binary `bar`,
 please set bin.path in Cargo.toml
+[WARNING] `foo` (manifest) generated 2 warnings
 [CHECKING] foo v1.0.0 ([ROOT]/foo)
 [RUNNING] `rustc [..]`
 [RUNNING] `rustc [..]`
@@ -3700,7 +3708,7 @@ please set bin.path in Cargo.toml
 
     p.cargo("check -v")
         .with_stderr_data(str![[r#"
-[WARNING] An explicit [[bin]] section is specified in Cargo.toml which currently
+[WARNING] Cargo.toml: An explicit [[bin]] section is specified in Cargo.toml which currently
 disables Cargo from automatically inferring other binary targets.
 This inference behavior will change in the Rust 2018 edition and the following
 files will be included as a binary target:
@@ -3715,8 +3723,9 @@ automatically infer them to be a target, such as in subfolders.
 
 For more information on this warning you can consult
 https://github.com/rust-lang/cargo/issues/5330
-[WARNING] path `src/bin/main.rs` was erroneously implicitly accepted for binary `bar`,
+[WARNING] Cargo.toml: path `src/bin/main.rs` was erroneously implicitly accepted for binary `bar`,
 please set bin.path in Cargo.toml
+[WARNING] `foo` (manifest) generated 2 warnings
 [CHECKING] foo v1.0.0 ([ROOT]/foo)
 [RUNNING] `rustc [..]`
 [RUNNING] `rustc [..]`
@@ -3744,8 +3753,9 @@ please set bin.path in Cargo.toml
 
     p.cargo("check -v")
         .with_stderr_data(str![[r#"
-[WARNING] path `src/bar.rs` was erroneously implicitly accepted for binary `bar`,
+[WARNING] Cargo.toml: path `src/bar.rs` was erroneously implicitly accepted for binary `bar`,
 please set bin.path in Cargo.toml
+[WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v1.0.0 ([ROOT]/foo)
 [RUNNING] `rustc [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s

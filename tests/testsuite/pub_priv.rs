@@ -141,7 +141,8 @@ fn requires_feature() {
     p.cargo("check --message-format=short")
         .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_stderr_data(str![[r#"
-[WARNING] ignoring `public` on dependency pub_dep, pass `-Zpublic-dependency` to enable support for it
+[WARNING] Cargo.toml: ignoring `public` on dependency pub_dep, pass `-Zpublic-dependency` to enable support for it
+[WARNING] `foo` (manifest) generated 1 warning
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
@@ -227,7 +228,8 @@ fn pub_dev_dependency_without_feature() {
 
     p.cargo("check --message-format=short")
         .with_stderr_data(str![[r#"
-[WARNING] 'public' specifier can only be used on regular dependencies, not dev-dependencies
+[WARNING] Cargo.toml: 'public' specifier can only be used on regular dependencies, not dev-dependencies
+[WARNING] `foo` (manifest) generated 1 warning
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s

@@ -135,7 +135,8 @@ fn unset_edition_with_unset_rust_version() {
 
     p.cargo("check -v")
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2015` while the latest is `[..]`
+[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustc [..] --edition=2015 [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -186,7 +187,8 @@ fn unset_edition_works_on_old_msrv() {
 
     p.cargo("check -v")
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2015` while 2018 is compatible with `rust-version`
+[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while 2018 is compatible with `rust-version`
+[WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustc [..] --edition=2015 [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s

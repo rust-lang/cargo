@@ -5136,7 +5136,7 @@ fn panic_abort_only_test() {
 
     p.cargo("test -Z panic-abort-tests -v")
         .with_stderr_data(str![[r#"
-[WARNING] `panic` setting is ignored for `test` profile
+[WARNING] Cargo.toml: `panic` setting is ignored for `test` profile
 ...
 "#]])
         .masquerade_as_nightly_cargo(&["panic-abort-tests"])

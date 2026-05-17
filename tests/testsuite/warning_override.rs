@@ -254,7 +254,8 @@ fn hard_warning_deny() {
         .arg("--")
         .arg("-ox.rs")
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2015` while the latest is `[..]`
+[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] foo@0.0.1: from a build script
 [WARNING] [..]
@@ -273,7 +274,8 @@ fn hard_warning_deny() {
         .arg("--")
         .arg("-ox.rs")
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2015` while the latest is `[..]`
+[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] foo@0.0.1: from a build script
 [WARNING] [..]
@@ -293,7 +295,8 @@ fn hard_warning_deny() {
         .arg("--")
         .arg("-ox.rs")
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2015` while the latest is `[..]`
+[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] foo@0.0.1: from a build script
 [WARNING] [..]
@@ -334,7 +337,8 @@ fn hard_warning_allow() {
         .arg("--")
         .arg("-ox.rs")
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2015` while the latest is `[..]`
+[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] foo@0.0.1: from a build script
 [WARNING] [..]
@@ -354,7 +358,8 @@ fn hard_warning_allow() {
         .arg("--")
         .arg("-ox.rs")
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2015` while the latest is `[..]`
+[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] foo@0.0.1: from a build script
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -370,7 +375,8 @@ fn hard_warning_allow() {
         .arg("--")
         .arg("-ox.rs")
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2015` while the latest is `[..]`
+[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] foo@0.0.1: from a build script
 [WARNING] [..]

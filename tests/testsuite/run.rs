@@ -608,7 +608,7 @@ fn run_example_autodiscover_2015() {
     p.cargo("run --example a")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[WARNING] An explicit [[example]] section is specified in Cargo.toml which currently
+[WARNING] Cargo.toml: An explicit [[example]] section is specified in Cargo.toml which currently
 disables Cargo from automatically inferring other example targets.
 This inference behavior will change in the Rust 2018 edition and the following
 files will be included as a example target:
@@ -623,6 +623,7 @@ automatically infer them to be a target, such as in subfolders.
 
 For more information on this warning you can consult
 https://github.com/rust-lang/cargo/issues/5330
+[WARNING] `foo` (manifest) generated 1 warning
 [ERROR] no example target named `a` in default-run packages
 [HELP] available example targets:
     do_magic

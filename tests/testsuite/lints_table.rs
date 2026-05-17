@@ -104,8 +104,9 @@ fn fail_on_invalid_tool() {
         .build();
 
     foo.cargo("check").with_stderr_data(str![[r#"
-[WARNING] [ROOT]/foo/Cargo.toml: unrecognized lint tool `lints.super-awesome-linter`, specifying unrecognized tools may break in the future.
+[WARNING] Cargo.toml: unrecognized lint tool `lints.super-awesome-linter`, specifying unrecognized tools may break in the future.
 supported tools: cargo, clippy, rust, rustdoc
+[WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -165,8 +166,9 @@ fn warn_on_unused_key() {
 
     foo.cargo("check")
         .with_stderr_data(str![[r#"
-[WARNING] [ROOT]/foo/Cargo.toml: unused manifest key: `lints.rust.rust-2018-idioms.unused`
-[WARNING] [ROOT]/foo/Cargo.toml: unused manifest key: `lints.rust.rust-2018-idioms.unused`
+[WARNING] Cargo.toml: unused manifest key: `lints.rust.rust-2018-idioms.unused`
+[WARNING] Cargo.toml: unused manifest key: `lints.rust.rust-2018-idioms.unused`
+[WARNING] `foo` (manifest) generated 2 warnings
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -754,11 +756,12 @@ authors = []
 
     foo.cargo("check")
         .with_stderr_data(str![[r#"
-[WARNING] unused manifest key `lints.cargo` (may be supported in a future version)
+[WARNING] Cargo.toml: unused manifest key `lints.cargo` (may be supported in a future version)
 
 this Cargo does not support nightly features, but if you
 switch to nightly channel you can pass
 `-Zcargo-lints` to enable this feature.
+[WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -790,9 +793,10 @@ im-a-teapot = true
     foo.cargo("check")
         .masquerade_as_nightly_cargo(&["cargo-lints", "test-dummy-unstable"])
         .with_stderr_data(str![[r#"
-[WARNING] unused manifest key `lints.cargo` (may be supported in a future version)
+[WARNING] Cargo.toml: unused manifest key `lints.cargo` (may be supported in a future version)
 
 consider passing `-Zcargo-lints` to enable this feature.
+[WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 

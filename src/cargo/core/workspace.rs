@@ -24,6 +24,7 @@ use crate::core::{EitherManifest, Package, SourceId, VirtualManifest};
 use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::rules::blanket_hint_mostly_unused;
 use crate::diagnostics::rules::check_im_a_teapot;
+use crate::diagnostics::rules::deferred_parse_diagnostics;
 use crate::diagnostics::rules::implicit_minimum_version_req_pkg;
 use crate::diagnostics::rules::implicit_minimum_version_req_ws;
 use crate::diagnostics::rules::missing_lints_features;
@@ -1290,42 +1291,19 @@ impl<'gctx> Workspace<'gctx> {
         }
     }
 
-    pub fn emit_warnings(&self) -> CargoResult<()> {
+    pub fn emit_parse_diagnostics(&self) -> CargoResult<()> {
         let mut first_emitted_error = None;
 
-        if let Err(e) = self.emit_ws_lints() {
+        if let Err(e) = self.emit_parse_ws_diagnostics() {
             first_emitted_error = Some(e);
         }
 
         for (path, maybe_pkg) in &self.packages.packages {
             if let MaybePackage::Package(pkg) = maybe_pkg {
-                if let Err(e) = self.emit_pkg_lints(pkg, &path)
+                if let Err(e) = self.emit_parse_pkg_diagnostics(pkg, &path)
                     && first_emitted_error.is_none()
                 {
                     first_emitted_error = Some(e);
-                }
-            }
-            let warnings = match maybe_pkg {
-                MaybePackage::Package(pkg) => pkg.manifest().warnings().warnings(),
-                MaybePackage::Virtual(vm) => vm.warnings().warnings(),
-            };
-            for warning in warnings {
-                if warning.is_critical {
-                    let err = anyhow::format_err!("{}", warning.message);
-                    let cx =
-                        anyhow::format_err!("failed to parse manifest at `{}`", path.display());
-                    if first_emitted_error.is_none() {
-                        first_emitted_error = Some(err.context(cx));
-                    }
-                } else {
-                    let msg = if self.root_manifest.is_none() {
-                        warning.message.to_string()
-                    } else {
-                        // In a workspace, it can be confusing where a warning
-                        // originated, so include the path.
-                        format!("{}: {}", path.display(), warning.message)
-                    };
-                    self.gctx.shell().warn(msg)?
                 }
             }
         }
@@ -1337,7 +1315,11 @@ impl<'gctx> Workspace<'gctx> {
         }
     }
 
-    pub fn emit_pkg_lints(&self, pkg: &Package, path: &Path) -> CargoResult<()> {
+    pub fn emit_parse_pkg_diagnostics(&self, pkg: &Package, path: &Path) -> CargoResult<()> {
+        let mut stats = DiagnosticStats::new();
+
+        deferred_parse_diagnostics(pkg.into(), path, &mut stats, self.gctx)?;
+
         let toml_lints = pkg
             .manifest()
             .normalized_toml()
@@ -1351,8 +1333,6 @@ impl<'gctx> Workspace<'gctx> {
             .unwrap_or(manifest::TomlToolLints::default());
 
         if self.gctx.cli_unstable().cargo_lints {
-            let mut stats = DiagnosticStats::new();
-
             missing_lints_features(pkg.into(), &path, &cargo_lints, &mut stats, self.gctx)?;
             unknown_lints(pkg.into(), &path, &cargo_lints, &mut stats, self.gctx)?;
 
@@ -1381,15 +1361,22 @@ impl<'gctx> Workspace<'gctx> {
                 &mut stats,
                 self.gctx,
             )?;
-
-            stats.report_summary("parse", Some(&*pkg.name()), self.gctx)?;
         }
+
+        stats.report_summary("parse", Some(&*pkg.name()), self.gctx)?;
 
         Ok(())
     }
 
-    pub fn emit_ws_lints(&self) -> CargoResult<()> {
+    pub fn emit_parse_ws_diagnostics(&self) -> CargoResult<()> {
         let mut stats = DiagnosticStats::new();
+
+        deferred_parse_diagnostics(
+            (self, self.root_maybe()).into(),
+            self.root_manifest(),
+            &mut stats,
+            self.gctx,
+        )?;
 
         let cargo_lints = match self.root_maybe() {
             MaybePackage::Package(pkg) => {
