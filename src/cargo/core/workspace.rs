@@ -1298,8 +1298,9 @@ impl<'gctx> Workspace<'gctx> {
             first_emitted_error = Some(e);
         }
 
-        for (path, maybe_pkg) in &self.packages.packages {
+        for maybe_pkg in self.packages.packages.values() {
             if let MaybePackage::Package(pkg) = maybe_pkg {
+                let path = pkg.manifest_path();
                 if let Err(e) = self.emit_parse_pkg_diagnostics(pkg, &path)
                     && first_emitted_error.is_none()
                 {
