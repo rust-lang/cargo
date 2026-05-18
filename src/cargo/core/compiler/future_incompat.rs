@@ -319,7 +319,7 @@ fn get_updates(ws: &Workspace<'_>, package_ids: &BTreeSet<PackageId>) -> Option<
     let sources: HashMap<_, _> = source_ids
         .into_iter()
         .filter_map(|sid| {
-            let source = map.load(sid, &HashSet::new()).ok()?;
+            let source = map.load(sid).ok()?;
             Some((sid, source))
         })
         .collect();

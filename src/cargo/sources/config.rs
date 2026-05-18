@@ -4,15 +4,18 @@
 //! structure usable by Cargo itself. Currently, this is primarily used to map
 //! sources to one another via the `replace-with` key in `.cargo/config`.
 
-use crate::core::{GitReference, PackageId, SourceId};
+use std::collections::HashMap;
+
+use crate::core::GitReference;
+use crate::core::SourceId;
 use crate::sources::overlay::DependencyConfusionThreatOverlaySource;
 use crate::sources::source::Source;
 use crate::sources::{CRATES_IO_REGISTRY, ReplacedSource};
 use crate::util::context::{self, ConfigRelativePath, OptValue};
 use crate::util::errors::CargoResult;
 use crate::util::{GlobalContext, IntoUrl};
+
 use anyhow::{Context as _, bail};
-use std::collections::{HashMap, HashSet};
 use tracing::debug;
 use url::Url;
 
@@ -142,17 +145,11 @@ impl<'gctx> SourceConfigMap<'gctx> {
     }
 
     /// Gets the [`Source`] for a given [`SourceId`].
-    ///
-    /// * `yanked_whitelist` --- Packages allowed to be used, even if they are yanked.
-    pub fn load(
-        &self,
-        id: SourceId,
-        yanked_whitelist: &HashSet<PackageId>,
-    ) -> CargoResult<Box<dyn Source + 'gctx>> {
+    pub fn load(&self, id: SourceId) -> CargoResult<Box<dyn Source + 'gctx>> {
         debug!("loading: {}", id);
 
         let Some(mut name) = self.id2name.get(&id) else {
-            return self.load_overlaid(id, yanked_whitelist);
+            return self.load_overlaid(id);
         };
         let mut cfg_loc = "";
         let orig_name = name;
@@ -177,7 +174,7 @@ impl<'gctx> SourceConfigMap<'gctx> {
                     name = s;
                     cfg_loc = c;
                 }
-                None if id == cfg.id => return self.load_overlaid(id, yanked_whitelist),
+                None if id == cfg.id => return self.load_overlaid(id),
                 None => {
                     break cfg.id.with_precise_from(id);
                 }
@@ -194,14 +191,8 @@ impl<'gctx> SourceConfigMap<'gctx> {
             }
         };
 
-        let new_src = self.load_overlaid(
-            new_id,
-            &yanked_whitelist
-                .iter()
-                .map(|p| p.map_source(id, new_id))
-                .collect(),
-        )?;
-        let old_src = id.load(self.gctx, yanked_whitelist)?;
+        let new_src = self.load_overlaid(new_id)?;
+        let old_src = id.load(self.gctx)?;
         if !new_src.supports_checksums() && old_src.supports_checksums() {
             bail!(
                 "\
@@ -232,14 +223,10 @@ restore the source replacement configuration to continue the build
     }
 
     /// Gets the [`Source`] for a given [`SourceId`] without performing any source replacement.
-    fn load_overlaid(
-        &self,
-        id: SourceId,
-        yanked_whitelist: &HashSet<PackageId>,
-    ) -> CargoResult<Box<dyn Source + 'gctx>> {
-        let src = id.load(self.gctx, yanked_whitelist)?;
+    fn load_overlaid(&self, id: SourceId) -> CargoResult<Box<dyn Source + 'gctx>> {
+        let src = id.load(self.gctx)?;
         if let Some(overlay_id) = self.overlays.get(&id) {
-            let overlay = overlay_id.load(self.gctx(), yanked_whitelist)?;
+            let overlay = overlay_id.load(self.gctx())?;
             Ok(Box::new(DependencyConfusionThreatOverlaySource::new(
                 overlay, src,
             )))

@@ -533,9 +533,15 @@ impl<'gctx> PackageRegistry<'gctx> {
         debug!("loading source {}", source_id);
         let source = self
             .source_config
-            .load(source_id, &self.yanked_whitelist.borrow())
+            .load(source_id)
             .with_context(|| format!("unable to update {}", source_id))?;
         assert_eq!(source.source_id(), source_id);
+
+        let yanked_whitelist = self.yanked_whitelist.borrow();
+        if !yanked_whitelist.is_empty() {
+            let pkgs: Vec<_> = yanked_whitelist.iter().copied().collect();
+            source.add_to_yanked_whitelist(&pkgs);
+        }
 
         if kind == Kind::Override {
             self.overrides.borrow_mut().push(source_id);

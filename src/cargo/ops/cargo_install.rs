@@ -1,4 +1,6 @@
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::BTreeMap;
+use std::collections::BTreeSet;
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::{env, fmt, fs};
@@ -184,7 +186,7 @@ impl<'gctx> InstallablePackage<'gctx> {
                     current_rust_version,
                 )?
             } else if let Some(dep) = dep {
-                let mut source = map.load(source_id, &HashSet::new())?;
+                let mut source = map.load(source_id)?;
                 if let Ok(Some(pkg)) = installed_exact_package(
                     dep.clone(),
                     &mut *source,
