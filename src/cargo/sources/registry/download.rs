@@ -7,7 +7,7 @@ use crate::util::interning::InternedString;
 use anyhow::Context as _;
 use cargo_credential::Operation;
 use cargo_util::Sha256;
-use cargo_util::registry::make_dep_path;
+use cargo_util::registry::crate_url;
 
 use crate::core::PackageId;
 use crate::core::global_cache_tracker;
@@ -17,17 +17,10 @@ use crate::util::auth;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
 use crate::util::{Filesystem, GlobalContext};
-use std::fmt::Write as FmtWrite;
 use std::fs::{self, File, OpenOptions};
 use std::io::SeekFrom;
 use std::io::prelude::*;
 use std::str;
-
-const CRATE_TEMPLATE: &str = "{crate}";
-const VERSION_TEMPLATE: &str = "{version}";
-const PREFIX_TEMPLATE: &str = "{prefix}";
-const LOWER_PREFIX_TEMPLATE: &str = "{lowerprefix}";
-const CHECKSUM_TEMPLATE: &str = "{sha256-checksum}";
 
 /// Checks if `pkg` is downloaded and ready under the directory at `cache_path`.
 /// If not, returns a URL to download it from.
@@ -64,24 +57,12 @@ pub(super) fn download(
         }
     }
 
-    let mut url = registry_config.dl;
-    if !url.contains(CRATE_TEMPLATE)
-        && !url.contains(VERSION_TEMPLATE)
-        && !url.contains(PREFIX_TEMPLATE)
-        && !url.contains(LOWER_PREFIX_TEMPLATE)
-        && !url.contains(CHECKSUM_TEMPLATE)
-    {
-        // Original format before customizing the download URL was supported.
-        write!(url, "/{}/{}/download", pkg.name(), pkg.version()).unwrap();
-    } else {
-        let prefix = make_dep_path(&pkg.name(), true);
-        url = url
-            .replace(CRATE_TEMPLATE, &*pkg.name())
-            .replace(VERSION_TEMPLATE, &pkg.version().to_string())
-            .replace(PREFIX_TEMPLATE, &prefix)
-            .replace(LOWER_PREFIX_TEMPLATE, &prefix.to_lowercase())
-            .replace(CHECKSUM_TEMPLATE, checksum);
-    }
+    let url = crate_url(
+        &registry_config.dl,
+        &*pkg.name(),
+        &pkg.version().to_string(),
+        checksum,
+    );
 
     let authorization = if registry_config.auth_required {
         Some(auth::auth_token(

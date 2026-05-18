@@ -25,6 +25,37 @@ pub fn make_dep_path(dep_name: &str, prefix_only: bool) -> String {
     }
 }
 
+pub fn crate_url(dl_template: &str, pkg_name: &str, pkg_version: &str, checksum: &str) -> String {
+    use std::fmt::Write as _;
+
+    let mut url = dl_template.to_owned();
+    if !url.contains(CRATE_TEMPLATE)
+        && !url.contains(VERSION_TEMPLATE)
+        && !url.contains(PREFIX_TEMPLATE)
+        && !url.contains(LOWER_PREFIX_TEMPLATE)
+        && !url.contains(CHECKSUM_TEMPLATE)
+    {
+        // Original format before customizing the download URL was supported.
+        write!(url, "/{}/{}/download", pkg_name, pkg_version).unwrap();
+    } else {
+        let prefix = make_dep_path(pkg_name, true);
+        url = url
+            .replace(CRATE_TEMPLATE, pkg_name)
+            .replace(VERSION_TEMPLATE, pkg_version)
+            .replace(PREFIX_TEMPLATE, &prefix)
+            .replace(LOWER_PREFIX_TEMPLATE, &prefix.to_lowercase())
+            .replace(CHECKSUM_TEMPLATE, checksum);
+    }
+
+    url
+}
+
+const CRATE_TEMPLATE: &str = "{crate}";
+const VERSION_TEMPLATE: &str = "{version}";
+const PREFIX_TEMPLATE: &str = "{prefix}";
+const LOWER_PREFIX_TEMPLATE: &str = "{lowerprefix}";
+const CHECKSUM_TEMPLATE: &str = "{sha256-checksum}";
+
 #[cfg(test)]
 mod tests {
     use super::make_dep_path;
