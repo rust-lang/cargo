@@ -23,7 +23,7 @@ redundant_homepage = "warn"
         .file("README.md", "")
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [WARNING] `package.homepage` is redundant with another manifest field
@@ -40,8 +40,6 @@ redundant_homepage = "warn"
 7 - homepage = "https://github.com/rust-lang/cargo/"
   |
 [WARNING] `cargo` (manifest) generated 1 warning
-[CHECKING] cargo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -68,7 +66,7 @@ redundant_homepage = "warn"
         .file("README.md", "")
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [WARNING] `package.homepage` is redundant with another manifest field
@@ -85,8 +83,6 @@ redundant_homepage = "warn"
 7 - homepage = "https://docs.rs/cargo/latest/cargo/"
   |
 [WARNING] `cargo` (manifest) generated 1 warning
-[CHECKING] cargo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -117,7 +113,7 @@ redundant_homepage = "warn"
         .file("README.md", "")
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [WARNING] `package.homepage` is redundant with another manifest field
@@ -134,8 +130,6 @@ redundant_homepage = "warn"
 11 - homepage.workspace = true
    |
 [WARNING] `cargo` (manifest) generated 1 warning
-[CHECKING] cargo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
