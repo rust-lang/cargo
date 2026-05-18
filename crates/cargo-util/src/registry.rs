@@ -25,7 +25,7 @@ pub fn make_dep_path(dep_name: &str, prefix_only: bool) -> String {
     }
 }
 
-pub fn crate_url(dl_template: &str, pkg_name: &str, pkg_version: &str, checksum: &str) -> String {
+pub fn crate_url(dl_template: &str, krate: &str, version: &str, sha256_checksum: &str) -> String {
     use std::fmt::Write as _;
 
     let mut url = dl_template.to_owned();
@@ -36,15 +36,16 @@ pub fn crate_url(dl_template: &str, pkg_name: &str, pkg_version: &str, checksum:
         && !url.contains(CHECKSUM_TEMPLATE)
     {
         // Original format before customizing the download URL was supported.
-        write!(url, "/{}/{}/download", pkg_name, pkg_version).unwrap();
+        write!(url, "/{}/{}/download", krate, version).unwrap();
     } else {
-        let prefix = make_dep_path(pkg_name, true);
+        let prefix = make_dep_path(krate, true);
+        let lowerprefix = prefix.to_lowercase();
         url = url
-            .replace(CRATE_TEMPLATE, pkg_name)
-            .replace(VERSION_TEMPLATE, pkg_version)
+            .replace(CRATE_TEMPLATE, krate)
+            .replace(VERSION_TEMPLATE, version)
             .replace(PREFIX_TEMPLATE, &prefix)
-            .replace(LOWER_PREFIX_TEMPLATE, &prefix.to_lowercase())
-            .replace(CHECKSUM_TEMPLATE, checksum);
+            .replace(LOWER_PREFIX_TEMPLATE, &lowerprefix)
+            .replace(CHECKSUM_TEMPLATE, sha256_checksum);
     }
 
     url
