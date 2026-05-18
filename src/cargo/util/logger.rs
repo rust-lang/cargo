@@ -124,7 +124,7 @@ impl BuildLogger {
 
     /// Generates a unique run ID.
     pub fn generate_run_id(ws: &Workspace<'_>) -> RunId {
-        RunId::new(&ws.root())
+        RunId::new(&ws.root(), ws.gctx().invocation_time())
     }
 
     /// Returns the run ID for this build session.
@@ -166,9 +166,9 @@ pub struct RunId {
 impl RunId {
     const FORMAT: &str = "%Y%m%dT%H%M%S%3fZ";
 
-    pub fn new<H: Hash>(h: &H) -> RunId {
+    pub fn new<H: Hash>(h: &H, timestamp: jiff::Timestamp) -> RunId {
         RunId {
-            timestamp: jiff::Timestamp::now(),
+            timestamp,
             hash: short_hash(h),
         }
     }
