@@ -20,7 +20,7 @@ pub fn fetch<'a>(
     ws: &Workspace<'a>,
     options: &FetchOptions<'a>,
 ) -> CargoResult<(Resolve, PackageSet<'a>)> {
-    ws.emit_parse_diagnostics()?;
+    crate::diagnostics::passes::emit_parse_diagnostics(ws)?;
     let dry_run = false;
     let (mut packages, resolve) = ops::resolve_ws(ws, dry_run)?;
 

@@ -143,7 +143,7 @@ pub fn compile_with_exec<'a>(
     options: &CompileOptions,
     exec: &Arc<dyn Executor>,
 ) -> CargoResult<Compilation<'a>> {
-    ws.emit_parse_diagnostics()?;
+    crate::diagnostics::passes::emit_parse_diagnostics(ws)?;
     let compilation = compile_ws(ws, options, exec)?;
     if ws.gctx().warning_handling()? == WarningHandling::Deny && compilation.lint_warning_count > 0
     {
