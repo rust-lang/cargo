@@ -30,7 +30,7 @@ implicit_minimum_version_req = "warn"
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [WARNING] dependency version requirement without an explicit minimum version
@@ -48,21 +48,7 @@ implicit_minimum_version_req = "warn"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
-[DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
-[CHECKING] dep v1.0.0
-[CHECKING] foo v0.0.0 ([ROOT]/foo)
-[WARNING] unused dependency
- --> Cargo.toml:7:1
-  |
-7 | dep = "1"
-  | ^^^^^^^^^
-  |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
-[HELP] remove the dependency
-  |
-7 - dep = "1"
-  |
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+...
 
 "#]])
         .run();
@@ -90,7 +76,7 @@ implicit_minimum_version_req = "warn"
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [WARNING] dependency version requirement without an explicit minimum version
@@ -108,21 +94,7 @@ implicit_minimum_version_req = "warn"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
-[DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
-[CHECKING] dep v1.0.0
-[CHECKING] foo v0.0.0 ([ROOT]/foo)
-[WARNING] unused dependency
- --> Cargo.toml:7:1
-  |
-7 | dep = "1.0"
-  | ^^^^^^^^^^^
-  |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
-[HELP] remove the dependency
-  |
-7 - dep = "1.0"
-  |
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+...
 
 "#]])
         .run();
@@ -150,27 +122,13 @@ implicit_minimum_version_req = "warn"
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
-[DOWNLOADED] dep v1.2.3 (registry `dummy-registry`)
-[CHECKING] dep v1.2.3
-[CHECKING] foo v0.0.0 ([ROOT]/foo)
-[WARNING] unused dependency
- --> Cargo.toml:7:1
-  |
-7 | dep = "1.0.0"
-  | ^^^^^^^^^^^^^
-  |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
-[HELP] remove the dependency
-  |
-7 - dep = "1.0.0"
-  |
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+...
 
 "#]])
         .run();
@@ -198,7 +156,7 @@ implicit_minimum_version_req = "warn"
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [WARNING] dependency version requirement without an explicit minimum version
@@ -216,21 +174,7 @@ implicit_minimum_version_req = "warn"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
-[DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
-[CHECKING] dep v1.0.0
-[CHECKING] foo v0.0.0 ([ROOT]/foo)
-[WARNING] unused dependency
- --> Cargo.toml:7:1
-  |
-7 | dep = { version = "1" }
-  | ^^^^^^^^^^^^^^^^^^^^^^^
-  |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
-[HELP] remove the dependency
-  |
-7 - dep = { version = "1" }
-  |
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+...
 
 "#]])
         .run();
@@ -258,7 +202,7 @@ implicit_minimum_version_req = "warn"
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [WARNING] dependency version requirement without an explicit minimum version
@@ -276,21 +220,7 @@ implicit_minimum_version_req = "warn"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
-[DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
-[CHECKING] dep v1.0.0
-[CHECKING] foo v0.0.0 ([ROOT]/foo)
-[WARNING] unused dependency
- --> Cargo.toml:7:1
-  |
-7 | dep = ">=1.0"
-  | ^^^^^^^^^^^^^
-  |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
-[HELP] remove the dependency
-  |
-7 - dep = ">=1.0"
-  |
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+...
 
 "#]])
         .run();
@@ -318,27 +248,13 @@ implicit_minimum_version_req = "warn"
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
-[DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
-[CHECKING] dep v1.0.0
-[CHECKING] foo v0.0.0 ([ROOT]/foo)
-[WARNING] unused dependency
- --> Cargo.toml:7:1
-  |
-7 | dep = "<2.0"
-  | ^^^^^^^^^^^^
-  |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
-[HELP] remove the dependency
-  |
-7 - dep = "<2.0"
-  |
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+...
 
 "#]])
         .run();
@@ -366,27 +282,13 @@ implicit_minimum_version_req = "warn"
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
-[DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
-[CHECKING] dep v1.0.0
-[CHECKING] foo v0.0.0 ([ROOT]/foo)
-[WARNING] unused dependency
- --> Cargo.toml:7:1
-  |
-7 | dep = "1.*"
-  | ^^^^^^^^^^^
-  |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
-[HELP] remove the dependency
-  |
-7 - dep = "1.*"
-  |
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+...
 
 "#]])
         .run();
@@ -414,27 +316,13 @@ implicit_minimum_version_req = "warn"
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
-[DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
-[CHECKING] dep v1.0.0
-[CHECKING] foo v0.0.0 ([ROOT]/foo)
-[WARNING] unused dependency
- --> Cargo.toml:7:1
-  |
-7 | dep = "1.0.*"
-  | ^^^^^^^^^^^^^
-  |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
-[HELP] remove the dependency
-  |
-7 - dep = "1.0.*"
-  |
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+...
 
 "#]])
         .run();
@@ -462,27 +350,13 @@ implicit_minimum_version_req = "warn"
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
-[DOWNLOADED] dep v1.1.0 (registry `dummy-registry`)
-[CHECKING] dep v1.1.0
-[CHECKING] foo v0.0.0 ([ROOT]/foo)
-[WARNING] unused dependency
- --> Cargo.toml:7:1
-  |
-7 | dep = ">1.0"
-  | ^^^^^^^^^^^^
-  |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
-[HELP] remove the dependency
-  |
-7 - dep = ">1.0"
-  |
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+...
 
 "#]])
         .run();
@@ -510,27 +384,13 @@ implicit_minimum_version_req = "warn"
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
-[DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
-[CHECKING] dep v1.0.0
-[CHECKING] foo v0.0.0 ([ROOT]/foo)
-[WARNING] unused dependency
- --> Cargo.toml:7:1
-  |
-7 | dep = "<=2.0"
-  | ^^^^^^^^^^^^^
-  |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
-[HELP] remove the dependency
-  |
-7 - dep = "<=2.0"
-  |
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+...
 
 "#]])
         .run();
@@ -558,7 +418,7 @@ implicit_minimum_version_req = "warn"
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [WARNING] dependency version requirement without an explicit minimum version
@@ -576,21 +436,7 @@ implicit_minimum_version_req = "warn"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
-[DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
-[CHECKING] dep v1.0.0
-[CHECKING] foo v0.0.0 ([ROOT]/foo)
-[WARNING] unused dependency
- --> Cargo.toml:7:1
-  |
-7 | dep = ">=1.0, <2.0"
-  | ^^^^^^^^^^^^^^^^^^^
-  |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
-[HELP] remove the dependency
-  |
-7 - dep = ">=1.0, <2.0"
-  |
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+...
 
 "#]])
         .run();
@@ -618,27 +464,13 @@ implicit_minimum_version_req = "warn"
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
-[DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
-[CHECKING] dep v1.0.0
-[CHECKING] foo v0.0.0 ([ROOT]/foo)
-[WARNING] unused dependency
- --> Cargo.toml:7:1
-  |
-7 | dep = "~1.0"
-  | ^^^^^^^^^^^^
-  |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
-[HELP] remove the dependency
-  |
-7 - dep = "~1.0"
-  |
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+...
 
 "#]])
         .run();
@@ -666,27 +498,13 @@ implicit_minimum_version_req = "warn"
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
-[DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
-[CHECKING] dep v1.0.0
-[CHECKING] foo v0.0.0 ([ROOT]/foo)
-[WARNING] unused dependency
- --> Cargo.toml:7:1
-  |
-7 | dep = "=1"
-  | ^^^^^^^^^^
-  |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
-[HELP] remove the dependency
-  |
-7 - dep = "=1"
-  |
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+...
 
 "#]])
         .run();
@@ -722,24 +540,10 @@ edition = "2021"
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to latest compatible version
-[CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
-[CHECKING] foo v0.0.0 ([ROOT]/foo)
-[WARNING] unused dependency
- --> Cargo.toml:7:1
-  |
-7 | bar = { path = "bar" }
-  | ^^^^^^^^^^^^^^^^^^^^^^
-  |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
-[HELP] remove the dependency
-  |
-7 - bar = { path = "bar" }
-  |
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -776,7 +580,7 @@ edition = "2021"
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [WARNING] dependency version requirement without an explicit minimum version
@@ -792,20 +596,6 @@ edition = "2021"
   |                                     ++
 [WARNING] `foo` (manifest) generated 1 warning
 [LOCKING] 1 package to latest compatible version
-[CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
-[CHECKING] foo v0.0.0 ([ROOT]/foo)
-[WARNING] unused dependency
- --> Cargo.toml:7:1
-  |
-7 | bar = { path = "bar", version = "0.1" }
-  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
-[HELP] remove the dependency
-  |
-7 - bar = { path = "bar", version = "0.1" }
-  |
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -840,25 +630,11 @@ implicit_minimum_version_req = "warn"
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `[ROOTURL]/bar`
 [LOCKING] 1 package to latest compatible version
-[CHECKING] bar v0.1.0 ([ROOTURL]/bar#[..])
-[CHECKING] foo v0.0.0 ([ROOT]/foo)
-[WARNING] unused dependency
- --> Cargo.toml:7:1
-  |
-7 | bar = { git = '[ROOTURL]/bar' }
-  | ^^^^^^^^^^^^^^^[..]^^^^^^^^^^^^
-  |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
-[HELP] remove the dependency
-  |
-7 - bar = { git = '[ROOTURL]/bar' }
-  |
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -893,7 +669,7 @@ implicit_minimum_version_req = "warn"
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [WARNING] dependency version requirement without an explicit minimum version
@@ -910,20 +686,6 @@ implicit_minimum_version_req = "warn"
 [WARNING] `foo` (manifest) generated 1 warning
 [UPDATING] git repository `[ROOTURL]/bar`
 [LOCKING] 1 package to latest compatible version
-[CHECKING] bar v0.1.0 ([ROOTURL]/bar#[..])
-[CHECKING] foo v0.0.0 ([ROOT]/foo)
-[WARNING] unused dependency
- --> Cargo.toml:7:1
-  |
-7 | bar = { git = '[ROOTURL]/bar', version = "0.1" }
-  | ^^^^^^^^^^^^^^^[..]^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
-[HELP] remove the dependency
-  |
-7 - bar = { git = '[ROOTURL]/bar', version = "0.1" }
-  |
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -951,7 +713,7 @@ implicit_minimum_version_req = "warn"
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [WARNING] dependency version requirement without an explicit minimum version
@@ -968,8 +730,8 @@ implicit_minimum_version_req = "warn"
 [WARNING] `foo` (manifest) generated 1 warning
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
-[CHECKING] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[DOWNLOADING] crates ...
+...
 
 "#]])
         .run();
@@ -998,7 +760,7 @@ implicit_minimum_version_req = "warn"
         .file("build.rs", "fn main() {}")
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [WARNING] dependency version requirement without an explicit minimum version
@@ -1016,21 +778,7 @@ implicit_minimum_version_req = "warn"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
-[DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
-[COMPILING] dep v1.0.0
-[COMPILING] foo v0.0.0 ([ROOT]/foo)
-[WARNING] unused dependency
- --> Cargo.toml:7:1
-  |
-7 | dep = "1.0"
-  | ^^^^^^^^^^^
-  |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
-[HELP] remove the dependency
-  |
-7 - dep = "1.0"
-  |
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+...
 
 "#]])
         .run();
@@ -1059,7 +807,7 @@ implicit_minimum_version_req = "warn"
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [WARNING] dependency version requirement without an explicit minimum version
@@ -1077,13 +825,7 @@ implicit_minimum_version_req = "warn"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
-[DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
-[CHECKING] dep v1.0.0
-[CHECKING] foo v0.0.0 ([ROOT]/foo)
-[WARNING] unused dependency
- --> Cargo.toml
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+...
 
 "#]])
         .run();
@@ -1112,7 +854,7 @@ implicit_minimum_version_req = "warn"
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [WARNING] dependency version requirement without an explicit minimum version
@@ -1129,8 +871,8 @@ implicit_minimum_version_req = "warn"
 [WARNING] `foo` (manifest) generated 1 warning
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
-[CHECKING] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[DOWNLOADING] crates ...
+...
 
 "#]])
         .run();
@@ -1160,7 +902,7 @@ implicit_minimum_version_req = "warn"
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcargo-lints --quiet")
+    p.cargo("fetch -Zcargo-lints --quiet")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [WARNING] dependency version requirement without an explicit minimum version
@@ -1184,27 +926,6 @@ implicit_minimum_version_req = "warn"
   |
 8 | regex = "1.0.0"
   |             ++
-[WARNING] unused dependency
- --> Cargo.toml:7:1
-  |
-7 | dep = "1"
-  | ^^^^^^^^^
-  |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
-[HELP] remove the dependency
-  |
-7 - dep = "1"
-  |
-[WARNING] unused dependency
- --> Cargo.toml:8:1
-  |
-8 | regex = "1.0"
-  | ^^^^^^^^^^^^^
-  |
-[HELP] remove the dependency
-  |
-8 - regex = "1.0"
-  |
 
 "#]])
         .run();
@@ -1246,7 +967,7 @@ workspace = true
         .file("member/src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [WARNING] dependency version requirement without an explicit minimum version
@@ -1264,22 +985,7 @@ workspace = true
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
-[DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
-[CHECKING] dep v1.0.0
-[CHECKING] member v0.0.0 ([ROOT]/foo/member)
-[WARNING] unused dependency
- --> member/Cargo.toml:7:1
-  |
-7 | dep.workspace = true
-  | ^^^
-  |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
-[HELP] remove the dependency
-  |
-7 - dep.workspace = true
-7 + .workspace = true
-  |
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+...
 
 "#]])
         .run();
@@ -1318,7 +1024,7 @@ edition = "2021"
         .file("member/src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [WARNING] unused workspace dependency
@@ -1344,8 +1050,6 @@ edition = "2021"
 7 | dep = "1.0.0"
   |         ++++
 [WARNING] workspace (manifest) generated 2 warnings
-[CHECKING] member v0.0.0 ([ROOT]/foo/member)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1388,7 +1092,7 @@ workspace = true
         .file("member/src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [WARNING] unused workspace dependency
@@ -1429,21 +1133,7 @@ workspace = true
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
-[DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
-[CHECKING] dep v1.0.0
-[CHECKING] member v0.0.0 ([ROOT]/foo/member)
-[WARNING] unused dependency
- --> member/Cargo.toml:7:1
-  |
-7 | dep = "1.0"
-  | ^^^^^^^^^^^
-  |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
-[HELP] remove the dependency
-  |
-7 - dep = "1.0"
-  |
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+...
 
 "#]])
         .run();
@@ -1471,7 +1161,7 @@ implicit_minimum_version_req = "deny"
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_status(101)
         .with_stderr_data(str![[r#"

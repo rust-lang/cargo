@@ -75,7 +75,7 @@ workspace = true
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [WARNING] unused workspace dependency
@@ -116,22 +116,7 @@ workspace = true
 [UPDATING] `dummy-registry` index
 [LOCKING] 6 packages to latest compatible versions
 [DOWNLOADING] crates ...
-[DOWNLOADED] in-package v1.0.0 (registry `dummy-registry`)
-[CHECKING] in-package v1.0.0
-[CHECKING] foo v0.0.1 ([ROOT]/foo)
-[WARNING] unused dependency
-  --> Cargo.toml:24:1
-   |
-24 | in-package.workspace = true
-   | ^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
-[HELP] remove the dependency
-   |
-24 - in-package.workspace = true
-24 + .workspace = true
-   |
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+...
 
 "#]])
         .run();

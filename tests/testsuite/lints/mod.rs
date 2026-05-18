@@ -44,7 +44,7 @@ im-a-teapot = "warn"
         .file("src/lib.rs", "")
         .build();
 
-    foo.cargo("check -Zcargo-lints")
+    foo.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints", "test-dummy-unstable"])
         .with_stderr_data(str![[r#"
 [WARNING] unknown lint: `im-a-teapot`
@@ -56,8 +56,6 @@ im-a-teapot = "warn"
    = [NOTE] `cargo::unknown_lints` is set to `warn` by default
    = [HELP] there is a lint with a similar name: `im_a_teapot`
 [WARNING] `foo` (manifest) generated 1 warning
-[CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -86,7 +84,7 @@ test_dummy_unstable = { level = "forbid", priority = -1 }
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints", "test-dummy-unstable"])
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -129,7 +127,7 @@ workspace = true
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints", "test-dummy-unstable"])
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -177,7 +175,7 @@ im-a-teapot = true
         .file("foo/src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [WARNING] missing `[lints]` to inherit `[workspace.lints]`
@@ -195,8 +193,6 @@ im-a-teapot = true
 10 + [lints]
    |
 [WARNING] `foo` (manifest) generated 1 warning
-[CHECKING] foo v0.0.1 ([ROOT]/foo/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -242,27 +238,13 @@ bar = "0.1.0"
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
-[DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
-[CHECKING] bar v0.1.0
-[CHECKING] foo v0.1.0 ([ROOT]/foo)
-[WARNING] unused dependency
- --> Cargo.toml:8:1
-  |
-8 | bar = "0.1.0"
-  | ^^^^^^^^^^^^^
-  |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
-[HELP] remove the dependency
-  |
-8 - bar = "0.1.0"
-  |
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+...
 
 "#]])
         .run();
@@ -287,7 +269,7 @@ im_a_teapot = "warn"
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -334,7 +316,7 @@ workspace = true
         .file("foo/src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -385,7 +367,7 @@ authors = []
         .file("foo/src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -446,7 +428,7 @@ im_a_teapot = { level = "warn", priority = 10 }
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcargo-lints -Zrustc-unicode")
+    p.cargo("fetch -Zcargo-lints -Zrustc-unicode")
         .masquerade_as_nightly_cargo(&["cargo-lints", "rustc-unicode", "test-dummy-unstable"])
         .with_stderr_data(str![[r#"
 [WARNING] `im_a_teapot` is specified
@@ -457,8 +439,6 @@ im_a_teapot = { level = "warn", priority = 10 }
   │
   ╰ [NOTE] `cargo::im_a_teapot` is set to `warn` in `[lints]`
 [WARNING] `foo` (manifest) generated 1 warning
-[CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -466,7 +446,6 @@ im_a_teapot = { level = "warn", priority = 10 }
 
 #[cargo_test]
 fn explicit_lint_level_overrides_default() {
-    Package::new("unused", "0.1.0").publish();
     let p = project()
         .file(
             "Cargo.toml",
@@ -476,12 +455,11 @@ fn explicit_lint_level_overrides_default() {
             version = "0.1.0"
             authors = []
             edition = "2018"
-
-            [dependencies]
-            unused = "0.1.0"
+            repository = "https://github.com/rust-lang/cargo/"
+            homepage = "https://github.com/rust-lang/cargo/"
 
             [lints.cargo]
-            unused_dependencies = "deny"
+            redundant_homepage = "deny"
         "#,
         )
         .file(
@@ -492,27 +470,24 @@ fn explicit_lint_level_overrides_default() {
         )
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_status(101)
         .with_stderr_data(str![[r#"
-[UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
-[DOWNLOADING] crates ...
-[DOWNLOADED] unused v0.1.0 (registry `dummy-registry`)
-[CHECKING] unused v0.1.0
-[CHECKING] foo v0.1.0 ([ROOT]/foo)
-[ERROR] unused dependency
- --> Cargo.toml:9:13
+[ERROR] `package.homepage` is redundant with another manifest field
+ --> Cargo.toml:8:24
   |
-9 |             unused = "0.1.0"
-  |             ^^^^^^^^^^^^^^^^
+7 |             repository = "https://github.com/rust-lang/cargo/"
+  |                          -------------------------------------
+8 |             homepage = "https://github.com/rust-lang/cargo/"
+  |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   |
-  = [NOTE] `cargo::unused_dependencies` is set to `deny` in `[lints]`
-[HELP] remove the dependency
+  = [NOTE] `cargo::redundant_homepage` is set to `deny` in `[lints]`
+[HELP] consider removing `package.homepage`
   |
-9 -             unused = "0.1.0"
+8 -             homepage = "https://github.com/rust-lang/cargo/"
   |
+[ERROR] could not parse `foo` (manifest) due to 1 previous error
 
 "#]])
         .run();

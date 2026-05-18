@@ -21,7 +21,7 @@ non_snake_case_packages = "warn"
         .file("src/lib.rs", "")
         .build();
 
-    foo.cargo("check -Zcargo-lints")
+    foo.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints", "test-dummy-unstable"])
         .with_stderr_data(str![[r#"
 [WARNING] packages should have a snake-case name
@@ -37,8 +37,6 @@ non_snake_case_packages = "warn"
 3 + name = "foo_bar"
   |
 [WARNING] `foo-bar` (manifest) generated 1 warning
-[CHECKING] foo-bar v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -58,7 +56,7 @@ fn main() {}"#,
         )
         .build();
 
-    p.cargo("check -Zcargo-lints -Zscript --manifest-path foo-bar")
+    p.cargo("fetch -Zcargo-lints -Zscript --manifest-path foo-bar")
         .masquerade_as_nightly_cargo(&["cargo-lints", "script"])
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
@@ -72,8 +70,6 @@ fn main() {}"#,
 1 + [ROOT]/foo/foo_bar
   |
 [WARNING] `foo-bar` (manifest) generated 1 warning
-[CHECKING] foo-bar v0.0.0 ([ROOT]/foo/foo-bar)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
