@@ -257,7 +257,7 @@ fn dump_index_schema() {
 /// ```
 ///
 /// [`config.json`]: https://doc.rust-lang.org/nightly/cargo/reference/registry-index.html#index-configuration
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub struct RegistryConfig {
