@@ -53,7 +53,7 @@ pub fn emit_parse_diagnostics(workspace: &Workspace<'_>) -> CargoResult<()> {
     }
 }
 
-pub fn emit_parse_pkg_diagnostics(
+fn emit_parse_pkg_diagnostics(
     workspace: &Workspace<'_>,
     pkg: &Package,
     path: &Path,
@@ -142,7 +142,7 @@ pub fn emit_parse_pkg_diagnostics(
     Ok(())
 }
 
-pub fn emit_parse_ws_diagnostics(workspace: &Workspace<'_>) -> CargoResult<()> {
+fn emit_parse_ws_diagnostics(workspace: &Workspace<'_>) -> CargoResult<()> {
     let mut stats = DiagnosticStats::new();
 
     deferred_parse_diagnostics(
