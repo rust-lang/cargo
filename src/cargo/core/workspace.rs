@@ -632,6 +632,11 @@ impl<'gctx> Workspace<'gctx> {
         Ok(combined)
     }
 
+    /// Returns an iterator over all loaded manifests
+    pub fn loaded_maybe(&self) -> impl Iterator<Item = &MaybePackage> {
+        self.packages.packages.values()
+    }
+
     /// Returns an iterator over all packages in this workspace
     pub fn members(&self) -> impl Iterator<Item = &Package> {
         let packages = &self.packages;
@@ -1298,7 +1303,7 @@ impl<'gctx> Workspace<'gctx> {
             first_emitted_error = Some(e);
         }
 
-        for maybe_pkg in self.packages.packages.values() {
+        for maybe_pkg in self.loaded_maybe() {
             if let MaybePackage::Package(pkg) = maybe_pkg {
                 let path = pkg.manifest_path();
                 if let Err(e) = self.emit_parse_pkg_diagnostics(pkg, &path)
