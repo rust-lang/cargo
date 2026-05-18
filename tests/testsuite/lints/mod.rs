@@ -466,7 +466,6 @@ im_a_teapot = { level = "warn", priority = 10 }
 
 #[cargo_test]
 fn explicit_lint_level_overrides_default() {
-    Package::new("unused", "0.1.0").publish();
     let p = project()
         .file(
             "Cargo.toml",
@@ -476,12 +475,11 @@ fn explicit_lint_level_overrides_default() {
             version = "0.1.0"
             authors = []
             edition = "2018"
-
-            [dependencies]
-            unused = "0.1.0"
+            repository = "https://github.com/rust-lang/cargo/"
+            homepage = "https://github.com/rust-lang/cargo/"
 
             [lints.cargo]
-            unused_dependencies = "deny"
+            redundant_homepage = "deny"
         "#,
         )
         .file(
@@ -496,23 +494,20 @@ fn explicit_lint_level_overrides_default() {
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_status(101)
         .with_stderr_data(str![[r#"
-[UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
-[DOWNLOADING] crates ...
-[DOWNLOADED] unused v0.1.0 (registry `dummy-registry`)
-[CHECKING] unused v0.1.0
-[CHECKING] foo v0.1.0 ([ROOT]/foo)
-[ERROR] unused dependency
- --> Cargo.toml:9:13
+[ERROR] `package.homepage` is redundant with another manifest field
+ --> Cargo.toml:8:24
   |
-9 |             unused = "0.1.0"
-  |             ^^^^^^^^^^^^^^^^
+7 |             repository = "https://github.com/rust-lang/cargo/"
+  |                          -------------------------------------
+8 |             homepage = "https://github.com/rust-lang/cargo/"
+  |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   |
-  = [NOTE] `cargo::unused_dependencies` is set to `deny` in `[lints]`
-[HELP] remove the dependency
+  = [NOTE] `cargo::redundant_homepage` is set to `deny` in `[lints]`
+[HELP] consider removing `package.homepage`
   |
-9 -             unused = "0.1.0"
+8 -             homepage = "https://github.com/rust-lang/cargo/"
   |
+[ERROR] could not parse `foo` (manifest) due to 1 previous error
 
 "#]])
         .run();
