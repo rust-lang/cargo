@@ -10,8 +10,8 @@ pub use self::resolver::{Resolve, ResolveVersion};
 pub use self::source_id::SourceId;
 pub use self::summary::{FeatureMap, FeatureValue, Summary};
 pub use self::workspace::{
-    MaybePackage, Workspace, WorkspaceConfig, WorkspaceRootConfig, emit_parse_diagnostics,
-    find_workspace_root, find_workspace_root_with_membership_check, resolve_relative_path,
+    MaybePackage, Workspace, WorkspaceConfig, WorkspaceRootConfig, find_workspace_root,
+    find_workspace_root_with_membership_check, resolve_relative_path,
 };
 pub use cargo_util_schemas::core::{GitReference, PackageIdSpec, SourceKind};
 

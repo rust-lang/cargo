@@ -10,6 +10,7 @@ use crate::util::GlobalContext;
 mod lint;
 mod report;
 
+pub mod passes;
 pub mod rules;
 
 pub use lint::{Lint, LintGroup, LintLevel, LintLevelSource};
