@@ -259,6 +259,7 @@ fn dump_index_schema() {
 /// [`config.json`]: https://doc.rust-lang.org/nightly/cargo/reference/registry-index.html#index-configuration
 #[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub struct RegistryConfig {
     /// Download endpoint for all crates.
     ///
@@ -296,6 +297,14 @@ pub struct RegistryConfig {
 impl RegistryConfig {
     /// File name of [`RegistryConfig`].
     pub const NAME: &'static str = "config.json";
+}
+
+#[cfg(feature = "unstable-schema")]
+#[test]
+fn dump_registry_schema() {
+    let schema = schemars::schema_for!(crate::index::RegistryConfig);
+    let dump = serde_json::to_string_pretty(&schema).unwrap();
+    snapbox::assert_data_eq!(dump, snapbox::file!("../registry_config.schema.json").raw());
 }
 
 #[test]
