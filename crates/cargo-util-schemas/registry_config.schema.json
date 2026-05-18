@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "RegistryConfig",
-  "description": "The [`config.json`] file stored in the index.\n\nThe config file may look like:\n\n```json\n{\n    \"dl\": \"https://example.com/api/{crate}/{version}/download\",\n    \"api\": \"https://example.com/api\",\n    \"auth-required\": false             # unstable feature (RFC 3139)\n}\n```\n\n[`config.json`]: https://doc.rust-lang.org/nightly/cargo/reference/registry-index.html#index-configuration",
+  "description": "The [`config.json`] file stored in the index.\n\nThe config file may look like:\n\n```json\n{\n    \"dl\": \"https://example.com/api/{crate}/{version}/download\",\n    \"api\": \"https://example.com/api\",\n    \"auth-required\": false\n}\n```\n\n[`config.json`]: https://doc.rust-lang.org/nightly/cargo/reference/registry-index.html#index-configuration",
   "type": "object",
   "properties": {
     "dl": {

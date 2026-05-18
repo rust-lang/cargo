@@ -252,7 +252,7 @@ fn dump_index_schema() {
 /// {
 ///     "dl": "https://example.com/api/{crate}/{version}/download",
 ///     "api": "https://example.com/api",
-///     "auth-required": false             # unstable feature (RFC 3139)
+///     "auth-required": false
 /// }
 /// ```
 ///
