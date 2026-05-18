@@ -80,6 +80,7 @@ Each new feature described below should explain how to use it.
     * [update-breaking](#update-breaking) --- Allows upgrading to breaking versions with `update --breaking`
     * [feature-unification](#feature-unification) --- Enable new feature unification modes in workspaces
     * [lockfile-publish-time](#lockfile-publish-time) --- Limit resolver to packages older than the specified time
+    * [min-publish-age](#min-publish-age) --- Filters out dependency versions published more recently than a configured minimum age.
 * Output behavior
     * [artifact-dir](#artifact-dir) --- Adds a directory where artifacts are copied to.
     * [build-dir-new-layout](#build-dir-new-layout) --- Enables the new build-dir filesystem layout
@@ -2011,6 +2012,121 @@ cargo +nightly build --target my-target.json -Z json-target-spec
 ```
 
 This usually must be combined with [build-std](#build-std).
+
+## min-publish-age
+
+* Tracking Issue: [#17009](https://github.com/rust-lang/cargo/issues/17009)
+* RFC: [#3923](https://github.com/rust-lang/rfcs/pull/3923)
+
+The `-Zmin-publish-age` feature allows users to specify a minimum age for
+dependency versions. When specified, Cargo won't use a version of a registry
+crate that is newer than the minimum age, with a way to override for exceptions
+like urgent security fixes.
+
+For example, in your `<repo>/.cargo/config.toml`:
+
+```toml
+[registry]
+global-min-publish-age = "14 days"
+```
+
+### Added to Configuration
+
+The following will be added to Cargo's configuration format:
+
+```toml
+[resolver]
+incompatible-publish-age = "deny" # Specifies how resolver reacts to these
+
+[registries.<name>]
+min-publish-age = "..."  # Override `registry.global-min-publish-age` for this registry
+
+[registry]
+min-publish-age = "..."  # Override `registry.global-min-publish-age` for crates.io
+global-min-publish-age = "0"  # Minimum time span allowed for packages from this registry
+```
+
+#### `resolver.incompatible-publish-age`
+
+* Type: String
+* Default: `"deny"`
+* Environment: `CARGO_RESOLVER_INCOMPATIBLE_PUBLISH_AGE`
+
+When resolving the version of a dependency,
+specify the behavior for versions with a `pubtime` (if present)
+that is incompatible with `registry.min-publish-age`.
+Values include:
+
+- `allow`: treat pubtime-incompatible versions like any other version
+- `deny`: ignore pubtime-incompatible versions unless they already exist in the lock file
+
+#### `registries.<name>.min-publish-age`
+
+* Type: String
+* Default: none
+* Environment: `CARGO_REGISTRIES_<name>_MIN_PUBLISH_AGE`
+
+Specifies the minimum timespan since a version's `pubtime` that it may be
+considered for `resolver.incompatible-publish-age` for packages from this
+registry. If not set, `registry.global-min-publish-age` will be used.
+
+Will be ignored if the registry does not support this.
+
+It supports the following values:
+
+- An integer followed by "seconds", "minutes", "hours", "days", "weeks", or "months"
+- `"0"` to allow all packages
+
+#### `registry.min-publish-age`
+
+* Type: String
+* Default: none
+* Environment: `CARGO_REGISTRY_MIN_PUBLISH_AGE`
+
+Specifies the minimum timespan since a version's `pubtime` that it may be
+considered for `resolver.incompatible-publish-age` for packages from crates.io.
+If not set, `registry.global-min-publish-age` will be used.
+
+It supports the following values:
+
+- An integer followed by "seconds", "minutes", "hours", "days", "weeks", or "months"
+- `"0"` to allow all packages
+
+Generally, `"0"`, `"N days"`, and `"N weeks"` will be used.
+
+#### `registry.global-min-publish-age`
+
+* Type: String
+* Default: `"0"`
+* Environment: `CARGO_REGISTRY_GLOBAL_MIN_PUBLISH_AGE`
+
+Specifies the global minimum timespan since a version's `pubtime` that it may
+be considered for `resolver.incompatible-publish-age` for packages.
+If `min-publish-age` is not set for a specific registry using
+`registries.<name>.min-publish-age`, Cargo will use this minimum publish age.
+
+It supports the following values:
+
+- An integer followed by "seconds", "minutes", "hours", "days", "weeks", or "months"
+- `"0"` to allow all packages
+
+### Added to Resolver
+
+The following will be added to the [resolver chapter] as a sibling section to
+"Yanked versions":
+
+> "Pubtime-incompatible versions"
+>
+> Versions with a publish time newer than the configured `min-publish-age`
+> are considered pubtime-incompatible.
+> When `resolver.incompatible-publish-age` is set to `deny`,
+> the resolver will ignore these versions
+> unless they already exist in the `Cargo.lock` file.
+> Setting the config to `allow` would disable the check,
+> which if combined with `cargo update --precise`,
+> cargo would pull in a specific version and its transitive dependencies.
+
+[resolver chapter]: ../reference/resolver.md
 
 # Stabilized and removed features
 
