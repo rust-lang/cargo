@@ -17,7 +17,6 @@ use crate::GlobalContext;
 use crate::core::MaybePackage;
 use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::Lint;
-use crate::diagnostics::LintLevel;
 use crate::diagnostics::LintLevelProduct;
 use crate::diagnostics::ManifestFor;
 use crate::diagnostics::get_key_value_span;
@@ -53,16 +52,10 @@ this-lint-does-not-exist = "warn"
 pub(crate) fn lint_manifest(
     manifest: ManifestFor<'_>,
     manifest_path: &Path,
-    cargo_lints: &TomlToolLints,
+    level: LintLevelProduct,
     stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let level = manifest.lint_level(cargo_lints, LINT);
-
-    if level.level == LintLevel::Allow {
-        return Ok(());
-    }
-
     let normalized_toml = match &manifest {
         ManifestFor::Package(pkg) => pkg.manifest().normalized_toml(),
         ManifestFor::Workspace {
