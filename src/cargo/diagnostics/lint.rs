@@ -1,9 +1,7 @@
 use std::cmp::{Reverse, max_by_key};
 use std::fmt::Display;
 
-use cargo_util_schemas::manifest::RustVersion;
-use cargo_util_schemas::manifest::TomlLintLevel;
-use cargo_util_schemas::manifest::TomlToolLints;
+use cargo_util_schemas::manifest;
 use cargo_util_terminal::report::Level;
 
 use crate::core::{Feature, Features};
@@ -18,7 +16,7 @@ pub struct Lint {
     /// Note: If the lint is on by default and did not qualify as a hard-warning before the
     /// linting system, then at earliest an MSRV of 1.78 is required as `[lints.cargo]` was a hard
     /// error before then.
-    pub msrv: Option<RustVersion>,
+    pub msrv: Option<manifest::RustVersion>,
     pub feature_gate: Option<&'static Feature>,
     /// This is a markdown formatted string that will be used when generating
     /// the lint documentation. If docs is `None`, the lint will not be
@@ -29,8 +27,8 @@ pub struct Lint {
 impl Lint {
     pub fn level(
         &self,
-        pkg_lints: &TomlToolLints,
-        pkg_rust_version: Option<&RustVersion>,
+        pkg_lints: &manifest::TomlToolLints,
+        pkg_rust_version: Option<&manifest::RustVersion>,
         unstable_features: &Features,
     ) -> (LintLevel, LintLevelSource) {
         // We should return `Allow` if a lint is behind a feature, but it is
@@ -125,13 +123,13 @@ impl LintLevel {
     }
 }
 
-impl From<TomlLintLevel> for LintLevel {
-    fn from(toml_lint_level: TomlLintLevel) -> LintLevel {
+impl From<manifest::TomlLintLevel> for LintLevel {
+    fn from(toml_lint_level: manifest::TomlLintLevel) -> LintLevel {
         match toml_lint_level {
-            TomlLintLevel::Allow => LintLevel::Allow,
-            TomlLintLevel::Warn => LintLevel::Warn,
-            TomlLintLevel::Deny => LintLevel::Deny,
-            TomlLintLevel::Forbid => LintLevel::Forbid,
+            manifest::TomlLintLevel::Allow => LintLevel::Allow,
+            manifest::TomlLintLevel::Warn => LintLevel::Warn,
+            manifest::TomlLintLevel::Deny => LintLevel::Deny,
+            manifest::TomlLintLevel::Forbid => LintLevel::Forbid,
         }
     }
 }
@@ -163,7 +161,7 @@ impl LintLevelSource {
 pub(crate) fn level_priority(
     name: &str,
     default_level: LintLevel,
-    pkg_lints: &TomlToolLints,
+    pkg_lints: &manifest::TomlToolLints,
 ) -> (LintLevel, LintLevelSource, i8) {
     if let Some(defined_level) = pkg_lints.get(name) {
         (
@@ -212,10 +210,10 @@ mod tests {
     fn lint_level_prefers_user_specified_over_default() {
         let lint = test_lint("unused_dependencies", &STYLE);
 
-        let mut pkg_lints = TomlToolLints::new();
+        let mut pkg_lints = manifest::TomlToolLints::new();
         pkg_lints.insert(
             "unused_dependencies".to_string(),
-            cargo_util_schemas::manifest::TomlLint::Level(TomlLintLevel::Deny),
+            manifest::TomlLint::Level(manifest::TomlLintLevel::Deny),
         );
         let features = Features::default();
 
@@ -228,10 +226,10 @@ mod tests {
     fn lint_level_group_overrides_default() {
         let lint = test_lint("non_kebab_case_bins", &STYLE);
 
-        let mut pkg_lints = TomlToolLints::new();
+        let mut pkg_lints = manifest::TomlToolLints::new();
         pkg_lints.insert(
             "style".to_string(),
-            cargo_util_schemas::manifest::TomlLint::Level(TomlLintLevel::Deny),
+            manifest::TomlLint::Level(manifest::TomlLintLevel::Deny),
         );
         let features = Features::default();
 

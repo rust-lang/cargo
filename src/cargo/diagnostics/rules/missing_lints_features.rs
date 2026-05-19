@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use cargo_util_schemas::manifest::TomlToolLints;
+use cargo_util_schemas::manifest;
 use cargo_util_terminal::report::AnnotationKind;
 use cargo_util_terminal::report::Group;
 use cargo_util_terminal::report::Level;
@@ -20,7 +20,7 @@ use crate::diagnostics::rel_cwd_manifest_path;
 pub(crate) fn diagnose_manifest(
     manifest: ManifestFor<'_>,
     manifest_path: &Path,
-    cargo_lints: &TomlToolLints,
+    cargo_lints: &manifest::TomlToolLints,
     stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
