@@ -3,10 +3,12 @@ use std::path::Path;
 use cargo_util_schemas::manifest;
 
 use crate::CargoResult;
+use crate::GlobalContext;
 use crate::core::MaybePackage;
 use crate::core::Package;
 use crate::core::Workspace;
 use crate::diagnostics::DiagnosticStats;
+use crate::diagnostics::ManifestFor;
 use crate::diagnostics::rules::blanket_hint_mostly_unused;
 use crate::diagnostics::rules::check_im_a_teapot;
 use crate::diagnostics::rules::deferred_parse_diagnostics;
@@ -27,6 +29,85 @@ use crate::diagnostics::rules::unknown_lints;
 use crate::diagnostics::rules::unused_build_dependencies_no_build_rs;
 use crate::diagnostics::rules::unused_workspace_dependencies;
 use crate::diagnostics::rules::unused_workspace_package_fields;
+
+pub const PARSE_PASS_RULES: &[ParsePassRule] = &[
+    ParsePassRule::DiagnosticManifest {
+        rule: deferred_parse_diagnostics,
+    },
+    ParsePassRule::LintManifest {
+        rule: missing_lints_features,
+    },
+    ParsePassRule::LintManifest {
+        rule: unknown_lints,
+    },
+    ParsePassRule::LintWorkspace {
+        rule: unused_workspace_package_fields,
+    },
+    ParsePassRule::LintWorkspace {
+        rule: unused_workspace_dependencies,
+    },
+    ParsePassRule::LintWorkspace {
+        rule: implicit_minimum_version_req_ws,
+    },
+    ParsePassRule::LintManifest {
+        rule: text_direction_codepoint_in_comment,
+    },
+    ParsePassRule::LintManifest {
+        rule: text_direction_codepoint_in_literal,
+    },
+    ParsePassRule::LintWorkspace {
+        rule: blanket_hint_mostly_unused,
+    },
+];
+
+pub enum ParsePassRule {
+    DiagnosticManifest { rule: FnDiagnosticManifest },
+    LintManifest { rule: FnLintManifest },
+    DiagnosticWorkspace { rule: FnDiagnosticWorkspace },
+    LintWorkspace { rule: FnLintWorkspace },
+    DiagnosticPackage { rule: FnDiagnosticPackage },
+    LintPackage { rule: FnLintPackage },
+}
+
+type FnDiagnosticManifest =
+    fn(ManifestFor<'_>, &Path, &mut DiagnosticStats, &GlobalContext) -> CargoResult<()>;
+
+type FnDiagnosticWorkspace = fn(
+    &Workspace<'_>,
+    &MaybePackage,
+    &Path,
+    &mut DiagnosticStats,
+    &GlobalContext,
+) -> CargoResult<()>;
+
+type FnDiagnosticPackage =
+    fn(&Workspace<'_>, &Package, &Path, &mut DiagnosticStats, &GlobalContext) -> CargoResult<()>;
+
+type FnLintManifest = fn(
+    manifest: ManifestFor<'_>,
+    manifest_path: &Path,
+    cargo_lints: &manifest::TomlToolLints,
+    stats: &mut DiagnosticStats,
+    gctx: &GlobalContext,
+) -> CargoResult<()>;
+
+type FnLintWorkspace = fn(
+    &Workspace<'_>,
+    &MaybePackage,
+    &Path,
+    &manifest::TomlToolLints,
+    &mut DiagnosticStats,
+    &GlobalContext,
+) -> CargoResult<()>;
+
+type FnLintPackage = fn(
+    &Workspace<'_>,
+    &Package,
+    &Path,
+    &manifest::TomlToolLints,
+    &mut DiagnosticStats,
+    &GlobalContext,
+) -> CargoResult<()>;
 
 pub fn emit_parse_diagnostics(workspace: &Workspace<'_>) -> CargoResult<()> {
     let mut first_emitted_error = None;
@@ -145,13 +226,6 @@ fn emit_parse_pkg_diagnostics(
 fn emit_parse_ws_diagnostics(workspace: &Workspace<'_>) -> CargoResult<()> {
     let mut stats = DiagnosticStats::new();
 
-    deferred_parse_diagnostics(
-        (workspace, workspace.root_maybe()).into(),
-        workspace.root_manifest(),
-        &mut stats,
-        workspace.gctx(),
-    )?;
-
     let cargo_lints = match workspace.root_maybe() {
         MaybePackage::Package(pkg) => {
             let toml = pkg.manifest().normalized_toml();
@@ -173,68 +247,50 @@ fn emit_parse_ws_diagnostics(workspace: &Workspace<'_>) -> CargoResult<()> {
     .cloned()
     .unwrap_or(manifest::TomlToolLints::default());
 
-    if workspace.gctx().cli_unstable().cargo_lints {
-        missing_lints_features(
-            (workspace, workspace.root_maybe()).into(),
-            workspace.root_manifest(),
-            &cargo_lints,
-            &mut stats,
-            workspace.gctx(),
-        )?;
-        unknown_lints(
-            (workspace, workspace.root_maybe()).into(),
-            workspace.root_manifest(),
-            &cargo_lints,
-            &mut stats,
-            workspace.gctx(),
-        )?;
-
-        unused_workspace_package_fields(
-            workspace,
-            workspace.root_maybe(),
-            workspace.root_manifest(),
-            &cargo_lints,
-            &mut stats,
-            workspace.gctx(),
-        )?;
-        unused_workspace_dependencies(
-            workspace,
-            workspace.root_maybe(),
-            workspace.root_manifest(),
-            &cargo_lints,
-            &mut stats,
-            workspace.gctx(),
-        )?;
-        implicit_minimum_version_req_ws(
-            workspace,
-            workspace.root_maybe(),
-            workspace.root_manifest(),
-            &cargo_lints,
-            &mut stats,
-            workspace.gctx(),
-        )?;
-        text_direction_codepoint_in_comment(
-            (workspace, workspace.root_maybe()).into(),
-            workspace.root_manifest(),
-            &cargo_lints,
-            &mut stats,
-            workspace.gctx(),
-        )?;
-        text_direction_codepoint_in_literal(
-            (workspace, workspace.root_maybe()).into(),
-            workspace.root_manifest(),
-            &cargo_lints,
-            &mut stats,
-            workspace.gctx(),
-        )?;
-        blanket_hint_mostly_unused(
-            workspace,
-            workspace.root_maybe(),
-            workspace.root_manifest(),
-            &cargo_lints,
-            &mut stats,
-            workspace.gctx(),
-        )?;
+    for rule in PARSE_PASS_RULES {
+        match rule {
+            ParsePassRule::DiagnosticManifest { rule } => {
+                rule(
+                    (workspace, workspace.root_maybe()).into(),
+                    workspace.root_manifest(),
+                    &mut stats,
+                    workspace.gctx(),
+                )?;
+            }
+            ParsePassRule::LintManifest { rule } => {
+                if workspace.gctx().cli_unstable().cargo_lints {
+                    rule(
+                        (workspace, workspace.root_maybe()).into(),
+                        workspace.root_manifest(),
+                        &cargo_lints,
+                        &mut stats,
+                        workspace.gctx(),
+                    )?;
+                }
+            }
+            ParsePassRule::DiagnosticWorkspace { rule } => {
+                rule(
+                    workspace,
+                    workspace.root_maybe(),
+                    workspace.root_manifest(),
+                    &mut stats,
+                    workspace.gctx(),
+                )?;
+            }
+            ParsePassRule::LintWorkspace { rule } => {
+                if workspace.gctx().cli_unstable().cargo_lints {
+                    rule(
+                        workspace,
+                        workspace.root_maybe(),
+                        workspace.root_manifest(),
+                        &cargo_lints,
+                        &mut stats,
+                        workspace.gctx(),
+                    )?;
+                }
+            }
+            ParsePassRule::DiagnosticPackage { .. } | ParsePassRule::LintPackage { .. } => {}
+        }
     }
 
     stats.report_summary("parse", None, workspace.gctx())?;
