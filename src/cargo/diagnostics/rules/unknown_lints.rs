@@ -56,14 +56,27 @@ pub(crate) fn lint_manifest(
     stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
+    let level = manifest.lint_level(cargo_lints, LINT);
+
+    if level.level == LintLevel::Allow {
+        return Ok(());
+    }
+
+    lint_manifest_inner(manifest, manifest_path, level, cargo_lints, stats, gctx)
+}
+
+fn lint_manifest_inner(
+    manifest: ManifestFor<'_>,
+    manifest_path: &Path,
+    level: LintLevelProduct,
+    cargo_lints: &TomlToolLints,
+    stats: &mut DiagnosticStats,
+    gctx: &GlobalContext,
+) -> CargoResult<()> {
     let LintLevelProduct {
         level: lint_level,
         source,
-    } = manifest.lint_level(cargo_lints, LINT);
-
-    if lint_level == LintLevel::Allow {
-        return Ok(());
-    }
+    } = level;
 
     let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
     let mut unknown_lints = Vec::new();
