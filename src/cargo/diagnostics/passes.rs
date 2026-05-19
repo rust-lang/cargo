@@ -58,6 +58,39 @@ pub const PARSE_PASS_RULES: &[ParsePassRule] = &[
     ParsePassRule::LintWorkspace {
         rule: blanket_hint_mostly_unused,
     },
+    ParsePassRule::LintPackage {
+        rule: check_im_a_teapot,
+    },
+    ParsePassRule::LintPackage {
+        rule: implicit_minimum_version_req_pkg,
+    },
+    ParsePassRule::LintPackage {
+        rule: non_kebab_case_packages,
+    },
+    ParsePassRule::LintPackage {
+        rule: non_snake_case_packages,
+    },
+    ParsePassRule::LintPackage {
+        rule: non_kebab_case_bins,
+    },
+    ParsePassRule::LintPackage {
+        rule: non_kebab_case_features,
+    },
+    ParsePassRule::LintPackage {
+        rule: non_snake_case_features,
+    },
+    ParsePassRule::LintPackage {
+        rule: unused_build_dependencies_no_build_rs,
+    },
+    ParsePassRule::LintPackage {
+        rule: redundant_readme,
+    },
+    ParsePassRule::LintPackage {
+        rule: redundant_homepage,
+    },
+    ParsePassRule::LintPackage {
+        rule: missing_lints_inheritance,
+    },
 ];
 
 pub enum ParsePassRule {
@@ -141,8 +174,6 @@ fn emit_parse_pkg_diagnostics(
 ) -> CargoResult<()> {
     let mut stats = DiagnosticStats::new();
 
-    deferred_parse_diagnostics(pkg.into(), path, &mut stats, workspace.gctx())?;
-
     let toml_lints = pkg
         .manifest()
         .normalized_toml()
@@ -155,124 +186,39 @@ fn emit_parse_pkg_diagnostics(
         .cloned()
         .unwrap_or(manifest::TomlToolLints::default());
 
-    if workspace.gctx().cli_unstable().cargo_lints {
-        missing_lints_features(
-            pkg.into(),
-            &path,
-            &cargo_lints,
-            &mut stats,
-            workspace.gctx(),
-        )?;
-        unknown_lints(
-            pkg.into(),
-            &path,
-            &cargo_lints,
-            &mut stats,
-            workspace.gctx(),
-        )?;
-
-        check_im_a_teapot(
-            workspace,
-            pkg,
-            &path,
-            &cargo_lints,
-            &mut stats,
-            workspace.gctx(),
-        )?;
-        implicit_minimum_version_req_pkg(
-            workspace,
-            pkg,
-            &path,
-            &cargo_lints,
-            &mut stats,
-            workspace.gctx(),
-        )?;
-        non_kebab_case_packages(
-            workspace,
-            pkg,
-            &path,
-            &cargo_lints,
-            &mut stats,
-            workspace.gctx(),
-        )?;
-        non_snake_case_packages(
-            workspace,
-            pkg,
-            &path,
-            &cargo_lints,
-            &mut stats,
-            workspace.gctx(),
-        )?;
-        non_kebab_case_bins(
-            workspace,
-            pkg,
-            &path,
-            &cargo_lints,
-            &mut stats,
-            workspace.gctx(),
-        )?;
-        non_kebab_case_features(
-            workspace,
-            pkg,
-            &path,
-            &cargo_lints,
-            &mut stats,
-            workspace.gctx(),
-        )?;
-        non_snake_case_features(
-            workspace,
-            pkg,
-            &path,
-            &cargo_lints,
-            &mut stats,
-            workspace.gctx(),
-        )?;
-        unused_build_dependencies_no_build_rs(
-            workspace,
-            pkg,
-            &path,
-            &cargo_lints,
-            &mut stats,
-            workspace.gctx(),
-        )?;
-        redundant_readme(
-            workspace,
-            pkg,
-            &path,
-            &cargo_lints,
-            &mut stats,
-            workspace.gctx(),
-        )?;
-        redundant_homepage(
-            workspace,
-            pkg,
-            &path,
-            &cargo_lints,
-            &mut stats,
-            workspace.gctx(),
-        )?;
-        missing_lints_inheritance(
-            workspace,
-            pkg,
-            &path,
-            &cargo_lints,
-            &mut stats,
-            workspace.gctx(),
-        )?;
-        text_direction_codepoint_in_comment(
-            pkg.into(),
-            &path,
-            &cargo_lints,
-            &mut stats,
-            workspace.gctx(),
-        )?;
-        text_direction_codepoint_in_literal(
-            pkg.into(),
-            &path,
-            &cargo_lints,
-            &mut stats,
-            workspace.gctx(),
-        )?;
+    for rule in PARSE_PASS_RULES {
+        match rule {
+            ParsePassRule::DiagnosticManifest { rule } => {
+                rule(pkg.into(), &path, &mut stats, workspace.gctx())?;
+            }
+            ParsePassRule::LintManifest { rule } => {
+                if workspace.gctx().cli_unstable().cargo_lints {
+                    rule(
+                        pkg.into(),
+                        &path,
+                        &cargo_lints,
+                        &mut stats,
+                        workspace.gctx(),
+                    )?;
+                }
+            }
+            ParsePassRule::DiagnosticWorkspace { .. } | ParsePassRule::LintWorkspace { .. } => {}
+            ParsePassRule::DiagnosticPackage { rule } => {
+                rule(workspace, pkg, &path, &mut stats, workspace.gctx())?;
+            }
+            ParsePassRule::LintPackage { rule } => {
+                if workspace.gctx().cli_unstable().cargo_lints {
+                    rule(
+                        workspace,
+                        pkg,
+                        &path,
+                        &cargo_lints,
+                        &mut stats,
+                        workspace.gctx(),
+                    )?;
+                }
+            }
+        }
     }
 
     stats.report_summary("parse", Some(&*pkg.name()), workspace.gctx())?;
