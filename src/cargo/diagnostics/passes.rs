@@ -8,15 +8,31 @@ use crate::core::MaybePackage;
 use crate::core::Package;
 use crate::core::Workspace;
 use crate::diagnostics::DiagnosticStats;
+use crate::diagnostics::Lint;
 use crate::diagnostics::ManifestFor;
 
-pub enum ParsePassRule {
-    DiagnosticManifest { rule: FnDiagnosticManifest },
-    LintManifest { rule: FnLintManifest },
-    DiagnosticWorkspace { rule: FnDiagnosticWorkspace },
-    LintWorkspace { rule: FnLintWorkspace },
-    DiagnosticPackage { rule: FnDiagnosticPackage },
-    LintPackage { rule: FnLintPackage },
+pub enum ParsePassRule<'r> {
+    DiagnosticManifest {
+        rule: FnDiagnosticManifest,
+    },
+    LintManifest {
+        rule: FnLintManifest,
+        lint: &'r Lint,
+    },
+    DiagnosticWorkspace {
+        rule: FnDiagnosticWorkspace,
+    },
+    LintWorkspace {
+        rule: FnLintWorkspace,
+        lint: &'r Lint,
+    },
+    DiagnosticPackage {
+        rule: FnDiagnosticPackage,
+    },
+    LintPackage {
+        rule: FnLintPackage,
+        lint: &'r Lint,
+    },
 }
 
 type FnDiagnosticManifest =
@@ -61,7 +77,7 @@ type FnLintPackage = fn(
 
 pub fn emit_parse_diagnostics(
     workspace: &Workspace<'_>,
-    rules: &[ParsePassRule],
+    rules: &[ParsePassRule<'_>],
 ) -> CargoResult<()> {
     let mut first_emitted_error = None;
 
@@ -91,7 +107,7 @@ fn emit_parse_pkg_diagnostics(
     workspace: &Workspace<'_>,
     pkg: &Package,
     path: &Path,
-    rules: &[ParsePassRule],
+    rules: &[ParsePassRule<'_>],
 ) -> CargoResult<()> {
     let mut stats = DiagnosticStats::new();
 
@@ -113,7 +129,7 @@ fn emit_parse_pkg_diagnostics(
                 let manifest = pkg.into();
                 rule(manifest, &path, &mut stats, workspace.gctx())?;
             }
-            ParsePassRule::LintManifest { rule } => {
+            ParsePassRule::LintManifest { rule, .. } => {
                 if workspace.gctx().cli_unstable().cargo_lints {
                     let manifest = pkg.into();
                     rule(manifest, &path, &cargo_lints, &mut stats, workspace.gctx())?;
@@ -123,7 +139,7 @@ fn emit_parse_pkg_diagnostics(
             ParsePassRule::DiagnosticPackage { rule } => {
                 rule(workspace, pkg, &path, &mut stats, workspace.gctx())?;
             }
-            ParsePassRule::LintPackage { rule } => {
+            ParsePassRule::LintPackage { rule, .. } => {
                 if workspace.gctx().cli_unstable().cargo_lints {
                     rule(
                         workspace,
@@ -145,7 +161,7 @@ fn emit_parse_pkg_diagnostics(
 
 fn emit_parse_ws_diagnostics(
     workspace: &Workspace<'_>,
-    rules: &[ParsePassRule],
+    rules: &[ParsePassRule<'_>],
 ) -> CargoResult<()> {
     let mut stats = DiagnosticStats::new();
 
@@ -181,7 +197,7 @@ fn emit_parse_ws_diagnostics(
                     workspace.gctx(),
                 )?;
             }
-            ParsePassRule::LintManifest { rule } => {
+            ParsePassRule::LintManifest { rule, .. } => {
                 if workspace.gctx().cli_unstable().cargo_lints {
                     let manifest = (workspace, workspace.root_maybe()).into();
                     rule(
@@ -202,7 +218,7 @@ fn emit_parse_ws_diagnostics(
                     workspace.gctx(),
                 )?;
             }
-            ParsePassRule::LintWorkspace { rule } => {
+            ParsePassRule::LintWorkspace { rule, .. } => {
                 if workspace.gctx().cli_unstable().cargo_lints {
                     rule(
                         workspace,

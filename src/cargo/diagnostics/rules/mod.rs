@@ -23,7 +23,7 @@ use super::LintLevel;
 use super::passes::ParsePassRule;
 use crate::core::Feature;
 
-pub const PARSE_PASS_RULES: &[ParsePassRule] = &[
+pub const PARSE_PASS_RULES: &[ParsePassRule<'static>] = &[
     ParsePassRule::DiagnosticManifest {
         rule: deferred_parse_diagnostics::diagnose_manifest,
     },
@@ -32,57 +32,75 @@ pub const PARSE_PASS_RULES: &[ParsePassRule] = &[
     },
     ParsePassRule::LintManifest {
         rule: unknown_lints::lint_manifest,
+        lint: unknown_lints::LINT,
     },
     ParsePassRule::LintWorkspace {
         rule: unused_workspace_package_fields::lint_workspace,
+        lint: unused_workspace_package_fields::LINT,
     },
     ParsePassRule::LintWorkspace {
         rule: unused_workspace_dependencies::lint_workspace,
+        lint: unused_workspace_dependencies::LINT,
     },
     ParsePassRule::LintWorkspace {
         rule: implicit_minimum_version_req::lint_workspace,
+        lint: implicit_minimum_version_req::LINT,
     },
     ParsePassRule::LintManifest {
         rule: text_direction_codepoint_in_comment::lint_manifest,
+        lint: text_direction_codepoint_in_comment::LINT,
     },
     ParsePassRule::LintManifest {
         rule: text_direction_codepoint_in_literal::lint_manifest,
+        lint: text_direction_codepoint_in_literal::LINT,
     },
     ParsePassRule::LintWorkspace {
         rule: blanket_hint_mostly_unused::lint_workspace,
+        lint: blanket_hint_mostly_unused::LINT,
     },
     ParsePassRule::LintPackage {
         rule: im_a_teapot::lint_package,
+        lint: im_a_teapot::LINT,
     },
     ParsePassRule::LintPackage {
         rule: implicit_minimum_version_req::lint_package,
+        lint: implicit_minimum_version_req::LINT,
     },
     ParsePassRule::LintPackage {
         rule: non_kebab_case_packages::lint_package,
+        lint: non_kebab_case_packages::LINT,
     },
     ParsePassRule::LintPackage {
         rule: non_snake_case_packages::lint_package,
+        lint: non_snake_case_packages::LINT,
     },
     ParsePassRule::LintPackage {
         rule: non_kebab_case_bins::lint_package,
+        lint: non_kebab_case_bins::LINT,
     },
     ParsePassRule::LintPackage {
         rule: non_kebab_case_features::lint_package,
+        lint: non_kebab_case_features::LINT,
     },
     ParsePassRule::LintPackage {
         rule: non_snake_case_features::lint_package,
+        lint: non_snake_case_features::LINT,
     },
     ParsePassRule::LintPackage {
         rule: unused_dependencies::lint_package,
+        lint: unused_dependencies::LINT,
     },
     ParsePassRule::LintPackage {
         rule: redundant_readme::lint_package,
+        lint: redundant_readme::LINT,
     },
     ParsePassRule::LintPackage {
         rule: redundant_homepage::lint_package,
+        lint: redundant_homepage::LINT,
     },
     ParsePassRule::LintPackage {
         rule: missing_lints_inheritance::lint_package,
+        lint: missing_lints_inheritance::LINT,
     },
 ];
 
@@ -269,6 +287,39 @@ mod tests {
         let mut expected = actual.clone();
         expected.sort();
         snapbox::assert_data_eq!(actual.to_debug(), expected.to_debug());
+    }
+
+    #[test]
+    fn ensure_parse_passed_in_lints() {
+        let parse_pass_lint_names = PARSE_PASS_RULES
+            .iter()
+            .filter_map(|rule| match rule {
+                ParsePassRule::DiagnosticManifest { .. }
+                | ParsePassRule::DiagnosticWorkspace { .. }
+                | ParsePassRule::DiagnosticPackage { .. } => None,
+                ParsePassRule::LintManifest { lint, .. }
+                | ParsePassRule::LintWorkspace { lint, .. }
+                | ParsePassRule::LintPackage { lint, .. } => Some(lint.name),
+            })
+            .collect::<std::collections::HashSet<_>>();
+        let lint_names = LINTS
+            .iter()
+            .map(|l| l.name)
+            .collect::<std::collections::HashSet<_>>();
+        let diff = parse_pass_lint_names
+            .difference(&lint_names)
+            .sorted()
+            .collect::<Vec<_>>();
+        let mut need_added = String::new();
+        for name in &diff {
+            need_added.push_str(&format!("{name}\n"));
+        }
+        assert!(
+            diff.is_empty(),
+            "\n`LINTS` did not contain all `Lint`s found in `PARSE_PASS_RULES`\n\
+            Please add the following to `LINTS`:\n\
+            {need_added}",
+        );
     }
 
     #[test]
