@@ -898,3 +898,42 @@ fn build_with_duplicate_crate_types() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn verbose_flag_forwarded_to_rustc_for_local_only() {
+    cargo_test_support::registry::Package::new("bar", "1.0.0")
+        .file("src/lib.rs", "pub fn bar() {}")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2015"
+
+            [dependencies]
+            bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "extern crate bar; pub fn main() {}")
+        .build();
+
+    p.cargo("build -v")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[COMPILING] bar v1.0.0
+[RUNNING] `rustc --crate-name bar [..]`
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .with_stderr_does_not_contain("[RUNNING] `rustc --crate-name bar [..] --verbose`")
+        .run();
+}
