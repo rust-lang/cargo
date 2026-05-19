@@ -108,9 +108,12 @@ impl ProcessBuilder {
     }
 
     /// (chainable) Adds multiple `args` to the args list.
-    pub fn args<T: AsRef<OsStr>>(&mut self, args: &[T]) -> &mut ProcessBuilder {
-        self.args
-            .extend(args.iter().map(|t| t.as_ref().to_os_string()));
+    pub fn args<I, T>(&mut self, args: I) -> &mut ProcessBuilder
+    where
+        I: IntoIterator<Item = T>,
+        T: Into<OsString>,
+    {
+        self.args.extend(args.into_iter().map(Into::into));
         self
     }
 
