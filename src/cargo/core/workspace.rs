@@ -351,10 +351,13 @@ impl<'gctx> Workspace<'gctx> {
                 .warn("ignoring `resolver.feature-unification` without `-Zfeature-unification`")?;
         };
 
-        if !self.gctx().cli_unstable().min_publish_age && config.incompatible_publish_age.is_some() {
-            self.gctx().shell().warn(
-                "ignoring `resolver.incompatible-publish-age` without `-Zmin-publish-age`",
-            )?;
+        if !self.gctx().cli_unstable().min_publish_age {
+            if config.incompatible_publish_age.is_some() {
+                self.gctx().shell().warn(
+                    "ignoring `resolver.incompatible-publish-age` without `-Zmin-publish-age`",
+                )?;
+            }
+            warn_unused_min_publish_age(self.gctx())?;
         }
 
         if let Some(lockfile_path) = config.lockfile_path {
@@ -2079,6 +2082,38 @@ impl WorkspaceRootConfig {
     pub fn inheritable(&self) -> &InheritableFields {
         &self.inheritable_fields
     }
+}
+
+fn warn_unused_min_publish_age(gctx: &GlobalContext) -> CargoResult<()> {
+    if gctx
+        .get::<Option<String>>("registry.global-min-publish-age")?
+        .is_some()
+    {
+        gctx.shell()
+            .warn("ignoring `registry.global-min-publish-age` without `-Zmin-publish-age`")?;
+    }
+
+    if gctx
+        .get::<Option<String>>("registry.min-publish-age")?
+        .is_some()
+    {
+        gctx.shell()
+            .warn("ignoring `registry.min-publish-age` without `-Zmin-publish-age`")?;
+    }
+
+    if let Some(context::ConfigValue::Table(registries, _)) = gctx.values()?.get("registries") {
+        for (name, val) in registries {
+            if let context::ConfigValue::Table(val, _) = val {
+                if val.contains_key("min-publish-age") {
+                    gctx.shell().warn(format!(
+                        "ignoring `registries.{name}.min-publish-age` without `-Zmin-publish-age`"
+                    ))?;
+                }
+            }
+        }
+    }
+
+    Ok(())
 }
 
 pub fn resolve_relative_path(

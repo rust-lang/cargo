@@ -55,6 +55,7 @@ fn feature_gated() {
         .masquerade_as_nightly_cargo(&["min-publish-age"])
         .env("__CARGO_TEST_INVOCATION_TIME", NOW)
         .with_stderr_data(str![[r#"
+[WARNING] ignoring `registry.global-min-publish-age` without `-Zmin-publish-age`
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 
@@ -109,6 +110,7 @@ fn feature_gated_env() {
         .masquerade_as_nightly_cargo(&["min-publish-age"])
         .env("__CARGO_TEST_INVOCATION_TIME", NOW)
         .with_stderr_data(str![[r#"
+[WARNING] ignoring `registry.global-min-publish-age` without `-Zmin-publish-age`
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 
