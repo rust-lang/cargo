@@ -9,7 +9,6 @@ use crate::core::Package;
 use crate::core::Workspace;
 use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::ManifestFor;
-use crate::diagnostics::rules::PARSE_PASS_RULES;
 
 pub enum ParsePassRule {
     DiagnosticManifest { rule: FnDiagnosticManifest },
@@ -60,17 +59,20 @@ type FnLintPackage = fn(
     &GlobalContext,
 ) -> CargoResult<()>;
 
-pub fn emit_parse_diagnostics(workspace: &Workspace<'_>) -> CargoResult<()> {
+pub fn emit_parse_diagnostics(
+    workspace: &Workspace<'_>,
+    rules: &[ParsePassRule],
+) -> CargoResult<()> {
     let mut first_emitted_error = None;
 
-    if let Err(e) = emit_parse_ws_diagnostics(workspace) {
+    if let Err(e) = emit_parse_ws_diagnostics(workspace, rules) {
         first_emitted_error = Some(e);
     }
 
     for maybe_pkg in workspace.loaded_maybe() {
         if let MaybePackage::Package(pkg) = maybe_pkg {
             let path = pkg.manifest_path();
-            if let Err(e) = emit_parse_pkg_diagnostics(workspace, pkg, &path)
+            if let Err(e) = emit_parse_pkg_diagnostics(workspace, pkg, &path, rules)
                 && first_emitted_error.is_none()
             {
                 first_emitted_error = Some(e);
@@ -89,6 +91,7 @@ fn emit_parse_pkg_diagnostics(
     workspace: &Workspace<'_>,
     pkg: &Package,
     path: &Path,
+    rules: &[ParsePassRule],
 ) -> CargoResult<()> {
     let mut stats = DiagnosticStats::new();
 
@@ -104,7 +107,7 @@ fn emit_parse_pkg_diagnostics(
         .cloned()
         .unwrap_or(manifest::TomlToolLints::default());
 
-    for rule in PARSE_PASS_RULES {
+    for rule in rules {
         match rule {
             ParsePassRule::DiagnosticManifest { rule } => {
                 rule(pkg.into(), &path, &mut stats, workspace.gctx())?;
@@ -144,7 +147,10 @@ fn emit_parse_pkg_diagnostics(
     Ok(())
 }
 
-fn emit_parse_ws_diagnostics(workspace: &Workspace<'_>) -> CargoResult<()> {
+fn emit_parse_ws_diagnostics(
+    workspace: &Workspace<'_>,
+    rules: &[ParsePassRule],
+) -> CargoResult<()> {
     let mut stats = DiagnosticStats::new();
 
     let cargo_lints = match workspace.root_maybe() {
@@ -168,7 +174,7 @@ fn emit_parse_ws_diagnostics(workspace: &Workspace<'_>) -> CargoResult<()> {
     .cloned()
     .unwrap_or(manifest::TomlToolLints::default());
 
-    for rule in PARSE_PASS_RULES {
+    for rule in rules {
         match rule {
             ParsePassRule::DiagnosticManifest { rule } => {
                 rule(
