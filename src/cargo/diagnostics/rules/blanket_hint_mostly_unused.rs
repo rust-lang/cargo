@@ -57,7 +57,7 @@ hint-mostly-unused = true
 };
 
 #[instrument(skip_all)]
-pub(crate) fn blanket_hint_mostly_unused(
+pub(crate) fn lint_workspace(
     ws: &Workspace<'_>,
     maybe_pkg: &MaybePackage,
     path: &Path,

@@ -18,27 +18,6 @@ pub mod unused_dependencies;
 mod unused_workspace_dependencies;
 mod unused_workspace_package_fields;
 
-pub(crate) use blanket_hint_mostly_unused::blanket_hint_mostly_unused;
-pub(crate) use deferred_parse_diagnostics::deferred_parse_diagnostics;
-pub(crate) use im_a_teapot::check_im_a_teapot;
-pub(crate) use implicit_minimum_version_req::implicit_minimum_version_req_pkg;
-pub(crate) use implicit_minimum_version_req::implicit_minimum_version_req_ws;
-pub(crate) use missing_lints_features::missing_lints_features;
-pub(crate) use missing_lints_inheritance::missing_lints_inheritance;
-pub(crate) use non_kebab_case_bins::non_kebab_case_bins;
-pub(crate) use non_kebab_case_features::non_kebab_case_features;
-pub(crate) use non_kebab_case_packages::non_kebab_case_packages;
-pub(crate) use non_snake_case_features::non_snake_case_features;
-pub(crate) use non_snake_case_packages::non_snake_case_packages;
-pub(crate) use redundant_homepage::redundant_homepage;
-pub(crate) use redundant_readme::redundant_readme;
-pub(crate) use text_direction_codepoint_in_comment::text_direction_codepoint_in_comment;
-pub(crate) use text_direction_codepoint_in_literal::text_direction_codepoint_in_literal;
-pub(crate) use unknown_lints::unknown_lints;
-pub(crate) use unused_dependencies::unused_build_dependencies_no_build_rs;
-pub(crate) use unused_workspace_dependencies::unused_workspace_dependencies;
-pub(crate) use unused_workspace_package_fields::unused_workspace_package_fields;
-
 use super::LintGroup;
 use super::LintLevel;
 use super::passes::ParsePassRule;
@@ -46,64 +25,64 @@ use crate::core::Feature;
 
 pub const PARSE_PASS_RULES: &[ParsePassRule] = &[
     ParsePassRule::DiagnosticManifest {
-        rule: deferred_parse_diagnostics,
+        rule: deferred_parse_diagnostics::diagnose_manifest,
     },
     ParsePassRule::LintManifest {
-        rule: missing_lints_features,
+        rule: missing_lints_features::diagnose_manifest,
     },
     ParsePassRule::LintManifest {
-        rule: unknown_lints,
+        rule: unknown_lints::lint_manifest,
     },
     ParsePassRule::LintWorkspace {
-        rule: unused_workspace_package_fields,
+        rule: unused_workspace_package_fields::lint_workspace,
     },
     ParsePassRule::LintWorkspace {
-        rule: unused_workspace_dependencies,
+        rule: unused_workspace_dependencies::lint_workspace,
     },
     ParsePassRule::LintWorkspace {
-        rule: implicit_minimum_version_req_ws,
+        rule: implicit_minimum_version_req::lint_workspace,
     },
     ParsePassRule::LintManifest {
-        rule: text_direction_codepoint_in_comment,
+        rule: text_direction_codepoint_in_comment::lint_manifest,
     },
     ParsePassRule::LintManifest {
-        rule: text_direction_codepoint_in_literal,
+        rule: text_direction_codepoint_in_literal::lint_manifest,
     },
     ParsePassRule::LintWorkspace {
-        rule: blanket_hint_mostly_unused,
+        rule: blanket_hint_mostly_unused::lint_workspace,
     },
     ParsePassRule::LintPackage {
-        rule: check_im_a_teapot,
+        rule: im_a_teapot::lint_package,
     },
     ParsePassRule::LintPackage {
-        rule: implicit_minimum_version_req_pkg,
+        rule: implicit_minimum_version_req::lint_package,
     },
     ParsePassRule::LintPackage {
-        rule: non_kebab_case_packages,
+        rule: non_kebab_case_packages::lint_package,
     },
     ParsePassRule::LintPackage {
-        rule: non_snake_case_packages,
+        rule: non_snake_case_packages::lint_package,
     },
     ParsePassRule::LintPackage {
-        rule: non_kebab_case_bins,
+        rule: non_kebab_case_bins::lint_package,
     },
     ParsePassRule::LintPackage {
-        rule: non_kebab_case_features,
+        rule: non_kebab_case_features::lint_package,
     },
     ParsePassRule::LintPackage {
-        rule: non_snake_case_features,
+        rule: non_snake_case_features::lint_package,
     },
     ParsePassRule::LintPackage {
-        rule: unused_build_dependencies_no_build_rs,
+        rule: unused_dependencies::lint_package,
     },
     ParsePassRule::LintPackage {
-        rule: redundant_readme,
+        rule: redundant_readme::lint_package,
     },
     ParsePassRule::LintPackage {
-        rule: redundant_homepage,
+        rule: redundant_homepage::lint_package,
     },
     ParsePassRule::LintPackage {
-        rule: missing_lints_inheritance,
+        rule: missing_lints_inheritance::lint_package,
     },
 ];
 

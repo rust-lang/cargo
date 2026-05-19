@@ -85,7 +85,7 @@ name = "foo"
 /// This must be determined independent of the compiler since there are no build targets to pass to
 /// rustc to report on these.
 #[instrument(skip_all)]
-pub(crate) fn unused_build_dependencies_no_build_rs(
+pub(crate) fn lint_package(
     _ws: &Workspace<'_>,
     pkg: &Package,
     manifest_path: &Path,

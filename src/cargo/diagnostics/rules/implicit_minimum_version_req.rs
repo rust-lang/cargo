@@ -85,7 +85,7 @@ serde = "1.0.219"
 };
 
 #[instrument(skip_all)]
-pub(crate) fn implicit_minimum_version_req_pkg(
+pub(crate) fn lint_package(
     _ws: &Workspace<'_>,
     pkg: &Package,
     manifest_path: &Path,
@@ -151,7 +151,7 @@ pub(crate) fn implicit_minimum_version_req_pkg(
 }
 
 #[instrument(skip_all)]
-pub(crate) fn implicit_minimum_version_req_ws(
+pub(crate) fn lint_workspace(
     ws: &Workspace<'_>,
     maybe_pkg: &MaybePackage,
     manifest_path: &Path,

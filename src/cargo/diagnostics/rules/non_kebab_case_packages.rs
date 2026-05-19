@@ -59,7 +59,7 @@ name = "foo-bar"
 };
 
 #[instrument(skip_all)]
-pub(crate) fn non_kebab_case_packages(
+pub(crate) fn lint_package(
     _ws: &Workspace<'_>,
     pkg: &Package,
     manifest_path: &Path,
@@ -79,10 +79,10 @@ pub(crate) fn non_kebab_case_packages(
 
     let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
 
-    lint_package(pkg, &manifest_path, lint_level, source, stats, gctx)
+    lint_package_inner(pkg, &manifest_path, lint_level, source, stats, gctx)
 }
 
-fn lint_package(
+fn lint_package_inner(
     pkg: &Package,
     manifest_path: &str,
     lint_level: LintLevel,

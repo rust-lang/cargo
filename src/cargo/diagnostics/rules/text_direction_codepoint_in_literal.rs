@@ -49,7 +49,7 @@ by default we deny their use.
 };
 
 #[instrument(skip_all)]
-pub(crate) fn text_direction_codepoint_in_literal(
+pub(crate) fn lint_manifest(
     manifest: ManifestFor<'_>,
     manifest_path: &Path,
     cargo_lints: &TomlToolLints,
