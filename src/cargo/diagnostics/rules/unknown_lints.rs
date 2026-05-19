@@ -14,6 +14,7 @@ use super::SUSPICIOUS;
 use super::find_lint_or_group;
 use crate::CargoResult;
 use crate::GlobalContext;
+use crate::core::MaybePackage;
 use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevel;
@@ -62,13 +63,46 @@ pub(crate) fn lint_manifest(
         return Ok(());
     }
 
-    lint_manifest_inner(manifest, manifest_path, level, cargo_lints, stats, gctx)
+    let normalized_toml = match &manifest {
+        ManifestFor::Package(pkg) => pkg.manifest().normalized_toml(),
+        ManifestFor::Workspace {
+            maybe_pkg: MaybePackage::Virtual(vm),
+            ..
+        } => vm.normalized_toml(),
+        ManifestFor::Workspace {
+            maybe_pkg: MaybePackage::Package(_),
+            ..
+        } => {
+            // For real manifests, lint as a package, rather than a workspace
+            return Ok(());
+        }
+    };
+
+    let ws_lints = normalized_toml
+        .workspace
+        .as_ref()
+        .and_then(|ws| ws.lints.as_ref())
+        .and_then(|lints| lints.get("cargo"));
+    let pkg_lints = normalized_toml
+        .lints
+        .as_ref()
+        .map(|lints| &lints.lints)
+        .and_then(|lints| lints.get("cargo"));
+
+    if let Some(cargo_lints) = ws_lints {
+        lint_manifest_inner(&manifest, manifest_path, &level, cargo_lints, stats, gctx)?;
+    }
+    if let Some(cargo_lints) = pkg_lints {
+        lint_manifest_inner(&manifest, manifest_path, &level, cargo_lints, stats, gctx)?;
+    }
+
+    Ok(())
 }
 
 fn lint_manifest_inner(
-    manifest: ManifestFor<'_>,
+    manifest: &ManifestFor<'_>,
     manifest_path: &Path,
-    level: LintLevelProduct,
+    level: &LintLevelProduct,
     cargo_lints: &TomlToolLints,
     stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
@@ -127,7 +161,7 @@ fn lint_manifest_inner(
         }
 
         if emitted_source.is_none() {
-            emitted_source = Some(LINT.emitted_source(lint_level, source));
+            emitted_source = Some(LINT.emitted_source(*lint_level, *source));
             group = group.element(Level::NOTE.message(emitted_source.as_ref().unwrap()));
         }
         if let Some(help) = help.as_ref() {
@@ -135,7 +169,7 @@ fn lint_manifest_inner(
         }
         report.push(group);
 
-        stats.record_lint(lint_level);
+        stats.record_lint(*lint_level);
         gctx.shell().print_report(&report, lint_level.force())?;
     }
 
