@@ -220,11 +220,13 @@ mod tests {
     use snapbox::ToDebug;
     use std::collections::HashSet;
 
+    use super::*;
+
     #[test]
     fn ensure_lint_groups_do_not_default_to_forbid() {
-        let forbid_groups = super::LINT_GROUPS
+        let forbid_groups = LINT_GROUPS
             .iter()
-            .filter(|g| matches!(g.default_level, super::LintLevel::Forbid))
+            .filter(|g| matches!(g.default_level, LintLevel::Forbid))
             .collect::<Vec<_>>();
 
         assert!(
@@ -241,7 +243,7 @@ mod tests {
         let location = std::panic::Location::caller();
         println!("\nTo fix this test, sort `LINTS` in {}\n", location.file(),);
 
-        let actual = super::LINTS
+        let actual = LINTS
             .iter()
             .map(|l| l.name.to_uppercase())
             .collect::<Vec<_>>();
@@ -259,7 +261,7 @@ mod tests {
             "\nTo fix this test, sort `LINT_GROUPS` in {}\n",
             location.file(),
         );
-        let actual = super::LINT_GROUPS
+        let actual = LINT_GROUPS
             .iter()
             .map(|l| l.name.to_uppercase())
             .collect::<Vec<_>>();
@@ -288,7 +290,7 @@ mod tests {
             assert!(expected.insert(lint_name.into()), "duplicate lint found");
         }
 
-        let actual = super::LINTS
+        let actual = LINTS
             .iter()
             .map(|l| l.name.to_string())
             .collect::<HashSet<_>>();
@@ -326,7 +328,7 @@ mod tests {
                 }
             })
             .collect::<HashSet<_>>();
-        let actual = super::LINT_GROUPS
+        let actual = LINT_GROUPS
             .iter()
             .map(|l| l.name.to_uppercase())
             .collect::<HashSet<_>>();
