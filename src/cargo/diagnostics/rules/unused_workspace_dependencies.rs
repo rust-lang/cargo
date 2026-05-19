@@ -19,6 +19,7 @@ use crate::core::Workspace;
 use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevel;
+use crate::diagnostics::LintLevelProduct;
 use crate::diagnostics::get_key_value_span;
 use crate::diagnostics::rel_cwd_manifest_path;
 
@@ -56,7 +57,10 @@ pub(crate) fn lint_workspace(
     stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let (lint_level, source) = LINT.level(
+    let LintLevelProduct {
+        level: lint_level,
+        source,
+    } = LINT.level(
         cargo_lints,
         ws.lowest_rust_version(),
         maybe_pkg.unstable_features(),

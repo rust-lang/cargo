@@ -16,6 +16,7 @@ use crate::core::Workspace;
 use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevel;
+use crate::diagnostics::LintLevelProduct;
 use crate::diagnostics::rel_cwd_manifest_path;
 
 pub static LINT: &Lint = &Lint {
@@ -63,7 +64,10 @@ pub(crate) fn lint_package(
     stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let (lint_level, source) = LINT.level(
+    let LintLevelProduct {
+        level: lint_level,
+        source,
+    } = LINT.level(
         cargo_lints,
         pkg.rust_version(),
         pkg.manifest().unstable_features(),

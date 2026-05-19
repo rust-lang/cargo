@@ -21,6 +21,7 @@ use crate::core::MaybePackage;
 use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevel;
+use crate::diagnostics::LintLevelProduct;
 use crate::diagnostics::ManifestFor;
 use crate::diagnostics::rel_cwd_manifest_path;
 
@@ -56,7 +57,10 @@ pub(crate) fn lint_manifest(
     stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let (lint_level, source) = manifest.lint_level(cargo_lints, LINT);
+    let LintLevelProduct {
+        level: lint_level,
+        source,
+    } = manifest.lint_level(cargo_lints, LINT);
     if lint_level == LintLevel::Allow {
         return Ok(());
     }

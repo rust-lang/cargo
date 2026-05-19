@@ -17,6 +17,7 @@ use crate::core::Workspace;
 use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevel;
+use crate::diagnostics::LintLevelProduct;
 use crate::diagnostics::get_key_value_span;
 use crate::diagnostics::rel_cwd_manifest_path;
 
@@ -35,13 +36,19 @@ pub(crate) fn lint_package(
     _ws: &Workspace<'_>,
     pkg: &Package,
     path: &Path,
-    pkg_lints: &TomlToolLints,
+    cargo_lints: &TomlToolLints,
     stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let manifest = pkg.manifest();
-    let (lint_level, source) =
-        LINT.level(pkg_lints, pkg.rust_version(), manifest.unstable_features());
+    let LintLevelProduct {
+        level: lint_level,
+        source,
+    } = LINT.level(
+        cargo_lints,
+        pkg.rust_version(),
+        manifest.unstable_features(),
+    );
 
     if lint_level == LintLevel::Allow {
         return Ok(());

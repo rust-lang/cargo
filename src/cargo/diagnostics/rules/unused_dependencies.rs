@@ -18,6 +18,7 @@ use crate::core::Workspace;
 use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevel;
+use crate::diagnostics::LintLevelProduct;
 use crate::diagnostics::get_key_value_span;
 use crate::diagnostics::rel_cwd_manifest_path;
 
@@ -93,7 +94,10 @@ pub(crate) fn lint_package(
     stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let (lint_level, reason) = LINT.level(
+    let LintLevelProduct {
+        level: lint_level,
+        source,
+    } = LINT.level(
         cargo_lints,
         pkg.rust_version(),
         pkg.manifest().unstable_features(),
@@ -124,7 +128,7 @@ pub(crate) fn lint_package(
         .enumerate()
     {
         let level = lint_level.to_diagnostic_level();
-        let emitted_source = LINT.emitted_source(lint_level, reason);
+        let emitted_source = LINT.emitted_source(lint_level, source);
 
         let mut primary = Group::with_title(level.primary_title(LINT.desc));
         if let Some(document) = document
