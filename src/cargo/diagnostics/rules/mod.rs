@@ -41,7 +41,71 @@ pub use unused_workspace_package_fields::unused_workspace_package_fields;
 
 use super::LintGroup;
 use super::LintLevel;
+use super::passes::ParsePassRule;
 use crate::core::Feature;
+
+pub const PARSE_PASS_RULES: &[ParsePassRule] = &[
+    ParsePassRule::DiagnosticManifest {
+        rule: deferred_parse_diagnostics,
+    },
+    ParsePassRule::LintManifest {
+        rule: missing_lints_features,
+    },
+    ParsePassRule::LintManifest {
+        rule: unknown_lints,
+    },
+    ParsePassRule::LintWorkspace {
+        rule: unused_workspace_package_fields,
+    },
+    ParsePassRule::LintWorkspace {
+        rule: unused_workspace_dependencies,
+    },
+    ParsePassRule::LintWorkspace {
+        rule: implicit_minimum_version_req_ws,
+    },
+    ParsePassRule::LintManifest {
+        rule: text_direction_codepoint_in_comment,
+    },
+    ParsePassRule::LintManifest {
+        rule: text_direction_codepoint_in_literal,
+    },
+    ParsePassRule::LintWorkspace {
+        rule: blanket_hint_mostly_unused,
+    },
+    ParsePassRule::LintPackage {
+        rule: check_im_a_teapot,
+    },
+    ParsePassRule::LintPackage {
+        rule: implicit_minimum_version_req_pkg,
+    },
+    ParsePassRule::LintPackage {
+        rule: non_kebab_case_packages,
+    },
+    ParsePassRule::LintPackage {
+        rule: non_snake_case_packages,
+    },
+    ParsePassRule::LintPackage {
+        rule: non_kebab_case_bins,
+    },
+    ParsePassRule::LintPackage {
+        rule: non_kebab_case_features,
+    },
+    ParsePassRule::LintPackage {
+        rule: non_snake_case_features,
+    },
+    ParsePassRule::LintPackage {
+        rule: unused_build_dependencies_no_build_rs,
+    },
+    ParsePassRule::LintPackage {
+        rule: redundant_readme,
+    },
+    ParsePassRule::LintPackage {
+        rule: redundant_homepage,
+    },
+    ParsePassRule::LintPackage {
+        rule: missing_lints_inheritance,
+    },
+];
 
 pub static LINTS: &[&crate::diagnostics::Lint] = &[
     blanket_hint_mostly_unused::LINT,
