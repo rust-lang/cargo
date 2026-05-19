@@ -1361,10 +1361,10 @@ fn build_base_args(
 
     unit.kind.add_target_arg(cmd);
 
-    add_codegen_linker(cmd, build_runner, unit, bcx.gctx.target_applies_to_host()?);
+    cmd.args(add_codegen_linker(build_runner, unit)?);
 
     if incremental {
-        add_codegen_incremental(cmd, build_runner, unit)
+        cmd.args(add_codegen_incremental(build_runner, unit));
     }
 
     let pkg_hint_mostly_unused = match hints.mostly_unused {
@@ -2041,11 +2041,10 @@ pub fn extern_args(
 
 /// Adds `-C linker=<path>` if specified.
 fn add_codegen_linker(
-    cmd: &mut ProcessBuilder,
     build_runner: &BuildRunner<'_, '_>,
     unit: &Unit,
-    target_applies_to_host: bool,
-) {
+) -> CargoResult<impl Iterator<Item = OsString>> {
+    let target_applies_to_host = build_runner.bcx.gctx.target_applies_to_host()?;
     let linker = if unit.target.for_host() && !target_applies_to_host {
         build_runner
             .compilation
@@ -2058,23 +2057,25 @@ fn add_codegen_linker(
             .map(|s| s.as_os_str())
     };
 
-    if let Some(linker) = linker {
-        let mut arg = OsString::from("linker=");
-        arg.push(linker);
-        cmd.arg("-C").arg(arg);
-    }
+    Ok(linker
+        .map(|linker| {
+            let mut arg = OsString::from("linker=");
+            arg.push(linker);
+            ["-C".into(), arg]
+        })
+        .into_iter()
+        .flatten())
 }
 
 /// Adds `-C incremental=<path>`.
 fn add_codegen_incremental(
-    cmd: &mut ProcessBuilder,
     build_runner: &BuildRunner<'_, '_>,
     unit: &Unit,
-) {
+) -> impl Iterator<Item = OsString> {
     let dir = build_runner.files().incremental_dir(&unit);
     let mut arg = OsString::from("incremental=");
-    arg.push(dir.as_os_str());
-    cmd.arg("-C").arg(arg);
+    arg.push(dir);
+    ["-C".into(), arg].into_iter()
 }
 
 fn envify(s: &str) -> String {
