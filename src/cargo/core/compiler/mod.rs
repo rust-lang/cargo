@@ -808,7 +808,7 @@ fn prepare_rustc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResult
     if let Some(args) = build_runner.bcx.extra_args_for(unit) {
         base.args(args);
     }
-    base.args(&unit.rustflags);
+    base.args(unit.rustflags.as_ref());
     if gctx.cli_unstable().binary_dep_depinfo {
         base.arg("-Z").arg("binary-dep-depinfo");
     }
@@ -970,7 +970,7 @@ fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResu
     if let Some(args) = build_runner.bcx.extra_args_for(unit) {
         rustdoc.args(args);
     }
-    rustdoc.args(&unit.rustdocflags);
+    rustdoc.args(unit.rustdocflags.as_ref());
 
     if !crate_version_flag_already_present(&rustdoc) {
         append_crate_version_flag(unit, &mut rustdoc);

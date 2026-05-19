@@ -223,7 +223,7 @@ pub fn print<'a>(
         let target_info = TargetInfo::new(gctx, &build_config.requested_kinds, &rustc, *kind)?;
         let mut process = rustc.process();
         apply_env_config(gctx, &mut process)?;
-        process.args(&target_info.rustflags);
+        process.args(target_info.rustflags.as_ref());
         if let Some(args) = target_rustc_args {
             process.args(args);
         }
