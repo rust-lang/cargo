@@ -1231,17 +1231,9 @@ fn build_base_args(
 
     let bcx = build_runner.bcx;
     let Profile {
-        ref opt_level,
         codegen_backend,
-        codegen_units,
-        debuginfo,
-        debug_assertions,
-        split_debuginfo,
-        overflow_checks,
-        rpath,
         ref panic,
         incremental,
-        strip,
         rustflags: profile_rustflags,
         trim_paths,
         hint_mostly_unused: profile_hint_mostly_unused,
@@ -1317,16 +1309,9 @@ fn build_base_args(
         cmd.arg("-C").arg("prefer-dynamic");
     }
 
-    if opt_level.as_str() != "0" {
-        cmd.arg("-C").arg(&format!("opt-level={}", opt_level));
-    }
+    cmd.args(opt_level_args(unit));
 
-    if *panic != PanicStrategy::Unwind {
-        cmd.arg("-C").arg(format!("panic={}", panic));
-    }
-    if *panic == PanicStrategy::ImmediateAbort {
-        cmd.arg("-Z").arg("unstable-options");
-    }
+    cmd.args(panic_strategy_args(unit));
 
     cmd.args(&lto_args(build_runner, unit));
 
@@ -1334,31 +1319,9 @@ fn build_base_args(
         cmd.arg("-Z").arg(&format!("codegen-backend={}", backend));
     }
 
-    if let Some(n) = codegen_units {
-        cmd.arg("-C").arg(&format!("codegen-units={}", n));
-    }
+    cmd.args(codegen_units_args(unit));
 
-    let debuginfo = debuginfo.into_inner();
-    // Shorten the number of arguments if possible.
-    if debuginfo != TomlDebugInfo::None {
-        cmd.arg("-C").arg(format!("debuginfo={debuginfo}"));
-        // This is generally just an optimization on build time so if we don't
-        // pass it then it's ok. The values for the flag (off, packed, unpacked)
-        // may be supported or not depending on the platform, so availability is
-        // checked per-value. For example, at the time of writing this code, on
-        // Windows the only stable valid value for split-debuginfo is "packed",
-        // while on Linux "unpacked" is also stable.
-        if let Some(split) = split_debuginfo {
-            if build_runner
-                .bcx
-                .target_data
-                .info(unit.kind)
-                .supports_debuginfo_split(split)
-            {
-                cmd.arg("-C").arg(format!("split-debuginfo={split}"));
-            }
-        }
-    }
+    cmd.args(debuginfo_args(build_runner, unit));
 
     if let Some(trim_paths) = trim_paths {
         trim_paths_args(cmd, build_runner, unit, &trim_paths)?;
@@ -1367,26 +1330,7 @@ fn build_base_args(
     cmd.args(unit.pkg.manifest().lint_rustflags());
     cmd.args(&profile_rustflags);
 
-    // `-C overflow-checks` is implied by the setting of `-C debug-assertions`,
-    // so we only need to provide `-C overflow-checks` if it differs from
-    // the value of `-C debug-assertions` we would provide.
-    if opt_level.as_str() != "0" {
-        if debug_assertions {
-            cmd.args(&["-C", "debug-assertions=on"]);
-            if !overflow_checks {
-                cmd.args(&["-C", "overflow-checks=off"]);
-            }
-        } else if overflow_checks {
-            cmd.args(&["-C", "overflow-checks=on"]);
-        }
-    } else if !debug_assertions {
-        cmd.args(&["-C", "debug-assertions=off"]);
-        if overflow_checks {
-            cmd.args(&["-C", "overflow-checks=on"]);
-        }
-    } else if !overflow_checks {
-        cmd.args(&["-C", "overflow-checks=off"]);
-    }
+    cmd.args(debug_assertions_overflow_checks_args(unit));
 
     if test && unit.target.harness() {
         cmd.arg("--test");
@@ -1408,17 +1352,9 @@ fn build_base_args(
     cmd.args(&features_args(unit));
     cmd.args(&check_cfg_args(unit));
 
-    let meta = build_runner.files().metadata(unit);
-    cmd.arg("-C")
-        .arg(&format!("metadata={}", meta.c_metadata()));
-    if let Some(c_extra_filename) = meta.c_extra_filename() {
-        cmd.arg("-C")
-            .arg(&format!("extra-filename=-{c_extra_filename}"));
-    }
+    cmd.args(metadata_args(build_runner, unit));
 
-    if rpath {
-        cmd.arg("-C").arg("rpath");
-    }
+    cmd.args(rpath_args(unit));
 
     cmd.arg("--out-dir")
         .arg(&build_runner.files().output_dir(unit));
@@ -1462,10 +1398,7 @@ fn build_base_args(
         }
     }
 
-    let strip = strip.into_inner();
-    if strip != StripInner::None {
-        cmd.arg("-C").arg(format!("strip={}", strip));
-    }
+    cmd.args(strip_args(unit));
 
     if unit.is_std {
         // -Zforce-unstable-if-unmarked prevents the accidental use of
@@ -1479,6 +1412,138 @@ fn build_base_args(
     }
 
     Ok(())
+}
+
+/// Returns `-C opt-level=<op-level>` if `opt-level` isn't `"0"`
+fn opt_level_args(unit: &Unit) -> impl Iterator<Item = String> {
+    let opt_level = unit.profile.opt_level;
+
+    (opt_level.as_str() != "0")
+        .then(|| ["-C".into(), format!("opt-level={}", opt_level)])
+        .into_iter()
+        .flatten()
+}
+
+/// Returns `-C panic=<strategy>` if `<strategy>` isn't `Unwind`
+///
+/// Also returns `-Z unstable-options` as needed
+fn panic_strategy_args(unit: &Unit) -> impl Iterator<Item = String> {
+    let panic = unit.profile.panic;
+    let mut args = Vec::new();
+
+    if panic != PanicStrategy::Unwind {
+        args.push("-C".into());
+        args.push(format!("panic={}", panic));
+    }
+    if panic == PanicStrategy::ImmediateAbort {
+        args.push("-Z".into());
+        args.push("unstable-options".into());
+    }
+    args.into_iter()
+}
+
+/// Returns `-C codegen-units=<number>` if a number has been set
+fn codegen_units_args(unit: &Unit) -> impl Iterator<Item = String> {
+    let codegen_units = unit.profile.codegen_units;
+
+    codegen_units
+        .map(|n| ["-C".into(), format!("codegen-units={}", n)])
+        .into_iter()
+        .flatten()
+}
+
+/// Returns `-C debuginfo=<debuginfo>` and `-C split-debuginfo=<split>` if provided
+fn debuginfo_args(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> impl Iterator<Item = String> {
+    let debuginfo = unit.profile.debuginfo.into_inner();
+    let split_debuginfo = unit.profile.split_debuginfo;
+    let mut args = Vec::new();
+
+    // Shorten the number of arguments if possible.
+    if debuginfo != TomlDebugInfo::None {
+        args.push("-C".into());
+        args.push(format!("debuginfo={debuginfo}"));
+        // This is generally just an optimization on build time so if we don't
+        // pass it then it's ok. The values for the flag (off, packed, unpacked)
+        // may be supported or not depending on the platform, so availability is
+        // checked per-value. For example, at the time of writing this code, on
+        // Windows the only stable valid value for split-debuginfo is "packed",
+        // while on Linux "unpacked" is also stable.
+        if let Some(split) = split_debuginfo {
+            if build_runner
+                .bcx
+                .target_data
+                .info(unit.kind)
+                .supports_debuginfo_split(split)
+            {
+                args.push("-C".into());
+                args.push(format!("split-debuginfo={split}"));
+            }
+        }
+    }
+    args.into_iter()
+}
+
+/// Returns `-C debug-assertions=<on/off>` and `-C overflow-checks=<on/off>` if the settings differs from the default
+fn debug_assertions_overflow_checks_args(unit: &Unit) -> impl Iterator<Item = &'static str> {
+    let opt_level = unit.profile.opt_level;
+    let debug_assertions = unit.profile.debug_assertions;
+    let overflow_checks = unit.profile.overflow_checks;
+    let mut args = Vec::new();
+
+    // `-C overflow-checks` is implied by the setting of `-C debug-assertions`,
+    // so we only need to provide `-C overflow-checks` if it differs from
+    // the value of `-C debug-assertions` we would provide.
+    if opt_level.as_str() != "0" {
+        if debug_assertions {
+            args.extend(["-C", "debug-assertions=on"]);
+            if !overflow_checks {
+                args.extend(["-C", "overflow-checks=off"]);
+            }
+        } else if overflow_checks {
+            args.extend(["-C", "overflow-checks=on"]);
+        }
+    } else if !debug_assertions {
+        args.extend(["-C", "debug-assertions=off"]);
+        if overflow_checks {
+            args.extend(["-C", "overflow-checks=on"]);
+        }
+    } else if !overflow_checks {
+        args.extend(["-C", "overflow-checks=off"]);
+    }
+    args.into_iter()
+}
+
+/// Returns `-C metadata=<argument>` and `-C extra-filename=<file-name>` if relevant
+fn metadata_args(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> impl Iterator<Item = String> {
+    let meta = build_runner.files().metadata(unit);
+    ["-C".into(), format!("metadata={}", meta.c_metadata())]
+        .into_iter()
+        .chain(
+            meta.c_extra_filename()
+                .map(|c_extra_filename| {
+                    ["-C".into(), format!("extra-filename=-{c_extra_filename}")]
+                })
+                .into_iter()
+                .flatten(),
+        )
+}
+
+/// Returns `-C rpath` if rpath is enabled
+fn rpath_args(unit: &Unit) -> impl Iterator<Item = &'static str> {
+    unit.profile
+        .rpath
+        .then(|| ["-C", "rpath"])
+        .into_iter()
+        .flatten()
+}
+
+/// Returns `-C strip=<strip-argument>` if `strip` is not `None`
+fn strip_args(unit: &Unit) -> impl Iterator<Item = String> {
+    let strip = unit.profile.strip.into_inner();
+    (strip != StripInner::None)
+        .then(|| ["-C".into(), format!("strip={}", strip)])
+        .into_iter()
+        .flatten()
 }
 
 /// All active features for the unit passed as `--cfg features=<feature-name>`.
