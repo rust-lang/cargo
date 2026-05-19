@@ -110,17 +110,13 @@ fn emit_parse_pkg_diagnostics(
     for rule in rules {
         match rule {
             ParsePassRule::DiagnosticManifest { rule } => {
-                rule(pkg.into(), &path, &mut stats, workspace.gctx())?;
+                let manifest = pkg.into();
+                rule(manifest, &path, &mut stats, workspace.gctx())?;
             }
             ParsePassRule::LintManifest { rule } => {
                 if workspace.gctx().cli_unstable().cargo_lints {
-                    rule(
-                        pkg.into(),
-                        &path,
-                        &cargo_lints,
-                        &mut stats,
-                        workspace.gctx(),
-                    )?;
+                    let manifest = pkg.into();
+                    rule(manifest, &path, &cargo_lints, &mut stats, workspace.gctx())?;
                 }
             }
             ParsePassRule::DiagnosticWorkspace { .. } | ParsePassRule::LintWorkspace { .. } => {}
@@ -177,8 +173,9 @@ fn emit_parse_ws_diagnostics(
     for rule in rules {
         match rule {
             ParsePassRule::DiagnosticManifest { rule } => {
+                let manifest = (workspace, workspace.root_maybe()).into();
                 rule(
-                    (workspace, workspace.root_maybe()).into(),
+                    manifest,
                     workspace.root_manifest(),
                     &mut stats,
                     workspace.gctx(),
@@ -186,8 +183,9 @@ fn emit_parse_ws_diagnostics(
             }
             ParsePassRule::LintManifest { rule } => {
                 if workspace.gctx().cli_unstable().cargo_lints {
+                    let manifest = (workspace, workspace.root_maybe()).into();
                     rule(
-                        (workspace, workspace.root_maybe()).into(),
+                        manifest,
                         workspace.root_manifest(),
                         &cargo_lints,
                         &mut stats,
