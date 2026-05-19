@@ -63,7 +63,7 @@ repository = "https://github.com/rust-lang/cargo/"
 };
 
 #[instrument(skip_all)]
-pub fn redundant_homepage(
+pub(crate) fn redundant_homepage(
     _ws: &Workspace<'_>,
     pkg: &Package,
     manifest_path: &Path,

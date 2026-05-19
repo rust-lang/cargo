@@ -64,7 +64,7 @@ name = "foo-bar"
 };
 
 #[instrument(skip_all)]
-pub fn non_kebab_case_bins(
+pub(crate) fn non_kebab_case_bins(
     ws: &Workspace<'_>,
     pkg: &Package,
     manifest_path: &Path,

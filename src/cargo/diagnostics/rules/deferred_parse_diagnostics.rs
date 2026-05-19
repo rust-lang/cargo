@@ -10,7 +10,7 @@ use crate::diagnostics::ManifestFor;
 use crate::diagnostics::rel_cwd_manifest_path;
 
 #[instrument(skip_all)]
-pub fn deferred_parse_diagnostics(
+pub(crate) fn deferred_parse_diagnostics(
     manifest: ManifestFor<'_>,
     manifest_path: &Path,
     stats: &mut DiagnosticStats,

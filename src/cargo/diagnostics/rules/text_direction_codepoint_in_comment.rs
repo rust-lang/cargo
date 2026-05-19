@@ -48,7 +48,7 @@ by default we deny their use.
 };
 
 #[instrument(skip_all)]
-pub fn text_direction_codepoint_in_comment(
+pub(crate) fn text_direction_codepoint_in_comment(
     manifest: ManifestFor<'_>,
     manifest_path: &Path,
     cargo_lints: &TomlToolLints,

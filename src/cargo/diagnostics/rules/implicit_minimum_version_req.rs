@@ -85,7 +85,7 @@ serde = "1.0.219"
 };
 
 #[instrument(skip_all)]
-pub fn implicit_minimum_version_req_pkg(
+pub(crate) fn implicit_minimum_version_req_pkg(
     _ws: &Workspace<'_>,
     pkg: &Package,
     manifest_path: &Path,
@@ -151,7 +151,7 @@ pub fn implicit_minimum_version_req_pkg(
 }
 
 #[instrument(skip_all)]
-pub fn implicit_minimum_version_req_ws(
+pub(crate) fn implicit_minimum_version_req_ws(
     ws: &Workspace<'_>,
     maybe_pkg: &MaybePackage,
     manifest_path: &Path,
@@ -232,7 +232,7 @@ pub fn implicit_minimum_version_req_ws(
     Ok(())
 }
 
-pub fn span_of_version_req<'doc>(
+pub(crate) fn span_of_version_req<'doc>(
     document: &'doc toml::Spanned<toml::de::DeTable<'static>>,
     path: &[&str],
 ) -> Option<std::ops::Range<usize>> {

@@ -55,7 +55,7 @@ workspace = true
 };
 
 #[instrument(skip_all)]
-pub fn missing_lints_inheritance(
+pub(crate) fn missing_lints_inheritance(
     ws: &Workspace<'_>,
     pkg: &Package,
     manifest_path: &Path,

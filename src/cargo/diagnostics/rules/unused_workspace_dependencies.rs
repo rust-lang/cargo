@@ -48,7 +48,7 @@ regex = "1"
 };
 
 #[instrument(skip_all)]
-pub fn unused_workspace_dependencies(
+pub(crate) fn unused_workspace_dependencies(
     ws: &Workspace<'_>,
     maybe_pkg: &MaybePackage,
     manifest_path: &Path,

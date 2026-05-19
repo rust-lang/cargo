@@ -48,7 +48,7 @@ name = "foo"
 };
 
 #[instrument(skip_all)]
-pub fn unused_workspace_package_fields(
+pub(crate) fn unused_workspace_package_fields(
     ws: &Workspace<'_>,
     maybe_pkg: &MaybePackage,
     manifest_path: &Path,

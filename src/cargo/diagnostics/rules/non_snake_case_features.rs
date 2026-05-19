@@ -59,7 +59,7 @@ foo_bar = []
 };
 
 #[instrument(skip_all)]
-pub fn non_snake_case_features(
+pub(crate) fn non_snake_case_features(
     _ws: &Workspace<'_>,
     pkg: &Package,
     manifest_path: &Path,

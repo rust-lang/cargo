@@ -65,7 +65,7 @@ name = "foo"
 };
 
 #[instrument(skip_all)]
-pub fn redundant_readme(
+pub(crate) fn redundant_readme(
     _ws: &Workspace<'_>,
     pkg: &Package,
     manifest_path: &Path,

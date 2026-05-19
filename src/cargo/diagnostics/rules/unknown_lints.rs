@@ -48,7 +48,7 @@ this-lint-does-not-exist = "warn"
 };
 
 #[instrument(skip_all)]
-pub fn unknown_lints(
+pub(crate) fn unknown_lints(
     manifest: ManifestFor<'_>,
     manifest_path: &Path,
     cargo_lints: &TomlToolLints,

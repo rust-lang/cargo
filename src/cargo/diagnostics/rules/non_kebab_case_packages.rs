@@ -59,7 +59,7 @@ name = "foo-bar"
 };
 
 #[instrument(skip_all)]
-pub fn non_kebab_case_packages(
+pub(crate) fn non_kebab_case_packages(
     _ws: &Workspace<'_>,
     pkg: &Package,
     manifest_path: &Path,
