@@ -244,7 +244,15 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
                 let mut unstable_opts = false;
                 let mut args = compiler::extern_args(&self, unit, &mut unstable_opts)?;
                 args.extend(compiler::lib_search_paths(&self, unit)?);
+                args.extend(compiler::opt_level_args(unit).map(Into::into));
+                args.extend(compiler::panic_strategy_args(unit).map(Into::into));
                 args.extend(compiler::lto_args(&self, unit));
+                args.extend(compiler::codegen_units_args(unit).map(Into::into));
+                args.extend(compiler::debuginfo_args(&self, unit).map(Into::into));
+                args.extend(compiler::debug_assertions_overflow_checks_args(unit).map(Into::into));
+                args.extend(compiler::rpath_args(unit).map(Into::into));
+                args.extend(compiler::add_codegen_linker(&self, unit)?);
+                args.extend(compiler::strip_args(unit).map(Into::into));
                 args.extend(compiler::features_args(unit));
                 args.extend(compiler::check_cfg_args(unit));
 
