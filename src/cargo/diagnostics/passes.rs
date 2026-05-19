@@ -227,12 +227,6 @@ fn emit_parse_ws_diagnostics(workspace: &Workspace<'_>) -> CargoResult<()> {
             &mut stats,
             workspace.gctx(),
         )?;
-    }
-
-    // This is a short term hack to allow `blanket_hint_mostly_unused`
-    // to run without requiring `-Zcargo-lints`, which should hopefully
-    // improve the testing experience while we are collecting feedback
-    if workspace.gctx().cli_unstable().profile_hint_mostly_unused {
         blanket_hint_mostly_unused(
             workspace,
             workspace.root_maybe(),

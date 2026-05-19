@@ -19,7 +19,7 @@ hint-mostly-unused = true
         )
         .file("src/main.rs", "fn main() {}")
         .build();
-    p.cargo("check -Zprofile-hint-mostly-unused -v")
+    p.cargo("check -Zprofile-hint-mostly-unused -Zcargo-lints -Zcargo-lints -v")
         .masquerade_as_nightly_cargo(&["profile-hint-mostly-unused", "cargo-lints"])
         .with_stderr_data(str![[r#"
 [WARNING] `hint-mostly-unused` is being blanket applied to all dependencies
@@ -61,7 +61,7 @@ hint-mostly-unused = true
         )
         .file("src/main.rs", "fn main() {}")
         .build();
-    p.cargo("check -Zprofile-hint-mostly-unused -v")
+    p.cargo("check -Zprofile-hint-mostly-unused -Zcargo-lints -v")
         .masquerade_as_nightly_cargo(&["profile-hint-mostly-unused", "cargo-lints"])
         .with_stderr_data(str![[r#"
 [WARNING] `hint-mostly-unused` is being blanket applied to all dependencies
@@ -100,7 +100,7 @@ hint-mostly-unused = true
         )
         .file("src/main.rs", "fn main() {}")
         .build();
-    p.cargo("check -Zprofile-hint-mostly-unused -v")
+    p.cargo("check -Zprofile-hint-mostly-unused -Zcargo-lints -v")
         .masquerade_as_nightly_cargo(&["profile-hint-mostly-unused", "cargo-lints"])
         .with_stderr_data(str![[r#"
 [WARNING] `hint-mostly-unused` is being blanket applied to all dependencies
@@ -148,7 +148,7 @@ authors = []
         .file("foo/src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zprofile-hint-mostly-unused -v")
+    p.cargo("check -Zprofile-hint-mostly-unused -Zcargo-lints -v")
         .masquerade_as_nightly_cargo(&["profile-hint-mostly-unused", "cargo-lints"])
         .with_stderr_data(str![[r#"
 [WARNING] `hint-mostly-unused` is being blanket applied to all dependencies
