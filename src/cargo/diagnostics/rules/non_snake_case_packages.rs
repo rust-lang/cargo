@@ -13,6 +13,7 @@ use super::RESTRICTION;
 use crate::CargoResult;
 use crate::GlobalContext;
 use crate::core::Package;
+use crate::core::Workspace;
 use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevel;
@@ -59,6 +60,7 @@ name = "foo-bar"
 
 #[instrument(skip_all)]
 pub fn non_snake_case_packages(
+    _ws: &Workspace<'_>,
     pkg: &Package,
     manifest_path: &Path,
     cargo_lints: &TomlToolLints,

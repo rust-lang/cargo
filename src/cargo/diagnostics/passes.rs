@@ -171,10 +171,38 @@ fn emit_parse_pkg_diagnostics(
             workspace.gctx(),
         )?;
 
-        check_im_a_teapot(pkg, &path, &cargo_lints, &mut stats, workspace.gctx())?;
-        implicit_minimum_version_req_pkg(pkg, &path, &cargo_lints, &mut stats, workspace.gctx())?;
-        non_kebab_case_packages(pkg, &path, &cargo_lints, &mut stats, workspace.gctx())?;
-        non_snake_case_packages(pkg, &path, &cargo_lints, &mut stats, workspace.gctx())?;
+        check_im_a_teapot(
+            workspace,
+            pkg,
+            &path,
+            &cargo_lints,
+            &mut stats,
+            workspace.gctx(),
+        )?;
+        implicit_minimum_version_req_pkg(
+            workspace,
+            pkg,
+            &path,
+            &cargo_lints,
+            &mut stats,
+            workspace.gctx(),
+        )?;
+        non_kebab_case_packages(
+            workspace,
+            pkg,
+            &path,
+            &cargo_lints,
+            &mut stats,
+            workspace.gctx(),
+        )?;
+        non_snake_case_packages(
+            workspace,
+            pkg,
+            &path,
+            &cargo_lints,
+            &mut stats,
+            workspace.gctx(),
+        )?;
         non_kebab_case_bins(
             workspace,
             pkg,
@@ -183,17 +211,46 @@ fn emit_parse_pkg_diagnostics(
             &mut stats,
             workspace.gctx(),
         )?;
-        non_kebab_case_features(pkg, &path, &cargo_lints, &mut stats, workspace.gctx())?;
-        non_snake_case_features(pkg, &path, &cargo_lints, &mut stats, workspace.gctx())?;
-        unused_build_dependencies_no_build_rs(
+        non_kebab_case_features(
+            workspace,
             pkg,
             &path,
             &cargo_lints,
             &mut stats,
             workspace.gctx(),
         )?;
-        redundant_readme(pkg, &path, &cargo_lints, &mut stats, workspace.gctx())?;
-        redundant_homepage(pkg, &path, &cargo_lints, &mut stats, workspace.gctx())?;
+        non_snake_case_features(
+            workspace,
+            pkg,
+            &path,
+            &cargo_lints,
+            &mut stats,
+            workspace.gctx(),
+        )?;
+        unused_build_dependencies_no_build_rs(
+            workspace,
+            pkg,
+            &path,
+            &cargo_lints,
+            &mut stats,
+            workspace.gctx(),
+        )?;
+        redundant_readme(
+            workspace,
+            pkg,
+            &path,
+            &cargo_lints,
+            &mut stats,
+            workspace.gctx(),
+        )?;
+        redundant_homepage(
+            workspace,
+            pkg,
+            &path,
+            &cargo_lints,
+            &mut stats,
+            workspace.gctx(),
+        )?;
         missing_lints_inheritance(
             workspace,
             pkg,

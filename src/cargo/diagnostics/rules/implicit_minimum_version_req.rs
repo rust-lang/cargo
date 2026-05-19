@@ -86,6 +86,7 @@ serde = "1.0.219"
 
 #[instrument(skip_all)]
 pub fn implicit_minimum_version_req_pkg(
+    _ws: &Workspace<'_>,
     pkg: &Package,
     manifest_path: &Path,
     cargo_lints: &TomlToolLints,

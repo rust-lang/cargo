@@ -13,6 +13,7 @@ use crate::CargoResult;
 use crate::GlobalContext;
 use crate::core::Feature;
 use crate::core::Package;
+use crate::core::Workspace;
 use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevel;
@@ -31,6 +32,7 @@ pub static LINT: &Lint = &Lint {
 
 #[instrument(skip_all)]
 pub fn check_im_a_teapot(
+    _ws: &Workspace<'_>,
     pkg: &Package,
     path: &Path,
     pkg_lints: &TomlToolLints,

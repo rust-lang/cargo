@@ -14,6 +14,7 @@ use super::STYLE;
 use crate::CargoResult;
 use crate::GlobalContext;
 use crate::core::Package;
+use crate::core::Workspace;
 use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevel;
@@ -85,6 +86,7 @@ name = "foo"
 /// rustc to report on these.
 #[instrument(skip_all)]
 pub fn unused_build_dependencies_no_build_rs(
+    _ws: &Workspace<'_>,
     pkg: &Package,
     manifest_path: &Path,
     cargo_lints: &TomlToolLints,

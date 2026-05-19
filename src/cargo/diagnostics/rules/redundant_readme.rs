@@ -15,6 +15,7 @@ use super::STYLE;
 use crate::CargoResult;
 use crate::GlobalContext;
 use crate::core::Package;
+use crate::core::Workspace;
 use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevel;
@@ -65,6 +66,7 @@ name = "foo"
 
 #[instrument(skip_all)]
 pub fn redundant_readme(
+    _ws: &Workspace<'_>,
     pkg: &Package,
     manifest_path: &Path,
     cargo_lints: &TomlToolLints,

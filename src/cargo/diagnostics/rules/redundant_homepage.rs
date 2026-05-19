@@ -14,6 +14,7 @@ use super::STYLE;
 use crate::CargoResult;
 use crate::GlobalContext;
 use crate::core::Package;
+use crate::core::Workspace;
 use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevel;
@@ -63,6 +64,7 @@ repository = "https://github.com/rust-lang/cargo/"
 
 #[instrument(skip_all)]
 pub fn redundant_homepage(
+    _ws: &Workspace<'_>,
     pkg: &Package,
     manifest_path: &Path,
     cargo_lints: &TomlToolLints,
