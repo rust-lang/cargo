@@ -27,7 +27,7 @@ pub const PARSE_PASS_RULES: &[ParsePassRule] = &[
     ParsePassRule::DiagnosticManifest {
         rule: deferred_parse_diagnostics::diagnose_manifest,
     },
-    ParsePassRule::LintManifest {
+    ParsePassRule::DiagnosticManifest {
         rule: missing_lints_features::diagnose_manifest,
     },
     ParsePassRule::LintManifest {

@@ -11,6 +11,7 @@ use super::find_lint_or_group;
 use crate::CargoResult;
 use crate::GlobalContext;
 use crate::core::Feature;
+use crate::core::MaybePackage;
 use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::ManifestFor;
 use crate::diagnostics::get_key_value_span;
@@ -19,6 +20,48 @@ use crate::diagnostics::rel_cwd_manifest_path;
 #[instrument(skip_all)]
 pub(crate) fn diagnose_manifest(
     manifest: ManifestFor<'_>,
+    manifest_path: &Path,
+    stats: &mut DiagnosticStats,
+    gctx: &GlobalContext,
+) -> CargoResult<()> {
+    let normalized_toml = match &manifest {
+        ManifestFor::Package(pkg) => pkg.manifest().normalized_toml(),
+        ManifestFor::Workspace {
+            maybe_pkg: MaybePackage::Virtual(vm),
+            ..
+        } => vm.normalized_toml(),
+        ManifestFor::Workspace {
+            maybe_pkg: MaybePackage::Package(_),
+            ..
+        } => {
+            // For real manifests, lint as a package, rather than a workspace
+            return Ok(());
+        }
+    };
+
+    let ws_lints = normalized_toml
+        .workspace
+        .as_ref()
+        .and_then(|ws| ws.lints.as_ref())
+        .and_then(|lints| lints.get("cargo"));
+    let pkg_lints = normalized_toml
+        .lints
+        .as_ref()
+        .map(|lints| &lints.lints)
+        .and_then(|lints| lints.get("cargo"));
+
+    if let Some(cargo_lints) = ws_lints {
+        diagnose_manifest_inner(&manifest, manifest_path, cargo_lints, stats, gctx)?;
+    }
+    if let Some(cargo_lints) = pkg_lints {
+        diagnose_manifest_inner(&manifest, manifest_path, cargo_lints, stats, gctx)?;
+    }
+
+    Ok(())
+}
+
+fn diagnose_manifest_inner(
+    manifest: &ManifestFor<'_>,
     manifest_path: &Path,
     cargo_lints: &manifest::TomlToolLints,
     stats: &mut DiagnosticStats,
