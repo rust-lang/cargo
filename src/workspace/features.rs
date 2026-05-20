@@ -916,7 +916,6 @@ unstable_cli_options!(
     publish_timeout: bool = ("Enable the `publish.timeout` key in .cargo/config.toml file"),
     root_dir: Option<PathBuf> = ("Set the root directory relative to which paths are printed (defaults to workspace root)"),
     rustc_unicode: bool = ("Enable `rustc`'s unicode error format in Cargo's error messages"),
-    rustdoc_depinfo: bool = ("Use dep-info files in rustdoc rebuild detection"),
     rustdoc_map: bool = ("Allow passing external documentation mappings to rustdoc"),
     rustdoc_mergeable_info: bool = ("Use rustdoc mergeable cross-crate-info files"),
     rustdoc_scrape_examples: bool = ("Allows Rustdoc to scrape code examples from reverse-dependencies"),
@@ -1017,6 +1016,9 @@ const STABILIZED_CONFIG_INCLUDE: &str = "The `include` config key is now always 
 const STABILIZED_LOCKFILE_PATH: &str = "The `lockfile-path` config key is now always available";
 
 const STABILIZED_WARNINGS: &str = "The `build.warnings` config key is now always available";
+
+const STABILIZED_RUSTDOC_DEPINFO: &str = "Rustdoc dep-info-based rebuild detection \
+    is now always enabled.";
 
 fn deserialize_comma_separated_list<'de, D>(
     deserializer: D,
@@ -1424,6 +1426,7 @@ impl CliUnstable {
             "config-include" => stabilized_warn(k, "1.93", STABILIZED_CONFIG_INCLUDE),
             "lockfile-path" => stabilized_warn(k, "1.97", STABILIZED_LOCKFILE_PATH),
             "warnings" => stabilized_warn(k, "1.97", STABILIZED_WARNINGS),
+            "rustdoc-depinfo" => stabilized_warn(k, "1.99", STABILIZED_RUSTDOC_DEPINFO),
 
             // Unstable features
             // Sorted alphabetically:
@@ -1478,7 +1481,6 @@ impl CliUnstable {
             "publish-timeout" => self.publish_timeout = parse_empty(k, v)?,
             "root-dir" => self.root_dir = v.map(|v| v.into()),
             "rustc-unicode" => self.rustc_unicode = parse_empty(k, v)?,
-            "rustdoc-depinfo" => self.rustdoc_depinfo = parse_empty(k, v)?,
             "rustdoc-map" => self.rustdoc_map = parse_empty(k, v)?,
             "rustdoc-mergeable-info" => self.rustdoc_mergeable_info = parse_empty(k, v)?,
             "rustdoc-scrape-examples" => self.rustdoc_scrape_examples = parse_empty(k, v)?,

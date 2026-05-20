@@ -891,7 +891,13 @@ fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResu
     add_error_format_and_color(build_runner, &mut rustdoc);
     add_allow_features(build_runner, &mut rustdoc);
 
-    if build_runner.bcx.gctx.cli_unstable().rustdoc_depinfo {
+    // `--emit` would reject or drop the JSON doc output,
+    // so skip it and fall back to package fingerprint for JSON doc units.
+    //
+    // If we have `--emit=json-files` available,
+    // we could pass that along with `--emit=dep-info`.
+    // see rust-lang/rust#155679
+    if !build_runner.bcx.build_config.intent.wants_doc_json_output() {
         // html-static-files is required for keeping the shared styling resources
         // html-non-static-files is required for keeping the original rustdoc emission
         let mut arg = if build_runner.bcx.gctx.cli_unstable().rustdoc_mergeable_info {
@@ -903,13 +909,10 @@ fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResu
         };
         arg.push(rustdoc_dep_info_loc(build_runner, unit));
         rustdoc.arg(arg);
+    }
 
-        if build_runner.bcx.gctx.cli_unstable().checksum_freshness {
-            rustdoc.arg("-Z").arg("checksum-hash-algorithm=blake3");
-        }
-    } else if build_runner.bcx.gctx.cli_unstable().rustdoc_mergeable_info {
-        // toolchain resources are written at the end, at the same time as merging
-        rustdoc.arg("--emit=html-non-static-files");
+    if build_runner.bcx.gctx.cli_unstable().checksum_freshness {
+        rustdoc.arg("-Z").arg("checksum-hash-algorithm=blake3");
     }
 
     if build_runner.bcx.gctx.cli_unstable().rustdoc_mergeable_info {
@@ -1009,7 +1012,6 @@ fn rustdoc(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<W
     let fingerprint_dir = build_runner.files().fingerprint_dir(unit);
     let is_local = unit.is_local();
     let env_config = Arc::clone(build_runner.bcx.gctx.env_config()?);
-    let rustdoc_depinfo_enabled = build_runner.bcx.gctx.cli_unstable().rustdoc_depinfo;
 
     let mut output_options = OutputOptions::for_dirty(build_runner, unit);
     let script_metadatas = build_runner.find_build_script_metadatas(unit);
@@ -1106,7 +1108,7 @@ fn rustdoc(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<W
             return Err(e);
         }
 
-        if rustdoc_depinfo_enabled && rustdoc_dep_info_loc.exists() {
+        if rustdoc_dep_info_loc.exists() {
             fingerprint::translate_dep_info(
                 &rustdoc_dep_info_loc,
                 &dep_info_loc,
