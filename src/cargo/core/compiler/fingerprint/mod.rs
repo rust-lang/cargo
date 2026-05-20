@@ -136,9 +136,8 @@
 //!   below for more details.
 //!
 //! Note that some units are a little different. A Unit for *running* a build
-//! script or for `rustdoc` does not have a dep-info file (it's not
-//! applicable). Build script `invoked.timestamp` files are in the build
-//! output directory.
+//! script does not have a dep-info file (it's not applicable).
+//! Build script `invoked.timestamp` files are in the build output directory.
 //!
 //! ## Fingerprint calculation
 //!
@@ -251,23 +250,15 @@
 //! build, so it takes a conservative approach of assuming the file was *not*
 //! included, and it should be rebuilt during the next build.
 //!
-//! #### Rustdoc mtime handling
-//!
-//! Rustdoc does not emit a dep-info file, so Cargo currently has a relatively
-//! simple system for detecting rebuilds. [`LocalFingerprint::Precalculated`] is
-//! used for rustdoc units. For registry packages, this is the package
-//! version. For git packages, it is the git hash. For path packages, it is
-//! a string of the mtime of the newest file in the package.
-//!
-//! There are some known bugs with how this works, so it should be improved at
-//! some point.
-//!
 //! #### Build script mtime handling
 //!
 //! Build script mtime handling runs in different modes. There is the "old
 //! style" where the build script does not emit any `rerun-if` directives. In
-//! this mode, Cargo will use [`LocalFingerprint::Precalculated`]. See the
-//! "rustdoc" section above how it works.
+//! this mode, Cargo will use [`LocalFingerprint::Precalculated`].
+//! For registry packages, this is the package version.
+//! For git packages, it is the git hash.
+//! For path packages, it is a string of the mtime of the newest file in the package.
+
 //!
 //! In the new-style, each `rerun-if` directive is translated to the
 //! corresponding [`LocalFingerprint`] variant. The [`RerunIfChanged`] variant
@@ -808,12 +799,11 @@ impl<'de> Deserialize<'de> for DepFingerprint {
 #[derive(Debug, Serialize, Deserialize, Hash)]
 enum LocalFingerprint {
     /// This is a precalculated fingerprint which has an opaque string we just
-    /// hash as usual. This variant is primarily used for rustdoc where we
-    /// don't have a dep-info file to compare against.
+    /// hash as usual.
     ///
-    /// This is also used for build scripts with no `rerun-if-*` statements, but
-    /// that's overall a mistake and causes bugs in Cargo. We shouldn't use this
-    /// for build scripts.
+    /// This variant is primarily used for build scripts with no `rerun-if-*`
+    /// statements, but that's overall a mistake and causes bugs in Cargo.
+    /// We shouldn't use this for build scripts.
     Precalculated(String),
 
     /// This is used for crate compilations. The `dep_info` file is a relative
@@ -1584,25 +1574,12 @@ fn calculate_normal(
 
     // Afterwards calculate our own fingerprint information.
     let build_root = build_root(build_runner);
-    let is_any_doc_gen = unit.mode.is_doc() || unit.mode.is_doc_scrape();
-    let rustdoc_depinfo_enabled = build_runner.bcx.gctx.cli_unstable().rustdoc_depinfo;
-    let local = if is_any_doc_gen && !rustdoc_depinfo_enabled {
-        // rustdoc does not have dep-info files.
-        let fingerprint = pkg_fingerprint(build_runner.bcx, &unit.pkg).with_context(|| {
-            format!(
-                "failed to determine package fingerprint for documenting {}",
-                unit.pkg
-            )
-        })?;
-        vec![LocalFingerprint::Precalculated(fingerprint)]
-    } else {
-        let dep_info = dep_info_loc(build_runner, unit);
-        let dep_info = dep_info.strip_prefix(&build_root).unwrap().to_path_buf();
-        vec![LocalFingerprint::CheckDepInfo {
-            dep_info,
-            checksum: build_runner.bcx.gctx.cli_unstable().checksum_freshness,
-        }]
-    };
+    let dep_info = dep_info_loc(build_runner, unit);
+    let dep_info = dep_info.strip_prefix(&build_root).unwrap().to_path_buf();
+    let local = vec![LocalFingerprint::CheckDepInfo {
+        dep_info,
+        checksum: build_runner.bcx.gctx.cli_unstable().checksum_freshness,
+    }];
 
     // Figure out what the outputs of our unit is, and we'll be storing them
     // into the fingerprint as well.
