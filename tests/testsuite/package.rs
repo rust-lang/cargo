@@ -7800,7 +7800,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(public_network_test)]
 fn publish_to_crates_io_warns() {
     let p = project()
         .file(
