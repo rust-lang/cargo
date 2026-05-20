@@ -14,8 +14,8 @@ use url::Url;
 use crate::core::compiler::Unit;
 use crate::core::features::Features;
 use crate::core::registry::PackageRegistry;
-use crate::core::resolver::ResolveBehavior;
 use crate::core::resolver::features::CliFeatures;
+use crate::core::resolver::{Resolve, ResolveBehavior};
 use crate::core::{
     Dependency, Edition, FeatureValue, PackageId, PackageIdSpec, PackageIdSpecQuery, Patch,
     PatchLocation,
@@ -1309,6 +1309,68 @@ impl<'gctx> Workspace<'gctx> {
         }
     }
 
+    pub(crate) fn members_with_features_for_resolve(
+        &self,
+        specs: &[PackageIdSpec],
+        cli_features: &CliFeatures,
+    ) -> CargoResult<Vec<(&Package, CliFeatures)>> {
+        if self.should_defer_non_member_feature_validation(specs, cli_features) {
+            // Resolve the graph before deciding whether the package spec is
+            // missing or a non-workspace package with unsupported feature flags.
+            return Ok(self
+                .members()
+                .map(|m| (m, CliFeatures::new_all(false)))
+                .collect());
+        }
+        self.members_with_features(specs, cli_features)
+    }
+
+    pub(crate) fn validate_non_member_features(
+        &self,
+        specs: &[PackageIdSpec],
+        cli_features: &CliFeatures,
+        resolve: &Resolve,
+    ) -> CargoResult<()> {
+        if self.should_defer_non_member_feature_validation(specs, cli_features) {
+            resolve.specs_to_ids(specs)?;
+            bail!(
+                "cannot specify features for packages outside of workspace{}",
+                self.non_member_feature_hint(specs)
+            );
+        }
+        Ok(())
+    }
+
+    pub(crate) fn should_defer_non_member_feature_validation(
+        &self,
+        specs: &[PackageIdSpec],
+        cli_features: &CliFeatures,
+    ) -> bool {
+        !specs.is_empty()
+            && self.allows_new_cli_feature_behavior()
+            && !(cli_features.features.is_empty()
+                && !cli_features.all_features
+                && cli_features.uses_default_features)
+            && !self
+                .members()
+                .any(|m| specs.iter().any(|spec| spec.matches(m.package_id())))
+    }
+
+    fn non_member_feature_hint(&self, specs: &[PackageIdSpec]) -> String {
+        specs
+            .iter()
+            .map(|spec| {
+                closest_msg(
+                    spec.name(),
+                    self.members(),
+                    |m| m.name().as_str(),
+                    "workspace member",
+                )
+            })
+            .find(|msg| !msg.is_empty())
+            .unwrap_or_default()
+    }
+
     /// Returns the requested features for the given member.
     /// This filters out any named features that the member does not have.
     fn collect_matching_features(
@@ -1659,19 +1721,10 @@ impl<'gctx> Workspace<'gctx> {
                 && !cli_features.all_features
                 && cli_features.uses_default_features)
             {
-                let hint = specs
-                    .iter()
-                    .map(|spec| {
-                        closest_msg(
-                            spec.name(),
-                            self.members(),
-                            |m| m.name().as_str(),
-                            "workspace member",
-                        )
-                    })
-                    .find(|msg| !msg.is_empty())
-                    .unwrap_or_default();
-                bail!("cannot specify features for packages outside of workspace{hint}");
+                bail!(
+                    "cannot specify features for packages outside of workspace{}",
+                    self.non_member_feature_hint(specs)
+                );
             }
             // Add all members from the workspace so we can ensure `-p nonmember`
             // is in the resolve graph.
