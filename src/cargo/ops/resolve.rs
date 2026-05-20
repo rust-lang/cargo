@@ -173,6 +173,21 @@ pub fn resolve_ws_with_opts<'gctx>(
         .cloned()
         .collect();
     let specs = &specs[..];
+    if ws.should_defer_non_member_feature_validation(specs, cli_features) {
+        let mut registry = ws.package_registry()?;
+        let previous = ops::load_pkg_lockfile(ws)?;
+        let resolved = resolve_with_previous(
+            &mut registry,
+            ws,
+            cli_features,
+            has_dev_units,
+            previous.as_ref(),
+            None,
+            specs,
+            true,
+        )?;
+        ws.validate_non_member_features(specs, cli_features, &resolved)?;
+    }
     let mut registry = ws.package_registry()?;
     let (resolve, resolved_with_overrides) = if ws.ignore_lock() {
         let add_patches = true;
@@ -485,7 +500,7 @@ pub fn resolve_with_previous<'gctx>(
 
     let summaries: Vec<(Summary, ResolveOpts)> = {
         let _span = tracing::span!(tracing::Level::TRACE, "registry.lock").entered();
-        ws.members_with_features(specs, cli_features)?
+        ws.members_with_features_for_resolve(specs, cli_features)?
             .into_iter()
             .map(|(member, features)| {
                 let summary = registry.lock(member.summary().clone());
