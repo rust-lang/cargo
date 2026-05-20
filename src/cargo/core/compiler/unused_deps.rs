@@ -20,6 +20,7 @@ use crate::core::compiler::build_config::CompileMode;
 use crate::core::dependency::DepKind;
 use crate::core::manifest::TargetKind;
 use crate::diagnostics::LintLevel;
+use crate::diagnostics::LintLevelProduct;
 use crate::diagnostics::get_key_value_span;
 use crate::diagnostics::rel_cwd_manifest_path;
 use crate::diagnostics::rules::unused_dependencies::LINT;
@@ -161,7 +162,10 @@ impl UnusedDepState {
                 .get("cargo")
                 .cloned()
                 .unwrap_or(manifest::TomlToolLints::default());
-            let (lint_level, reason) = LINT.level(
+            let LintLevelProduct {
+                level: lint_level,
+                source,
+            } = LINT.level(
                 &cargo_lints,
                 pkg.rust_version(),
                 pkg.manifest().unstable_features(),
@@ -256,7 +260,7 @@ impl UnusedDepState {
                         let document = manifest.document();
                         let contents = manifest.contents();
                         let level = lint_level.to_diagnostic_level();
-                        let emitted_source = LINT.emitted_source(lint_level, reason);
+                        let emitted_source = LINT.emitted_source(lint_level, source);
                         let toml_path = dependency.toml_path();
 
                         let mut primary = Group::with_title(level.primary_title(LINT.desc));

@@ -1,9 +1,7 @@
 use std::cmp::{Reverse, max_by_key};
 use std::fmt::Display;
 
-use cargo_util_schemas::manifest::RustVersion;
-use cargo_util_schemas::manifest::TomlLintLevel;
-use cargo_util_schemas::manifest::TomlToolLints;
+use cargo_util_schemas::manifest;
 use cargo_util_terminal::report::Level;
 
 use crate::core::{Feature, Features};
@@ -18,7 +16,7 @@ pub struct Lint {
     /// Note: If the lint is on by default and did not qualify as a hard-warning before the
     /// linting system, then at earliest an MSRV of 1.78 is required as `[lints.cargo]` was a hard
     /// error before then.
-    pub msrv: Option<RustVersion>,
+    pub msrv: Option<manifest::RustVersion>,
     pub feature_gate: Option<&'static Feature>,
     /// This is a markdown formatted string that will be used when generating
     /// the lint documentation. If docs is `None`, the lint will not be
@@ -29,23 +27,27 @@ pub struct Lint {
 impl Lint {
     pub fn level(
         &self,
-        pkg_lints: &TomlToolLints,
-        pkg_rust_version: Option<&RustVersion>,
+        pkg_lints: &manifest::TomlToolLints,
+        pkg_rust_version: Option<&manifest::RustVersion>,
         unstable_features: &Features,
-    ) -> (LintLevel, LintLevelSource) {
+    ) -> LintLevelProduct {
         // We should return `Allow` if a lint is behind a feature, but it is
         // not enabled, that way the lint does not run.
         if self
             .feature_gate
             .is_some_and(|f| !unstable_features.is_enabled(f))
         {
-            return (LintLevel::Allow, LintLevelSource::Default);
+            let level = LintLevel::Allow;
+            let source = LintLevelSource::Default;
+            return LintLevelProduct { level, source };
         }
 
         if let (Some(msrv), Some(pkg_rust_version)) = (&self.msrv, pkg_rust_version) {
             let pkg_rust_version = pkg_rust_version.to_partial();
             if !msrv.is_compatible_with(&pkg_rust_version) {
-                return (LintLevel::Allow, LintLevelSource::Default);
+                let level = LintLevel::Allow;
+                let source = LintLevelSource::Default;
+                return LintLevelProduct { level, source };
             }
         }
 
@@ -58,7 +60,7 @@ impl Lint {
             pkg_lints,
         );
 
-        let (_, (l, s, _)) = max_by_key(
+        let (_, (level, source, _)) = max_by_key(
             (self.name, lint_level_priority),
             (self.primary_group.name, group_level_priority),
             |(n, (l, s, p))| {
@@ -70,12 +72,17 @@ impl Lint {
                 )
             },
         );
-        (l, s)
+        LintLevelProduct { level, source }
     }
 
     pub fn emitted_source(&self, lint_level: LintLevel, source: LintLevelSource) -> String {
         format!("`cargo::{}` is set to `{lint_level}` {source}", self.name,)
     }
+}
+
+pub struct LintLevelProduct {
+    pub level: LintLevel,
+    pub source: LintLevelSource,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -125,13 +132,13 @@ impl LintLevel {
     }
 }
 
-impl From<TomlLintLevel> for LintLevel {
-    fn from(toml_lint_level: TomlLintLevel) -> LintLevel {
+impl From<manifest::TomlLintLevel> for LintLevel {
+    fn from(toml_lint_level: manifest::TomlLintLevel) -> LintLevel {
         match toml_lint_level {
-            TomlLintLevel::Allow => LintLevel::Allow,
-            TomlLintLevel::Warn => LintLevel::Warn,
-            TomlLintLevel::Deny => LintLevel::Deny,
-            TomlLintLevel::Forbid => LintLevel::Forbid,
+            manifest::TomlLintLevel::Allow => LintLevel::Allow,
+            manifest::TomlLintLevel::Warn => LintLevel::Warn,
+            manifest::TomlLintLevel::Deny => LintLevel::Deny,
+            manifest::TomlLintLevel::Forbid => LintLevel::Forbid,
         }
     }
 }
@@ -163,7 +170,7 @@ impl LintLevelSource {
 pub(crate) fn level_priority(
     name: &str,
     default_level: LintLevel,
-    pkg_lints: &TomlToolLints,
+    pkg_lints: &manifest::TomlToolLints,
 ) -> (LintLevel, LintLevelSource, i8) {
     if let Some(defined_level) = pkg_lints.get(name) {
         (
@@ -212,14 +219,14 @@ mod tests {
     fn lint_level_prefers_user_specified_over_default() {
         let lint = test_lint("unused_dependencies", &STYLE);
 
-        let mut pkg_lints = TomlToolLints::new();
+        let mut pkg_lints = manifest::TomlToolLints::new();
         pkg_lints.insert(
             "unused_dependencies".to_string(),
-            cargo_util_schemas::manifest::TomlLint::Level(TomlLintLevel::Deny),
+            manifest::TomlLint::Level(manifest::TomlLintLevel::Deny),
         );
         let features = Features::default();
 
-        let (level, source) = lint.level(&pkg_lints, None, &features);
+        let LintLevelProduct { level, source } = lint.level(&pkg_lints, None, &features);
         assert_eq!(level, LintLevel::Deny);
         assert_eq!(source, LintLevelSource::Package);
     }
@@ -228,14 +235,14 @@ mod tests {
     fn lint_level_group_overrides_default() {
         let lint = test_lint("non_kebab_case_bins", &STYLE);
 
-        let mut pkg_lints = TomlToolLints::new();
+        let mut pkg_lints = manifest::TomlToolLints::new();
         pkg_lints.insert(
             "style".to_string(),
-            cargo_util_schemas::manifest::TomlLint::Level(TomlLintLevel::Deny),
+            manifest::TomlLint::Level(manifest::TomlLintLevel::Deny),
         );
         let features = Features::default();
 
-        let (level, source) = lint.level(&pkg_lints, None, &features);
+        let LintLevelProduct { level, source } = lint.level(&pkg_lints, None, &features);
         assert_eq!(level, LintLevel::Deny);
         assert_eq!(source, LintLevelSource::Package);
     }

@@ -1,6 +1,5 @@
 use std::path::Path;
 
-use cargo_util_schemas::manifest::TomlToolLints;
 use cargo_util_terminal::report::Group;
 use cargo_util_terminal::report::Level;
 use cargo_util_terminal::report::Origin;
@@ -15,7 +14,7 @@ use crate::core::Package;
 use crate::core::Workspace;
 use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::Lint;
-use crate::diagnostics::LintLevel;
+use crate::diagnostics::LintLevelProduct;
 use crate::diagnostics::rel_cwd_manifest_path;
 
 pub static LINT: &Lint = &Lint {
@@ -55,23 +54,18 @@ workspace = true
 };
 
 #[instrument(skip_all)]
-pub fn missing_lints_inheritance(
+pub(crate) fn lint_package(
     ws: &Workspace<'_>,
     pkg: &Package,
     manifest_path: &Path,
-    cargo_lints: &TomlToolLints,
+    level: LintLevelProduct,
     stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let (lint_level, source) = LINT.level(
-        cargo_lints,
-        pkg.rust_version(),
-        pkg.manifest().unstable_features(),
-    );
-
-    if lint_level == LintLevel::Allow {
-        return Ok(());
-    }
+    let LintLevelProduct {
+        level: lint_level,
+        source,
+    } = level;
 
     let root = ws.root_maybe();
     // `normalized_toml` normally isn't guaranteed to include inheritance information except

@@ -1,6 +1,5 @@
 use std::path::Path;
 
-use cargo_util_schemas::manifest::TomlToolLints;
 use cargo_util_terminal::report::AnnotationKind;
 use cargo_util_terminal::report::Group;
 use cargo_util_terminal::report::Level;
@@ -13,9 +12,10 @@ use crate::CargoResult;
 use crate::GlobalContext;
 use crate::core::Feature;
 use crate::core::Package;
+use crate::core::Workspace;
 use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::Lint;
-use crate::diagnostics::LintLevel;
+use crate::diagnostics::LintLevelProduct;
 use crate::diagnostics::get_key_value_span;
 use crate::diagnostics::rel_cwd_manifest_path;
 
@@ -30,20 +30,19 @@ pub static LINT: &Lint = &Lint {
 };
 
 #[instrument(skip_all)]
-pub fn check_im_a_teapot(
+pub(crate) fn lint_package(
+    _ws: &Workspace<'_>,
     pkg: &Package,
     path: &Path,
-    pkg_lints: &TomlToolLints,
+    level: LintLevelProduct,
     stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let manifest = pkg.manifest();
-    let (lint_level, source) =
-        LINT.level(pkg_lints, pkg.rust_version(), manifest.unstable_features());
-
-    if lint_level == LintLevel::Allow {
-        return Ok(());
-    }
+    let LintLevelProduct {
+        level: lint_level,
+        source,
+    } = level;
 
     if manifest
         .normalized_toml()

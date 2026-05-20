@@ -1,6 +1,5 @@
 use std::path::Path;
 
-use cargo_util_schemas::manifest::TomlToolLints;
 use cargo_util_terminal::report::AnnotationKind;
 use cargo_util_terminal::report::Group;
 use cargo_util_terminal::report::Level;
@@ -18,6 +17,7 @@ use crate::diagnostics::AsIndex;
 use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevel;
+use crate::diagnostics::LintLevelProduct;
 use crate::diagnostics::LintLevelSource;
 use crate::diagnostics::get_key_value_span;
 use crate::diagnostics::rel_cwd_manifest_path;
@@ -64,30 +64,25 @@ name = "foo-bar"
 };
 
 #[instrument(skip_all)]
-pub fn non_kebab_case_bins(
+pub(crate) fn lint_package(
     ws: &Workspace<'_>,
     pkg: &Package,
     manifest_path: &Path,
-    cargo_lints: &TomlToolLints,
+    level: LintLevelProduct,
     stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let (lint_level, source) = LINT.level(
-        cargo_lints,
-        pkg.rust_version(),
-        pkg.manifest().unstable_features(),
-    );
-
-    if lint_level == LintLevel::Allow {
-        return Ok(());
-    }
+    let LintLevelProduct {
+        level: lint_level,
+        source,
+    } = level;
 
     let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
 
-    lint_package(ws, pkg, &manifest_path, lint_level, source, stats, gctx)
+    lint_package_inner(ws, pkg, &manifest_path, lint_level, source, stats, gctx)
 }
 
-fn lint_package(
+fn lint_package_inner(
     ws: &Workspace<'_>,
     pkg: &Package,
     manifest_path: &str,

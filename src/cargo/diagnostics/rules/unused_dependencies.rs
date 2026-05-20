@@ -1,7 +1,6 @@
 use std::path::Path;
 
 use cargo_util_schemas::manifest::TomlPackageBuild;
-use cargo_util_schemas::manifest::TomlToolLints;
 use cargo_util_terminal::report::AnnotationKind;
 use cargo_util_terminal::report::Group;
 use cargo_util_terminal::report::Level;
@@ -14,9 +13,10 @@ use super::STYLE;
 use crate::CargoResult;
 use crate::GlobalContext;
 use crate::core::Package;
+use crate::core::Workspace;
 use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::Lint;
-use crate::diagnostics::LintLevel;
+use crate::diagnostics::LintLevelProduct;
 use crate::diagnostics::get_key_value_span;
 use crate::diagnostics::rel_cwd_manifest_path;
 
@@ -84,22 +84,18 @@ name = "foo"
 /// This must be determined independent of the compiler since there are no build targets to pass to
 /// rustc to report on these.
 #[instrument(skip_all)]
-pub fn unused_build_dependencies_no_build_rs(
+pub(crate) fn lint_package(
+    _ws: &Workspace<'_>,
     pkg: &Package,
     manifest_path: &Path,
-    cargo_lints: &TomlToolLints,
+    level: LintLevelProduct,
     stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let (lint_level, reason) = LINT.level(
-        cargo_lints,
-        pkg.rust_version(),
-        pkg.manifest().unstable_features(),
-    );
-
-    if lint_level == LintLevel::Allow {
-        return Ok(());
-    }
+    let LintLevelProduct {
+        level: lint_level,
+        source,
+    } = level;
 
     let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
 
@@ -122,7 +118,7 @@ pub fn unused_build_dependencies_no_build_rs(
         .enumerate()
     {
         let level = lint_level.to_diagnostic_level();
-        let emitted_source = LINT.emitted_source(lint_level, reason);
+        let emitted_source = LINT.emitted_source(lint_level, source);
 
         let mut primary = Group::with_title(level.primary_title(LINT.desc));
         if let Some(document) = document

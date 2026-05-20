@@ -13,7 +13,7 @@ mod report;
 pub mod passes;
 pub mod rules;
 
-pub use lint::{Lint, LintGroup, LintLevel, LintLevelSource};
+pub use lint::{Lint, LintGroup, LintLevel, LintLevelProduct, LintLevelSource};
 pub use report::{AsIndex, get_key_value, get_key_value_span, rel_cwd_manifest_path};
 pub use rules::{LINT_GROUPS, LINTS};
 
@@ -94,7 +94,7 @@ pub enum ManifestFor<'a> {
 }
 
 impl ManifestFor<'_> {
-    fn lint_level(&self, pkg_lints: &TomlToolLints, lint: &Lint) -> (LintLevel, LintLevelSource) {
+    fn lint_level(&self, pkg_lints: &TomlToolLints, lint: &Lint) -> LintLevelProduct {
         lint.level(pkg_lints, self.rust_version(), self.unstable_features())
     }
 

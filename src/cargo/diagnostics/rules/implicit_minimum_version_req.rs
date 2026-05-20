@@ -3,7 +3,6 @@ use std::path::Path;
 
 use cargo_platform::Platform;
 use cargo_util_schemas::manifest::TomlDependency;
-use cargo_util_schemas::manifest::TomlToolLints;
 use cargo_util_terminal::report::AnnotationKind;
 use cargo_util_terminal::report::Group;
 use cargo_util_terminal::report::Level;
@@ -23,6 +22,7 @@ use crate::core::Workspace;
 use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevel;
+use crate::diagnostics::LintLevelProduct;
 use crate::diagnostics::LintLevelSource;
 use crate::diagnostics::get_key_value;
 use crate::diagnostics::rel_cwd_manifest_path;
@@ -85,22 +85,18 @@ serde = "1.0.219"
 };
 
 #[instrument(skip_all)]
-pub fn implicit_minimum_version_req_pkg(
+pub(crate) fn lint_package(
+    _ws: &Workspace<'_>,
     pkg: &Package,
     manifest_path: &Path,
-    cargo_lints: &TomlToolLints,
+    level: LintLevelProduct,
     stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let (lint_level, source) = LINT.level(
-        cargo_lints,
-        pkg.rust_version(),
-        pkg.manifest().unstable_features(),
-    );
-
-    if lint_level == LintLevel::Allow {
-        return Ok(());
-    }
+    let LintLevelProduct {
+        level: lint_level,
+        source,
+    } = level;
 
     let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
 
@@ -150,23 +146,18 @@ pub fn implicit_minimum_version_req_pkg(
 }
 
 #[instrument(skip_all)]
-pub fn implicit_minimum_version_req_ws(
-    ws: &Workspace<'_>,
+pub(crate) fn lint_workspace(
+    _ws: &Workspace<'_>,
     maybe_pkg: &MaybePackage,
     manifest_path: &Path,
-    cargo_lints: &TomlToolLints,
+    level: LintLevelProduct,
     stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let (lint_level, source) = LINT.level(
-        cargo_lints,
-        ws.lowest_rust_version(),
-        maybe_pkg.unstable_features(),
-    );
-
-    if lint_level == LintLevel::Allow {
-        return Ok(());
-    }
+    let LintLevelProduct {
+        level: lint_level,
+        source,
+    } = level;
 
     let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
 
@@ -231,7 +222,7 @@ pub fn implicit_minimum_version_req_ws(
     Ok(())
 }
 
-pub fn span_of_version_req<'doc>(
+pub(crate) fn span_of_version_req<'doc>(
     document: &'doc toml::Spanned<toml::de::DeTable<'static>>,
     path: &[&str],
 ) -> Option<std::ops::Range<usize>> {

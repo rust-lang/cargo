@@ -1,6 +1,5 @@
 use std::path::Path;
 
-use cargo_util_schemas::manifest::TomlToolLints;
 use cargo_util_terminal::report::AnnotationKind;
 use cargo_util_terminal::report::Group;
 use cargo_util_terminal::report::Level;
@@ -20,7 +19,7 @@ use crate::GlobalContext;
 use crate::core::MaybePackage;
 use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::Lint;
-use crate::diagnostics::LintLevel;
+use crate::diagnostics::LintLevelProduct;
 use crate::diagnostics::ManifestFor;
 use crate::diagnostics::rel_cwd_manifest_path;
 
@@ -49,17 +48,17 @@ by default we deny their use.
 };
 
 #[instrument(skip_all)]
-pub fn text_direction_codepoint_in_literal(
+pub(crate) fn lint_manifest(
     manifest: ManifestFor<'_>,
     manifest_path: &Path,
-    cargo_lints: &TomlToolLints,
+    level: LintLevelProduct,
     stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let (lint_level, source) = manifest.lint_level(cargo_lints, LINT);
-    if lint_level == LintLevel::Allow {
-        return Ok(());
-    }
+    let LintLevelProduct {
+        level: lint_level,
+        source,
+    } = level;
 
     if matches!(
         &manifest,
