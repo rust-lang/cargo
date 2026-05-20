@@ -293,7 +293,7 @@ pub fn create_bcx<'a, 'gctx>(
         // workspace, if any of those packages need dev-dependencies, then we need include dev-dependencies
         // to scrape those packages.
         let any_pkg_has_scrape_enabled = ws
-            .members_with_features(&specs, cli_features)?
+            .members_with_features_for_resolve(&specs, cli_features)?
             .iter()
             .any(|(pkg, _)| {
                 pkg.targets()

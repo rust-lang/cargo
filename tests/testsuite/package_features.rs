@@ -745,6 +745,7 @@ fn non_member() {
     p.cargo("check -p dep --features f1")
         .with_status(101)
         .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [ERROR] cannot specify features for packages outside of workspace
 
 [HELP] a workspace member with a similar name exists: `foo`
@@ -755,6 +756,7 @@ fn non_member() {
     p.cargo("check -p dep --all-features")
         .with_status(101)
         .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [ERROR] cannot specify features for packages outside of workspace
 
 [HELP] a workspace member with a similar name exists: `foo`
@@ -765,6 +767,7 @@ fn non_member() {
     p.cargo("check -p dep --no-default-features")
         .with_status(101)
         .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [ERROR] cannot specify features for packages outside of workspace
 
 [HELP] a workspace member with a similar name exists: `foo`
@@ -787,8 +790,9 @@ fn non_member() {
 
 #[cargo_test]
 fn non_member_typo() {
-    // -p with a mistyped package name shows a helpful error hint
-    // about similarly named workspace members.
+    // https://github.com/rust-lang/cargo/issues/16963
+    // A mistyped package name with feature flags should report the missing
+    // package, not the non-workspace feature restriction.
     let p = project()
         .file(
             "Cargo.toml",
@@ -805,9 +809,9 @@ fn non_member_typo() {
     p.cargo("build -p barr --features asdf")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] cannot specify features for packages outside of workspace
+[ERROR] package ID specification `barr` did not match any packages
 
-[HELP] a workspace member with a similar name exists: `bar`
+[HELP] a package with a similar name exists: `bar`
 
 "#]])
         .run();
@@ -1017,27 +1021,27 @@ fn non_member_feature() {
     p.cargo("check -p bar --features bar")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] cannot specify features for packages outside of workspace
+[ERROR] package ID specification `bar` did not match any packages
 
-[HELP] a workspace member with a similar name exists: `foo`
+[HELP] a package with a similar name exists: `foo`
 
 "#]])
         .run();
     p.cargo("check -p bar --features bar/jazz")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] cannot specify features for packages outside of workspace
+[ERROR] package ID specification `bar` did not match any packages
 
-[HELP] a workspace member with a similar name exists: `foo`
+[HELP] a package with a similar name exists: `foo`
 
 "#]])
         .run();
     p.cargo("check -p bar --features foo/bar")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] cannot specify features for packages outside of workspace
+[ERROR] package ID specification `bar` did not match any packages
 
-[HELP] a workspace member with a similar name exists: `foo`
+[HELP] a package with a similar name exists: `foo`
 
 "#]])
         .run();
