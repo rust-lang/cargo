@@ -13,6 +13,7 @@ use crate::diagnostics::LintLevel;
 use crate::diagnostics::LintLevelProduct;
 use crate::diagnostics::ManifestFor;
 
+#[derive(Clone)]
 pub enum ParsePassRule<'r> {
     DiagnosticManifest {
         rule: FnDiagnosticManifest,

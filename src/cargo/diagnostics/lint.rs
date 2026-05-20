@@ -85,7 +85,7 @@ pub struct LintLevelProduct {
     pub source: LintLevelSource,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum LintLevel {
     Allow,
     Warn,

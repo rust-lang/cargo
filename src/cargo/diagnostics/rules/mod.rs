@@ -31,22 +31,6 @@ pub const PARSE_PASS_RULES: &[ParsePassRule<'static>] = &[
         rule: missing_lints_features::diagnose_manifest,
     },
     ParsePassRule::LintManifest {
-        rule: unknown_lints::lint_manifest,
-        lint: unknown_lints::LINT,
-    },
-    ParsePassRule::LintWorkspace {
-        rule: unused_workspace_package_fields::lint_workspace,
-        lint: unused_workspace_package_fields::LINT,
-    },
-    ParsePassRule::LintWorkspace {
-        rule: unused_workspace_dependencies::lint_workspace,
-        lint: unused_workspace_dependencies::LINT,
-    },
-    ParsePassRule::LintWorkspace {
-        rule: implicit_minimum_version_req::lint_workspace,
-        lint: implicit_minimum_version_req::LINT,
-    },
-    ParsePassRule::LintManifest {
         rule: text_direction_codepoint_in_comment::lint_manifest,
         lint: text_direction_codepoint_in_comment::LINT,
     },
@@ -54,53 +38,71 @@ pub const PARSE_PASS_RULES: &[ParsePassRule<'static>] = &[
         rule: text_direction_codepoint_in_literal::lint_manifest,
         lint: text_direction_codepoint_in_literal::LINT,
     },
+    ParsePassRule::LintManifest {
+        rule: unknown_lints::lint_manifest,
+        lint: unknown_lints::LINT,
+    },
     ParsePassRule::LintWorkspace {
         rule: blanket_hint_mostly_unused::lint_workspace,
         lint: blanket_hint_mostly_unused::LINT,
     },
-    ParsePassRule::LintPackage {
-        rule: im_a_teapot::lint_package,
-        lint: im_a_teapot::LINT,
+    ParsePassRule::LintWorkspace {
+        rule: unused_workspace_dependencies::lint_workspace,
+        lint: unused_workspace_dependencies::LINT,
     },
-    ParsePassRule::LintPackage {
-        rule: implicit_minimum_version_req::lint_package,
+    ParsePassRule::LintWorkspace {
+        rule: unused_workspace_package_fields::lint_workspace,
+        lint: unused_workspace_package_fields::LINT,
+    },
+    ParsePassRule::LintWorkspace {
+        rule: implicit_minimum_version_req::lint_workspace,
         lint: implicit_minimum_version_req::LINT,
     },
+    // `warn`
     ParsePassRule::LintPackage {
-        rule: non_kebab_case_packages::lint_package,
-        lint: non_kebab_case_packages::LINT,
-    },
-    ParsePassRule::LintPackage {
-        rule: non_snake_case_packages::lint_package,
-        lint: non_snake_case_packages::LINT,
+        rule: missing_lints_inheritance::lint_package,
+        lint: missing_lints_inheritance::LINT,
     },
     ParsePassRule::LintPackage {
         rule: non_kebab_case_bins::lint_package,
         lint: non_kebab_case_bins::LINT,
     },
     ParsePassRule::LintPackage {
-        rule: non_kebab_case_features::lint_package,
-        lint: non_kebab_case_features::LINT,
-    },
-    ParsePassRule::LintPackage {
-        rule: non_snake_case_features::lint_package,
-        lint: non_snake_case_features::LINT,
-    },
-    ParsePassRule::LintPackage {
-        rule: unused_dependencies::lint_package,
-        lint: unused_dependencies::LINT,
+        rule: redundant_homepage::lint_package,
+        lint: redundant_homepage::LINT,
     },
     ParsePassRule::LintPackage {
         rule: redundant_readme::lint_package,
         lint: redundant_readme::LINT,
     },
     ParsePassRule::LintPackage {
-        rule: redundant_homepage::lint_package,
-        lint: redundant_homepage::LINT,
+        rule: unused_dependencies::lint_package,
+        lint: unused_dependencies::LINT,
     },
     ParsePassRule::LintPackage {
-        rule: missing_lints_inheritance::lint_package,
-        lint: missing_lints_inheritance::LINT,
+        rule: im_a_teapot::lint_package,
+        lint: im_a_teapot::LINT,
+    },
+    // `allow`
+    ParsePassRule::LintPackage {
+        rule: implicit_minimum_version_req::lint_package,
+        lint: implicit_minimum_version_req::LINT,
+    },
+    ParsePassRule::LintPackage {
+        rule: non_kebab_case_features::lint_package,
+        lint: non_kebab_case_features::LINT,
+    },
+    ParsePassRule::LintPackage {
+        rule: non_kebab_case_packages::lint_package,
+        lint: non_kebab_case_packages::LINT,
+    },
+    ParsePassRule::LintPackage {
+        rule: non_snake_case_features::lint_package,
+        lint: non_snake_case_features::LINT,
+    },
+    ParsePassRule::LintPackage {
+        rule: non_snake_case_packages::lint_package,
+        lint: non_snake_case_packages::LINT,
     },
 ];
 
@@ -290,18 +292,51 @@ mod tests {
     }
 
     #[test]
+    fn ensure_sorted_parse_pass_rules() {
+        let actual = parse_pass_rule_names(PARSE_PASS_RULES);
+        let mut ordered_parse_pass = PARSE_PASS_RULES.to_vec();
+        ordered_parse_pass.sort_by_key(|rule| {
+            let (lint, scope) = match rule {
+                ParsePassRule::DiagnosticManifest { .. } => {
+                    let scope = 0;
+                    (None, scope)
+                }
+                ParsePassRule::LintManifest { lint, .. } => {
+                    let scope = 0;
+                    (Some(lint), scope)
+                }
+                ParsePassRule::DiagnosticWorkspace { .. } => {
+                    let scope = 1;
+                    (None, scope)
+                }
+                ParsePassRule::LintWorkspace { lint, .. } => {
+                    let scope = 1;
+                    (Some(lint), scope)
+                }
+                ParsePassRule::DiagnosticPackage { .. } => {
+                    let scope = 2;
+                    (None, scope)
+                }
+                ParsePassRule::LintPackage { lint, .. } => {
+                    let scope = 2;
+                    (Some(lint), scope)
+                }
+            };
+            let is_lint = lint.is_some();
+            let level = lint.map(|l| std::cmp::Reverse(l.primary_group.default_level));
+            let name = lint.map(|l| l.name);
+            (is_lint, scope, level, name)
+        });
+        let expected = parse_pass_rule_names(&ordered_parse_pass);
+
+        println!("`PARSE_PASS_RULES` sort order:");
+        snapbox::assert_data_eq!(actual.join("\n"), expected.join("\n"));
+    }
+
+    #[test]
     fn ensure_parse_passed_in_lints() {
-        let parse_pass_lint_names = PARSE_PASS_RULES
-            .iter()
-            .filter_map(|rule| match rule {
-                ParsePassRule::DiagnosticManifest { .. }
-                | ParsePassRule::DiagnosticWorkspace { .. }
-                | ParsePassRule::DiagnosticPackage { .. } => None,
-                ParsePassRule::LintManifest { lint, .. }
-                | ParsePassRule::LintWorkspace { lint, .. }
-                | ParsePassRule::LintPackage { lint, .. } => Some(lint.name),
-            })
-            .collect::<std::collections::HashSet<_>>();
+        let parse_pass_lint_names =
+            HashSet::from_iter(parse_pass_rule_names(PARSE_PASS_RULES).into_iter());
         let lint_names = LINTS
             .iter()
             .map(|l| l.name)
@@ -320,6 +355,20 @@ mod tests {
             Please add the following to `LINTS`:\n\
             {need_added}",
         );
+    }
+
+    fn parse_pass_rule_names(rules: &[ParsePassRule<'_>]) -> Vec<&'static str> {
+        rules
+            .iter()
+            .filter_map(|rule| match rule {
+                ParsePassRule::DiagnosticManifest { .. }
+                | ParsePassRule::DiagnosticWorkspace { .. }
+                | ParsePassRule::DiagnosticPackage { .. } => None,
+                ParsePassRule::LintManifest { lint, .. }
+                | ParsePassRule::LintWorkspace { lint, .. }
+                | ParsePassRule::LintPackage { lint, .. } => Some(lint.name),
+            })
+            .collect()
     }
 
     #[test]
