@@ -802,7 +802,7 @@ fn non_member_typo() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("build -p barr --all-features")
+    p.cargo("build -p barr --features asdf")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] cannot specify features for packages outside of workspace
