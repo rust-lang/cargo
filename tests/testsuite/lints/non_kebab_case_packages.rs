@@ -61,14 +61,6 @@ fn main() {}"#,
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/foo_bar`
-[WARNING] packages should have a kebab-case name
- --> foo_bar
-  = [NOTE] `cargo::non_kebab_case_packages` is set to `warn` in `[lints]`
-[HELP] to change the package name to kebab case, convert the file stem
-  |
-1 - [ROOT]/foo/foo_bar
-1 + [ROOT]/foo/foo-bar
-  |
 [WARNING] binaries should have a kebab-case name
   |
 1 | [ROOT]/home/.cargo/build/[HASH]/target/.../foo_bar[EXE]
@@ -79,6 +71,14 @@ fn main() {}"#,
   |
 1 - foo_bar
 1 + foo-bar
+  |
+[WARNING] packages should have a kebab-case name
+ --> foo_bar
+  = [NOTE] `cargo::non_kebab_case_packages` is set to `warn` in `[lints]`
+[HELP] to change the package name to kebab case, convert the file stem
+  |
+1 - [ROOT]/foo/foo_bar
+1 + [ROOT]/foo/foo-bar
   |
 [WARNING] `foo_bar` (manifest) generated 2 warnings
 
