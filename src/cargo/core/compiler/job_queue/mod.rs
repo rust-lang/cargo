@@ -508,7 +508,7 @@ impl<'gctx> JobQueue<'gctx> {
             progress,
             next_id: 0,
             timings: self.timings,
-            unused_dep_state: UnusedDepState::new(build_runner),
+            unused_dep_state: UnusedDepState::new(build_runner.bcx),
             index_to_unit: build_runner
                 .bcx
                 .unit_to_index
@@ -849,7 +849,7 @@ impl<'gctx> DrainState<'gctx> {
             drop(self.unused_dep_state.emit_unused_warnings(
                 &mut warn_count,
                 &mut error_count,
-                build_runner,
+                build_runner.bcx,
             ));
             errors.count += error_count;
             build_runner.compilation.lint_warning_count += warn_count;

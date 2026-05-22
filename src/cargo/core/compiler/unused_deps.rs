@@ -11,7 +11,7 @@ use indexmap::IndexMap;
 use indexmap::IndexSet;
 use tracing::{debug, instrument, trace};
 
-use super::BuildRunner;
+use super::BuildContext;
 use super::unit::Unit;
 use crate::core::Dependency;
 use crate::core::Package;
@@ -34,18 +34,18 @@ pub struct UnusedDepState {
 
 impl UnusedDepState {
     #[instrument(name = "UnusedDepState::new", skip_all)]
-    pub fn new(build_runner: &mut BuildRunner<'_, '_>) -> Self {
+    pub fn new(bcx: &BuildContext<'_, '_>) -> Self {
         // Find all units for a package that can report unused externs
         let mut root_build_script_builds = IndexSet::new();
-        let roots = &build_runner.bcx.roots;
+        let roots = &bcx.roots;
         for root in roots.iter() {
-            for build_script_run in build_runner.unit_deps(root).iter() {
+            for build_script_run in bcx.unit_graph[root].iter() {
                 if !build_script_run.unit.target.is_custom_build()
                     && build_script_run.unit.pkg.package_id() != root.pkg.package_id()
                 {
                     continue;
                 }
-                for build_script_build in build_runner.unit_deps(&build_script_run.unit).iter() {
+                for build_script_build in bcx.unit_graph[&build_script_run.unit].iter() {
                     if !build_script_build.unit.target.is_custom_build()
                         && build_script_build.unit.pkg.package_id() != root.pkg.package_id()
                     {
@@ -59,15 +59,12 @@ impl UnusedDepState {
             }
         }
 
-        trace!(
-            "selected dep kinds: {:?}",
-            build_runner.bcx.selected_dep_kinds
-        );
+        trace!("selected dep kinds: {:?}", bcx.selected_dep_kinds);
         let mut states = IndexMap::<_, IndexMap<_, DependenciesState>>::new();
         for root in roots.iter().chain(root_build_script_builds.iter()) {
             let pkg_id = root.pkg.package_id();
             let dep_kind = dep_kind_of(root);
-            if !build_runner.bcx.selected_dep_kinds.contains(dep_kind) {
+            if !bcx.selected_dep_kinds.contains(dep_kind) {
                 trace!(
                     "pkg {} v{} ({dep_kind:?}): ignoring unused deps due to non-exhaustive units",
                     pkg_id.name(),
@@ -88,7 +85,7 @@ impl UnusedDepState {
                 .entry(dep_kind)
                 .or_default();
             state.needed_units += 1;
-            for dep in build_runner.unit_deps(root).iter() {
+            for dep in bcx.unit_graph[root].iter() {
                 trace!(
                     "    => {} (deps={})",
                     dep.unit.pkg.name(),
@@ -145,7 +142,7 @@ impl UnusedDepState {
         &self,
         warn_count: &mut usize,
         error_count: &mut usize,
-        build_runner: &mut BuildRunner<'_, '_>,
+        bcx: &BuildContext<'_, '_>,
     ) -> CargoResult<()> {
         for (pkg_id, states) in &self.states {
             let Some(pkg) = self.get_package(pkg_id) else {
@@ -184,7 +181,7 @@ impl UnusedDepState {
                 continue;
             }
 
-            let manifest_path = rel_cwd_manifest_path(pkg.manifest_path(), build_runner.bcx.gctx);
+            let manifest_path = rel_cwd_manifest_path(pkg.manifest_path(), bcx.gctx);
             let mut lint_count = 0;
             for (dep_kind, state) in states.iter() {
                 for ext in state.unused_externs.iter().flatten() {
@@ -240,7 +237,7 @@ impl UnusedDepState {
                         );
                         continue;
                     }
-                    if is_transitive_dep(&extern_state.unit, &state.seen_units, build_runner) {
+                    if is_transitive_dep(&extern_state.unit, &state.seen_units, bcx) {
                         debug!(
                             "pkg {} v{} ({dep_kind:?}): ignoring unused extern `{ext}`, may be activating features",
                             pkg_id.name(),
@@ -310,11 +307,7 @@ impl UnusedDepState {
                         if lint_level.is_error() {
                             *error_count += 1;
                         }
-                        build_runner
-                            .bcx
-                            .gctx
-                            .shell()
-                            .print_report(&report, lint_level.force())?;
+                        bcx.gctx.shell().print_report(&report, lint_level.force())?;
                     }
                 }
             }
@@ -383,11 +376,11 @@ fn unit_desc(unit: &Unit) -> String {
 fn is_transitive_dep(
     direct_dep_unit: &Unit,
     seen_units: &Vec<Unit>,
-    build_runner: &mut BuildRunner<'_, '_>,
+    bcx: &BuildContext<'_, '_>,
 ) -> bool {
     let mut queue = std::collections::VecDeque::new();
     for root_unit in seen_units {
-        for unit_dep in build_runner.unit_deps(root_unit) {
+        for unit_dep in &bcx.unit_graph[root_unit] {
             if root_unit.pkg.package_id() == unit_dep.unit.pkg.package_id() {
                 continue;
             }
@@ -399,7 +392,7 @@ fn is_transitive_dep(
     }
 
     while let Some(dep_unit) = queue.pop_front() {
-        for unit_dep in build_runner.unit_deps(dep_unit) {
+        for unit_dep in &bcx.unit_graph[dep_unit] {
             if unit_dep.unit == *direct_dep_unit {
                 return true;
             }
