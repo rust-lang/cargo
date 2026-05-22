@@ -213,6 +213,8 @@ use crate::util::interning::InternedString;
 use crate::util::{CargoResult, Filesystem, GlobalContext, LimitErrorReader, restricted_names};
 use crate::util::{VersionExt, hex};
 
+pub use cargo_util_schemas::index::RegistryConfig;
+
 /// The `.cargo-ok` file is used to track if the source is already unpacked.
 /// See [`RegistrySource::unpack_package`] for more.
 ///
@@ -268,55 +270,6 @@ pub struct RegistrySource<'gctx> {
     /// warning twice, with the assumption of (`dep.package_name()` + `--precise`
     /// version) being sufficient to uniquely identify the same query result.
     selected_precise_yanked: RefCell<HashSet<(InternedString, semver::Version)>>,
-}
-
-/// The [`config.json`] file stored in the index.
-///
-/// The config file may look like:
-///
-/// ```json
-/// {
-///     "dl": "https://example.com/api/{crate}/{version}/download",
-///     "api": "https://example.com/api",
-///     "auth-required": false             # unstable feature (RFC 3139)
-/// }
-/// ```
-///
-/// [`config.json`]: https://doc.rust-lang.org/nightly/cargo/reference/registry-index.html#index-configuration
-#[derive(Deserialize, Debug, Clone)]
-#[serde(rename_all = "kebab-case")]
-pub struct RegistryConfig {
-    /// Download endpoint for all crates.
-    ///
-    /// The string is a template which will generate the download URL for the
-    /// tarball of a specific version of a crate. The substrings `{crate}` and
-    /// `{version}` will be replaced with the crate's name and version
-    /// respectively.  The substring `{prefix}` will be replaced with the
-    /// crate's prefix directory name, and the substring `{lowerprefix}` will
-    /// be replaced with the crate's prefix directory name converted to
-    /// lowercase. The substring `{sha256-checksum}` will be replaced with the
-    /// crate's sha256 checksum.
-    ///
-    /// For backwards compatibility, if the string does not contain any
-    /// markers (`{crate}`, `{version}`, `{prefix}`, or `{lowerprefix}`), it
-    /// will be extended with `/{crate}/{version}/download` to
-    /// support registries like crates.io which were created before the
-    /// templating setup was created.
-    ///
-    /// For more on the template of the download URL, see [Index Configuration](
-    /// https://doc.rust-lang.org/nightly/cargo/reference/registry-index.html#index-configuration).
-    pub dl: String,
-
-    /// API endpoint for the registry. This is what's actually hit to perform
-    /// operations like yanks, owner modifications, publish new crates, etc.
-    /// If this is None, the registry does not support API commands.
-    pub api: Option<String>,
-
-    /// Whether all operations require authentication. See [RFC 3139].
-    ///
-    /// [RFC 3139]: https://rust-lang.github.io/rfcs/3139-cargo-alternative-registry-auth.html
-    #[serde(default)]
-    pub auth_required: bool,
 }
 
 /// Result from loading data from a registry.
@@ -963,11 +916,6 @@ impl<'gctx> Source for RegistrySource<'gctx> {
     async fn is_yanked(&self, pkg: PackageId) -> CargoResult<bool> {
         self.index.is_yanked(pkg, &*self.ops).await
     }
-}
-
-impl RegistryConfig {
-    /// File name of [`RegistryConfig`].
-    const NAME: &'static str = "config.json";
 }
 
 /// Get the maximum unpack size that Cargo permits

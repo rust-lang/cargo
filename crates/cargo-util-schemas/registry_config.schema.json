@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RegistryConfig",
+  "description": "The [`config.json`] file stored in the index.\n\nThe config file may look like:\n\n```json\n{\n    \"dl\": \"https://example.com/api/{crate}/{version}/download\",\n    \"api\": \"https://example.com/api\",\n    \"auth-required\": false\n}\n```\n\n[`config.json`]: https://doc.rust-lang.org/nightly/cargo/reference/registry-index.html#index-configuration",
+  "type": "object",
+  "properties": {
+    "dl": {
+      "description": "Download endpoint for all crates.\n\nThe string is a template which will generate the download URL for the\ntarball of a specific version of a crate. The substrings `{crate}` and\n`{version}` will be replaced with the crate's name and version\nrespectively.  The substring `{prefix}` will be replaced with the\ncrate's prefix directory name, and the substring `{lowerprefix}` will\nbe replaced with the crate's prefix directory name converted to\nlowercase. The substring `{sha256-checksum}` will be replaced with the\ncrate's sha256 checksum.\n\nFor backwards compatibility, if the string does not contain any\nmarkers (`{crate}`, `{version}`, `{prefix}`, or `{lowerprefix}`), it\nwill be extended with `/{crate}/{version}/download` to\nsupport registries like crates.io which were created before the\ntemplating setup was created.\n\nFor more on the template of the download URL, see [Index Configuration](\nhttps://doc.rust-lang.org/nightly/cargo/reference/registry-index.html#index-configuration).",
+      "type": "string"
+    },
+    "api": {
+      "description": "API endpoint for the registry. This is what's actually hit to perform\noperations like yanks, owner modifications, publish new crates, etc.\nIf this is None, the registry does not support API commands.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "auth-required": {
+      "description": "Whether all operations require authentication. See [RFC 3139].\n\n[RFC 3139]: https://rust-lang.github.io/rfcs/3139-cargo-alternative-registry-auth.html",
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "dl"
+  ]
+}
