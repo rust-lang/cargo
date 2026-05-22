@@ -30,6 +30,14 @@ impl DiagnosticStats {
         }
     }
 
+    pub fn warning_count(&self) -> usize {
+        self.warning_count
+    }
+
+    pub fn error_count(&self) -> usize {
+        self.error_count
+    }
+
     pub fn record_warning(&mut self) {
         self.warning_count += 1;
     }

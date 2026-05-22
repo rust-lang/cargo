@@ -144,6 +144,7 @@ use crate::core::compiler::future_incompat::{
 };
 use crate::core::resolver::ResolveBehavior;
 use crate::core::{PackageId, TargetKind};
+use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::rules::unused_dependencies;
 use crate::util::CargoResult;
 use crate::util::context::WarningHandling;
@@ -843,15 +844,13 @@ impl<'gctx> DrainState<'gctx> {
         self.progress.clear();
 
         if build_runner.bcx.gctx.cli_unstable().cargo_lints {
-            let mut warn_count = 0;
-            let mut error_count = 0;
+            let mut stats = DiagnosticStats::new();
             drop(unused_dependencies::lint_build_results(
                 build_runner,
-                &mut warn_count,
-                &mut error_count,
+                &mut stats,
             ));
-            errors.count += error_count;
-            build_runner.compilation.lint_warning_count += warn_count;
+            errors.count += stats.error_count();
+            build_runner.compilation.lint_warning_count += stats.warning_count();
         }
 
         let profile_name = build_runner.bcx.build_config.requested_profile;

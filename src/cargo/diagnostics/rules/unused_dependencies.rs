@@ -170,8 +170,7 @@ pub(crate) fn lint_package(
 #[instrument(skip_all)]
 pub fn lint_build_results(
     build_runner: &BuildRunner<'_, '_>,
-    warn_count: &mut usize,
-    error_count: &mut usize,
+    stats: &mut DiagnosticStats,
 ) -> CargoResult<()> {
     for (pkg_id, states) in &build_runner.unused_dep_state.states {
         let Some(pkg) = get_package(&build_runner.unused_dep_state, pkg_id) else {
@@ -325,12 +324,7 @@ pub fn lint_build_results(
                         report.push(help);
                     }
 
-                    if lint_level.is_warn() {
-                        *warn_count += 1;
-                    }
-                    if lint_level.is_error() {
-                        *error_count += 1;
-                    }
+                    stats.record_lint(lint_level);
                     build_runner
                         .bcx
                         .gctx
