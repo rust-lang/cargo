@@ -846,10 +846,9 @@ impl<'gctx> DrainState<'gctx> {
             let mut warn_count = 0;
             let mut error_count = 0;
             drop(unused_deps::lint_build_results(
+                build_runner,
                 &mut warn_count,
                 &mut error_count,
-                &build_runner.unused_dep_state,
-                build_runner.bcx,
             ));
             errors.count += error_count;
             build_runner.compilation.lint_warning_count += warn_count;

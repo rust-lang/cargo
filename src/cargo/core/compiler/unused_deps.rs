@@ -12,6 +12,7 @@ use indexmap::IndexSet;
 use tracing::{debug, instrument, trace};
 
 use super::BuildContext;
+use super::BuildRunner;
 use super::unit::Unit;
 use crate::core::Dependency;
 use crate::core::Package;
@@ -140,13 +141,12 @@ impl UnusedDepState {
 
 #[instrument(skip_all)]
 pub fn lint_build_results(
+    build_runner: &BuildRunner<'_, '_>,
     warn_count: &mut usize,
     error_count: &mut usize,
-    unused_dep_state: &UnusedDepState,
-    bcx: &BuildContext<'_, '_>,
 ) -> CargoResult<()> {
-    for (pkg_id, states) in &unused_dep_state.states {
-        let Some(pkg) = get_package(unused_dep_state, pkg_id) else {
+    for (pkg_id, states) in &build_runner.unused_dep_state.states {
+        let Some(pkg) = get_package(&build_runner.unused_dep_state, pkg_id) else {
             continue;
         };
         let toml_lints = pkg
@@ -182,7 +182,7 @@ pub fn lint_build_results(
             continue;
         }
 
-        let manifest_path = rel_cwd_manifest_path(pkg.manifest_path(), bcx.gctx);
+        let manifest_path = rel_cwd_manifest_path(pkg.manifest_path(), build_runner.bcx.gctx);
         let mut lint_count = 0;
         for (dep_kind, state) in states.iter() {
             for ext in state.unused_externs.iter().flatten() {
@@ -234,7 +234,7 @@ pub fn lint_build_results(
                     );
                     continue;
                 }
-                if is_transitive_dep(&extern_state.unit, &state.seen_units, bcx) {
+                if is_transitive_dep(&extern_state.unit, &state.seen_units, build_runner.bcx) {
                     debug!(
                         "pkg {} v{} ({dep_kind:?}): ignoring unused extern `{ext}`, may be activating features",
                         pkg_id.name(),
@@ -303,7 +303,11 @@ pub fn lint_build_results(
                     if lint_level.is_error() {
                         *error_count += 1;
                     }
-                    bcx.gctx.shell().print_report(&report, lint_level.force())?;
+                    build_runner
+                        .bcx
+                        .gctx
+                        .shell()
+                        .print_report(&report, lint_level.force())?;
                 }
             }
         }
