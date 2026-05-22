@@ -160,7 +160,7 @@ This may have false positives from:
 
 Also, periodically review hidden [`cargo::unused_dependencies`] results:
 ```console
-$ CARGO_LOG=cargo::core::compiler::unused_deps=debug cargo +nightly check -Zcargo-lints --workspace --all-targets
+$ CARGO_LOG=cargo::diagnostics::rules::unused_dependencies=debug cargo +nightly check -Zcargo-lints --workspace --all-targets
 ```
 This will show potential unused dependencies for
 - registry and git dependencies

@@ -138,13 +138,13 @@ use super::UnitIndex;
 use super::custom_build::Severity;
 use super::timings::SectionTiming;
 use super::timings::Timings;
-use super::unused_deps;
 use crate::core::compiler::descriptive_pkg_name;
 use crate::core::compiler::future_incompat::{
     self, FutureBreakageItem, FutureIncompatReportPackage,
 };
 use crate::core::resolver::ResolveBehavior;
 use crate::core::{PackageId, TargetKind};
+use crate::diagnostics::rules::unused_dependencies;
 use crate::util::CargoResult;
 use crate::util::context::WarningHandling;
 use crate::util::diagnostic_server::{self, DiagnosticPrinter};
@@ -845,7 +845,7 @@ impl<'gctx> DrainState<'gctx> {
         if build_runner.bcx.gctx.cli_unstable().cargo_lints {
             let mut warn_count = 0;
             let mut error_count = 0;
-            drop(unused_deps::lint_build_results(
+            drop(unused_dependencies::lint_build_results(
                 build_runner,
                 &mut warn_count,
                 &mut error_count,
