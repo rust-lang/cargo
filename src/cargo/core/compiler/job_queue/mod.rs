@@ -138,6 +138,7 @@ use super::UnitIndex;
 use super::custom_build::Severity;
 use super::timings::SectionTiming;
 use super::timings::Timings;
+use super::unused_deps::emit_unused_warnings;
 use crate::core::compiler::descriptive_pkg_name;
 use crate::core::compiler::future_incompat::{
     self, FutureBreakageItem, FutureIncompatReportPackage,
@@ -844,9 +845,10 @@ impl<'gctx> DrainState<'gctx> {
         if build_runner.bcx.gctx.cli_unstable().cargo_lints {
             let mut warn_count = 0;
             let mut error_count = 0;
-            drop(build_runner.unused_dep_state.emit_unused_warnings(
+            drop(emit_unused_warnings(
                 &mut warn_count,
                 &mut error_count,
+                &build_runner.unused_dep_state,
                 build_runner.bcx,
             ));
             errors.count += error_count;

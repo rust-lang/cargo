@@ -136,193 +136,191 @@ impl UnusedDepState {
             state.unused_externs = Some(unused_externs);
         }
     }
+}
 
-    #[instrument(skip_all)]
-    pub fn emit_unused_warnings(
-        &self,
-        warn_count: &mut usize,
-        error_count: &mut usize,
-        bcx: &BuildContext<'_, '_>,
-    ) -> CargoResult<()> {
-        for (pkg_id, states) in &self.states {
-            let Some(pkg) = self.get_package(pkg_id) else {
-                continue;
-            };
-            let toml_lints = pkg
-                .manifest()
-                .normalized_toml()
-                .lints
-                .clone()
-                .map(|lints| lints.lints)
-                .unwrap_or(manifest::TomlLints::default());
-            let cargo_lints = toml_lints
-                .get("cargo")
-                .cloned()
-                .unwrap_or(manifest::TomlToolLints::default());
-            let LintLevelProduct {
-                level: lint_level,
-                source,
-            } = LINT.level(
-                &cargo_lints,
-                pkg.rust_version(),
-                pkg.manifest().unstable_features(),
-            );
+#[instrument(skip_all)]
+pub fn emit_unused_warnings(
+    warn_count: &mut usize,
+    error_count: &mut usize,
+    unused_dep_state: &UnusedDepState,
+    bcx: &BuildContext<'_, '_>,
+) -> CargoResult<()> {
+    for (pkg_id, states) in &unused_dep_state.states {
+        let Some(pkg) = get_package(unused_dep_state, pkg_id) else {
+            continue;
+        };
+        let toml_lints = pkg
+            .manifest()
+            .normalized_toml()
+            .lints
+            .clone()
+            .map(|lints| lints.lints)
+            .unwrap_or(manifest::TomlLints::default());
+        let cargo_lints = toml_lints
+            .get("cargo")
+            .cloned()
+            .unwrap_or(manifest::TomlToolLints::default());
+        let LintLevelProduct {
+            level: lint_level,
+            source,
+        } = LINT.level(
+            &cargo_lints,
+            pkg.rust_version(),
+            pkg.manifest().unstable_features(),
+        );
 
-            if lint_level == LintLevel::Allow {
-                for (dep_kind, state) in states.iter() {
-                    for ext in state.unused_externs.iter().flatten() {
-                        debug!(
-                            "pkg {} v{} ({dep_kind:?}): ignoring unused extern `{ext}`, lint is allowed",
-                            pkg_id.name(),
-                            pkg_id.version(),
-                        );
-                    }
-                }
-                continue;
-            }
-
-            let manifest_path = rel_cwd_manifest_path(pkg.manifest_path(), bcx.gctx);
-            let mut lint_count = 0;
+        if lint_level == LintLevel::Allow {
             for (dep_kind, state) in states.iter() {
                 for ext in state.unused_externs.iter().flatten() {
-                    let mut used_in_dev = false;
-                    match dep_kind {
-                        DepKind::Normal => {
-                            if let Some(state) = states.get(&DepKind::Development)
-                                && state
-                                    .unused_externs
-                                    .as_ref()
-                                    .is_some_and(|ue| !ue.contains(ext))
-                            {
-                                used_in_dev = true;
-                            }
-                        }
-                        DepKind::Development => {
-                            if let Some(state) = states.get(&DepKind::Normal)
-                                && state.externs.contains_key(ext)
-                            {
-                                trace!(
-                                    "pkg {} v{} ({dep_kind:?}): ignoring unused extern `{ext}`, inherited from normal dependency",
-                                    pkg_id.name(),
-                                    pkg_id.version(),
-                                );
-                                continue;
-                            }
-                        }
-                        DepKind::Build => {}
-                    }
-                    let Some(extern_state) = state.externs.get(ext) else {
-                        // not one we care to report
-                        debug!(
-                            "pkg {} v{} ({dep_kind:?}): ignoring unused extern `{ext}`, untracked dependent",
-                            pkg_id.name(),
-                            pkg_id.version(),
-                        );
-                        continue;
-                    };
-                    if state.seen_units.len() != state.needed_units {
-                        debug_assert_ne!(
-                            state.externs.len(),
-                            0,
-                            "assumes tracked is checked first"
-                        );
-                        // Some compilations errored without printing the unused externs.
-                        // Don't print the warning in order to reduce false positive
-                        // spam during errors.
-                        debug!(
-                            "pkg {} v{} ({dep_kind:?}): ignoring unused extern `{ext}`, {} outstanding units",
-                            pkg_id.name(),
-                            pkg_id.version(),
-                            state.needed_units - state.seen_units.len()
-                        );
-                        continue;
-                    }
-                    if is_transitive_dep(&extern_state.unit, &state.seen_units, bcx) {
-                        debug!(
-                            "pkg {} v{} ({dep_kind:?}): ignoring unused extern `{ext}`, may be activating features",
-                            pkg_id.name(),
-                            pkg_id.version(),
-                        );
-                        continue;
-                    }
+                    debug!(
+                        "pkg {} v{} ({dep_kind:?}): ignoring unused extern `{ext}`, lint is allowed",
+                        pkg_id.name(),
+                        pkg_id.version(),
+                    );
+                }
+            }
+            continue;
+        }
 
-                    // Implicitly added dependencies (in the same crate) aren't interesting
-                    let dependency = if let Some(dependency) = &extern_state.manifest_deps {
-                        dependency
+        let manifest_path = rel_cwd_manifest_path(pkg.manifest_path(), bcx.gctx);
+        let mut lint_count = 0;
+        for (dep_kind, state) in states.iter() {
+            for ext in state.unused_externs.iter().flatten() {
+                let mut used_in_dev = false;
+                match dep_kind {
+                    DepKind::Normal => {
+                        if let Some(state) = states.get(&DepKind::Development)
+                            && state
+                                .unused_externs
+                                .as_ref()
+                                .is_some_and(|ue| !ue.contains(ext))
+                        {
+                            used_in_dev = true;
+                        }
+                    }
+                    DepKind::Development => {
+                        if let Some(state) = states.get(&DepKind::Normal)
+                            && state.externs.contains_key(ext)
+                        {
+                            trace!(
+                                "pkg {} v{} ({dep_kind:?}): ignoring unused extern `{ext}`, inherited from normal dependency",
+                                pkg_id.name(),
+                                pkg_id.version(),
+                            );
+                            continue;
+                        }
+                    }
+                    DepKind::Build => {}
+                }
+                let Some(extern_state) = state.externs.get(ext) else {
+                    // not one we care to report
+                    debug!(
+                        "pkg {} v{} ({dep_kind:?}): ignoring unused extern `{ext}`, untracked dependent",
+                        pkg_id.name(),
+                        pkg_id.version(),
+                    );
+                    continue;
+                };
+                if state.seen_units.len() != state.needed_units {
+                    debug_assert_ne!(state.externs.len(), 0, "assumes tracked is checked first");
+                    // Some compilations errored without printing the unused externs.
+                    // Don't print the warning in order to reduce false positive
+                    // spam during errors.
+                    debug!(
+                        "pkg {} v{} ({dep_kind:?}): ignoring unused extern `{ext}`, {} outstanding units",
+                        pkg_id.name(),
+                        pkg_id.version(),
+                        state.needed_units - state.seen_units.len()
+                    );
+                    continue;
+                }
+                if is_transitive_dep(&extern_state.unit, &state.seen_units, bcx) {
+                    debug!(
+                        "pkg {} v{} ({dep_kind:?}): ignoring unused extern `{ext}`, may be activating features",
+                        pkg_id.name(),
+                        pkg_id.version(),
+                    );
+                    continue;
+                }
+
+                // Implicitly added dependencies (in the same crate) aren't interesting
+                let dependency = if let Some(dependency) = &extern_state.manifest_deps {
+                    dependency
+                } else {
+                    continue;
+                };
+                for dependency in dependency {
+                    let manifest = pkg.manifest();
+                    let document = manifest.document();
+                    let contents = manifest.contents();
+                    let level = lint_level.to_diagnostic_level();
+                    let emitted_source = LINT.emitted_source(lint_level, source);
+                    let toml_path = dependency.toml_path();
+
+                    let mut primary = Group::with_title(level.primary_title(LINT.desc));
+                    if let Some(document) = document
+                        && let Some(contents) = contents
+                        && let Some(span) = get_key_value_span(document, &toml_path)
+                    {
+                        let span = span.key.start..span.value.end;
+                        primary = primary.element(
+                            Snippet::source(contents)
+                                .path(&manifest_path)
+                                .annotation(AnnotationKind::Primary.span(span)),
+                        );
                     } else {
-                        continue;
-                    };
-                    for dependency in dependency {
-                        let manifest = pkg.manifest();
-                        let document = manifest.document();
-                        let contents = manifest.contents();
-                        let level = lint_level.to_diagnostic_level();
-                        let emitted_source = LINT.emitted_source(lint_level, source);
-                        let toml_path = dependency.toml_path();
-
-                        let mut primary = Group::with_title(level.primary_title(LINT.desc));
-                        if let Some(document) = document
-                            && let Some(contents) = contents
-                            && let Some(span) = get_key_value_span(document, &toml_path)
-                        {
-                            let span = span.key.start..span.value.end;
-                            primary = primary.element(
-                                Snippet::source(contents)
-                                    .path(&manifest_path)
-                                    .annotation(AnnotationKind::Primary.span(span)),
-                            );
-                        } else {
-                            primary = primary.element(Origin::path(&manifest_path));
-                        }
-                        if lint_count == 0 {
-                            primary = primary.element(Level::NOTE.message(emitted_source));
-                        }
-                        lint_count += 1;
-                        let mut report = vec![primary];
-                        if let Some(document) = document
-                            && let Some(contents) = contents
-                            && let Some(span) = get_key_value_span(document, &toml_path)
-                        {
-                            let span = span.key.start..span.value.end;
-                            let mut help = Group::with_title(
-                                Level::HELP.secondary_title("remove the dependency"),
-                            );
-                            help = help.element(
-                                Snippet::source(contents)
-                                    .path(&manifest_path)
-                                    .patch(Patch::new(span, "")),
-                            );
-                            report.push(help);
-                        }
-                        if used_in_dev {
-                            let help = Group::with_title(Level::HELP.secondary_title(
-                                "to still use for development builds, move to `dev-dependencies`",
-                            ));
-                            report.push(help);
-                        }
-
-                        if lint_level.is_warn() {
-                            *warn_count += 1;
-                        }
-                        if lint_level.is_error() {
-                            *error_count += 1;
-                        }
-                        bcx.gctx.shell().print_report(&report, lint_level.force())?;
+                        primary = primary.element(Origin::path(&manifest_path));
                     }
+                    if lint_count == 0 {
+                        primary = primary.element(Level::NOTE.message(emitted_source));
+                    }
+                    lint_count += 1;
+                    let mut report = vec![primary];
+                    if let Some(document) = document
+                        && let Some(contents) = contents
+                        && let Some(span) = get_key_value_span(document, &toml_path)
+                    {
+                        let span = span.key.start..span.value.end;
+                        let mut help =
+                            Group::with_title(Level::HELP.secondary_title("remove the dependency"));
+                        help = help.element(
+                            Snippet::source(contents)
+                                .path(&manifest_path)
+                                .patch(Patch::new(span, "")),
+                        );
+                        report.push(help);
+                    }
+                    if used_in_dev {
+                        let help = Group::with_title(Level::HELP.secondary_title(
+                            "to still use for development builds, move to `dev-dependencies`",
+                        ));
+                        report.push(help);
+                    }
+
+                    if lint_level.is_warn() {
+                        *warn_count += 1;
+                    }
+                    if lint_level.is_error() {
+                        *error_count += 1;
+                    }
+                    bcx.gctx.shell().print_report(&report, lint_level.force())?;
                 }
             }
         }
-        Ok(())
     }
+    Ok(())
+}
 
-    fn get_package(&self, pkg_id: &PackageId) -> Option<&Package> {
-        let state = self.states.get(pkg_id)?;
-        let mut iter = state.values();
-        let state = iter.next()?;
-        let mut iter = state.seen_units.iter();
-        let unit = iter.next()?;
-        Some(&unit.pkg)
-    }
+fn get_package<'s>(
+    unused_dep_state: &'s UnusedDepState,
+    pkg_id: &PackageId,
+) -> Option<&'s Package> {
+    let state = unused_dep_state.states.get(pkg_id)?;
+    let mut iter = state.values();
+    let state = iter.next()?;
+    let mut iter = state.seen_units.iter();
+    let unit = iter.next()?;
+    Some(&unit.pkg)
 }
 
 /// Track a package's [`DepKind`]
