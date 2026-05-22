@@ -139,7 +139,7 @@ impl UnusedDepState {
 }
 
 #[instrument(skip_all)]
-pub fn emit_unused_warnings(
+pub fn lint_build_results(
     warn_count: &mut usize,
     error_count: &mut usize,
     unused_dep_state: &UnusedDepState,
