@@ -850,7 +850,6 @@ impl<'gctx> DrainState<'gctx> {
                 &mut stats,
             ));
             errors.count += stats.error_count();
-            build_runner.compilation.lint_warning_count += stats.lint_warning_count();
         }
 
         let profile_name = build_runner.bcx.build_config.requested_profile;
