@@ -19,6 +19,7 @@ pub use rules::{LINT_GROUPS, LINTS};
 
 pub struct DiagnosticStats {
     warning_count: usize,
+    lint_warning_count: usize,
     error_count: usize,
 }
 
@@ -26,8 +27,13 @@ impl DiagnosticStats {
     pub fn new() -> Self {
         Self {
             warning_count: 0,
+            lint_warning_count: 0,
             error_count: 0,
         }
+    }
+
+    pub fn lint_warning_count(&self) -> usize {
+        self.lint_warning_count
     }
 
     pub fn warning_count(&self) -> usize {
@@ -52,6 +58,7 @@ impl DiagnosticStats {
                 self.record_error();
             }
             LintLevel::Warn => {
+                self.lint_warning_count += 1;
                 self.record_warning();
             }
             LintLevel::Allow => {}
