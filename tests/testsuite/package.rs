@@ -7802,6 +7802,7 @@ Caused by:
 
 #[cargo_test]
 fn publish_to_crates_io_warns() {
+    // Publishing to crates.io should warn about missing manifest fields.
     let registry = registry::RegistryBuilder::new().http_api().build();
 
     let p = project()
@@ -7839,6 +7840,8 @@ fn publish_to_crates_io_warns() {
 
 #[cargo_test]
 fn publish_to_alt_registry_warns() {
+    // When publishing to an alternate registry, suppress warnings about
+    // missing manifest fields.
     let _alt_reg = registry::RegistryBuilder::new().alternative().build();
 
     let p = project()
