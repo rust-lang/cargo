@@ -883,8 +883,10 @@ fn exclude_from_time_machine_and_cloud_sync(path: &Path) {
 
 #[cfg(test)]
 mod tests {
+    use super::bytes2path;
     use super::join_paths;
     use super::normalize_path;
+    use super::strip_prefix_canonical;
     use super::write;
     use super::write_atomic;
 
@@ -919,6 +921,64 @@ mod tests {
             let actual = normalize_path(std::path::Path::new(input));
             assert_eq!(actual, std::path::Path::new(expected), "input: {input}");
         }
+    }
+
+    #[test]
+    fn test_normalize_path_edge_cases() {
+        assert_eq!(normalize_path(std::path::Path::new("foo/..")), std::path::Path::new(""));
+        assert_eq!(normalize_path(std::path::Path::new("./foo")), std::path::Path::new("foo"));
+        assert_eq!(normalize_path(std::path::Path::new("..")), std::path::Path::new(".."));
+        assert_eq!(normalize_path(std::path::Path::new("../..")), std::path::Path::new("../.."));
+        assert_eq!(normalize_path(std::path::Path::new("foo/../..")), std::path::Path::new(".."));
+    }
+
+    #[test]
+    fn test_bytes2path_empty() {
+        let path = bytes2path(b"").unwrap();
+        assert_eq!(path, std::path::Path::new(""));
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn test_bytes2path_non_utf8() {
+        use std::os::unix::ffi::OsStrExt;
+        let bytes = b"\x80\xFF\xFE";
+        let path = bytes2path(bytes).unwrap();
+        assert_eq!(path.as_os_str().as_bytes(), bytes);
+    }
+
+    #[test]
+    #[cfg(windows)]
+    fn test_bytes2path_non_utf8_fails() {
+        let err = bytes2path(b"\x80\xFF").unwrap_err();
+        assert!(err.to_string().contains("invalid non-unicode path"));
+    }
+
+    #[test]
+    fn test_strip_prefix_canonical_success() {
+        let tmpdir = tempfile::tempdir().unwrap();
+        let base = tmpdir.path().join("base");
+        let path = base.join("foo").join("bar");
+        std::fs::create_dir_all(&path).unwrap();
+        let result = strip_prefix_canonical(&path, &base).unwrap();
+        assert_eq!(result, std::path::Path::new("foo/bar"));
+    }
+
+    #[test]
+    fn test_strip_prefix_canonical_failure() {
+        let tmpdir = tempfile::tempdir().unwrap();
+        let base = tmpdir.path().join("base");
+        let path = tmpdir.path().join("other").join("file");
+        std::fs::create_dir_all(&path).unwrap();
+        std::fs::create_dir_all(&base).unwrap();
+        let err = strip_prefix_canonical(&path, &base).unwrap_err();
+        let _ = err;
+    }
+
+    #[test]
+    fn test_strip_prefix_canonical_empty() {
+        let result = strip_prefix_canonical(std::path::Path::new(""), std::path::Path::new("")).unwrap();
+        assert_eq!(result, std::path::Path::new(""));
     }
 
     #[test]
