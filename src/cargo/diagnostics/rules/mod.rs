@@ -135,14 +135,14 @@ static CARGO_LINTS_MSRV: cargo_util_schemas::manifest::RustVersion =
 
 pub static LINT_GROUPS: &[LintGroup] = &[
     DEFAULT,
-    COMPLEXITY,
     CORRECTNESS,
-    NURSERY,
-    PEDANTIC,
+    COMPLEXITY,
     PERF,
-    RESTRICTION,
     STYLE,
     SUSPICIOUS,
+    NURSERY,
+    PEDANTIC,
+    RESTRICTION,
     TEST_DUMMY_UNSTABLE,
 ];
 
@@ -247,6 +247,7 @@ fn find_lint_or_group<'a>(
 mod tests {
     use itertools::Itertools;
     use snapbox::ToDebug;
+    use std::cmp::Reverse;
     use std::collections::HashSet;
 
     use super::*;
@@ -292,7 +293,13 @@ mod tests {
         );
         let actual = LINT_GROUPS
             .iter()
-            .map(|l| (l.name != "default", l.name.to_uppercase()))
+            .map(|l| {
+                (
+                    l.name != "default",
+                    Reverse(l.default_level),
+                    l.name.to_uppercase(),
+                )
+            })
             .collect::<Vec<_>>();
 
         let mut expected = actual.clone();
