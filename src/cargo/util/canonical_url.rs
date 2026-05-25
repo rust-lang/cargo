@@ -33,27 +33,31 @@ impl CanonicalUrl {
             url.path_segments_mut().unwrap().pop_if_empty();
         }
 
-        // For GitHub URLs specifically, just lower-case everything. GitHub
-        // treats both the same, but they hash differently, and we're gonna be
-        // hashing them. This wants a more general solution, and also we're
-        // almost certainly not using the same case conversion rules that GitHub
-        // does. (See issue #84)
-        if url.host_str() == Some("github.com") {
-            url = format!("https{}", &url[url::Position::AfterScheme..])
-                .parse()
-                .unwrap();
-            let path = url.path().to_lowercase();
-            url.set_path(&path);
-        }
+        // Perform further canonicalization specific to git registries, which
+        // do not contain a `+` specifier.
+        if !url.scheme().contains('+') {
+            // For GitHub URLs specifically, just lower-case everything. GitHub
+            // treats both the same, but they hash differently, and we're gonna be
+            // hashing them. This wants a more general solution, and also we're
+            // almost certainly not using the same case conversion rules that GitHub
+            // does. (See issue #84)
+            if url.host_str() == Some("github.com") {
+                url = format!("https{}", &url[url::Position::AfterScheme..])
+                    .parse()
+                    .unwrap();
+                let path = url.path().to_lowercase();
+                url.set_path(&path);
+            }
 
-        // Repos can generally be accessed with or without `.git` extension.
-        let needs_chopping = url.path().ends_with(".git");
-        if needs_chopping {
-            let last = {
-                let last = url.path_segments().unwrap().next_back().unwrap();
-                last[..last.len() - 4].to_owned()
-            };
-            url.path_segments_mut().unwrap().pop().push(&last);
+            // Repos can generally be accessed with or without `.git` extension.
+            let needs_chopping = url.path().ends_with(".git");
+            if needs_chopping {
+                let last = {
+                    let last = url.path_segments().unwrap().next_back().unwrap();
+                    last[..last.len() - 4].to_owned()
+                };
+                url.path_segments_mut().unwrap().pop().push(&last);
+            }
         }
 
         Ok(CanonicalUrl(url))
