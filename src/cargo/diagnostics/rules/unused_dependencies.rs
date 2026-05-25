@@ -209,6 +209,12 @@ pub fn lint_build_results(
 
         let mut pkg_stats = DiagnosticStats::new();
         lint_package_build_results(build_runner, pkg, states, level, &mut pkg_stats)?;
+        // HACK: as other rules are added to this pass, this needs to move up into the pass
+        if let Err(error) =
+            pkg_stats.report_summary("finalize", Some(&*pkg.name()), build_runner.bcx.gctx)
+        {
+            build_runner.bcx.gctx.shell().error(error)?;
+        }
         *global_stats += pkg_stats;
     }
     Ok(())
