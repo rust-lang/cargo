@@ -844,12 +844,12 @@ impl<'gctx> DrainState<'gctx> {
         self.progress.clear();
 
         if build_runner.bcx.gctx.cli_unstable().cargo_lints {
-            let mut stats = DiagnosticStats::new();
+            let mut global_stats = DiagnosticStats::new();
             drop(unused_dependencies::lint_build_results(
                 build_runner,
-                &mut stats,
+                &mut global_stats,
             ));
-            errors.count += stats.error_count();
+            errors.count += global_stats.error_count();
         }
 
         let profile_name = build_runner.bcx.build_config.requested_profile;

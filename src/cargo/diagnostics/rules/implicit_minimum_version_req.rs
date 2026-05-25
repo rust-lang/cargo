@@ -90,7 +90,7 @@ pub(crate) fn lint_package(
     pkg: &Package,
     manifest_path: &Path,
     level: LintLevelProduct,
-    stats: &mut DiagnosticStats,
+    pkg_stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let LintLevelProduct {
@@ -138,7 +138,7 @@ pub(crate) fn lint_package(
             emit_source = false;
         }
 
-        stats.record_lint(lint_level);
+        pkg_stats.record_lint(lint_level);
         gctx.shell().print_report(&report, lint_level.force())?;
     }
 
@@ -151,7 +151,7 @@ pub(crate) fn lint_workspace(
     maybe_pkg: &MaybePackage,
     manifest_path: &Path,
     level: LintLevelProduct,
-    stats: &mut DiagnosticStats,
+    pkg_stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let LintLevelProduct {
@@ -215,7 +215,7 @@ pub(crate) fn lint_workspace(
             emit_source = false;
         }
 
-        stats.record_lint(lint_level);
+        pkg_stats.record_lint(lint_level);
         gctx.shell().print_report(&report, lint_level.force())?;
     }
 

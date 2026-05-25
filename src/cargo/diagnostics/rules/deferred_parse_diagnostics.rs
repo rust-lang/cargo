@@ -13,7 +13,7 @@ use crate::diagnostics::rel_cwd_manifest_path;
 pub(crate) fn diagnose_manifest(
     manifest: ManifestFor<'_>,
     manifest_path: &Path,
-    stats: &mut DiagnosticStats,
+    pkg_stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let warnings = match &manifest {
@@ -35,10 +35,10 @@ pub(crate) fn diagnose_manifest(
     for warning in warnings {
         let msg = format!("{manifest_path}: {}", warning.message);
         if warning.is_critical {
-            stats.record_error();
+            pkg_stats.record_error();
             gctx.shell().error(msg)?
         } else {
-            stats.record_warning();
+            pkg_stats.record_warning();
             gctx.shell().warn(msg)?
         }
     }

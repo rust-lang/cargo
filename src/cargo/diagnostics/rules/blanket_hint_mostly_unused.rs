@@ -61,7 +61,7 @@ pub(crate) fn lint_workspace(
     maybe_pkg: &MaybePackage,
     path: &Path,
     level: LintLevelProduct,
-    stats: &mut DiagnosticStats,
+    pkg_stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let LintLevelProduct {
@@ -169,7 +169,7 @@ pub(crate) fn lint_workspace(
         // The primary group should always be first
         report.insert(0, primary_group);
 
-        stats.record_lint(lint_level);
+        pkg_stats.record_lint(lint_level);
         gctx.shell().print_report(&report, lint_level.force())?;
     }
 

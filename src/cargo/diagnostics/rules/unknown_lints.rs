@@ -53,7 +53,7 @@ pub(crate) fn lint_manifest(
     manifest: ManifestFor<'_>,
     manifest_path: &Path,
     level: LintLevelProduct,
-    stats: &mut DiagnosticStats,
+    pkg_stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let normalized_toml = match &manifest {
@@ -83,10 +83,24 @@ pub(crate) fn lint_manifest(
         .and_then(|lints| lints.get("cargo"));
 
     if let Some(cargo_lints) = ws_lints {
-        lint_manifest_inner(&manifest, manifest_path, &level, cargo_lints, stats, gctx)?;
+        lint_manifest_inner(
+            &manifest,
+            manifest_path,
+            &level,
+            cargo_lints,
+            pkg_stats,
+            gctx,
+        )?;
     }
     if let Some(cargo_lints) = pkg_lints {
-        lint_manifest_inner(&manifest, manifest_path, &level, cargo_lints, stats, gctx)?;
+        lint_manifest_inner(
+            &manifest,
+            manifest_path,
+            &level,
+            cargo_lints,
+            pkg_stats,
+            gctx,
+        )?;
     }
 
     Ok(())
@@ -97,7 +111,7 @@ fn lint_manifest_inner(
     manifest_path: &Path,
     level: &LintLevelProduct,
     cargo_lints: &TomlToolLints,
-    stats: &mut DiagnosticStats,
+    pkg_stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let LintLevelProduct {
@@ -162,7 +176,7 @@ fn lint_manifest_inner(
         }
         report.push(group);
 
-        stats.record_lint(*lint_level);
+        pkg_stats.record_lint(*lint_level);
         gctx.shell().print_report(&report, lint_level.force())?;
     }
 

@@ -112,7 +112,7 @@ fn emit_parse_pkg_diagnostics(
     path: &Path,
     rules: &[ParsePassRule<'_>],
 ) -> CargoResult<()> {
-    let mut stats = DiagnosticStats::new();
+    let mut pkg_stats = DiagnosticStats::new();
 
     let toml_lints = pkg
         .manifest()
@@ -130,20 +130,20 @@ fn emit_parse_pkg_diagnostics(
         match rule {
             ParsePassRule::DiagnosticManifest { rule } => {
                 let manifest = pkg.into();
-                rule(manifest, &path, &mut stats, workspace.gctx())?;
+                rule(manifest, &path, &mut pkg_stats, workspace.gctx())?;
             }
             ParsePassRule::LintManifest { rule, lint } => {
                 if workspace.gctx().cli_unstable().cargo_lints {
                     let manifest: ManifestFor<'_> = pkg.into();
                     let level = manifest.lint_level(&cargo_lints, lint);
                     if level.level != LintLevel::Allow {
-                        rule(manifest, &path, level, &mut stats, workspace.gctx())?;
+                        rule(manifest, &path, level, &mut pkg_stats, workspace.gctx())?;
                     }
                 }
             }
             ParsePassRule::DiagnosticWorkspace { .. } | ParsePassRule::LintWorkspace { .. } => {}
             ParsePassRule::DiagnosticPackage { rule } => {
-                rule(workspace, pkg, &path, &mut stats, workspace.gctx())?;
+                rule(workspace, pkg, &path, &mut pkg_stats, workspace.gctx())?;
             }
             ParsePassRule::LintPackage { rule, lint } => {
                 if workspace.gctx().cli_unstable().cargo_lints {
@@ -154,14 +154,21 @@ fn emit_parse_pkg_diagnostics(
                     );
 
                     if level.level != LintLevel::Allow {
-                        rule(workspace, pkg, &path, level, &mut stats, workspace.gctx())?;
+                        rule(
+                            workspace,
+                            pkg,
+                            &path,
+                            level,
+                            &mut pkg_stats,
+                            workspace.gctx(),
+                        )?;
                     }
                 }
             }
         }
     }
 
-    stats.report_summary("parse", Some(&*pkg.name()), workspace.gctx())?;
+    pkg_stats.report_summary("parse", Some(&*pkg.name()), workspace.gctx())?;
 
     Ok(())
 }
@@ -170,7 +177,7 @@ fn emit_parse_ws_diagnostics(
     workspace: &Workspace<'_>,
     rules: &[ParsePassRule<'_>],
 ) -> CargoResult<()> {
-    let mut stats = DiagnosticStats::new();
+    let mut pkg_stats = DiagnosticStats::new();
 
     let cargo_lints = match workspace.root_maybe() {
         MaybePackage::Package(pkg) => {
@@ -200,7 +207,7 @@ fn emit_parse_ws_diagnostics(
                 rule(
                     manifest,
                     workspace.root_manifest(),
-                    &mut stats,
+                    &mut pkg_stats,
                     workspace.gctx(),
                 )?;
             }
@@ -213,7 +220,7 @@ fn emit_parse_ws_diagnostics(
                             manifest,
                             workspace.root_manifest(),
                             level,
-                            &mut stats,
+                            &mut pkg_stats,
                             workspace.gctx(),
                         )?;
                     }
@@ -224,7 +231,7 @@ fn emit_parse_ws_diagnostics(
                     workspace,
                     workspace.root_maybe(),
                     workspace.root_manifest(),
-                    &mut stats,
+                    &mut pkg_stats,
                     workspace.gctx(),
                 )?;
             }
@@ -241,7 +248,7 @@ fn emit_parse_ws_diagnostics(
                             workspace.root_maybe(),
                             workspace.root_manifest(),
                             level,
-                            &mut stats,
+                            &mut pkg_stats,
                             workspace.gctx(),
                         )?;
                     }
@@ -251,6 +258,6 @@ fn emit_parse_ws_diagnostics(
         }
     }
 
-    stats.report_summary("parse", None, workspace.gctx())?;
+    pkg_stats.report_summary("parse", None, workspace.gctx())?;
     Ok(())
 }

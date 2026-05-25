@@ -70,7 +70,7 @@ pub(crate) fn lint_package(
     pkg: &Package,
     manifest_path: &Path,
     level: LintLevelProduct,
-    stats: &mut DiagnosticStats,
+    pkg_stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let LintLevelProduct {
@@ -80,7 +80,7 @@ pub(crate) fn lint_package(
 
     let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
 
-    lint_package_inner(pkg, &manifest_path, lint_level, source, stats, gctx)
+    lint_package_inner(pkg, &manifest_path, lint_level, source, pkg_stats, gctx)
 }
 
 fn lint_package_inner(
@@ -88,7 +88,7 @@ fn lint_package_inner(
     manifest_path: &str,
     lint_level: LintLevel,
     source: LintLevelSource,
-    stats: &mut DiagnosticStats,
+    pkg_stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let manifest = pkg.manifest();
@@ -156,7 +156,7 @@ fn lint_package_inner(
         report.push(help);
     }
 
-    stats.record_lint(lint_level);
+    pkg_stats.record_lint(lint_level);
     gctx.shell().print_report(&report, lint_level.force())?;
 
     Ok(())

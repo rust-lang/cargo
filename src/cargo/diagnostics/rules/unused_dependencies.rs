@@ -99,7 +99,7 @@ pub(crate) fn lint_package(
     pkg: &Package,
     manifest_path: &Path,
     level: LintLevelProduct,
-    stats: &mut DiagnosticStats,
+    pkg_stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let LintLevelProduct {
@@ -162,7 +162,7 @@ pub(crate) fn lint_package(
             report.push(help);
         }
 
-        stats.record_lint(lint_level);
+        pkg_stats.record_lint(lint_level);
         gctx.shell().print_report(&report, lint_level.force())?;
     }
 
@@ -172,7 +172,7 @@ pub(crate) fn lint_package(
 #[instrument(skip_all)]
 pub fn lint_build_results(
     build_runner: &BuildRunner<'_, '_>,
-    stats: &mut DiagnosticStats,
+    global_stats: &mut DiagnosticStats,
 ) -> CargoResult<()> {
     for (pkg_id, states) in &build_runner.unused_dep_state.states {
         let Some(pkg) = get_package(&build_runner.unused_dep_state, pkg_id) else {
@@ -207,7 +207,7 @@ pub fn lint_build_results(
             continue;
         }
 
-        lint_package_build_results(build_runner, pkg, states, level, stats)?;
+        lint_package_build_results(build_runner, pkg, states, level, global_stats)?;
     }
     Ok(())
 }
@@ -217,7 +217,7 @@ fn lint_package_build_results(
     pkg: &Package,
     states: &IndexMap<DepKind, DependenciesState>,
     level: LintLevelProduct,
-    stats: &mut DiagnosticStats,
+    global_stats: &mut DiagnosticStats,
 ) -> CargoResult<()> {
     let mut lint_count = 0;
     let LintLevelProduct {
@@ -339,7 +339,7 @@ fn lint_package_build_results(
                     report.push(help);
                 }
 
-                stats.record_lint(lint_level);
+                global_stats.record_lint(lint_level);
                 build_runner
                     .bcx
                     .gctx
