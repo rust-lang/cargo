@@ -103,12 +103,16 @@ fn lint_groups(buf: &mut String) -> anyhow::Result<()> {
             continue;
         }
         let group_name = format!("`cargo::{}`", group.name);
+        // HACK: `default` is a secondary group without its own level
+        let group_level = if group.name == "default" {
+            "warn/deny".to_owned()
+        } else {
+            group.default_level.to_string()
+        };
         writeln!(
             buf,
             "| {:<max_name_len$} | {:<max_desc_len$} | {:<default_level_len$} |",
-            group_name,
-            group.desc,
-            group.default_level.to_string(),
+            group_name, group.desc, group_level,
         )?;
     }
     writeln!(buf, "\n")?;

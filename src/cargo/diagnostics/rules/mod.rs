@@ -134,6 +134,7 @@ static CARGO_LINTS_MSRV: cargo_util_schemas::manifest::RustVersion =
     cargo_util_schemas::manifest::RustVersion::new(1, 79, 0);
 
 pub static LINT_GROUPS: &[LintGroup] = &[
+    DEFAULT,
     COMPLEXITY,
     CORRECTNESS,
     NURSERY,
@@ -144,6 +145,14 @@ pub static LINT_GROUPS: &[LintGroup] = &[
     SUSPICIOUS,
     TEST_DUMMY_UNSTABLE,
 ];
+
+const DEFAULT: LintGroup = LintGroup {
+    name: "default",
+    desc: "all lints that are on by default (correctness, suspicious, style, complexity, perf)",
+    default_level: LintLevel::Warn,
+    feature_gate: None,
+    hidden: false,
+};
 
 const COMPLEXITY: LintGroup = LintGroup {
     name: "complexity",
@@ -283,7 +292,7 @@ mod tests {
         );
         let actual = LINT_GROUPS
             .iter()
-            .map(|l| l.name.to_uppercase())
+            .map(|l| (l.name != "default", l.name.to_uppercase()))
             .collect::<Vec<_>>();
 
         let mut expected = actual.clone();

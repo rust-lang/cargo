@@ -60,11 +60,20 @@ impl Lint {
             pkg_lints,
         );
 
+        let default_group = if LintLevel::Warn <= self.primary_group.default_level {
+            let lint_level_priority =
+                level_priority("default", self.primary_group.default_level, pkg_lints);
+            Some(("default", lint_level_priority))
+        } else {
+            None
+        };
+
         let (_, (level, source, _)) = [
             (self.name, lint_level_priority),
             (self.primary_group.name, group_level_priority),
         ]
         .into_iter()
+        .chain(default_group)
         .max_by_key(|(n, (l, s, p))| {
             (
                 l == &LintLevel::Forbid,
@@ -255,7 +264,7 @@ mod tests {
 
         let mut pkg_lints = manifest::TomlToolLints::new();
         pkg_lints.insert(
-            "style".to_string(),
+            "default".to_string(),
             manifest::TomlLint::Level(manifest::TomlLintLevel::Deny),
         );
         let features = Features::default();
@@ -281,7 +290,7 @@ mod tests {
         let features = Features::default();
 
         let LintLevelProduct { level, source } = lint.level(&pkg_lints, None, &features);
-        assert_eq!(level, LintLevel::Allow);
+        assert_eq!(level, LintLevel::Deny);
         assert_eq!(source, LintLevelSource::Package);
     }
 
@@ -301,7 +310,7 @@ mod tests {
         let features = Features::default();
 
         let LintLevelProduct { level, source } = lint.level(&pkg_lints, None, &features);
-        assert_eq!(level, LintLevel::Allow);
+        assert_eq!(level, LintLevel::Deny);
         assert_eq!(source, LintLevelSource::Package);
     }
 
@@ -329,7 +338,7 @@ mod tests {
         let features = Features::default();
 
         let LintLevelProduct { level, source } = lint.level(&pkg_lints, None, &features);
-        assert_eq!(level, LintLevel::Allow);
+        assert_eq!(level, LintLevel::Deny);
         assert_eq!(source, LintLevelSource::Package);
     }
 
