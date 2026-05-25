@@ -15,6 +15,7 @@ edition = "2015"
 authors = []
 
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 non_snake_case_packages = "warn"
             "#,
         )
@@ -50,6 +51,7 @@ fn package_name_from_script_name() {
             r#"
 ---
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 non_snake_case_packages = "warn"
 ---
 fn main() {}"#,

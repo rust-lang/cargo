@@ -19,6 +19,7 @@ authors = []
 foo_bar = []
 
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 non_kebab_case_features = "warn"
             "#,
         )
@@ -64,6 +65,7 @@ authors = []
 foo_bar = { version = "0.0.1", optional = true }
 
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 non_kebab_case_features = "warn"
             "#,
         )

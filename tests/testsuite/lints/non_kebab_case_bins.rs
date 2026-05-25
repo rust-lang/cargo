@@ -19,6 +19,7 @@ name = "foo_bar"
 path = "src/main.rs"
 
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 non_kebab_case_bins = "warn"
 "#,
         )
@@ -59,6 +60,7 @@ edition = "2015"
 authors = []
 
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 non_kebab_case_bins = "warn"
 "#,
         )
@@ -81,12 +83,12 @@ non_kebab_case_bins = "warn"
  3 + name = "foo-bar"
    |
 [HELP] to change the binary name to kebab case, specify `bin.name`
-  --> Cargo.toml:9:30
+  --> Cargo.toml:10:30
    |
- 9 ~ non_kebab_case_bins = "warn"
-10 + [[bin]]
-11 + name = "foo-bar"
-12 + path = "src/main.rs"
+10 ~ non_kebab_case_bins = "warn"
+11 + [[bin]]
+12 + name = "foo-bar"
+13 + path = "src/main.rs"
    |
 [WARNING] `foo_bar` (manifest) generated 1 warning
 
@@ -107,6 +109,7 @@ edition = "2015"
 authors = []
 
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 non_kebab_case_bins = "warn"
 "#,
         )
@@ -141,6 +144,7 @@ fn bin_name_from_script_name() {
             r#"
 ---
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 non_kebab_case_bins = "warn"
 ---
 fn main() {}"#,

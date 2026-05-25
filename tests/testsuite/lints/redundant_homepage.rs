@@ -16,6 +16,7 @@ repository = "https://github.com/rust-lang/cargo/"
 homepage = "https://github.com/rust-lang/cargo/"
 
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 redundant_homepage = "warn"
 "#,
         )
@@ -59,6 +60,7 @@ documentation = "https://docs.rs/cargo/latest/cargo/"
 homepage = "https://docs.rs/cargo/latest/cargo/"
 
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 redundant_homepage = "warn"
 "#,
         )
@@ -106,6 +108,7 @@ documentation.workspace = true
 homepage.workspace = true
 
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 redundant_homepage = "warn"
 "#,
         )

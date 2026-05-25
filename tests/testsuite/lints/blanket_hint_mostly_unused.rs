@@ -185,6 +185,7 @@ edition = "2015"
 hint-mostly-unused = true
 
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 blanket_hint_mostly_unused = "deny"
 "#,
         )

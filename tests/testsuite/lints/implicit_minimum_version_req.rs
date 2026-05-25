@@ -24,6 +24,7 @@ edition = "2021"
 dep = "1"
 
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 implicit_minimum_version_req = "warn"
 "#,
         )
@@ -70,6 +71,7 @@ edition = "2021"
 dep = "1.0"
 
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 implicit_minimum_version_req = "warn"
 "#,
         )
@@ -116,6 +118,7 @@ edition = "2021"
 dep = "1.0.0"
 
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 implicit_minimum_version_req = "warn"
 "#,
         )
@@ -150,6 +153,7 @@ edition = "2021"
 dep = { version = "1" }
 
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 implicit_minimum_version_req = "warn"
 "#,
         )
@@ -196,6 +200,7 @@ edition = "2021"
 dep = ">=1.0"
 
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 implicit_minimum_version_req = "warn"
 "#,
         )
@@ -242,6 +247,7 @@ edition = "2021"
 dep = "<2.0"
 
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 implicit_minimum_version_req = "warn"
 "#,
         )
@@ -276,6 +282,7 @@ edition = "2021"
 dep = "1.*"
 
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 implicit_minimum_version_req = "warn"
 "#,
         )
@@ -310,6 +317,7 @@ edition = "2021"
 dep = "1.0.*"
 
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 implicit_minimum_version_req = "warn"
 "#,
         )
@@ -344,6 +352,7 @@ edition = "2021"
 dep = ">1.0"
 
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 implicit_minimum_version_req = "warn"
 "#,
         )
@@ -378,6 +387,7 @@ edition = "2021"
 dep = "<=2.0"
 
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 implicit_minimum_version_req = "warn"
 "#,
         )
@@ -412,6 +422,7 @@ edition = "2021"
 dep = ">=1.0, <2.0"
 
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 implicit_minimum_version_req = "warn"
 "#,
         )
@@ -458,6 +469,7 @@ edition = "2021"
 dep = "~1.0"
 
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 implicit_minimum_version_req = "warn"
 "#,
         )
@@ -492,6 +504,7 @@ edition = "2021"
 dep = "=1"
 
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 implicit_minimum_version_req = "warn"
 "#,
         )
@@ -524,6 +537,7 @@ edition = "2021"
 bar = { path = "bar" }
 
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 implicit_minimum_version_req = "warn"
 "#,
         )
@@ -564,6 +578,7 @@ edition = "2021"
 bar = { path = "bar", version = "0.1" }
 
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 implicit_minimum_version_req = "warn"
 "#,
         )
@@ -622,6 +637,7 @@ edition = "2021"
 bar = {{ git = '{}' }}
 
 [lints.cargo]
+default = {{ level = "allow", priority = -1 }}
 implicit_minimum_version_req = "warn"
 "#,
                 git_project.url()
@@ -661,6 +677,7 @@ edition = "2021"
 bar = {{ git = '{}', version = "0.1" }}
 
 [lints.cargo]
+default = {{ level = "allow", priority = -1 }}
 implicit_minimum_version_req = "warn"
 "#,
                 git_project.url()
@@ -707,6 +724,7 @@ edition = "2021"
 dep = "1"
 
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 implicit_minimum_version_req = "warn"
 "#,
         )
@@ -753,6 +771,7 @@ edition = "2021"
 dep = "1.0"
 
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 implicit_minimum_version_req = "warn"
 "#,
         )
@@ -801,6 +820,7 @@ edition = "2021"
 dep = "1"
 
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 implicit_minimum_version_req = "warn"
 "#,
         )
@@ -848,6 +868,7 @@ edition = "2021"
 dep = "1"
 
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 implicit_minimum_version_req = "warn"
 "#,
         )
@@ -896,6 +917,7 @@ dep = "1"
 regex = "1.0"
 
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 implicit_minimum_version_req = "warn"
 "#,
         )
@@ -947,6 +969,7 @@ resolver = "2"
 dep = "1"
 
 [workspace.lints.cargo]
+default = { level = "allow", priority = -1 }
 implicit_minimum_version_req = "warn"
 "#,
         )
@@ -1008,6 +1031,7 @@ resolver = "2"
 dep = "1"
 
 [workspace.lints.cargo]
+default = { level = "allow", priority = -1 }
 implicit_minimum_version_req = "warn"
 "#,
         )
@@ -1027,17 +1051,6 @@ edition = "2021"
     p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unused workspace dependency
- --> Cargo.toml:7:1
-  |
-7 | dep = "1"
-  | ^^^
-  |
-  = [NOTE] `cargo::unused_workspace_dependencies` is set to `warn` by default
-[HELP] consider removing the unused dependency
-  |
-7 - dep = "1"
-  |
 [WARNING] dependency version requirement without an explicit minimum version
  --> Cargo.toml:7:7
   |
@@ -1049,7 +1062,7 @@ edition = "2021"
   |
 7 | dep = "1.0.0"
   |         ++++
-[WARNING] workspace (manifest) generated 2 warnings
+[WARNING] workspace (manifest) generated 1 warning
 
 "#]])
         .run();
@@ -1072,6 +1085,7 @@ resolver = "2"
 dep = "1"
 
 [workspace.lints.cargo]
+default = { level = "allow", priority = -1 }
 implicit_minimum_version_req = "warn"
 "#,
         )
@@ -1095,17 +1109,6 @@ workspace = true
     p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unused workspace dependency
- --> Cargo.toml:7:1
-  |
-7 | dep = "1"
-  | ^^^
-  |
-  = [NOTE] `cargo::unused_workspace_dependencies` is set to `warn` by default
-[HELP] consider removing the unused dependency
-  |
-7 - dep = "1"
-  |
 [WARNING] dependency version requirement without an explicit minimum version
  --> Cargo.toml:7:7
   |
@@ -1117,7 +1120,7 @@ workspace = true
   |
 7 | dep = "1.0.0"
   |         ++++
-[WARNING] workspace (manifest) generated 2 warnings
+[WARNING] workspace (manifest) generated 1 warning
 [WARNING] dependency version requirement without an explicit minimum version
  --> member/Cargo.toml:7:7
   |
@@ -1155,6 +1158,7 @@ edition = "2021"
 dep = "1"
 
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 implicit_minimum_version_req = "deny"
 "#,
         )

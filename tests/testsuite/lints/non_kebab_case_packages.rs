@@ -15,6 +15,7 @@ edition = "2015"
 authors = []
 
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 non_kebab_case_packages = "warn"
             "#,
         )
@@ -50,6 +51,7 @@ fn package_name_from_script_name() {
             r#"
 ---
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 non_kebab_case_packages = "warn"
 ---
 fn main() {}"#,
@@ -61,17 +63,6 @@ fn main() {}"#,
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/foo_bar`
-[WARNING] binaries should have a kebab-case name
-  |
-1 | [ROOT]/home/.cargo/build/[HASH]/target/.../foo_bar[EXE]
-  |                                        [..]^^^^^^^
-  |
-  = [NOTE] `cargo::non_kebab_case_bins` is set to `warn` by default
-[HELP] to change the binary name to kebab case, convert the file stem
-  |
-1 - foo_bar
-1 + foo-bar
-  |
 [WARNING] packages should have a kebab-case name
  --> foo_bar
   = [NOTE] `cargo::non_kebab_case_packages` is set to `warn` in `[lints]`
@@ -80,7 +71,7 @@ fn main() {}"#,
 1 - [ROOT]/foo/foo_bar
 1 + [ROOT]/foo/foo-bar
   |
-[WARNING] `foo_bar` (manifest) generated 2 warnings
+[WARNING] `foo_bar` (manifest) generated 1 warning
 
 "#]])
         .run();

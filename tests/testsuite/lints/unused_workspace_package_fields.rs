@@ -18,6 +18,7 @@ rust-version = "1.0"
 unknown = "foo"
 
 [workspace.lints.cargo]
+default = { level = "allow", priority = -1 }
 unused_workspace_package_fields = "warn"
 
 [package]

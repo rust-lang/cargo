@@ -41,6 +41,7 @@ fn ws_lints() {
 members = ["bar"]
 
 [workspace.lints.cargo]
+default = { level = "allow", priority = -1 }
 missing_lints_inheritance = "warn"
 "#,
         )
@@ -90,6 +91,7 @@ fn empty_pkg_lints() {
 members = ["bar"]
 
 [workspace.lints.cargo]
+default = { level = "allow", priority = -1 }
 missing_lints_inheritance = "warn"
 "#,
         )
@@ -124,6 +126,7 @@ fn inherit_lints() {
 members = ["bar"]
 
 [workspace.lints.cargo]
+default = { level = "allow", priority = -1 }
 missing_lints_inheritance = "warn"
 "#,
         )
