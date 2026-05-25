@@ -1,4 +1,4 @@
-use std::cmp::{Reverse, max_by_key};
+use std::cmp::Reverse;
 use std::fmt::Display;
 
 use cargo_util_schemas::manifest;
@@ -60,18 +60,20 @@ impl Lint {
             pkg_lints,
         );
 
-        let (_, (level, source, _)) = max_by_key(
+        let (_, (level, source, _)) = [
             (self.name, lint_level_priority),
             (self.primary_group.name, group_level_priority),
-            |(n, (l, s, p))| {
-                (
-                    l == &LintLevel::Forbid,
-                    *s != LintLevelSource::Default,
-                    *p,
-                    Reverse(*n),
-                )
-            },
-        );
+        ]
+        .into_iter()
+        .max_by_key(|(n, (l, s, p))| {
+            (
+                l == &LintLevel::Forbid,
+                *s != LintLevelSource::Default,
+                *p,
+                Reverse(*n),
+            )
+        })
+        .unwrap();
         LintLevelProduct { level, source }
     }
 
