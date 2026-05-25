@@ -500,6 +500,13 @@ mod test {
         assert_eq!(ident1, ident2);
     }
 
+    #[test]
+    fn test_canonicalize_idents_does_not_strip_dot_git_for_sparse() {
+        let ident1 = ident(&src("sparse+https://crates.io/fake-registry"));
+        let ident2 = ident(&src("sparse+https://crates.io/fake-registry.git"));
+        assert_ne!(ident1, ident2);
+    }
+
     fn src(s: &str) -> SourceId {
         SourceId::for_git(&s.into_url().unwrap(), GitReference::DefaultBranch).unwrap()
     }
