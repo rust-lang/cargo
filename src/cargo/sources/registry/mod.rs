@@ -198,7 +198,7 @@ use flate2::read::GzDecoder;
 use futures::FutureExt as _;
 use serde::Deserialize;
 use serde::Serialize;
-use tar::Archive;
+use tar::{Archive, EntryType};
 use tracing::debug;
 
 use crate::core::dependency::Dependency;
@@ -1017,6 +1017,14 @@ fn unpack(
                 "invalid tarball downloaded, contains \
                      a file at {entry_path:?} which isn't under {prefix:?}",
             )
+        }
+
+        // Prevent unpacking symlinks and other unexpected entry types
+        match entry.header().entry_type() {
+            EntryType::Regular | EntryType::Directory => {}
+            t => anyhow::bail!(
+                "invalid tarball downloaded, contains an entry at {entry_path:?} with invalid type {t:?}",
+            ),
         }
 
         // Prevent unpacking the lockfile from the crate itself.
