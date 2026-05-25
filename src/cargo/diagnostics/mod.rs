@@ -97,6 +97,28 @@ impl DiagnosticStats {
     }
 }
 
+impl std::ops::Add for DiagnosticStats {
+    type Output = DiagnosticStats;
+
+    fn add(mut self, rhs: Self) -> Self::Output {
+        self += rhs;
+        self
+    }
+}
+
+impl std::ops::AddAssign for DiagnosticStats {
+    fn add_assign(&mut self, rhs: Self) {
+        let DiagnosticStats {
+            warning_count,
+            lint_warning_count,
+            error_count,
+        } = rhs;
+        self.warning_count += warning_count;
+        self.lint_warning_count += lint_warning_count;
+        self.error_count += error_count;
+    }
+}
+
 /// Scope at which a lint runs: package-level or workspace-level.
 pub enum ManifestFor<'a> {
     /// Lint runs for a specific package.

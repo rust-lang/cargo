@@ -207,7 +207,9 @@ pub fn lint_build_results(
             continue;
         }
 
-        lint_package_build_results(build_runner, pkg, states, level, global_stats)?;
+        let mut pkg_stats = DiagnosticStats::new();
+        lint_package_build_results(build_runner, pkg, states, level, &mut pkg_stats)?;
+        *global_stats += pkg_stats;
     }
     Ok(())
 }
@@ -217,7 +219,7 @@ fn lint_package_build_results(
     pkg: &Package,
     states: &IndexMap<DepKind, DependenciesState>,
     level: LintLevelProduct,
-    global_stats: &mut DiagnosticStats,
+    pkg_stats: &mut DiagnosticStats,
 ) -> CargoResult<()> {
     let mut lint_count = 0;
     let LintLevelProduct {
@@ -339,7 +341,7 @@ fn lint_package_build_results(
                     report.push(help);
                 }
 
-                global_stats.record_lint(lint_level);
+                pkg_stats.record_lint(lint_level);
                 build_runner
                     .bcx
                     .gctx
