@@ -246,4 +246,116 @@ mod tests {
         assert_eq!(level, LintLevel::Deny);
         assert_eq!(source, LintLevelSource::Package);
     }
+
+    #[test]
+    fn default_group_overrides_default() {
+        let lint = test_lint("non_kebab_case_bins", &STYLE);
+
+        let mut pkg_lints = manifest::TomlToolLints::new();
+        pkg_lints.insert(
+            "style".to_string(),
+            manifest::TomlLint::Level(manifest::TomlLintLevel::Deny),
+        );
+        let features = Features::default();
+
+        let LintLevelProduct { level, source } = lint.level(&pkg_lints, None, &features);
+        assert_eq!(level, LintLevel::Deny);
+        assert_eq!(source, LintLevelSource::Package);
+    }
+
+    #[test]
+    fn default_before_primary() {
+        let lint = test_lint("non_kebab_case_bins", &STYLE);
+
+        let mut pkg_lints = manifest::TomlToolLints::new();
+        pkg_lints.insert(
+            "default".to_string(),
+            manifest::TomlLint::Level(manifest::TomlLintLevel::Deny),
+        );
+        pkg_lints.insert(
+            "style".to_string(),
+            manifest::TomlLint::Level(manifest::TomlLintLevel::Allow),
+        );
+        let features = Features::default();
+
+        let LintLevelProduct { level, source } = lint.level(&pkg_lints, None, &features);
+        assert_eq!(level, LintLevel::Allow);
+        assert_eq!(source, LintLevelSource::Package);
+    }
+
+    #[test]
+    fn default_after_primary() {
+        let lint = test_lint("non_kebab_case_bins", &STYLE);
+
+        let mut pkg_lints = manifest::TomlToolLints::new();
+        pkg_lints.insert(
+            "style".to_string(),
+            manifest::TomlLint::Level(manifest::TomlLintLevel::Allow),
+        );
+        pkg_lints.insert(
+            "default".to_string(),
+            manifest::TomlLint::Level(manifest::TomlLintLevel::Deny),
+        );
+        let features = Features::default();
+
+        let LintLevelProduct { level, source } = lint.level(&pkg_lints, None, &features);
+        assert_eq!(level, LintLevel::Allow);
+        assert_eq!(source, LintLevelSource::Package);
+    }
+
+    #[test]
+    fn default_higher_than_primary() {
+        let lint = test_lint("non_kebab_case_bins", &STYLE);
+
+        let mut pkg_lints = manifest::TomlToolLints::new();
+        pkg_lints.insert(
+            "default".to_string(),
+            manifest::TomlLint::Config(manifest::TomlLintConfig {
+                level: manifest::TomlLintLevel::Deny,
+                priority: 1,
+                config: Default::default(),
+            }),
+        );
+        pkg_lints.insert(
+            "style".to_string(),
+            manifest::TomlLint::Config(manifest::TomlLintConfig {
+                level: manifest::TomlLintLevel::Allow,
+                priority: -1,
+                config: Default::default(),
+            }),
+        );
+        let features = Features::default();
+
+        let LintLevelProduct { level, source } = lint.level(&pkg_lints, None, &features);
+        assert_eq!(level, LintLevel::Allow);
+        assert_eq!(source, LintLevelSource::Package);
+    }
+
+    #[test]
+    fn default_lower_than_primary() {
+        let lint = test_lint("non_kebab_case_bins", &STYLE);
+
+        let mut pkg_lints = manifest::TomlToolLints::new();
+        pkg_lints.insert(
+            "default".to_string(),
+            manifest::TomlLint::Config(manifest::TomlLintConfig {
+                level: manifest::TomlLintLevel::Deny,
+                priority: -1,
+                config: Default::default(),
+            }),
+        );
+        pkg_lints.insert(
+            "style".to_string(),
+            manifest::TomlLint::Config(manifest::TomlLintConfig {
+                level: manifest::TomlLintLevel::Allow,
+                priority: 1,
+                config: Default::default(),
+            }),
+        );
+        let features = Features::default();
+
+        let LintLevelProduct { level, source } = lint.level(&pkg_lints, None, &features);
+        assert_eq!(level, LintLevel::Allow);
+        assert_eq!(source, LintLevelSource::Package);
+    }
 }
