@@ -564,12 +564,13 @@ fn config_before_subcommand_forwarded() {
         .arg("build.warnings='deny'")
         .arg("clippy-mock")
         .env("PATH", &path)
-        .with_status(0)
+        .with_status(101)
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] unused variable: `x`
 ...
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[ERROR] `foo` (bin "foo") generated 1 warning (run `cargo fix --bin "foo" -p foo` to apply 1 suggestion)
+[ERROR] warnings are denied by `build.warnings` configuration
 
 "#]])
         .run();
