@@ -309,20 +309,10 @@ fn fix_manifests(ws: &Workspace<'_>, pkgs: &[&Package]) -> CargoResult<()> {
         let file = file.display();
 
         let mut manifest_mut = LocalManifest::try_new(pkg.manifest_path())?;
-        let document = &mut manifest_mut.data;
         let mut fixes = 0;
 
-        let root = document.as_table_mut();
-
         fixes += 1;
-        root.entry("package").or_insert_with(|| {
-            let mut t = toml_edit::Table::new();
-            t.set_position(Some(-1));
-            t.into()
-        });
-        root["package"]["edition"] = crate::core::features::Edition::LATEST_STABLE
-            .to_string()
-            .into();
+        manifest_mut.ensure_edition();
 
         if 0 < fixes {
             let verb = if fixes == 1 { "fix" } else { "fixes" };

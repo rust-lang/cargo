@@ -353,6 +353,32 @@ impl LocalManifest {
             })
     }
 
+    pub fn ensure_edition(&mut self) -> bool {
+        if self.embedded.is_none() {
+            return false;
+        }
+
+        let root = self.data.as_table_mut();
+        let package = root.entry("package").or_insert_with(|| {
+            let mut t = toml_edit::Table::new();
+            t.set_position(Some(-1));
+            t.into()
+        });
+        let Some(package) = package.as_table_like_mut() else {
+            return false;
+        };
+
+        let mut changed = false;
+        package.entry("edition").or_insert_with(|| {
+            changed = true;
+            crate::core::features::Edition::LATEST_STABLE
+                .to_string()
+                .into()
+        });
+
+        changed
+    }
+
     /// Add entry to a Cargo.toml.
     pub fn insert_into_table(
         &mut self,
