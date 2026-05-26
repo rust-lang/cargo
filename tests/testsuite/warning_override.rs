@@ -527,3 +527,50 @@ fn cap_lints_allow() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn config_before_subcommand_forwarded() {
+    let clippy_mock = project()
+        .at("cargo-clippy-mock")
+        .file(
+            "Cargo.toml",
+            &cargo_test_support::basic_manifest("cargo-clippy-mock", "0.0.1"),
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {
+                    let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_string());
+                    let mut cmd = std::process::Command::new(cargo);
+                    cmd.arg("check");
+                    cmd.args(std::env::args().skip(2));
+                    let status = cmd.status().unwrap();
+                    std::process::exit(status.code().unwrap_or(1));
+                }
+            "#,
+        )
+        .build();
+    clippy_mock.cargo("build").run();
+
+    let p = make_project_with_rustc_warning();
+
+    let mut path =
+        std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default()).collect::<Vec<_>>();
+    path.push(clippy_mock.target_debug_dir());
+    let path = std::env::join_paths(path.iter()).unwrap();
+
+    p.cargo("")
+        .arg("--config")
+        .arg("build.warnings='deny'")
+        .arg("clippy-mock")
+        .env("PATH", &path)
+        .with_status(0)
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] unused variable: `x`
+...
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
