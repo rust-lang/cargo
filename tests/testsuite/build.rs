@@ -1571,7 +1571,7 @@ fn cargo_default_env_metadata_env_var() {
         .with_stderr_data(format!(
             "\
 ...
-[RUNNING] `rustc --crate-name foo [..]--extern bar=[ROOT]/foo/target/debug/deps/{dll_prefix}bar{dll_suffix}`
+[RUNNING] `rustc --crate-name foo [..]--extern bar=[ROOT]/foo/target/debug/deps/{dll_prefix}bar{dll_suffix}[..]`
 ...
 "))
         .run();
@@ -1584,7 +1584,7 @@ fn cargo_default_env_metadata_env_var() {
         .with_stderr_data(format!(
             "\
 ...
-[RUNNING] `rustc --crate-name foo [..]--extern bar=[ROOT]/foo/target/debug/deps/{dll_prefix}bar-[..]{dll_suffix}`
+[RUNNING] `rustc --crate-name foo [..]--extern bar=[ROOT]/foo/target/debug/deps/{dll_prefix}bar-[..]{dll_suffix}[..]`
 ...
 "))
         .run();
@@ -5890,7 +5890,7 @@ fn build_lib_only() {
     p.cargo("build --lib -v")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..] -L dependency=[ROOT]/foo/target/debug/deps`
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..] -L dependency=[ROOT]/foo/target/debug/deps[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])

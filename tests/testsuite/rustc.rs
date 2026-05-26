@@ -17,7 +17,7 @@ fn build_lib_for_foo() {
 
     p.cargo("rustc --lib -v").with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=2 [..]-C metadata=[..] [..]--out-dir [ROOT]/foo/target/debug/deps -L dependency=[ROOT]/foo/target/debug/deps`
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=2 [..]-C metadata=[..] [..]--out-dir [ROOT]/foo/target/debug/deps -L dependency=[ROOT]/foo/target/debug/deps[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]]).run();
@@ -50,7 +50,7 @@ fn build_main_and_allow_unstable_options() {
     p.cargo("rustc -v --bin foo -- -C debug-assertions")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=2 [..]-C metadata=[..] --out-dir [ROOT]/foo/target/debug/deps -L dependency=[ROOT]/foo/target/debug/deps`
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=2 [..]-C metadata=[..] --out-dir [ROOT]/foo/target/debug/deps -L dependency=[ROOT]/foo/target/debug/deps[..]`
 [RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]--crate-type bin --emit=[..]link[..]-C debuginfo=2 [..]-C metadata=[..] --out-dir [ROOT]/foo/target/debug/deps -L dependency=[ROOT]/foo/target/debug/deps --extern foo=[ROOT]/foo/target/debug/deps/libfoo-[HASH].rlib[..]-C debug-assertions[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -870,7 +870,7 @@ fn precedence() {
         .env("RUSTFLAGS", "--cfg from_rustflags")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
-[RUNNING] `rustc [..]-C strip=debuginfo [..]--cfg cargo_rustc -C strip=symbols --cfg from_rustflags`
+[RUNNING] `rustc [..]-C strip=debuginfo [..]--cfg cargo_rustc -C strip=symbols --cfg from_rustflags[..]`
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 
 "#]])
@@ -896,5 +896,44 @@ fn build_with_duplicate_crate_types() {
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
+        .run();
+}
+
+#[cargo_test]
+fn verbose_flag_forwarded_to_rustc_for_local_only() {
+    cargo_test_support::registry::Package::new("bar", "1.0.0")
+        .file("src/lib.rs", "pub fn bar() {}")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2015"
+
+            [dependencies]
+            bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "extern crate bar; pub fn main() {}")
+        .build();
+
+    p.cargo("build -v")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[COMPILING] bar v1.0.0
+[RUNNING] `rustc --crate-name bar [..]`
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..] --verbose`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .with_stderr_does_not_contain("[RUNNING] `rustc --crate-name bar [..] --verbose`")
         .run();
 }

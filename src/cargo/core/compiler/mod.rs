@@ -815,6 +815,9 @@ fn prepare_rustc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResult
     if build_runner.bcx.gctx.cli_unstable().checksum_freshness {
         base.arg("-Z").arg("checksum-hash-algorithm=blake3");
     }
+    if gctx.shell().verbosity() == Verbosity::Verbose && unit.is_local() {
+        base.arg("--verbose");
+    }
 
     if is_primary {
         base.env("CARGO_PRIMARY_PACKAGE", "1");
