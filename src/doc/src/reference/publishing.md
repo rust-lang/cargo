@@ -4,9 +4,10 @@ Once you've got a library that you'd like to share with the world, it's time to
 publish it on [crates.io]! Publishing a crate is when a specific
 version is uploaded to be hosted on [crates.io].
 
-Take care when publishing a crate, because a publish is **permanent**. The
-version can never be overwritten, and the code cannot be deleted. There is no
-limit to the number of versions which can be published, however.
+Take care when publishing a crate, because a publish is
+[generally permanent](https://crates.io/policies#package-ownership).
+The version can never be overwritten, and the code cannot be deleted. There is
+no limit to the number of versions which can be published, however.
 
 ## Before your first publish
 
