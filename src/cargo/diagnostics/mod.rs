@@ -19,6 +19,7 @@ pub use rules::{LINT_GROUPS, LINTS};
 
 pub struct DiagnosticStats {
     warning_count: usize,
+    lint_warning_count: usize,
     error_count: usize,
 }
 
@@ -26,8 +27,21 @@ impl DiagnosticStats {
     pub fn new() -> Self {
         Self {
             warning_count: 0,
+            lint_warning_count: 0,
             error_count: 0,
         }
+    }
+
+    pub fn lint_warning_count(&self) -> usize {
+        self.lint_warning_count
+    }
+
+    pub fn warning_count(&self) -> usize {
+        self.warning_count
+    }
+
+    pub fn error_count(&self) -> usize {
+        self.error_count
     }
 
     pub fn record_warning(&mut self) {
@@ -44,6 +58,7 @@ impl DiagnosticStats {
                 self.record_error();
             }
             LintLevel::Warn => {
+                self.lint_warning_count += 1;
                 self.record_warning();
             }
             LintLevel::Allow => {}
@@ -79,6 +94,28 @@ impl DiagnosticStats {
         }
 
         Ok(())
+    }
+}
+
+impl std::ops::Add for DiagnosticStats {
+    type Output = DiagnosticStats;
+
+    fn add(mut self, rhs: Self) -> Self::Output {
+        self += rhs;
+        self
+    }
+}
+
+impl std::ops::AddAssign for DiagnosticStats {
+    fn add_assign(&mut self, rhs: Self) {
+        let DiagnosticStats {
+            warning_count,
+            lint_warning_count,
+            error_count,
+        } = rhs;
+        self.warning_count += warning_count;
+        self.lint_warning_count += lint_warning_count;
+        self.error_count += error_count;
     }
 }
 

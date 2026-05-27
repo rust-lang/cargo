@@ -1,51 +1,37 @@
 use std::collections::BTreeSet;
 
-use cargo_util_schemas::manifest;
-use cargo_util_terminal::report::AnnotationKind;
-use cargo_util_terminal::report::Group;
-use cargo_util_terminal::report::Level;
-use cargo_util_terminal::report::Origin;
-use cargo_util_terminal::report::Patch;
-use cargo_util_terminal::report::Snippet;
 use indexmap::IndexMap;
 use indexmap::IndexSet;
-use tracing::{debug, instrument, trace};
+use tracing::{instrument, trace};
 
-use super::BuildRunner;
+use super::BuildContext;
 use super::unit::Unit;
 use crate::core::Dependency;
-use crate::core::Package;
 use crate::core::PackageId;
 use crate::core::compiler::build_config::CompileMode;
 use crate::core::dependency::DepKind;
 use crate::core::manifest::TargetKind;
-use crate::diagnostics::LintLevel;
-use crate::diagnostics::LintLevelProduct;
-use crate::diagnostics::get_key_value_span;
-use crate::diagnostics::rel_cwd_manifest_path;
-use crate::diagnostics::rules::unused_dependencies::LINT;
-use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 
 /// Track and translate `unused_externs` to `unused_dependencies`
 pub struct UnusedDepState {
-    states: IndexMap<PackageId, IndexMap<DepKind, DependenciesState>>,
+    pub states: IndexMap<PackageId, IndexMap<DepKind, DependenciesState>>,
 }
 
 impl UnusedDepState {
     #[instrument(name = "UnusedDepState::new", skip_all)]
-    pub fn new(build_runner: &mut BuildRunner<'_, '_>) -> Self {
+    pub fn new(bcx: &BuildContext<'_, '_>) -> Self {
         // Find all units for a package that can report unused externs
         let mut root_build_script_builds = IndexSet::new();
-        let roots = &build_runner.bcx.roots;
+        let roots = &bcx.roots;
         for root in roots.iter() {
-            for build_script_run in build_runner.unit_deps(root).iter() {
+            for build_script_run in bcx.unit_graph[root].iter() {
                 if !build_script_run.unit.target.is_custom_build()
                     && build_script_run.unit.pkg.package_id() != root.pkg.package_id()
                 {
                     continue;
                 }
-                for build_script_build in build_runner.unit_deps(&build_script_run.unit).iter() {
+                for build_script_build in bcx.unit_graph[&build_script_run.unit].iter() {
                     if !build_script_build.unit.target.is_custom_build()
                         && build_script_build.unit.pkg.package_id() != root.pkg.package_id()
                     {
@@ -59,15 +45,12 @@ impl UnusedDepState {
             }
         }
 
-        trace!(
-            "selected dep kinds: {:?}",
-            build_runner.bcx.selected_dep_kinds
-        );
+        trace!("selected dep kinds: {:?}", bcx.selected_dep_kinds);
         let mut states = IndexMap::<_, IndexMap<_, DependenciesState>>::new();
         for root in roots.iter().chain(root_build_script_builds.iter()) {
             let pkg_id = root.pkg.package_id();
             let dep_kind = dep_kind_of(root);
-            if !build_runner.bcx.selected_dep_kinds.contains(dep_kind) {
+            if !bcx.selected_dep_kinds.contains(dep_kind) {
                 trace!(
                     "pkg {} v{} ({dep_kind:?}): ignoring unused deps due to non-exhaustive units",
                     pkg_id.name(),
@@ -88,7 +71,7 @@ impl UnusedDepState {
                 .entry(dep_kind)
                 .or_default();
             state.needed_units += 1;
-            for dep in build_runner.unit_deps(root).iter() {
+            for dep in bcx.unit_graph[root].iter() {
                 trace!(
                     "    => {} (deps={})",
                     dep.unit.pkg.name(),
@@ -139,219 +122,28 @@ impl UnusedDepState {
             state.unused_externs = Some(unused_externs);
         }
     }
-
-    #[instrument(skip_all)]
-    pub fn emit_unused_warnings(
-        &self,
-        warn_count: &mut usize,
-        error_count: &mut usize,
-        build_runner: &mut BuildRunner<'_, '_>,
-    ) -> CargoResult<()> {
-        for (pkg_id, states) in &self.states {
-            let Some(pkg) = self.get_package(pkg_id) else {
-                continue;
-            };
-            let toml_lints = pkg
-                .manifest()
-                .normalized_toml()
-                .lints
-                .clone()
-                .map(|lints| lints.lints)
-                .unwrap_or(manifest::TomlLints::default());
-            let cargo_lints = toml_lints
-                .get("cargo")
-                .cloned()
-                .unwrap_or(manifest::TomlToolLints::default());
-            let LintLevelProduct {
-                level: lint_level,
-                source,
-            } = LINT.level(
-                &cargo_lints,
-                pkg.rust_version(),
-                pkg.manifest().unstable_features(),
-            );
-
-            if lint_level == LintLevel::Allow {
-                for (dep_kind, state) in states.iter() {
-                    for ext in state.unused_externs.iter().flatten() {
-                        debug!(
-                            "pkg {} v{} ({dep_kind:?}): ignoring unused extern `{ext}`, lint is allowed",
-                            pkg_id.name(),
-                            pkg_id.version(),
-                        );
-                    }
-                }
-                continue;
-            }
-
-            let manifest_path = rel_cwd_manifest_path(pkg.manifest_path(), build_runner.bcx.gctx);
-            let mut lint_count = 0;
-            for (dep_kind, state) in states.iter() {
-                for ext in state.unused_externs.iter().flatten() {
-                    let mut used_in_dev = false;
-                    match dep_kind {
-                        DepKind::Normal => {
-                            if let Some(state) = states.get(&DepKind::Development)
-                                && state
-                                    .unused_externs
-                                    .as_ref()
-                                    .is_some_and(|ue| !ue.contains(ext))
-                            {
-                                used_in_dev = true;
-                            }
-                        }
-                        DepKind::Development => {
-                            if let Some(state) = states.get(&DepKind::Normal)
-                                && state.externs.contains_key(ext)
-                            {
-                                trace!(
-                                    "pkg {} v{} ({dep_kind:?}): ignoring unused extern `{ext}`, inherited from normal dependency",
-                                    pkg_id.name(),
-                                    pkg_id.version(),
-                                );
-                                continue;
-                            }
-                        }
-                        DepKind::Build => {}
-                    }
-                    let Some(extern_state) = state.externs.get(ext) else {
-                        // not one we care to report
-                        debug!(
-                            "pkg {} v{} ({dep_kind:?}): ignoring unused extern `{ext}`, untracked dependent",
-                            pkg_id.name(),
-                            pkg_id.version(),
-                        );
-                        continue;
-                    };
-                    if state.seen_units.len() != state.needed_units {
-                        debug_assert_ne!(
-                            state.externs.len(),
-                            0,
-                            "assumes tracked is checked first"
-                        );
-                        // Some compilations errored without printing the unused externs.
-                        // Don't print the warning in order to reduce false positive
-                        // spam during errors.
-                        debug!(
-                            "pkg {} v{} ({dep_kind:?}): ignoring unused extern `{ext}`, {} outstanding units",
-                            pkg_id.name(),
-                            pkg_id.version(),
-                            state.needed_units - state.seen_units.len()
-                        );
-                        continue;
-                    }
-                    if is_transitive_dep(&extern_state.unit, &state.seen_units, build_runner) {
-                        debug!(
-                            "pkg {} v{} ({dep_kind:?}): ignoring unused extern `{ext}`, may be activating features",
-                            pkg_id.name(),
-                            pkg_id.version(),
-                        );
-                        continue;
-                    }
-
-                    // Implicitly added dependencies (in the same crate) aren't interesting
-                    let dependency = if let Some(dependency) = &extern_state.manifest_deps {
-                        dependency
-                    } else {
-                        continue;
-                    };
-                    for dependency in dependency {
-                        let manifest = pkg.manifest();
-                        let document = manifest.document();
-                        let contents = manifest.contents();
-                        let level = lint_level.to_diagnostic_level();
-                        let emitted_source = LINT.emitted_source(lint_level, source);
-                        let toml_path = dependency.toml_path();
-
-                        let mut primary = Group::with_title(level.primary_title(LINT.desc));
-                        if let Some(document) = document
-                            && let Some(contents) = contents
-                            && let Some(span) = get_key_value_span(document, &toml_path)
-                        {
-                            let span = span.key.start..span.value.end;
-                            primary = primary.element(
-                                Snippet::source(contents)
-                                    .path(&manifest_path)
-                                    .annotation(AnnotationKind::Primary.span(span)),
-                            );
-                        } else {
-                            primary = primary.element(Origin::path(&manifest_path));
-                        }
-                        if lint_count == 0 {
-                            primary = primary.element(Level::NOTE.message(emitted_source));
-                        }
-                        lint_count += 1;
-                        let mut report = vec![primary];
-                        if let Some(document) = document
-                            && let Some(contents) = contents
-                            && let Some(span) = get_key_value_span(document, &toml_path)
-                        {
-                            let span = span.key.start..span.value.end;
-                            let mut help = Group::with_title(
-                                Level::HELP.secondary_title("remove the dependency"),
-                            );
-                            help = help.element(
-                                Snippet::source(contents)
-                                    .path(&manifest_path)
-                                    .patch(Patch::new(span, "")),
-                            );
-                            report.push(help);
-                        }
-                        if used_in_dev {
-                            let help = Group::with_title(Level::HELP.secondary_title(
-                                "to still use for development builds, move to `dev-dependencies`",
-                            ));
-                            report.push(help);
-                        }
-
-                        if lint_level.is_warn() {
-                            *warn_count += 1;
-                        }
-                        if lint_level.is_error() {
-                            *error_count += 1;
-                        }
-                        build_runner
-                            .bcx
-                            .gctx
-                            .shell()
-                            .print_report(&report, lint_level.force())?;
-                    }
-                }
-            }
-        }
-        Ok(())
-    }
-
-    fn get_package(&self, pkg_id: &PackageId) -> Option<&Package> {
-        let state = self.states.get(pkg_id)?;
-        let mut iter = state.values();
-        let state = iter.next()?;
-        let mut iter = state.seen_units.iter();
-        let unit = iter.next()?;
-        Some(&unit.pkg)
-    }
 }
 
 /// Track a package's [`DepKind`]
 #[derive(Default)]
-struct DependenciesState {
+pub struct DependenciesState {
     /// All declared dependencies
-    externs: IndexMap<InternedString, ExternState>,
+    pub externs: IndexMap<InternedString, ExternState>,
     /// Expected [`Self::seen_units`] entries to know we've received them all
     ///
     /// To avoid warning in cases where we didn't,
     /// e.g. if a [`Unit`] errored and didn't report unused externs.
-    needed_units: usize,
+    pub needed_units: usize,
     /// Units that have reported their unused externs
-    seen_units: Vec<Unit>,
+    pub seen_units: Vec<Unit>,
     /// Intersection of unused externs across all [`Self::seen_units`]
-    unused_externs: Option<BTreeSet<InternedString>>,
+    pub unused_externs: Option<BTreeSet<InternedString>>,
 }
 
 #[derive(Clone)]
-struct ExternState {
-    unit: Unit,
-    manifest_deps: Option<Vec<Dependency>>,
+pub struct ExternState {
+    pub unit: Unit,
+    pub manifest_deps: Option<Vec<Dependency>>,
 }
 
 fn dep_kind_of(unit: &Unit) -> DepKind {
@@ -377,35 +169,4 @@ fn unit_desc(unit: &Unit) -> String {
         unit.target.kind().description(),
         unit.mode,
     )
-}
-
-#[instrument(skip_all)]
-fn is_transitive_dep(
-    direct_dep_unit: &Unit,
-    seen_units: &Vec<Unit>,
-    build_runner: &mut BuildRunner<'_, '_>,
-) -> bool {
-    let mut queue = std::collections::VecDeque::new();
-    for root_unit in seen_units {
-        for unit_dep in build_runner.unit_deps(root_unit) {
-            if root_unit.pkg.package_id() == unit_dep.unit.pkg.package_id() {
-                continue;
-            }
-            if unit_dep.unit == *direct_dep_unit {
-                continue;
-            }
-            queue.push_back(&unit_dep.unit);
-        }
-    }
-
-    while let Some(dep_unit) = queue.pop_front() {
-        for unit_dep in build_runner.unit_deps(dep_unit) {
-            if unit_dep.unit == *direct_dep_unit {
-                return true;
-            }
-            queue.push_back(&unit_dep.unit);
-        }
-    }
-
-    false
 }

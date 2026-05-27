@@ -24,6 +24,7 @@ use super::job_queue::JobQueue;
 use super::layout::Layout;
 use super::lto::Lto;
 use super::unit_graph::UnitDep;
+use super::unused_deps::UnusedDepState;
 use super::{BuildContext, Compilation, CompileKind, CompileMode, Executor, FileFlavor};
 
 mod compilation_files;
@@ -89,6 +90,8 @@ pub struct BuildRunner<'a, 'gctx> {
     /// because it is continuously updated as the job progresses.
     pub failed_scrape_units: Arc<Mutex<HashSet<UnitHash>>>,
 
+    pub unused_dep_state: UnusedDepState,
+
     /// Manages locks for build units when fine grain locking is enabled.
     pub lock_manager: Arc<LockManager>,
 }
@@ -130,6 +133,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
             lto: HashMap::new(),
             metadata_for_doc_units: HashMap::new(),
             failed_scrape_units: Arc::new(Mutex::new(HashSet::new())),
+            unused_dep_state: UnusedDepState::new(bcx),
             lock_manager: Arc::new(LockManager::new()),
         })
     }

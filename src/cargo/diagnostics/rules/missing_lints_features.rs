@@ -21,7 +21,7 @@ use crate::diagnostics::rel_cwd_manifest_path;
 pub(crate) fn diagnose_manifest(
     manifest: ManifestFor<'_>,
     manifest_path: &Path,
-    stats: &mut DiagnosticStats,
+    pkg_stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let normalized_toml = match &manifest {
@@ -51,10 +51,10 @@ pub(crate) fn diagnose_manifest(
         .and_then(|lints| lints.get("cargo"));
 
     if let Some(cargo_lints) = ws_lints {
-        diagnose_manifest_inner(&manifest, manifest_path, cargo_lints, stats, gctx)?;
+        diagnose_manifest_inner(&manifest, manifest_path, cargo_lints, pkg_stats, gctx)?;
     }
     if let Some(cargo_lints) = pkg_lints {
-        diagnose_manifest_inner(&manifest, manifest_path, cargo_lints, stats, gctx)?;
+        diagnose_manifest_inner(&manifest, manifest_path, cargo_lints, pkg_stats, gctx)?;
     }
 
     Ok(())
@@ -64,7 +64,7 @@ fn diagnose_manifest_inner(
     manifest: &ManifestFor<'_>,
     manifest_path: &Path,
     cargo_lints: &manifest::TomlToolLints,
-    stats: &mut DiagnosticStats,
+    pkg_stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
@@ -85,7 +85,14 @@ fn diagnose_manifest_inner(
         if let Some(feature_gate) = feature_gate
             && !manifest.unstable_features().is_enabled(feature_gate)
         {
-            report_feature_not_enabled(name, feature_gate, &manifest, &manifest_path, stats, gctx)?;
+            report_feature_not_enabled(
+                name,
+                feature_gate,
+                &manifest,
+                &manifest_path,
+                pkg_stats,
+                gctx,
+            )?;
         }
     }
 
@@ -97,7 +104,7 @@ fn report_feature_not_enabled(
     feature_gate: &Feature,
     manifest: &ManifestFor<'_>,
     manifest_path: &str,
-    stats: &mut DiagnosticStats,
+    pkg_stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let dash_feature_name = feature_gate.name().replace("_", "-");
@@ -129,7 +136,7 @@ fn report_feature_not_enabled(
         "consider adding `cargo-features = [\"{dash_feature_name}\"]` to the top of the manifest"
     )))];
 
-    stats.record_error();
+    pkg_stats.record_error();
     gctx.shell().print_report(&report, true)?;
 
     Ok(())

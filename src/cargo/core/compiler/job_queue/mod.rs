@@ -138,13 +138,14 @@ use super::UnitIndex;
 use super::custom_build::Severity;
 use super::timings::SectionTiming;
 use super::timings::Timings;
-use super::unused_deps::UnusedDepState;
 use crate::core::compiler::descriptive_pkg_name;
 use crate::core::compiler::future_incompat::{
     self, FutureBreakageItem, FutureIncompatReportPackage,
 };
 use crate::core::resolver::ResolveBehavior;
 use crate::core::{PackageId, TargetKind};
+use crate::diagnostics::DiagnosticStats;
+use crate::diagnostics::rules::unused_dependencies;
 use crate::util::CargoResult;
 use crate::util::context::WarningHandling;
 use crate::util::diagnostic_server::{self, DiagnosticPrinter};
@@ -189,7 +190,6 @@ struct DrainState<'gctx> {
     progress: Progress<'gctx>,
     next_id: u32,
     timings: Timings<'gctx>,
-    unused_dep_state: UnusedDepState,
 
     /// Map from unit index to unit, for looking up dependency information.
     index_to_unit: HashMap<UnitIndex, Unit>,
@@ -508,7 +508,6 @@ impl<'gctx> JobQueue<'gctx> {
             progress,
             next_id: 0,
             timings: self.timings,
-            unused_dep_state: UnusedDepState::new(build_runner),
             index_to_unit: build_runner
                 .bcx
                 .unit_to_index
@@ -748,7 +747,8 @@ impl<'gctx> DrainState<'gctx> {
             }
             Message::UnusedExterns(id, unused_externs) => {
                 let unit = &self.active[&id];
-                self.unused_dep_state
+                build_runner
+                    .unused_dep_state
                     .record_unused_externs_for_unit(unit, unused_externs);
             }
             Message::Token(acquired_token) => {
@@ -844,15 +844,12 @@ impl<'gctx> DrainState<'gctx> {
         self.progress.clear();
 
         if build_runner.bcx.gctx.cli_unstable().cargo_lints {
-            let mut warn_count = 0;
-            let mut error_count = 0;
-            drop(self.unused_dep_state.emit_unused_warnings(
-                &mut warn_count,
-                &mut error_count,
+            let mut global_stats = DiagnosticStats::new();
+            drop(unused_dependencies::lint_build_results(
                 build_runner,
+                &mut global_stats,
             ));
-            errors.count += error_count;
-            build_runner.compilation.lint_warning_count += warn_count;
+            errors.count += global_stats.error_count();
         }
 
         let profile_name = build_runner.bcx.build_config.requested_profile;

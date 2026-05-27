@@ -59,7 +59,7 @@ pub(crate) fn lint_package(
     pkg: &Package,
     manifest_path: &Path,
     level: LintLevelProduct,
-    stats: &mut DiagnosticStats,
+    pkg_stats: &mut DiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let LintLevelProduct {
@@ -114,7 +114,7 @@ pub(crate) fn lint_package(
         report.push(help);
     }
 
-    stats.record_lint(lint_level);
+    pkg_stats.record_lint(lint_level);
     gctx.shell().print_report(&report, lint_level.force())?;
 
     Ok(())
