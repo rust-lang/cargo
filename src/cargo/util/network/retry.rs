@@ -314,7 +314,7 @@ fn with_retry_finds_nested_spurious_errors() {
         body: Vec::new(),
         headers: Vec::new(),
     });
-    let error1 = anyhow::Error::from(error1.context("A non-spurious wrapping err"));
+    let error1 = anyhow::Error::from(error1.context("a non-spurious wrapping err"));
     let error2 = anyhow::Error::from(HttpNotSuccessful {
         code: 502,
         url: "Uri".to_string(),
@@ -322,7 +322,7 @@ fn with_retry_finds_nested_spurious_errors() {
         body: Vec::new(),
         headers: Vec::new(),
     });
-    let error2 = anyhow::Error::from(error2.context("A second chained error"));
+    let error2 = anyhow::Error::from(error2.context("a second chained error"));
     let mut results: Vec<CargoResult<()>> = vec![Ok(()), Err(error1), Err(error2)];
     let gctx = GlobalContext::default().unwrap();
     *gctx.shell() = Shell::from_write(Box::new(Vec::new()));

@@ -222,7 +222,7 @@ impl str::FromStr for Manifest {
 
     /// Read manifest data from string
     fn from_str(input: &str) -> ::std::result::Result<Self, Self::Err> {
-        let d: toml_edit::DocumentMut = input.parse().context("Manifest not valid TOML")?;
+        let d: toml_edit::DocumentMut = input.parse().context("manifest not valid TOML")?;
 
         Ok(Manifest { data: d })
     }
@@ -283,7 +283,7 @@ impl LocalManifest {
                 data = String::new();
             }
         }
-        let manifest = data.parse().context("Unable to parse Cargo.toml")?;
+        let manifest = data.parse().context("unable to parse Cargo.toml")?;
         Ok(LocalManifest {
             manifest,
             path: path.to_owned(),
