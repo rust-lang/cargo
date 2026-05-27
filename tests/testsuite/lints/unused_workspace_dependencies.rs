@@ -30,6 +30,7 @@ unused = "1"
 not-inherited = "1"
 
 [workspace.lints.cargo]
+default = { level = "allow", priority = -1 }
 unused_workspace_dependencies = "warn"
 
 [package]
@@ -100,19 +101,6 @@ workspace = true
 11 - unused = "1"
    |
 [WARNING] workspace (manifest) generated 2 warnings
-[WARNING] unused dependency
- --> bar/Cargo.toml:9:1
-  |
-9 | build-dep.workspace = true
-  | ^^^^^^^^^
-  |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` by default
-[HELP] remove the dependency
-  |
-9 - build-dep.workspace = true
-9 + .workspace = true
-  |
-[WARNING] `bar` (manifest) generated 1 warning
 [UPDATING] `dummy-registry` index
 [LOCKING] 6 packages to latest compatible versions
 [DOWNLOADING] crates ...

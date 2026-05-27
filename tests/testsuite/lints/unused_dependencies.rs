@@ -22,6 +22,7 @@ fn unused_dep_normal() {
             unused = "0.1.0"
 
             [lints.cargo]
+            default = { level = "allow", priority = -1 }
             unused_dependencies = "warn"
         "#,
         )
@@ -77,6 +78,7 @@ fn unused_dep_build() {
             unused = "0.1.0"
 
             [lints.cargo]
+            default = { level = "allow", priority = -1 }
             unused_dependencies = "warn"
         "#,
         )
@@ -138,6 +140,7 @@ fn unused_dep_build_no_build_rs() {
             unused = "0.1.0"
 
             [lints.cargo]
+            default = { level = "allow", priority = -1 }
             unused_dependencies = "warn"
         "#,
         )
@@ -198,6 +201,7 @@ fn unused_dep_lib_bins() {
             bins_used = "0.1.0"
 
             [lints.cargo]
+            default = { level = "allow", priority = -1 }
             unused_dependencies = "warn"
         "#,
         )
@@ -303,6 +307,7 @@ fn unused_dep_build_with_used_dep_normal() {
             unused_build = "0.1.0"
 
             [lints.cargo]
+            default = { level = "allow", priority = -1 }
             unused_dependencies = "warn"
         "#,
         )
@@ -365,6 +370,7 @@ fn unused_dep_normal_but_implicit_used_dep_dev() {
             used_dev = "0.1.0"
 
             [lints.cargo]
+            default = { level = "allow", priority = -1 }
             unused_dependencies = "warn"
         "#,
         )
@@ -454,6 +460,7 @@ fn unused_dep_normal_but_explicit_used_dep_dev() {
             used_once = "0.1.0"
 
             [lints.cargo]
+            default = { level = "allow", priority = -1 }
             unused_dependencies = "warn"
         "#,
         )
@@ -521,6 +528,7 @@ fn unused_dep_dev_but_explicit_used_dep_normal() {
             used_once = "0.1.0"
 
             [lints.cargo]
+            default = { level = "allow", priority = -1 }
             unused_dependencies = "warn"
         "#,
         )
@@ -579,6 +587,7 @@ fn optional_dependency() {
             used = { version = "0.1.0", optional = true }
 
             [lints.cargo]
+            default = { level = "allow", priority = -1 }
             unused_dependencies = "warn"
         "#,
         )
@@ -654,6 +663,7 @@ fn unused_dep_renamed() {
             bar = { package = "baz", version = "0.2.0" }
 
             [lints.cargo]
+            default = { level = "allow", priority = -1 }
             unused_dependencies = "warn"
         "#,
         )
@@ -716,6 +726,7 @@ fn warning_replay() {
             unused = "0.1.0"
 
             [lints.cargo]
+            default = { level = "allow", priority = -1 }
             unused_dependencies = "warn"
         "#,
         )
@@ -796,6 +807,7 @@ fn unused_dep_target() {
             used = "0.1.0"
 
             [lints.cargo]
+            default = {{ level = "allow", priority = -1 }}
             unused_dependencies = "warn"
         "#
             ),
@@ -869,6 +881,7 @@ fn unused_dev_deps() {
             unused = "0.1.0"
 
             [lints.cargo]
+            default = { level = "allow", priority = -1 }
             unused_dependencies = "warn"
         "#,
         )
@@ -1030,6 +1043,7 @@ fn package_selection() {
             external.path = "../external"
 
             [lints.cargo]
+            default = { level = "allow", priority = -1 }
             unused_dependencies = "warn"
             "#,
         )
@@ -1053,6 +1067,7 @@ fn package_selection() {
             used_bar = "0.1.0"
 
             [lints.cargo]
+            default = { level = "allow", priority = -1 }
             unused_dependencies = "warn"
             "#,
         )
@@ -1076,6 +1091,7 @@ fn package_selection() {
             used_external = "0.1.0"
 
             [lints.cargo]
+            default = { level = "allow", priority = -1 }
             unused_dependencies = "warn"
             "#,
         )
@@ -1261,6 +1277,7 @@ fn pinned_transitive_dep() {
             transitive = "=0.1.1"
 
             [lints.cargo]
+            default = { level = "allow", priority = -1 }
             unused_dependencies = "warn"
         "#,
         )
@@ -1335,6 +1352,7 @@ pub fn fun() -> &'static str {
             transitive = { version = "0.1.1", features = ["a"] }
 
             [lints.cargo]
+            default = { level = "allow", priority = -1 }
             unused_dependencies = "warn"
         "#,
         )
@@ -1384,6 +1402,7 @@ fn allow_rustflags() {
             unused = "0.1.0"
 
             [lints.cargo]
+            default = { level = "allow", priority = -1 }
             unused_dependencies = "warn"
         "#,
         )
@@ -1441,6 +1460,7 @@ fn allow_attribute() {
             unused = "0.1.0"
 
             [lints.cargo]
+            default = { level = "allow", priority = -1 }
             unused_dependencies = "warn"
         "#,
         )
@@ -1554,6 +1574,7 @@ fn deny_rustflags() {
             unused = "0.1.0"
 
             [lints.cargo]
+            default = { level = "allow", priority = -1 }
             unused_dependencies = "warn"
         "#,
         )
@@ -1611,6 +1632,7 @@ fn deny_attribute() {
             unused = "0.1.0"
 
             [lints.cargo]
+            default = { level = "allow", priority = -1 }
             unused_dependencies = "warn"
         "#,
         )
@@ -1668,6 +1690,7 @@ fn forbid_rustflags() {
             unused = "0.1.0"
 
             [lints.cargo]
+            default = { level = "allow", priority = -1 }
             unused_dependencies = "warn"
         "#,
         )
@@ -1725,6 +1748,7 @@ fn forbid_attribute() {
             unused = "0.1.0"
 
             [lints.cargo]
+            default = { level = "allow", priority = -1 }
             unused_dependencies = "warn"
         "#,
         )

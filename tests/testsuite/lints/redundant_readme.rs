@@ -16,6 +16,7 @@ authors = []
 readme = "README.md"
 
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 redundant_readme = "warn"
 "#,
         )
@@ -56,6 +57,7 @@ edition = "2015"
 authors = []
 
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 redundant_readme = "warn"
 "#,
         )
@@ -83,6 +85,7 @@ authors = []
 readme = "FOO.md"
 
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 redundant_readme = "warn"
 "#,
         )
@@ -110,6 +113,7 @@ authors = []
 readme = "src/README.md"
 
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 redundant_readme = "warn"
 "#,
         )
@@ -140,6 +144,7 @@ authors = []
 readme.workspace = true
 
 [lints.cargo]
+default = { level = "allow", priority = -1 }
 redundant_readme = "warn"
 "#,
         )

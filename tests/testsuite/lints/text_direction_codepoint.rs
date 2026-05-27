@@ -19,6 +19,7 @@ fn bidi_comments_warn() {
 {BIDI_MANIFEST}
 
 [lints.cargo]
+default = {{ level = \"allow\", priority = -1 }}
 text_direction_codepoint_in_comment = \"warn\"
 text_direction_codepoint_in_literal = \"allow\"
 "
@@ -74,6 +75,7 @@ fn bidi_literals_warn() {
 {BIDI_MANIFEST}
 
 [lints.cargo]
+default = {{ level = \"allow\", priority = -1 }}
 text_direction_codepoint_in_comment = \"allow\"
 text_direction_codepoint_in_literal = \"warn\"
 "
@@ -149,6 +151,7 @@ members = [\"bar\"]
 {BIDI_MANIFEST}
 
 [lints.cargo]
+default = {{ level = \"allow\", priority = -1 }}
 text_direction_codepoint_in_comment = \"warn\"
 text_direction_codepoint_in_literal = \"warn\"
 "
@@ -267,6 +270,7 @@ homepage = \"a \u{202e}homepage\u{202a} there\"  # this is a \u{202b}tricky\u{20
 repository = \"a \u{202e}repository\u{202a} everywhere\"  # this is a \u{202b}tricky\u{202c} comment
 
 [workspace.lints.cargo]
+default = {{ level = \"allow\", priority = -1 }}
 text_direction_codepoint_in_comment = \"warn\"
 text_direction_codepoint_in_literal = \"warn\"
 "
