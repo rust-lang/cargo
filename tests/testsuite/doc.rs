@@ -4029,3 +4029,162 @@ fn mergeable_info_dep_collision() {
     // ...and the fingerprint content are different (path to dep.json different)
     assert_ne!(first_fingerprint, second_fingerprint);
 }
+
+#[cargo_test]
+fn doc_output_format_html_stable() {
+    let p = project().file("src/lib.rs", "").build();
+
+    p.cargo("doc --output-format html -v")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] the `--output-format` flag is unstable, and only available on the nightly channel of Cargo, but this is the `stable` channel
+See https://doc.rust-lang.org/book/[..].html for more information about Rust release channels.
+See https://github.com/rust-lang/cargo/issues/13283 for more information about the `--output-format` flag.
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn doc_invalid_output_format() {
+    let p = project().file("src/lib.rs", "").build();
+
+    p.cargo("doc -Z unstable-options --output-format pdf -v")
+        .masquerade_as_nightly_cargo(&["rustdoc-output-format"])
+        .with_status(1)
+        .with_stderr_data(str![[r#"
+[ERROR] invalid value 'pdf' for '--output-format <FMT>'
+  [possible values: html, json]
+
+For more information, try '--help'.
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn doc_output_format_json_without_unstable_options() {
+    let p = project().file("src/lib.rs", "").build();
+
+    p.cargo("doc --output-format json -v")
+        .masquerade_as_nightly_cargo(&["rustdoc-output-format"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] the `--output-format` flag is unstable, pass `-Z unstable-options` to enable it
+See https://github.com/rust-lang/cargo/issues/13283 for more information about the `--output-format` flag.
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "--output-format is unstable")]
+fn doc_output_format_json_no_deps() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+
+                [dependencies]
+                bar = { path = "bar" }
+            "#,
+        )
+        .file("src/lib.rs", "pub fn foo_fn() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                edition = "2021"
+            "#,
+        )
+        .file("bar/src/lib.rs", "pub fn bar_fn() {}")
+        .build();
+
+    p.cargo("doc --no-deps -Z unstable-options --output-format json -v")
+        .masquerade_as_nightly_cargo(&["rustdoc-output-format"])
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to latest compatible version
+[CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
+[RUNNING] `rustc [..]--crate-name bar [..]`
+[DOCUMENTING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `rustdoc [..]--crate-name foo [..]--output-format=json[..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo.json
+
+"#]])
+        .run();
+
+    assert!(p.root().join("target/doc/foo.json").is_file());
+    assert!(!p.root().join("target/doc/bar.json").exists());
+    assert!(!p.root().join("target/doc/foo/index.html").exists());
+
+    let foo_json = fs::read_to_string(p.root().join("target/doc/foo.json")).unwrap();
+    assert!(foo_json.contains("foo_fn"));
+}
+
+#[cargo_test(nightly, reason = "--output-format is unstable")]
+fn doc_output_format_json_with_deps() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+
+                [dependencies]
+                bar = { path = "bar" }
+            "#,
+        )
+        .file("src/lib.rs", "pub fn foo_fn() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                edition = "2021"
+            "#,
+        )
+        .file("bar/src/lib.rs", "pub fn bar_fn() {}")
+        .build();
+
+    p.cargo("doc -Z unstable-options --output-format json -v")
+        .masquerade_as_nightly_cargo(&["rustdoc-output-format"])
+        .with_stderr_data(
+            str![[r#"
+[LOCKING] 1 package to latest compatible version
+[CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
+[RUNNING] `rustc [..]--crate-name bar [..]`
+[DOCUMENTING] bar v0.1.0 ([ROOT]/foo/bar)
+[RUNNING] `rustdoc [..]--crate-name bar [..]--output-format=json[..]`
+[DOCUMENTING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `rustdoc [..]--crate-name foo [..]--output-format=json[..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo.json
+
+"#]]
+            .unordered(),
+        )
+        .run();
+
+    let foo_json_path = p.root().join("target/doc/foo.json");
+    let bar_json_path = p.root().join("target/doc/bar.json");
+    assert!(foo_json_path.is_file());
+    assert!(bar_json_path.is_file());
+
+    let foo_json = fs::read_to_string(&foo_json_path).unwrap();
+    assert!(foo_json.contains("foo_fn"));
+
+    let bar_json = fs::read_to_string(&bar_json_path).unwrap();
+    assert!(bar_json.contains("bar_fn"));
+
+    assert!(!p.root().join("target/doc/foo/index.html").exists());
+    assert!(!p.root().join("target/doc/bar/index.html").exists());
+}
