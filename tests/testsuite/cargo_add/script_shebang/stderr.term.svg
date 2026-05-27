@@ -1,4 +1,4 @@
-<svg width="1490px" height="164px" xmlns="http://www.w3.org/2000/svg">
+<svg width="1490px" height="128px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
     .bg { fill: #000000 }
@@ -28,13 +28,9 @@
 </tspan>
     <tspan x="10px" y="82px"><tspan class="fg-bright-green bold">      Adding</tspan><tspan> my-package v99999.0.0 to dependencies</tspan>
 </tspan>
-    <tspan x="10px" y="100px"><tspan class="fg-yellow bold">warning</tspan><tspan>: `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)</tspan>
+    <tspan x="10px" y="100px"><tspan class="fg-bright-green bold">     Locking</tspan><tspan> 1 package to latest Rust [..] compatible version</tspan>
 </tspan>
-    <tspan x="10px" y="118px"><tspan class="fg-bright-cyan bold">help</tspan><tspan>: to pin the edition, run `cargo fix --manifest-path [ROOT]/case/cargo-test-fixture.rs`</tspan>
-</tspan>
-    <tspan x="10px" y="136px"><tspan class="fg-bright-green bold">     Locking</tspan><tspan> 1 package to latest Rust [..] compatible version</tspan>
-</tspan>
-    <tspan x="10px" y="154px">
+    <tspan x="10px" y="118px">
 </tspan>
   </text>
 
