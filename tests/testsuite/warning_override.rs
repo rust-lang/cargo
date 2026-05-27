@@ -228,6 +228,272 @@ fn rustc_caching_deny_first() {
 }
 
 #[cargo_test]
+fn lint_parse_pass() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+            edition = "2018"
+            repository = "https://github.com/rust-lang/cargo/"
+            homepage = "https://github.com/rust-lang/cargo/"
+
+            [lints.cargo]
+            default = { level = "allow", priority = -1 }
+            redundant_homepage = "warn"
+        "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {}
+            "#,
+        )
+        .build();
+
+    // Verify the lints fire
+    p.cargo("fetch -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints"])
+        .with_stderr_data(str![[r#"
+[WARNING] `package.homepage` is redundant with another manifest field
+ --> Cargo.toml:8:24
+  |
+7 |             repository = "https://github.com/rust-lang/cargo/"
+  |                          -------------------------------------
+8 |             homepage = "https://github.com/rust-lang/cargo/"
+  |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::redundant_homepage` is set to `warn` in `[lints]`
+[HELP] consider removing `package.homepage`
+  |
+8 -             homepage = "https://github.com/rust-lang/cargo/"
+  |
+[WARNING] `foo` (manifest) generated 1 warning
+
+"#]])
+        .run();
+    p.cargo("check -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints"])
+        .with_stderr_data(str![[r#"
+[WARNING] `package.homepage` is redundant with another manifest field
+ --> Cargo.toml:8:24
+  |
+7 |             repository = "https://github.com/rust-lang/cargo/"
+  |                          -------------------------------------
+8 |             homepage = "https://github.com/rust-lang/cargo/"
+  |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::redundant_homepage` is set to `warn` in `[lints]`
+[HELP] consider removing `package.homepage`
+  |
+8 -             homepage = "https://github.com/rust-lang/cargo/"
+  |
+[WARNING] `foo` (manifest) generated 1 warning
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    p.cargo("fetch -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints"])
+        .arg("--config")
+        .arg("build.warnings='allow'")
+        .with_stderr_data(str![[r#"
+[WARNING] `package.homepage` is redundant with another manifest field
+ --> Cargo.toml:8:24
+  |
+7 |             repository = "https://github.com/rust-lang/cargo/"
+  |                          -------------------------------------
+8 |             homepage = "https://github.com/rust-lang/cargo/"
+  |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::redundant_homepage` is set to `warn` in `[lints]`
+[HELP] consider removing `package.homepage`
+  |
+8 -             homepage = "https://github.com/rust-lang/cargo/"
+  |
+[WARNING] `foo` (manifest) generated 1 warning
+
+"#]])
+        .run();
+    p.cargo("check -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints"])
+        .arg("--config")
+        .arg("build.warnings='allow'")
+        .with_stderr_data(str![[r#"
+[WARNING] `package.homepage` is redundant with another manifest field
+ --> Cargo.toml:8:24
+  |
+7 |             repository = "https://github.com/rust-lang/cargo/"
+  |                          -------------------------------------
+8 |             homepage = "https://github.com/rust-lang/cargo/"
+  |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::redundant_homepage` is set to `warn` in `[lints]`
+[HELP] consider removing `package.homepage`
+  |
+8 -             homepage = "https://github.com/rust-lang/cargo/"
+  |
+[WARNING] `foo` (manifest) generated 1 warning
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    p.cargo("fetch -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints"])
+        .arg("--config")
+        .arg("build.warnings='deny'")
+        .with_stderr_data(str![[r#"
+[WARNING] `package.homepage` is redundant with another manifest field
+ --> Cargo.toml:8:24
+  |
+7 |             repository = "https://github.com/rust-lang/cargo/"
+  |                          -------------------------------------
+8 |             homepage = "https://github.com/rust-lang/cargo/"
+  |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::redundant_homepage` is set to `warn` in `[lints]`
+[HELP] consider removing `package.homepage`
+  |
+8 -             homepage = "https://github.com/rust-lang/cargo/"
+  |
+[WARNING] `foo` (manifest) generated 1 warning
+
+"#]])
+        .run();
+    p.cargo("check -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints"])
+        .arg("--config")
+        .arg("build.warnings='deny'")
+        .with_stderr_data(str![[r#"
+[WARNING] `package.homepage` is redundant with another manifest field
+ --> Cargo.toml:8:24
+  |
+7 |             repository = "https://github.com/rust-lang/cargo/"
+  |                          -------------------------------------
+8 |             homepage = "https://github.com/rust-lang/cargo/"
+  |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::redundant_homepage` is set to `warn` in `[lints]`
+[HELP] consider removing `package.homepage`
+  |
+8 -             homepage = "https://github.com/rust-lang/cargo/"
+  |
+[WARNING] `foo` (manifest) generated 1 warning
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn lint_build_result_pass() {
+    // Cover each lint pass
+    Package::new("unused", "0.1.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+            edition = "2018"
+
+            [dependencies]
+            unused = "0.1.0"
+
+            [lints.cargo]
+            default = { level = "allow", priority = -1 }
+            unused_dependencies = "warn"
+        "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {}
+            "#,
+        )
+        .build();
+
+    // Verify the lints fire
+    p.cargo("check --all-targets -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] unused v0.1.0 (registry `dummy-registry`)
+[CHECKING] unused v0.1.0
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[WARNING] unused dependency
+ --> Cargo.toml:9:13
+  |
+9 |             unused = "0.1.0"
+  |             ^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
+[HELP] remove the dependency
+  |
+9 -             unused = "0.1.0"
+  |
+[WARNING] `foo` (manifest) generated 1 warning
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    p.cargo("check --all-targets -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints"])
+        .arg("--config")
+        .arg("build.warnings='allow'")
+        .with_stderr_data(str![[r#"
+[WARNING] unused dependency
+ --> Cargo.toml:9:13
+  |
+9 |             unused = "0.1.0"
+  |             ^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
+[HELP] remove the dependency
+  |
+9 -             unused = "0.1.0"
+  |
+[WARNING] `foo` (manifest) generated 1 warning
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    p.cargo("check --all-targets -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints"])
+        .arg("--config")
+        .arg("build.warnings='deny'")
+        .with_stderr_data(str![[r#"
+[WARNING] unused dependency
+ --> Cargo.toml:9:13
+  |
+9 |             unused = "0.1.0"
+  |             ^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
+[HELP] remove the dependency
+  |
+9 -             unused = "0.1.0"
+  |
+[WARNING] `foo` (manifest) generated 1 warning
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn hard_warning_deny() {
     let p = project()
         .file(
