@@ -68,6 +68,12 @@ struct State<'a, 'gctx> {
     /// dependency from a to b was added purely because it was a dev-dependency.
     /// This is used during `connect_run_custom_build_deps`.
     dev_dependency_edges: HashSet<(Unit, Unit)>,
+
+    /// Package IDs of the root units (i.e. the packages the user asked to
+    /// compile). Used when deciding whether to document a dependency: roots
+    /// always get all their direct deps documented, while non-roots only
+    /// get public deps documented when `-Zpublic-dependency` is active.
+    root_pkg_ids: HashSet<PackageId>,
 }
 
 /// A boolean-like to indicate if a `Unit` is an artifact or not.
@@ -127,6 +133,7 @@ pub fn build_unit_dependencies<'a, 'gctx>(
         interner,
         scrape_units,
         dev_dependency_edges: HashSet::new(),
+        root_pkg_ids: roots.iter().map(|u| u.pkg.package_id()).collect(),
     };
 
     let std_unit_deps = calc_deps_of_std(&mut state, std_roots)?;
@@ -650,6 +657,19 @@ fn compute_deps_doc(
     // built. If we're documenting *all* libraries, then we also depend on
     // the documentation of the library being built.
     let mut ret = Vec::new();
+
+    let public_deps_enabled = state.gctx.cli_unstable().public_dependency
+        || unit
+            .pkg
+            .manifest()
+            .unstable_features()
+            .is_enabled(Feature::public_dependency());
+
+    // Whether this package is a root of the compilation (i.e. selected by
+    // the user). Roots always have all their direct deps documented,
+    // regardless of public/private status.
+    let is_root = state.root_pkg_ids.contains(&unit.pkg.package_id());
+
     for (id, deps) in state.deps(unit, unit_for) {
         let Some(dep_lib) = calc_artifact_deps(unit, unit_for, id, &deps, state, &mut ret)? else {
             continue;
@@ -671,7 +691,17 @@ fn compute_deps_doc(
             IS_NO_ARTIFACT_DEP,
         )?;
         ret.push(lib_unit_dep);
-        if dep_lib.documented() && state.intent.wants_deps_docs() {
+
+        // Decide whether to document this dependency. When
+        // public-dependency is enabled, only document direct deps of root
+        // packages and public deps (recursively).
+        let should_doc_dep = if is_root || !public_deps_enabled {
+            true
+        } else {
+            state.resolve().is_public_dep(unit.pkg.package_id(), id)
+        };
+
+        if dep_lib.documented() && state.intent.wants_deps_docs() && should_doc_dep {
             // Document this lib as well.
             let doc_unit_dep = new_unit_dep(
                 state,
