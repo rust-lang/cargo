@@ -6,3 +6,4 @@ edition = "2018"
 
 [dependencies]
 registry-dep-using-core = { version = "*", features = ['mockbuild'] }
+core = { path = "../core" }

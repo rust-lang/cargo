@@ -173,6 +173,29 @@ impl Summary {
         };
         me.map_dependencies(|dep| dep.map_source(to_replace, replace_with))
     }
+
+    // Converts the Summary into a dummy summary to represent a builtin package during the user's resolve
+    pub fn to_opaque_builtin_summary(self) -> CargoResult<Self> {
+        let pid = self.package_id();
+        let builtin_sid = pid.source_id().as_builtin()?;
+
+        Ok(Summary {
+            inner: Arc::new(Inner {
+                package_id: PackageId::with_source_id(pid, builtin_sid),
+                // Builtins are opaque dependencies - the real deps are inserted during unit generation
+                dependencies: vec![],
+                // Features are ignored during unit generation - a future patch implementing
+                // features for explicit builtin dependencies will probably want to change this.
+                features: Arc::new(BTreeMap::new()),
+                // TODO: Checksums are checked later, right?
+                checksum: None,
+                links: self.links(),
+                // Builtins are always valid for our current toolchain
+                rust_version: None,
+                pubtime: None,
+            }),
+        })
+    }
 }
 
 impl PartialEq for Summary {

@@ -1,6 +1,7 @@
 use crate::core::GitReference;
 use crate::core::PackageId;
 use crate::core::SourceKind;
+use crate::sources::BuiltinSource;
 use crate::sources::registry::CRATES_IO_HTTP_INDEX;
 use crate::sources::source::Source;
 use crate::sources::{CRATES_IO_DOMAIN, CRATES_IO_INDEX, CRATES_IO_REGISTRY, DirectorySource};
@@ -140,6 +141,23 @@ impl SourceId {
         }
     }
 
+    /// Converts a path-based SourceId to a Builtin
+    pub fn as_builtin(&self) -> CargoResult<SourceId> {
+        if self.is_builtin() {
+            Ok(self.clone())
+        } else if !self.is_path() {
+            Err(anyhow::format_err!(
+                "Attempted to convert non-path SourceId `{}` to Builtin",
+                self.to_string()
+            ))
+        } else {
+            Ok(SourceId::wrap(SourceIdInner {
+                kind: SourceKind::Builtin,
+                ..self.inner.clone()
+            }))
+        }
+    }
+
     /// Parses a source URL and returns the corresponding ID.
     ///
     /// ## Example
@@ -175,6 +193,10 @@ impl SourceId {
             "path" => {
                 let url = url.into_url()?;
                 SourceId::new(SourceKind::Path, url, None)
+            }
+            "builtin" => {
+                let url = url.into_url()?;
+                SourceId::new(SourceKind::Builtin, url, None)
             }
             kind => Err(anyhow::format_err!("unsupported source protocol: {}", kind)),
         }
@@ -387,6 +409,10 @@ impl SourceId {
         matches!(self.inner.kind, SourceKind::Git(_))
     }
 
+    pub fn is_builtin(self) -> bool {
+        matches!(self.inner.kind, SourceKind::Builtin)
+    }
+
     /// Creates an implementation of `Source` corresponding to this ID.
     ///
     /// * `yanked_whitelist` --- Packages allowed to be used, even if they are yanked.
@@ -408,6 +434,14 @@ impl SourceId {
                     anyhow::bail!("single file packages cannot be used as dependencies")
                 }
                 Ok(Box::new(PathSource::new(&path, self, gctx)))
+            }
+            SourceKind::Builtin => {
+                let path = self
+                    .inner
+                    .url
+                    .to_file_path()
+                    .expect("builtin sources should not be remote");
+                Ok(Box::new(BuiltinSource::from_path(&path, self, gctx)))
             }
             SourceKind::Registry | SourceKind::SparseRegistry => Ok(Box::new(
                 RegistrySource::remote(self, yanked_whitelist, gctx)?,
@@ -679,6 +713,7 @@ impl fmt::Display for SourceId {
             }
             SourceKind::LocalRegistry => write!(f, "registry `{}`", url_display(&self.inner.url)),
             SourceKind::Directory => write!(f, "dir {}", url_display(&self.inner.url)),
+            SourceKind::Builtin => write!(f, "builtin {}", url_display(&self.inner.url)),
         }
     }
 }

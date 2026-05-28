@@ -15,7 +15,11 @@ use std::path::PathBuf;
 
 use super::BuildConfig;
 
-fn std_crates<'a>(crates: &'a [String], default: &'static str, units: &[Unit]) -> HashSet<&'a str> {
+pub fn std_crates<'a>(
+    crates: &'a [String],
+    default: &'static str,
+    units: &[Unit],
+) -> HashSet<&'a str> {
     let mut crates = HashSet::from_iter(crates.iter().map(|s| s.as_str()));
     // This is a temporary hack until there is a more principled way to
     // declare dependencies in Cargo.toml.
@@ -59,6 +63,7 @@ pub fn resolve_std<'gctx>(
     // TODO: Consider doing something to enforce --locked? Or to prevent the
     // lock file from being written, such as setting ephemeral.
     let mut std_ws = Workspace::new(&std_ws_manifest_path, gctx)?;
+    std_ws.set_is_std(true);
     // Don't require optional dependencies in this workspace, aka std's own
     // `[dev-dependencies]`. No need for us to generate a `Resolve` which has
     // those included because we'll never use them anyway.
@@ -216,7 +221,7 @@ fn generate_roots(
     Ok(())
 }
 
-fn detect_sysroot_src_path(target_data: &RustcTargetData<'_>) -> CargoResult<PathBuf> {
+pub fn detect_sysroot_src_path(target_data: &RustcTargetData<'_>) -> CargoResult<PathBuf> {
     if let Some(s) = target_data.gctx.get_env_os("__CARGO_TESTS_ONLY_SRC_ROOT") {
         return Ok(s.into());
     }

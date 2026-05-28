@@ -204,6 +204,7 @@ pub fn resolve_with_global_context_raw(
         &version_prefs,
         ResolveVersion::with_rust_version(None),
         Some(gctx),
+        &[],
     );
 
     // The largest test in our suite takes less then 30 secs.

@@ -65,6 +65,7 @@ use std::time::{Duration, Instant};
 use tracing::{debug, trace};
 
 use crate::core::PackageIdSpec;
+use crate::core::dependency::DepKind;
 use crate::core::{Dependency, PackageId, Registry, Summary};
 use crate::util::context::GlobalContext;
 use crate::util::errors::CargoResult;
@@ -126,6 +127,7 @@ pub fn resolve(
     version_prefs: &VersionPreferences,
     resolve_version: ResolveVersion,
     gctx: Option<&GlobalContext>,
+    implicit_builtin_deps: &[Dependency],
 ) -> CargoResult<Resolve> {
     let first_version = match gctx {
         Some(config) if config.cli_unstable().direct_minimal_versions => {
@@ -133,7 +135,8 @@ pub fn resolve(
         }
         _ => None,
     };
-    let mut registry = RegistryQueryer::new(registry, replacements, version_prefs);
+    let mut registry =
+        RegistryQueryer::new(registry, replacements, version_prefs, implicit_builtin_deps);
 
     // Global cache of the reasons for each time we backtrack.
     let mut past_conflicting_activations = conflict_cache::ConflictCache::new();
@@ -239,7 +242,7 @@ fn activate_deps_loop(
     while let Some((just_here_for_the_error_messages, frame)) =
         remaining_deps.pop_most_constrained()
     {
-        let (mut parent, (mut dep, candidates, mut features)) = frame;
+        let (mut parent, siblings_inject_builtins, (mut dep, candidates, mut features)) = frame;
 
         // If we spend a lot of time here (we shouldn't in most cases) then give
         // a bit of a visual indicator as to what we're doing.
@@ -391,12 +394,18 @@ fn activate_deps_loop(
             };
 
             let pid = candidate.package_id();
+            // The deps frame inject_builtins field is a baseline for all siblings
+            // We shouldn't inject builtins for a builtin dep, nor for build-dependencies
+            let inject_builtins = siblings_inject_builtins
+                && !dep.source_id().is_builtin()
+                && dep.kind() != DepKind::Build;
             let opts = ResolveOpts {
                 dev_deps: false,
                 features: RequestedFeatures::DepFeatures {
                     features: Rc::clone(&features),
                     uses_default_features: dep.uses_default_features(),
                 },
+                inject_builtins,
             };
             trace!(
                 "{}[{}]>{} trying {}",
@@ -687,6 +696,7 @@ fn activate(
     let frame = DepsFrame {
         parent: candidate,
         just_for_error_messages: false,
+        inject_builtins: opts.inject_builtins,
         remaining_siblings: RcVecIter::new(Rc::clone(deps)),
     };
     Ok(Some((frame, now.elapsed())))

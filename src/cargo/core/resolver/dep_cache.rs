@@ -24,6 +24,7 @@ use crate::util::LocalPollAdapter;
 use crate::util::closest_msg;
 use crate::util::errors::CargoResult;
 use crate::util::interning::{INTERNED_DEFAULT, InternedString};
+use crate::util::network::PollExt;
 
 use anyhow::Context as _;
 use std::cell::RefCell;
@@ -191,6 +192,8 @@ pub struct RegistryQueryer<'a, T: Registry> {
         (Option<PackageId>, Summary, ResolveOpts),
         (Rc<(HashSet<InternedString>, Rc<Vec<DepInfo>>)>, bool),
     >,
+    /// The set of builtin dependencies to inject when appropriate
+    implicit_builtin_deps: &'a [Dependency],
 }
 
 impl<'a, T: Registry> RegistryQueryer<'a, T> {
@@ -198,6 +201,7 @@ impl<'a, T: Registry> RegistryQueryer<'a, T> {
         registry: &'a T,
         replacements: &'a [(PackageIdSpec, Dependency)],
         version_prefs: &'a VersionPreferences,
+        implicit_builtin_deps: &'a [Dependency],
     ) -> Self {
         let inner = Rc::new(RegistryQueryerAsync::new(
             registry,
@@ -208,6 +212,7 @@ impl<'a, T: Registry> RegistryQueryer<'a, T> {
             inner: inner.clone(),
             poller: LocalPollAdapter::new(inner),
             summary_cache: HashMap::new(),
+            implicit_builtin_deps,
         }
     }
 
@@ -300,6 +305,19 @@ impl<'a, T: Registry> RegistryQueryer<'a, T> {
                 })),
             })
             .collect::<CargoResult<Vec<DepInfo>>>()?;
+
+        if opts.inject_builtins {
+            for dep in self.implicit_builtin_deps {
+                // TODO: This kicks off multiple queries per package searched. What's the
+                // performance impact?
+                let candidates = self
+                    .query(dep, first_version)
+                    .expect("Builtin packages should be immediately available")
+                    .expect("Builtin names should be valid by this point");
+
+                deps.push((dep.clone(), candidates, Rc::new(Default::default())));
+            }
+        }
 
         // Attempt to resolve dependencies with fewer candidates before trying
         // dependencies with more candidates. This way if the dependency with

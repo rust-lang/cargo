@@ -1,4 +1,5 @@
 use cargo_platform::Platform;
+use cargo_util_schemas::core::SourceKind;
 use semver::VersionReq;
 use serde::Serialize;
 use serde::ser;
@@ -51,6 +52,10 @@ struct Inner {
     // This dependency should be used only for this platform.
     // `None` means *all platforms*.
     platform: Option<Platform>,
+
+    // Opaque dependencies should be resolved with a separate resolver run, and handled
+    // by unit generation.
+    opaque: bool,
 }
 
 #[derive(Serialize)]
@@ -162,7 +167,39 @@ impl Dependency {
                 platform: None,
                 explicit_name_in_toml: None,
                 artifact: None,
+                opaque: false,
             }),
+        }
+    }
+
+    pub fn new_for_builtin_summary(s: Summary) -> CargoResult<Self> {
+        if let SourceKind::Builtin = s.source_id().kind() {
+            Ok(Dependency {
+                // Most of these fields are ignored by the resolver/registry, which will just match this
+                // dependency up with the given Summary
+                inner: Arc::new(Inner {
+                    name: s.name(),
+                    source_id: s.source_id(),
+                    registry_id: None,
+                    req: OptVersionReq::Any,
+                    kind: DepKind::Normal,
+                    only_match_name: true,
+                    optional: false,
+                    public: true,
+                    features: Vec::new(),
+                    default_features: true,
+                    specified_req: false,
+                    platform: None,
+                    explicit_name_in_toml: None,
+                    artifact: None,
+                    opaque: true,
+                }),
+            })
+        } else {
+            Err(anyhow::format_err!(
+                "Can't create builtin dependency for a non-builtin \"{}\"",
+                s.source_id()
+            ))
         }
     }
 
@@ -466,6 +503,10 @@ impl Dependency {
     /// Previously, every dependency was potentially seen as library.
     pub(crate) fn maybe_lib(&self) -> bool {
         self.artifact().map(|a| a.is_lib).unwrap_or(true)
+    }
+
+    pub fn is_opaque(&self) -> bool {
+        self.inner.opaque
     }
 }
 

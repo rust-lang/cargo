@@ -246,7 +246,7 @@ fn basic() {
 }
 
 #[cargo_test(build_std_mock)]
-fn shared_std_dependency_rebuild() {
+fn shared_std_dependency() {
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
     let setup = setup();
     let p = project()
@@ -261,7 +261,11 @@ fn shared_std_dependency_rebuild() {
 
                 [build-dependencies]
                 dep_test = {{ path = \"{}/tests/testsuite/mock-std/dep_test\" }}
+
+                [dependencies]
+                dep_test = {{ path = \"{}/tests/testsuite/mock-std/dep_test\" }}
             ",
+                manifest_dir.replace('\\', "/"),
                 manifest_dir.replace('\\', "/")
             )
             .as_str(),
@@ -284,6 +288,26 @@ fn shared_std_dependency_rebuild() {
         )
         .build();
 
+    // One build each for the:
+    //  - Build-std build
+    //  - Build-time user crate dependency (with the sysroot std)
+    //  - Runtime user crate dependency (with the build-std std)
+    p.cargo("build -v")
+        .build_std(&setup)
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `[..] rustc --crate-name dep_test [..]`
+...
+[RUNNING] `[..] rustc --crate-name dep_test [..]`
+...
+[RUNNING] `[..] rustc --crate-name dep_test [..]`
+...
+"#]])
+        .run();
+
+    p.cargo("clean").run();
+
+    // Sanity check for `rebuild_unit_graph_shared`
     p.cargo("build -v")
         .build_std(&setup)
         .target_host()
@@ -293,18 +317,9 @@ fn shared_std_dependency_rebuild() {
 ...
 [RUNNING] `[..] rustc --crate-name dep_test [..]`
 ...
+[RUNNING] `[..] rustc --crate-name dep_test [..]`
+...
 "#]])
-        .run();
-
-    p.cargo("build -v")
-        .build_std(&setup)
-        .with_stderr_does_not_contain(str![[r#"
-    ...
-    [RUNNING] `[..] rustc --crate-name dep_test [..]`
-    ...
-    [RUNNING] `[..] rustc --crate-name dep_test [..]`
-    ...
-    "#]])
         .run();
 }
 
@@ -381,6 +396,55 @@ fn check_core() {
 [WARNING] function `unused_fn` is never used
 ...
 "#]])
+        .run();
+}
+
+#[cargo_test(build_std_mock)]
+fn build_std_does_not_change_lockfile() {
+    let setup = setup();
+    let p = project().file("src/lib.rs", "").build();
+
+    p.cargo("generate-lockfile").run();
+    let lockfile = p.read_lockfile();
+
+    p.cargo("build").build_std(&setup).run();
+
+    let build_std_lockfile = p.read_lockfile();
+    assert_eq!(lockfile, build_std_lockfile);
+    assert!(!build_std_lockfile.contains("name = \"core\""));
+    assert!(!build_std_lockfile.contains("name = \"std\""));
+    assert!(!build_std_lockfile.contains("name = \"alloc\""));
+}
+
+#[cargo_test(build_std_mock)]
+fn builtins_do_not_show_in_status_messages() {
+    let setup = setup();
+    let p = project()
+        .file("src/lib.rs", "#![no_std]")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                registry-dep-using-core = "1.0"
+            "#,
+        )
+        .build();
+
+    // New lockfile
+    p.cargo("c")
+        .build_std_arg(&setup, "core")
+        .with_stderr_contains("[LOCKING] 1 package [..]")
+        .run();
+
+    // Updating lockfile
+    p.cargo("add registry-dep-using-alloc")
+        .build_std_arg(&setup, "core,alloc")
+        .with_stderr_contains("[ADDING] registry-dep-using-alloc [..]")
+        .with_stderr_contains("[LOCKING] 1 package [..]")
         .run();
 }
 
