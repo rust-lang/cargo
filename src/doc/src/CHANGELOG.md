@@ -98,6 +98,12 @@
 
 ### Fixed
 
+- 🚨 [CVE-2026-5223](https://blog.rust-lang.org/2026/05/25/cve-2026-5223/)
+  is a medium severity vulnerability regarding extraction of crate tarballs with symlinks.
+  [#17030](https://github.com/rust-lang/cargo/pull/17030)
+- 🚨 [CVE-2026-5222](https://blog.rust-lang.org/2026/05/25/cve-2026-5222/)
+  is a low severity vulnerability regarding authentication with normalized URLs.
+  [#17030](https://github.com/rust-lang/cargo/pull/17030)
 - Preserve SCP-like submodule URLs for fetch. This was a regression in 1.94.
   [#16727](https://github.com/rust-lang/cargo/pull/16727)
   [#16744](https://github.com/rust-lang/cargo/pull/16744)
