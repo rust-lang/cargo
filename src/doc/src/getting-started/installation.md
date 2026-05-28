@@ -1,7 +1,10 @@
 # Installation
 
+Update installation documentation
+
 ## Install Rust and Cargo
 
+Update installation documentation
 The easiest way to get Cargo is to install the current stable release of [Rust]
 by using [rustup]. Installing Rust using `rustup` will also install `cargo`.
 
@@ -36,3 +39,4 @@ Alternatively, you can [build Cargo from source][compiling-from-source].
 [rustup-init.exe]: https://win.rustup.rs/
 [install-rust]: https://www.rust-lang.org/tools/install
 [compiling-from-source]: https://github.com/rust-lang/cargo#compiling-from-source
+Update installation documentation
