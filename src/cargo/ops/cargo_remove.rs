@@ -106,6 +106,8 @@ pub fn remove(options: &RemoveOptions<'_>) -> CargoResult<()> {
         manifest.gc_dep(dep);
     }
 
+    manifest.ensure_edition();
+
     if options.dry_run {
         options
             .gctx

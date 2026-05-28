@@ -294,37 +294,17 @@ fn check_version_control(gctx: &GlobalContext, opts: &FixOptions) -> CargoResult
 
 fn fix_manifests(ws: &Workspace<'_>, pkgs: &[&Package]) -> CargoResult<()> {
     for pkg in pkgs {
-        if !pkg.manifest().is_embedded()
-            || pkg
-                .manifest()
-                .original_toml()
-                .and_then(|m| m.package())
-                .map(|pkg| pkg.edition.is_some())
-                .unwrap_or(false)
-        {
-            continue;
-        }
-        let file = pkg.manifest_path();
-        let file = file.strip_prefix(ws.root()).unwrap_or(file);
-        let file = file.display();
-
         let mut manifest_mut = LocalManifest::try_new(pkg.manifest_path())?;
-        let document = &mut manifest_mut.data;
         let mut fixes = 0;
 
-        let root = document.as_table_mut();
-
-        fixes += 1;
-        root.entry("package").or_insert_with(|| {
-            let mut t = toml_edit::Table::new();
-            t.set_position(Some(-1));
-            t.into()
-        });
-        root["package"]["edition"] = crate::core::features::Edition::LATEST_STABLE
-            .to_string()
-            .into();
+        if manifest_mut.ensure_edition() {
+            fixes += 1;
+        }
 
         if 0 < fixes {
+            let file = pkg.manifest_path();
+            let file = file.strip_prefix(ws.root()).unwrap_or(file);
+            let file = file.display();
             let verb = if fixes == 1 { "fix" } else { "fixes" };
             let msg = format!("{file} ({fixes} {verb})");
             ws.gctx().shell().status("Fixed", msg)?;

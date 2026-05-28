@@ -1,4 +1,5 @@
 ---
+[package]
 edition = "2015"
 
 [dependencies]
