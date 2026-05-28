@@ -1,5 +1,52 @@
 # Changelog
 
+## Cargo 1.98 (2026-08-20)
+[c25859fa...HEAD](https://github.com/rust-lang/cargo/compare/c25859fa...HEAD)
+
+### Added
+
+### Changed
+
+- Forward verbose flag to rustc for local crates
+  [#17006](https://github.com/rust-lang/cargo/pull/17006)
+
+### Fixed
+
+### Nightly only
+
+- `-Zbindeps`: Remove compat mode from artifacts
+  [#17016](https://github.com/rust-lang/cargo/pull/17016)
+- rustdoc-output-format: Add `--output-format=json` to `cargo doc` as an unstable option
+  [#17025](https://github.com/rust-lang/cargo/pull/17025)
+- `-Zcargo-lints`: Add the `cargo::default` group
+  [#17033](https://github.com/rust-lang/cargo/pull/17033)
+- `-Zcargo-lints`: Report summaries for unused_deps
+  [#17034](https://github.com/rust-lang/cargo/pull/17034)
+- `-Zcargo-lints`: Report deferred diagnostics like other diagnostics
+  [#16994](https://github.com/rust-lang/cargo/pull/16994)
+- `-Zcargo-lints`: Simplify adding of new diagnostics
+  [#17008](https://github.com/rust-lang/cargo/pull/17008)
+  [#17015](https://github.com/rust-lang/cargo/pull/17015)
+  [#17019](https://github.com/rust-lang/cargo/pull/17019)
+- `-Zscript`: Add edition for scripts anytime we mutate the manifest
+  [#17038](https://github.com/rust-lang/cargo/pull/17038)
+
+### Documentation
+
+- Clarified on crate removal according to RFC 3660
+  [#17036](https://github.com/rust-lang/cargo/pull/17036)
+
+### Internal
+
+- Drop `-Zunstable-options` for `rustdoc --emit`, as the flag is stabilized.
+  [#17002](https://github.com/rust-lang/cargo/pull/17002)
+- cargo-util-schemas: Break out `RegistryConfig` and `crate_url` for interpreting `RegistryConfig::dl`
+  [#17011](https://github.com/rust-lang/cargo/pull/17011)
+- test: Avoid compiling where possible
+  [#17007](https://github.com/rust-lang/cargo/pull/17007)
+- Update dependencies.
+  [#17001](https://github.com/rust-lang/cargo/pull/17001)
+
 ## Cargo 1.97 (2026-07-09)
 [eb94155a...rust-1.97.0](https://github.com/rust-lang/cargo/compare/eb94155a...rust-1.97.0)
 
