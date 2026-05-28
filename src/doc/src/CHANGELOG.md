@@ -1,16 +1,31 @@
 # Changelog
 
 ## Cargo 1.97 (2026-07-09)
-[eb94155a...HEAD](https://github.com/rust-lang/cargo/compare/eb94155a...HEAD)
-
+[eb94155a...rust-1.97.0](https://github.com/rust-lang/cargo/compare/eb94155a...rust-1.97.0)
 
 ### Added
 
+- 🎉 Stabilize `build.warnings` config.
+  This controls how lint warnings from local packages are treated.
+  Useful for enforcing a warning-free build in CI, replacing `-Dwarnings`.
+  [docs](https://doc.rust-lang.org/nightly/cargo/reference/config.html#buildwarnings)
+  [#16796](https://github.com/rust-lang/cargo/pull/16796)
+  [#16961](https://github.com/rust-lang/cargo/pull/16961)
+- 🎉 Stabilize `resolver.lockfile-path` config.
+  This allows specifying the path to the lockfile to use when resolving dependencies.
+  Useful when working with read-only source directories.
+  [docs](https://doc.rust-lang.org/nightly/cargo/reference/config.html#resolverlockfile-path)
+  [#16694](https://github.com/rust-lang/cargo/pull/16694)
 - Add `-m` shorthand for `--manifest-path`
   [#16858](https://github.com/rust-lang/cargo/pull/16858)
+  [#16888](https://github.com/rust-lang/cargo/pull/16888)
 
 ### Changed
 
+- Suggest `fmt` when user types `cargo rustfmt`.
+  [#16985](https://github.com/rust-lang/cargo/pull/16985)
+- Add `$comment` to `.cargo-checksum.json` to clarify this file is not a security mechanism.
+  [#16967](https://github.com/rust-lang/cargo/pull/16967)
 - Improved error message for mistyped `-p` to suggest similar workspace member names
   [#16844](https://github.com/rust-lang/cargo/pull/16844)
 - cargo-clean: Error when `--target-dir` doesn't look like a Cargo target directory.
@@ -20,30 +35,119 @@
 
 ### Fixed
 
+- Fix `[env]` relative paths being resolved against the wrong config file
+  when merged via `include`.
+  [#16957](https://github.com/rust-lang/cargo/pull/16957)
+- Normalize `..` in included config paths so relative paths resolve correctly.
+  [#16964](https://github.com/rust-lang/cargo/pull/16964)
+- cargo-clean: do not error if explicitly specified target-dir does not exist
+  [#16934](https://github.com/rust-lang/cargo/pull/16934)
+- cargo-clean: respect `build.target` config
+  [#16988](https://github.com/rust-lang/cargo/pull/16988)
+- cargo-help: add `.1` extension to man page temp file,
+  so platforms like NetBSD recognize it as a man page.
+  [#16917](https://github.com/rust-lang/cargo/pull/16917)
+
 ### Nightly only
 
+- rustdoc-output-format: rebuild rustdoc json for different versions of a same crate
+  [#16773](https://github.com/rust-lang/cargo/pull/16773)
+  [#16968](https://github.com/rust-lang/cargo/pull/16968)
 - `-Zscript`: Teach users how to pin edition
   [#16851](https://github.com/rust-lang/cargo/pull/16851)
+- `-Zcargo-lints`: Add deny-by-default `text_direction_codepoint` lints
+  [#16950](https://github.com/rust-lang/cargo/pull/16950)
 - `-Zcargo-lints`: Prefer defined lint levels over default
   [#16879](https://github.com/rust-lang/cargo/pull/16879)
 - `-Zcargo-lints`: `unused_dependencies` ignore rustc's
   `unused_crate_dependencies` lint status
   [#16877](https://github.com/rust-lang/cargo/pull/16877)
+- `-Zcargo-lints`: Where possible, hint about misplaced deps
+  [#16940](https://github.com/rust-lang/cargo/pull/16940)
+- `-Zcargo-lints`: Ignore unused deps if also transitive
+  [#16935](https://github.com/rust-lang/cargo/pull/16935)
+- `-Zcargo-lints`: Log all ignored unused externs
+  [#16920](https://github.com/rust-lang/cargo/pull/16920)
+- `-Zcargo-lints`: Instrument lints for logging
+  [#16972](https://github.com/rust-lang/cargo/pull/16972)
+- `-Zcargo-lints`: Consolidate verify/run diagnostics passes
+  [#16989](https://github.com/rust-lang/cargo/pull/16989)
+- `-Zcargo-lints`: Track Cargo diagnostic warning/error count like is done for rustc
+  [#16981](https://github.com/rust-lang/cargo/pull/16981)
+- `-Zcargo-lints`: consolidate lints infrastructure to touch fewer files
+  in preparation of a new "how to write a lint" guide
+  [#16975](https://github.com/rust-lang/cargo/pull/16975)
+  [#16976](https://github.com/rust-lang/cargo/pull/16976)
+  [#16978](https://github.com/rust-lang/cargo/pull/16978)
+- `-Zjson-target-spec`: rename incorrectly documented `target-spec-json` to `json-target-spec`
+  [#16905](https://github.com/rust-lang/cargo/pull/16905)
+- `-Zpublic-dependency`: Rebuild when toggling `-Zpublic-dependency` flag
+  [#16965](https://github.com/rust-lang/cargo/pull/16965)
 
 ### Documentation
 
 - Clarified "api" in registry's `config.json` should not include a trailing slash.
   [#16869](https://github.com/rust-lang/cargo/pull/16869)
+- Clarified `.cargo-checksum.json` is not a security mechanism
+  [#16966](https://github.com/rust-lang/cargo/pull/16966)
+- Clarified that if `include` is specified,
+  gitignore rules of the repo and global git config are not applied.
+  [#16890](https://github.com/rust-lang/cargo/pull/16890)
+- Switch from third-party to first-party unused deps detection
+  [#16946](https://github.com/rust-lang/cargo/pull/16946)
+- cargo-update: clarified `--precise <yanked>` is on stable
+  [#16944](https://github.com/rust-lang/cargo/pull/16944)
+- cargo-package: Better highlight `--list` for include/exclude
+  [#16891](https://github.com/rust-lang/cargo/pull/16891)
 
 ### Internal
 
-- Update dependencies.
-  [#16883](https://github.com/rust-lang/cargo/pull/16883)
+- Convert more network operations to async,
+  including GitHub fast path and `.crate` downloads.
+  [#16899](https://github.com/rust-lang/cargo/pull/16899)
+  [#16900](https://github.com/rust-lang/cargo/pull/16900)
+  [#16898](https://github.com/rust-lang/cargo/pull/16898)
+  [#16902](https://github.com/rust-lang/cargo/pull/16902)
+  [#16903](https://github.com/rust-lang/cargo/pull/16903)
+  [#16909](https://github.com/rust-lang/cargo/pull/16909)
+  [#16912](https://github.com/rust-lang/cargo/pull/16912)
+- Remove `curl` dependency from `crates-io` crate
+  [#16936](https://github.com/rust-lang/cargo/pull/16936)
+- Remove `windows-sys` dependency from `home`
+  [#16918](https://github.com/rust-lang/cargo/pull/16918)
+- Use `portable-atomic` for 64-bit atomics
+  [#16906](https://github.com/rust-lang/cargo/pull/16906)
+- build-rs: Ensure we lint the crate
+  [#16930](https://github.com/rust-lang/cargo/pull/16930)
 - ci: Pin GitHub Actions to commit SHAs
   [#16867](https://github.com/rust-lang/cargo/pull/16867)
   [#16868](https://github.com/rust-lang/cargo/pull/16868)
+- ci: update to macos-15
+  [#16996](https://github.com/rust-lang/cargo/pull/16996)
+- ci: Use `actions/deploy-pages` for Cargo Contributor Guide deployment
+  [#16876](https://github.com/rust-lang/cargo/pull/16876)
 - test: Add test for cargo install with github fastpath
   [#16866](https://github.com/rust-lang/cargo/pull/16866)
+- test: Fix flaky tests
+  [#16914](https://github.com/rust-lang/cargo/pull/16914)
+  [#16915](https://github.com/rust-lang/cargo/pull/16915)
+  [#16916](https://github.com/rust-lang/cargo/pull/16916)
+  [#16922](https://github.com/rust-lang/cargo/pull/16922)
+- test: cover search API redirects
+  [#16971](https://github.com/rust-lang/cargo/pull/16971)
+- test: add regression test for full-hash GitHub fast path
+  [#16919](https://github.com/rust-lang/cargo/pull/16919)
+- Update dependencies.
+  [#16883](https://github.com/rust-lang/cargo/pull/16883)
+  [#16897](https://github.com/rust-lang/cargo/pull/16897)
+  [#16931](https://github.com/rust-lang/cargo/pull/16931)
+  [#16932](https://github.com/rust-lang/cargo/pull/16932)
+  [#16938](https://github.com/rust-lang/cargo/pull/16938)
+  [#16941](https://github.com/rust-lang/cargo/pull/16941)
+  [#16945](https://github.com/rust-lang/cargo/pull/16945)
+  [#16952](https://github.com/rust-lang/cargo/pull/16952)
+  [#16953](https://github.com/rust-lang/cargo/pull/16953)
+  [#16979](https://github.com/rust-lang/cargo/pull/16979)
 
 ## Cargo 1.96 (2026-05-28)
 [f298b8c8...rust-1.96.0](https://github.com/rust-lang/cargo/compare/f298b8c8...rust-1.96.0)
