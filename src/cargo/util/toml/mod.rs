@@ -2788,10 +2788,11 @@ fn lints_to_rustflags(lints: &manifest::TomlLints) -> CargoResult<Vec<String>> {
                     manifest::TomlLintLevel::Allow => "--allow",
                 };
 
+                let normalized_name = name.replace('-', "_");
                 let option = if tool == "rust" {
-                    format!("{flag}={name}")
+                    format!("{flag}={normalized_name}")
                 } else {
-                    format!("{flag}={tool}::{name}")
+                    format!("{flag}={tool}::{normalized_name}")
                 };
                 (
                     config.priority(),
