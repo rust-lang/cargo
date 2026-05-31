@@ -899,11 +899,12 @@ fn duplicate_lint_name_hyphen_and_underscore() {
         .build();
 
     foo.cargo("check")
+        .with_status(101)
         .with_stderr_data(str![[r#"
-[WARNING] Cargo.toml: `lints.rust.unexpected-cfgs` is deprecated in favor of `lints.rust.unexpected_cfgs` and will not work in a future edition
-[WARNING] `foo` (manifest) generated 1 warning
-[CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  duplicate lint `unexpected-cfgs` in `[lints.rust]`, conflicts with `unexpected_cfgs`
 
 "#]])
         .run();

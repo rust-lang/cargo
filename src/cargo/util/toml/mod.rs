@@ -2690,6 +2690,7 @@ supported tools: {}",
         if tool == "cargo" && !gctx.cli_unstable().cargo_lints {
             warn_for_cargo_lint_feature(gctx, warnings);
         }
+        let mut seen_normalized: HashMap<String, String> = HashMap::new();
         for (name, config) in lints {
             let normalized = name.replace('-', "_");
             if name.contains('-') {
@@ -2699,6 +2700,13 @@ supported tools: {}",
                      future edition"
                 ));
             }
+            if let Some(existing) = seen_normalized.get(&normalized) {
+                anyhow::bail!(
+                    "duplicate lint `{existing}` in `[lints.{tool}]`, \
+                     conflicts with `{name}`"
+                );
+            }
+            seen_normalized.insert(normalized.clone(), name.to_string());
             if let Some((prefix, suffix)) = name.split_once("::") {
                 if tool == prefix {
                     anyhow::bail!(
