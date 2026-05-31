@@ -47,6 +47,7 @@ im-a-teapot = "warn"
     foo.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints", "test-dummy-unstable"])
         .with_stderr_data(str![[r#"
+[WARNING] Cargo.toml: `lints.cargo.im-a-teapot` is deprecated in favor of `lints.cargo.im_a_teapot` and will not work in a future edition
 [WARNING] unknown lint: `im-a-teapot`
   --> Cargo.toml:12:1
    |
@@ -55,7 +56,7 @@ im-a-teapot = "warn"
    |
    = [NOTE] `cargo::unknown_lints` is set to `warn` by default
    = [HELP] there is a lint with a similar name: `im_a_teapot`
-[WARNING] `foo` (manifest) generated 1 warning
+[WARNING] `foo` (manifest) generated 2 warnings
 
 "#]])
         .run();

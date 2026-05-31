@@ -166,9 +166,11 @@ fn warn_on_unused_key() {
 
     foo.cargo("check")
         .with_stderr_data(str![[r#"
+[WARNING] Cargo.toml: `lints.rust.rust-2018-idioms` is deprecated in favor of `lints.rust.rust_2018_idioms` and will not work in a future edition
 [WARNING] Cargo.toml: unused manifest key: `lints.rust.rust-2018-idioms.unused`
+[WARNING] Cargo.toml: `lints.rust.rust-2018-idioms` is deprecated in favor of `lints.rust.rust_2018_idioms` and will not work in a future edition
 [WARNING] Cargo.toml: unused manifest key: `lints.rust.rust-2018-idioms.unused`
-[WARNING] `foo` (manifest) generated 2 warnings
+[WARNING] `foo` (manifest) generated 4 warnings
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -720,6 +722,8 @@ pub const Ĕ: i32 = 2;
 
     foo.cargo("check")
         .with_stderr_data(str![[r#"
+[WARNING] Cargo.toml: `lints.rust.confusable-idents` is deprecated in favor of `lints.rust.confusable_idents` and will not work in a future edition
+[WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -728,6 +732,8 @@ pub const Ĕ: i32 = 2;
 
     foo.cargo("test --doc")
         .with_stderr_data(str![[r#"
+[WARNING] Cargo.toml: `lints.rust.confusable-idents` is deprecated in favor of `lints.rust.confusable_idents` and will not work in a future edition
+[WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [DOCTEST] foo
@@ -856,7 +862,7 @@ fn hyphen_in_lint_name() {
                 edition = "2015"
 
                 [lints.rust]
-                unexpected-cfgs = "warn"
+                unexpected-cfgs = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -864,6 +870,8 @@ fn hyphen_in_lint_name() {
 
     foo.cargo("check")
         .with_stderr_data(str![[r#"
+[WARNING] Cargo.toml: `lints.rust.unexpected-cfgs` is deprecated in favor of `lints.rust.unexpected_cfgs` and will not work in a future edition
+[WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -892,6 +900,8 @@ fn duplicate_lint_name_hyphen_and_underscore() {
 
     foo.cargo("check")
         .with_stderr_data(str![[r#"
+[WARNING] Cargo.toml: `lints.rust.unexpected-cfgs` is deprecated in favor of `lints.rust.unexpected_cfgs` and will not work in a future edition
+[WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 

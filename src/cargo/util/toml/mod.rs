@@ -2691,6 +2691,14 @@ supported tools: {}",
             warn_for_cargo_lint_feature(gctx, warnings);
         }
         for (name, config) in lints {
+            let normalized = name.replace('-', "_");
+            if name.contains('-') {
+                warnings.push(format!(
+                    "`lints.{tool}.{name}` is deprecated in favor of \
+                     `lints.{tool}.{normalized}` and will not work in a \
+                     future edition"
+                ));
+            }
             if let Some((prefix, suffix)) = name.split_once("::") {
                 if tool == prefix {
                     anyhow::bail!(
