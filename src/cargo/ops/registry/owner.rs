@@ -53,6 +53,14 @@ pub fn modify_owners(gctx: &GlobalContext, opts: &OwnersOptions) -> CargoResult<
                 name,
                 registry.host()
             )
+        }).map_err(|e| {
+            if format!("{e:#}").contains("could not find the github team") {
+                e.context("hint: crates.io may not have permission to access the GitHub organization. \
+                    Go to https://github.com/settings/applications, check that crates.io is \
+                    authorized, and ensure the organization has granted access")
+            } else {
+                e
+            }
         })?;
 
         gctx.shell().status("Owner", msg)?;
