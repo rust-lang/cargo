@@ -392,7 +392,7 @@ dependencies = [
  "flate2",
  "futures",
  "futures-timer",
- "git2",
+ "git2 0.20.4",
  "git2-curl",
  "gix",
  "gix-transport",
@@ -535,7 +535,7 @@ dependencies = [
  "crates-io",
  "filetime",
  "flate2",
- "git2",
+ "git2 0.20.4",
  "glob",
  "itertools 0.14.0",
  "pasetors",
@@ -1535,13 +1535,25 @@ dependencies = [
 ]
 
 [[package]]
-name = "git2-curl"
+name = "git2"
 version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be8dcabbc09ece4d30a9aa983d5804203b7e2f8054a171f792deff59b56d31fa"
+checksum = "ddddbf932745a6be37109b6112d3ee09696106f848449069d3a57bba937ab82e"
+dependencies = [
+ "bitflags",
+ "libc",
+ "libgit2-sys",
+ "log",
+]
+
+[[package]]
+name = "git2-curl"
+version = "0.22.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1f1f6fe01327a2f7a1d6ee519c14651f79530aa4d64e870f4cf672efe697bea5"
 dependencies = [
  "curl",
- "git2",
+ "git2 0.21.0",
  "log",
  "url",
 ]
@@ -3102,9 +3114,9 @@ checksum = "68ab91017fe16c622486840e4c83c9a37afeff978bd239b5293d61ece587de66"
 
 [[package]]
 name = "libgit2-sys"
-version = "0.18.3+1.9.2"
+version = "0.18.5+1.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c9b3acc4b91781bb0b3386669d325163746af5f6e4f73e6d2d630e09a35f3487"
+checksum = "005d6ae6eac1912906073e069f7db60b1fa98e052a68227824afe3e3a1c59ca2"
 dependencies = [
  "cc",
  "libc",
@@ -5887,7 +5899,7 @@ dependencies = [
  "cargo-util-terminal",
  "clap",
  "futures",
- "git2",
+ "git2 0.20.4",
  "semver",
  "tracing",
  "tracing-subscriber",
