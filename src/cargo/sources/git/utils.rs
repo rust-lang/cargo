@@ -429,9 +429,17 @@ impl<'a> GitCheckout<'a> {
         ) -> CargoResult<()> {
             child.init(false)?;
 
-            let child_url_str = child.url().ok_or_else(|| {
-                anyhow::format_err!("non-utf8 url for submodule {:?}?", child.path())
-            })?;
+            let child_url_str = child
+                .url()
+                .with_context(|| {
+                    format!("failed to update submodule `{}`", child.path().display())
+                })?
+                .ok_or_else(|| {
+                    anyhow::format_err!(
+                        "unable to update submodule `{}` without a path",
+                        child.name().unwrap_or("")
+                    )
+                })?;
 
             // Skip the submodule if the config says not to update it.
             if child.update_strategy() == git2::SubmoduleUpdate::None {

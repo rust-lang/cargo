@@ -242,7 +242,7 @@ fn check_version_control(gctx: &GlobalContext, opts: &FixOptions) -> CargoResult
         repo_opts.include_ignored(false);
         repo_opts.include_untracked(true);
         for status in repo.statuses(Some(&mut repo_opts))?.iter() {
-            if let Some(path) = status.path() {
+            if let Ok(path) = status.path() {
                 match status.status() {
                     git2::Status::CURRENT => (),
                     git2::Status::INDEX_NEW
