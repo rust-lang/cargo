@@ -1873,6 +1873,65 @@ fn allow_dep_renames_with_multiple_versions() {
 }
 
 #[cargo_test]
+fn registry_build_script_bin_artifact_with_explicit_target_sets_bin_file_env() {
+    if cross_compile_disabled() {
+        return;
+    }
+    let target = cross_compile::alternate();
+
+    Package::new("bar", "1.0.0")
+        .file("src/main.rs", "fn main() {}")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                edition = "2015"
+                authors = []
+                resolver = "2"
+
+                [build-dependencies]
+                bar = {{ version = "1.0.0", artifact = "bin", target = "{target}" }}
+            "#
+            ),
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+            fn main() {
+                let bar: std::path::PathBuf = std::env::var("CARGO_BIN_FILE_BAR").expect("CARGO_BIN_FILE_BAR").into();
+                assert!(bar.is_file(), "CARGO_BIN_FILE_BAR should point to the artifact binary");
+
+                let bar_named: std::path::PathBuf = std::env::var("CARGO_BIN_FILE_BAR_bar").expect("CARGO_BIN_FILE_BAR_bar").into();
+                assert!(bar_named.is_file(), "CARGO_BIN_FILE_BAR_bar should point to the artifact binary");
+                assert_eq!(bar, bar_named);
+            }
+            "#,
+        )
+        .build();
+
+    p.cargo("check -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[COMPILING] bar v1.0.0
+[COMPILING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn allow_artifact_and_non_artifact_dependency_to_same_crate_if_these_are_not_the_same_dep_kind() {
     let p = project()
         .file(
