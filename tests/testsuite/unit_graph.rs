@@ -1,9 +1,9 @@
 //! Tests for --unit-graph option.
 
 use crate::prelude::*;
-use cargo_test_support::project;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
+use cargo_test_support::{basic_bin_manifest, project};
 
 #[cargo_test]
 fn gated() {
@@ -235,5 +235,43 @@ fn simple() {
 "#]]
             .is_json(),
         )
+        .run();
+}
+
+#[cargo_test]
+fn unit_graph_rejects_artifact_alias_edges_to_same_package() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2015"
+            authors = []
+
+            [dependencies.bar]
+            path = "bar/"
+            artifact = "bin"
+
+            [dependencies.bar-alt]
+            package = "bar"
+            path = "bar/"
+            artifact = "bin"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_bin_manifest("bar"))
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build --unit-graph -Zunstable-options -Z bindeps")
+        .masquerade_as_nightly_cargo(&["unit-graph", "bindeps"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to latest compatible version
+[ERROR] the crate `foo v0.1.0 ([ROOT]/foo)` depends on crate `bar v0.5.0 ([ROOT]/foo/bar)` multiple times with different names
+
+"#]])
         .run();
 }
