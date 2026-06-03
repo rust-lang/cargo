@@ -230,6 +230,55 @@ fn disallow_artifact_and_no_artifact_dep_to_same_package_within_the_same_dep_cat
 }
 
 #[cargo_test]
+fn disallow_artifact_lib_and_no_artifact_dep_to_same_package_within_the_same_dep_category() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                edition = "2015"
+                authors = []
+                resolver = "2"
+
+                [dependencies]
+                bar = { path = "bar/", artifact = "bin", lib = true }
+                bar_stable = { path = "bar/", package = "bar" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.5.0"
+                edition = "2015"
+
+                [lib]
+                name = "bar"
+
+                [[bin]]
+                name = "bar"
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to latest compatible version
+[ERROR] the crate `foo v0.0.0 ([ROOT]/foo)` depends on crate `bar v0.5.0 ([ROOT]/foo/bar)` multiple times with different names
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn features_are_unified_among_lib_and_bin_dep_of_same_target() {
     let p = project()
         .file(
@@ -1183,6 +1232,293 @@ fn build_script_deps_adopt_do_not_allow_multiple_targets_under_different_name_an
         .build();
 
     p.cargo("check -v -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to latest compatible version
+[ERROR] the crate `foo v0.0.0 ([ROOT]/foo)` depends on crate `bar v0.5.0 ([ROOT]/foo/bar)` multiple times with different names
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn non_build_deps_do_not_allow_multiple_targets_under_different_names() {
+    if cross_compile_disabled() {
+        return;
+    }
+
+    let alternate = cross_compile::alternate();
+    let native = cross_compile::native();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                edition = "2015"
+                authors = []
+                resolver = "2"
+
+                [dependencies.bar]
+                path = "bar/"
+                artifact = "bin"
+                target = "{alternate}"
+
+                [dependencies.bar-native]
+                package = "bar"
+                path = "bar/"
+                artifact = "bin"
+                target = "{native}"
+            "#
+            ),
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                pub fn f() {
+                    let _alternate = include_bytes!(env!("CARGO_BIN_FILE_BAR_bar"));
+                    let _native = include_bytes!(env!("CARGO_BIN_FILE_BAR_NATIVE_bar"));
+                }
+            "#,
+        )
+        .file("bar/Cargo.toml", &basic_bin_manifest("bar"))
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to latest compatible version
+[ERROR] the crate `foo v0.0.0 ([ROOT]/foo)` depends on crate `bar v0.5.0 ([ROOT]/foo/bar)` multiple times with different names
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn build_script_deps_do_not_allow_same_target_under_different_names() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                edition = "2015"
+                authors = []
+                resolver = "2"
+
+                [build-dependencies.bar]
+                path = "bar/"
+                artifact = "bin"
+
+                [build-dependencies.bar-alt]
+                package = "bar"
+                path = "bar/"
+                artifact = "bin"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+                fn main() {
+                    let bar: std::path::PathBuf = std::env::var("CARGO_BIN_FILE_BAR").expect("CARGO_BIN_FILE_BAR").into();
+                    assert!(bar.is_file());
+                    let bar_alt: std::path::PathBuf = std::env::var("CARGO_BIN_FILE_BAR_ALT_bar").expect("CARGO_BIN_FILE_BAR_ALT_bar").into();
+                    assert!(bar_alt.is_file());
+                    assert_eq!(bar_alt, bar, "same-target aliases should share the artifact path");
+                }
+            "#,
+        )
+        .file("bar/Cargo.toml", &basic_bin_manifest("bar"))
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to latest compatible version
+[ERROR] the crate `foo v0.0.0 ([ROOT]/foo)` depends on crate `bar v0.5.0 ([ROOT]/foo/bar)` multiple times with different names
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn artifact_output_only_dep_cannot_coexist_with_one_artifact_lib_dep() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                edition = "2015"
+                authors = []
+                resolver = "2"
+
+                [build-dependencies.bar-lib]
+                package = "bar"
+                path = "bar/"
+                artifact = "bin"
+                lib = true
+
+                [build-dependencies.bar-bin]
+                package = "bar"
+                path = "bar/"
+                artifact = "bin"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+                extern crate bar_lib;
+
+                fn main() {
+                    bar_lib::f();
+                    let bar_lib_bin: std::path::PathBuf = std::env::var("CARGO_BIN_FILE_BAR_LIB_bar").expect("CARGO_BIN_FILE_BAR_LIB_bar").into();
+                    assert!(bar_lib_bin.is_file());
+                    let bar_bin: std::path::PathBuf = std::env::var("CARGO_BIN_FILE_BAR_BIN_bar").expect("CARGO_BIN_FILE_BAR_BIN_bar").into();
+                    assert!(bar_bin.is_file());
+                }
+            "#,
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.5.0"
+                edition = "2015"
+
+                [lib]
+                name = "bar"
+
+                [[bin]]
+                name = "bar"
+            "#,
+        )
+        .file("bar/src/lib.rs", "pub fn f() {}")
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to latest compatible version
+[ERROR] the crate `foo v0.0.0 ([ROOT]/foo)` depends on crate `bar v0.5.0 ([ROOT]/foo/bar)` multiple times with different names
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn multiple_artifact_lib_deps_to_same_package_still_error() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                edition = "2015"
+                authors = []
+                resolver = "2"
+
+                [dependencies.bar-a]
+                package = "bar"
+                path = "bar/"
+                artifact = "bin"
+                lib = true
+
+                [dependencies.bar-b]
+                package = "bar"
+                path = "bar/"
+                artifact = "bin"
+                lib = true
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.5.0"
+                edition = "2015"
+
+                [lib]
+                name = "bar"
+
+                [[bin]]
+                name = "bar"
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to latest compatible version
+[ERROR] the crate `foo v0.0.0 ([ROOT]/foo)` depends on crate `bar v0.5.0 ([ROOT]/foo/bar)` multiple times with different names
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn multiple_artifact_lib_deps_with_different_artifact_targets_still_error() {
+    if cross_compile_disabled() {
+        return;
+    }
+
+    let alternate = cross_compile::alternate();
+    let native = cross_compile::native();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                edition = "2015"
+                authors = []
+                resolver = "2"
+
+                [dependencies.bar]
+                path = "bar/"
+                artifact = "bin"
+                lib = true
+                target = "{alternate}"
+
+                [dependencies.bar-native]
+                package = "bar"
+                path = "bar/"
+                artifact = "bin"
+                lib = true
+                target = "{native}"
+            "#
+            ),
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.5.0"))
+        .file("bar/src/lib.rs", "pub fn doit() {}")
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_status(101)
         .with_stderr_data(str![[r#"
