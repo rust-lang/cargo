@@ -1040,8 +1040,13 @@ Artifact-dependencies adds the following keys to a dependency declaration in `Ca
   This field can only be specified when `artifact` is specified.
 
   The default if this is not specified depends on the dependency kind.
+  If the dependency package specifies `package.forced-target`, that target is
+  used.
+  If no command-line target is specified and the dependency package specifies
+  `package.default-target`, that target is used.
   For build dependencies, it will be built for the host target.
   For all other dependencies, it will be built for the same targets the declaring package is built for.
+  An explicit artifact dependency `target` overrides either package target.
 
   For a build dependency, this can also take the special value of `"target"` which means to build the dependency for the same targets that the package is being built for.
 

@@ -465,17 +465,30 @@ fn calc_artifact_deps<'a>(
                 !unit.mode.is_run_custom_build(),
                 "BUG: This should be handled in a separate branch"
             );
+            let package_target = artifact_package_target(
+                artifact,
+                artifact_pkg,
+                state.target_data.requested_kinds(),
+            );
+            let compile_kind = artifact
+                .target()
+                .and_then(|t| match t {
+                    ArtifactTarget::BuildDependencyAssumeTarget => None,
+                    ArtifactTarget::Force(kind) => Some(CompileKind::Target(kind)),
+                })
+                .or(package_target)
+                .unwrap_or(unit.kind);
+            let unit_for = match package_target {
+                Some(kind) => {
+                    unit_for.with_artifact_features_from_resolved_compile_kind(Some(kind))
+                }
+                None => unit_for.with_artifact_features(artifact),
+            };
             ret.extend(artifact_targets_to_unit_deps(
                 unit,
-                unit_for.with_artifact_features(artifact),
+                unit_for,
                 state,
-                artifact
-                    .target()
-                    .and_then(|t| match t {
-                        ArtifactTarget::BuildDependencyAssumeTarget => None,
-                        ArtifactTarget::Force(kind) => Some(CompileKind::Target(kind)),
-                    })
-                    .unwrap_or(unit.kind),
+                compile_kind,
                 artifact_pkg,
                 dep,
             )?);
@@ -554,7 +567,14 @@ fn compute_deps_custom_build(
             let artifact = dep.artifact().expect("artifact dep");
             let resolved_artifact_compile_kind = artifact
                 .target()
-                .map(|target| target.to_resolved_compile_kind(root_unit_compile_target));
+                .map(|target| target.to_resolved_compile_kind(root_unit_compile_target))
+                .or_else(|| {
+                    artifact_package_target(
+                        artifact,
+                        artifact_pkg,
+                        state.target_data.requested_kinds(),
+                    )
+                });
 
             result.extend(artifact_targets_to_unit_deps(
                 unit,
@@ -570,6 +590,23 @@ fn compute_deps_custom_build(
     }
 
     Ok(result)
+}
+
+fn artifact_package_target(
+    artifact: &Artifact,
+    artifact_pkg: &Package,
+    requested_kinds: &[CompileKind],
+) -> Option<CompileKind> {
+    if artifact.target().is_some() {
+        return None;
+    }
+    if let Some(kind) = artifact_pkg.manifest().forced_kind() {
+        return Some(kind);
+    }
+    if requested_kinds.iter().any(CompileKind::is_host) {
+        return artifact_pkg.manifest().default_kind();
+    }
+    None
 }
 
 /// Given a `parent` unit containing a dependency `dep` whose package is `artifact_pkg`,

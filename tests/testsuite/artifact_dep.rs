@@ -1546,6 +1546,279 @@ foo v0.0.0 ([ROOT]/foo)
         .run();
 }
 
+#[cargo_test]
+fn artifact_dep_uses_dependency_forced_target_as_default() {
+    if cross_compile_disabled() {
+        return;
+    }
+    let target = cross_compile::alternate();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                authors = []
+                resolver = "2"
+                edition = "2015"
+
+                [dependencies]
+                bindep = { path = "bindep", artifact = "bin" }
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                pub fn foo() {
+                    let _bin = include_bytes!(env!("CARGO_BIN_FILE_BINDEP"));
+                }
+            "#,
+        )
+        .file(
+            "bindep/Cargo.toml",
+            &format!(
+                r#"
+                    cargo-features = ["per-package-target"]
+
+                    [package]
+                    name = "bindep"
+                    version = "0.0.0"
+                    edition = "2015"
+                    forced-target = "{target}"
+                "#,
+            ),
+        )
+        .file("bindep/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps", "per-package-target"])
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to latest compatible version
+[COMPILING] bindep v0.0.0 ([ROOT]/foo/bindep)
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .with_status(0)
+        .run();
+
+    assert!(
+        p.glob(&format!(
+            "target/{}/debug/deps/artifact/bindep-*/bin/bindep*",
+            target
+        ))
+        .next()
+        .is_some()
+    );
+}
+
+#[cargo_test]
+fn artifact_dep_uses_dependency_default_target_as_default() {
+    if cross_compile_disabled() {
+        return;
+    }
+    let target = cross_compile::alternate();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                authors = []
+                resolver = "2"
+                edition = "2015"
+
+                [dependencies]
+                bindep = { path = "bindep", artifact = "bin" }
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                pub fn foo() {
+                    let _bin = include_bytes!(env!("CARGO_BIN_FILE_BINDEP"));
+                }
+            "#,
+        )
+        .file(
+            "bindep/Cargo.toml",
+            &format!(
+                r#"
+                    cargo-features = ["per-package-target"]
+
+                    [package]
+                    name = "bindep"
+                    version = "0.0.0"
+                    edition = "2015"
+                    default-target = "{target}"
+                "#,
+            ),
+        )
+        .file("bindep/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps", "per-package-target"])
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to latest compatible version
+[COMPILING] bindep v0.0.0 ([ROOT]/foo/bindep)
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .with_status(0)
+        .run();
+
+    assert!(
+        p.glob(&format!(
+            "target/{}/debug/deps/artifact/bindep-*/bin/bindep*",
+            target
+        ))
+        .next()
+        .is_some()
+    );
+}
+
+#[cargo_test]
+fn command_line_target_overrides_dependency_default_target() {
+    if cross_compile_disabled() {
+        return;
+    }
+    let target = cross_compile::alternate();
+    let default_target = rustc_host();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.0.0"
+                    authors = []
+                    resolver = "2"
+                    edition = "2015"
+
+                    [dependencies]
+                    bindep = {{ path = "bindep", artifact = "bin" }}
+                "#,
+            ),
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                pub fn foo() {
+                    let _bin = include_bytes!(env!("CARGO_BIN_FILE_BINDEP"));
+                }
+            "#,
+        )
+        .file(
+            "bindep/Cargo.toml",
+            &format!(
+                r#"
+                    cargo-features = ["per-package-target"]
+
+                    [package]
+                    name = "bindep"
+                    version = "0.0.0"
+                    edition = "2015"
+                    default-target = "{default_target}"
+                "#,
+            ),
+        )
+        .file("bindep/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check -Z bindeps --target")
+        .arg(target)
+        .masquerade_as_nightly_cargo(&["bindeps", "per-package-target"])
+        .with_status(0)
+        .run();
+
+    assert!(
+        p.glob(&format!(
+            "target/{}/debug/deps/artifact/bindep-*/bin/bindep*",
+            target
+        ))
+        .next()
+        .is_some()
+    );
+}
+
+#[cargo_test]
+fn explicit_artifact_dep_target_overrides_dependency_forced_target() {
+    if cross_compile_disabled() {
+        return;
+    }
+    let target = cross_compile::alternate();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.0.0"
+                    authors = []
+                    resolver = "2"
+                    edition = "2015"
+
+                    [dependencies]
+                    bindep = {{ path = "bindep", artifact = "bin", target = "{target}" }}
+                "#,
+            ),
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                pub fn foo() {
+                    let _bin = include_bytes!(env!("CARGO_BIN_FILE_BINDEP"));
+                }
+            "#,
+        )
+        .file(
+            "bindep/Cargo.toml",
+            r#"
+                cargo-features = ["per-package-target"]
+
+                [package]
+                name = "bindep"
+                version = "0.0.0"
+                edition = "2015"
+                forced-target = "wasm32-unknown-unknown"
+            "#,
+        )
+        .file("bindep/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps", "per-package-target"])
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to latest compatible version
+[COMPILING] bindep v0.0.0 ([ROOT]/foo/bindep)
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .with_status(0)
+        .run();
+
+    assert!(
+        p.glob(&format!(
+            "target/{}/debug/deps/artifact/bindep-*/bin/bindep*",
+            target
+        ))
+        .next()
+        .is_some()
+    );
+}
+
 /// From issue #10593
 /// The case where:
 /// *   artifact dep is { target = <specified> }

@@ -1252,7 +1252,8 @@ impl UnitFor {
             match dep_artifact {
                 Some(artifact) => artifact
                     .target()
-                    .and_then(|t| t.to_resolved_compile_target(self.root_compile_kind)),
+                    .and_then(|t| t.to_resolved_compile_target(self.root_compile_kind))
+                    .or(self.artifact_target_for_features),
                 None => self.artifact_target_for_features,
             },
         )

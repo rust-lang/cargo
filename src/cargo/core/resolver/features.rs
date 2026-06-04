@@ -809,6 +809,7 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
         fn artifact_features_for(
             this: &mut FeatureResolver<'_, '_>,
             pkg_id: PackageId,
+            dep_pkg_id: PackageId,
             dep: &Dependency,
             lib_fk: FeaturesFor,
             unstable_json_spec: bool,
@@ -817,6 +818,21 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
                 return Ok(vec![lib_fk]);
             };
             let mut result = Vec::new();
+            let artifact_target = artifact.target().or_else(|| {
+                let dep_pkg = this
+                    .package_set
+                    .get_one(dep_pkg_id)
+                    .expect("packages downloaded");
+                if let Some(CompileKind::Target(target)) = dep_pkg.manifest().forced_kind() {
+                    return Some(ArtifactTarget::Force(target));
+                }
+                if this.requested_targets.iter().any(CompileKind::is_host) {
+                    if let Some(CompileKind::Target(target)) = dep_pkg.manifest().default_kind() {
+                        return Some(ArtifactTarget::Force(target));
+                    }
+                }
+                None
+            });
             let host_triple = this.target_data.rustc.host;
             // Not all targets may be queried before resolution since artifact
             // dependencies and per-pkg-targets are not immediately known.
@@ -834,7 +850,7 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
                     })
             };
 
-            if let Some(target) = artifact.target() {
+            if let Some(target) = artifact_target {
                 match target {
                     ArtifactTarget::Force(target) => {
                         activate_target(target)?;
@@ -856,7 +872,7 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
                     }
                 }
             }
-            if artifact.is_lib() || artifact.target().is_none() {
+            if artifact.is_lib() || artifact_target.is_none() {
                 result.push(lib_fk);
             }
             Ok(result)
@@ -919,8 +935,14 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
                             fk
                         };
 
-                        let dep_fks =
-                            artifact_features_for(self, pkg_id, dep, lib_fk, unstable_json_spec)?;
+                        let dep_fks = artifact_features_for(
+                            self,
+                            pkg_id,
+                            dep_id,
+                            dep,
+                            lib_fk,
+                            unstable_json_spec,
+                        )?;
                         Ok(dep_fks.into_iter().map(move |dep_fk| (dep, dep_fk)))
                     })
                     .flatten_ok()
