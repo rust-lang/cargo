@@ -622,7 +622,7 @@ impl<'gctx> PackageSet<'gctx> {
         root_ids: &[PackageId],
         has_dev_units: HasDevUnits,
         requested_kinds: &[CompileKind],
-        target_data: &RustcTargetData<'gctx>,
+        target_data: &mut RustcTargetData<'gctx>,
         force_all_targets: ForceAllTargets,
     ) -> CargoResult<()> {
         fn collect_used_deps(
@@ -631,7 +631,7 @@ impl<'gctx> PackageSet<'gctx> {
             pkg_id: PackageId,
             has_dev_units: HasDevUnits,
             requested_kind: CompileKind,
-            target_data: &RustcTargetData<'_>,
+            target_data: &mut RustcTargetData<'_>,
             force_all_targets: ForceAllTargets,
         ) -> CargoResult<()> {
             if !used.insert((pkg_id, requested_kind)) {
@@ -645,29 +645,45 @@ impl<'gctx> PackageSet<'gctx> {
                 requested_kinds,
                 target_data,
                 force_all_targets,
-            );
-            for (pkg_id, deps) in filtered_deps {
+            )
+            .map(|(dep_pkg_id, deps)| {
+                let artifact_kinds = deps
+                    .iter()
+                    .filter_map(|dep| {
+                        Some((
+                            dep.artifact()?
+                                .target()?
+                                .to_resolved_compile_kind(requested_kind),
+                            dep.name_in_toml(),
+                        ))
+                    })
+                    .collect::<Vec<_>>();
+                (dep_pkg_id, artifact_kinds)
+            })
+            .collect::<Vec<_>>();
+            for (dep_pkg_id, deps) in filtered_deps {
                 collect_used_deps(
                     used,
                     resolve,
-                    pkg_id,
+                    dep_pkg_id,
                     has_dev_units,
                     requested_kind,
                     target_data,
                     force_all_targets,
                 )?;
-                let artifact_kinds = deps.iter().filter_map(|dep| {
-                    Some(
-                        dep.artifact()?
-                            .target()?
-                            .to_resolved_compile_kind(*requested_kinds.iter().next().unwrap()),
-                    )
-                });
-                for artifact_kind in artifact_kinds {
+                for (artifact_kind, dep_name) in deps {
+                    let target_name = target_data.short_name(&artifact_kind).to_owned();
+                    target_data.merge_compile_kind(artifact_kind).with_context(|| {
+                        format!(
+                            "failed to determine target information for target `{target_name}`.\n  \
+                             Artifact dependency `{dep_name}` in package `{pkg_id}` requires \
+                             building for `{target_name}`"
+                        )
+                    })?;
                     collect_used_deps(
                         used,
                         resolve,
-                        pkg_id,
+                        dep_pkg_id,
                         has_dev_units,
                         artifact_kind,
                         target_data,
@@ -677,6 +693,14 @@ impl<'gctx> PackageSet<'gctx> {
             }
             Ok(())
         }
+
+        let default_kinds;
+        let requested_kinds = if requested_kinds.is_empty() {
+            default_kinds = [CompileKind::Host];
+            &default_kinds
+        } else {
+            requested_kinds
+        };
 
         // This is sorted by PackageId to get consistent behavior and error
         // messages for Cargo's testsuite. Perhaps there is a better ordering
