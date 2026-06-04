@@ -9,7 +9,7 @@ use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::registry::{Package, RegistryBuilder};
 use cargo_test_support::str;
 use cargo_test_support::{
-    Project, basic_bin_manifest, basic_manifest, cross_compile, project, publish, registry,
+    Project, basic_bin_manifest, basic_manifest, cross_compile, git, project, publish, registry,
     rustc_host,
 };
 
@@ -3315,6 +3315,87 @@ Caused by:
 
 "#]])
         .with_status(101)
+        .run();
+}
+
+#[cargo_test]
+fn transitive_build_script_artifact_dependency_with_valid_target_does_not_panic() {
+    if cross_compile_disabled() {
+        return;
+    }
+    let target = cross_compile::alternate();
+    let fdb = git::new("fdb", |project| {
+        project
+            .file(
+                "Cargo.toml",
+                &format!(
+                    r#"
+                        [package]
+                        name = "fdb"
+                        version = "0.0.0"
+                        edition = "2015"
+                        build = "build.rs"
+
+                        [dependencies]
+                        redux_helper32 = {{ path = "redux_helper32/" }}
+
+                        [build-dependencies]
+                        redux_helper32 = {{ path = "redux_helper32/", artifact = "bin", target = "{target}" }}
+                    "#,
+                ),
+            )
+            .file("src/lib.rs", "")
+            .file(
+                "build.rs",
+                r#"fn main() {
+                    let bin = std::env::var_os("CARGO_BIN_FILE_REDUX_HELPER32").unwrap();
+                    assert!(std::path::PathBuf::from(bin).exists());
+                }"#,
+            )
+            .file(
+                "redux_helper32/Cargo.toml",
+                r#"
+                    [package]
+                    name = "redux_helper32"
+                    version = "0.0.0"
+                    edition = "2015"
+                "#,
+            )
+            .file("redux_helper32/src/lib.rs", "")
+            .file("redux_helper32/src/main.rs", "fn main() {}")
+    });
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                edition = "2015"
+
+                [dependencies]
+                fdb = {{ git = '{}' }}
+            "#,
+                fdb.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_stderr_data(str![[r#"
+[UPDATING] git repository `[ROOTURL]/fdb`
+[LOCKING] 2 packages to latest compatible versions
+[COMPILING] redux_helper32 v0.0.0 ([ROOTURL]/fdb#[..])
+[COMPILING] fdb v0.0.0 ([ROOTURL]/fdb#[..])
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .with_status(0)
         .run();
 }
 
