@@ -1,8 +1,8 @@
 [package]
 name = "cargo-test-macro"
-version = "0.4.12"
+version = "0.4.13"
 edition.workspace = true
-rust-version = "1.95"  # MSRV:1
+rust-version = "1.96"  # MSRV:1
 license.workspace = true
 repository.workspace = true
 description = "Helper proc-macro for Cargo's testsuite."
