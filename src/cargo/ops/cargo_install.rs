@@ -27,11 +27,13 @@ use tracing::debug;
 
 struct Transaction {
     bins: Vec<PathBuf>,
+    cdylibs: Vec<PathBuf>,
 }
 
 impl Transaction {
     fn success(mut self) {
         self.bins.clear();
+        self.cdylibs.clear();
     }
 }
 
@@ -39,6 +41,9 @@ impl Drop for Transaction {
     fn drop(&mut self) {
         for bin in self.bins.iter() {
             let _ = paths::remove_file(bin);
+        }
+        for lib in self.cdylibs.iter() {
+            let _ = paths::remove_file(lib);
         }
     }
 }
@@ -506,7 +511,10 @@ impl<'gctx> InstallablePackage<'gctx> {
             .map(|&(bin, _)| bin)
             .partition(|&bin| duplicates.contains_key(bin));
 
-        let mut installed = Transaction { bins: Vec::new() };
+        let mut installed = Transaction {
+            bins: Vec::new(),
+            cdylibs: Vec::new(),
+        };
         let mut successful_bins = BTreeSet::new();
 
         // Move the temporary copies into `dst` starting with new binaries.
@@ -575,6 +583,16 @@ impl<'gctx> InstallablePackage<'gctx> {
 
         // Reaching here means all actions have succeeded. Clean up.
         installed.success();
+
+        // See https://github.com/rust-lang/cargo/issues/17055
+        if !dry_run && (!compile.cdylibs.is_empty() || !compile.dylibs.is_empty()) {
+            let kind = self.opts.build_config.single_requested_kind()?;
+            install_dylibs(self.gctx, &compile, kind, &dst)?;
+            for &(bin_name, _) in &binaries {
+                fix_rpath_for_install(self.gctx, &dst.join(bin_name));
+            }
+        }
+
         if needs_cleanup {
             // Don't bother grabbing a lock as we're going to blow it all away
             // anyway.
@@ -1005,6 +1023,115 @@ fn remove_orphaned_bins(
                 if !dry_run {
                     paths::remove_file(&full_path)
                         .with_context(|| format!("failed to remove {:?}", full_path))?;
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+fn fix_rpath_for_install(gctx: &GlobalContext, bin_path: &Path) {
+    #[cfg(target_os = "linux")]
+    {
+        if std::process::Command::new("patchelf")
+            .arg("--add-rpath")
+            .arg("$ORIGIN")
+            .arg(bin_path)
+            .output()
+            .is_err()
+        {
+            let _ = gctx.shell().warn(format!(
+                "`patchelf` is not installed; the installed binary `{}`\n\
+                 may not be able to find its dynamic libraries at runtime.\n\
+                 consider installing `patchelf` or setting `LD_LIBRARY_PATH`.",
+                bin_path.display(),
+            ));
+        }
+    }
+    #[cfg(target_os = "macos")]
+    {
+        let _ = std::process::Command::new("install_name_tool")
+            .arg("-add_rpath")
+            .arg("@loader_path")
+            .arg(bin_path)
+            .output();
+        let _ = gctx;
+    }
+    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+    {
+        let _ = (gctx, bin_path);
+    }
+}
+
+fn install_dylibs(
+    gctx: &GlobalContext,
+    compile: &crate::core::compiler::Compilation<'_>,
+    kind: CompileKind,
+    dst: &Path,
+) -> CargoResult<()> {
+    for cdylib in &compile.cdylibs {
+        let Some(name) = cdylib.path.file_name() else {
+            bail!("cdylib path has no filename: {}", cdylib.path.display());
+        };
+        let dest = dst.join(name);
+        if !dest.exists() {
+            gctx.shell().status("Installing", dest.display())?;
+            paths::copy(&cdylib.path, &dest)?;
+        }
+    }
+
+    for dylib in &compile.dylibs {
+        let Some(name) = dylib.path.file_name() else {
+            bail!("dylib path has no filename: {}", dylib.path.display());
+        };
+        let dest = dst.join(name);
+        if !dest.exists() {
+            gctx.shell().status("Installing", dest.display())?;
+            paths::copy(&dylib.path, &dest)?;
+        }
+    }
+
+    for dir in compile
+        .root_output
+        .values()
+        .chain(compile.deps_output.values())
+    {
+        if !dir.is_dir() {
+            continue;
+        }
+        for entry in std::fs::read_dir(dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            let ext = path.extension().and_then(|e| e.to_str());
+            if !matches!(ext, Some("so" | "dylib")) {
+                continue;
+            }
+            let Some(name) = path.file_name() else {
+                continue;
+            };
+            let dest = dst.join(name);
+            if !dest.exists() {
+                gctx.shell().status("Installing", dest.display())?;
+                paths::copy(&path, &dest)?;
+            }
+        }
+    }
+
+    if let Some(sysroot_libdir) = compile.sysroot_target_libdir.get(&kind) {
+        if sysroot_libdir.is_dir() {
+            for entry in std::fs::read_dir(sysroot_libdir)? {
+                let entry = entry?;
+                let path = entry.path();
+                let ext = path.extension().and_then(|e| e.to_str());
+                if matches!(ext, Some("so" | "dylib")) {
+                    let Some(name) = path.file_name() else {
+                        bail!("sysroot file path has no filename: {}", path.display());
+                    };
+                    let dest = dst.join(name);
+                    if !dest.exists() {
+                        gctx.shell().status("Installing", dest.display())?;
+                        paths::copy(&path, &dest)?;
+                    }
                 }
             }
         }

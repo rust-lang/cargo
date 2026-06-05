@@ -339,6 +339,12 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
                 self.compilation
                     .cdylibs
                     .push(self.unit_output(unit, bindst)?);
+            } else if unit.target.is_dylib()
+                && !self.compilation.dylibs.iter().any(|uo| uo.unit == *unit)
+            {
+                self.compilation
+                    .dylibs
+                    .push(self.unit_output(unit, bindst)?);
             }
         }
         Ok(())
