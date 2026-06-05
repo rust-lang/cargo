@@ -5,7 +5,6 @@
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
-use std::collections::HashSet;
 use std::fs::File;
 use std::io::Seek;
 use std::io::SeekFrom;
@@ -390,7 +389,7 @@ fn wait_for_any_publish_confirmation(
     pkgs: &BTreeSet<PackageId>,
     timeout: Duration,
 ) -> CargoResult<BTreeSet<PackageId>> {
-    let mut source = SourceConfigMap::empty(gctx)?.load(registry_src, &HashSet::new())?;
+    let mut source = SourceConfigMap::empty(gctx)?.load(registry_src)?;
     // Disable the source's built-in progress bars. Repeatedly showing a bunch
     // of independent progress bars can be a little confusing. There is an
     // overall progress bar managed here.

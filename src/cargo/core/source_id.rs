@@ -1,5 +1,4 @@
 use crate::core::GitReference;
-use crate::core::PackageId;
 use crate::core::SourceKind;
 use crate::sources::registry::CRATES_IO_HTTP_INDEX;
 use crate::sources::source::Source;
@@ -389,12 +388,9 @@ impl SourceId {
 
     /// Creates an implementation of `Source` corresponding to this ID.
     ///
-    /// * `yanked_whitelist` --- Packages allowed to be used, even if they are yanked.
-    pub fn load<'a>(
-        self,
-        gctx: &'a GlobalContext,
-        yanked_whitelist: &HashSet<PackageId>,
-    ) -> CargoResult<Box<dyn Source + 'a>> {
+    /// To allow yanked packages through queries,
+    /// call [`Source::add_to_yanked_whitelist`] on the returned source.
+    pub fn load<'a>(self, gctx: &'a GlobalContext) -> CargoResult<Box<dyn Source + 'a>> {
         trace!("loading SourceId; {}", self);
         match self.inner.kind {
             SourceKind::Git(..) => Ok(Box::new(GitSource::new(self, gctx)?)),
@@ -409,21 +405,16 @@ impl SourceId {
                 }
                 Ok(Box::new(PathSource::new(&path, self, gctx)))
             }
-            SourceKind::Registry | SourceKind::SparseRegistry => Ok(Box::new(
-                RegistrySource::remote(self, yanked_whitelist, gctx)?,
-            )),
+            SourceKind::Registry | SourceKind::SparseRegistry => {
+                Ok(Box::new(RegistrySource::remote(self, gctx)?))
+            }
             SourceKind::LocalRegistry => {
                 let path = self
                     .inner
                     .url
                     .to_file_path()
                     .expect("path sources cannot be remote");
-                Ok(Box::new(RegistrySource::local(
-                    self,
-                    &path,
-                    yanked_whitelist,
-                    gctx,
-                )))
+                Ok(Box::new(RegistrySource::local(self, &path, gctx)))
             }
             SourceKind::Directory => {
                 let path = self

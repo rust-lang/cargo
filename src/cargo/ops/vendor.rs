@@ -110,7 +110,7 @@ impl SourceReplacementCache<'_> {
         match self.cache.entry(id) {
             Entry::Occupied(e) => Ok(e.get().clone()),
             Entry::Vacant(e) => {
-                let replaced = self.map.load(id, &HashSet::new())?.replaced_source_id();
+                let replaced = self.map.load(id)?.replaced_source_id();
                 Ok(e.insert(replaced).clone())
             }
         }
@@ -246,11 +246,11 @@ fn sync(
             // we'll do a direct extraction into the vendor directory.
             let registry = match sid.kind() {
                 SourceKind::Registry | SourceKind::SparseRegistry => {
-                    RegistrySource::remote(sid, &Default::default(), gctx)?
+                    RegistrySource::remote(sid, gctx)?
                 }
                 SourceKind::LocalRegistry => {
                     let path = sid.url().to_file_path().expect("local path");
-                    RegistrySource::local(sid, &path, &Default::default(), gctx)
+                    RegistrySource::local(sid, &path, gctx)
                 }
                 _ => unreachable!("not registry source: {sid}"),
             };

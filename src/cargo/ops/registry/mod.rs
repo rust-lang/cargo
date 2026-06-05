@@ -135,7 +135,7 @@ fn registry<'gctx>(
         auth::cache_token_from_commandline(gctx, &source_ids.original, token);
     }
 
-    let src = RegistrySource::remote(source_ids.replacement, &HashSet::new(), gctx)?;
+    let src = RegistrySource::remote(source_ids.replacement, gctx)?;
     let cfg = {
         let _lock = gctx.acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
         // Only update the index if `force_update` is set.
@@ -265,11 +265,9 @@ fn get_replacement_source_ids(
     sid: SourceId,
 ) -> CargoResult<(SourceId, SourceId)> {
     let builtin_replacement_sid = SourceConfigMap::empty(gctx)?
-        .load(sid, &HashSet::new())?
+        .load(sid)?
         .replaced_source_id();
-    let replacement_sid = SourceConfigMap::new(gctx)?
-        .load(sid, &HashSet::new())?
-        .replaced_source_id();
+    let replacement_sid = SourceConfigMap::new(gctx)?.load(sid)?.replaced_source_id();
     Ok((builtin_replacement_sid, replacement_sid))
 }
 
@@ -279,7 +277,7 @@ fn is_replacement_for_package_source(
     package_source_id: SourceId,
 ) -> CargoResult<bool> {
     let pkg_source_replacement_sid = SourceConfigMap::new(gctx)?
-        .load(package_source_id, &HashSet::new())?
+        .load(package_source_id)?
         .replaced_source_id();
     Ok(pkg_source_replacement_sid == sid)
 }

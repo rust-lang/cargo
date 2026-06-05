@@ -433,11 +433,8 @@ impl<'gctx> RegistrySource<'gctx> {
     /// Creates a [`Source`] of a "remote" registry.
     /// It could be either an HTTP-based [`http_remote::HttpRegistry`] or
     /// a Git-based [`remote::RemoteRegistry`].
-    ///
-    /// * `yanked_whitelist` --- Packages allowed to be used, even if they are yanked.
     pub fn remote(
         source_id: SourceId,
-        yanked_whitelist: &HashSet<PackageId>,
         gctx: &'gctx GlobalContext,
     ) -> CargoResult<RegistrySource<'gctx>> {
         assert!(source_id.is_remote_registry());
@@ -454,28 +451,20 @@ impl<'gctx> RegistrySource<'gctx> {
             Box::new(remote::RemoteRegistry::new(source_id, gctx, &name)) as Box<_>
         };
 
-        Ok(RegistrySource::new(
-            source_id,
-            gctx,
-            &name,
-            ops,
-            yanked_whitelist,
-        ))
+        Ok(RegistrySource::new(source_id, gctx, &name, ops))
     }
 
     /// Creates a [`Source`] of a local registry, with [`local::LocalRegistry`] under the hood.
     ///
     /// * `path` --- The root path of a local registry on the file system.
-    /// * `yanked_whitelist` --- Packages allowed to be used, even if they are yanked.
     pub fn local(
         source_id: SourceId,
         path: &Path,
-        yanked_whitelist: &HashSet<PackageId>,
         gctx: &'gctx GlobalContext,
     ) -> RegistrySource<'gctx> {
         let name = short_name(source_id, false);
         let ops = local::LocalRegistry::new(path, gctx, &name);
-        RegistrySource::new(source_id, gctx, &name, Box::new(ops), yanked_whitelist)
+        RegistrySource::new(source_id, gctx, &name, Box::new(ops))
     }
 
     /// Creates a source of a registry. This is a inner helper function.
@@ -483,13 +472,11 @@ impl<'gctx> RegistrySource<'gctx> {
     /// * `name` --- Name of a path segment which may affect where `.crate`
     ///   tarballs, the registry index and cache are stored. Expect to be unique.
     /// * `ops` --- The underlying [`RegistryData`] type.
-    /// * `yanked_whitelist` --- Packages allowed to be used, even if they are yanked.
     fn new(
         source_id: SourceId,
         gctx: &'gctx GlobalContext,
         name: &str,
         ops: Box<dyn RegistryData + 'gctx>,
-        yanked_whitelist: &HashSet<PackageId>,
     ) -> RegistrySource<'gctx> {
         // Before starting to work on the registry, make sure that
         // `<cargo_home>/registry` is marked as excluded from indexing and
@@ -512,7 +499,7 @@ impl<'gctx> RegistrySource<'gctx> {
             gctx,
             source_id,
             index: index::RegistryIndex::new(source_id, ops.index_path(), gctx),
-            yanked_whitelist: RefCell::new(yanked_whitelist.clone()),
+            yanked_whitelist: RefCell::new(HashSet::new()),
             ops,
             selected_precise_yanked: RefCell::new(HashSet::new()),
         }
