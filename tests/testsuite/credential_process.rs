@@ -728,19 +728,14 @@ fn basic_provider_crlf() {
     Package::new("bar", "0.0.1").alternative(true).publish();
 
     p.cargo("check")
-        .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
-[ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `bar`
-
-Caused by:
-  unable to update registry `alternative`
-
-Caused by:
-  failed to parse header value
+[LOCKING] 1 package to latest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.1 (registry `alternative`)
+[CHECKING] bar v0.0.1 (registry `alternative`)
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

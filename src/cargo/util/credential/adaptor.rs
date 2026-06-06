@@ -51,6 +51,10 @@ impl Credential for BasicProcessCredential {
                         .into());
                     }
                     buffer.truncate(end);
+                    // Strip also a preceding `\r` from CRLF
+                    if buffer.ends_with('\r') {
+                        buffer.pop();
+                    }
                 }
                 let status = child.wait().context("credential process never started")?;
                 if !status.success() {
