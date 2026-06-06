@@ -16,6 +16,7 @@ use crate::core::compiler::{DirtyReason, Freshness};
 use crate::core::{Dependency, FeatureValue, Package, PackageId, SourceId};
 use crate::core::{PackageSet, Target};
 use crate::ops::{self, CompileFilter, CompileOptions};
+use crate::sources::IndexSummary;
 use crate::sources::PathSource;
 use crate::sources::source::{QueryKind, Source, SourceMap};
 use crate::util::GlobalContext;
@@ -611,7 +612,10 @@ pub fn select_dep_pkg(
     let deps = crate::util::block_on(source.query_vec(&dep, QueryKind::Exact))?;
     match deps
         .iter()
-        .map(|s| s.as_summary())
+        .filter_map(|s| match s {
+            IndexSummary::Candidate(s) => Some(s),
+            _ => None,
+        })
         .max_by_key(|p| p.package_id())
     {
         Some(summary) => {
@@ -627,7 +631,10 @@ pub fn select_dep_pkg(
                             crate::util::block_on(source.query_vec(&msrv_dep, QueryKind::Exact))?;
                         if let Some(alt) = msrv_deps
                             .iter()
-                            .map(|s| s.as_summary())
+                            .filter_map(|s| match s {
+                                IndexSummary::Candidate(s) => Some(s),
+                                _ => None,
+                            })
                             .filter(|summary| {
                                 summary
                                     .rust_version()

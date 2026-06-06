@@ -511,7 +511,7 @@ impl<'gctx> RegistryIndex<'gctx> {
         let found = self
             .summaries(pkg.name(), &req, load)
             .await?
-            .any(|s| s.is_yanked());
+            .any(|s| matches!(s, IndexSummary::Yanked(_)));
         Ok(found)
     }
 }

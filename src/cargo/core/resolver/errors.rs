@@ -437,7 +437,13 @@ fn alt_versions(registry: &impl Registry, dep: &Dependency) -> Option<CargoResul
         Ok(candidates) => candidates,
         Err(e) => return Some(Err(e)),
     };
-    let mut candidates: Vec<_> = candidates.into_iter().map(|s| s.into_summary()).collect();
+    let mut candidates: Vec<_> = candidates
+        .into_iter()
+        .filter_map(|s| match s {
+            IndexSummary::Candidate(s) => Some(s),
+            _ => None,
+        })
+        .collect();
     candidates.sort_unstable_by(|a, b| b.version().cmp(a.version()));
     if candidates.is_empty() {
         None

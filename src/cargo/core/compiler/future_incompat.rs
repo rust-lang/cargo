@@ -35,6 +35,7 @@
 
 use crate::core::compiler::BuildContext;
 use crate::core::{Dependency, PackageId, Workspace};
+use crate::sources::IndexSummary;
 use crate::sources::SourceConfigMap;
 use crate::sources::source::QueryKind;
 use crate::util::CargoResult;
@@ -342,7 +343,10 @@ fn get_updates(ws: &Workspace<'_>, package_ids: &BTreeSet<PackageId>) -> Option<
     for (pkg_id, summaries) in summaries {
         let mut updated_versions: Vec<_> = summaries
             .iter()
-            .map(|summary| summary.as_summary().version())
+            .filter_map(|s| match s {
+                IndexSummary::Candidate(s) => Some(s.version()),
+                _ => None,
+            })
             .filter(|version| *version > pkg_id.version())
             .collect();
         updated_versions.sort();

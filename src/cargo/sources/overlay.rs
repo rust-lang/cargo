@@ -127,11 +127,6 @@ impl<'gctx> Source for DependencyConfusionThreatOverlaySource<'gctx> {
         self.remote.describe()
     }
 
-    fn add_to_yanked_whitelist(&self, pkgs: &[crate::core::PackageId]) {
-        self.local.add_to_yanked_whitelist(pkgs);
-        self.remote.add_to_yanked_whitelist(pkgs);
-    }
-
     async fn is_yanked(&self, pkg: crate::core::PackageId) -> crate::CargoResult<bool> {
         self.remote.is_yanked(pkg).await
     }

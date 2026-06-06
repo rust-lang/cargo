@@ -31,6 +31,7 @@ use crate::core::Workspace;
 use crate::core::dependency::DepKind;
 use crate::core::registry::PackageRegistry;
 use crate::ops::resolve_ws;
+use crate::sources::IndexSummary;
 use crate::sources::source::QueryKind;
 use crate::util::OptVersionReq;
 use crate::util::cache_lock::CacheLockMode;
@@ -838,7 +839,10 @@ fn get_latest_dependency(
 
             let mut possibilities: Vec<_> = possibilities
                 .into_iter()
-                .map(|s| s.into_summary())
+                .filter_map(|s| match s {
+                    IndexSummary::Candidate(s) => Some(s),
+                    _ => None,
+                })
                 .collect();
 
             possibilities.sort_by_key(|s| {
@@ -964,7 +968,10 @@ fn select_package(
 
             let possibilities: Vec<_> = possibilities
                 .into_iter()
-                .map(|s| s.into_summary())
+                .filter_map(|s| match s {
+                    IndexSummary::Candidate(s) => Some(s),
+                    _ => None,
+                })
                 .collect();
 
             match possibilities.len() {
@@ -1191,7 +1198,10 @@ fn populate_available_features(
     // in the lock file for a given version requirement.
     let lowest_common_denominator = possibilities
         .iter()
-        .map(|s| s.as_summary())
+        .filter_map(|s| match s {
+            IndexSummary::Candidate(s) => Some(s),
+            _ => None,
+        })
         .min_by_key(|s| {
             // Fallback to a pre-release if no official release is available by sorting them as
             // more.

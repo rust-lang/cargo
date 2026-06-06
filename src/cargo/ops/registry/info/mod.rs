@@ -220,7 +220,10 @@ fn query_summaries(
     // Query without version requirement to get all index summaries.
     let dep = Dependency::parse(spec.name(), None, source_ids.original)?;
     // Use normalized crate name lookup for user-provided package names.
-    let results = crate::util::block_on(registry.query_vec(&dep, QueryKind::Normalized))?;
+    let results: Vec<_> = crate::util::block_on(registry.query_vec(&dep, QueryKind::Normalized))?
+        .into_iter()
+        .filter(|s| matches!(s, IndexSummary::Candidate(_)))
+        .collect();
 
     let normalized_name = results.first().map(|s| s.package_id().name().to_string());
 

@@ -267,8 +267,6 @@ impl<'gctx> Source for DirectorySource<'gctx> {
         format!("directory source `{}`", self.root.display())
     }
 
-    fn add_to_yanked_whitelist(&self, _pkgs: &[PackageId]) {}
-
     async fn is_yanked(&self, _pkg: PackageId) -> CargoResult<bool> {
         Ok(false)
     }

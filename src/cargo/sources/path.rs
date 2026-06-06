@@ -201,8 +201,6 @@ impl<'gctx> Source for PathSource<'gctx> {
         }
     }
 
-    fn add_to_yanked_whitelist(&self, _pkgs: &[PackageId]) {}
-
     async fn is_yanked(&self, _pkg: PackageId) -> CargoResult<bool> {
         Ok(false)
     }
@@ -401,8 +399,6 @@ impl<'gctx> Source for RecursivePathSource<'gctx> {
             Err(_) => self.source_id.to_string(),
         }
     }
-
-    fn add_to_yanked_whitelist(&self, _pkgs: &[PackageId]) {}
 
     async fn is_yanked(&self, _pkg: PackageId) -> CargoResult<bool> {
         Ok(false)
