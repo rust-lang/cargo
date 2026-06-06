@@ -2383,7 +2383,7 @@ fn install_yanked_only_with_caret_req() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[ERROR] could not find `baz` in registry `crates-io` with version `^2`
+[ERROR] cannot install package `baz`, it has been yanked from registry `crates-io`
 
 "#]])
         .run();
@@ -2396,7 +2396,7 @@ fn install_yanked_only_without_version() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[ERROR] could not find `baz` in registry `crates-io` with version `*`
+[ERROR] cannot install package `baz`, it has been yanked from registry `crates-io`
 
 "#]])
         .run();
