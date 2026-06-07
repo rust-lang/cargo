@@ -126,8 +126,4 @@ impl<'gctx> Source for DependencyConfusionThreatOverlaySource<'gctx> {
     fn describe(&self) -> String {
         self.remote.describe()
     }
-
-    async fn is_yanked(&self, pkg: crate::core::PackageId) -> crate::CargoResult<bool> {
-        self.remote.is_yanked(pkg).await
-    }
 }

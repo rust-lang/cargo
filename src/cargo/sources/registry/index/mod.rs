@@ -504,16 +504,6 @@ impl<'gctx> RegistryIndex<'gctx> {
             .for_each(f);
         Ok(())
     }
-
-    /// Looks into the summaries to check if a package has been yanked.
-    pub async fn is_yanked(&self, pkg: PackageId, load: &dyn RegistryData) -> CargoResult<bool> {
-        let req = OptVersionReq::lock_to_exact(pkg.version());
-        let found = self
-            .summaries(pkg.name(), &req, load)
-            .await?
-            .any(|s| matches!(s, IndexSummary::Yanked(_)));
-        Ok(found)
-    }
 }
 
 impl Summaries {
