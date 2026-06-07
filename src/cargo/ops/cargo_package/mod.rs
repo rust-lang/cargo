@@ -1063,12 +1063,15 @@ pub fn check_yanked(
                 .await?;
 
             if yanked {
-                gctx.shell().warn(format!(
-                    "package `{}` in Cargo.lock is yanked in registry `{}`, {}",
-                    pkg_id,
-                    pkg_id.source_id().display_registry_name(),
-                    hint
-                ))?;
+                gctx.shell().print_report(
+                    &[Level::WARNING
+                        .secondary_title(format!(
+                            "package `{pkg_id}` in Cargo.lock is yanked in registry `{}`",
+                            pkg_id.source_id().display_registry_name(),
+                        ))
+                        .element(Level::HELP.message(hint))],
+                    false,
+                )?;
             }
             CargoResult::Ok(())
         })

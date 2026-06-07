@@ -346,7 +346,9 @@ fn warn_package_with_yanked() {
         .with_stderr_data(str![[r#"
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [UPDATING] `dummy-registry` index
-[WARNING] package `bar v0.1.0` in Cargo.lock is yanked in registry `crates-io`, consider updating to a version that is not yanked
+[WARNING] package `bar v0.1.0` in Cargo.lock is yanked in registry `crates-io`
+  |
+  = [HELP] consider updating to a version that is not yanked
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 
 "#]])
@@ -384,7 +386,9 @@ dependencies = [
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.1.0 (registry `dummy-registry`)
 [INSTALLING] foo v0.1.0
-[WARNING] package `bar v0.1.0` in Cargo.lock is yanked in registry `crates-io`, consider running without --locked
+[WARNING] package `bar v0.1.0` in Cargo.lock is yanked in registry `crates-io`
+  |
+  = [HELP] consider running without --locked
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
 [COMPILING] bar v0.1.0
@@ -449,8 +453,11 @@ dependencies = [
     cargo_process("install --offline --locked --force foo")
         .with_stderr_data(str![[r#"
 ...
-[WARNING] package `bar v0.1.0` in Cargo.lock is yanked in registry `crates-io`, consider running without --locked
+[WARNING] package `bar v0.1.0` in Cargo.lock is yanked in registry `crates-io`
+  |
+  = [HELP] consider running without --locked
 ...
+
 "#]])
         .run();
 }
