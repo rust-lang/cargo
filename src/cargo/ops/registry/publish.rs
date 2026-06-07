@@ -211,9 +211,8 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         // upload.
         let mut ready = plan.take_ready();
 
-        if ready.is_empty() {
-            // Circular dependencies are caught above, so this indicates a failure
-            // to progress, potentially due to a timeout while waiting for confirmations.
+        if ready.is_empty() && to_confirm.is_empty() {
+            // Cycles are caught above; reaching here means an unexpected stall.
             return Err(crate::util::internal(format!(
                 "no packages ready to publish but {} packages remain in plan with {} awaiting confirmation: {}",
                 plan.len(),
