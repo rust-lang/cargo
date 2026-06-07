@@ -3410,6 +3410,108 @@ fn timeout_waiting_for_publish() {
 }
 
 #[cargo_test]
+fn wait_for_workspace_publish() {
+    let arc: Arc<Mutex<u32>> = Arc::new(Mutex::new(0));
+
+    let registry = registry::RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        .add_responder("/index/1/c", move |req, server| {
+            let mut lock = arc.lock().unwrap();
+            *lock += 1;
+            // 3 queries come from resolving `c` during packaging of `a`
+            // 3 more from the wait loop while `b` and `c` are being confirmed
+            // `c` becomes available on the 7th query, unblocking `a`
+            if *lock <= 6 {
+                server.not_found(req)
+            } else {
+                server.index(req)
+            }
+        })
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["a", "b", "c"]
+            "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            r#"
+            [package]
+            name = "a"
+            version = "1.0.0"
+            edition = "2015"
+            license = "MIT"
+            description = "a"
+            repository = "a"
+
+            [dependencies]
+            b = { version = "1.0", path = "../b" }
+            c = { version = "1.0", path = "../c" }
+            "#,
+        )
+        .file("a/src/lib.rs", "")
+        .file(
+            "b/Cargo.toml",
+            r#"
+            [package]
+            name = "b"
+            version = "1.0.0"
+            edition = "2015"
+            license = "MIT"
+            description = "b"
+            repository = "b"
+            "#,
+        )
+        .file("b/src/lib.rs", "")
+        .file(
+            "c/Cargo.toml",
+            r#"
+            [package]
+            name = "c"
+            version = "1.0.0"
+            edition = "2015"
+            license = "MIT"
+            description = "c"
+            repository = "c"
+            "#,
+        )
+        .file("c/src/lib.rs", "")
+        .build();
+
+    p.cargo("publish --workspace --no-verify")
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[PACKAGING] b v1.0.0 ([ROOT]/foo/b)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] c v1.0.0 ([ROOT]/foo/c)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] a v1.0.0 ([ROOT]/foo/a)
+[UPDATING] crates.io index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[UPLOADING] b v1.0.0 ([ROOT]/foo/b)
+[UPLOADED] b v1.0.0 to registry `crates-io`
+[UPLOADING] c v1.0.0 ([ROOT]/foo/c)
+[UPLOADED] c v1.0.0 to registry `crates-io`
+[NOTE] waiting for b v1.0.0 or c v1.0.0 to be available at registry `crates-io`.
+      1 remaining crate to be published
+[PUBLISHED] b v1.0.0 at registry `crates-io`
+[ERROR] no packages ready to publish but 1 packages remain in plan with 1 awaiting confirmation: a v1.0.0
+[NOTE] this is an unexpected cargo internal error
+[NOTE] we would appreciate a bug report: https://github.com/rust-lang/cargo/issues/
+[NOTE] cargo [..]
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn timeout_waiting_for_dependency_publish() {
     // Publish doesn't happen within the timeout window.
     let registry = registry::RegistryBuilder::new()
