@@ -3485,7 +3485,7 @@ fn wait_for_workspace_publish() {
 
     p.cargo("publish --workspace --no-verify")
         .replace_crates_io(registry.index_url())
-        .with_status(101)
+        .with_status(0)
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [PACKAGING] b v1.0.0 ([ROOT]/foo/b)
@@ -3502,10 +3502,14 @@ fn wait_for_workspace_publish() {
 [NOTE] waiting for b v1.0.0 or c v1.0.0 to be available at registry `crates-io`.
       1 remaining crate to be published
 [PUBLISHED] b v1.0.0 at registry `crates-io`
-[ERROR] no packages ready to publish but 1 packages remain in plan with 1 awaiting confirmation: a v1.0.0
-[NOTE] this is an unexpected cargo internal error
-[NOTE] we would appreciate a bug report: https://github.com/rust-lang/cargo/issues/
-[NOTE] cargo [..]
+[NOTE] waiting for c v1.0.0 to be available at registry `crates-io`.
+      1 remaining crate to be published
+[PUBLISHED] c v1.0.0 at registry `crates-io`
+[UPLOADING] a v1.0.0 ([ROOT]/foo/a)
+[UPLOADED] a v1.0.0 to registry `crates-io`
+[NOTE] waiting for a v1.0.0 to be available at registry `crates-io`
+[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
+[PUBLISHED] a v1.0.0 at registry `crates-io`
 
 "#]])
         .run();
