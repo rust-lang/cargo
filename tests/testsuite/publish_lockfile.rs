@@ -417,6 +417,45 @@ dependencies = [
 }
 
 #[cargo_test]
+fn warn_install_with_offline_warn_cache() {
+    Package::new("bar", "0.1.0").yanked(true).publish();
+    Package::new("bar", "0.1.1").publish();
+    Package::new("foo", "0.1.0")
+        .dep("bar", "0.1")
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "Cargo.lock",
+            r#"
+[[package]]
+name = "bar"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "foo"
+version = "0.1.0"
+dependencies = [
+ "bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+            "#,
+        )
+        .publish();
+
+    // Warm the registry index cache.
+    cargo_process("install --locked foo").run();
+
+    // Re-install and the yanked help works with offline.
+    // (no extra index query)
+    cargo_process("install --offline --locked --force foo")
+        .with_stderr_data(str![[r#"
+...
+[WARNING] package `bar v0.1.0` in Cargo.lock is yanked in registry `crates-io`, consider running without --locked
+...
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn ignore_lockfile() {
     // With an explicit `include` list, but Cargo.lock in .gitignore, don't
     // complain about `Cargo.lock` being ignored. Note that it is still
