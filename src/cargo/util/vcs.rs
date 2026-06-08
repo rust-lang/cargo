@@ -8,6 +8,7 @@ use std::path::Path;
 // 1. We are in a git repo and the path to the new package is not an ignored
 //    path in that repo.
 // 2. We are in an HG repo.
+// 3. We are in a fossil repo.
 pub fn existing_vcs_repo(path: &Path, cwd: &Path) -> bool {
     fn in_git_repo(path: &Path, cwd: &Path) -> bool {
         if let Ok(repo) = GitRepo::discover(path, cwd) {
@@ -22,7 +23,9 @@ pub fn existing_vcs_repo(path: &Path, cwd: &Path) -> bool {
         }
     }
 
-    in_git_repo(path, cwd) || HgRepo::discover(path, cwd).is_ok()
+    in_git_repo(path, cwd)
+        || HgRepo::discover(path, cwd).is_ok()
+        || FossilRepo::discover(path, cwd).is_ok()
 }
 
 pub struct HgRepo;
@@ -100,5 +103,19 @@ impl FossilRepo {
             .exec()?;
 
         Ok(FossilRepo)
+    }
+
+    pub fn discover(_path: &Path, cwd: &Path) -> CargoResult<FossilRepo> {
+        let output = ProcessBuilder::new("fossil")
+            .cwd(cwd)
+            .arg("info")
+            .output()?;
+        let stdout = String::from_utf8(output.stdout)?;
+        let has_local_root = stdout.lines().any(|line| line.starts_with("local-root:"));
+        if has_local_root {
+            Ok(FossilRepo)
+        } else {
+            anyhow::bail!("not in a fossil repository")
+        }
     }
 }

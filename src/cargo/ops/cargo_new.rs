@@ -570,7 +570,9 @@ pub fn init(opts: &NewOptions, gctx: &GlobalContext) -> CargoResult<NewProjectKi
             num_detected_vcses += 1;
         }
 
-        if path.join(".fossil").exists() {
+        // .fslckout tracks your active, local work.
+        // ~/.fossil is the Configuration Database
+        if path.join(".fslckout").exists() {
             version_control = Some(VersionControl::Fossil);
             num_detected_vcses += 1;
         }
