@@ -96,10 +96,10 @@ impl FossilRepo {
 
         // open it in that new directory
         ProcessBuilder::new("fossil")
-            .cwd(&path)
+            .cwd(cwd)
             .arg("open")
             .arg("--")
-            .arg(db_fname)
+            .arg(db_path)
             .exec()?;
 
         Ok(FossilRepo)

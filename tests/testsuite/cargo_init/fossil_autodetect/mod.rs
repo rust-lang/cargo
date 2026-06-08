@@ -18,6 +18,6 @@ fn case() {
         .stdout_eq(str![""])
         .stderr_eq(file!["stderr.term.svg"]);
 
-    assert_ui().subset_matches(current_dir!().join("out"), project_root);
-    assert!(!project_root.join(".git").is_dir());
+    assert_ui().subset_matches(current_dir!().join("in"), project_root);
+    assert!(!project_root.join(".fslckout").is_file());
 }

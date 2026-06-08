@@ -581,7 +581,7 @@ pub fn init(opts: &NewOptions, gctx: &GlobalContext) -> CargoResult<NewProjectKi
 
         if num_detected_vcses > 1 {
             anyhow::bail!(
-                "more than one of .hg, .git, .pijul, .fossil configurations \
+                "more than one of .hg, .git, .pijul, .fslckout configurations \
                  found and the ignore file can't be filled in as \
                  a result. specify --vcs to override detection"
             );
