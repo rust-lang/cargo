@@ -685,6 +685,63 @@ CARGO_REGISTRY_INDEX_URL=Some("[ROOTURL]/alternative-registry")
 }
 
 #[cargo_test]
+fn basic_provider_crlf() {
+    // Helpers on Windows commonly emit a token terminated by `\r\n`.
+    let cred_proj = project()
+        .at("cred_proj")
+        .file("Cargo.toml", &basic_manifest("test-cred", "1.0.0"))
+        .file("src/main.rs", r#"fn main() { print!("sekrit\r\n"); }"#)
+        .build();
+    cred_proj.cargo("build").run();
+
+    let _server = registry::RegistryBuilder::new()
+        .no_configure_token()
+        .credential_provider(&[
+            "cargo:token-from-stdout",
+            &toml_bin(&cred_proj, "test-cred"),
+        ])
+        .token(cargo_test_support::registry::Token::Plaintext(
+            "sekrit".to_string(),
+        ))
+        .alternative()
+        .http_api()
+        .http_index()
+        .auth_required()
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+                [dependencies.bar]
+                version = "0.0.1"
+                registry = "alternative"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+    Package::new("bar", "0.0.1").alternative(true).publish();
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[UPDATING] `alternative` index
+[LOCKING] 1 package to latest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.1 (registry `alternative`)
+[CHECKING] bar v0.0.1 (registry `alternative`)
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn unsupported_version() {
     let cred_proj = project()
         .at("new-vers")
