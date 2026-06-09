@@ -178,7 +178,13 @@ The JSON output has the following format:
                     "doctest": false,
                     /* Whether or not this target should be built and run with `--test`
                     */
-                    "test": true
+                    "test": true,
+                    /* Whether or not the target uses the libtest harness.
+                       Corresponds to the `harness` field in `Cargo.toml`.
+                       This property is not included if `harness` is true
+                       (the default).
+                    */
+                    "harness": false
                 }
             ],
             /* Set of features defined for the package.

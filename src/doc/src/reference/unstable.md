@@ -779,7 +779,8 @@ The following is a description of the JSON structure:
         "src_path": "/path/to/my-package/src/lib.rs",
         "edition": "2018",
         "test": true,
-        "doctest": true
+        "doctest": true,
+        "harness": false
       },
       /* The profile settings for this unit.
          These values may not match the profile defined in the manifest.

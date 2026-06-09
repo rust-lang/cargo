@@ -396,6 +396,9 @@ struct SerializedTarget<'a> {
     doctest: bool,
     /// Whether tests should be run for the target (`test` field in `Cargo.toml`)
     test: bool,
+    /// Whether the target uses the libtest harness (`harness` field in `Cargo.toml`).
+    #[serde(skip_serializing_if = "bool::clone")] // skip if true
+    harness: bool,
 }
 
 impl ser::Serialize for Target {
@@ -418,6 +421,7 @@ impl ser::Serialize for Target {
             doc: self.documented(),
             doctest: self.doctested() && self.doctestable(),
             test: self.tested(),
+            harness: self.harness(),
         }
         .serialize(s)
     }
