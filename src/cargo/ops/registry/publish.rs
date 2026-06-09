@@ -39,7 +39,6 @@ use crate::ops::RegistryOrIndex;
 use crate::ops::registry::RegistryClient;
 use crate::ops::registry::RegistrySourceIds;
 use crate::sources::CRATES_IO_REGISTRY;
-use crate::sources::IndexSummary;
 use crate::sources::RegistrySource;
 use crate::sources::SourceConfigMap;
 use crate::sources::source::QueryKind;
@@ -446,10 +445,7 @@ fn poll_one_package(
     let query = Dependency::parse(pkg_id.name(), Some(&version_req), registry_src)?;
     // Exact to avoid returning all for path/git
     let summaries = crate::util::block_on(source.query_vec(&query, QueryKind::Exact))?;
-    let available = summaries
-        .iter()
-        .any(|s| matches!(s, IndexSummary::Candidate(_)));
-    Ok(available)
+    Ok(!summaries.is_empty())
 }
 
 fn verify_unpublished(
@@ -465,10 +461,7 @@ fn verify_unpublished(
         source_ids.replacement,
     )?;
     let duplicate_query = crate::util::block_on(source.query_vec(&query, QueryKind::Exact))?;
-    let already_published = duplicate_query
-        .iter()
-        .any(|s| matches!(s, IndexSummary::Candidate(_)));
-    if already_published {
+    if !duplicate_query.is_empty() {
         // Move the registry error earlier in the publish process.
         // Since dry-run wouldn't talk to the registry to get the error, we downgrade it to a
         // warning.

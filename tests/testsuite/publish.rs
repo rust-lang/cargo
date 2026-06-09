@@ -156,6 +156,7 @@ fn duplicate_version_yanked() {
         .replace_crates_io(registry_dupl.index_url())
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
+[WARNING] crate foo@0.0.0 already exists on crates.io index
 [PACKAGING] foo v0.0.0 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.0 ([ROOT]/foo)
@@ -171,18 +172,10 @@ fn duplicate_version_yanked() {
     // Real registry would reject re-publish regardless.
     p.cargo("publish")
         .replace_crates_io(registry_dupl.index_url())
+        .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
-[PACKAGING] foo v0.0.0 ([ROOT]/foo)
-[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
-[VERIFYING] foo v0.0.0 ([ROOT]/foo)
-[COMPILING] foo v0.0.0 ([ROOT]/foo/target/package/foo-0.0.0)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[UPLOADING] foo v0.0.0 ([ROOT]/foo)
-[UPLOADED] foo v0.0.0 to registry `crates-io`
-[NOTE] waiting for foo v0.0.0 to be available at registry `crates-io`
-[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
-[PUBLISHED] foo v0.0.0 at registry `crates-io`
+[ERROR] crate foo@0.0.0 already exists on crates.io index
 
 "#]])
         .run();
