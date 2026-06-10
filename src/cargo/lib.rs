@@ -43,6 +43,8 @@
 //!   The [`sources::source::Source`] trait is an abstraction over different sources of packages.
 //!   Sources are uniquely identified by a [`core::SourceId`]. Sources are implemented in the [`sources`]
 //!   directory.
+//! - [`diagnostics`]: Home of diagnostic [passes][diagnostics::passes] and their
+//!   [rules][diagnostics::rules].
 //! - [`util`]:
 //!   This directory contains generally-useful utility modules.
 //! - [`util::context`]:
