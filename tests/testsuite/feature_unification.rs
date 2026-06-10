@@ -900,11 +900,15 @@ fn cargo_install_ignores_config() {
         .env("CARGO_RESOLVER_FEATURE_UNIFICATION", "workspace")
         .with_stderr_data(str![[r#"
 [INSTALLING] a v0.1.0 ([ROOT]/foo)
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [COMPILING] common v0.1.0 ([ROOT]/foo/common)
 [COMPILING] a v0.1.0 ([ROOT]/foo)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/home/.cargo/bin/a[EXE]
-[INSTALLED] package `a v0.1.0 ([ROOT]/foo)` (executable `a[EXE]`)
+[INSTALLING] [ROOT]/home/.cargo/bin/a
+[INSTALLED] package `a v0.1.0 ([ROOT]/foo)` (executable `a`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]])
@@ -916,9 +920,13 @@ fn cargo_install_ignores_config() {
         .env("CARGO_RESOLVER_FEATURE_UNIFICATION", "package")
         .with_stderr_data(str![[r#"
 [INSTALLING] a v0.1.0 ([ROOT]/foo)
+[WARNING] default toolchain implicitly overridden with `1.94.0-[HOST_TARGET]` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[REPLACING] [ROOT]/home/.cargo/bin/a[EXE]
-[REPLACED] package `a v0.1.0 ([ROOT]/foo)` with `a v0.1.0 ([ROOT]/foo)` (executable `a[EXE]`)
+[REPLACING] [ROOT]/home/.cargo/bin/a
+[REPLACED] package `a v0.1.0 ([ROOT]/foo)` with `a v0.1.0 ([ROOT]/foo)` (executable `a`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]])

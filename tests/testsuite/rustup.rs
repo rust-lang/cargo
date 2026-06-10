@@ -338,10 +338,14 @@ fn cargo_install_with_toolchain_source_unset() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.1
+[WARNING] default toolchain implicitly overridden with `test-toolchain` by rustup directory override
+  |
+  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [COMPILING] foo v0.0.1
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
-[INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
+[INSTALLING] [ROOT]/home/.cargo/bin/foo
+[INSTALLED] package `foo v0.0.1` (executable `foo`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]],

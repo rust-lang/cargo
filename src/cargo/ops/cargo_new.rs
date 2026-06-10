@@ -511,7 +511,7 @@ pub fn init(opts: &NewOptions, gctx: &GlobalContext) -> CargoResult<NewProjectKi
     detect_source_paths_and_types(path, name, &mut src_paths_types)?;
     let kind = calculate_new_project_kind(opts.kind, opts.auto_detect_kind, &src_paths_types);
     gctx.shell()
-        .status("Creating", format!("{} package", opts.kind))?;
+        .status("Creating", format!("{} package", kind))?;
 
     if path.join("Cargo.toml").exists() {
         anyhow::bail!(
