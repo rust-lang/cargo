@@ -1509,3 +1509,48 @@ fn override_spec_metadata_is_optional() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn yanked_candidates_are_skipped() {
+    Package::new("bar", "1.0.0").yanked(true).publish();
+    Package::new("bar", "1.1.0").publish();
+
+    let _bar_path = project()
+        .at("bar")
+        .file("Cargo.toml", &basic_manifest("bar", "1.1.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                edition = "2021"
+
+                [dependencies]
+                bar = "1.0"
+
+                [replace]
+                "bar:1.0.0" = { path = "../bar" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
+[WARNING] package replacement is not used: https://github.com/rust-lang/crates.io-index#bar@1.0.0
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v1.1.0 (registry `dummy-registry`)
+[CHECKING] bar v1.1.0
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}

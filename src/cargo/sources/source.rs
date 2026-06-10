@@ -125,13 +125,8 @@ pub trait Source {
         false
     }
 
-    /// Add a number of crates that should be whitelisted for showing up during
-    /// queries, even if they are yanked. Currently only applies to registry
-    /// sources.
-    fn add_to_yanked_whitelist(&self, pkgs: &[PackageId]);
-
     /// Query if a package is yanked. Only registry sources can mark packages
-    /// as yanked. This ignores the yanked whitelist.
+    /// as yanked.
     async fn is_yanked(&self, pkg: PackageId) -> CargoResult<bool>;
 }
 
@@ -236,10 +231,6 @@ impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
 
     fn is_replaced(&self) -> bool {
         (**self).is_replaced()
-    }
-
-    fn add_to_yanked_whitelist(&self, pkgs: &[PackageId]) {
-        (**self).add_to_yanked_whitelist(pkgs);
     }
 
     async fn is_yanked(&self, pkg: PackageId) -> CargoResult<bool> {

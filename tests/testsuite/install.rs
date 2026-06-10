@@ -2377,6 +2377,32 @@ fn install_yanked_cargo_package() {
 }
 
 #[cargo_test]
+fn install_yanked_only_with_caret_req() {
+    Package::new("baz", "2.0.0").yanked(true).publish();
+    cargo_process("install baz --version ^2")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] cannot install package `baz`, it has been yanked from registry `crates-io`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn install_yanked_only_without_version() {
+    Package::new("baz", "0.0.1").yanked(true).publish();
+    cargo_process("install baz")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] cannot install package `baz`, it has been yanked from registry `crates-io`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn install_cargo_package_in_a_patched_workspace() {
     pkg("foo", "0.1.0");
     pkg("fizz", "1.0.0");

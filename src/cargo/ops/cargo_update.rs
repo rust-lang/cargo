@@ -375,7 +375,10 @@ fn upgrade_dependency(
     let latest = if !possibilities.is_empty() {
         possibilities
             .iter()
-            .map(|s| s.as_summary())
+            .filter_map(|s| match s {
+                IndexSummary::Candidate(s) => Some(s),
+                _ => None,
+            })
             .map(|s| s.version())
             .filter(|v| !v.is_prerelease())
             .max()
@@ -799,7 +802,10 @@ fn report_latest(possibilities: &[IndexSummary], change: &PackageChange) -> Opti
 
     let compat_ver_compat_msrv_summary = possibilities
         .iter()
-        .map(|s| s.as_summary())
+        .filter_map(|s| match s {
+            IndexSummary::Candidate(s) => Some(s),
+            _ => None,
+        })
         .filter(|s| {
             if let (Some(summary_rust_version), Some(required_rust_version)) =
                 (s.rust_version(), required_rust_version)
@@ -821,7 +827,10 @@ fn report_latest(possibilities: &[IndexSummary], change: &PackageChange) -> Opti
     if !change.is_transitive.unwrap_or(true) {
         let incompat_ver_compat_msrv_summary = possibilities
             .iter()
-            .map(|s| s.as_summary())
+            .filter_map(|s| match s {
+                IndexSummary::Candidate(s) => Some(s),
+                _ => None,
+            })
             .filter(|s| {
                 if let (Some(summary_rust_version), Some(required_rust_version)) =
                     (s.rust_version(), required_rust_version)
@@ -843,7 +852,10 @@ fn report_latest(possibilities: &[IndexSummary], change: &PackageChange) -> Opti
 
     let compat_ver_summary = possibilities
         .iter()
-        .map(|s| s.as_summary())
+        .filter_map(|s| match s {
+            IndexSummary::Candidate(s) => Some(s),
+            _ => None,
+        })
         .filter(|s| package_id.version() != s.version() && version_req.matches(s.version()))
         .max_by_key(|s| s.version());
     if let Some(summary) = compat_ver_summary {
@@ -860,7 +872,10 @@ fn report_latest(possibilities: &[IndexSummary], change: &PackageChange) -> Opti
     if !change.is_transitive.unwrap_or(true) {
         let incompat_ver_summary = possibilities
             .iter()
-            .map(|s| s.as_summary())
+            .filter_map(|s| match s {
+                IndexSummary::Candidate(s) => Some(s),
+                _ => None,
+            })
             .filter(|s| is_latest(s.version(), package_id.version()))
             .max_by_key(|s| s.version());
         if let Some(summary) = incompat_ver_summary {

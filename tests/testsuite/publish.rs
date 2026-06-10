@@ -132,6 +132,56 @@ fn simple() {
 }
 
 #[cargo_test]
+fn duplicate_version_yanked() {
+    let registry_dupl = RegistryBuilder::new().http_api().http_index().build();
+    Package::new("foo", "0.0.0").yanked(true).publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                edition = "2021"
+                license = "MIT"
+                description = "foo"
+                documentation = "foo"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish --dry-run")
+        .replace_crates_io(registry_dupl.index_url())
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[WARNING] crate foo@0.0.0 already exists on crates.io index
+[PACKAGING] foo v0.0.0 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.0 ([ROOT]/foo)
+[COMPILING] foo v0.0.0 ([ROOT]/foo/target/package/foo-0.0.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[UPLOADING] foo v0.0.0 ([ROOT]/foo)
+[WARNING] aborting upload due to dry run
+
+"#]])
+        .run();
+
+    // This is a gap in our cargo-test-support code.
+    // Real registry would reject re-publish regardless.
+    p.cargo("publish")
+        .replace_crates_io(registry_dupl.index_url())
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[ERROR] crate foo@0.0.0 already exists on crates.io index
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn duplicate_version() {
     let registry_dupl = RegistryBuilder::new().http_api().http_index().build();
     Package::new("foo", "0.0.1").publish();

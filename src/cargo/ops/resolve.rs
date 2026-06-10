@@ -629,7 +629,6 @@ fn register_previous_locks(
     // newer version of `serde` requires a new version of `log` it'll get pulled
     // in (as we didn't accidentally lock it to an old version).
     let mut avoid_locking = HashSet::new();
-    registry.add_to_yanked_whitelist(resolve.iter().filter(keep));
     for node in resolve.iter() {
         if !keep(&node) {
             add_deps(resolve, node, &mut avoid_locking);

@@ -387,9 +387,6 @@ impl SourceId {
     }
 
     /// Creates an implementation of `Source` corresponding to this ID.
-    ///
-    /// To allow yanked packages through queries,
-    /// call [`Source::add_to_yanked_whitelist`] on the returned source.
     pub fn load<'a>(self, gctx: &'a GlobalContext) -> CargoResult<Box<dyn Source + 'a>> {
         trace!("loading SourceId; {}", self);
         match self.inner.kind {

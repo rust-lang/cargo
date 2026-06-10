@@ -58,6 +58,16 @@ impl VersionPreferences {
         self.publish_time = Some(publish_time);
     }
 
+    /// Whether the given package is preferred.
+    pub fn should_prefer(&self, pkg_id: &PackageId) -> bool {
+        self.try_to_use.contains(pkg_id)
+            || self
+                .prefer_patch_deps
+                .get(&pkg_id.name())
+                .map(|deps| deps.iter().any(|d| d.matches_id(*pkg_id)))
+                .unwrap_or(false)
+    }
+
     /// Sort (and filter) the given vector of summaries in-place
     ///
     /// Note: all summaries presumed to be for the same package.
@@ -75,14 +85,6 @@ impl VersionPreferences {
         summaries: &mut Vec<Summary>,
         first_version: Option<VersionOrdering>,
     ) {
-        let should_prefer = |pkg_id: &PackageId| {
-            self.try_to_use.contains(pkg_id)
-                || self
-                    .prefer_patch_deps
-                    .get(&pkg_id.name())
-                    .map(|deps| deps.iter().any(|d| d.matches_id(*pkg_id)))
-                    .unwrap_or(false)
-        };
         if let Some(max_publish_time) = self.publish_time {
             summaries.retain(|s| {
                 if let Some(summary_publish_time) = s.pubtime() {
@@ -93,8 +95,8 @@ impl VersionPreferences {
             });
         }
         summaries.sort_unstable_by(|a, b| {
-            let prefer_a = should_prefer(&a.package_id());
-            let prefer_b = should_prefer(&b.package_id());
+            let prefer_a = self.should_prefer(&a.package_id());
+            let prefer_b = self.should_prefer(&b.package_id());
             let previous_cmp = prefer_a.cmp(&prefer_b).reverse();
             if previous_cmp != Ordering::Equal {
                 return previous_cmp;
