@@ -33,6 +33,7 @@ use crate::util::context::GlobalContext;
 use crate::util::errors::CargoResult;
 
 mod package;
+mod provider;
 mod semver_pubgrub;
 
 /// Resolve the dependency graph using the PubGrub algorithm.

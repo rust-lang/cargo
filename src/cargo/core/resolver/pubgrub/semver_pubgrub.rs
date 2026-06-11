@@ -99,6 +99,11 @@ impl SemverPubgrub {
         self.normal.subset_of(&other.normal) && self.pre.subset_of(&other.pre)
     }
 
+    /// If this set is exactly one version, return it.
+    pub fn as_singleton(&self) -> Option<&Version> {
+        self.normal.as_singleton().xor(self.pre.as_singleton())
+    }
+
     /// A range covering all versions in a single semver-compatibility bucket.
     pub fn compatibility(compat: &SemverCompatibility) -> Self {
         let r = compat.to_range();
@@ -106,6 +111,67 @@ impl SemverPubgrub {
             normal: r.clone(),
             pre: r,
         }
+    }
+
+    /// If every version this set can match falls within a single
+    /// semver-compatibility bucket, return that bucket.
+    ///
+    /// Most requirements in the ecosystem (caret/tilde) match only one bucket,
+    /// which lets the encoding use a plain [`super::package::PubGrubPackage::Bucket`]
+    /// instead of the heavier "wide" packages.
+    pub fn only_one_compatibility_range(&self) -> Option<SemverCompatibility> {
+        use Bound::*;
+        let normal_bound = self.normal.bounding_range();
+        let pre_bound = self.pre.bounding_range();
+        if normal_bound.is_none() && pre_bound.is_none() {
+            return Some(SemverCompatibility::Patch(0));
+        }
+        let normal_start = normal_bound.map(|(s, _)| match s {
+            Included(v) | Excluded(v) => v.into(),
+            Unbounded => SemverCompatibility::Patch(0),
+        });
+        let pre_start = pre_bound.map(|(s, _)| match s {
+            Included(v) | Excluded(v) => v.into(),
+            Unbounded => SemverCompatibility::Patch(0),
+        });
+        if normal_start.is_some() && pre_start.is_some() && normal_start != pre_start {
+            return None;
+        }
+        let start = normal_start.or(pre_start).unwrap();
+        if let Some(next) = start.next() {
+            if let Some((_, pe)) = pre_bound {
+                match (pe, next.minimum()) {
+                    (Unbounded, _) => return None,
+                    (Included(e), m) => {
+                        if e >= &m {
+                            return None;
+                        }
+                    }
+                    (Excluded(e), m) => {
+                        if e > &m {
+                            return None;
+                        }
+                    }
+                }
+            }
+            if let Some((_, ne)) = normal_bound {
+                match (ne, next.canonical()) {
+                    (Unbounded, _) => return None,
+                    (Included(e), m) => {
+                        if e >= &m {
+                            return None;
+                        }
+                    }
+                    (Excluded(e), m) => {
+                        if e > &m {
+                            return None;
+                        }
+                    }
+                }
+            }
+        }
+
+        Some(start)
     }
 
     /// Convert to a pair of bounds usable with

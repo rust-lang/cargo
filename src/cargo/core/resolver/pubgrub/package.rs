@@ -114,7 +114,10 @@ pub enum PubGrubPackage {
     Root,
     /// A concrete crate bucket. `member` is true for workspace members being
     /// resolved directly (which also pull in their dev-dependencies).
-    Bucket { name: BucketName, member: bool },
+    /// `all_features` is true when every feature/optional dependency should be
+    /// activated (the lock-file resolution pass), as opposed to a specific set
+    /// selected through [`PubGrubPackage::BucketFeatures`].
+    Bucket { name: BucketName, member: bool, all_features: bool },
     /// "Feature (or optional dep) of the bucket is enabled".
     BucketFeatures { name: BucketName, feature: FeatureNamespace },
     /// "Default features of the bucket are enabled".
@@ -205,8 +208,13 @@ impl Display for PubGrubPackage {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             PubGrubPackage::Root => f.write_str("root"),
-            PubGrubPackage::Bucket { name, member } => {
-                write!(f, "{name}{}", if *member { " (member)" } else { "" })
+            PubGrubPackage::Bucket { name, member, all_features } => {
+                write!(
+                    f,
+                    "{name}{}{}",
+                    if *member { " (member)" } else { "" },
+                    if *all_features { " (all-features)" } else { "" },
+                )
             }
             PubGrubPackage::BucketFeatures { name, feature } => write!(f, "{name}/{feature}"),
             PubGrubPackage::BucketDefaultFeatures { name } => write!(f, "{name}/default"),
