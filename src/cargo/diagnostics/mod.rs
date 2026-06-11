@@ -72,21 +72,37 @@ pub use lint::{Lint, LintGroup, LintLevel, LintLevelProduct, LintLevelSource};
 pub use report::{AsIndex, get_key_value, get_key_value_span, rel_cwd_manifest_path};
 pub use rules::{LINT_GROUPS, LINTS};
 
-pub struct ScopedDiagnosticStats {
-    warning_count: usize,
-    lint_warning_count: usize,
+pub struct GlobalDiagnosticStats {
     error_count: usize,
 }
 
-impl ScopedDiagnosticStats {
+impl GlobalDiagnosticStats {
     pub fn new() -> Self {
-        Self {
+        Self { error_count: 0 }
+    }
+
+    pub fn scope(&mut self) -> ScopedDiagnosticStats<'_> {
+        ScopedDiagnosticStats {
             warning_count: 0,
             lint_warning_count: 0,
             error_count: 0,
+            global: self,
         }
     }
 
+    pub fn error_count(&self) -> usize {
+        self.error_count
+    }
+}
+
+pub struct ScopedDiagnosticStats<'g> {
+    warning_count: usize,
+    lint_warning_count: usize,
+    error_count: usize,
+    global: &'g mut GlobalDiagnosticStats,
+}
+
+impl ScopedDiagnosticStats<'_> {
     pub fn lint_warning_count(&self) -> usize {
         self.lint_warning_count
     }
@@ -105,6 +121,7 @@ impl ScopedDiagnosticStats {
 
     pub fn record_error(&mut self) {
         self.error_count += 1;
+        self.global.error_count += 1;
     }
 
     pub fn record_lint(&mut self, lint: LintLevel) {
@@ -149,28 +166,6 @@ impl ScopedDiagnosticStats {
         }
 
         Ok(())
-    }
-}
-
-impl std::ops::Add for ScopedDiagnosticStats {
-    type Output = ScopedDiagnosticStats;
-
-    fn add(mut self, rhs: Self) -> Self::Output {
-        self += rhs;
-        self
-    }
-}
-
-impl std::ops::AddAssign for ScopedDiagnosticStats {
-    fn add_assign(&mut self, rhs: Self) {
-        let ScopedDiagnosticStats {
-            warning_count,
-            lint_warning_count,
-            error_count,
-        } = rhs;
-        self.warning_count += warning_count;
-        self.lint_warning_count += lint_warning_count;
-        self.error_count += error_count;
     }
 }
 

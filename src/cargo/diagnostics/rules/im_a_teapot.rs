@@ -35,7 +35,7 @@ pub(crate) fn lint_package(
     pkg: &Package,
     path: &Path,
     level: LintLevelProduct,
-    pkg_stats: &mut ScopedDiagnosticStats,
+    pkg_stats: &mut ScopedDiagnosticStats<'_>,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let manifest = pkg.manifest();

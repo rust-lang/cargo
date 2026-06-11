@@ -21,7 +21,7 @@ use crate::diagnostics::rel_cwd_manifest_path;
 pub(crate) fn diagnose_manifest(
     manifest: ManifestFor<'_>,
     manifest_path: &Path,
-    pkg_stats: &mut ScopedDiagnosticStats,
+    pkg_stats: &mut ScopedDiagnosticStats<'_>,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let normalized_toml = match &manifest {
@@ -64,7 +64,7 @@ fn diagnose_manifest_inner(
     manifest: &ManifestFor<'_>,
     manifest_path: &Path,
     cargo_lints: &manifest::TomlToolLints,
-    pkg_stats: &mut ScopedDiagnosticStats,
+    pkg_stats: &mut ScopedDiagnosticStats<'_>,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
@@ -104,7 +104,7 @@ fn report_feature_not_enabled(
     feature_gate: &Feature,
     manifest: &ManifestFor<'_>,
     manifest_path: &str,
-    pkg_stats: &mut ScopedDiagnosticStats,
+    pkg_stats: &mut ScopedDiagnosticStats<'_>,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let dash_feature_name = feature_gate.name().replace("_", "-");

@@ -53,7 +53,7 @@ pub(crate) fn lint_manifest(
     manifest: ManifestFor<'_>,
     manifest_path: &Path,
     level: LintLevelProduct,
-    pkg_stats: &mut ScopedDiagnosticStats,
+    pkg_stats: &mut ScopedDiagnosticStats<'_>,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let normalized_toml = match &manifest {
@@ -111,7 +111,7 @@ fn lint_manifest_inner(
     manifest_path: &Path,
     level: &LintLevelProduct,
     cargo_lints: &TomlToolLints,
-    pkg_stats: &mut ScopedDiagnosticStats,
+    pkg_stats: &mut ScopedDiagnosticStats<'_>,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let LintLevelProduct {

@@ -61,7 +61,7 @@ pub(crate) fn lint_workspace(
     maybe_pkg: &MaybePackage,
     path: &Path,
     level: LintLevelProduct,
-    pkg_stats: &mut ScopedDiagnosticStats,
+    pkg_stats: &mut ScopedDiagnosticStats<'_>,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let LintLevelProduct {

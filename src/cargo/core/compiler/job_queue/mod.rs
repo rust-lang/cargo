@@ -144,7 +144,7 @@ use crate::core::compiler::future_incompat::{
 };
 use crate::core::resolver::ResolveBehavior;
 use crate::core::{PackageId, TargetKind};
-use crate::diagnostics::ScopedDiagnosticStats;
+use crate::diagnostics::GlobalDiagnosticStats;
 use crate::diagnostics::rules::unused_dependencies;
 use crate::util::CargoResult;
 use crate::util::context::WarningHandling;
@@ -844,7 +844,7 @@ impl<'gctx> DrainState<'gctx> {
         self.progress.clear();
 
         if build_runner.bcx.gctx.cli_unstable().cargo_lints {
-            let mut global_stats = ScopedDiagnosticStats::new();
+            let mut global_stats = GlobalDiagnosticStats::new();
             drop(unused_dependencies::lint_build_results(
                 build_runner,
                 &mut global_stats,

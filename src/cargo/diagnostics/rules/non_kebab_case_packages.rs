@@ -64,7 +64,7 @@ pub(crate) fn lint_package(
     pkg: &Package,
     manifest_path: &Path,
     level: LintLevelProduct,
-    pkg_stats: &mut ScopedDiagnosticStats,
+    pkg_stats: &mut ScopedDiagnosticStats<'_>,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let LintLevelProduct {
@@ -82,7 +82,7 @@ fn lint_package_inner(
     manifest_path: &str,
     lint_level: LintLevel,
     source: LintLevelSource,
-    pkg_stats: &mut ScopedDiagnosticStats,
+    pkg_stats: &mut ScopedDiagnosticStats<'_>,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let manifest = pkg.manifest();
