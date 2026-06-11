@@ -53,7 +53,6 @@
 //!
 //! [future-incompat lint]: https://rustc-dev-guide.rust-lang.org/diagnostics.html#future-incompatible-lints
 
-use anyhow::bail;
 use cargo_util_schemas::manifest::RustVersion;
 use cargo_util_schemas::manifest::TomlToolLints;
 
@@ -92,6 +91,16 @@ impl GlobalDiagnosticStats {
 
     pub fn error_count(&self) -> usize {
         self.error_count
+    }
+
+    pub fn ok(&self) -> CargoResult<()> {
+        if 0 < self.error_count {
+            Err(crate::Error::new(crate::AlreadyPrintedError::new(
+                anyhow::format_err!("see above"),
+            )))
+        } else {
+            Ok(())
+        }
     }
 }
 
@@ -137,6 +146,9 @@ impl ScopedDiagnosticStats<'_> {
         }
     }
 
+    /// Print a summary to the user
+    ///
+    /// **Note:** be sure to call `GlobalDiagnosticStats::ok` or equivalent to fail the operation
     pub fn report_summary(
         &self,
         action: &str,
@@ -159,10 +171,10 @@ impl ScopedDiagnosticStats<'_> {
             let name = name
                 .map(|n| format!("`{n}`"))
                 .unwrap_or_else(|| "workspace".to_owned());
-            bail!(
+            gctx.shell().error(format!(
                 "could not {action} {name} (manifest) due to {} previous error{plural}",
                 self.error_count
-            )
+            ))?;
         }
 
         Ok(())

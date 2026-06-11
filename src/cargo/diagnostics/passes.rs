@@ -89,28 +89,17 @@ pub fn emit_parse_diagnostics(
     rules: &[ParsePassRule<'_>],
 ) -> CargoResult<()> {
     let mut stats = GlobalDiagnosticStats::new();
-    let mut first_emitted_error = None;
 
-    if let Err(e) = emit_parse_ws_diagnostics(workspace, rules, &mut stats) {
-        first_emitted_error = Some(e);
-    }
+    emit_parse_ws_diagnostics(workspace, rules, &mut stats)?;
 
     for maybe_pkg in workspace.loaded_maybe() {
         if let MaybePackage::Package(pkg) = maybe_pkg {
             let path = pkg.manifest_path();
-            if let Err(e) = emit_parse_pkg_diagnostics(workspace, pkg, &path, rules, &mut stats)
-                && first_emitted_error.is_none()
-            {
-                first_emitted_error = Some(e);
-            }
+            emit_parse_pkg_diagnostics(workspace, pkg, &path, rules, &mut stats)?;
         }
     }
 
-    if let Some(error) = first_emitted_error {
-        Err(error)
-    } else {
-        Ok(())
-    }
+    stats.ok()
 }
 
 fn emit_parse_pkg_diagnostics(
