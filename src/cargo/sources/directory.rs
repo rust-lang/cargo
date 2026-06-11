@@ -267,10 +267,6 @@ impl<'gctx> Source for DirectorySource<'gctx> {
         format!("directory source `{}`", self.root.display())
     }
 
-    async fn is_yanked(&self, _pkg: PackageId) -> CargoResult<bool> {
-        Ok(false)
-    }
-
     fn invalidate_cache(&self) {
         // Directory source has no local cache.
     }

@@ -880,10 +880,6 @@ impl<'gctx> Source for RegistrySource<'gctx> {
     fn describe(&self) -> String {
         self.source_id.display_index()
     }
-
-    async fn is_yanked(&self, pkg: PackageId) -> CargoResult<bool> {
-        self.index.is_yanked(pkg, &*self.ops).await
-    }
 }
 
 /// Get the maximum unpack size that Cargo permits

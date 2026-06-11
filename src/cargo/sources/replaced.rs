@@ -155,8 +155,4 @@ impl<'gctx> Source for ReplacedSource<'gctx> {
     fn is_replaced(&self) -> bool {
         !self.is_builtin_replacement()
     }
-
-    async fn is_yanked(&self, pkg: PackageId) -> CargoResult<bool> {
-        self.inner.is_yanked(pkg).await
-    }
 }

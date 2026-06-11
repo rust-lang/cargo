@@ -6,6 +6,7 @@ use std::io::SeekFrom;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 
+use crate::core::Dependency;
 use crate::core::PackageIdSpecQuery;
 use crate::core::Workspace;
 use crate::core::dependency::DepKind;
@@ -16,12 +17,14 @@ use crate::core::{Package, PackageId, PackageSet, Resolve, SourceId};
 use crate::ops::lockfile::LOCKFILE_NAME;
 use crate::ops::registry::{RegistryOrIndex, infer_registry};
 use crate::sources::path::PathEntry;
+use crate::sources::source::QueryKind;
 use crate::sources::{CRATES_IO_REGISTRY, PathSource};
 use crate::util::FileLock;
 use crate::util::Filesystem;
 use crate::util::GlobalContext;
 use crate::util::Graph;
 use crate::util::HumanBytes;
+use crate::util::OptVersionReq;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::context::JobsConfig;
 use crate::util::errors::CargoResult;
@@ -1040,18 +1043,35 @@ pub fn check_yanked(
         source.invalidate_cache();
     }
 
+    let sources = &pkg_set.sources();
     let mut futures = resolve
         .iter()
         .map(|pkg_id| async move {
-            if let Some(source) = pkg_set.sources().get(pkg_id.source_id())
-                && source.is_yanked(pkg_id).await?
-            {
-                gctx.shell().warn(format!(
-                    "package `{}` in Cargo.lock is yanked in registry `{}`, {}",
-                    pkg_id,
-                    pkg_id.source_id().display_registry_name(),
-                    hint
-                ))?;
+            let Some(source) = sources.get(pkg_id.source_id()) else {
+                return CargoResult::Ok(());
+            };
+
+            let mut dep = Dependency::new_override(pkg_id.name(), pkg_id.source_id());
+            dep.set_version_req(OptVersionReq::lock_to_exact(pkg_id.version()));
+            let mut yanked = false;
+            source
+                .query(&dep, QueryKind::Exact, &mut |s| {
+                    if s.is_yanked() {
+                        yanked = true;
+                    }
+                })
+                .await?;
+
+            if yanked {
+                gctx.shell().print_report(
+                    &[Level::WARNING
+                        .secondary_title(format!(
+                            "package `{pkg_id}` in Cargo.lock is yanked in registry `{}`",
+                            pkg_id.source_id().display_registry_name(),
+                        ))
+                        .element(Level::HELP.message(hint))],
+                    false,
+                )?;
             }
             CargoResult::Ok(())
         })

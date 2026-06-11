@@ -346,7 +346,9 @@ fn warn_package_with_yanked() {
         .with_stderr_data(str![[r#"
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [UPDATING] `dummy-registry` index
-[WARNING] package `bar v0.1.0` in Cargo.lock is yanked in registry `crates-io`, consider updating to a version that is not yanked
+[WARNING] package `bar v0.1.0` in Cargo.lock is yanked in registry `crates-io`
+  |
+  = [HELP] consider updating to a version that is not yanked
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 
 "#]])
@@ -384,7 +386,9 @@ dependencies = [
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.1.0 (registry `dummy-registry`)
 [INSTALLING] foo v0.1.0
-[WARNING] package `bar v0.1.0` in Cargo.lock is yanked in registry `crates-io`, consider running without --locked
+[WARNING] package `bar v0.1.0` in Cargo.lock is yanked in registry `crates-io`
+  |
+  = [HELP] consider running without --locked
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
 [COMPILING] bar v0.1.0
@@ -411,6 +415,48 @@ dependencies = [
 [REPLACING] [ROOT]/home/.cargo/bin/foo[EXE]
 [REPLACED] package `foo v0.1.0` with `foo v0.1.0` (executable `foo[EXE]`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn warn_install_with_offline_warn_cache() {
+    Package::new("bar", "0.1.0").yanked(true).publish();
+    Package::new("bar", "0.1.1").publish();
+    Package::new("foo", "0.1.0")
+        .dep("bar", "0.1")
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "Cargo.lock",
+            r#"
+[[package]]
+name = "bar"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "foo"
+version = "0.1.0"
+dependencies = [
+ "bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+            "#,
+        )
+        .publish();
+
+    // Warm the registry index cache.
+    cargo_process("install --locked foo").run();
+
+    // Re-install and the yanked help works with offline.
+    // (no extra index query)
+    cargo_process("install --offline --locked --force foo")
+        .with_stderr_data(str![[r#"
+...
+[WARNING] package `bar v0.1.0` in Cargo.lock is yanked in registry `crates-io`
+  |
+  = [HELP] consider running without --locked
+...
 
 "#]])
         .run();
