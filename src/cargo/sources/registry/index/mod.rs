@@ -156,17 +156,6 @@ impl IndexSummary {
         }
     }
 
-    /// Extract the summary from any variant
-    pub fn into_summary(self) -> Summary {
-        match self {
-            IndexSummary::Candidate(sum)
-            | IndexSummary::Yanked(sum)
-            | IndexSummary::Offline(sum)
-            | IndexSummary::Unsupported(sum, _)
-            | IndexSummary::Invalid(sum) => sum,
-        }
-    }
-
     pub fn map_summary(self, f: impl Fn(Summary) -> Summary) -> Self {
         match self {
             IndexSummary::Candidate(s) => IndexSummary::Candidate(f(s)),

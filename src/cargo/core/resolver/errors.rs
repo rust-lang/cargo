@@ -486,7 +486,13 @@ fn alt_names(
         };
     let mut name_candidates: Vec<_> = name_candidates
         .into_iter()
-        .map(|s| s.into_summary())
+        .map(|s| match s {
+            IndexSummary::Candidate(sum)
+            | IndexSummary::Yanked(sum)
+            | IndexSummary::Offline(sum)
+            | IndexSummary::Unsupported(sum, _)
+            | IndexSummary::Invalid(sum) => sum,
+        })
         .collect();
     name_candidates.sort_unstable_by_key(|a| a.name());
     name_candidates.dedup_by(|a, b| a.name() == b.name());
