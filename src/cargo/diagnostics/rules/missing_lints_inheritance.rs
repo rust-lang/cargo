@@ -12,9 +12,9 @@ use crate::CargoResult;
 use crate::GlobalContext;
 use crate::core::Package;
 use crate::core::Workspace;
-use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevelProduct;
+use crate::diagnostics::ScopedDiagnosticStats;
 use crate::diagnostics::rel_cwd_manifest_path;
 
 pub static LINT: &Lint = &Lint {
@@ -59,7 +59,7 @@ pub(crate) fn lint_package(
     pkg: &Package,
     manifest_path: &Path,
     level: LintLevelProduct,
-    pkg_stats: &mut DiagnosticStats,
+    pkg_stats: &mut ScopedDiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let LintLevelProduct {

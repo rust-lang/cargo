@@ -44,7 +44,7 @@
 //! When a diagnostic requires adding a new pass, keep in mind:
 //! - Support for `build.warnings`
 //! - When errors should block further evaluation within the pass
-//! - Providing a summary at the end, like what is provided by [`DiagnosticStats::report_summary`]
+//! - Providing a summary at the end, like what is provided by [`ScopedDiagnosticStats::report_summary`]
 //! - Prefer data driven passes to simplify adding rules
 //!   - Ensure the pass' lints are in [`rules::LINTS`], e.g. `ensure_parse_passed_in_lints`
 //!   - Prefer evaluating the lint level within the pass
@@ -72,13 +72,13 @@ pub use lint::{Lint, LintGroup, LintLevel, LintLevelProduct, LintLevelSource};
 pub use report::{AsIndex, get_key_value, get_key_value_span, rel_cwd_manifest_path};
 pub use rules::{LINT_GROUPS, LINTS};
 
-pub struct DiagnosticStats {
+pub struct ScopedDiagnosticStats {
     warning_count: usize,
     lint_warning_count: usize,
     error_count: usize,
 }
 
-impl DiagnosticStats {
+impl ScopedDiagnosticStats {
     pub fn new() -> Self {
         Self {
             warning_count: 0,
@@ -152,8 +152,8 @@ impl DiagnosticStats {
     }
 }
 
-impl std::ops::Add for DiagnosticStats {
-    type Output = DiagnosticStats;
+impl std::ops::Add for ScopedDiagnosticStats {
+    type Output = ScopedDiagnosticStats;
 
     fn add(mut self, rhs: Self) -> Self::Output {
         self += rhs;
@@ -161,9 +161,9 @@ impl std::ops::Add for DiagnosticStats {
     }
 }
 
-impl std::ops::AddAssign for DiagnosticStats {
+impl std::ops::AddAssign for ScopedDiagnosticStats {
     fn add_assign(&mut self, rhs: Self) {
-        let DiagnosticStats {
+        let ScopedDiagnosticStats {
             warning_count,
             lint_warning_count,
             error_count,

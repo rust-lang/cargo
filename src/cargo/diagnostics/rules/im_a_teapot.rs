@@ -13,9 +13,9 @@ use crate::GlobalContext;
 use crate::core::Feature;
 use crate::core::Package;
 use crate::core::Workspace;
-use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevelProduct;
+use crate::diagnostics::ScopedDiagnosticStats;
 use crate::diagnostics::get_key_value_span;
 use crate::diagnostics::rel_cwd_manifest_path;
 
@@ -35,7 +35,7 @@ pub(crate) fn lint_package(
     pkg: &Package,
     path: &Path,
     level: LintLevelProduct,
-    pkg_stats: &mut DiagnosticStats,
+    pkg_stats: &mut ScopedDiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let manifest = pkg.manifest();

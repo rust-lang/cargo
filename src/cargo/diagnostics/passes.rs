@@ -7,11 +7,11 @@ use crate::GlobalContext;
 use crate::core::MaybePackage;
 use crate::core::Package;
 use crate::core::Workspace;
-use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevel;
 use crate::diagnostics::LintLevelProduct;
 use crate::diagnostics::ManifestFor;
+use crate::diagnostics::ScopedDiagnosticStats;
 
 #[derive(Clone)]
 pub enum ParsePassRule<'r> {
@@ -39,24 +39,29 @@ pub enum ParsePassRule<'r> {
 }
 
 type FnDiagnosticManifest =
-    fn(ManifestFor<'_>, &Path, &mut DiagnosticStats, &GlobalContext) -> CargoResult<()>;
+    fn(ManifestFor<'_>, &Path, &mut ScopedDiagnosticStats, &GlobalContext) -> CargoResult<()>;
 
 type FnDiagnosticWorkspace = fn(
     &Workspace<'_>,
     &MaybePackage,
     &Path,
-    &mut DiagnosticStats,
+    &mut ScopedDiagnosticStats,
     &GlobalContext,
 ) -> CargoResult<()>;
 
-type FnDiagnosticPackage =
-    fn(&Workspace<'_>, &Package, &Path, &mut DiagnosticStats, &GlobalContext) -> CargoResult<()>;
+type FnDiagnosticPackage = fn(
+    &Workspace<'_>,
+    &Package,
+    &Path,
+    &mut ScopedDiagnosticStats,
+    &GlobalContext,
+) -> CargoResult<()>;
 
 type FnLintManifest = fn(
     manifest: ManifestFor<'_>,
     manifest_path: &Path,
     LintLevelProduct,
-    stats: &mut DiagnosticStats,
+    stats: &mut ScopedDiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()>;
 
@@ -65,7 +70,7 @@ type FnLintWorkspace = fn(
     &MaybePackage,
     &Path,
     LintLevelProduct,
-    &mut DiagnosticStats,
+    &mut ScopedDiagnosticStats,
     &GlobalContext,
 ) -> CargoResult<()>;
 
@@ -74,7 +79,7 @@ type FnLintPackage = fn(
     &Package,
     &Path,
     LintLevelProduct,
-    &mut DiagnosticStats,
+    &mut ScopedDiagnosticStats,
     &GlobalContext,
 ) -> CargoResult<()>;
 
@@ -112,7 +117,7 @@ fn emit_parse_pkg_diagnostics(
     path: &Path,
     rules: &[ParsePassRule<'_>],
 ) -> CargoResult<()> {
-    let mut pkg_stats = DiagnosticStats::new();
+    let mut pkg_stats = ScopedDiagnosticStats::new();
 
     let toml_lints = pkg
         .manifest()
@@ -177,7 +182,7 @@ fn emit_parse_ws_diagnostics(
     workspace: &Workspace<'_>,
     rules: &[ParsePassRule<'_>],
 ) -> CargoResult<()> {
-    let mut pkg_stats = DiagnosticStats::new();
+    let mut pkg_stats = ScopedDiagnosticStats::new();
 
     let cargo_lints = match workspace.root_maybe() {
         MaybePackage::Package(pkg) => {

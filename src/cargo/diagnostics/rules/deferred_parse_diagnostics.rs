@@ -5,15 +5,15 @@ use tracing::instrument;
 use crate::CargoResult;
 use crate::GlobalContext;
 use crate::core::MaybePackage;
-use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::ManifestFor;
+use crate::diagnostics::ScopedDiagnosticStats;
 use crate::diagnostics::rel_cwd_manifest_path;
 
 #[instrument(skip_all)]
 pub(crate) fn diagnose_manifest(
     manifest: ManifestFor<'_>,
     manifest_path: &Path,
-    pkg_stats: &mut DiagnosticStats,
+    pkg_stats: &mut ScopedDiagnosticStats,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let warnings = match &manifest {
