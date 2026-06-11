@@ -130,7 +130,7 @@ enum MaybeIndexSummary {
 /// from a line from a raw index file, or a JSON blob from on-disk index cache.
 ///
 /// In addition to a full [`Summary`], we have information on whether it is `yanked`.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum IndexSummary {
     /// Available for consideration
     Candidate(Summary),

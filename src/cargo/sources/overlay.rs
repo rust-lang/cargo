@@ -57,7 +57,7 @@ impl<'gctx> Source for DependencyConfusionThreatOverlaySource<'gctx> {
         let mut local_packages = std::collections::HashSet::new();
         let mut local_callback = |index: IndexSummary| {
             let index = index.map_summary(|s| s.map_source(local_source, remote_source));
-            local_packages.insert(index.as_summary().clone());
+            local_packages.insert(index.clone());
             f(index)
         };
         self.local
@@ -65,7 +65,7 @@ impl<'gctx> Source for DependencyConfusionThreatOverlaySource<'gctx> {
             .await?;
 
         let mut remote_callback = |index: IndexSummary| {
-            if local_packages.contains(index.as_summary()) {
+            if local_packages.contains(&index) {
                 tracing::debug!(?local_source, ?remote_source, ?index, "package collision");
             } else {
                 f(index)
