@@ -242,6 +242,10 @@ impl<'a, T: Registry> RegistryQueryer<'a, T> {
         self.inner.registry
     }
 
+    pub fn version_prefs(&self) -> &VersionPreferences {
+        self.inner.version_prefs
+    }
+
     pub fn query(
         &mut self,
         dep: &Dependency,

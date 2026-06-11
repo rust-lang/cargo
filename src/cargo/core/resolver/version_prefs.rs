@@ -76,7 +76,7 @@ impl VersionPreferences {
 
     /// Returns the version's publish-age if it is too new for the configured
     /// `min-publish-age`, otherwise `None`.
-    pub fn too_new(&self, summary: &Summary) -> Option<jiff::SignedDuration> {
+    pub fn too_new(&self, summary: &Summary) -> Option<PublishAgeViolation> {
         self.publish_age.as_ref()?.too_new(summary)
     }
 
@@ -243,7 +243,7 @@ impl PublishAgePolicy {
     /// Returns the version's publish-age if it is too new for its registry.
     ///
     /// `None` means the version is acceptable.
-    pub fn too_new(&self, summary: &Summary) -> Option<jiff::SignedDuration> {
+    pub fn too_new(&self, summary: &Summary) -> Option<PublishAgeViolation> {
         let pubtime = summary.pubtime()?;
         let MinPublishAge::Age(min_age) = self.min_age(summary.source_id()) else {
             return None;
@@ -256,8 +256,8 @@ impl PublishAgePolicy {
         let age = self.invocation_time.duration_since(pubtime);
 
         match max_pubtime {
-            Some(max_pubtime) => (pubtime > max_pubtime).then_some(age),
-            None => Some(age),
+            Some(max_pubtime) => (pubtime > max_pubtime).then_some(PublishAgeViolation { age }),
+            None => Some(PublishAgeViolation { age }),
         }
     }
 
@@ -301,6 +301,63 @@ impl MinPublishAge {
     /// Whether a value was configured for this scope.
     fn is_set(self) -> bool {
         !matches!(self, MinPublishAge::Unset)
+    }
+}
+
+/// A violation of `min-publish-age` config.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PublishAgeViolation {
+    /// How long ago the version was published.
+    age: jiff::SignedDuration,
+}
+
+impl PublishAgeViolation {
+    /// How long ago the version was published,
+    /// as a single friendly-spelled unit for display.
+    pub fn age_label(&self) -> String {
+        format_age_as_single_unit(self.age)
+    }
+}
+
+/// Formats an age as a single, friendly-spelled unit, never is multi-unit noise.
+fn format_age_as_single_unit(age: jiff::SignedDuration) -> String {
+    use jiff::Unit;
+    use jiff::fmt::friendly::Designator;
+    use jiff::fmt::friendly::Spacing;
+    use jiff::fmt::friendly::SpanPrinter;
+
+    // An age at or ahead of "now" gives a non-positive age.
+    if age <= jiff::SignedDuration::ZERO {
+        return "moments ago".to_string();
+    }
+
+    let rounded = jiff::Span::try_from(age).and_then(|span| {
+        let unit = if age >= jiff::SignedDuration::from_hours(48) {
+            Unit::Day
+        } else if age >= jiff::SignedDuration::from_hours(1) {
+            Unit::Hour
+        } else if age >= jiff::SignedDuration::from_mins(1) {
+            Unit::Minute
+        } else {
+            Unit::Second
+        };
+        let opts = jiff::SpanRound::new()
+            .largest(unit)
+            .smallest(unit)
+            .relative(jiff::SpanRelativeTo::days_are_24_hours());
+        span.round(opts)
+    });
+
+    let printer = SpanPrinter::new()
+        .designator(Designator::Verbose)
+        .spacing(Spacing::BetweenUnitsAndDesignators);
+
+    match rounded {
+        Ok(span) => format!("{} ago", printer.span_to_string(&span)),
+        Err(e) => {
+            tracing::warn!("failed to round `{age}`: {e}");
+            format!("{} seconds ago", age.as_secs())
+        }
     }
 }
 
@@ -553,7 +610,7 @@ mod test {
     fn publish_age_reports_exact_age() {
         let p = policy(MinPublishAge::Age(days(7)), MinPublishAge::Unset, &[]);
         let age = p.too_new(&published(crates_io_source(), hours(50)));
-        assert_eq!(age, Some(hours(50)));
+        assert_eq!(age, Some(PublishAgeViolation { age: hours(50) }));
     }
 
     #[test]
@@ -574,7 +631,7 @@ mod test {
     fn publish_age_just_inside_threshold_is_too_new() {
         let p = policy(MinPublishAge::Age(days(7)), MinPublishAge::Unset, &[]);
         let age = p.too_new(&published(crates_io_source(), hours(7 * 24 - 1)));
-        assert_eq!(age, Some(hours(7 * 24 - 1)));
+        assert_eq!(age, Some(PublishAgeViolation { age: hours(7 * 24 - 1) }));
     }
 
     #[test]
@@ -597,7 +654,7 @@ mod test {
         );
         let crates_io = p.too_new(&published(crates_io_source(), hours(2 * 24)));
         let alt = p.too_new(&published(alt_source(), hours(2 * 24)));
-        assert_eq!(crates_io, Some(hours(2 * 24)));
+        assert_eq!(crates_io, Some(PublishAgeViolation { age: hours(2 * 24) }));
         assert_eq!(alt, None);
     }
 
@@ -605,7 +662,7 @@ mod test {
     fn publish_age_alt_registry_falls_through_to_global() {
         let p = policy(MinPublishAge::Age(days(7)), MinPublishAge::Unset, &[]);
         let age = p.too_new(&published(alt_source(), hours(2 * 24)));
-        assert_eq!(age, Some(hours(2 * 24)));
+        assert_eq!(age, Some(PublishAgeViolation { age: hours(2 * 24) }));
     }
 
     #[test]
@@ -616,7 +673,7 @@ mod test {
             &[("alt", MinPublishAge::Age(days(7)))],
         );
         let age = p.too_new(&published(alt_source(), hours(2 * 24)));
-        assert_eq!(age, Some(hours(2 * 24)));
+        assert_eq!(age, Some(PublishAgeViolation { age: hours(2 * 24) }));
     }
 
     #[test]
@@ -665,7 +722,7 @@ mod test {
     fn publish_age_future_pubtime_is_too_new() {
         let p = policy(MinPublishAge::Age(days(7)), MinPublishAge::Unset, &[]);
         let age = p.too_new(&published(crates_io_source(), hours(-24)));
-        assert_eq!(age, Some(hours(-24)));
+        assert_eq!(age, Some(PublishAgeViolation { age: hours(-24) }));
     }
 
     #[test]
@@ -676,6 +733,47 @@ mod test {
             &[],
         );
         let age = p.too_new(&published(crates_io_source(), hours(24)));
-        assert_eq!(age, Some(hours(24)));
+        assert_eq!(age, Some(PublishAgeViolation { age: hours(24) }));
+    }
+
+    #[track_caller]
+    fn assert_age(secs: i64, expected: &str) {
+        assert_eq!(
+            format_age_as_single_unit(jiff::SignedDuration::from_secs(secs)),
+            expected
+        );
+    }
+
+    const MIN: i64 = 60;
+    const HOUR: i64 = 60 * MIN;
+    const DAY: i64 = 24 * HOUR;
+
+    #[test]
+    fn rounds_to_a_single_unit() {
+        // `>= 2 days` rounds to the nearest day.
+        assert_age(2 * DAY, "2 days ago");
+        assert_age(2 * DAY + 8 * HOUR + 23 * MIN, "2 days ago");
+        assert_age(2 * DAY + 13 * HOUR, "3 days ago");
+        assert_age(540 * DAY, "540 days ago");
+
+        // `1 hour ..< 2 days` rounds to the nearest hour.
+        assert_age(47 * HOUR, "47 hours ago");
+        assert_age(24 * HOUR, "24 hours ago");
+        assert_age(11 * HOUR + 40 * MIN, "12 hours ago");
+        assert_age(11 * HOUR + 20 * MIN, "11 hours ago");
+        assert_age(HOUR, "1 hour ago");
+
+        // `1 minute ..< 1 hour` rounds to the nearest minute.
+        assert_age(40 * MIN, "40 minutes ago");
+        assert_age(MIN, "1 minute ago");
+
+        // `< 1 minute` rounds to the nearest second.
+        assert_age(40, "40 seconds ago");
+        assert_age(1, "1 second ago");
+
+        // ahead of "now" (clock drift)
+        assert_age(0, "moments ago");
+        assert_age(-20, "moments ago");
+        assert_age(-2 * DAY, "moments ago");
     }
 }
