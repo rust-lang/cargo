@@ -462,7 +462,7 @@ fn rejected_versions(
             Ok(candidates) => candidates,
             Err(e) => return Some(Err(e)),
         };
-    version_candidates.sort_unstable_by_key(|a| a.as_summary().version().clone());
+    version_candidates.sort_unstable_by_key(|a| a.package_id().version().clone());
     if version_candidates.is_empty() {
         None
     } else {

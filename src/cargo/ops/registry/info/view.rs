@@ -1,19 +1,20 @@
 use std::collections::HashMap;
 use std::io::Write;
 
+use crate::core::Summary;
 use crate::util::style::{CONTEXT, ERROR, HEADER, LITERAL, NOP, WARN};
 use crate::{
     CargoResult, GlobalContext,
     core::{Dependency, FeatureMap, Package, PackageId, SourceId, dependency::DepKind},
-    sources::IndexSummary,
     util::interning::InternedString,
 };
+
 use cargo_util_terminal::{Shell, Verbosity};
 
 // Pretty print the package information.
 pub(super) fn pretty_view(
     package: &Package,
-    summaries: &[IndexSummary],
+    summaries: &[Summary],
     suggest_cargo_tree_command: bool,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
@@ -60,23 +61,19 @@ pub(super) fn pretty_view(
     // 1. The package version is not the latest available version.
     // 2. The package source is not crates.io.
     match (
-        summaries.iter().max_by_key(|s| s.as_summary().version()),
+        summaries.iter().max_by_key(|s| s.version()),
         is_package_from_crates_io,
     ) {
-        (Some(latest), false) if latest.as_summary().version() != package_id.version() => {
+        (Some(latest), false) if latest.version() != package_id.version() => {
             write!(
                 stdout,
                 " {warn}(latest {} {warn:#}{context}from {}{context:#}{warn}){warn:#}",
-                latest.as_summary().version(),
+                latest.version(),
                 pretty_source(summary.source_id(), gctx)
             )?;
         }
-        (Some(latest), true) if latest.as_summary().version() != package_id.version() => {
-            write!(
-                stdout,
-                " {warn}(latest {}){warn:#}",
-                latest.as_summary().version(),
-            )?;
+        (Some(latest), true) if latest.version() != package_id.version() => {
+            write!(stdout, " {warn}(latest {}){warn:#}", latest.version(),)?;
         }
         (_, false) => {
             write!(

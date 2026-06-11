@@ -710,12 +710,13 @@ impl<'gctx> Source for RegistrySource<'gctx> {
         if kind == QueryKind::Exact && req.is_locked() && !self.ops.is_updated() {
             debug!("attempting query without update");
             self.index
-                .query_inner(dep.package_name(), &req, &*self.ops, &mut |s| {
-                    if matches!(s, IndexSummary::Candidate(_) | IndexSummary::Yanked(_))
-                        && dep.matches(s.as_summary())
-                    {
-                        // We are looking for a package from a lock file so we do not care about yank
-                        callback(s)
+                .query_inner(dep.package_name(), &req, &*self.ops, &mut |is| {
+                    match &is {
+                        IndexSummary::Candidate(s) | IndexSummary::Yanked(s) if dep.matches(&s) => {
+                            // We are looking for a package from a lock file so we do not care about yank
+                            callback(is)
+                        }
+                        _ => {}
                     }
                 })
                 .await?;
@@ -738,10 +739,17 @@ impl<'gctx> Source for RegistrySource<'gctx> {
             .query_inner(dep.package_name(), &req, &*self.ops, &mut |s| {
                 let matched = match kind {
                     QueryKind::Exact | QueryKind::RejectedVersions => {
+                        let s = match &s {
+                            IndexSummary::Candidate(s)
+                            | IndexSummary::Yanked(s)
+                            | IndexSummary::Offline(s)
+                            | IndexSummary::Unsupported(s, _)
+                            | IndexSummary::Invalid(s) => s,
+                        };
                         if req.is_precise() && self.gctx.cli_unstable().unstable_options {
-                            dep.matches_prerelease(s.as_summary())
+                            dep.matches_prerelease(&s)
                         } else {
-                            dep.matches(s.as_summary())
+                            dep.matches(&s)
                         }
                     }
                     QueryKind::AlternativeNames => true,

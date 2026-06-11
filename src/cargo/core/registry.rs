@@ -552,7 +552,7 @@ impl<'gctx> PackageRegistry<'gctx> {
     }
 
     /// Queries path overrides from this registry.
-    async fn query_overrides(&self, dep: &Dependency) -> CargoResult<Option<IndexSummary>> {
+    async fn query_overrides(&self, dep: &Dependency) -> CargoResult<Option<Summary>> {
         let overrides = self.overrides.borrow();
         for &s in overrides.iter() {
             let dep = Dependency::new_override(dep.package_name(), s);
@@ -562,7 +562,7 @@ impl<'gctx> PackageRegistry<'gctx> {
                 .get(s)
                 .unwrap()
                 .query(&dep, QueryKind::Exact, &mut |s| {
-                    if let IndexSummary::Candidate(_) = &s {
+                    if let IndexSummary::Candidate(s) = s {
                         results = Some(s);
                     }
                 })
@@ -686,10 +686,9 @@ impl<'gctx> Registry for PackageRegistry<'gctx> {
             let patch = patches.remove(0);
             match override_summary {
                 Some(override_summary) => {
-                    self.warn_bad_override(override_summary.as_summary(), &patch)?;
-                    let override_summary =
-                        override_summary.map_summary(|summary| self.lock(summary));
-                    f(override_summary);
+                    self.warn_bad_override(&override_summary, &patch)?;
+                    let override_summary = self.lock(override_summary);
+                    f(IndexSummary::Candidate(override_summary));
                 }
                 None => f(IndexSummary::Candidate(patch)),
             }
@@ -781,17 +780,25 @@ impl<'gctx> Registry for PackageRegistry<'gctx> {
                 let mut to_warn = None;
                 let callback = &mut |summary| {
                     n += 1;
-                    to_warn = Some(summary);
+                    match summary {
+                        IndexSummary::Candidate(summary)
+                        | IndexSummary::Yanked(summary)
+                        | IndexSummary::Offline(summary)
+                        | IndexSummary::Unsupported(summary, _)
+                        | IndexSummary::Invalid(summary) => {
+                            to_warn = Some(summary);
+                        }
+                    }
                 };
                 query_with_context(&*source, dep, kind, callback).await?;
                 if n > 1 {
                     return Err(anyhow::anyhow!("found an override with a non-locked list"));
                 }
                 if let Some(to_warn) = to_warn {
-                    self.warn_bad_override(override_summary.as_summary(), to_warn.as_summary())?;
+                    self.warn_bad_override(&override_summary, &to_warn)?;
                 }
-                let override_summary = override_summary.map_summary(|summary| self.lock(summary));
-                f(override_summary);
+                let override_summary = self.lock(override_summary);
+                f(IndexSummary::Candidate(override_summary));
             }
         }
 

@@ -3,13 +3,15 @@
 use anyhow::bail;
 use cargo_util_schemas::core::{PackageIdSpec, PartialVersion};
 
+use crate::core::Summary;
 use crate::core::registry::PackageRegistry;
 use crate::core::{Dependency, Package, PackageId, PackageIdSpecQuery, Registry, Workspace};
 use crate::ops::registry::info::view::pretty_view;
 use crate::ops::registry::{RegistryOrIndex, RegistrySourceIds, get_source_id_with_package_id};
 use crate::ops::resolve_ws;
+use crate::sources::IndexSummary;
+use crate::sources::SourceConfigMap;
 use crate::sources::source::QueryKind;
-use crate::sources::{IndexSummary, SourceConfigMap};
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::command_prelude::root_manifest;
 use crate::{CargoResult, GlobalContext};
@@ -170,7 +172,7 @@ fn find_pkgid_in_ws(
 }
 
 fn find_pkgid_in_summaries(
-    summaries: &[IndexSummary],
+    summaries: &[Summary],
     normalized_spec: &PackageIdSpec,
     rustc_version: &PartialVersion,
     source_ids: &RegistrySourceIds,
@@ -181,12 +183,10 @@ fn find_pkgid_in_summaries(
         .max_by(|s1, s2| {
             // Check the MSRV compatibility.
             let s1_matches = s1
-                .as_summary()
                 .rust_version()
                 .map(|v| v.is_compatible_with(rustc_version))
                 .unwrap_or_else(|| false);
             let s2_matches = s2
-                .as_summary()
                 .rust_version()
                 .map(|v| v.is_compatible_with(rustc_version))
                 .unwrap_or_else(|| false);
@@ -216,13 +216,16 @@ fn query_summaries(
     spec: &PackageIdSpec,
     registry: &mut PackageRegistry<'_>,
     source_ids: &RegistrySourceIds,
-) -> CargoResult<(Vec<IndexSummary>, Option<String>)> {
+) -> CargoResult<(Vec<Summary>, Option<String>)> {
     // Query without version requirement to get all index summaries.
     let dep = Dependency::parse(spec.name(), None, source_ids.original)?;
     // Use normalized crate name lookup for user-provided package names.
     let results: Vec<_> = crate::util::block_on(registry.query_vec(&dep, QueryKind::Normalized))?
         .into_iter()
-        .filter(|s| matches!(s, IndexSummary::Candidate(_)))
+        .filter_map(|s| match s {
+            IndexSummary::Candidate(s) => Some(s),
+            _ => None,
+        })
         .collect();
 
     let normalized_name = results.first().map(|s| s.package_id().name().to_string());

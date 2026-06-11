@@ -448,7 +448,10 @@ fn check_crates_io<'a>(
         let possibilities =
             futures::executor::block_on(registry.query_vec(&query, QueryKind::Exact))?
                 .into_iter()
-                .filter(|s| matches!(s, IndexSummary::Candidate(_)))
+                .filter_map(|s| match s {
+                    IndexSummary::Candidate(s) => Some(s),
+                    _ => None,
+                })
                 .collect::<Vec<_>>();
         if possibilities.is_empty() {
             tracing::trace!("dep `{name}` has no version greater than or equal to `{current}`");
@@ -457,7 +460,6 @@ fn check_crates_io<'a>(
                 "`{name}@{current}` needs a bump because its should have a version newer than crates.io: {:?}`",
                 possibilities
                     .iter()
-                    .map(|s| s.as_summary())
                     .map(|s| format!("{}@{}", s.name(), s.version()))
                     .collect::<Vec<_>>(),
             );
