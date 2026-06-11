@@ -209,6 +209,7 @@ fn filters_too_new_versions() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
+[ADDING] bar v1.0.0 (available: v1.1.0)
 
 "#]])
         .run();
@@ -222,9 +223,9 @@ version = 4
 
 [[package]]
 name = "bar"
-version = "1.1.0"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2216902cacb5611f65e00da63d917a6b9f4dbb10ddc39ee24c853322ab44b041"
+checksum = "75120345f1869de1197d82823818e8151ad3325d58f084044181fc4457c087c4"
 
 [[package]]
 name = "foo"
@@ -335,6 +336,7 @@ fn incompatible_publish_age_deny() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
+[ADDING] bar v1.0.0 (available: v1.1.0)
 
 "#]])
         .run();
@@ -348,9 +350,9 @@ version = 4
 
 [[package]]
 name = "bar"
-version = "1.1.0"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2216902cacb5611f65e00da63d917a6b9f4dbb10ddc39ee24c853322ab44b041"
+checksum = "75120345f1869de1197d82823818e8151ad3325d58f084044181fc4457c087c4"
 
 [[package]]
 name = "foo"
@@ -400,9 +402,15 @@ fn no_candidates_error() {
     p.cargo("generate-lockfile -Zmin-publish-age")
         .masquerade_as_nightly_cargo(&["min-publish-age"])
         .env("__CARGO_TEST_INVOCATION_TIME", NOW)
+        .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[ERROR] failed to select a version for the requirement `bar = "^1"`
+  version 1.1.0 is unavailable
+  version 1.2.0 is unavailable
+  version 1.3.0 is unavailable
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `foo v0.0.0 ([ROOT]/foo)`
 
 "#]])
         .run();
@@ -781,9 +789,10 @@ fn cargo_install_allows_too_new_deps() {
 [DOWNLOADED] foo v1.0.0 (registry `dummy-registry`)
 [INSTALLING] foo v1.0.0
 [LOCKING] 1 package to latest compatible version
+[ADDING] bar v1.0.0 (available: v1.1.0)
 [DOWNLOADING] crates ...
-[DOWNLOADED] bar v1.1.0 (registry `dummy-registry`)
-[COMPILING] bar v1.1.0
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[COMPILING] bar v1.0.0
 [COMPILING] foo v1.0.0
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
@@ -791,7 +800,7 @@ fn cargo_install_allows_too_new_deps() {
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]])
-        .run();
+         .run();
 
     assert_has_installed_exe(paths::cargo_home(), "foo");
 }
@@ -829,9 +838,10 @@ fn cargo_install_path_allows_too_new_deps() {
 [INSTALLING] foo v0.0.0 ([ROOT]/foo)
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
+[ADDING] bar v1.0.0 (available: v1.1.0)
 [DOWNLOADING] crates ...
-[DOWNLOADED] bar v1.1.0 (registry `dummy-registry`)
-[COMPILING] bar v1.1.0
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[COMPILING] bar v1.0.0
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
@@ -926,6 +936,7 @@ fn update_precise_to_too_new() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
+[ADDING] bar v1.0.0 (available: v1.1.0)
 
 "#]])
         .run();
@@ -939,9 +950,9 @@ version = 4
 
 [[package]]
 name = "bar"
-version = "1.1.0"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2216902cacb5611f65e00da63d917a6b9f4dbb10ddc39ee24c853322ab44b041"
+checksum = "75120345f1869de1197d82823818e8151ad3325d58f084044181fc4457c087c4"
 
 [[package]]
 name = "foo"
@@ -956,8 +967,13 @@ dependencies = [
     p.cargo("update bar --precise 1.1.0 -Zmin-publish-age")
         .masquerade_as_nightly_cargo(&["min-publish-age"])
         .env("__CARGO_TEST_INVOCATION_TIME", NOW)
+        .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for the requirement `bar = "^1"`
+  version 1.1.0 is unavailable
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `foo v0.0.0 ([ROOT]/foo)`
 
 "#]])
         .run();
@@ -971,9 +987,9 @@ version = 4
 
 [[package]]
 name = "bar"
-version = "1.1.0"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2216902cacb5611f65e00da63d917a6b9f4dbb10ddc39ee24c853322ab44b041"
+checksum = "75120345f1869de1197d82823818e8151ad3325d58f084044181fc4457c087c4"
 
 [[package]]
 name = "foo"
@@ -1022,6 +1038,7 @@ fn update_precise_with_allow() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
+[ADDING] bar v1.0.0 (available: v1.2.0)
 
 "#]])
         .run();
@@ -1035,9 +1052,9 @@ version = 4
 
 [[package]]
 name = "bar"
-version = "1.2.0"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "13b7fac0658f812317d4650e24111753ce171cdb5414c911e36616748c6757c5"
+checksum = "75120345f1869de1197d82823818e8151ad3325d58f084044181fc4457c087c4"
 
 [[package]]
 name = "foo"
@@ -1055,7 +1072,7 @@ dependencies = [
         .env("CARGO_RESOLVER_INCOMPATIBLE_PUBLISH_AGE", "allow")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[DOWNGRADING] bar v1.2.0 -> v1.1.0
+[UPDATING] bar v1.0.0 -> v1.1.0
 
 "#]])
         .run();
@@ -1173,9 +1190,9 @@ fn publish_age_invalid() {
     p.cargo("generate-lockfile -Zmin-publish-age")
         .masquerade_as_nightly_cargo(&["min-publish-age"])
         .env("__CARGO_TEST_INVOCATION_TIME", NOW)
+        .with_status(101)
         .with_stderr_data(str![[r#"
-[UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[ERROR] invalid value for `registry.global-min-publish-age`: expected a value of the form "N seconds/minutes/hours/days/weeks/months", got: "garbage"
 
 "#]])
         .run();
@@ -1213,6 +1230,7 @@ fn registry_default() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
+[ADDING] bar v1.0.0 (available: v1.1.0)
 
 "#]])
         .run();
@@ -1226,9 +1244,9 @@ version = 4
 
 [[package]]
 name = "bar"
-version = "1.1.0"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2216902cacb5611f65e00da63d917a6b9f4dbb10ddc39ee24c853322ab44b041"
+checksum = "75120345f1869de1197d82823818e8151ad3325d58f084044181fc4457c087c4"
 
 [[package]]
 name = "foo"
@@ -1274,6 +1292,7 @@ fn registry_default_overrides_global() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
+[ADDING] bar v1.0.0 (available: v1.1.0)
 
 "#]])
         .run();
@@ -1287,9 +1306,9 @@ version = 4
 
 [[package]]
 name = "bar"
-version = "1.1.0"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2216902cacb5611f65e00da63d917a6b9f4dbb10ddc39ee24c853322ab44b041"
+checksum = "75120345f1869de1197d82823818e8151ad3325d58f084044181fc4457c087c4"
 
 [[package]]
 name = "foo"
@@ -1395,6 +1414,7 @@ fn registries_crates_io() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
+[ADDING] bar v1.0.0 (available: v1.1.0)
 
 "#]])
         .run();
@@ -1408,9 +1428,9 @@ version = 4
 
 [[package]]
 name = "bar"
-version = "1.1.0"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2216902cacb5611f65e00da63d917a6b9f4dbb10ddc39ee24c853322ab44b041"
+checksum = "75120345f1869de1197d82823818e8151ad3325d58f084044181fc4457c087c4"
 
 [[package]]
 name = "foo"
@@ -1526,6 +1546,7 @@ fn registries_alt() {
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
 [LOCKING] 1 package to latest compatible version
+[ADDING] bar v1.0.0 (registry `alternative`) (available: v1.1.0)
 
 "#]])
         .run();
@@ -1539,9 +1560,9 @@ version = 4
 
 [[package]]
 name = "bar"
-version = "1.1.0"
+version = "1.0.0"
 source = "registry+[ROOTURL]/alternative-registry"
-checksum = "2216902cacb5611f65e00da63d917a6b9f4dbb10ddc39ee24c853322ab44b041"
+checksum = "75120345f1869de1197d82823818e8151ad3325d58f084044181fc4457c087c4"
 
 [[package]]
 name = "foo"
@@ -1665,6 +1686,7 @@ fn registries_alt_respects_global() {
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
 [LOCKING] 1 package to latest compatible version
+[ADDING] bar v1.0.0 (registry `alternative`) (available: v1.1.0)
 
 "#]])
         .run();
@@ -1678,9 +1700,9 @@ version = 4
 
 [[package]]
 name = "bar"
-version = "1.1.0"
+version = "1.0.0"
 source = "registry+[ROOTURL]/alternative-registry"
-checksum = "2216902cacb5611f65e00da63d917a6b9f4dbb10ddc39ee24c853322ab44b041"
+checksum = "75120345f1869de1197d82823818e8151ad3325d58f084044181fc4457c087c4"
 
 [[package]]
 name = "foo"
@@ -1884,6 +1906,7 @@ fn resolve_with_backtracking() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
+[ADDING] dep v1.0.0 (available: v1.1.0)
 
 "#]])
         .run();
@@ -1897,15 +1920,15 @@ version = 4
 
 [[package]]
 name = "bar"
-version = "2.0.0"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a184cee92224be6149c9e218327188d1d74a4514f971b1e3ce0170ea94ea5da7"
+checksum = "75120345f1869de1197d82823818e8151ad3325d58f084044181fc4457c087c4"
 
 [[package]]
 name = "dep"
-version = "1.1.0"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa304e15f0d28fbe4d8bbb6c9bc711d312e646e50f188f436d0bcdb1f57acbd4"
+checksum = "6f7ae4b3f8c82164502d95cdee595a98e7855c7134987510b31e2d9004bcdbc8"
 dependencies = [
  "bar",
 ]
@@ -1947,27 +1970,17 @@ fn cargo_add_skips_too_new() {
     p.cargo("add bar -Zmin-publish-age")
         .masquerade_as_nightly_cargo(&["min-publish-age"])
         .env("__CARGO_TEST_INVOCATION_TIME", NOW)
+        .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ADDING] bar v1.1.0 to dependencies
-[LOCKING] 1 package to latest compatible version
+[ERROR] failed to select a version for the requirement `bar = "^1.1.0"`
+  version 1.1.0 is unavailable
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `foo v0.0.0 ([ROOT]/foo)`
 
 "#]])
         .run();
-
-    assert_e2e().eq(
-        p.read_file("Cargo.toml"),
-        str![[r#"
-
-                [package]
-                name = "foo"
-                edition = "2021"
-
-[dependencies]
-bar = "1.1.0"
-            
-"#]],
-    );
 }
 
 #[cargo_test]
@@ -1998,10 +2011,14 @@ fn cargo_add_all_versions_too_new() {
     p.cargo("add bar -Zmin-publish-age")
         .masquerade_as_nightly_cargo(&["min-publish-age"])
         .env("__CARGO_TEST_INVOCATION_TIME", NOW)
+        .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ADDING] bar v1.1.0 to dependencies
-[LOCKING] 1 package to latest compatible version
+[ERROR] failed to select a version for the requirement `bar = "^1.1.0"`
+  version 1.1.0 is unavailable
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `foo v0.0.0 ([ROOT]/foo)`
 
 "#]])
         .run();

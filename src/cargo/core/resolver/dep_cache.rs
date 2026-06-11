@@ -70,7 +70,17 @@ impl<'a, T: Registry> RegistryQueryerAsync<'a, T> {
         let mut summaries = Vec::new();
         self.registry
             .query(dep, QueryKind::Exact, &mut |s| match s {
-                IndexSummary::Candidate(summary) => summaries.push(summary),
+                IndexSummary::Candidate(summary) => {
+                    // Filter out versions that are too new,
+                    // unless pinned by a lock file or a `[patch]` entry.
+                    //
+                    // Unlike yanked, `cargo update --precise` does not opt in here
+                    // unless `resolver.incompatible-publish-age = "allow"` is set.
+                    let too_new = self.version_prefs.too_new(&summary).is_some();
+                    if !too_new || self.version_prefs.should_prefer(&summary.package_id()) {
+                        summaries.push(summary);
+                    }
+                }
                 // Prefer yanked only when
                 //
                 // * it is recorded in lock file or a `[patch]` entry
