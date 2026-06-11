@@ -5,10 +5,8 @@ use cargo::core::Dependency;
 use cargo::util::GlobalContext;
 
 use resolver_tests::{
-    helpers::{
-        ToDep, dep, dep_req, pkg, pkg_dep, pkg_dep_link, pkg_dep_with, registry,
-    },
-    pkg, resolve_with_global_context,
+    helpers::{ToDep, dep, dep_req, pkg, pkg_dep, pkg_dep_link, pkg_dep_with, registry},
+    resolve_with_global_context,
     sat::SatResolver,
 };
 

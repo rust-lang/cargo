@@ -34,12 +34,8 @@ use super::semver_pubgrub::SemverCompatibility;
 struct Activation {
     /// Activated named features (including `default`).
     features: BTreeSet<InternedString>,
-    /// Activated optional dependencies (via `dep:` / implicit features).
-    deps: HashSet<InternedString>,
     /// Whether this package was resolved as a workspace member (dev-deps).
     member: bool,
-    /// Whether all features were requested for this package.
-    all_features: bool,
 }
 
 pub(super) fn into_resolve<T: Registry>(
@@ -55,7 +51,7 @@ pub(super) fn into_resolve<T: Registry>(
 
     for (pkg, version) in solution.iter() {
         match pkg {
-            PubGrubPackage::Bucket { name, member, all_features } => {
+            PubGrubPackage::Bucket { name, member, all_features: _ } => {
                 let pid = PackageId::new(name.name, version.clone(), name.source);
                 package_ids.insert(pid);
                 selected
@@ -64,7 +60,6 @@ pub(super) fn into_resolve<T: Registry>(
                     .insert(version.clone());
                 let act = activations.entry(pid).or_default();
                 act.member |= *member;
-                act.all_features |= *all_features;
             }
             PubGrubPackage::BucketFeatures { name, feature } => {
                 let pid = PackageId::new(name.name, version.clone(), name.source);
@@ -73,9 +68,9 @@ pub(super) fn into_resolve<T: Registry>(
                     FeatureNamespace::Feat(f) => {
                         act.features.insert(*f);
                     }
-                    FeatureNamespace::Dep(d) => {
-                        act.deps.insert(*d);
-                    }
+                    // Optional-dependency activations don't contribute to the
+                    // user-facing feature list.
+                    FeatureNamespace::Dep(_) => {}
                 }
             }
             PubGrubPackage::BucketDefaultFeatures { name } => {
@@ -107,26 +102,21 @@ pub(super) fn into_resolve<T: Registry>(
         };
         let act = activations.get(pid);
         let member = act.is_some_and(|a| a.member);
-        let all_features = act.is_some_and(|a| a.all_features);
         for dep in summary.dependencies() {
-            let active = match dep.kind() {
-                DepKind::Development => member,
-                _ => {
-                    if dep.is_optional() {
-                        all_features || act.is_some_and(|a| a.deps.contains(&dep.name_in_toml()))
-                    } else {
-                        true
-                    }
-                }
-            };
-            if !active {
+            // Dev-dependencies are only recorded for workspace members. Every
+            // other dependency (including optional ones) is recorded as an edge
+            // whenever it resolves to a package that is present in the lock —
+            // matching Cargo's lockfile semantics, where the graph is
+            // feature-agnostic so any feature set can be built without
+            // re-resolving.
+            if dep.kind() == DepKind::Development && !member {
                 continue;
             }
             let Some(child) = resolve_child(provider, dep, pid, solution, &selected) else {
-                anyhow::bail!(
-                    "pubgrub could not map dependency `{}` of `{pid}` to a resolved package",
-                    dep.package_name()
-                );
+                // No selected package satisfies this dependency. This is
+                // expected for optional dependencies that were never activated
+                // anywhere (so their target is absent from the lock).
+                continue;
             };
             graph.link(*pid, child).insert(dep.clone());
         }
