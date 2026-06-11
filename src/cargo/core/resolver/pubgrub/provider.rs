@@ -87,11 +87,27 @@ impl<'a, T: Registry> Provider<'a, T> {
         version_prefs: &'a VersionPreferences,
         roots: Vec<Root>,
     ) -> Self {
+        // Workspace members are provided directly rather than queried from the
+        // registry (they are typically path/local sources). Seed the version
+        // cache with their summaries so `candidates`/`summary_for` find them.
+        let mut versions: HashMap<(InternedString, SourceId), Rc<Vec<Summary>>> = HashMap::new();
+        {
+            let mut grouped: HashMap<(InternedString, SourceId), Vec<Summary>> = HashMap::new();
+            for root in &roots {
+                grouped
+                    .entry((root.summary.name(), root.summary.source_id()))
+                    .or_default()
+                    .push(root.summary.clone());
+            }
+            for (key, summaries) in grouped {
+                versions.insert(key, Rc::new(summaries));
+            }
+        }
         Provider {
             registry: RefCell::new(registry),
             version_prefs,
             roots,
-            versions: RefCell::new(HashMap::new()),
+            versions: RefCell::new(versions),
             error: RefCell::new(None),
         }
     }
