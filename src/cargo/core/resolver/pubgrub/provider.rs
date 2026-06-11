@@ -22,17 +22,14 @@ use std::fmt;
 use std::rc::Rc;
 use std::task::Poll;
 
-use pubgrub::{
-    Dependencies, DependencyConstraints, DependencyProvider, PackageResolutionStatistics,
-};
+use pubgrub::{Dependencies, DependencyProvider, PackageResolutionStatistics};
 use semver::Version;
 
 use crate::core::dependency::DepKind;
 use crate::core::resolver::VersionPreferences;
 use crate::core::resolver::dep_cache::RegistryQueryer;
 use crate::core::summary::FeatureValue;
-use crate::core::{Dependency, PackageId, Registry, SourceId, Summary};
-use crate::util::errors::CargoResult;
+use crate::core::{Dependency, Registry, SourceId, Summary};
 use crate::util::interning::InternedString;
 
 use super::package::{
@@ -158,7 +155,7 @@ impl<'a, T: Registry> Provider<'a, T> {
     }
 
     /// The summary for an exact (name, source, version), if it exists.
-    fn summary_for(
+    pub(super) fn summary_for(
         &self,
         name: InternedString,
         source: SourceId,
@@ -192,7 +189,7 @@ impl<'a, T: Registry> Provider<'a, T> {
 
     /// Map a Cargo [`Dependency`] to the PubGrub package + version range that
     /// represents it.
-    fn from_dep(
+    pub(super) fn from_dep(
         &self,
         dep: &Dependency,
         from: InternedString,
@@ -680,10 +677,4 @@ impl<'a, T: Registry> DependencyProvider for Provider<'a, T> {
 /// The PubGrub range for a bare [`semver::VersionReq`].
 fn opt_req_range(req: &semver::VersionReq) -> SemverPubgrub {
     SemverPubgrub::from(req)
-}
-
-/// Helper to resolve a [`PubGrubPackage`] bucket to its [`PackageId`], used by
-/// solution reconstruction.
-pub fn bucket_package_id(name: &BucketName, version: &Version) -> PackageId {
-    PackageId::new(name.name, version.clone(), name.source)
 }

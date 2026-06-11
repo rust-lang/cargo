@@ -46,24 +46,6 @@ pub enum FeatureNamespace {
     Dep(InternedString),
 }
 
-impl FeatureNamespace {
-    /// Parse a feature token the way it appears in a feature list, splitting off
-    /// a `dep:` prefix into the [`FeatureNamespace::Dep`] namespace.
-    pub fn parse(feat: InternedString) -> Self {
-        if let Some(dep) = feat.strip_prefix("dep:") {
-            FeatureNamespace::Dep(InternedString::new(dep))
-        } else {
-            FeatureNamespace::Feat(feat)
-        }
-    }
-
-    pub fn name(&self) -> InternedString {
-        match self {
-            FeatureNamespace::Dep(n) | FeatureNamespace::Feat(n) => *n,
-        }
-    }
-}
-
 impl Display for FeatureNamespace {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -133,38 +115,6 @@ pub enum PubGrubPackage {
 }
 
 impl PubGrubPackage {
-    /// The crate name this package refers to, if it refers to a crate.
-    pub fn crate_name(&self) -> Option<InternedString> {
-        match self {
-            PubGrubPackage::Root | PubGrubPackage::Links { .. } => None,
-            PubGrubPackage::Bucket { name, .. }
-            | PubGrubPackage::BucketFeatures { name, .. }
-            | PubGrubPackage::BucketDefaultFeatures { name } => Some(name.name),
-            PubGrubPackage::Wide { name }
-            | PubGrubPackage::WideFeatures { name, .. }
-            | PubGrubPackage::WideDefaultFeatures { name } => Some(name.name),
-        }
-    }
-
-    /// The source this package refers to, if it refers to a crate.
-    pub fn source(&self) -> Option<SourceId> {
-        match self {
-            PubGrubPackage::Root | PubGrubPackage::Links { .. } => None,
-            PubGrubPackage::Bucket { name, .. }
-            | PubGrubPackage::BucketFeatures { name, .. }
-            | PubGrubPackage::BucketDefaultFeatures { name } => Some(name.source),
-            PubGrubPackage::Wide { name }
-            | PubGrubPackage::WideFeatures { name, .. }
-            | PubGrubPackage::WideDefaultFeatures { name } => Some(name.source),
-        }
-    }
-
-    /// Returns true for the concrete crate buckets that map 1:1 to a selected
-    /// package version in the final [`crate::core::resolver::Resolve`].
-    pub fn is_real_bucket(&self) -> bool {
-        matches!(self, PubGrubPackage::Bucket { .. })
-    }
-
     /// The same bucket package, with default features enabled.
     pub fn with_default_features(&self) -> Self {
         match self {
