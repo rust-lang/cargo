@@ -2300,3 +2300,20 @@ Support for `resolver.lockfile-path` config field has been stabilized in Rust 1.
 ## warnings
 
 The `build.warnings` config field has been stabilized in Rust 1.97.
+
+## pubgrub-resolver
+* Tracking Issue: [#14930](https://github.com/rust-lang/cargo/issues/14930)
+
+The `-Zpubgrub-resolver` flag switches Cargo's dependency resolution from the
+default hand-rolled backtracking resolver to an experimental resolver built on
+the [PubGrub](https://crates.io/crates/pubgrub) algorithm.
+
+```sh
+cargo +nightly -Zpubgrub-resolver generate-lockfile
+```
+
+This is an experimental, side-by-side implementation intended for evaluation and
+correctness comparison against the default resolver. It is not yet feature
+complete and should not be relied upon for production lock files. When the flag
+is not passed, resolution is completely unaffected.
+
