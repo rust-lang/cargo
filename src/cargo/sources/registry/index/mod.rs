@@ -130,7 +130,7 @@ enum MaybeIndexSummary {
 /// from a line from a raw index file, or a JSON blob from on-disk index cache.
 ///
 /// In addition to a full [`Summary`], we have information on whether it is `yanked`.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum IndexSummary {
     /// Available for consideration
     Candidate(Summary),
@@ -145,19 +145,10 @@ pub enum IndexSummary {
 }
 
 impl IndexSummary {
-    /// Extract the summary from any variant
-    pub fn as_summary(&self) -> &Summary {
-        match self {
-            IndexSummary::Candidate(sum)
-            | IndexSummary::Yanked(sum)
-            | IndexSummary::Offline(sum)
-            | IndexSummary::Unsupported(sum, _)
-            | IndexSummary::Invalid(sum) => sum,
-        }
-    }
-
-    /// Extract the summary from any variant
-    pub fn into_summary(self) -> Summary {
+    /// Extract the summary from any variant.
+    ///
+    /// You should not use this unless you know what you are doing.
+    fn as_summary_unchecked(&self) -> &Summary {
         match self {
             IndexSummary::Candidate(sum)
             | IndexSummary::Yanked(sum)
@@ -179,7 +170,7 @@ impl IndexSummary {
 
     /// Extract the package id from any variant
     pub fn package_id(&self) -> PackageId {
-        self.as_summary().package_id()
+        self.as_summary_unchecked().package_id()
     }
 
     /// Returns `true` if the index summary is [`Yanked`].
@@ -273,7 +264,7 @@ impl<'gctx> RegistryIndex<'gctx> {
         Ok(summary
             .next()
             .ok_or_else(|| internal(format!("no hash listed for {}", pkg)))?
-            .as_summary()
+            .as_summary_unchecked()
             .checksum()
             .map(|checksum| checksum.to_string())
             .ok_or_else(|| internal(format!("no hash listed for {}", pkg)))?)
@@ -498,7 +489,7 @@ impl<'gctx> RegistryIndex<'gctx> {
                 if online || load.is_crate_downloaded(s.package_id()) {
                     s.clone()
                 } else {
-                    IndexSummary::Offline(s.as_summary().clone())
+                    IndexSummary::Offline(s.as_summary_unchecked().clone())
                 }
             })
             .for_each(f);
