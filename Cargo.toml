@@ -85,6 +85,7 @@ pathdiff = "0.2.3"
 portable-atomic = "1.13.1"
 percent-encoding = "2.3.2"
 proptest = "1.11.0"
+pubgrub = "0.4.0"
 pulldown-cmark = { version = "0.13.3", default-features = false, features = ["html"] }
 rand = "0.10.1"
 regex = "1.12.3"
@@ -207,6 +208,7 @@ os_info.workspace = true
 pasetors.workspace = true
 pathdiff.workspace = true
 portable-atomic.workspace = true
+pubgrub.workspace = true
 rand.workspace = true
 regex.workspace = true
 rusqlite = { workspace = true, features = ["fallible_uint"] }

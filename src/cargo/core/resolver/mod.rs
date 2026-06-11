@@ -92,6 +92,8 @@ mod resolve;
 mod types;
 mod version_prefs;
 
+mod pubgrub;
+
 /// Builds the list of all packages required to build the first argument.
 ///
 /// * `summaries` - the list of package summaries along with how to resolve
@@ -127,6 +129,17 @@ pub fn resolve(
     resolve_version: ResolveVersion,
     gctx: Option<&GlobalContext>,
 ) -> CargoResult<Resolve> {
+    if gctx.is_some_and(|gctx| gctx.cli_unstable().pubgrub_resolver) {
+        return pubgrub::resolve(
+            summaries,
+            replacements,
+            registry,
+            version_prefs,
+            resolve_version,
+            gctx,
+        );
+    }
+
     let first_version = match gctx {
         Some(config) if config.cli_unstable().direct_minimal_versions => {
             Some(VersionOrdering::MinimumVersionsFirst)
