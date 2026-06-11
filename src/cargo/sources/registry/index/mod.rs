@@ -145,8 +145,10 @@ pub enum IndexSummary {
 }
 
 impl IndexSummary {
-    /// Extract the summary from any variant
-    pub fn as_summary(&self) -> &Summary {
+    /// Extract the summary from any variant.
+    ///
+    /// You should not use this unless you know what you are doing.
+    fn as_summary_unchecked(&self) -> &Summary {
         match self {
             IndexSummary::Candidate(sum)
             | IndexSummary::Yanked(sum)
@@ -168,7 +170,7 @@ impl IndexSummary {
 
     /// Extract the package id from any variant
     pub fn package_id(&self) -> PackageId {
-        self.as_summary().package_id()
+        self.as_summary_unchecked().package_id()
     }
 
     /// Returns `true` if the index summary is [`Yanked`].
@@ -262,7 +264,7 @@ impl<'gctx> RegistryIndex<'gctx> {
         Ok(summary
             .next()
             .ok_or_else(|| internal(format!("no hash listed for {}", pkg)))?
-            .as_summary()
+            .as_summary_unchecked()
             .checksum()
             .map(|checksum| checksum.to_string())
             .ok_or_else(|| internal(format!("no hash listed for {}", pkg)))?)
@@ -487,7 +489,7 @@ impl<'gctx> RegistryIndex<'gctx> {
                 if online || load.is_crate_downloaded(s.package_id()) {
                     s.clone()
                 } else {
-                    IndexSummary::Offline(s.as_summary().clone())
+                    IndexSummary::Offline(s.as_summary_unchecked().clone())
                 }
             })
             .for_each(f);
