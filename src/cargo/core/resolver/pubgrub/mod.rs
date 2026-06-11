@@ -32,6 +32,8 @@ use crate::core::{Dependency, PackageIdSpec, Registry, Summary};
 use crate::util::context::GlobalContext;
 use crate::util::errors::CargoResult;
 
+mod semver_pubgrub;
+
 /// Resolve the dependency graph using the PubGrub algorithm.
 ///
 /// This mirrors the signature of [`super::resolve`] so the two resolvers are
