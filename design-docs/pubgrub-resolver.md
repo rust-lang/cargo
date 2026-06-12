@@ -34,8 +34,15 @@ lockfile identical to the default resolver.
     including regressions for the cycle and weak-dependency cases (3 tests).
   - `pubgrub_prop.rs` — property test vs the SAT reference resolver over 256
     randomly generated registries.
-  - `pubgrub.rs` (pre-existing, not authored here) — 28 curated hard cases; these
-    run against the *default* resolver + SAT, not pubgrub yet.
+  - **Curated suite via `CARGO_TEST_PUBGRUB=1`** — the harness convenience
+    helpers route through `-Zpubgrub-resolver` when this env var is set, so the
+    pre-existing curated suites run on PubGrub:
+    - `tests/resolve.rs`: **37/37 pass**.
+    - `tests/pubgrub.rs`: **28/28 pass** (weak deps, feature unification, cyclic
+      features — all SAT-validated where applicable).
+    - Two `resolve.rs` tests have their *exact error-text* assertions gated off
+      under PubGrub (it uses its own derivation-tree formatter); the resolution
+      *outcome* is identical.
 
 ### Caveats on the verification
 - Parity is verified against the **current crates.io index state**; index drift
@@ -75,6 +82,10 @@ nix develop ~/dev/dotfiles#cargo --command bash -c \
 
 # Property test (slow, ~60-70s)
 nix develop ~/dev/dotfiles#cargo --command bash -c 'cargo test -p resolver-tests --test pubgrub_prop'
+
+# Re-run the ENTIRE curated suite through the PubGrub resolver
+nix develop ~/dev/dotfiles#cargo --command bash -c \
+  'CARGO_TEST_PUBGRUB=1 cargo test -p resolver-tests --test resolve --test pubgrub'
 ```
 
 ### Reproducing the full-graph parity check (the real acceptance test)
@@ -264,9 +275,10 @@ been removed; re-add ad hoc if needed.)
 
 ## 9. Prioritized next steps
 
-1. **Run `tests/resolve.rs` (the curated suite) through pubgrub.** Add a
-   `resolve_and_validated`-style pubgrub variant to the harness and run the
-   decades of edge cases deterministically. Highest signal / lowest cost.
+1. ~~Run `tests/resolve.rs` through pubgrub.~~ **DONE** via `CARGO_TEST_PUBGRUB`
+   (see §2/§3). `resolve.rs` 37/37, `pubgrub.rs` 28/28. Next: extend the switch
+   to also run the proptests and the full `cargo test -p resolver-tests` under
+   PubGrub in CI.
 2. **Scale the property test** (bump cases way up; loop it). It is the Cargo
    team's de-facto correctness gate.
 3. **Verify conservative-update paths**: existing-lock reuse, `cargo update -p`,
