@@ -19,11 +19,11 @@ use crate::core::Manifest;
 use crate::core::MaybePackage;
 use crate::core::Package;
 use crate::core::Workspace;
-use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevel;
 use crate::diagnostics::LintLevelProduct;
 use crate::diagnostics::LintLevelSource;
+use crate::diagnostics::ScopedDiagnosticStats;
 use crate::diagnostics::get_key_value;
 use crate::diagnostics::rel_cwd_manifest_path;
 use crate::util::OptVersionReq;
@@ -90,7 +90,7 @@ pub(crate) fn lint_package(
     pkg: &Package,
     manifest_path: &Path,
     level: LintLevelProduct,
-    pkg_stats: &mut DiagnosticStats,
+    pkg_stats: &mut ScopedDiagnosticStats<'_>,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let LintLevelProduct {
@@ -151,7 +151,7 @@ pub(crate) fn lint_workspace(
     maybe_pkg: &MaybePackage,
     manifest_path: &Path,
     level: LintLevelProduct,
-    pkg_stats: &mut DiagnosticStats,
+    pkg_stats: &mut ScopedDiagnosticStats<'_>,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let LintLevelProduct {

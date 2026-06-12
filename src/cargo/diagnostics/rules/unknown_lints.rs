@@ -15,10 +15,10 @@ use super::find_lint_or_group;
 use crate::CargoResult;
 use crate::GlobalContext;
 use crate::core::MaybePackage;
-use crate::diagnostics::DiagnosticStats;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevelProduct;
 use crate::diagnostics::ManifestFor;
+use crate::diagnostics::ScopedDiagnosticStats;
 use crate::diagnostics::get_key_value_span;
 use crate::diagnostics::rel_cwd_manifest_path;
 
@@ -53,7 +53,7 @@ pub(crate) fn lint_manifest(
     manifest: ManifestFor<'_>,
     manifest_path: &Path,
     level: LintLevelProduct,
-    pkg_stats: &mut DiagnosticStats,
+    pkg_stats: &mut ScopedDiagnosticStats<'_>,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let normalized_toml = match &manifest {
@@ -111,7 +111,7 @@ fn lint_manifest_inner(
     manifest_path: &Path,
     level: &LintLevelProduct,
     cargo_lints: &TomlToolLints,
-    pkg_stats: &mut DiagnosticStats,
+    pkg_stats: &mut ScopedDiagnosticStats<'_>,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let LintLevelProduct {

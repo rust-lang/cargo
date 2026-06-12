@@ -44,7 +44,7 @@
 //! When a diagnostic requires adding a new pass, keep in mind:
 //! - Support for `build.warnings`
 //! - When errors should block further evaluation within the pass
-//! - Providing a summary at the end, like what is provided by [`DiagnosticStats::report_summary`]
+//! - Providing a summary at the end, like what is provided by [`ScopedDiagnosticStats::report_summary`]
 //! - Prefer data driven passes to simplify adding rules
 //!   - Ensure the pass' lints are in [`rules::LINTS`], e.g. `ensure_parse_passed_in_lints`
 //!   - Prefer evaluating the lint level within the pass
@@ -53,7 +53,6 @@
 //!
 //! [future-incompat lint]: https://rustc-dev-guide.rust-lang.org/diagnostics.html#future-incompatible-lints
 
-use anyhow::bail;
 use cargo_util_schemas::manifest::RustVersion;
 use cargo_util_schemas::manifest::TomlToolLints;
 
@@ -72,21 +71,47 @@ pub use lint::{Lint, LintGroup, LintLevel, LintLevelProduct, LintLevelSource};
 pub use report::{AsIndex, get_key_value, get_key_value_span, rel_cwd_manifest_path};
 pub use rules::{LINT_GROUPS, LINTS};
 
-pub struct DiagnosticStats {
-    warning_count: usize,
-    lint_warning_count: usize,
+pub struct GlobalDiagnosticStats {
     error_count: usize,
 }
 
-impl DiagnosticStats {
+impl GlobalDiagnosticStats {
     pub fn new() -> Self {
-        Self {
+        Self { error_count: 0 }
+    }
+
+    pub fn scope(&mut self) -> ScopedDiagnosticStats<'_> {
+        ScopedDiagnosticStats {
             warning_count: 0,
             lint_warning_count: 0,
             error_count: 0,
+            global: self,
         }
     }
 
+    pub fn error_count(&self) -> usize {
+        self.error_count
+    }
+
+    pub fn ok(&self) -> CargoResult<()> {
+        if 0 < self.error_count {
+            Err(crate::Error::new(crate::AlreadyPrintedError::new(
+                anyhow::format_err!("see above"),
+            )))
+        } else {
+            Ok(())
+        }
+    }
+}
+
+pub struct ScopedDiagnosticStats<'g> {
+    warning_count: usize,
+    lint_warning_count: usize,
+    error_count: usize,
+    global: &'g mut GlobalDiagnosticStats,
+}
+
+impl ScopedDiagnosticStats<'_> {
     pub fn lint_warning_count(&self) -> usize {
         self.lint_warning_count
     }
@@ -105,6 +130,7 @@ impl DiagnosticStats {
 
     pub fn record_error(&mut self) {
         self.error_count += 1;
+        self.global.error_count += 1;
     }
 
     pub fn record_lint(&mut self, lint: LintLevel) {
@@ -120,6 +146,9 @@ impl DiagnosticStats {
         }
     }
 
+    /// Print a summary to the user
+    ///
+    /// **Note:** be sure to call `GlobalDiagnosticStats::ok` or equivalent to fail the operation
     pub fn report_summary(
         &self,
         action: &str,
@@ -142,35 +171,13 @@ impl DiagnosticStats {
             let name = name
                 .map(|n| format!("`{n}`"))
                 .unwrap_or_else(|| "workspace".to_owned());
-            bail!(
+            gctx.shell().error(format!(
                 "could not {action} {name} (manifest) due to {} previous error{plural}",
                 self.error_count
-            )
+            ))?;
         }
 
         Ok(())
-    }
-}
-
-impl std::ops::Add for DiagnosticStats {
-    type Output = DiagnosticStats;
-
-    fn add(mut self, rhs: Self) -> Self::Output {
-        self += rhs;
-        self
-    }
-}
-
-impl std::ops::AddAssign for DiagnosticStats {
-    fn add_assign(&mut self, rhs: Self) {
-        let DiagnosticStats {
-            warning_count,
-            lint_warning_count,
-            error_count,
-        } = rhs;
-        self.warning_count += warning_count;
-        self.lint_warning_count += lint_warning_count;
-        self.error_count += error_count;
     }
 }
 

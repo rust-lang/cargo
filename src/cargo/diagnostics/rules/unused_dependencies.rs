@@ -23,10 +23,11 @@ use crate::core::compiler::Unit;
 use crate::core::compiler::unused_deps::DependenciesState;
 use crate::core::compiler::unused_deps::UnusedDepState;
 use crate::core::dependency::DepKind;
-use crate::diagnostics::DiagnosticStats;
+use crate::diagnostics::GlobalDiagnosticStats;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevel;
 use crate::diagnostics::LintLevelProduct;
+use crate::diagnostics::ScopedDiagnosticStats;
 use crate::diagnostics::get_key_value_span;
 use crate::diagnostics::rel_cwd_manifest_path;
 
@@ -99,7 +100,7 @@ pub(crate) fn lint_package(
     pkg: &Package,
     manifest_path: &Path,
     level: LintLevelProduct,
-    pkg_stats: &mut DiagnosticStats,
+    pkg_stats: &mut ScopedDiagnosticStats<'_>,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let LintLevelProduct {
@@ -172,7 +173,7 @@ pub(crate) fn lint_package(
 #[instrument(skip_all)]
 pub fn lint_build_results(
     build_runner: &BuildRunner<'_, '_>,
-    global_stats: &mut DiagnosticStats,
+    global_stats: &mut GlobalDiagnosticStats,
 ) -> CargoResult<()> {
     for (pkg_id, states) in &build_runner.unused_dep_state.states {
         let Some(pkg) = get_package(&build_runner.unused_dep_state, pkg_id) else {
@@ -207,15 +208,9 @@ pub fn lint_build_results(
             continue;
         }
 
-        let mut pkg_stats = DiagnosticStats::new();
+        let mut pkg_stats = global_stats.scope();
         lint_package_build_results(build_runner, pkg, states, level, &mut pkg_stats)?;
-        // HACK: as other rules are added to this pass, this needs to move up into the pass
-        if let Err(error) =
-            pkg_stats.report_summary("finalize", Some(&*pkg.name()), build_runner.bcx.gctx)
-        {
-            build_runner.bcx.gctx.shell().error(error)?;
-        }
-        *global_stats += pkg_stats;
+        pkg_stats.report_summary("finalize", Some(&*pkg.name()), build_runner.bcx.gctx)?;
     }
     Ok(())
 }
@@ -225,7 +220,7 @@ fn lint_package_build_results(
     pkg: &Package,
     states: &IndexMap<DepKind, DependenciesState>,
     level: LintLevelProduct,
-    pkg_stats: &mut DiagnosticStats,
+    pkg_stats: &mut ScopedDiagnosticStats<'_>,
 ) -> CargoResult<()> {
     let mut lint_count = 0;
     let LintLevelProduct {

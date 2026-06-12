@@ -385,6 +385,7 @@ authors = []
   | ^^^^^^^^^^^^^^^^^^^ this is behind `test-dummy-unstable`, which is not enabled
   |
   = [HELP] consider adding `cargo-features = ["test-dummy-unstable"]` to the top of the manifest
+[ERROR] could not parse workspace (manifest) due to 2 previous errors
 [WARNING] missing `[lints]` to inherit `[workspace.lints]`
  --> foo/Cargo.toml
   = [NOTE] `cargo::missing_lints_inheritance` is set to `warn` by default
@@ -400,7 +401,6 @@ authors = []
 8 + [lints]
   |
 [WARNING] `foo` (manifest) generated 1 warning
-[ERROR] could not parse workspace (manifest) due to 2 previous errors
 
 "#]])
         .run();
