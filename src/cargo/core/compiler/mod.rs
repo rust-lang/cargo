@@ -63,13 +63,12 @@ use std::fs::{self, File};
 use std::io::{BufRead, BufWriter, Write};
 use std::ops::Range;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, LazyLock};
+use std::sync::Arc;
 
 use anyhow::{Context as _, Error};
 use cargo_platform::{Cfg, Platform};
 use cargo_util_terminal::report::{AnnotationKind, Group, Level, Renderer, Snippet};
 use itertools::Itertools;
-use regex::Regex;
 use tracing::{debug, instrument, trace};
 
 pub use self::build_config::UserIntent;
@@ -105,7 +104,10 @@ pub use crate::core::compiler::unit::UnitInterner;
 use crate::core::manifest::TargetSourcePath;
 use crate::core::profiles::{PanicStrategy, Profile, StripInner};
 use crate::core::{Feature, PackageId, Target};
-use crate::diagnostics::get_key_value;
+use crate::diagnostics::{
+    PublicDependencySuggestion, exported_private_dependency_name, get_key_value,
+    public_dependency_suggestion_from_value, push_public_dependency_suggestion_to_diagnostic,
+};
 use crate::util::OnceExt;
 use crate::util::errors::{CargoResult, VerboseError};
 use crate::util::interning::InternedString;
@@ -2197,28 +2199,17 @@ fn on_stderr_line_inner(
 
     // Returns `true` if the diagnostic was modified.
     let add_pub_in_priv_diagnostic = |diag: &mut String| -> bool {
-        // We are parsing the compiler diagnostic here, as this information isn't
-        // currently exposed elsewhere.
-        // At the time of writing this comment, rustc emits two different
-        // "exported_private_dependencies" errors:
-        //  - type `FromPriv` from private dependency 'priv_dep' in public interface
-        //  - struct `FromPriv` from private dependency 'priv_dep' is re-exported
-        // This regex matches them both. To see if it needs to be updated, grep the rust
-        // source for "EXPORTED_PRIVATE_DEPENDENCIES".
-        static PRIV_DEP_REGEX: LazyLock<Regex> =
-            LazyLock::new(|| Regex::new("from private dependency '([A-Za-z0-9-_]+)'").unwrap());
-        if let Some(crate_name) = PRIV_DEP_REGEX.captures(diag).and_then(|m| m.get(1))
+        if let Some(crate_name) = exported_private_dependency_name(diag)
             && let Some(ref contents) = manifest.contents
-            && let Some(span) = manifest.find_crate_span(crate_name.as_str())
+            && let Some(span) = manifest.find_crate_span(crate_name)
         {
             let rel_path = pathdiff::diff_paths(&manifest.path, &manifest.cwd)
                 .unwrap_or_else(|| manifest.path.clone())
                 .display()
                 .to_string();
-            let report = [Group::with_title(Level::NOTE.secondary_title(format!(
-                "dependency `{}` declared here",
-                crate_name.as_str()
-            )))
+            let report = [Group::with_title(
+                Level::NOTE.secondary_title(format!("dependency `{}` declared here", crate_name)),
+            )
             .element(
                 Snippet::source(contents)
                     .path(rel_path)
@@ -2233,6 +2224,20 @@ fn on_stderr_line_inner(
             return true;
         }
         false
+    };
+    let add_pub_in_priv_suggestion = |diag: &mut serde_json::Value| -> bool {
+        let Some(crate_name) = diag
+            .get("message")
+            .and_then(|message| message.as_str())
+            .and_then(exported_private_dependency_name)
+            .map(str::to_owned)
+        else {
+            return false;
+        };
+        let Some(suggestion) = manifest.find_crate_public_suggestion(&crate_name) else {
+            return false;
+        };
+        push_public_dependency_suggestion_to_diagnostic(diag, &crate_name, suggestion)
     };
 
     // Depending on what we're emitting from Cargo itself, we figure out what to
@@ -2301,7 +2306,7 @@ fn on_stderr_line_inner(
                 }
                 let mut rendered = msg.rendered;
                 if options.show_diagnostics {
-                    let machine_applicable: bool = msg
+                    let rustc_machine_applicable: bool = msg
                         .children
                         .iter()
                         .map(|child| {
@@ -2312,6 +2317,17 @@ fn on_stderr_line_inner(
                                 .any(|app| app == Applicability::MachineApplicable)
                         })
                         .any(|b| b);
+                    let manifest_machine_applicable = msg
+                        .code
+                        .as_ref()
+                        .is_some_and(|c| c.code == "exported_private_dependencies")
+                        && exported_private_dependency_name(&msg.message)
+                            .and_then(|crate_name| {
+                                manifest.find_crate_public_suggestion(crate_name)
+                            })
+                            .is_some();
+                    let machine_applicable =
+                        rustc_machine_applicable || manifest_machine_applicable;
                     count_diagnostic(&msg.level, options);
                     if msg
                         .code
@@ -2329,30 +2345,32 @@ fn on_stderr_line_inner(
         }
 
         MessageFormat::Json { ansi, .. } => {
-            #[derive(serde::Deserialize, serde::Serialize)]
-            struct CompilerMessage<'a> {
-                rendered: String,
-                #[serde(flatten, borrow)]
-                other: std::collections::BTreeMap<Cow<'a, str>, serde_json::Value>,
-                code: Option<DiagnosticCode<'a>>,
-            }
-
-            #[derive(serde::Deserialize, serde::Serialize)]
-            struct DiagnosticCode<'a> {
-                code: String,
-                #[serde(flatten, borrow)]
-                other: std::collections::BTreeMap<Cow<'a, str>, serde_json::Value>,
-            }
-
-            if let Ok(mut error) =
-                serde_json::from_str::<CompilerMessage<'_>>(compiler_message.get())
+            if let Ok(mut error) = serde_json::from_str::<serde_json::Value>(compiler_message.get())
             {
-                let modified_diag = if error
-                    .code
-                    .as_ref()
-                    .is_some_and(|c| c.code == "exported_private_dependencies")
-                {
-                    add_pub_in_priv_diagnostic(&mut error.rendered)
+                let is_pub_in_priv = error
+                    .get("code")
+                    .and_then(|code| code.get("code"))
+                    .and_then(|code| code.as_str())
+                    == Some("exported_private_dependencies");
+                let modified_diag = if is_pub_in_priv {
+                    let rendered = error
+                        .get("rendered")
+                        .and_then(|rendered| rendered.as_str())
+                        .map(str::to_owned);
+                    if let Some(mut rendered) = rendered {
+                        let modified = add_pub_in_priv_diagnostic(&mut rendered);
+                        if modified {
+                            error["rendered"] = serde_json::Value::String(rendered);
+                        }
+                        modified
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                };
+                let added_suggestion = if is_pub_in_priv {
+                    add_pub_in_priv_suggestion(&mut error)
                 } else {
                     false
                 };
@@ -2360,10 +2378,17 @@ fn on_stderr_line_inner(
                 // Remove color information from the rendered string if color is not
                 // enabled. Cargo always asks for ANSI colors from rustc. This allows
                 // cached replay to enable/disable colors without re-invoking rustc.
-                if !ansi {
-                    error.rendered = anstream::adapter::strip_str(&error.rendered).to_string();
+                if !ansi
+                    && let Some(rendered) = error
+                        .get("rendered")
+                        .and_then(|rendered| rendered.as_str())
+                        .map(str::to_owned)
+                {
+                    error["rendered"] = serde_json::Value::String(
+                        anstream::adapter::strip_str(&rendered).to_string(),
+                    );
                 }
-                if !ansi || modified_diag {
+                if !ansi || modified_diag || added_suggestion {
                     let new_line = serde_json::to_string(&error)?;
                     compiler_message = serde_json::value::RawValue::from_string(new_line)?;
                 }
@@ -2574,6 +2599,61 @@ impl ManifestErrorContext {
                         } else {
                             return Some(k.span());
                         }
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    fn find_crate_public_suggestion(&self, unrenamed: &str) -> Option<PublicDependencySuggestion> {
+        let Some(ref spans) = self.spans else {
+            return None;
+        };
+        let Some(ref contents) = self.contents else {
+            return None;
+        };
+
+        let orig_name = self.rename_table.get(unrenamed)?.as_str();
+
+        if let Some((_k, v)) = get_key_value(&spans, &["dependencies", orig_name]) {
+            return public_dependency_suggestion_from_value(&self.path, contents, v);
+        }
+
+        // The dependency could also be in a target-specific table, like
+        // [target.x86_64-unknown-linux-gnu.dependencies] or
+        // [target.'cfg(something)'.dependencies]. We filter out target tables
+        // that don't match a requested target or a requested cfg.
+        if let Some(target) = spans
+            .as_ref()
+            .get("target")
+            .and_then(|t| t.as_ref().as_table())
+        {
+            for (platform, platform_table) in target.iter() {
+                match platform.as_ref().parse::<Platform>() {
+                    Ok(Platform::Name(name)) => {
+                        if !self.requested_target_names().any(|n| n == name) {
+                            continue;
+                        }
+                    }
+                    Ok(Platform::Cfg(cfg_expr)) => {
+                        if !self.cfgs.iter().any(|cfgs| cfg_expr.matches(cfgs)) {
+                            continue;
+                        }
+                    }
+                    Err(_) => continue,
+                }
+
+                let Some(platform_table) = platform_table.as_ref().as_table() else {
+                    continue;
+                };
+
+                if let Some(deps) = platform_table
+                    .get("dependencies")
+                    .and_then(|d| d.as_ref().as_table())
+                {
+                    if let Some((_k, v)) = deps.get_key_value(orig_name) {
+                        return public_dependency_suggestion_from_value(&self.path, contents, v);
                     }
                 }
             }

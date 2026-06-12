@@ -62,12 +62,18 @@ use crate::core::{Edition, Features, MaybePackage, Package};
 use crate::util::GlobalContext;
 
 mod lint;
+mod pub_priv;
 mod report;
 
 pub mod passes;
 pub mod rules;
 
 pub use lint::{Lint, LintGroup, LintLevel, LintLevelProduct, LintLevelSource};
+pub(crate) use pub_priv::{
+    PublicDependencyManifest, PublicDependencySuggestion,
+    add_public_dependency_suggestion_to_diagnostic, exported_private_dependency_name,
+    public_dependency_suggestion_from_value, push_public_dependency_suggestion_to_diagnostic,
+};
 pub use report::{AsIndex, cwd_rel_path, get_key_value, get_key_value_span, workspace_rel_path};
 pub use rules::{LINT_GROUPS, LINTS};
 
