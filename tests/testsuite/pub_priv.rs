@@ -860,7 +860,7 @@ src/lib.rs:3:13: [WARNING] type `FromDep` from private dependency 'dep' in publi
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 src/lib.rs:3:13: [WARNING] type `FromDep` from private dependency 'dep' in public interface
-[WARNING] `foo` (lib) generated 1 warning
+[WARNING] `foo` (lib) generated 1 warning (run `cargo fix --lib -p foo` to apply 1 suggestion)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
