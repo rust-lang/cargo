@@ -32,9 +32,38 @@ use proptest::prelude::*;
 use proptest::sample::Index;
 use proptest::string::string_regex;
 
+/// Builds the [`GlobalContext`] used by the convenience resolve helpers.
+///
+/// When the `CARGO_TEST_PUBGRUB` environment variable is set, the experimental
+/// `-Zpubgrub-resolver` is enabled, so the entire curated resolver test suite
+/// can be re-run against the PubGrub resolver for differential validation:
+///
+/// ```sh
+/// CARGO_TEST_PUBGRUB=1 cargo test -p resolver-tests
+/// ```
+pub fn test_global_context() -> GlobalContext {
+    let mut gctx = GlobalContext::default().unwrap();
+    if std::env::var_os("CARGO_TEST_PUBGRUB").is_some() {
+        gctx.nightly_features_allowed = true;
+        gctx.configure(
+            0,
+            false,
+            None,
+            false,
+            false,
+            false,
+            &None,
+            &["pubgrub-resolver".to_string()],
+            &[],
+        )
+        .unwrap();
+    }
+    gctx
+}
+
 pub fn resolve(deps: Vec<Dependency>, registry: &[Summary]) -> CargoResult<Vec<PackageId>> {
     Ok(
-        resolve_with_global_context(deps, registry, &GlobalContext::default().unwrap())?
+        resolve_with_global_context(deps, registry, &test_global_context())?
             .into_iter()
             .map(|(pkg, _)| pkg)
             .collect(),
@@ -60,7 +89,7 @@ pub fn resolve_and_validated_raw(
         deps.clone(),
         registry,
         root_pkg_id,
-        &GlobalContext::default().unwrap(),
+        &test_global_context(),
     );
 
     match resolve {
