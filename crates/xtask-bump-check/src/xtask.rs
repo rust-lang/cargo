@@ -133,7 +133,10 @@ fn bump_check(args: &clap::ArgMatches, gctx: &cargo::util::GlobalContext) -> Car
         // See `TO_PUBLISH` in publish.py.
         "home",
     ];
-    let crates_not_checked = ["cargo-util-terminal"];
+    // Skip both the version-bump check and SemVer checks entirely.
+    //
+    // Use this for crates with no prior published release to baseline against.
+    let crates_not_checked: [&str; 0] = [];
 
     status(&format!("base commit `{}`", base_commit.id()))?;
     status(&format!("head commit `{}`", head_commit.id()))?;
