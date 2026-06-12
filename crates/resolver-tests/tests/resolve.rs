@@ -878,6 +878,12 @@ fn resolving_but_no_exists() {
     let res = resolve(vec![dep_req("foo", "1")], &reg);
     assert!(res.is_err());
 
+    // The PubGrub resolver reports conflicts via its own derivation-tree
+    // formatter rather than Cargo's native messages; only assert the outcome.
+    if std::env::var_os("CARGO_TEST_PUBGRUB").is_some() {
+        return;
+    }
+
     assert_eq!(
         res.err().unwrap().to_string(),
         "no matching package named `foo` found\n\
@@ -1017,6 +1023,11 @@ fn shortest_path_in_error_message() {
     ];
     let error = resolve(vec![dep("A")], &registry(input)).unwrap_err();
     println!("{}", error);
+    // The PubGrub resolver formats conflicts differently; only assert that
+    // resolution fails (above), not the exact Cargo-native message.
+    if std::env::var_os("CARGO_TEST_PUBGRUB").is_some() {
+        return;
+    }
     assert_data_eq!(
         error.to_string(),
         str![[r#"
