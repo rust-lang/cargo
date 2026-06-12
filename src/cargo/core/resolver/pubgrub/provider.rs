@@ -523,25 +523,26 @@ impl<'a, T: Registry> DependencyProvider for Provider<'a, T> {
                                 }
                                 let (cray, range) = self.from_dep(dep, name.name, version);
                                 if dep.is_optional() {
-                                    if !*weak {
-                                        // A non-weak `dep/feat` also activates
-                                        // the optional dependency itself.
+                                    // Cargo's v1 lock resolver records the
+                                    // optional dependency as part of the graph
+                                    // for ANY `dep/feat` reference, including
+                                    // weak `dep?/feat` ones. The `weak` flag
+                                    // only controls whether the dependency's
+                                    // own implicit feature is enabled.
+                                    deps_insert(
+                                        &mut deps,
+                                        package.with_feature(FeatureNamespace::Dep(*dep_name)),
+                                        singleton.clone(),
+                                    );
+                                    if !*weak
+                                        && *dep_name != *feat
+                                        && summary.features().contains_key(dep_name)
+                                    {
                                         deps_insert(
                                             &mut deps,
-                                            package.with_feature(FeatureNamespace::Dep(*dep_name)),
+                                            package.with_feature(FeatureNamespace::Feat(*dep_name)),
                                             singleton.clone(),
                                         );
-                                        if *dep_name != *feat
-                                            && summary.features().contains_key(dep_name)
-                                        {
-                                            deps_insert(
-                                                &mut deps,
-                                                package.with_feature(FeatureNamespace::Feat(
-                                                    *dep_name,
-                                                )),
-                                                singleton.clone(),
-                                            );
-                                        }
                                     }
                                 }
                                 deps_insert(

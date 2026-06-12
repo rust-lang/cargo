@@ -34,6 +34,9 @@ use super::semver_pubgrub::SemverCompatibility;
 struct Activation {
     /// Activated named features (including `default`).
     features: BTreeSet<InternedString>,
+    /// Activated optional dependencies (the toml names that appeared as
+    /// `BucketFeatures{.., Dep(name)}` in the solution).
+    deps: HashSet<InternedString>,
     /// Whether this package was resolved as a workspace member (dev-deps).
     member: bool,
 }
@@ -69,8 +72,10 @@ pub(super) fn into_resolve<T: Registry>(
                         act.features.insert(*f);
                     }
                     // Optional-dependency activations don't contribute to the
-                    // user-facing feature list.
-                    FeatureNamespace::Dep(_) => {}
+                    // user-facing feature list, but do gate optional edges.
+                    FeatureNamespace::Dep(d) => {
+                        act.deps.insert(*d);
+                    }
                 }
             }
             PubGrubPackage::BucketDefaultFeatures { name } => {
@@ -103,20 +108,30 @@ pub(super) fn into_resolve<T: Registry>(
         let act = activations.get(pid);
         let member = act.is_some_and(|a| a.member);
         for dep in summary.dependencies() {
-            // Dev-dependencies are only recorded for workspace members. Every
-            // other dependency (including optional ones) is recorded as an edge
-            // whenever it resolves to a package that is present in the lock —
-            // matching Cargo's lockfile semantics, where the graph is
-            // feature-agnostic so any feature set can be built without
-            // re-resolving.
-            if dep.kind() == DepKind::Development && !member {
+            // Determine whether this dependency is part of the resolved graph:
+            //
+            // * dev-dependencies are only recorded for workspace members;
+            // * optional dependencies are recorded only when activated (some
+            //   feature turned them on), so that unactivated optional deps do
+            //   not introduce spurious edges (and cycles);
+            // * all other dependencies are always recorded.
+            let active = match dep.kind() {
+                DepKind::Development => member,
+                _ => {
+                    !dep.is_optional()
+                        || act.is_some_and(|a| a.deps.contains(&dep.name_in_toml()))
+                }
+            };
+            if !active {
                 continue;
             }
             let Some(child) = resolve_child(provider, dep, pid, solution, &selected) else {
-                // No selected package satisfies this dependency. This is
-                // expected for optional dependencies that were never activated
-                // anywhere (so their target is absent from the lock).
-                continue;
+                // An active dependency with no resolved child indicates a bug
+                // in the encoding rather than a benign skip.
+                anyhow::bail!(
+                    "pubgrub could not map dependency `{}` of `{pid}` to a resolved package",
+                    dep.package_name()
+                );
             };
             graph.link(*pid, child).insert(dep.clone());
         }
