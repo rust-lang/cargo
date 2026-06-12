@@ -1972,17 +1972,28 @@ fn cargo_add_skips_too_new() {
     p.cargo("add bar -Zmin-publish-age")
         .masquerade_as_nightly_cargo(&["min-publish-age"])
         .env("__CARGO_TEST_INVOCATION_TIME", NOW)
-        .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[ADDING] bar v1.1.0 to dependencies
-[ERROR] failed to select a version for the requirement `bar = "^1.1.0"`
-  version 1.1.0 is too new (published 2 days ago, minimum age 7 days)
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.0.0 ([ROOT]/foo)`
+[ADDING] bar v1.0.0 to dependencies
+[LOCKING] 1 package to latest compatible version
+[ADDING] bar v1.0.0 (available: v1.1.0, published 2 days ago)
 
 "#]])
         .run();
+
+    assert_e2e().eq(
+        p.read_file("Cargo.toml"),
+        str![[r#"
+
+                [package]
+                name = "foo"
+                edition = "2021"
+
+[dependencies]
+bar = "1.0.0"
+            
+"#]],
+    );
 }
 
 #[cargo_test]
@@ -2016,11 +2027,7 @@ fn cargo_add_all_versions_too_new() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[ADDING] bar v1.1.0 to dependencies
-[ERROR] failed to select a version for the requirement `bar = "^1.1.0"`
-  version 1.1.0 is too new (published 2 days ago, minimum age 7 days)
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.0.0 ([ROOT]/foo)`
+[ERROR] all versions of crate `bar` are too new per `min-publish-age`
 
 "#]])
         .run();
