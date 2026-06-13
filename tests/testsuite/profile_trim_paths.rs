@@ -770,6 +770,10 @@ fn custom_build_env_var_trim_paths() {
                         std::env::var("CARGO_TRIM_PATHS_SCOPE").unwrap().as_str(),
                         "{expected}",
                     );
+                    assert_eq!(
+                        std::env::var("CARGO_TRIM_PATHS_REMAP"),
+                        Err(std::env::VarError::NotPresent),
+                    );
                 }}
                 "#
             ),
