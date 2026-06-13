@@ -1511,11 +1511,11 @@ fn trim_paths_args_rustdoc(
     // feature gate was checked during manifest/config parsing.
     cmd.arg("-Zunstable-options");
 
-    // Order of `--remap-path-prefix` flags is important for `-Zbuild-std`.
-    // We want to show `/rustc/<hash>/library/std` instead of `std-0.0.0`.
-    cmd.arg(package_remap(build_runner, unit));
-    cmd.arg(build_dir_remap(build_runner));
-    cmd.arg(sysroot_remap(build_runner, unit));
+    for pair in trim_paths_remap(build_runner, unit) {
+        let mut arg = OsString::from("--remap-path-prefix=");
+        arg.push(pair);
+        cmd.arg(arg);
+    }
 
     Ok(())
 }
@@ -1538,13 +1538,27 @@ fn trim_paths_args(
     // feature gate was checked during manifest/config parsing.
     cmd.arg(format!("--remap-path-scope={trim_paths}"));
 
-    // Order of `--remap-path-prefix` flags is important for `-Zbuild-std`.
-    // We want to show `/rustc/<hash>/library/std` instead of `std-0.0.0`.
-    cmd.arg(package_remap(build_runner, unit));
-    cmd.arg(build_dir_remap(build_runner));
-    cmd.arg(sysroot_remap(build_runner, unit));
+    for pair in trim_paths_remap(build_runner, unit) {
+        let mut arg = OsString::from("--remap-path-prefix=");
+        arg.push(pair);
+        cmd.arg(arg);
+    }
 
     Ok(())
+}
+
+/// Computes the `<from>=<to>` path remap pairs for [RFC 3127] trim-paths.
+///
+/// Order of `--remap-path-prefix` flags is important for `-Zbuild-std`.
+/// We want to show `/rustc/<hash>/library/std` instead of `std-0.0.0`.
+///
+/// [RFC 3127]: https://rust-lang.github.io/rfcs/3127-trim-paths.html
+pub(crate) fn trim_paths_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> [OsString; 3] {
+    [
+        package_remap(build_runner, unit),
+        build_dir_remap(build_runner),
+        sysroot_remap(build_runner, unit),
+    ]
 }
 
 /// Path prefix remap rules for sysroot.
@@ -1552,7 +1566,7 @@ fn trim_paths_args(
 /// This remap logic aligns with rustc:
 /// <https://github.com/rust-lang/rust/blob/c2ef3516/src/bootstrap/src/lib.rs#L1113-L1116>
 fn sysroot_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> OsString {
-    let mut remap = OsString::from("--remap-path-prefix=");
+    let mut remap = OsString::new();
     remap.push({
         // See also `detect_sysroot_src_path()`.
         let mut sysroot = build_runner.bcx.target_data.info(unit.kind).sysroot.clone();
@@ -1582,7 +1596,7 @@ fn sysroot_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> OsString {
 fn package_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> OsString {
     let pkg_root = unit.pkg.root();
     let ws_root = build_runner.bcx.ws.root();
-    let mut remap = OsString::from("--remap-path-prefix=");
+    let mut remap = OsString::new();
     let source_id = unit.pkg.package_id().source_id();
     if source_id.is_git() {
         remap.push(
@@ -1629,7 +1643,7 @@ fn package_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> OsString {
 ///   files (dwp and dwo).
 fn build_dir_remap(build_runner: &BuildRunner<'_, '_>) -> OsString {
     let build_dir = build_runner.bcx.ws.build_dir();
-    let mut remap = OsString::from("--remap-path-prefix=");
+    let mut remap = OsString::new();
     remap.push(build_dir.as_path_unlocked());
     remap.push("=/cargo/build-dir");
     remap
