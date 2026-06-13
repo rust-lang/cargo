@@ -399,7 +399,7 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
     }
 
     if let Some(trim_paths) = unit.profile.trim_paths.as_ref() {
-        cmd.env("CARGO_TRIM_PATHS", trim_paths.to_string());
+        cmd.env("CARGO_TRIM_PATHS_SCOPE", trim_paths.to_string());
     }
 
     // Be sure to pass along all enabled features for this package, this is the

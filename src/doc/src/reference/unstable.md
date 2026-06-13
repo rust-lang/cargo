@@ -1566,7 +1566,7 @@ This will not affect any hard-coded paths in the source code, such as in strings
 
 *as a new entry of ["Environment variables Cargo sets for build scripts"](./environment-variables.md#environment-variables-cargo-sets-for-crates)*
 
-* `CARGO_TRIM_PATHS` --- The value of `trim-paths` profile option.
+* `CARGO_TRIM_PATHS_SCOPE` --- The value of `trim-paths` profile option.
     `false`, `"none"`, and empty arrays would be converted to `none`.
     `true` and `"all"` become `all`.
     Values in a non-empty array would be joined into a comma-separated list.

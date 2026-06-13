@@ -767,7 +767,7 @@ fn custom_build_env_var_trim_paths() {
                 r#"
                 fn main() {{
                     assert_eq!(
-                        std::env::var("CARGO_TRIM_PATHS").unwrap().as_str(),
+                        std::env::var("CARGO_TRIM_PATHS_SCOPE").unwrap().as_str(),
                         "{expected}",
                     );
                 }}
