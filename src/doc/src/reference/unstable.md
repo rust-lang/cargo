@@ -1574,6 +1574,12 @@ This will not affect any hard-coded paths in the source code, such as in strings
     the user may request them to be sanitized in different types of artifacts.
     Common paths requiring sanitization include `OUT_DIR`, `CARGO_MANIFEST_DIR` and `CARGO_MANIFEST_PATH`,
     plus any other introduced by the build script, such as include directories.
+* `CARGO_TRIM_PATHS_REMAP` --- The `<from>=<to>` path remap pairs Cargo passes to the compiler,
+    joined by the platform path separator.
+    Only set when `trim-paths` profile is active.
+    Build scripts can forward these mappings to C/C++ compilers and other tools,
+    for example via `cc`'s `-ffile-prefix-map`,
+    to sanitize paths consistently with the rest of the build.
 
 ## gc
 

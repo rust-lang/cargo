@@ -400,6 +400,13 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
 
     if let Some(trim_paths) = unit.profile.trim_paths.as_ref() {
         cmd.env("CARGO_TRIM_PATHS_SCOPE", trim_paths.to_string());
+        if !trim_paths.is_none() {
+            let pairs = super::trim_paths_remap(build_runner, unit);
+            cmd.env(
+                "CARGO_TRIM_PATHS_REMAP",
+                paths::join_paths(&pairs, "CARGO_TRIM_PATHS_REMAP")?,
+            );
+        }
     }
 
     // Be sure to pass along all enabled features for this package, this is the
