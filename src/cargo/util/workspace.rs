@@ -123,6 +123,8 @@ pub fn print_available_tests(ws: &Workspace<'_>, options: &CompileOptions) -> Ca
 ///
 /// The first returned value here is the argument to pass to rustc, and the
 /// second is the cwd that rustc should operate in.
+///
+/// Mirrors [`crate::diagnostics::workspace_rel_path`].
 pub fn path_args(ws: &Workspace<'_>, unit: &Unit) -> (PathBuf, PathBuf) {
     let src = match unit.target.src_path() {
         TargetSourcePath::Path(path) => path.to_path_buf(),

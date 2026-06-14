@@ -16,11 +16,12 @@ use super::CORRECTNESS;
 use crate::CargoResult;
 use crate::GlobalContext;
 use crate::core::MaybePackage;
+use crate::core::Workspace;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevelProduct;
 use crate::diagnostics::ManifestFor;
 use crate::diagnostics::ScopedDiagnosticStats;
-use crate::diagnostics::rel_cwd_manifest_path;
+use crate::diagnostics::workspace_rel_path;
 
 pub static LINT: &Lint = &Lint {
     name: "text_direction_codepoint_in_comment",
@@ -48,6 +49,7 @@ by default we deny their use.
 
 #[instrument(skip_all)]
 pub(crate) fn lint_manifest(
+    ws: &Workspace<'_>,
     manifest: ManifestFor<'_>,
     manifest_path: &Path,
     level: LintLevelProduct,
@@ -88,7 +90,7 @@ pub(crate) fn lint_manifest(
     }
 
     let events = bidi_events(contents, &bidi_spans);
-    let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
+    let manifest_path = workspace_rel_path(ws, manifest_path);
     let mut emitted_source = None;
     for event in events {
         let token_span = event.token.span();

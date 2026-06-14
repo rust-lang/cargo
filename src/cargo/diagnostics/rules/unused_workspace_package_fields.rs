@@ -18,7 +18,7 @@ use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevelProduct;
 use crate::diagnostics::ScopedDiagnosticStats;
 use crate::diagnostics::get_key_value_span;
-use crate::diagnostics::rel_cwd_manifest_path;
+use crate::diagnostics::workspace_rel_path;
 
 pub static LINT: &Lint = &Lint {
     name: "unused_workspace_package_fields",
@@ -98,7 +98,7 @@ pub(crate) fn lint_workspace(
         let document = maybe_pkg.document();
         let contents = maybe_pkg.contents();
         let level = lint_level.to_diagnostic_level();
-        let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
+        let manifest_path = workspace_rel_path(ws, manifest_path);
         let emitted_source = LINT.emitted_source(lint_level, source);
 
         let mut primary = Group::with_title(level.primary_title(LINT.desc));

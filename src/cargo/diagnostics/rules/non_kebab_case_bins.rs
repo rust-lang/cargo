@@ -20,7 +20,7 @@ use crate::diagnostics::LintLevelProduct;
 use crate::diagnostics::LintLevelSource;
 use crate::diagnostics::ScopedDiagnosticStats;
 use crate::diagnostics::get_key_value_span;
-use crate::diagnostics::rel_cwd_manifest_path;
+use crate::diagnostics::workspace_rel_path;
 
 pub static LINT: &Lint = &Lint {
     name: "non_kebab_case_bins",
@@ -77,7 +77,7 @@ pub(crate) fn lint_package(
         source,
     } = level;
 
-    let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
+    let manifest_path = workspace_rel_path(ws, manifest_path);
 
     lint_package_inner(ws, pkg, &manifest_path, lint_level, source, pkg_stats, gctx)
 }
