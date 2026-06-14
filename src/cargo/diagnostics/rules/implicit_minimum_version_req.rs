@@ -25,7 +25,7 @@ use crate::diagnostics::LintLevelProduct;
 use crate::diagnostics::LintLevelSource;
 use crate::diagnostics::ScopedDiagnosticStats;
 use crate::diagnostics::get_key_value;
-use crate::diagnostics::rel_cwd_manifest_path;
+use crate::diagnostics::workspace_rel_path;
 use crate::util::OptVersionReq;
 
 pub static LINT: &Lint = &Lint {
@@ -86,7 +86,7 @@ serde = "1.0.219"
 
 #[instrument(skip_all)]
 pub(crate) fn lint_package(
-    _ws: &Workspace<'_>,
+    ws: &Workspace<'_>,
     pkg: &Package,
     manifest_path: &Path,
     level: LintLevelProduct,
@@ -98,7 +98,7 @@ pub(crate) fn lint_package(
         source,
     } = level;
 
-    let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
+    let manifest_path = workspace_rel_path(ws, manifest_path);
 
     let manifest = pkg.manifest();
 
@@ -147,7 +147,7 @@ pub(crate) fn lint_package(
 
 #[instrument(skip_all)]
 pub(crate) fn lint_workspace(
-    _ws: &Workspace<'_>,
+    ws: &Workspace<'_>,
     maybe_pkg: &MaybePackage,
     manifest_path: &Path,
     level: LintLevelProduct,
@@ -159,7 +159,7 @@ pub(crate) fn lint_workspace(
         source,
     } = level;
 
-    let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
+    let manifest_path = workspace_rel_path(ws, manifest_path);
 
     let document = maybe_pkg.document();
     let contents = maybe_pkg.contents();

@@ -2,13 +2,36 @@ use std::borrow::Cow;
 use std::ops::Range;
 use std::path::Path;
 
+use cargo_util::paths::normalize_path;
 use pathdiff::diff_paths;
 
 use crate::GlobalContext;
+use crate::core::Workspace;
 
-/// Gets the relative path to a manifest from the current working directory, or
-/// the absolute path of the manifest if a relative path cannot be constructed
-pub fn rel_cwd_manifest_path(path: &Path, gctx: &GlobalContext) -> String {
+/// Display path, generally relative to the workspace
+///
+/// Mirrors [`crate::util::path_args`]
+pub fn workspace_rel_path(ws: &Workspace<'_>, path: &Path) -> String {
+    // Determine which path we make this relative to: usually it's the workspace root,
+    // but this can be overwritten with a `-Z` flag.
+    let root = match &ws.gctx().cli_unstable().root_dir {
+        None => ws.root().to_owned(),
+        Some(root_dir) => normalize_path(&ws.gctx().cwd().join(root_dir)),
+    };
+    if let Ok(path) = path.strip_prefix(&root) {
+        path
+    } else {
+        path
+    }
+    .display()
+    .to_string()
+}
+
+/// Display path, generally relative to cwd
+///
+/// Prefer [`workspace_rel_path`].
+/// This is for when there is no workspace available.
+pub fn cwd_rel_path(path: &Path, gctx: &GlobalContext) -> String {
     diff_paths(path, gctx.cwd())
         .unwrap_or_else(|| path.to_path_buf())
         .display()

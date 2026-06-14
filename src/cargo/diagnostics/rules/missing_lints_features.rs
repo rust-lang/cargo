@@ -12,13 +12,15 @@ use crate::CargoResult;
 use crate::GlobalContext;
 use crate::core::Feature;
 use crate::core::MaybePackage;
+use crate::core::Workspace;
 use crate::diagnostics::ManifestFor;
 use crate::diagnostics::ScopedDiagnosticStats;
 use crate::diagnostics::get_key_value_span;
-use crate::diagnostics::rel_cwd_manifest_path;
+use crate::diagnostics::workspace_rel_path;
 
 #[instrument(skip_all)]
 pub(crate) fn diagnose_manifest(
+    ws: &Workspace<'_>,
     manifest: ManifestFor<'_>,
     manifest_path: &Path,
     pkg_stats: &mut ScopedDiagnosticStats<'_>,
@@ -51,23 +53,24 @@ pub(crate) fn diagnose_manifest(
         .and_then(|lints| lints.get("cargo"));
 
     if let Some(cargo_lints) = ws_lints {
-        diagnose_manifest_inner(&manifest, manifest_path, cargo_lints, pkg_stats, gctx)?;
+        diagnose_manifest_inner(ws, &manifest, manifest_path, cargo_lints, pkg_stats, gctx)?;
     }
     if let Some(cargo_lints) = pkg_lints {
-        diagnose_manifest_inner(&manifest, manifest_path, cargo_lints, pkg_stats, gctx)?;
+        diagnose_manifest_inner(ws, &manifest, manifest_path, cargo_lints, pkg_stats, gctx)?;
     }
 
     Ok(())
 }
 
 fn diagnose_manifest_inner(
+    ws: &Workspace<'_>,
     manifest: &ManifestFor<'_>,
     manifest_path: &Path,
     cargo_lints: &manifest::TomlToolLints,
     pkg_stats: &mut ScopedDiagnosticStats<'_>,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
+    let manifest_path = workspace_rel_path(ws, manifest_path);
     for lint_name in cargo_lints.keys().map(|name| name) {
         let Some((name, default_level, feature_gate)) = find_lint_or_group(lint_name) else {
             continue;

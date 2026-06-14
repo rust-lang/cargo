@@ -15,7 +15,7 @@ use crate::core::Workspace;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevelProduct;
 use crate::diagnostics::ScopedDiagnosticStats;
-use crate::diagnostics::rel_cwd_manifest_path;
+use crate::diagnostics::workspace_rel_path;
 
 pub static LINT: &Lint = &Lint {
     name: "missing_lints_inheritance",
@@ -87,7 +87,7 @@ pub(crate) fn lint_package(
     let contents = manifest.contents();
     let level = lint_level.to_diagnostic_level();
     let emitted_source = LINT.emitted_source(lint_level, source);
-    let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
+    let manifest_path = workspace_rel_path(ws, manifest_path);
 
     let mut primary = Group::with_title(level.primary_title(LINT.desc));
     primary = primary.element(Origin::path(&manifest_path));

@@ -5,12 +5,14 @@ use tracing::instrument;
 use crate::CargoResult;
 use crate::GlobalContext;
 use crate::core::MaybePackage;
+use crate::core::Workspace;
 use crate::diagnostics::ManifestFor;
 use crate::diagnostics::ScopedDiagnosticStats;
-use crate::diagnostics::rel_cwd_manifest_path;
+use crate::diagnostics::workspace_rel_path;
 
 #[instrument(skip_all)]
 pub(crate) fn diagnose_manifest(
+    ws: &Workspace<'_>,
     manifest: ManifestFor<'_>,
     manifest_path: &Path,
     pkg_stats: &mut ScopedDiagnosticStats<'_>,
@@ -31,7 +33,7 @@ pub(crate) fn diagnose_manifest(
         }
     };
 
-    let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
+    let manifest_path = workspace_rel_path(ws, manifest_path);
     for warning in warnings {
         let msg = format!("{manifest_path}: {}", warning.message);
         if warning.is_critical {

@@ -29,7 +29,7 @@ use crate::diagnostics::LintLevel;
 use crate::diagnostics::LintLevelProduct;
 use crate::diagnostics::ScopedDiagnosticStats;
 use crate::diagnostics::get_key_value_span;
-use crate::diagnostics::rel_cwd_manifest_path;
+use crate::diagnostics::workspace_rel_path;
 
 pub static LINT: &Lint = &Lint {
     name: "unused_dependencies",
@@ -96,7 +96,7 @@ name = "foo"
 /// rustc to report on these.
 #[instrument(skip_all)]
 pub(crate) fn lint_package(
-    _ws: &Workspace<'_>,
+    ws: &Workspace<'_>,
     pkg: &Package,
     manifest_path: &Path,
     level: LintLevelProduct,
@@ -108,7 +108,7 @@ pub(crate) fn lint_package(
         source,
     } = level;
 
-    let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
+    let manifest_path = workspace_rel_path(ws, manifest_path);
 
     let manifest = pkg.manifest();
     let Some(package) = &manifest.normalized_toml().package else {
@@ -227,7 +227,8 @@ fn lint_package_build_results(
         level: lint_level,
         source,
     } = level;
-    let manifest_path = rel_cwd_manifest_path(pkg.manifest_path(), build_runner.bcx.gctx);
+    let ws = build_runner.bcx.ws;
+    let manifest_path = workspace_rel_path(ws, pkg.manifest_path());
     let pkg_id = pkg.package_id();
     for (dep_kind, state) in states.iter() {
         for ext in state.unused_externs.iter().flatten() {

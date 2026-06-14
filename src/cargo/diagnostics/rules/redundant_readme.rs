@@ -21,7 +21,7 @@ use crate::diagnostics::LintLevelProduct;
 use crate::diagnostics::LintLevelSource;
 use crate::diagnostics::ScopedDiagnosticStats;
 use crate::diagnostics::get_key_value_span;
-use crate::diagnostics::rel_cwd_manifest_path;
+use crate::diagnostics::workspace_rel_path;
 use crate::util::toml::DEFAULT_README_FILES;
 
 pub static LINT: &Lint = &Lint {
@@ -66,7 +66,7 @@ name = "foo"
 
 #[instrument(skip_all)]
 pub(crate) fn lint_package(
-    _ws: &Workspace<'_>,
+    ws: &Workspace<'_>,
     pkg: &Package,
     manifest_path: &Path,
     level: LintLevelProduct,
@@ -78,7 +78,7 @@ pub(crate) fn lint_package(
         source,
     } = level;
 
-    let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
+    let manifest_path = workspace_rel_path(ws, manifest_path);
 
     lint_package_inner(pkg, &manifest_path, lint_level, source, pkg_stats, gctx)
 }

@@ -18,7 +18,7 @@ use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevelProduct;
 use crate::diagnostics::ScopedDiagnosticStats;
 use crate::diagnostics::get_key_value_span;
-use crate::diagnostics::rel_cwd_manifest_path;
+use crate::diagnostics::workspace_rel_path;
 
 pub static LINT: &Lint = &Lint {
     name: "blanket_hint_mostly_unused",
@@ -57,7 +57,7 @@ hint-mostly-unused = true
 
 #[instrument(skip_all)]
 pub(crate) fn lint_workspace(
-    _ws: &Workspace<'_>,
+    ws: &Workspace<'_>,
     maybe_pkg: &MaybePackage,
     path: &Path,
     level: LintLevelProduct,
@@ -70,7 +70,7 @@ pub(crate) fn lint_workspace(
     } = level;
 
     let level = lint_level.to_diagnostic_level();
-    let manifest_path = rel_cwd_manifest_path(path, gctx);
+    let manifest_path = workspace_rel_path(ws, path);
     let mut paths = Vec::new();
 
     if let Some(profiles) = maybe_pkg.profiles() {

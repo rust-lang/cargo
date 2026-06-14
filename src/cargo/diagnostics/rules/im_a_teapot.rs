@@ -17,7 +17,7 @@ use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevelProduct;
 use crate::diagnostics::ScopedDiagnosticStats;
 use crate::diagnostics::get_key_value_span;
-use crate::diagnostics::rel_cwd_manifest_path;
+use crate::diagnostics::workspace_rel_path;
 
 /// This lint is only to be used for testing purposes
 pub static LINT: &Lint = &Lint {
@@ -31,7 +31,7 @@ pub static LINT: &Lint = &Lint {
 
 #[instrument(skip_all)]
 pub(crate) fn lint_package(
-    _ws: &Workspace<'_>,
+    ws: &Workspace<'_>,
     pkg: &Package,
     path: &Path,
     level: LintLevelProduct,
@@ -50,7 +50,7 @@ pub(crate) fn lint_package(
         .is_some_and(|p| p.im_a_teapot.is_some())
     {
         let level = lint_level.to_diagnostic_level();
-        let manifest_path = rel_cwd_manifest_path(path, gctx);
+        let manifest_path = workspace_rel_path(ws, path);
         let emitted_source = LINT.emitted_source(lint_level, source);
 
         let mut desc = Group::with_title(level.primary_title(LINT.desc));
