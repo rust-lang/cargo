@@ -259,9 +259,10 @@ pub(super) fn activation_error(
                 IndexSummary::Candidate(summary) => {
                     if let Some(violation) = version_prefs.too_new(&summary) {
                         let version_age = violation.age_label();
+                        let config = violation.config();
                         let _ = writeln!(
                             &mut msg,
-                            "  version {} is too new (published {version_age})",
+                            "  version {} is too new (published {version_age}, minimum age {config})",
                             summary.version(),
                         );
                     } else {

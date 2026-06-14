@@ -406,9 +406,9 @@ fn no_candidates_error() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for the requirement `bar = "^1"`
-  version 1.1.0 is too new (published 2 days ago)
-  version 1.2.0 is too new (published 24 hours ago)
-  version 1.3.0 is too new (published moments ago)
+  version 1.1.0 is too new (published 2 days ago, minimum age 7 days)
+  version 1.2.0 is too new (published 24 hours ago, minimum age 7 days)
+  version 1.3.0 is too new (published moments ago, minimum age 7 days)
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.0 ([ROOT]/foo)`
 
@@ -971,7 +971,7 @@ dependencies = [
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for the requirement `bar = "^1"`
-  version 1.1.0 is too new (published 2 days ago)
+  version 1.1.0 is too new (published 2 days ago, minimum age 7 days)
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.0 ([ROOT]/foo)`
 
@@ -1975,7 +1975,7 @@ fn cargo_add_skips_too_new() {
 [UPDATING] `dummy-registry` index
 [ADDING] bar v1.1.0 to dependencies
 [ERROR] failed to select a version for the requirement `bar = "^1.1.0"`
-  version 1.1.0 is too new (published 2 days ago)
+  version 1.1.0 is too new (published 2 days ago, minimum age 7 days)
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.0 ([ROOT]/foo)`
 
@@ -2016,7 +2016,7 @@ fn cargo_add_all_versions_too_new() {
 [UPDATING] `dummy-registry` index
 [ADDING] bar v1.1.0 to dependencies
 [ERROR] failed to select a version for the requirement `bar = "^1.1.0"`
-  version 1.1.0 is too new (published 2 days ago)
+  version 1.1.0 is too new (published 2 days ago, minimum age 7 days)
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.0 ([ROOT]/foo)`
 

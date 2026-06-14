@@ -198,7 +198,7 @@ impl PublishAgePolicy {
             }
             let duration = parse_time_span(&config)
                 .map_err(|e| anyhow::format_err!("invalid value for `{key}`: {e}"))?;
-            Ok(MinPublishAge::Age(duration))
+            Ok(MinPublishAge::Age(duration, config))
         };
 
         let registry = gctx.get::<Option<RegistryConfigExtended>>("registry")?;
@@ -245,19 +245,23 @@ impl PublishAgePolicy {
     /// `None` means the version is acceptable.
     pub fn too_new(&self, summary: &Summary) -> Option<PublishAgeViolation> {
         let pubtime = summary.pubtime()?;
-        let MinPublishAge::Age(min_age) = self.min_age(summary.source_id()) else {
+        let MinPublishAge::Age(min_age, config) = self.min_age(summary.source_id()) else {
             return None;
         };
 
-        let max_pubtime = jiff::SignedDuration::try_from(min_age)
+        let max_pubtime = jiff::SignedDuration::try_from(*min_age)
             .ok()
             .and_then(|min_age| self.invocation_time.checked_sub(min_age).ok());
 
         let age = self.invocation_time.duration_since(pubtime);
+        let publish_age = || PublishAgeViolation {
+            age,
+            config: config.clone(),
+        };
 
         match max_pubtime {
-            Some(max_pubtime) => (pubtime > max_pubtime).then_some(PublishAgeViolation { age }),
-            None => Some(PublishAgeViolation { age }),
+            Some(max_pubtime) => (pubtime > max_pubtime).then(publish_age),
+            None => Some(publish_age()),
         }
     }
 
@@ -268,38 +272,38 @@ impl PublishAgePolicy {
     /// 1. `registries.<name>.min-publish-age`
     /// 2. `registry.min-publish-age`
     /// 3. `registry.global-min-publish-age`
-    fn min_age(&self, source_id: SourceId) -> MinPublishAge {
+    fn min_age(&self, source_id: SourceId) -> &MinPublishAge {
         // `registries.<name>` also covers crates.io, whose name is `crates-io`.
         if let Some(min_age) = source_id
             .alt_registry_key()
-            .and_then(|name| self.per_registry.get(name).copied())
+            .and_then(|name| self.per_registry.get(name))
             .filter(|min_age| min_age.is_set())
         {
             return min_age;
         }
 
         if source_id.is_crates_io() && self.crates_io.is_set() {
-            return self.crates_io;
+            return &self.crates_io;
         }
 
-        self.global
+        &self.global
     }
 }
 
 /// A configured `min-publish-age` value for one scope.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 enum MinPublishAge {
     /// Key unset.
     Unset,
     /// No min-publish-age limit at all.
     None,
-    /// An age threshold.
-    Age(Duration),
+    /// An age threshold, with the raw config string for display.
+    Age(Duration, String),
 }
 
 impl MinPublishAge {
     /// Whether a value was configured for this scope.
-    fn is_set(self) -> bool {
+    fn is_set(&self) -> bool {
         !matches!(self, MinPublishAge::Unset)
     }
 }
@@ -309,6 +313,8 @@ impl MinPublishAge {
 pub struct PublishAgeViolation {
     /// How long ago the version was published.
     age: jiff::SignedDuration,
+    /// The configured `min-publish-age` it violates
+    config: String,
 }
 
 impl PublishAgeViolation {
@@ -316,6 +322,11 @@ impl PublishAgeViolation {
     /// as a single friendly-spelled unit for display.
     pub fn age_label(&self) -> String {
         format_age_as_single_unit(self.age)
+    }
+
+    /// The configured `min-publish-age` it violates
+    pub fn config(&self) -> &str {
+        &self.config
     }
 }
 
@@ -561,8 +572,8 @@ mod test {
 
     const NOW: &str = "2006-08-08T00:00:00Z";
 
-    fn days(n: i64) -> Duration {
-        Duration::from_secs(n as u64 * 24 * 60 * 60)
+    fn age(raw: &str) -> MinPublishAge {
+        MinPublishAge::Age(parse_time_span(raw).unwrap(), raw.to_string())
     }
 
     fn hours(n: i64) -> jiff::SignedDuration {
@@ -580,7 +591,7 @@ mod test {
             crates_io,
             per_registry: per_registry
                 .iter()
-                .map(|(name, age)| (name.to_string(), *age))
+                .map(|(name, age)| (name.to_string(), age.clone()))
                 .collect(),
         }
     }
@@ -608,61 +619,81 @@ mod test {
 
     #[test]
     fn publish_age_reports_exact_age() {
-        let p = policy(MinPublishAge::Age(days(7)), MinPublishAge::Unset, &[]);
-        let age = p.too_new(&published(crates_io_source(), hours(50)));
-        assert_eq!(age, Some(PublishAgeViolation { age: hours(50) }));
+        let p = policy(age("7 days"), MinPublishAge::Unset, &[]);
+        let violation = p.too_new(&published(crates_io_source(), hours(50)));
+        assert_eq!(
+            violation,
+            Some(PublishAgeViolation {
+                age: hours(50),
+                config: "7 days".to_string(),
+            })
+        );
     }
 
     #[test]
     fn publish_age_older_than_threshold_is_acceptable() {
-        let p = policy(MinPublishAge::Age(days(7)), MinPublishAge::Unset, &[]);
-        let age = p.too_new(&published(crates_io_source(), hours(10 * 24)));
-        assert_eq!(age, None);
+        let p = policy(age("7 days"), MinPublishAge::Unset, &[]);
+        let violation = p.too_new(&published(crates_io_source(), hours(10 * 24)));
+        assert_eq!(violation, None);
     }
 
     #[test]
     fn publish_age_at_threshold_boundary_is_acceptable() {
-        let p = policy(MinPublishAge::Age(days(7)), MinPublishAge::Unset, &[]);
-        let age = p.too_new(&published(crates_io_source(), hours(7 * 24)));
-        assert_eq!(age, None);
+        let p = policy(age("7 days"), MinPublishAge::Unset, &[]);
+        let violation = p.too_new(&published(crates_io_source(), hours(7 * 24)));
+        assert_eq!(violation, None);
     }
 
     #[test]
     fn publish_age_just_inside_threshold_is_too_new() {
-        let p = policy(MinPublishAge::Age(days(7)), MinPublishAge::Unset, &[]);
-        let age = p.too_new(&published(crates_io_source(), hours(7 * 24 - 1)));
-        assert_eq!(age, Some(PublishAgeViolation { age: hours(7 * 24 - 1) }));
+        let p = policy(age("7 days"), MinPublishAge::Unset, &[]);
+        let violation = p.too_new(&published(crates_io_source(), hours(7 * 24 - 1)));
+        assert_eq!(
+            violation,
+            Some(PublishAgeViolation {
+                age: hours(7 * 24 - 1),
+                config: "7 days".to_string(),
+            })
+        );
     }
 
     #[test]
     fn publish_age_per_registry_overrides_global() {
         let p = policy(
-            MinPublishAge::Age(days(30)),
+            age("30 days"),
             MinPublishAge::Unset,
-            &[("alt", MinPublishAge::Age(days(1)))],
+            &[("alt", age("1 day"))],
         );
-        let age = p.too_new(&published(alt_source(), hours(2 * 24)));
-        assert_eq!(age, None);
+        let violation = p.too_new(&published(alt_source(), hours(2 * 24)));
+        assert_eq!(violation, None);
     }
 
     #[test]
     fn publish_age_crates_io_scope_excludes_alt_registry() {
-        let p = policy(
-            MinPublishAge::Age(days(1)),
-            MinPublishAge::Age(days(30)),
-            &[],
-        );
+        let p = policy(age("1 day"), age("30 days"), &[]);
         let crates_io = p.too_new(&published(crates_io_source(), hours(2 * 24)));
         let alt = p.too_new(&published(alt_source(), hours(2 * 24)));
-        assert_eq!(crates_io, Some(PublishAgeViolation { age: hours(2 * 24) }));
+        assert_eq!(
+            crates_io,
+            Some(PublishAgeViolation {
+                age: hours(2 * 24),
+                config: "30 days".to_string(),
+            })
+        );
         assert_eq!(alt, None);
     }
 
     #[test]
     fn publish_age_alt_registry_falls_through_to_global() {
-        let p = policy(MinPublishAge::Age(days(7)), MinPublishAge::Unset, &[]);
-        let age = p.too_new(&published(alt_source(), hours(2 * 24)));
-        assert_eq!(age, Some(PublishAgeViolation { age: hours(2 * 24) }));
+        let p = policy(age("7 days"), MinPublishAge::Unset, &[]);
+        let violation = p.too_new(&published(alt_source(), hours(2 * 24)));
+        assert_eq!(
+            violation,
+            Some(PublishAgeViolation {
+                age: hours(2 * 24),
+                config: "7 days".to_string(),
+            })
+        );
     }
 
     #[test]
@@ -670,70 +701,89 @@ mod test {
         let p = policy(
             MinPublishAge::Unset,
             MinPublishAge::Unset,
-            &[("alt", MinPublishAge::Age(days(7)))],
+            &[("alt", age("7 days"))],
         );
-        let age = p.too_new(&published(alt_source(), hours(2 * 24)));
-        assert_eq!(age, Some(PublishAgeViolation { age: hours(2 * 24) }));
+        let violation = p.too_new(&published(alt_source(), hours(2 * 24)));
+        assert_eq!(
+            violation,
+            Some(PublishAgeViolation {
+                age: hours(2 * 24),
+                config: "7 days".to_string(),
+            })
+        );
     }
 
     #[test]
     fn publish_age_per_registry_zero_overrides_global() {
         let p = policy(
-            MinPublishAge::Age(days(30)),
+            age("30 days"),
             MinPublishAge::Unset,
             &[("alt", MinPublishAge::None)],
         );
-        let age = p.too_new(&published(alt_source(), hours(0)));
-        assert_eq!(age, None);
+        let violation = p.too_new(&published(alt_source(), hours(0)));
+        assert_eq!(violation, None);
     }
 
     #[test]
     fn publish_age_no_applicable_scope_is_acceptable() {
-        let p = policy(MinPublishAge::Unset, MinPublishAge::Age(days(7)), &[]);
-        let age = p.too_new(&published(alt_source(), hours(0)));
-        assert_eq!(age, None);
+        let p = policy(MinPublishAge::Unset, age("7 days"), &[]);
+        let violation = p.too_new(&published(alt_source(), hours(0)));
+        assert_eq!(violation, None);
     }
 
     #[test]
     fn publish_age_zero_disables_threshold() {
         let p = policy(MinPublishAge::None, MinPublishAge::Unset, &[]);
-        let age = p.too_new(&published(crates_io_source(), hours(0)));
-        assert_eq!(age, None);
+        let violation = p.too_new(&published(crates_io_source(), hours(0)));
+        assert_eq!(violation, None);
     }
 
     #[test]
     fn publish_age_zero_stops_scope_fallthrough() {
-        let p = policy(MinPublishAge::Age(days(30)), MinPublishAge::None, &[]);
-        let age = p.too_new(&published(crates_io_source(), hours(0)));
-        assert_eq!(age, None);
+        let p = policy(age("30 days"), MinPublishAge::None, &[]);
+        let violation = p.too_new(&published(crates_io_source(), hours(0)));
+        assert_eq!(violation, None);
     }
 
     #[test]
     fn publish_age_missing_pubtime_is_acceptable() {
-        let p = policy(MinPublishAge::Age(days(7)), MinPublishAge::Unset, &[]);
+        let p = policy(age("7 days"), MinPublishAge::Unset, &[]);
         let pkg_id = PackageId::try_new("foo", "1.0.0", crates_io_source()).unwrap();
         let summary =
             Summary::new(pkg_id, Vec::new(), &BTreeMap::new(), None::<&String>, None).unwrap();
-        let age = p.too_new(&summary);
-        assert_eq!(age, None);
+        let violation = p.too_new(&summary);
+        assert_eq!(violation, None);
     }
 
     #[test]
     fn publish_age_future_pubtime_is_too_new() {
-        let p = policy(MinPublishAge::Age(days(7)), MinPublishAge::Unset, &[]);
-        let age = p.too_new(&published(crates_io_source(), hours(-24)));
-        assert_eq!(age, Some(PublishAgeViolation { age: hours(-24) }));
+        let p = policy(age("7 days"), MinPublishAge::Unset, &[]);
+        let violation = p.too_new(&published(crates_io_source(), hours(-24)));
+        assert_eq!(
+            violation,
+            Some(PublishAgeViolation {
+                age: hours(-24),
+                config: "7 days".to_string(),
+            })
+        );
     }
 
     #[test]
     fn publish_age_out_of_range_threshold_is_too_new() {
+        // u64::MAX
         let p = policy(
-            MinPublishAge::Age(Duration::from_secs(u64::MAX)),
+            age("18446744073709551615 seconds"),
             MinPublishAge::Unset,
             &[],
         );
-        let age = p.too_new(&published(crates_io_source(), hours(24)));
-        assert_eq!(age, Some(PublishAgeViolation { age: hours(24) }));
+        let violation = p.too_new(&published(crates_io_source(), hours(24)));
+        assert_eq!(
+            violation,
+            Some(PublishAgeViolation {
+                age: hours(24),
+                config: "18446744073709551615 seconds".to_string(),
+            })
+        );
     }
 
     #[track_caller]
