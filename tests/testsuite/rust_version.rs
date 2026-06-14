@@ -2,6 +2,9 @@
 
 use crate::prelude::*;
 use crate::utils::cargo_process;
+
+use cargo_test_support::install::assert_has_installed_exe;
+use cargo_test_support::paths;
 use cargo_test_support::{project, registry::Package, str};
 
 #[cargo_test]
@@ -962,6 +965,57 @@ fn cargo_install_ignores_resolver_v3_msrv_change() {
 
 "#]])
         .run();
+}
+
+/// `cargo install --path` builds a normal workspace,
+/// so its dependency resolution honors msrv.
+#[cargo_test]
+fn cargo_install_path_honors_msrv_config() {
+    Package::new("dep", "1.0.0")
+        .rust_version("1.50")
+        .file("src/lib.rs", "fn hello() {}")
+        .publish();
+    Package::new("dep", "1.1.0")
+        .rust_version("1.70")
+        .file("src/lib.rs", "fn hello() {}")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2015"
+                rust-version = "1.60"
+                resolver = "3"
+
+                [dependencies]
+                dep = "1"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("install --path .")
+        .with_stderr_data(str![[r#"
+[INSTALLING] foo v0.0.0 ([ROOT]/foo)
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest Rust 1.60 compatible version
+[ADDING] dep v1.0.0 (available: v1.1.0, requires Rust 1.70)
+[DOWNLOADING] crates ...
+[DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
+[COMPILING] dep v1.0.0
+[COMPILING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.0 ([ROOT]/foo)` (executable `foo[EXE]`)
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
+        .run();
+
+    assert_has_installed_exe(paths::cargo_home(), "foo");
 }
 
 #[cargo_test]
