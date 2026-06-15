@@ -793,6 +793,9 @@ fn required_rust_version(ws: &Workspace<'_>) -> Option<PartialVersion> {
 }
 
 fn publish_age_policy_for_report(ws: &Workspace<'_>) -> Option<PublishAgePolicy> {
+    if !ws.resolve_honors_publish_age() {
+        return None;
+    }
     PublishAgePolicy::for_report(ws.gctx()).ok().flatten()
 }
 

@@ -927,6 +927,7 @@ fn make_ws_rustc_target<'gctx>(
     } else {
         let mut ws = Workspace::ephemeral(pkg, gctx, None, false)?;
         ws.set_resolve_honors_rust_version(Some(false));
+        ws.set_resolve_honors_publish_age(false);
         ws
     };
     ws.set_resolve_feature_unification(FeatureUnification::Selected);

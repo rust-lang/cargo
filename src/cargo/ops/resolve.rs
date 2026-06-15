@@ -452,8 +452,10 @@ pub fn resolve_with_previous<'gctx>(
     if let Some(publish_time) = ws.resolve_publish_time() {
         version_prefs.publish_time(publish_time);
     }
-    if let Some(policy) = PublishAgePolicy::new(ws.gctx())? {
-        version_prefs.publish_age(policy);
+    if ws.resolve_honors_publish_age() {
+        if let Some(policy) = PublishAgePolicy::new(ws.gctx())? {
+            version_prefs.publish_age(policy);
+        }
     }
 
     let avoid_patch_ids = if register_patches {

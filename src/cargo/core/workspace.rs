@@ -122,6 +122,8 @@ pub struct Workspace<'gctx> {
     resolve_honors_rust_version: bool,
     /// The feature unification mode used when building packages.
     resolve_feature_unification: FeatureUnification,
+    /// Whether resolution enforces `min-publish-age`.
+    resolve_honors_publish_age: bool,
     /// Latest publish time allowed for packages
     resolve_publish_time: Option<jiff::Timestamp>,
     /// Workspace-level custom metadata
@@ -261,6 +263,7 @@ impl<'gctx> Workspace<'gctx> {
             resolve_behavior: ResolveBehavior::V1,
             resolve_honors_rust_version: false,
             resolve_feature_unification: FeatureUnification::Selected,
+            resolve_honors_publish_age: true,
             resolve_publish_time: None,
             custom_metadata: None,
             local_overlays: HashMap::new(),
@@ -767,6 +770,14 @@ impl<'gctx> Workspace<'gctx> {
 
     pub fn resolve_honors_rust_version(&self) -> bool {
         self.resolve_honors_rust_version
+    }
+
+    pub fn set_resolve_honors_publish_age(&mut self, honor_publish_age: bool) {
+        self.resolve_honors_publish_age = honor_publish_age;
+    }
+
+    pub fn resolve_honors_publish_age(&self) -> bool {
+        self.resolve_honors_publish_age
     }
 
     pub fn set_resolve_feature_unification(&mut self, feature_unification: FeatureUnification) {

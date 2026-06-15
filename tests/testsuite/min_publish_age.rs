@@ -792,10 +792,9 @@ fn cargo_install_allows_too_new_deps() {
 [DOWNLOADED] foo v1.0.0 (registry `dummy-registry`)
 [INSTALLING] foo v1.0.0
 [LOCKING] 1 package to latest compatible version
-[ADDING] bar v1.0.0 (available: v1.1.0, published 2 days ago)
 [DOWNLOADING] crates ...
-[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
-[COMPILING] bar v1.0.0
+[DOWNLOADED] bar v1.1.0 (registry `dummy-registry`)
+[COMPILING] bar v1.1.0
 [COMPILING] foo v1.0.0
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
