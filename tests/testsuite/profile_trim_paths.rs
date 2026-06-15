@@ -766,10 +766,24 @@ fn custom_build_env_var_trim_paths() {
             &format!(
                 r#"
                 fn main() {{
-                    assert_eq!(
-                        std::env::var("CARGO_TRIM_PATHS").unwrap().as_str(),
-                        "{expected}",
-                    );
+                    let scope = std::env::var("CARGO_TRIM_PATHS_SCOPE").unwrap();
+                    assert_eq!(scope.as_str(), "{expected}");
+
+                    let remap = std::env::var_os("CARGO_TRIM_PATHS_REMAP");
+                    if scope == "none" {{
+                        assert_eq!(remap, None);
+                    }} else {{
+                        let remap = remap.unwrap();
+                        let pairs: Vec<String> = std::env::split_paths(&remap)
+                            .map(|p| p.into_os_string().into_string().unwrap())
+                            .collect();
+                        // package, build-dir, sysroot
+                        assert_eq!(pairs.len(), 3, "remap = {{remap:?}}");
+                        // The package lives at the workspace root, remapped to `.`.
+                        assert!(pairs[0].ends_with("=."), "remap = {{remap:?}}");
+                        assert!(pairs[1].ends_with("=/cargo/build-dir"), "remap = {{remap:?}}");
+                        assert!(pairs[2].contains("=/rustc/"), "remap = {{remap:?}}");
+                    }}
                 }}
                 "#
             ),
