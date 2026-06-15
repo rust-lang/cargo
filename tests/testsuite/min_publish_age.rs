@@ -209,7 +209,7 @@ fn filters_too_new_versions() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
-[ADDING] bar v1.0.0 (available: v1.1.0)
+[ADDING] bar v1.0.0 (available: v1.1.0, published 2 days ago)
 
 "#]])
         .run();
@@ -273,6 +273,7 @@ fn incompatible_publish_age_allow() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
+[ADDING] bar v1.1.0 (published 2 days ago, minimum age 7 days)
 
 "#]])
         .run();
@@ -336,7 +337,7 @@ fn incompatible_publish_age_deny() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
-[ADDING] bar v1.0.0 (available: v1.1.0)
+[ADDING] bar v1.0.0 (available: v1.1.0, published 2 days ago)
 
 "#]])
         .run();
@@ -456,6 +457,7 @@ fn report_unchanged_too_new_version() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 0 packages to latest compatible versions
+[UNCHANGED] bar v1.1.0 (published 2 days ago, minimum age 7 days)
 [NOTE] to see how you depend on a package, run `cargo tree --invert <dep>@<ver>`
 
 "#]])
@@ -643,6 +645,7 @@ fn patched_versions_preserved() {
 [UPDATING] `alternative` index
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
+[ADDING] bar v1.1.0 (registry `alternative`) (published 2 days ago, minimum age 7 days)
 
 "#]])
         .run();
@@ -789,7 +792,7 @@ fn cargo_install_allows_too_new_deps() {
 [DOWNLOADED] foo v1.0.0 (registry `dummy-registry`)
 [INSTALLING] foo v1.0.0
 [LOCKING] 1 package to latest compatible version
-[ADDING] bar v1.0.0 (available: v1.1.0)
+[ADDING] bar v1.0.0 (available: v1.1.0, published 2 days ago)
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 [COMPILING] bar v1.0.0
@@ -838,7 +841,7 @@ fn cargo_install_path_allows_too_new_deps() {
 [INSTALLING] foo v0.0.0 ([ROOT]/foo)
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
-[ADDING] bar v1.0.0 (available: v1.1.0)
+[ADDING] bar v1.0.0 (available: v1.1.0, published 2 days ago)
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 [COMPILING] bar v1.0.0
@@ -936,7 +939,7 @@ fn update_precise_to_too_new() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
-[ADDING] bar v1.0.0 (available: v1.1.0)
+[ADDING] bar v1.0.0 (available: v1.1.0, published 2 days ago)
 
 "#]])
         .run();
@@ -1038,7 +1041,7 @@ fn update_precise_with_allow() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
-[ADDING] bar v1.0.0 (available: v1.2.0)
+[ADDING] bar v1.0.0 (available: v1.2.0, published 24 hours ago)
 
 "#]])
         .run();
@@ -1072,7 +1075,7 @@ dependencies = [
         .env("CARGO_RESOLVER_INCOMPATIBLE_PUBLISH_AGE", "allow")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[UPDATING] bar v1.0.0 -> v1.1.0
+[UPDATING] bar v1.0.0 -> v1.1.0 (published 2 days ago, minimum age 7 days)
 
 "#]])
         .run();
@@ -1230,7 +1233,7 @@ fn registry_default() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
-[ADDING] bar v1.0.0 (available: v1.1.0)
+[ADDING] bar v1.0.0 (available: v1.1.0, published 2 days ago)
 
 "#]])
         .run();
@@ -1292,7 +1295,7 @@ fn registry_default_overrides_global() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
-[ADDING] bar v1.0.0 (available: v1.1.0)
+[ADDING] bar v1.0.0 (available: v1.1.0, published 2 days ago)
 
 "#]])
         .run();
@@ -1414,7 +1417,7 @@ fn registries_crates_io() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
-[ADDING] bar v1.0.0 (available: v1.1.0)
+[ADDING] bar v1.0.0 (available: v1.1.0, published 2 days ago)
 
 "#]])
         .run();
@@ -1546,7 +1549,7 @@ fn registries_alt() {
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
 [LOCKING] 1 package to latest compatible version
-[ADDING] bar v1.0.0 (registry `alternative`) (available: v1.1.0)
+[ADDING] bar v1.0.0 (registry `alternative`) (available: v1.1.0, published 2 days ago)
 
 "#]])
         .run();
@@ -1686,7 +1689,7 @@ fn registries_alt_respects_global() {
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
 [LOCKING] 1 package to latest compatible version
-[ADDING] bar v1.0.0 (registry `alternative`) (available: v1.1.0)
+[ADDING] bar v1.0.0 (registry `alternative`) (available: v1.1.0, published 2 days ago)
 
 "#]])
         .run();

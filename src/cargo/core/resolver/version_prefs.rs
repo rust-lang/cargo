@@ -177,15 +177,21 @@ impl PublishAgePolicy {
     /// * the resolver is configured to allow pubtime-incompatible versions
     /// * no threshold is configured at all
     pub fn new(gctx: &GlobalContext) -> CargoResult<Option<Self>> {
-        if !gctx.cli_unstable().min_publish_age {
-            return Ok(None);
-        }
-
         let resolver_config = gctx.get::<Option<CargoResolverConfig>>("resolver")?;
         if resolver_config
             .and_then(|c| c.incompatible_publish_age)
             .is_some_and(|v| v == IncompatiblePublishAge::Allow)
         {
+            return Ok(None);
+        }
+
+        Self::for_report(gctx)
+    }
+
+    /// Like [`PublishAgePolicy::new`] but ignore config from `[resolver]`,
+    /// so it report too-new packages regardess they are allowed or denied.
+    pub fn for_report(gctx: &GlobalContext) -> CargoResult<Option<Self>> {
+        if !gctx.cli_unstable().min_publish_age {
             return Ok(None);
         }
 
