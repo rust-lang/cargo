@@ -250,8 +250,8 @@ pub struct GlobalContext {
     crates_io_source_id: OnceLock<SourceId>,
     /// If false, don't cache `rustc --version --verbose` invocations
     cache_rustc_info: bool,
-    /// Creation time of this config, used to output the total build time
-    creation_time: Instant,
+    /// Monotonic start of this cargo invocation for reporting time elapsed.
+    invocation_instant: Instant,
     /// Wall-clock time of this cargo invocation.
     ///
     /// Currently used as the reference time for `min-publish-age` and `-Zbuild-analysis`.
@@ -391,7 +391,7 @@ impl GlobalContext {
             easy: Default::default(),
             crates_io_source_id: Default::default(),
             cache_rustc_info,
-            creation_time: Instant::now(),
+            invocation_instant: Instant::now(),
             invocation_time,
             target_dir: None,
             env,
@@ -2068,8 +2068,8 @@ impl GlobalContext {
         Ok(*source_id)
     }
 
-    pub fn creation_time(&self) -> Instant {
-        self.creation_time
+    pub fn invocation_instant(&self) -> Instant {
+        self.invocation_instant
     }
 
     /// Returns the wall-clock time of this cargo invocation.
