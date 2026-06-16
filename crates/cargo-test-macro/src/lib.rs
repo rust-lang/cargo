@@ -279,11 +279,41 @@ static VERSION: std::sync::LazyLock<(u32, bool)> = LazyLock::new(|| {
         .arg("-V")
         .output()
         .expect("rustc should run");
+
+    let exit_code = output.status.code();
+
+    if exit_code != Some(0) {
+        let stdout = std::str::from_utf8(&output.stdout).unwrap_or("<invalid utf8>");
+        let stderr = std::str::from_utf8(&output.stderr).unwrap_or("<invalid utf8>");
+        // On Windows, exit code `0xC0000017` is not very well documented but appears to
+        // usually happen when a command length exceeds the windows limit.
+        // Since we are just running `rustc -V` it likely that the PATH got too long.
+        // This can happen when Cargo's tests are executed from rustc bootstrap.
+        let extra = if exit_code.map(|c| c as u32) == Some(0xC0000017) {
+            "This likely indicates that PATH is too large for Windows.\n"
+        } else {
+            ""
+        };
+        panic!(
+            "'rustc -V' exited with non-zero exit code: {exit_code:?}\n{extra}stdout: {stdout}\nstderr: {stderr}",
+        );
+    }
+
     let stdout = std::str::from_utf8(&output.stdout).expect("utf8");
-    let vers = stdout.split_whitespace().skip(1).next().unwrap();
+    let vers = stdout
+        .split_whitespace()
+        .skip(1)
+        .next()
+        .expect("version should have contain at least one space");
     let is_nightly = option_env!("CARGO_TEST_DISABLE_NIGHTLY").is_none()
         && (vers.contains("-nightly") || vers.contains("-dev"));
-    let minor = vers.split('.').skip(1).next().unwrap().parse().unwrap();
+    let minor = vers
+        .split('.')
+        .skip(1)
+        .next()
+        .expect("malformed rustc version (not semver)")
+        .parse()
+        .expect("malformed rustc version (minor version was not u32)");
     (minor, is_nightly)
 });
 
