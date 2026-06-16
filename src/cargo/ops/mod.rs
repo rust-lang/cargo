@@ -4,7 +4,7 @@ pub use self::cargo_clean::{CleanContext, CleanOptions, clean};
 pub use self::cargo_compile::unit_generator::UnitGenerator;
 pub use self::cargo_compile::{CompileFilter, FilterRule, LibRule, Packages};
 pub use self::cargo_compile::{
-    CompileOptions, compile, compile_with_exec, compile_ws, create_bcx, print, resolve_all_features,
+    CompileOptions, compile, compile_with_exec, create_bcx, print, resolve_all_features,
 };
 pub use self::cargo_doc::{DocOptions, OutputFormat, doc};
 pub use self::cargo_fetch::{FetchOptions, fetch};

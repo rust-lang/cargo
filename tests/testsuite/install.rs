@@ -40,6 +40,8 @@ fn simple() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.1
+[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v0.0.1
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
@@ -68,6 +70,8 @@ fn install_the_same_version_twice() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.1
+[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v0.0.1
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
@@ -116,6 +120,8 @@ fn simple_with_message_format() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.1
+[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v0.0.1
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
@@ -199,6 +205,8 @@ fn with_index() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `[ROOT]/registry`)
 [INSTALLING] foo v0.0.1 (registry `[ROOT]/registry`)
+[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v0.0.1 (registry `[ROOT]/registry`)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
@@ -233,11 +241,15 @@ fn multiple_pkgs() {
 [DOWNLOADED] bar v0.0.2 (registry `dummy-registry`)
 [ERROR] could not find `baz` in registry `crates-io` with version `*`
 [INSTALLING] foo v0.0.1
+[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v0.0.1
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
 [INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
 [INSTALLING] bar v0.0.2
+[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `bar` (manifest) generated 1 warning
 [COMPILING] bar v0.0.2
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/bar[EXE]
@@ -291,11 +303,15 @@ fn multiple_pkgs_path_set() {
 [DOWNLOADED] bar v0.0.2 (registry `dummy-registry`)
 [ERROR] could not find `baz` in registry `crates-io` with version `*`
 [INSTALLING] foo v0.0.1
+[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v0.0.1
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
 [INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
 [INSTALLING] bar v0.0.2
+[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `bar` (manifest) generated 1 warning
 [COMPILING] bar v0.0.2
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/bar[EXE]
@@ -334,6 +350,8 @@ fn pick_max_version() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.2.1 (registry `dummy-registry`)
 [INSTALLING] foo v0.2.1
+[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v0.2.1
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
@@ -1631,6 +1649,10 @@ fn path_install_workspace_root_despite_default_members() {
         .arg("ws-root")
         .with_stderr_data(str![[r#"
 [INSTALLING] ws-root v0.1.0 ([ROOT]/foo)
+[WARNING] ws-member/Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `ws-member` (manifest) generated 1 warning
+[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `ws-root` (manifest) generated 1 warning
 [COMPILING] ws-root v0.1.0 ([ROOT]/foo)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/ws-root[EXE]
@@ -2149,6 +2171,8 @@ fn workspace_uses_workspace_target_dir() {
         .arg(p.root().join("bar"))
         .with_stderr_data(str![[r#"
 [INSTALLING] bar v0.1.0 ([ROOT]/foo/bar)
+[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `foo` (manifest) generated 1 warning
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/bar[EXE]
 [INSTALLED] package `bar v0.1.0 ([ROOT]/foo/bar)` (executable `bar[EXE]`)
@@ -2456,6 +2480,8 @@ workspace: [ROOT]/foo/Cargo.toml
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.1.0 (registry `dummy-registry`)
 [INSTALLING] foo v0.1.0
+[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v0.1.0
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
@@ -2513,6 +2539,8 @@ fn install_semver_metadata() {
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
 [INSTALLING] foo v1.0.0+abc (registry `alternative`)
+[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v1.0.0+abc (registry `alternative`)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [REPLACING] [ROOT]/home/.cargo/bin/foo[EXE]
@@ -2530,6 +2558,8 @@ fn install_semver_metadata() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v1.0.0+abc (registry `alternative`)
 [INSTALLING] foo v1.0.0+abc (registry `alternative`)
+[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v1.0.0+abc (registry `alternative`)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
@@ -2560,6 +2590,8 @@ fn no_auto_fix_note() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] auto_fix v0.0.1 (registry `dummy-registry`)
 [INSTALLING] auto_fix v0.0.1
+[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `auto_fix` (manifest) generated 1 warning
 [COMPILING] auto_fix v0.0.1
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/auto_fix[EXE]
@@ -2593,6 +2625,8 @@ fn failed_install_retains_temp_directory() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.1
+[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v0.0.1
 [ERROR] expected one of `!` or `::`, found `<eof>`
  --> [ROOT]/home/.cargo/registry/src/-[..]/foo-0.0.1/src/main.rs:1:1
@@ -2673,6 +2707,8 @@ fn sparse_install() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.1 (registry `dummy-registry`)
+[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `foo` (manifest) generated 1 warning
 [UPDATING] `dummy-registry` index
 [COMPILING] foo v0.0.1 (registry `dummy-registry`)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
@@ -2746,6 +2782,8 @@ fn self_referential() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.2 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.2
+[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `foo` (manifest) generated 1 warning
 [LOCKING] 1 package to latest compatible version
 [ADDING] foo v0.0.1 (available: v0.0.2)
 [DOWNLOADING] crates ...
@@ -2896,6 +2934,8 @@ fn uninstall_running_binary() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.1
+[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v0.0.1
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
@@ -2959,6 +2999,8 @@ fn uninstall_running_binary() {
     cargo_process("install foo").with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [INSTALLING] foo v0.0.1
+[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v0.0.1
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
@@ -2979,6 +3021,8 @@ fn dry_run() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.1
+[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `foo` (manifest) generated 1 warning
 [INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
 [WARNING] aborting install due to dry run
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
@@ -3043,6 +3087,8 @@ fn dry_run_incompatible_package_dependency() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [INSTALLING] foo v0.1.0 ([ROOT]/foo)
+[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `foo` (manifest) generated 1 warning
 [LOCKING] 1 package to latest compatible version
 [ERROR] failed to compile `foo v0.1.0 ([ROOT]/foo)`, intermediate artifacts can be found at `[ROOT]/foo/target`.
 To reuse those artifacts with a future compilation, set the environment variable `CARGO_BUILD_BUILD_DIR` to that path.
@@ -3070,6 +3116,8 @@ fn dry_run_upgrade() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.2 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.2
+[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `foo` (manifest) generated 1 warning
 [REPLACING] [ROOT]/home/.cargo/bin/foo[EXE]
 [WARNING] aborting install due to dry run
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
@@ -3092,6 +3140,8 @@ fn dry_run_remove_orphan() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 [INSTALLING] bar v1.0.0
+[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `bar` (manifest) generated 1 warning
 [COMPILING] bar v1.0.0
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/client[EXE]
@@ -3115,6 +3165,8 @@ fn dry_run_remove_orphan() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v2.0.0 (registry `dummy-registry`)
 [INSTALLING] bar v2.0.0
+[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `bar` (manifest) generated 1 warning
 [REPLACING] [ROOT]/home/.cargo/bin/client[EXE]
 [REMOVING] executable `[ROOT]/home/.cargo/bin/server[EXE]` from previous version bar v1.0.0
 [WARNING] aborting install due to dry run
@@ -3208,6 +3260,14 @@ im_a_teapot = "warn"
         .with_stdout_data(str![])
         .with_stderr_data(str![[r#"
 [INSTALLING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] `im_a_teapot` is specified
+ --> Cargo.toml:9:1
+  |
+9 | im-a-teapot = true
+  | ^^^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::im_a_teapot` is set to `warn` in `[lints]`
+[WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] unused variable: `unused`
 ...
@@ -3251,6 +3311,15 @@ im-a-teapot = "deny"
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v1.0.0 (registry `dummy-registry`)
 [INSTALLING] foo v1.0.0
+[WARNING] unknown lint: `im-a-teapot`
+  --> Cargo.toml:12:1
+   |
+12 | im-a-teapot = "deny"
+   | ^^^^^^^^^^^
+   |
+   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
+   = [HELP] there is a lint with a similar name: `im_a_teapot`
+[WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v1.0.0
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
