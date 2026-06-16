@@ -23,9 +23,23 @@ lockfile identical to the default resolver.
 
 ## 2. Current status (verified)
 
-- `cargo -Zpubgrub-resolver generate-lockfile`, run **fresh with no pre-existing
-  `Cargo.lock`**, produces a **byte-identical** lockfile to the default
-  resolver for Cargo's own ~5944-line dependency tree (`diff` = 0 lines).
+- **Full-tree parity against an *unmodified* `rust-lang/cargo`.** Using the
+  pubgrub-enabled binary against a **pristine clone** of `rust-lang/cargo` (whose
+  `Cargo.toml` has no pubgrub dependency), with no pre-existing `Cargo.lock`,
+  both resolvers produce a **byte-identical** lockfile (latest run: 5907 lines,
+  542 packages, `diff` = 0). See §3 for the exact procedure.
+  - Verified two ways, because `diff == 0` alone is *not* sufficient (it is also
+    consistent with the `-Z` flag being a silent no-op that runs the default
+    resolver twice):
+    1. **Dispatch proof** — a temporary marker in `pubgrub::resolve` printed 0
+       times without the flag and 1 time with it, proving the flag routes to the
+       pubgrub code path. (Also: `generate-lockfile` does a **single** resolve
+       pass, so the marker fires once.)
+    2. **Parity proof** — the byte-identical lockfile above.
+  - NOTE: resolving the manifest *inside this branch's repo* is a weaker check:
+    this branch adds `pubgrub`/`version-ranges` to the workspace `Cargo.toml`, so
+    its lockfile is ~5942 lines (the extra ~35 are those added deps). Always test
+    against a pristine clone to avoid that confound.
 - Validation in `crates/resolver-tests`:
   - `pubgrub_smoke.rs` — basic end-to-end (2 tests).
   - `pubgrub_validated.rs` — SAT-validated scenarios: features, `dep:`/`dep/feat`,
@@ -46,7 +60,8 @@ lockfile identical to the default resolver.
 
 ### Caveats on the verification
 - Parity is verified against the **current crates.io index state**; index drift
-  changes selected versions for both resolvers.
+  changes selected versions for both resolvers (it stays a 0-line diff because
+  both drift together, but it is not a hermetic golden-file test).
 - Parity is verified for **`generate-lockfile` (fresh)** only. The
   conservative-update paths (`cargo update -p`, building against an existing
   lock, `--precise`) are **not** yet exercised/verified.
@@ -88,21 +103,36 @@ nix develop ~/dev/dotfiles#cargo --command bash -c \
   'CARGO_TEST_PUBGRUB=1 cargo test -p resolver-tests --test resolve --test pubgrub'
 ```
 
-### Reproducing the full-graph parity check (the real acceptance test)
+### Reproducing the full-tree parity check (the real acceptance test)
+
+Test against a **pristine clone** of `rust-lang/cargo`, *not* this branch's repo
+(this branch's `Cargo.toml` adds the pubgrub dependency — a confound).
+
 ```sh
 nix develop ~/dev/dotfiles#cargo --command bash -c '
+  cd /local/home/whlo/dev/cargo
   cargo build --bin cargo
   CARGO=$(pwd)/target/debug/cargo
-  git checkout -- Cargo.lock
-  rm -f Cargo.lock; $CARGO generate-lockfile >/dev/null 2>&1; cp Cargo.lock /tmp/fd.lock
-  rm -f Cargo.lock; $CARGO -Zpubgrub-resolver generate-lockfile >/dev/null 2>&1; cp Cargo.lock /tmp/fp.lock
-  git checkout -- Cargo.lock
-  diff /tmp/fd.lock /tmp/fp.lock && echo IDENTICAL
+
+  rm -rf /tmp/cargo-clean
+  git clone --depth 1 https://github.com/rust-lang/cargo /tmp/cargo-clean
+  cd /tmp/cargo-clean
+  grep -c pubgrub Cargo.toml   # expect 0 (pristine manifest)
+
+  rm -f Cargo.lock; $CARGO generate-lockfile >/dev/null 2>&1;            cp Cargo.lock /tmp/d.lock
+  rm -f Cargo.lock; $CARGO -Zpubgrub-resolver generate-lockfile >/dev/null 2>&1; cp Cargo.lock /tmp/p.lock
+  diff /tmp/d.lock /tmp/p.lock && echo IDENTICAL
 '
 ```
-> Always `rm -f Cargo.lock` before *each* resolver run. If a lock is present it
-> seeds `version_prefs` and masks fresh-resolution bugs (this exact mistake led
-> to a false "it works" claim early on).
+> - Always `rm -f Cargo.lock` before *each* run. A present lock seeds
+>   `version_prefs` and masks fresh-resolution bugs (this exact mistake produced
+>   a false "it works" claim early on).
+> - `diff == 0` is necessary but **not** sufficient — it cannot tell "pubgrub
+>   matched" from "flag is a no-op, default ran twice". To prove the pubgrub path
+>   actually executed, run with the flag and
+>   `CARGO_LOG=cargo::core::resolver::pubgrub=debug`; you should see
+>   `pubgrub resolver active: resolving N workspace member(s)` (a permanent
+>   `tracing::debug!` in `pubgrub::resolve`). It does not print without the flag.
 
 ---
 
@@ -296,7 +326,17 @@ been removed; re-add ad hoc if needed.)
 
 ## 10. Commit history (this branch)
 
+Newest first. Implementation: `9fa0e7f75`–`913116cbb`; fixes: `eb917c1f7`,
+`c83889704`→`c916af4f5`; tests: `6d49e8644`, `1f17605b3`, `0864cb574`,
+`7d24add22`; observability: `37fa77459`; docs: `cacdd97e9`, `6de3fd5be`,
+`68fb458d9`, and this update.
+
 ```
+37fa77459 feat(resolver): Add observable trace when the pubgrub resolver runs
+68fb458d9 docs: Record curated-suite validation results for pubgrub resolver
+7d24add22 test(resolver): Skip exact error-text assertions under pubgrub
+0864cb574 test(resolver): Allow running the curated suite through pubgrub
+6de3fd5be docs: Add PubGrub resolver design & handoff doc
 c916af4f5 fix(resolver): Match v1 lock graph for weak dependency features
 cacdd97e9 docs(unstable): Document -Zpubgrub-resolver flag
 1f17605b3 test(resolver): Add pubgrub vs SAT property test
