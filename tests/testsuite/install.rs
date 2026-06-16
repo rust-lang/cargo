@@ -3181,3 +3181,82 @@ fn mistaken_flag_case() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn cap_lints_path() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+cargo-features = ["test-dummy-unstable"]
+
+[package]
+name = "foo"
+version = "0.0.1"
+edition = "2015"
+authors = []
+im-a-teapot = true
+
+[lints.cargo]
+im_a_teapot = "warn"
+            "#,
+        )
+        .file("src/main.rs", "fn main() { let unused = 10; }")
+        .build();
+    p.cargo("install --path . -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints", "test-dummy-unstable"])
+        .with_stdout_data(str![])
+        .with_stderr_data(str![[r#"
+[INSTALLING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] unused variable: `unused`
+...
+[WARNING] `foo` (bin "foo") generated 1 warning (run `cargo fix --bin "foo" -p foo` to apply 1 suggestion)
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.1 ([ROOT]/foo)` (executable `foo[EXE]`)
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn cap_lints_registry() {
+    Package::new("foo", "1.0.0")
+        .file(
+            "Cargo.toml",
+            r#"
+cargo-features = ["test-dummy-unstable"]
+
+[package]
+name = "foo"
+version = "1.0.0"
+edition = "2015"
+authors = []
+im-a-teapot = true
+
+[lints.cargo]
+im-a-teapot = "deny"
+            "#,
+        )
+        .file("src/main.rs", "fn main() { let unused = 10; }")
+        .publish();
+
+    cargo_process("install foo -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints", "test-dummy-unstable"])
+        .with_stdout_data(str![])
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v1.0.0 (registry `dummy-registry`)
+[INSTALLING] foo v1.0.0
+[COMPILING] foo v1.0.0
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v1.0.0` (executable `foo[EXE]`)
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
+        .run();
+}
