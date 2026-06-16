@@ -129,7 +129,14 @@ pub fn resolve(
     resolve_version: ResolveVersion,
     gctx: Option<&GlobalContext>,
 ) -> CargoResult<Resolve> {
-    if gctx.is_some_and(|gctx| gctx.cli_unstable().pubgrub_resolver) {
+    // `CARGO_TEST_PUBGRUB` is a test-only escape hatch that routes every
+    // resolution through the experimental PubGrub resolver, independent of the
+    // `-Zpubgrub-resolver` flag (which requires nightly). It lets the entire
+    // integration testsuite be re-run on PubGrub for differential validation;
+    // it is read here, at the single dispatch fork, so child `cargo` processes
+    // spawned by the testsuite inherit it. It is never set in production.
+    let force_pubgrub = std::env::var_os("CARGO_TEST_PUBGRUB").is_some();
+    if force_pubgrub || gctx.is_some_and(|gctx| gctx.cli_unstable().pubgrub_resolver) {
         return pubgrub::resolve(
             summaries,
             replacements,
