@@ -158,6 +158,31 @@ pub fn resolve_with_global_context_raw(
     root_pkg_id: PackageId,
     gctx: &GlobalContext,
 ) -> CargoResult<Resolve> {
+    resolve_with_prefs_raw(
+        deps,
+        registry,
+        root_pkg_id,
+        gctx,
+        VersionPreferences::default(),
+    )
+}
+
+/// Like [`resolve_with_global_context_raw`], but lets the caller seed the
+/// [`VersionPreferences`].
+///
+/// This is how the conservative-update paths are exercised offline: an existing
+/// lockfile (and `cargo update -p <crate>`) is modeled by preferring the
+/// previously selected [`PackageId`]s (see [`prefs_from_lock`]), and `--precise`
+/// is modeled by preferring an exact [`Dependency`]. The production glue in
+/// `ops::resolve` builds the same [`VersionPreferences`] before handing off to
+/// the resolver, so this is the faithful resolver-level slice of those flows.
+pub fn resolve_with_prefs_raw(
+    deps: Vec<Dependency>,
+    registry: &[Summary],
+    root_pkg_id: PackageId,
+    gctx: &GlobalContext,
+    mut version_prefs: VersionPreferences,
+) -> CargoResult<Resolve> {
     struct MyRegistry<'a> {
         list: &'a [Summary],
         used: RefCell<HashSet<PackageId>>,
@@ -221,7 +246,6 @@ pub fn resolve_with_global_context_raw(
     let opts = ResolveOpts::everything();
 
     let start = Instant::now();
-    let mut version_prefs = VersionPreferences::default();
     if gctx.cli_unstable().minimal_versions {
         version_prefs.version_ordering(VersionOrdering::MinimumVersionsFirst)
     }
@@ -239,6 +263,26 @@ pub fn resolve_with_global_context_raw(
     // So let's fail the test if we have been running for more than 60 secs.
     assert!(start.elapsed().as_secs() < 60);
     resolve
+}
+
+/// Build [`VersionPreferences`] that reproduce a previous resolution, modeling
+/// an existing `Cargo.lock` (and `cargo update -p <crate>`) at the resolver
+/// level.
+///
+/// Every previously selected package is preferred via
+/// [`VersionPreferences::prefer_package_id`], *except* those whose name is in
+/// `unlock`. Passing an empty `unlock` models building against an untouched lock
+/// (everything kept); passing a single name models `cargo update -p <name>`
+/// (that crate is free to move, the rest are pinned).
+pub fn prefs_from_lock(resolve: &Resolve, unlock: &[&str]) -> VersionPreferences {
+    let mut prefs = VersionPreferences::default();
+    for id in resolve.iter() {
+        if unlock.contains(&id.name().as_str()) {
+            continue;
+        }
+        prefs.prefer_package_id(id);
+    }
+    prefs
 }
 
 /// By default `Summary` and `Dependency` have a very verbose `Debug` representation.
