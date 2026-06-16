@@ -60,6 +60,12 @@ pub(super) fn resolve(
 ) -> CargoResult<Resolve> {
     let registry = RegistryQueryer::new(registry, replacements, version_prefs);
 
+    tracing::debug!(
+        target: "cargo::core::resolver::pubgrub",
+        "pubgrub resolver active: resolving {} workspace member(s)",
+        summaries.len(),
+    );
+
     let roots = summaries
         .iter()
         .map(|(summary, opts)| root_from_opts(summary.clone(), opts))
