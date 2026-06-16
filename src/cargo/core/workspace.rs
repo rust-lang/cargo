@@ -1875,6 +1875,13 @@ impl MaybePackage {
         }
     }
 
+    pub fn as_package(&self) -> Option<&Package> {
+        match self {
+            MaybePackage::Package(p) => Some(p),
+            MaybePackage::Virtual(_) => None,
+        }
+    }
+
     /// Has an embedded manifest (single-file package)
     pub fn is_embedded(&self) -> bool {
         match self {

@@ -131,8 +131,6 @@ fn registry_upgrade() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v1.0.0 (registry `dummy-registry`)
 [INSTALLING] foo v1.0.0
-[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
-[WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v1.0.0
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
@@ -162,8 +160,6 @@ fn registry_upgrade() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v1.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v1.0.1
-[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
-[WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v1.0.1
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [REPLACING] [ROOT]/home/.cargo/bin/foo[EXE]
@@ -239,8 +235,6 @@ fn upgrade_force() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [INSTALLING] foo v1.0.0
-[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
-[WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v1.0.0
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [REPLACING] [ROOT]/home/.cargo/bin/foo[EXE]
@@ -741,22 +735,16 @@ fn multiple_report() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] three v1.0.0 (registry `dummy-registry`)
 [INSTALLING] one v1.0.0
-[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
-[WARNING] `one` (manifest) generated 1 warning
 [COMPILING] one v1.0.0
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/one[EXE]
 [INSTALLED] package `one v1.0.0` (executable `one[EXE]`)
 [INSTALLING] two v1.0.0
-[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
-[WARNING] `two` (manifest) generated 1 warning
 [COMPILING] two v1.0.0
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/two[EXE]
 [INSTALLED] package `two v1.0.0` (executable `two[EXE]`)
 [INSTALLING] three v1.0.0
-[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
-[WARNING] `three` (manifest) generated 1 warning
 [COMPILING] three v1.0.0
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/three[EXE]
@@ -779,8 +767,6 @@ fn multiple_report() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] three v1.0.1 (registry `dummy-registry`)
 [INSTALLING] three v1.0.1
-[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
-[WARNING] `three` (manifest) generated 1 warning
 [COMPILING] three v1.0.1
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [REPLACING] [ROOT]/home/.cargo/bin/three[EXE]
@@ -804,8 +790,6 @@ fn multiple_report() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [INSTALLING] three v1.0.1
-[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
-[WARNING] `three` (manifest) generated 1 warning
 [COMPILING] three v1.0.1
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/x[EXE]
@@ -818,8 +802,6 @@ fn multiple_report() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [INSTALLING] three v1.0.1
-[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
-[WARNING] `three` (manifest) generated 1 warning
 [COMPILING] three v1.0.1
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/three[EXE]
@@ -930,8 +912,6 @@ fn already_installed_exact_does_not_update() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v1.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v1.0.1
-[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
-[WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v1.0.1
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [REPLACING] [ROOT]/home/.cargo/bin/foo[EXE]
@@ -966,8 +946,6 @@ fn already_installed_updates_yank_status_on_upgrade() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v1.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v1.0.1
-[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
-[WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v1.0.1
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [REPLACING] [ROOT]/home/.cargo/bin/foo[EXE]
@@ -993,15 +971,11 @@ fn partially_already_installed_does_one_update() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] baz v1.0.0 (registry `dummy-registry`)
 [INSTALLING] bar v1.0.0
-[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
-[WARNING] `bar` (manifest) generated 1 warning
 [COMPILING] bar v1.0.0
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/bar[EXE]
 [INSTALLED] package `bar v1.0.0` (executable `bar[EXE]`)
 [INSTALLING] baz v1.0.0
-[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
-[WARNING] `baz` (manifest) generated 1 warning
 [COMPILING] baz v1.0.0
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/baz[EXE]

@@ -916,8 +916,6 @@ fn cargo_install_ignores_msrv_config() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.1
-[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while 2021 is compatible with `rust-version`
-[WARNING] `foo` (manifest) generated 1 warning
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] dep v1.1.0 (registry `dummy-registry`)
@@ -955,8 +953,6 @@ fn cargo_install_ignores_resolver_v3_msrv_change() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.1
-[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while 2021 is compatible with `rust-version`
-[WARNING] `foo` (manifest) generated 1 warning
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] dep v1.1.0 (registry `dummy-registry`)

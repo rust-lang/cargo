@@ -195,6 +195,18 @@ pub fn lint_build_results(
             pkg.rust_version(),
             pkg.manifest().unstable_features(),
         );
+        if !pkg_id.source_id().is_path() {
+            for (dep_kind, state) in states.iter() {
+                for ext in state.unused_externs.iter().flatten() {
+                    debug!(
+                        "pkg {} v{} ({dep_kind:?}): ignoring unused extern `{ext}`, package is capped",
+                        pkg_id.name(),
+                        pkg_id.version(),
+                    );
+                }
+            }
+            continue;
+        }
         if level.level == LintLevel::Allow {
             for (dep_kind, state) in states.iter() {
                 for ext in state.unused_externs.iter().flatten() {
