@@ -74,11 +74,15 @@ pub use rules::{LINT_GROUPS, LINTS};
 
 pub struct GlobalDiagnosticStats {
     error_count: usize,
+    lint_warning_count: usize,
 }
 
 impl GlobalDiagnosticStats {
     pub fn new() -> Self {
-        Self { error_count: 0 }
+        Self {
+            error_count: 0,
+            lint_warning_count: 0,
+        }
     }
 
     pub fn scope(&mut self) -> ScopedDiagnosticStats<'_> {
@@ -92,6 +96,10 @@ impl GlobalDiagnosticStats {
 
     pub fn error_count(&self) -> usize {
         self.error_count
+    }
+
+    pub fn lint_warning_count(&self) -> usize {
+        self.lint_warning_count
     }
 
     pub fn ok(&self) -> CargoResult<()> {
@@ -141,6 +149,7 @@ impl ScopedDiagnosticStats<'_> {
             }
             LintLevel::Warn => {
                 self.lint_warning_count += 1;
+                self.global.lint_warning_count += 1;
                 self.record_warning();
             }
             LintLevel::Allow => {}

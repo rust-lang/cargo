@@ -432,6 +432,7 @@ fn lint_build_result_pass() {
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .arg("--config")
         .arg("build.warnings='deny'")
+        .with_status(101)
         .with_stderr_data(str![[r#"
 [WARNING] unused dependency
  --> Cargo.toml:9:13
@@ -446,6 +447,7 @@ fn lint_build_result_pass() {
   |
 [WARNING] `foo` (manifest) generated 1 warning
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[ERROR] warnings are denied by `build.warnings` configuration
 
 "#]])
         .run();
