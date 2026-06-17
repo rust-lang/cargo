@@ -113,8 +113,8 @@ fn multiple_shared() {
 }
 
 #[cfg_attr(
-    target_os = "aix",
-    ignore = "Test fails on AIX due to unsupported flock behaviour"
+    any(target_os = "aix", target_os = "solaris"),
+    ignore = "Test fails on AIX due to unsupported flock behaviour and on Solaris due to process-scoped fcntl locks"
 )]
 #[cargo_test]
 fn multiple_shared_separate() {
@@ -218,8 +218,8 @@ fn readonly() {
 }
 
 #[cfg_attr(
-    target_os = "aix",
-    ignore = "Test fails on AIX due to unsupported flock behaviour"
+    any(target_os = "aix", target_os = "solaris"),
+    ignore = "Test fails on AIX due to unsupported flock behaviour and on Solaris due to process-scoped fcntl locks"
 )]
 #[cargo_test]
 fn download_then_shared_separate() {
@@ -231,8 +231,8 @@ fn download_then_shared_separate() {
 }
 
 #[cfg_attr(
-    target_os = "aix",
-    ignore = "Test fails on AIX due to unsupported flock behaviour"
+    any(target_os = "aix", target_os = "solaris"),
+    ignore = "Test fails on AIX due to unsupported flock behaviour and on Solaris due to process-scoped fcntl locks"
 )]
 #[cargo_test]
 fn shared_then_download_separate() {
@@ -244,8 +244,8 @@ fn shared_then_download_separate() {
 }
 
 #[cfg_attr(
-    target_os = "aix",
-    ignore = "Test fails on AIX due to unsupported flock behaviour"
+    any(target_os = "aix", target_os = "solaris"),
+    ignore = "Test fails on AIX due to unsupported flock behaviour and on Solaris due to process-scoped fcntl locks"
 )]
 #[cargo_test]
 fn multiple_download_separate() {
@@ -258,8 +258,8 @@ fn multiple_download_separate() {
 }
 
 #[cfg_attr(
-    target_os = "aix",
-    ignore = "Test fails on AIX due to unsupported flock behaviour"
+    any(target_os = "aix", target_os = "solaris"),
+    ignore = "Test fails on AIX due to unsupported flock behaviour and on Solaris due to process-scoped fcntl locks"
 )]
 #[cargo_test]
 fn multiple_mutate_separate() {
@@ -272,8 +272,8 @@ fn multiple_mutate_separate() {
 }
 
 #[cfg_attr(
-    target_os = "aix",
-    ignore = "Test fails on AIX due to unsupported flock behaviour"
+    any(target_os = "aix", target_os = "solaris"),
+    ignore = "Test fails on AIX due to unsupported flock behaviour and on Solaris due to process-scoped fcntl locks"
 )]
 #[cargo_test]
 fn shared_then_mutate_separate() {
@@ -281,8 +281,8 @@ fn shared_then_mutate_separate() {
 }
 
 #[cfg_attr(
-    target_os = "aix",
-    ignore = "Test fails on AIX due to unsupported flock behaviour"
+    any(target_os = "aix", target_os = "solaris"),
+    ignore = "Test fails on AIX due to unsupported flock behaviour and on Solaris due to process-scoped fcntl locks"
 )]
 #[cargo_test]
 fn download_then_mutate_separate() {
@@ -293,8 +293,8 @@ fn download_then_mutate_separate() {
 }
 
 #[cfg_attr(
-    target_os = "aix",
-    ignore = "Test fails on AIX due to unsupported flock behaviour"
+    any(target_os = "aix", target_os = "solaris"),
+    ignore = "Test fails on AIX due to unsupported flock behaviour and on Solaris due to process-scoped fcntl locks"
 )]
 #[cargo_test]
 fn mutate_then_download_separate() {
@@ -305,8 +305,8 @@ fn mutate_then_download_separate() {
 }
 
 #[cfg_attr(
-    target_os = "aix",
-    ignore = "Test fails on AIX due to unsupported flock behaviour"
+    any(target_os = "aix", target_os = "solaris"),
+    ignore = "Test fails on AIX due to unsupported flock behaviour and on Solaris due to process-scoped fcntl locks"
 )]
 #[cargo_test]
 fn mutate_then_shared_separate() {

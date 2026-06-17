@@ -126,7 +126,7 @@ impl Write for FileLock {
 impl Drop for FileLock {
     fn drop(&mut self) {
         if let Some(f) = self.f.take() {
-            if let Err(e) = f.unlock() {
+            if let Err(e) = imp::unlock(&f) {
                 tracing::warn!("failed to release lock: {e:?}");
             }
         }
@@ -150,10 +150,10 @@ impl Drop for FileLock {
 /// `try_` prefix like [`Filesystem::try_open_ro_shared_create`].
 ///
 /// The behavior of locks acquired by the `Filesystem` depend on the operating
-/// system. On unix-like system, they are advisory using [`flock`], and thus
-/// not enforced against processes which do not try to acquire the lock. On
-/// Windows, they are mandatory using [`LockFileEx`], enforced against all
-/// processes.
+/// system. On unix-like system, they are advisory using [`flock`] (or
+/// process-scoped `fcntl` locks on Solaris), and thus not enforced against
+/// processes which do not try to acquire the lock. On Windows, they are
+/// mandatory using [`LockFileEx`], enforced against all processes.
 ///
 /// This **does not** guarantee that a lock is acquired. In some cases, for
 /// example on filesystems that don't support locking, it will return a
@@ -239,7 +239,9 @@ impl Filesystem {
         let mut opts = OpenOptions::new();
         opts.read(true).write(true).create(true);
         let (path, f) = self.open(path.as_ref(), &opts, true)?;
-        acquire(gctx, msg, &path, &|| f.try_lock(), &|| f.lock())?;
+        acquire(gctx, msg, &path, &|| imp::try_lock_exclusive(&f), &|| {
+            imp::lock_exclusive(&f)
+        })?;
         Ok(FileLock { f: Some(f), path })
     }
 
@@ -254,7 +256,7 @@ impl Filesystem {
         let mut opts = OpenOptions::new();
         opts.read(true).write(true).create(true);
         let (path, f) = self.open(path.as_ref(), &opts, true)?;
-        if try_acquire(&path, &|| f.try_lock())? {
+        if try_acquire(&path, &|| imp::try_lock_exclusive(&f))? {
             Ok(Some(FileLock { f: Some(f), path }))
         } else {
             Ok(None)
@@ -280,8 +282,8 @@ impl Filesystem {
         P: AsRef<Path>,
     {
         let (path, f) = self.open(path.as_ref(), &OpenOptions::new().read(true), false)?;
-        acquire(gctx, msg, &path, &|| f.try_lock_shared(), &|| {
-            f.lock_shared()
+        acquire(gctx, msg, &path, &|| imp::try_lock_shared(&f), &|| {
+            imp::lock_shared(&f)
         })?;
         Ok(FileLock { f: Some(f), path })
     }
@@ -300,8 +302,8 @@ impl Filesystem {
         let mut opts = OpenOptions::new();
         opts.read(true).write(true).create(true);
         let (path, f) = self.open(path.as_ref(), &opts, true)?;
-        acquire(gctx, msg, &path, &|| f.try_lock_shared(), &|| {
-            f.lock_shared()
+        acquire(gctx, msg, &path, &|| imp::try_lock_shared(&f), &|| {
+            imp::lock_shared(&f)
         })?;
         Ok(FileLock { f: Some(f), path })
     }
@@ -317,7 +319,7 @@ impl Filesystem {
         let mut opts = OpenOptions::new();
         opts.read(true).write(true).create(true);
         let (path, f) = self.open(path.as_ref(), &opts, true)?;
-        if try_acquire(&path, &|| f.try_lock_shared())? {
+        if try_acquire(&path, &|| imp::try_lock_shared(&f))? {
             Ok(Some(FileLock { f: Some(f), path }))
         } else {
             Ok(None)
@@ -473,5 +475,99 @@ fn error_unsupported(err: &std::io::Error) -> bool {
     match err.raw_os_error() {
         Some(code) if code == ERROR_INVALID_FUNCTION as i32 => true,
         _ => err.kind() == std::io::ErrorKind::Unsupported,
+    }
+}
+
+#[cfg(not(target_os = "solaris"))]
+mod imp {
+    use super::*;
+
+    pub fn try_lock_exclusive(file: &File) -> Result<(), TryLockError> {
+        file.try_lock()
+    }
+
+    pub fn lock_exclusive(file: &File) -> io::Result<()> {
+        file.lock()
+    }
+
+    pub fn try_lock_shared(file: &File) -> Result<(), TryLockError> {
+        file.try_lock_shared()
+    }
+
+    pub fn lock_shared(file: &File) -> io::Result<()> {
+        file.lock_shared()
+    }
+
+    pub fn unlock(file: &File) -> io::Result<()> {
+        file.unlock()
+    }
+}
+
+#[cfg(target_os = "solaris")]
+mod imp {
+    use super::*;
+    use std::mem;
+    use std::os::unix::io::AsRawFd;
+
+    pub fn try_lock_exclusive(file: &File) -> Result<(), TryLockError> {
+        match fcntl_lock(file, libc::F_WRLCK, libc::F_SETLK) {
+            Ok(()) => Ok(()),
+            Err(e) if is_would_block(&e) => Err(TryLockError::WouldBlock),
+            Err(e) => Err(TryLockError::Error(e)),
+        }
+    }
+
+    pub fn lock_exclusive(file: &File) -> io::Result<()> {
+        fcntl_lock(file, libc::F_WRLCK, libc::F_SETLKW)
+    }
+
+    pub fn try_lock_shared(file: &File) -> Result<(), TryLockError> {
+        match fcntl_lock(file, libc::F_RDLCK, libc::F_SETLK) {
+            Ok(()) => Ok(()),
+            Err(e) if is_would_block(&e) => Err(TryLockError::WouldBlock),
+            Err(e) => Err(TryLockError::Error(e)),
+        }
+    }
+
+    pub fn lock_shared(file: &File) -> io::Result<()> {
+        fcntl_lock(file, libc::F_RDLCK, libc::F_SETLKW)
+    }
+
+    pub fn unlock(file: &File) -> io::Result<()> {
+        fcntl_lock_raw(file, libc::F_UNLCK, libc::F_SETLK)
+    }
+
+    fn fcntl_lock(file: &File, lock_type: libc::c_short, cmd: libc::c_int) -> io::Result<()> {
+        fcntl_lock_raw(file, lock_type, cmd)
+    }
+
+    fn fcntl_lock_raw(file: &File, lock_type: libc::c_short, cmd: libc::c_int) -> io::Result<()> {
+        let mut lock = flock_for_whole_file(lock_type);
+        loop {
+            let result = unsafe { libc::fcntl(file.as_raw_fd(), cmd, &mut lock) };
+            if result != -1 {
+                return Ok(());
+            }
+
+            let error = io::Error::last_os_error();
+            if cmd == libc::F_SETLKW && error.kind() == io::ErrorKind::Interrupted {
+                continue;
+            }
+            return Err(error);
+        }
+    }
+
+    fn flock_for_whole_file(lock_type: libc::c_short) -> libc::flock {
+        let mut lock = unsafe { mem::zeroed::<libc::flock>() };
+        lock.l_type = lock_type;
+        lock.l_whence = libc::SEEK_SET as libc::c_short;
+        lock.l_start = 0;
+        lock.l_len = 0;
+        lock
+    }
+
+    fn is_would_block(error: &io::Error) -> bool {
+        matches!(error.raw_os_error(), Some(libc::EACCES | libc::EAGAIN))
+            || error.kind() == io::ErrorKind::WouldBlock
     }
 }
