@@ -42,6 +42,7 @@
 //! # Adding a pass
 //!
 //! When a diagnostic requires adding a new pass, keep in mind:
+//! - Cap lints (skip everything for non-local)
 //! - Support for `build.warnings`
 //! - When errors should block further evaluation within the pass
 //! - Providing a summary at the end, like what is provided by [`ScopedDiagnosticStats::report_summary`]

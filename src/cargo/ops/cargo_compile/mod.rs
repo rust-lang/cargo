@@ -157,7 +157,7 @@ pub fn compile_with_exec<'a>(
 
 /// Like [`compile_with_exec`] but without warnings from manifest parsing.
 #[tracing::instrument(skip_all)]
-pub fn compile_ws<'a>(
+fn compile_ws<'a>(
     ws: &Workspace<'a>,
     options: &CompileOptions,
     exec: &Arc<dyn Executor>,

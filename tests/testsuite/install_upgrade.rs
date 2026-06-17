@@ -865,6 +865,8 @@ fn deletes_orphaned() {
     p.cargo("install --path . --bins --examples")
         .with_stderr_data(str![[r#"
 [INSTALLING] foo v0.2.0 ([ROOT]/foo)
+[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v0.2.0 ([ROOT]/foo)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/ex2[EXE]

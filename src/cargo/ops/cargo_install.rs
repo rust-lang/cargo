@@ -266,7 +266,7 @@ impl<'gctx> InstallablePackage<'gctx> {
 
         // For bare `cargo install` (no `--bin` or `--example`), check if there is
         // *something* to install. Explicit `--bin` or `--example` flags will be
-        // checked at the start of `compile_ws`.
+        // checked at the start of `compile_with_exec`.
         if !opts.filter.is_specific() && !pkg.targets().iter().any(|t| t.is_bin()) {
             bail!(
                 "there is nothing to install in `{}`, because it has no binaries\n\
@@ -392,7 +392,7 @@ impl<'gctx> InstallablePackage<'gctx> {
 
         let exec: Arc<dyn Executor> = Arc::new(DefaultExecutor);
         self.opts.build_config.dry_run = dry_run;
-        let compile = ops::compile_ws(&self.ws, &self.opts, &exec).with_context(|| {
+        let compile = ops::compile_with_exec(&self.ws, &self.opts, &exec).with_context(|| {
             if let Some(td) = td_opt.take() {
                 // preserve the temporary directory, so the user can inspect it
                 drop(td.keep());
@@ -645,7 +645,7 @@ impl<'gctx> InstallablePackage<'gctx> {
         }
         // It would be best if `source` could be passed in here to avoid a
         // duplicate "Updating", but since `source` is taken by value, then it
-        // wouldn't be available for `compile_ws`.
+        // wouldn't be available for `compile_with_exec`.
         let dry_run = false;
         let (pkg_set, resolve) = ops::resolve_ws(&self.ws, dry_run)?;
         ops::check_yanked(

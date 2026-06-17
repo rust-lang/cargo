@@ -96,16 +96,32 @@ pub fn emit_parse_diagnostics(
 ) -> CargoResult<()> {
     let mut stats = GlobalDiagnosticStats::new();
 
-    emit_parse_ws_diagnostics(workspace, rules, &mut stats)?;
+    if is_local_workspace(workspace) {
+        emit_parse_ws_diagnostics(workspace, rules, &mut stats)?;
+    }
 
     for maybe_pkg in workspace.loaded_maybe() {
         if let MaybePackage::Package(pkg) = maybe_pkg {
-            let path = pkg.manifest_path();
-            emit_parse_pkg_diagnostics(workspace, pkg, &path, rules, &mut stats)?;
+            if is_local_package(pkg) {
+                let path = pkg.manifest_path();
+                emit_parse_pkg_diagnostics(workspace, pkg, &path, rules, &mut stats)?;
+            }
         }
     }
 
     stats.ok()
+}
+
+fn is_local_workspace(workspace: &Workspace<'_>) -> bool {
+    workspace
+        .root_maybe()
+        .as_package()
+        .map(is_local_package)
+        .unwrap_or_else(|| workspace.members().any(is_local_package))
+}
+
+fn is_local_package(pkg: &Package) -> bool {
+    pkg.package_id().source_id().is_path()
 }
 
 fn emit_parse_pkg_diagnostics(

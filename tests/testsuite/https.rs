@@ -171,6 +171,8 @@ fn github_works_cargo_install() {
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `https://github.com/rust-lang/bitflags.git`
 [INSTALLING] bitflags-smoke-test [..]
+[WARNING] Cargo.toml: unused manifest key: dependencies.bitflags.all-features
+[WARNING] `bitflags-smoke-test` (manifest) generated 1 warning
 [LOCKING] 1 package to latest compatible version
 ...
 [INSTALLED] package [..]

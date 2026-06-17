@@ -1631,13 +1631,17 @@ fn path_install_workspace_root_despite_default_members() {
         .arg("ws-root")
         .with_stderr_data(str![[r#"
 [INSTALLING] ws-root v0.1.0 ([ROOT]/foo)
+[WARNING] ws-member/Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `ws-member` (manifest) generated 1 warning
+[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `ws-root` (manifest) generated 1 warning
 [COMPILING] ws-root v0.1.0 ([ROOT]/foo)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/ws-root[EXE]
 [INSTALLED] package `ws-root v0.1.0 ([ROOT]/foo)` (executable `ws-root[EXE]`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
-"#]])
+"#]].unordered())
         // Particularly avoid "Installed package `ws-root v0.1.0 ([..]])` (executable `ws-member`)":
         .with_stderr_does_not_contain("ws-member")
         .run();
@@ -2149,6 +2153,8 @@ fn workspace_uses_workspace_target_dir() {
         .arg(p.root().join("bar"))
         .with_stderr_data(str![[r#"
 [INSTALLING] bar v0.1.0 ([ROOT]/foo/bar)
+[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `foo` (manifest) generated 1 warning
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/bar[EXE]
 [INSTALLED] package `bar v0.1.0 ([ROOT]/foo/bar)` (executable `bar[EXE]`)
@@ -3043,6 +3049,8 @@ fn dry_run_incompatible_package_dependency() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [INSTALLING] foo v0.1.0 ([ROOT]/foo)
+[WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
+[WARNING] `foo` (manifest) generated 1 warning
 [LOCKING] 1 package to latest compatible version
 [ERROR] failed to compile `foo v0.1.0 ([ROOT]/foo)`, intermediate artifacts can be found at `[ROOT]/foo/target`.
 To reuse those artifacts with a future compilation, set the environment variable `CARGO_BUILD_BUILD_DIR` to that path.
@@ -3177,6 +3185,93 @@ fn mistaken_flag_case() {
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
 [ERROR] invalid character `–` in package name: `––path`, the first character must be a Unicode XID start character (most letters or `_`)
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn cap_lints_path() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+cargo-features = ["test-dummy-unstable"]
+
+[package]
+name = "foo"
+version = "0.0.1"
+edition = "2015"
+authors = []
+im-a-teapot = true
+
+[lints.cargo]
+im_a_teapot = "warn"
+            "#,
+        )
+        .file("src/main.rs", "fn main() { let unused = 10; }")
+        .build();
+    p.cargo("install --path . -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints", "test-dummy-unstable"])
+        .with_stdout_data(str![])
+        .with_stderr_data(str![[r#"
+[INSTALLING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] `im_a_teapot` is specified
+ --> Cargo.toml:9:1
+  |
+9 | im-a-teapot = true
+  | ^^^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::im_a_teapot` is set to `warn` in `[lints]`
+[WARNING] `foo` (manifest) generated 1 warning
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] unused variable: `unused`
+...
+[WARNING] `foo` (bin "foo") generated 1 warning (run `cargo fix --bin "foo" -p foo` to apply 1 suggestion)
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.1 ([ROOT]/foo)` (executable `foo[EXE]`)
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn cap_lints_registry() {
+    Package::new("foo", "1.0.0")
+        .file(
+            "Cargo.toml",
+            r#"
+cargo-features = ["test-dummy-unstable"]
+
+[package]
+name = "foo"
+version = "1.0.0"
+edition = "2015"
+authors = []
+im-a-teapot = true
+
+[lints.cargo]
+im-a-teapot = "deny"
+            "#,
+        )
+        .file("src/main.rs", "fn main() { let unused = 10; }")
+        .publish();
+
+    cargo_process("install foo -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints", "test-dummy-unstable"])
+        .with_stdout_data(str![])
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v1.0.0 (registry `dummy-registry`)
+[INSTALLING] foo v1.0.0
+[COMPILING] foo v1.0.0
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v1.0.0` (executable `foo[EXE]`)
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]])
         .run();
