@@ -302,43 +302,13 @@ fn lint_parse_pass() {
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .arg("--config")
         .arg("build.warnings='allow'")
-        .with_stderr_data(str![[r#"
-[WARNING] `package.homepage` is redundant with another manifest field
- --> Cargo.toml:8:24
-  |
-7 |             repository = "https://github.com/rust-lang/cargo/"
-  |                          -------------------------------------
-8 |             homepage = "https://github.com/rust-lang/cargo/"
-  |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  |
-  = [NOTE] `cargo::redundant_homepage` is set to `warn` in `[lints]`
-[HELP] consider removing `package.homepage`
-  |
-8 -             homepage = "https://github.com/rust-lang/cargo/"
-  |
-[WARNING] `foo` (manifest) generated 1 warning
-
-"#]])
+        .with_stderr_data(str![""])
         .run();
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .arg("--config")
         .arg("build.warnings='allow'")
         .with_stderr_data(str![[r#"
-[WARNING] `package.homepage` is redundant with another manifest field
- --> Cargo.toml:8:24
-  |
-7 |             repository = "https://github.com/rust-lang/cargo/"
-  |                          -------------------------------------
-8 |             homepage = "https://github.com/rust-lang/cargo/"
-  |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  |
-  = [NOTE] `cargo::redundant_homepage` is set to `warn` in `[lints]`
-[HELP] consider removing `package.homepage`
-  |
-8 -             homepage = "https://github.com/rust-lang/cargo/"
-  |
-[WARNING] `foo` (manifest) generated 1 warning
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -453,18 +423,6 @@ fn lint_build_result_pass() {
         .arg("--config")
         .arg("build.warnings='allow'")
         .with_stderr_data(str![[r#"
-[WARNING] unused dependency
- --> Cargo.toml:9:13
-  |
-9 |             unused = "0.1.0"
-  |             ^^^^^^^^^^^^^^^^
-  |
-  = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
-[HELP] remove the dependency
-  |
-9 -             unused = "0.1.0"
-  |
-[WARNING] `foo` (manifest) generated 1 warning
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
