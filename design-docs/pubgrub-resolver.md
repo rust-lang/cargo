@@ -46,8 +46,18 @@ lockfile identical to the default resolver.
     incompatible majors, links conflicts, diamonds, missing deps (11 tests).
   - `pubgrub_graph.rs` — **graph/edge** comparison vs the default resolver,
     including regressions for the cycle and weak-dependency cases (3 tests).
-  - `pubgrub_prop.rs` — property test vs the SAT reference resolver over 256
-    randomly generated registries.
+  - `pubgrub_prop.rs` — property tests vs the SAT reference resolver over 256
+    randomly generated registries: a fresh-resolution check and a
+    conservative-update check (resolve, feed the result back as
+    `VersionPreferences`, re-resolve both kept and with the requested crate
+    freed, and re-validate against SAT + the default resolver).
+  - `pubgrub_update.rs` — deterministic offline differential tests for the
+    conservative-update paths: building against an untouched lock, `cargo
+    update -p <crate>`, `cargo update` (free everything), adding a dependency,
+    shared transitive pinning, stale-lock override, and `--precise`. Each
+    resolves, derives `VersionPreferences` from the first resolution, mutates
+    one input, and asserts the pubgrub graph (nodes **and** edges) matches the
+    default resolver (8 tests).
   - **Curated suite via `CARGO_TEST_PUBGRUB=1`** — the harness convenience
     helpers route through `-Zpubgrub-resolver` when this env var is set, so the
     pre-existing curated suites run on PubGrub:
@@ -62,9 +72,14 @@ lockfile identical to the default resolver.
 - Parity is verified against the **current crates.io index state**; index drift
   changes selected versions for both resolvers (it stays a 0-line diff because
   both drift together, but it is not a hermetic golden-file test).
-- Parity is verified for **`generate-lockfile` (fresh)** only. The
-  conservative-update paths (`cargo update -p`, building against an existing
-  lock, `--precise`) are **not** yet exercised/verified.
+- Full-lockfile parity is verified for **`generate-lockfile` (fresh)** only. The
+  conservative-update paths are now exercised at the **resolver level** (where
+  they reduce to `VersionPreferences`) by `pubgrub_update.rs` and the new
+  `pubgrub_prop.rs` case — see §9.3. Still unverified end-to-end: the
+  `ops::resolve` glue that *builds* those preferences from a real `Cargo.lock`,
+  and the registry-side exact pinning that `--precise` performs on top of the
+  preference (the harness models `--precise` only as a preferred `=x.y.z`
+  dependency).
 - The package-set/SAT tests do **not** check graph edges; only `pubgrub_graph.rs`
   does. Edge correctness is where the subtle bugs lived (see §6).
 
@@ -101,6 +116,15 @@ nix develop ~/dev/dotfiles#cargo --command bash -c 'cargo test -p resolver-tests
 # Re-run the ENTIRE curated suite through the PubGrub resolver
 nix develop ~/dev/dotfiles#cargo --command bash -c \
   'CARGO_TEST_PUBGRUB=1 cargo test -p resolver-tests --test resolve --test pubgrub'
+
+# Re-run the FULL integration testsuite through PubGrub. `CARGO_TEST_PUBGRUB`
+# is honored at the resolver dispatch fork (resolver::resolve), independent of
+# the nightly-gated `-Zpubgrub-resolver` flag, and is inherited by the child
+# cargo processes the testsuite spawns. Expect failures: many testsuite cases
+# assert exact error text / version-selection ordering the PubGrub path does
+# not reproduce. This is a survey of the gap, not a pass/fail gate.
+nix develop ~/dev/dotfiles#cargo --command bash -c \
+  'CARGO_TEST_PUBGRUB=1 cargo test -p cargo --test testsuite'
 ```
 
 ### Reproducing the full-tree parity check (the real acceptance test)
@@ -283,14 +307,22 @@ been removed; re-add ad hoc if needed.)
 
 ## 8. Known limitations / open questions
 
-- **Conservative updates unverified.** `cargo update -p`, `--precise`, and
-  building against an existing lock flow through `version_prefs` differently and
-  are untested. (`choose_version` already iterates `version_prefs`-sorted
-  candidates, so lockfile preference *should* work, but prove it.)
+- **Conservative updates verified at the resolver level, not end-to-end.**
+  Building against a lock, `cargo update -p`, and `--precise` all reach the
+  resolver as `VersionPreferences`; `pubgrub_update.rs` + the new
+  `pubgrub_prop.rs` case confirm pubgrub honors those preferences exactly like
+  the default resolver (`choose_version` iterates `version_prefs`-sorted
+  candidates). Not yet covered: the `ops::resolve` glue that constructs the
+  preferences from a real `Cargo.lock`, and the registry-side version pinning
+  `--precise` applies in addition to the preference.
 - **`[patch]`/`[replace]`** handled only insofar as `RegistryQueryer` applies
   them; not specifically tested.
 - **Error reporting** is a thin wrapper over pubgrub's `DefaultStringReporter`,
-  not Cargo-native messages.
+  not Cargo-native messages. Concretely, the resolver returns a generic
+  `anyhow` error rather than a typed `ResolveError`, which the full-testsuite
+  survey (§12) caught via `member_errors::member_manifest_version_error`
+  ("Not a ResolveError"). The resolution itself is correct; only the error
+  type/text differs.
 - **Performance** is not tuned: blocking poll loop in `Provider::candidates`, no
   reuse of the provider across Cargo's two resolve passes, `RefCell` caches.
 - **`Wide` packages** (multi-bucket requirements) are implemented but lightly
@@ -306,13 +338,24 @@ been removed; re-add ad hoc if needed.)
 ## 9. Prioritized next steps
 
 1. ~~Run `tests/resolve.rs` through pubgrub.~~ **DONE** via `CARGO_TEST_PUBGRUB`
-   (see §2/§3). `resolve.rs` 37/37, `pubgrub.rs` 28/28. Next: extend the switch
-   to also run the proptests and the full `cargo test -p resolver-tests` under
-   PubGrub in CI.
+   (see §2/§3). `resolve.rs` 37/37, `pubgrub.rs` 28/28; `proptests.rs` also
+   passes 5/5 under the env var at the default 256 cases. The env var is now
+   *also* honored at the resolver dispatch fork (not just in the resolver-tests
+   harness), so the full `cargo test -p cargo --test testsuite` can be run on
+   PubGrub — see §12 for the current survey results. Next: wire a curated
+   green subset into CI (the full testsuite is not yet pass/fail-clean).
 2. **Scale the property test** (bump cases way up; loop it). It is the Cargo
    team's de-facto correctness gate.
-3. **Verify conservative-update paths**: existing-lock reuse, `cargo update -p`,
-   `--precise`. Add tests that resolve, mutate one dep, and re-resolve.
+3. ~~**Verify conservative-update paths**: existing-lock reuse, `cargo update
+   -p`, `--precise`. Add tests that resolve, mutate one dep, and re-resolve.~~
+   **DONE at the resolver level** via `pubgrub_update.rs` (8 deterministic
+   differential tests) and a new `pubgrub_prop.rs` case. All three paths reduce
+   to `VersionPreferences` at the resolver boundary, so the tests build prefs
+   from a first resolution and re-resolve both kept and freed, comparing
+   pubgrub against the default resolver (graph nodes + edges) and SAT. Next:
+   close the end-to-end gap — drive a real `Cargo.lock` through `ops::resolve`
+   and the `--precise` registry pinning (see §8), e.g. via a cargo-test
+   integration test rather than the resolver harness.
 4. **Real-world differential testing** via `Eh2406/pubgrub-crates-benchmark` —
    resolve many crates.io crates with both resolvers and diff.
 5. **Weak-dep + feature-map fidelity** — stress more `dep?/feat` shapes and
@@ -328,10 +371,15 @@ been removed; re-add ad hoc if needed.)
 
 Newest first. Implementation: `9fa0e7f75`–`913116cbb`; fixes: `eb917c1f7`,
 `c83889704`→`c916af4f5`; tests: `6d49e8644`, `1f17605b3`, `0864cb574`,
-`7d24add22`; observability: `37fa77459`; docs: `cacdd97e9`, `6de3fd5be`,
-`68fb458d9`, and this update.
+`7d24add22`, `87e953f7b`–`22a51e300`; observability: `37fa77459`; docs:
+`cacdd97e9`, `6de3fd5be`, `68fb458d9`, `ee05f2fbb`, and this update.
 
 ```
+22a51e300 test(resolver): Add CARGO_TEST_PUBGRUB escape hatch at the dispatch fork
+8e8a44a26 test(resolver): Add conservative-update property test for pubgrub
+592a1a47e test(resolver): Add conservative-update differential tests for pubgrub
+87e953f7b refactor(resolver): Allow seeding VersionPreferences in the raw resolve helper
+ee05f2fbb docs: Update handoff doc for cleaner verification methodology
 37fa77459 feat(resolver): Add observable trace when the pubgrub resolver runs
 68fb458d9 docs: Record curated-suite validation results for pubgrub resolver
 7d24add22 test(resolver): Skip exact error-text assertions under pubgrub
@@ -365,3 +413,43 @@ bc8028b86 feat(resolver): Add PubGrubPackage encoding for the pubgrub resolver
 - The acceptance command is in §3; remember `rm -f Cargo.lock` each run.
 - Before claiming "it works," test **fresh** (no lock) and **diff the full
   lockfile**, not just exit codes.
+
+---
+
+## 12. Full-testsuite survey under PubGrub
+
+First run of the entire integration testsuite through PubGrub, via the
+`CARGO_TEST_PUBGRUB` dispatch hook (§3):
+
+```sh
+CARGO_TEST_PUBGRUB=1 cargo test -p cargo --test testsuite
+```
+
+Result (this environment, against this branch):
+**3872 passed, 4 failed, 404 ignored.**
+
+Cross-checking the 4 failures against the **default** resolver (same filter, no
+env var) shows **3 are pre-existing / environment**, not PubGrub regressions:
+
+| Test | Default resolver | Cause |
+|---|---|---|
+| `artifact_dep::artifact_dep_target_does_not_propagate_to_proc_macro` | also FAILS | needs the `i686-unknown-linux-gnu` cross target (not installed here) |
+| `install::failed_install_retains_temp_directory` | also FAILS | `assertion failed: path.exists()` — env/temp-dir, unrelated to resolution |
+| `cargo::z_help::case` | also FAILS | `-Z` help SVG snapshot; the only real delta is our own `-Z pubgrub-resolver` line being added |
+
+The **one genuinely PubGrub-specific failure**:
+
+- `member_errors::member_manifest_version_error` — passes on the default
+  resolver, fails under PubGrub with *"Not a ResolveError"*. The test downcasts
+  the resolution error to a typed `ResolveError`; the PubGrub path instead
+  returns a generic `anyhow` error formatted by `DefaultStringReporter`. This is
+  the **error-reporting** limitation (§8, §9.6), **not** a wrong resolution —
+  the resolver correctly detects the unsatisfiable `i-dont-exist` requirement,
+  it just reports it with the wrong error *type*.
+
+Takeaway: at the resolution level, PubGrub clears essentially the entire
+integration testsuite. The remaining gap surfaced by this survey is
+Cargo-native error reporting (typed `ResolveError` + message text), which §9.6
+already tracks. A useful next step is a curated allowlist of testsuite modules
+known-green under PubGrub for CI, excluding the error-text/snapshot cases until
+reporting lands.
