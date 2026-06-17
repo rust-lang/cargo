@@ -194,8 +194,18 @@ pub enum ManifestFor<'a> {
 }
 
 impl ManifestFor<'_> {
-    fn lint_level(&self, pkg_lints: &TomlToolLints, lint: &Lint) -> LintLevelProduct {
-        lint.level(pkg_lints, self.rust_version(), self.unstable_features())
+    fn lint_level(
+        &self,
+        pkg_lints: &TomlToolLints,
+        lint: &Lint,
+        gctx: &GlobalContext,
+    ) -> LintLevelProduct {
+        lint.level(
+            pkg_lints,
+            self.rust_version(),
+            self.unstable_features(),
+            gctx,
+        )
     }
 
     pub fn rust_version(&self) -> Option<&RustVersion> {
