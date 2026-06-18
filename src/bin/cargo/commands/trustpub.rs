@@ -53,6 +53,19 @@ pub fn cli() -> Command {
                         .required(true),
                 ),
         )
+        .subcommand(
+            subcommand("set")
+                .about("Control whether new versions must be published via Trusted Publishing")
+                .arg(
+                    opt(
+                        "trustpub-only",
+                        "Require Trusted Publishing for new versions of the crate",
+                    )
+                    .value_name("BOOL")
+                    .value_parser(value_parser!(bool))
+                    .required(true),
+                ),
+        )
 }
 
 pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
@@ -66,6 +79,9 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         },
         Some(("remove", sub)) => TrustpubCommand::Remove {
             id: *sub.get_one::<u32>("id").unwrap(),
+        },
+        Some(("set", sub)) => TrustpubCommand::Set {
+            trustpub_only: *sub.get_one::<bool>("trustpub-only").unwrap(),
         },
         Some((cmd, _)) => unreachable!("unexpected command {}", cmd),
         None => unreachable!("unexpected command"),

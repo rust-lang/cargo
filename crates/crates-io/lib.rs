@@ -179,6 +179,15 @@ struct NewGitHubConfig<'a> {
 struct NewGitHubConfigReq<'a> {
     github_config: NewGitHubConfig<'a>,
 }
+#[derive(Serialize)]
+struct CrateUpdate {
+    trustpub_only: bool,
+}
+#[derive(Serialize)]
+struct CrateUpdateReq {
+    #[serde(rename = "crate")]
+    krate: CrateUpdate,
+}
 
 /// Error returned when interacting with a registry.
 #[derive(Debug, thiserror::Error)]
@@ -350,6 +359,18 @@ impl<T: HttpClient> Registry<T> {
         Ok(())
     }
 
+    pub fn set_trustpub_only(
+        &mut self,
+        krate: &str,
+        trustpub_only: bool,
+    ) -> RegistryResult<(), T::Error> {
+        let body = serde_json::to_string(&CrateUpdateReq {
+            krate: CrateUpdate { trustpub_only },
+        })?;
+        self.patch(&format!("/crates/{}", krate), Some(body.as_bytes()))?;
+        Ok(())
+    }
+
     pub fn publish(
         &mut self,
         krate: &NewCrate,
@@ -468,6 +489,10 @@ impl<T: HttpClient> Registry<T> {
 
     fn post(&mut self, path: &str, b: Option<&[u8]>) -> RegistryResult<String, T::Error> {
         self.req(Method::POST, path, b, Auth::Authorized)
+    }
+
+    fn patch(&mut self, path: &str, b: Option<&[u8]>) -> RegistryResult<String, T::Error> {
+        self.req(Method::PATCH, path, b, Auth::Authorized)
     }
 
     fn get(&mut self, path: &str) -> RegistryResult<String, T::Error> {

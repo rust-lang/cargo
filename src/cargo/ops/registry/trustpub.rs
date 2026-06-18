@@ -20,6 +20,9 @@ pub enum TrustpubCommand {
     Remove {
         id: u32,
     },
+    Set {
+        trustpub_only: bool,
+    },
 }
 
 pub struct TrustpubOptions {
@@ -132,6 +135,21 @@ pub fn trusted_publish(gctx: &GlobalContext, opts: &TrustpubOptions) -> CargoRes
             gctx.shell().status(
                 "Removed",
                 format!("trusted publishing config {} for crate `{}`", id, name),
+            )?;
+        }
+        TrustpubCommand::Set { trustpub_only } => {
+            registry
+                .set_trustpub_only(&name, *trustpub_only)
+                .with_context(|| {
+                    format!(
+                        "failed to update `trustpub_only` for crate `{}` on registry at {}",
+                        name,
+                        registry.host()
+                    )
+                })?;
+            gctx.shell().status(
+                "Updated",
+                format!("`trustpub_only` for crate `{}` to {}", name, trustpub_only),
             )?;
         }
     }
