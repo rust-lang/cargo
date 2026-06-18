@@ -318,6 +318,7 @@ fn lint_parse_pass() {
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .arg("--config")
         .arg("build.warnings='deny'")
+        .with_status(101)
         .with_stderr_data(str![[r#"
 [WARNING] `package.homepage` is redundant with another manifest field
  --> Cargo.toml:8:24
@@ -333,6 +334,7 @@ fn lint_parse_pass() {
 8 -             homepage = "https://github.com/rust-lang/cargo/"
   |
 [WARNING] `foo` (manifest) generated 1 warning
+[ERROR] warnings are denied by `build.warnings` configuration
 
 "#]])
         .run();
@@ -340,6 +342,7 @@ fn lint_parse_pass() {
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .arg("--config")
         .arg("build.warnings='deny'")
+        .with_status(101)
         .with_stderr_data(str![[r#"
 [WARNING] `package.homepage` is redundant with another manifest field
  --> Cargo.toml:8:24
@@ -356,6 +359,7 @@ fn lint_parse_pass() {
   |
 [WARNING] `foo` (manifest) generated 1 warning
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[ERROR] warnings are denied by `build.warnings` configuration
 
 "#]])
         .run();

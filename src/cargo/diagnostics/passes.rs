@@ -12,6 +12,7 @@ use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevel;
 use crate::diagnostics::LintLevelProduct;
 use crate::diagnostics::ManifestFor;
+use crate::diagnostics::PassOutput;
 use crate::diagnostics::ScopedDiagnosticStats;
 
 #[derive(Clone)]
@@ -93,7 +94,7 @@ type FnLintPackage = fn(
 pub fn emit_parse_diagnostics(
     workspace: &Workspace<'_>,
     rules: &[ParsePassRule<'_>],
-) -> CargoResult<()> {
+) -> CargoResult<PassOutput> {
     let mut stats = GlobalDiagnosticStats::new();
 
     if is_local_workspace(workspace) {

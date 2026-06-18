@@ -72,6 +72,10 @@ pub use lint::{Lint, LintGroup, LintLevel, LintLevelProduct, LintLevelSource};
 pub use report::{AsIndex, cwd_rel_path, get_key_value, get_key_value_span, workspace_rel_path};
 pub use rules::{LINT_GROUPS, LINTS};
 
+pub struct PassOutput {
+    pub lint_warning_count: usize,
+}
+
 pub struct GlobalDiagnosticStats {
     error_count: usize,
     lint_warning_count: usize,
@@ -102,13 +106,15 @@ impl GlobalDiagnosticStats {
         self.lint_warning_count
     }
 
-    pub fn ok(&self) -> CargoResult<()> {
+    pub fn ok(&self) -> CargoResult<PassOutput> {
         if 0 < self.error_count {
             Err(crate::Error::new(crate::AlreadyPrintedError::new(
                 anyhow::format_err!("see above"),
             )))
         } else {
-            Ok(())
+            Ok(PassOutput {
+                lint_warning_count: self.lint_warning_count,
+            })
         }
     }
 }

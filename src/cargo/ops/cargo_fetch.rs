@@ -7,6 +7,7 @@ use crate::ops;
 use crate::util::CargoResult;
 use crate::util::GlobalContext;
 use crate::util::context::JobsConfig;
+use crate::util::context::WarningHandling;
 use std::collections::HashSet;
 
 pub struct FetchOptions<'a> {
@@ -20,7 +21,7 @@ pub fn fetch<'a>(
     ws: &Workspace<'a>,
     options: &FetchOptions<'a>,
 ) -> CargoResult<(Resolve, PackageSet<'a>)> {
-    crate::diagnostics::passes::emit_parse_diagnostics(
+    let parse_pass_output = crate::diagnostics::passes::emit_parse_diagnostics(
         ws,
         crate::diagnostics::rules::PARSE_PASS_RULES,
     )?;
@@ -82,6 +83,12 @@ pub fn fetch<'a>(
 
     packages.get_many(to_download)?;
     crate::core::gc::auto_gc(gctx);
+
+    if ws.gctx().warning_handling()? == WarningHandling::Deny
+        && parse_pass_output.lint_warning_count > 0
+    {
+        anyhow::bail!("warnings are denied by `build.warnings` configuration")
+    }
 
     Ok((resolve, packages))
 }
