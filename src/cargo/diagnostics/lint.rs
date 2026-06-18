@@ -5,6 +5,8 @@ use cargo_util_schemas::manifest;
 use cargo_util_terminal::report::Level;
 
 use crate::core::{Feature, Features};
+use crate::util::GlobalContext;
+use crate::util::context::WarningHandling;
 
 #[derive(Clone, Debug)]
 pub struct Lint {
@@ -30,6 +32,7 @@ impl Lint {
         pkg_lints: &manifest::TomlToolLints,
         pkg_rust_version: Option<&manifest::RustVersion>,
         unstable_features: &Features,
+        gctx: &GlobalContext,
     ) -> LintLevelProduct {
         // We should return `Allow` if a lint is behind a feature, but it is
         // not enabled, that way the lint does not run.
@@ -83,6 +86,15 @@ impl Lint {
             )
         })
         .unwrap();
+
+        let (level, source) = match (level, gctx.warning_handling().ok()) {
+            // `Deny` needs to be handled later, at the end of the operation
+            (LintLevel::Warn, Some(WarningHandling::Allow)) => {
+                (LintLevel::Allow, LintLevelSource::Default)
+            }
+            _ => (level, source),
+        };
+
         LintLevelProduct { level, source }
     }
 
@@ -215,6 +227,15 @@ mod tests {
         hidden: false,
     };
 
+    fn gctx() -> GlobalContext {
+        let cwd = std::env::current_dir().unwrap();
+        GlobalContext::new(
+            cargo_util_terminal::Shell::new(),
+            cwd.clone(),
+            home::cargo_home_with_cwd(&cwd).unwrap(),
+        )
+    }
+
     fn test_lint(name: &'static str, group: &'static LintGroup) -> Lint {
         Lint {
             name,
@@ -237,7 +258,7 @@ mod tests {
         );
         let features = Features::default();
 
-        let LintLevelProduct { level, source } = lint.level(&pkg_lints, None, &features);
+        let LintLevelProduct { level, source } = lint.level(&pkg_lints, None, &features, &gctx());
         assert_eq!(level, LintLevel::Deny);
         assert_eq!(source, LintLevelSource::Package);
     }
@@ -253,7 +274,7 @@ mod tests {
         );
         let features = Features::default();
 
-        let LintLevelProduct { level, source } = lint.level(&pkg_lints, None, &features);
+        let LintLevelProduct { level, source } = lint.level(&pkg_lints, None, &features, &gctx());
         assert_eq!(level, LintLevel::Deny);
         assert_eq!(source, LintLevelSource::Package);
     }
@@ -269,7 +290,7 @@ mod tests {
         );
         let features = Features::default();
 
-        let LintLevelProduct { level, source } = lint.level(&pkg_lints, None, &features);
+        let LintLevelProduct { level, source } = lint.level(&pkg_lints, None, &features, &gctx());
         assert_eq!(level, LintLevel::Deny);
         assert_eq!(source, LintLevelSource::Package);
     }
@@ -289,7 +310,7 @@ mod tests {
         );
         let features = Features::default();
 
-        let LintLevelProduct { level, source } = lint.level(&pkg_lints, None, &features);
+        let LintLevelProduct { level, source } = lint.level(&pkg_lints, None, &features, &gctx());
         assert_eq!(level, LintLevel::Deny);
         assert_eq!(source, LintLevelSource::Package);
     }
@@ -309,7 +330,7 @@ mod tests {
         );
         let features = Features::default();
 
-        let LintLevelProduct { level, source } = lint.level(&pkg_lints, None, &features);
+        let LintLevelProduct { level, source } = lint.level(&pkg_lints, None, &features, &gctx());
         assert_eq!(level, LintLevel::Deny);
         assert_eq!(source, LintLevelSource::Package);
     }
@@ -337,7 +358,7 @@ mod tests {
         );
         let features = Features::default();
 
-        let LintLevelProduct { level, source } = lint.level(&pkg_lints, None, &features);
+        let LintLevelProduct { level, source } = lint.level(&pkg_lints, None, &features, &gctx());
         assert_eq!(level, LintLevel::Deny);
         assert_eq!(source, LintLevelSource::Package);
     }
@@ -365,7 +386,7 @@ mod tests {
         );
         let features = Features::default();
 
-        let LintLevelProduct { level, source } = lint.level(&pkg_lints, None, &features);
+        let LintLevelProduct { level, source } = lint.level(&pkg_lints, None, &features, &gctx());
         assert_eq!(level, LintLevel::Allow);
         assert_eq!(source, LintLevelSource::Package);
     }

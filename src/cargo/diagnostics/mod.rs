@@ -72,19 +72,26 @@ pub use lint::{Lint, LintGroup, LintLevel, LintLevelProduct, LintLevelSource};
 pub use report::{AsIndex, cwd_rel_path, get_key_value, get_key_value_span, workspace_rel_path};
 pub use rules::{LINT_GROUPS, LINTS};
 
+pub struct PassOutput {
+    pub lint_warning_count: usize,
+}
+
 pub struct GlobalDiagnosticStats {
     error_count: usize,
+    lint_warning_count: usize,
 }
 
 impl GlobalDiagnosticStats {
     pub fn new() -> Self {
-        Self { error_count: 0 }
+        Self {
+            error_count: 0,
+            lint_warning_count: 0,
+        }
     }
 
     pub fn scope(&mut self) -> ScopedDiagnosticStats<'_> {
         ScopedDiagnosticStats {
             warning_count: 0,
-            lint_warning_count: 0,
             error_count: 0,
             global: self,
         }
@@ -94,29 +101,30 @@ impl GlobalDiagnosticStats {
         self.error_count
     }
 
-    pub fn ok(&self) -> CargoResult<()> {
+    pub fn lint_warning_count(&self) -> usize {
+        self.lint_warning_count
+    }
+
+    pub fn ok(&self) -> CargoResult<PassOutput> {
         if 0 < self.error_count {
             Err(crate::Error::new(crate::AlreadyPrintedError::new(
                 anyhow::format_err!("see above"),
             )))
         } else {
-            Ok(())
+            Ok(PassOutput {
+                lint_warning_count: self.lint_warning_count,
+            })
         }
     }
 }
 
 pub struct ScopedDiagnosticStats<'g> {
     warning_count: usize,
-    lint_warning_count: usize,
     error_count: usize,
     global: &'g mut GlobalDiagnosticStats,
 }
 
 impl ScopedDiagnosticStats<'_> {
-    pub fn lint_warning_count(&self) -> usize {
-        self.lint_warning_count
-    }
-
     pub fn warning_count(&self) -> usize {
         self.warning_count
     }
@@ -140,7 +148,7 @@ impl ScopedDiagnosticStats<'_> {
                 self.record_error();
             }
             LintLevel::Warn => {
-                self.lint_warning_count += 1;
+                self.global.lint_warning_count += 1;
                 self.record_warning();
             }
             LintLevel::Allow => {}
@@ -194,8 +202,18 @@ pub enum ManifestFor<'a> {
 }
 
 impl ManifestFor<'_> {
-    fn lint_level(&self, pkg_lints: &TomlToolLints, lint: &Lint) -> LintLevelProduct {
-        lint.level(pkg_lints, self.rust_version(), self.unstable_features())
+    fn lint_level(
+        &self,
+        pkg_lints: &TomlToolLints,
+        lint: &Lint,
+        gctx: &GlobalContext,
+    ) -> LintLevelProduct {
+        lint.level(
+            pkg_lints,
+            self.rust_version(),
+            self.unstable_features(),
+            gctx,
+        )
     }
 
     pub fn rust_version(&self) -> Option<&RustVersion> {

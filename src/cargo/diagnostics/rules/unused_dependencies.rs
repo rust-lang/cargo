@@ -194,6 +194,7 @@ pub fn lint_build_results(
             &cargo_lints,
             pkg.rust_version(),
             pkg.manifest().unstable_features(),
+            build_runner.bcx.gctx,
         );
         if !pkg_id.source_id().is_path() {
             for (dep_kind, state) in states.iter() {

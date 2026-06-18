@@ -12,6 +12,7 @@ use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevel;
 use crate::diagnostics::LintLevelProduct;
 use crate::diagnostics::ManifestFor;
+use crate::diagnostics::PassOutput;
 use crate::diagnostics::ScopedDiagnosticStats;
 
 #[derive(Clone)]
@@ -93,7 +94,7 @@ type FnLintPackage = fn(
 pub fn emit_parse_diagnostics(
     workspace: &Workspace<'_>,
     rules: &[ParsePassRule<'_>],
-) -> CargoResult<()> {
+) -> CargoResult<PassOutput> {
     let mut stats = GlobalDiagnosticStats::new();
 
     if is_local_workspace(workspace) {
@@ -154,7 +155,7 @@ fn emit_parse_pkg_diagnostics(
             ParsePassRule::LintManifest { rule, lint } => {
                 if workspace.gctx().cli_unstable().cargo_lints {
                     let manifest: ManifestFor<'_> = pkg.into();
-                    let level = manifest.lint_level(&cargo_lints, lint);
+                    let level = manifest.lint_level(&cargo_lints, lint, workspace.gctx());
                     if level.level != LintLevel::Allow {
                         rule(
                             workspace,
@@ -177,6 +178,7 @@ fn emit_parse_pkg_diagnostics(
                         &cargo_lints,
                         pkg.rust_version(),
                         pkg.manifest().unstable_features(),
+                        workspace.gctx(),
                     );
 
                     if level.level != LintLevel::Allow {
@@ -242,7 +244,7 @@ fn emit_parse_ws_diagnostics(
             ParsePassRule::LintManifest { rule, lint } => {
                 if workspace.gctx().cli_unstable().cargo_lints {
                     let manifest: ManifestFor<'_> = (workspace, workspace.root_maybe()).into();
-                    let level = manifest.lint_level(&cargo_lints, lint);
+                    let level = manifest.lint_level(&cargo_lints, lint, workspace.gctx());
                     if level.level != LintLevel::Allow {
                         rule(
                             workspace,
@@ -270,6 +272,7 @@ fn emit_parse_ws_diagnostics(
                         &cargo_lints,
                         workspace.lowest_rust_version(),
                         workspace.root_maybe().unstable_features(),
+                        workspace.gctx(),
                     );
                     if level.level != LintLevel::Allow {
                         rule(
