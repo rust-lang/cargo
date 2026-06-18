@@ -871,7 +871,7 @@ impl<'gctx> DrainState<'gctx> {
             opt_type += " + debuginfo";
         }
 
-        let time_elapsed = util::elapsed(build_runner.bcx.gctx.creation_time().elapsed());
+        let time_elapsed = util::elapsed(build_runner.bcx.gctx.invocation_instant().elapsed());
         if let Err(e) = self
             .timings
             .finished(build_runner, &errors.to_error())

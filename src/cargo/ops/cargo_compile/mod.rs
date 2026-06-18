@@ -313,7 +313,7 @@ pub fn create_bcx<'a, 'gctx>(
     let dry_run = false;
 
     if let Some(logger) = logger {
-        let elapsed = ws.gctx().creation_time().elapsed().as_secs_f64();
+        let elapsed = ws.gctx().invocation_instant().elapsed().as_secs_f64();
         logger.log(LogMessage::ResolutionStarted { elapsed });
     }
 
@@ -335,7 +335,7 @@ pub fn create_bcx<'a, 'gctx>(
     } = resolve;
 
     if let Some(logger) = logger {
-        let elapsed = ws.gctx().creation_time().elapsed().as_secs_f64();
+        let elapsed = ws.gctx().invocation_instant().elapsed().as_secs_f64();
         logger.log(LogMessage::ResolutionFinished { elapsed });
     }
 
@@ -423,7 +423,7 @@ pub fn create_bcx<'a, 'gctx>(
     let mut scrape_units = Vec::new();
 
     if let Some(logger) = logger {
-        let elapsed = ws.gctx().creation_time().elapsed().as_secs_f64();
+        let elapsed = ws.gctx().invocation_instant().elapsed().as_secs_f64();
         logger.log(LogMessage::UnitGraphStarted { elapsed });
     }
 
@@ -572,7 +572,7 @@ pub fn create_bcx<'a, 'gctx>(
                 dependencies,
             });
         }
-        let elapsed = ws.gctx().creation_time().elapsed().as_secs_f64();
+        let elapsed = ws.gctx().invocation_instant().elapsed().as_secs_f64();
         logger.log(LogMessage::UnitGraphFinished { elapsed });
     }
 

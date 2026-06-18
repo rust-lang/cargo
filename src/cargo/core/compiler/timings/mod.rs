@@ -80,7 +80,7 @@ pub struct UnitData {
 
 impl<'gctx> Timings<'gctx> {
     pub fn new(bcx: &BuildContext<'_, 'gctx>) -> Timings<'gctx> {
-        let start = bcx.gctx.creation_time();
+        let start = bcx.gctx.invocation_instant();
         let enabled = bcx.logger.is_some();
 
         if !enabled {

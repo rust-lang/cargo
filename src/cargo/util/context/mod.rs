@@ -250,8 +250,12 @@ pub struct GlobalContext {
     crates_io_source_id: OnceLock<SourceId>,
     /// If false, don't cache `rustc --version --verbose` invocations
     cache_rustc_info: bool,
-    /// Creation time of this config, used to output the total build time
-    creation_time: Instant,
+    /// Monotonic start of this cargo invocation for reporting time elapsed.
+    invocation_instant: Instant,
+    /// Wall-clock time of this cargo invocation.
+    ///
+    /// Currently used as the reference time for `min-publish-age` and `-Zbuild-analysis`.
+    invocation_time: jiff::Timestamp,
     /// Target Directory via resolved Cli parameter
     target_dir: Option<Filesystem>,
     /// Environment variable snapshot.
@@ -358,6 +362,15 @@ impl GlobalContext {
             _ => true,
         };
 
+        #[expect(
+            clippy::disallowed_methods,
+            reason = "testing only, no reason for config support"
+        )]
+        let invocation_time = match env::var("__CARGO_TEST_INVOCATION_TIME") {
+            Ok(now) => now.parse().unwrap(),
+            Err(_) => jiff::Timestamp::now(),
+        };
+
         GlobalContext {
             home_path: Filesystem::new(homedir),
             shell: Mutex::new(shell),
@@ -378,7 +391,8 @@ impl GlobalContext {
             easy: Default::default(),
             crates_io_source_id: Default::default(),
             cache_rustc_info,
-            creation_time: Instant::now(),
+            invocation_instant: Instant::now(),
+            invocation_time,
             target_dir: None,
             env,
             updated_sources: Default::default(),
@@ -2054,8 +2068,17 @@ impl GlobalContext {
         Ok(*source_id)
     }
 
-    pub fn creation_time(&self) -> Instant {
-        self.creation_time
+    pub fn invocation_instant(&self) -> Instant {
+        self.invocation_instant
+    }
+
+    /// Returns the wall-clock time of this cargo invocation.
+    ///
+    /// See the [`invocation_time`] field doc for details.
+    ///
+    /// [`invocation_time`]: GlobalContext::invocation_time
+    pub fn invocation_time(&self) -> jiff::Timestamp {
+        self.invocation_time
     }
 
     /// Retrieves a config variable.

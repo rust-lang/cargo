@@ -80,7 +80,10 @@ pub use self::errors::{ActivateError, ActivateResult, ResolveError};
 pub use self::features::{CliFeatures, ForceAllTargets, HasDevUnits};
 pub use self::resolve::{Resolve, ResolveVersion};
 pub use self::types::{ResolveBehavior, ResolveOpts};
-pub use self::version_prefs::{VersionOrdering, VersionPreferences};
+pub use self::version_prefs::PublishAgePolicy;
+pub use self::version_prefs::PublishAgeViolation;
+pub use self::version_prefs::VersionOrdering;
+pub use self::version_prefs::VersionPreferences;
 
 mod conflict_cache;
 mod context;
@@ -349,6 +352,7 @@ fn activate_deps_loop(
                         Err(errors::activation_error(
                             &resolver_ctx,
                             registry.registry(),
+                            registry.version_prefs(),
                             &parent,
                             &dep,
                             &conflicting_activations,

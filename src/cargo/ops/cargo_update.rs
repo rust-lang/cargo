@@ -1,6 +1,7 @@
 use crate::core::Registry as _;
 use crate::core::dependency::Dependency;
 use crate::core::registry::PackageRegistry;
+use crate::core::resolver::PublishAgePolicy;
 use crate::core::resolver::features::{CliFeatures, HasDevUnits};
 use crate::core::{PackageId, PackageIdSpec, PackageIdSpecQuery};
 use crate::core::{Resolve, SourceId, Workspace};
@@ -14,6 +15,7 @@ use crate::util::toml_mut::manifest::LocalManifest;
 use crate::util::toml_mut::upgrade::upgrade_requirement;
 use crate::util::{CargoResult, VersionExt};
 use crate::util::{OptVersionReq, style};
+
 use anyhow::Context as _;
 use cargo_util_schemas::core::PartialVersion;
 use cargo_util_terminal::Verbosity;
@@ -561,6 +563,7 @@ fn print_lockfile_generation(
         return Ok(());
     }
     annotate_required_rust_version(ws, resolve, &mut changes);
+    let publish_age = publish_age_policy_for_report(ws);
 
     status_locking(ws, num_pkgs)?;
     for change in changes.values() {
@@ -576,8 +579,9 @@ fn print_lockfile_generation(
                 };
 
                 let required_rust_version = report_required_rust_version(resolve, change);
-                let latest = report_latest(&possibilities, change);
-                let note = required_rust_version.or(latest);
+                let too_new = report_too_new(resolve, change, publish_age.as_ref());
+                let latest = report_latest(&possibilities, change, publish_age.as_ref());
+                let note = required_rust_version.or(too_new).or(latest);
 
                 if let Some(note) = note {
                     ws.gctx().shell().status_with_color(
@@ -615,6 +619,7 @@ fn print_lockfile_sync(
         return Ok(());
     }
     annotate_required_rust_version(ws, resolve, &mut changes);
+    let publish_age = publish_age_policy_for_report(ws);
 
     status_locking(ws, num_pkgs)?;
     for change in changes.values() {
@@ -632,8 +637,12 @@ fn print_lockfile_sync(
                 };
 
                 let required_rust_version = report_required_rust_version(resolve, change);
-                let latest = report_latest(&possibilities, change);
-                let note = required_rust_version.or(latest).unwrap_or_default();
+                let too_new = report_too_new(resolve, change, publish_age.as_ref());
+                let latest = report_latest(&possibilities, change, publish_age.as_ref());
+                let note = required_rust_version
+                    .or(too_new)
+                    .or(latest)
+                    .unwrap_or_default();
 
                 ws.gctx().shell().status_with_color(
                     change.kind.status(),
@@ -661,6 +670,7 @@ fn print_lockfile_updates(
         .filter(|change| change.kind.is_new())
         .count();
     annotate_required_rust_version(ws, resolve, &mut changes);
+    let publish_age = publish_age_policy_for_report(ws);
 
     if !precise {
         status_locking(ws, num_pkgs)?;
@@ -678,8 +688,12 @@ fn print_lockfile_updates(
             | PackageChangeKind::Upgraded
             | PackageChangeKind::Downgraded => {
                 let required_rust_version = report_required_rust_version(resolve, change);
-                let latest = report_latest(&possibilities, change);
-                let note = required_rust_version.or(latest).unwrap_or_default();
+                let too_new = report_too_new(resolve, change, publish_age.as_ref());
+                let latest = report_latest(&possibilities, change, publish_age.as_ref());
+                let note = required_rust_version
+                    .or(too_new)
+                    .or(latest)
+                    .unwrap_or_default();
 
                 ws.gctx().shell().status_with_color(
                     change.kind.status(),
@@ -696,8 +710,12 @@ fn print_lockfile_updates(
             }
             PackageChangeKind::Unchanged => {
                 let required_rust_version = report_required_rust_version(resolve, change);
-                let latest = report_latest(&possibilities, change);
-                let note = required_rust_version.as_deref().or(latest.as_deref());
+                let too_new = report_too_new(resolve, change, publish_age.as_ref());
+                let latest = report_latest(&possibilities, change, publish_age.as_ref());
+                let note = required_rust_version
+                    .as_deref()
+                    .or(too_new.as_deref())
+                    .or(latest.as_deref());
 
                 if let Some(note) = note {
                     if latest.is_some() {
@@ -774,6 +792,13 @@ fn required_rust_version(ws: &Workspace<'_>) -> Option<PartialVersion> {
     }
 }
 
+fn publish_age_policy_for_report(ws: &Workspace<'_>) -> Option<PublishAgePolicy> {
+    if !ws.resolve_honors_publish_age() {
+        return None;
+    }
+    PublishAgePolicy::for_report(ws.gctx()).ok().flatten()
+}
+
 fn report_required_rust_version(resolve: &Resolve, change: &PackageChange) -> Option<String> {
     if change.package_id.source_id().is_path() {
         return None;
@@ -791,7 +816,28 @@ fn report_required_rust_version(resolve: &Resolve, change: &PackageChange) -> Op
     ))
 }
 
-fn report_latest(possibilities: &[IndexSummary], change: &PackageChange) -> Option<String> {
+/// Reports when the selected version is too new and violates `min-publish-age` config.
+fn report_too_new(
+    resolve: &Resolve,
+    change: &PackageChange,
+    publish_age: Option<&PublishAgePolicy>,
+) -> Option<String> {
+    let summary = resolve.summary(change.package_id);
+    let violation = publish_age?.too_new(summary)?;
+    let age = violation.age_label();
+    let config = violation.config();
+
+    let warn = style::WARN;
+    Some(format!(
+        " {warn}(published {age}, minimum age {config}){warn:#}"
+    ))
+}
+
+fn report_latest(
+    possibilities: &[IndexSummary],
+    change: &PackageChange,
+    publish_age: Option<&PublishAgePolicy>,
+) -> Option<String> {
     let package_id = change.package_id;
     if !package_id.source_id().is_registry() {
         return None;
@@ -799,6 +845,11 @@ fn report_latest(possibilities: &[IndexSummary], change: &PackageChange) -> Opti
 
     let version_req = package_id.version().to_caret_req();
     let required_rust_version = change.required_rust_version.as_ref();
+
+    let publish_note = |summary| {
+        let age = publish_age?.too_new(summary)?.age_label();
+        Some(format!(", published {age}"))
+    };
 
     let compat_ver_compat_msrv_summary = possibilities
         .iter()
@@ -820,7 +871,8 @@ fn report_latest(possibilities: &[IndexSummary], change: &PackageChange) -> Opti
     if let Some(summary) = compat_ver_compat_msrv_summary {
         let warn = style::WARN;
         let version = summary.version();
-        let report = format!(" {warn}(available: v{version}){warn:#}");
+        let publish_note = publish_note(summary).unwrap_or_default();
+        let report = format!(" {warn}(available: v{version}{publish_note}){warn:#}");
         return Some(report);
     }
 
@@ -845,7 +897,8 @@ fn report_latest(possibilities: &[IndexSummary], change: &PackageChange) -> Opti
         if let Some(summary) = incompat_ver_compat_msrv_summary {
             let warn = style::WARN;
             let version = summary.version();
-            let report = format!(" {warn}(available: v{version}){warn:#}");
+            let publish_note = publish_note(summary).unwrap_or_default();
+            let report = format!(" {warn}(available: v{version}{publish_note}){warn:#}");
             return Some(report);
         }
     }
@@ -865,7 +918,8 @@ fn report_latest(possibilities: &[IndexSummary], change: &PackageChange) -> Opti
             .unwrap_or_default();
         let warn = style::NOP;
         let version = summary.version();
-        let report = format!(" {warn}(available: v{version}{msrv_note}){warn:#}");
+        let publish_note = publish_note(summary).unwrap_or_default();
+        let report = format!(" {warn}(available: v{version}{msrv_note}{publish_note}){warn:#}");
         return Some(report);
     }
 
@@ -885,7 +939,8 @@ fn report_latest(possibilities: &[IndexSummary], change: &PackageChange) -> Opti
                 .unwrap_or_default();
             let warn = style::NOP;
             let version = summary.version();
-            let report = format!(" {warn}(available: v{version}{msrv_note}){warn:#}");
+            let publish_note = publish_note(summary).unwrap_or_default();
+            let report = format!(" {warn}(available: v{version}{msrv_note}{publish_note}){warn:#}");
             return Some(report);
         }
     }

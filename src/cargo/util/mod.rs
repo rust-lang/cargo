@@ -69,6 +69,7 @@ pub mod rustc;
 mod semver_eval_ext;
 mod semver_ext;
 pub mod sqlite;
+pub mod time_span;
 pub mod toml;
 pub mod toml_mut;
 mod unhashed;

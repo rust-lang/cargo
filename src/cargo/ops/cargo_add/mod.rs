@@ -30,6 +30,7 @@ use crate::core::Summary;
 use crate::core::Workspace;
 use crate::core::dependency::DepKind;
 use crate::core::registry::PackageRegistry;
+use crate::core::resolver::PublishAgePolicy;
 use crate::ops::resolve_ws;
 use crate::sources::IndexSummary;
 use crate::sources::source::QueryKind;
@@ -844,6 +845,19 @@ fn get_latest_dependency(
                     _ => None,
                 })
                 .collect();
+            let has_candidates = !possibilities.is_empty();
+
+            // `cargo add` selects a version outside the resolver,
+            // so the `min-publish-age` policy must be applied here too.
+            let publish_age = PublishAgePolicy::new(gctx)?;
+            if let Some(publish_age) = &publish_age {
+                possibilities.retain(|s| publish_age.too_new(s).is_none());
+                if possibilities.is_empty() && has_candidates {
+                    anyhow::bail!(
+                        "all versions of crate `{dependency}` are too new per `min-publish-age`"
+                    );
+                }
+            }
 
             possibilities.sort_by_key(|s| {
                 // Fallback to a pre-release if no official release is available by sorting them as

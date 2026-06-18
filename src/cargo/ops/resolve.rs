@@ -65,6 +65,7 @@ use crate::core::SourceId;
 use crate::core::Workspace;
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::registry::{LockedPatchDependency, PackageRegistry};
+use crate::core::resolver::PublishAgePolicy;
 use crate::core::resolver::features::{
     CliFeatures, FeatureOpts, FeatureResolver, ForceAllTargets, RequestedFeatures, ResolvedFeatures,
 };
@@ -450,6 +451,11 @@ pub fn resolve_with_previous<'gctx>(
     }
     if let Some(publish_time) = ws.resolve_publish_time() {
         version_prefs.publish_time(publish_time);
+    }
+    if ws.resolve_honors_publish_age() {
+        if let Some(policy) = PublishAgePolicy::new(ws.gctx())? {
+            version_prefs.publish_age(policy);
+        }
     }
 
     let avoid_patch_ids = if register_patches {

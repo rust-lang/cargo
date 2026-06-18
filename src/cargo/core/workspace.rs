@@ -122,6 +122,8 @@ pub struct Workspace<'gctx> {
     resolve_honors_rust_version: bool,
     /// The feature unification mode used when building packages.
     resolve_feature_unification: FeatureUnification,
+    /// Whether resolution enforces `min-publish-age`.
+    resolve_honors_publish_age: bool,
     /// Latest publish time allowed for packages
     resolve_publish_time: Option<jiff::Timestamp>,
     /// Workspace-level custom metadata
@@ -261,6 +263,7 @@ impl<'gctx> Workspace<'gctx> {
             resolve_behavior: ResolveBehavior::V1,
             resolve_honors_rust_version: false,
             resolve_feature_unification: FeatureUnification::Selected,
+            resolve_honors_publish_age: true,
             resolve_publish_time: None,
             custom_metadata: None,
             local_overlays: HashMap::new(),
@@ -350,6 +353,15 @@ impl<'gctx> Workspace<'gctx> {
                 .shell()
                 .warn("ignoring `resolver.feature-unification` without `-Zfeature-unification`")?;
         };
+
+        if !self.gctx().cli_unstable().min_publish_age {
+            if config.incompatible_publish_age.is_some() {
+                self.gctx().shell().warn(
+                    "ignoring `resolver.incompatible-publish-age` without `-Zmin-publish-age`",
+                )?;
+            }
+            warn_unused_min_publish_age(self.gctx())?;
+        }
 
         if let Some(lockfile_path) = config.lockfile_path {
             // Reserve the ability to add templates in the future.
@@ -758,6 +770,14 @@ impl<'gctx> Workspace<'gctx> {
 
     pub fn resolve_honors_rust_version(&self) -> bool {
         self.resolve_honors_rust_version
+    }
+
+    pub fn set_resolve_honors_publish_age(&mut self, honor_publish_age: bool) {
+        self.resolve_honors_publish_age = honor_publish_age;
+    }
+
+    pub fn resolve_honors_publish_age(&self) -> bool {
+        self.resolve_honors_publish_age
     }
 
     pub fn set_resolve_feature_unification(&mut self, feature_unification: FeatureUnification) {
@@ -2073,6 +2093,38 @@ impl WorkspaceRootConfig {
     pub fn inheritable(&self) -> &InheritableFields {
         &self.inheritable_fields
     }
+}
+
+fn warn_unused_min_publish_age(gctx: &GlobalContext) -> CargoResult<()> {
+    if gctx
+        .get::<Option<String>>("registry.global-min-publish-age")?
+        .is_some()
+    {
+        gctx.shell()
+            .warn("ignoring `registry.global-min-publish-age` without `-Zmin-publish-age`")?;
+    }
+
+    if gctx
+        .get::<Option<String>>("registry.min-publish-age")?
+        .is_some()
+    {
+        gctx.shell()
+            .warn("ignoring `registry.min-publish-age` without `-Zmin-publish-age`")?;
+    }
+
+    if let Some(context::ConfigValue::Table(registries, _)) = gctx.values()?.get("registries") {
+        for (name, val) in registries {
+            if let context::ConfigValue::Table(val, _) = val {
+                if val.contains_key("min-publish-age") {
+                    gctx.shell().warn(format!(
+                        "ignoring `registries.{name}.min-publish-age` without `-Zmin-publish-age`"
+                    ))?;
+                }
+            }
+        }
+    }
+
+    Ok(())
 }
 
 pub fn resolve_relative_path(

@@ -9,6 +9,7 @@ use crate::util::errors::CargoResult;
 use crate::util::{GlobalContext, OptVersionReq, VersionExt};
 use anyhow::Error;
 
+use super::VersionPreferences;
 use super::context::ResolverContext;
 use super::types::{ConflictMap, ConflictReason};
 
@@ -74,6 +75,7 @@ impl From<(PackageId, ConflictReason)> for ActivateError {
 pub(super) fn activation_error(
     resolver_ctx: &ResolverContext,
     registry: &impl Registry,
+    version_prefs: &VersionPreferences,
     parent: &Summary,
     dep: &Dependency,
     conflicting_activations: &ConflictMap,
@@ -255,9 +257,20 @@ pub(super) fn activation_error(
         for candidate in version_candidates {
             match candidate {
                 IndexSummary::Candidate(summary) => {
-                    // HACK: If this was a real candidate, we wouldn't hit this case.
-                    // so it must be a patch which get normalized to being a candidate
-                    let _ = writeln!(&mut msg, "  version {} is unavailable", summary.version());
+                    if let Some(violation) = version_prefs.too_new(&summary) {
+                        let version_age = violation.age_label();
+                        let config = violation.config();
+                        let _ = writeln!(
+                            &mut msg,
+                            "  version {} is too new (published {version_age}, minimum age {config})",
+                            summary.version(),
+                        );
+                    } else {
+                        // HACK: If this was a real candidate, we wouldn't hit this case.
+                        // so it must be a patch which get normalized to being a candidate
+                        let _ =
+                            writeln!(&mut msg, "  version {} is unavailable", summary.version());
+                    }
                 }
                 IndexSummary::Yanked(summary) => {
                     let _ = writeln!(&mut msg, "  version {} is yanked", summary.version());

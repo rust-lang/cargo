@@ -38,6 +38,8 @@ pub struct RegistryConfig {
     pub credential_provider: Option<PathAndArgs>,
     pub secret_key: OptValue<Secret<String>>,
     pub secret_key_subject: Option<String>,
+    /// Minimum publish age threshold for RFC 3923
+    pub min_publish_age: Option<String>,
     #[serde(rename = "protocol")]
     _protocol: Option<String>,
 }
@@ -54,6 +56,10 @@ pub struct RegistryConfigExtended {
     pub credential_provider: Option<PathAndArgs>,
     pub secret_key: OptValue<Secret<String>>,
     pub secret_key_subject: Option<String>,
+    /// Minimum publish age threshold for RFC 3923
+    pub min_publish_age: Option<String>,
+    /// Global default Minimum publish age threshold for RFC 3923
+    pub global_min_publish_age: Option<String>,
     #[serde(rename = "default")]
     _default: Option<String>,
     #[serde(rename = "global-credential-providers")]
@@ -68,6 +74,7 @@ impl RegistryConfigExtended {
             credential_provider: self.credential_provider,
             secret_key: self.secret_key,
             secret_key_subject: self.secret_key_subject,
+            min_publish_age: self.min_publish_age,
             _protocol: None,
         }
     }

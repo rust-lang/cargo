@@ -134,6 +134,7 @@ mod message_format;
 mod messages;
 mod metabuild;
 mod metadata;
+mod min_publish_age;
 mod minimal_versions;
 mod multitarget;
 mod net_config;
