@@ -11,6 +11,12 @@ use crate::util::important_paths::find_root_manifest_for_wd;
 
 pub enum TrustpubCommand {
     List,
+    Add {
+        repository_owner: String,
+        repository_name: String,
+        workflow_filename: String,
+        environment: Option<String>,
+    },
 }
 
 pub struct TrustpubOptions {
@@ -40,7 +46,7 @@ pub fn trusted_publish(gctx: &GlobalContext, opts: &TrustpubOptions) -> CargoRes
         Some(operation),
     )?;
 
-    match opts.command {
+    match &opts.command {
         TrustpubCommand::List => {
             let configs = registry.list_github_trustpub_configs(&name).with_context(|| {
                 format!(
@@ -70,6 +76,44 @@ pub fn trusted_publish(gctx: &GlobalContext, opts: &TrustpubOptions) -> CargoRes
                     None => drop_println!(gctx),
                 }
             }
+        }
+        TrustpubCommand::Add {
+            repository_owner,
+            repository_name,
+            workflow_filename,
+            environment,
+        } => {
+            let config = registry
+                .add_github_trustpub_config(
+                    &name,
+                    repository_owner,
+                    repository_name,
+                    workflow_filename,
+                    environment.as_deref(),
+                )
+                .with_context(|| {
+                    format!(
+                        "failed to add trusted publishing config to crate `{}` on registry at {}",
+                        name,
+                        registry.host()
+                    )
+                })?;
+            let environment = match config.environment.as_ref() {
+                Some(env) => format!(" environment={}", env),
+                None => String::new(),
+            };
+            gctx.shell().status(
+                "Added",
+                format!(
+                    "trusted publishing config {} ({}/{} workflow={}{}) for crate `{}`",
+                    config.id,
+                    config.repository_owner,
+                    config.repository_name,
+                    config.workflow_filename,
+                    environment,
+                    name,
+                ),
+            )?;
         }
     }
 

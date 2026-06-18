@@ -20,11 +20,40 @@ pub fn cli() -> Command {
         )
         .arg_silent_suggestion()
         .subcommand(subcommand("list").about("List the Trusted Publishing configs for a crate"))
+        .subcommand(
+            subcommand("add")
+                .about("Add a GitHub Actions Trusted Publishing config to a crate")
+                .arg(
+                    opt("owner", "GitHub repository owner (user or organization)")
+                        .value_name("OWNER")
+                        .required(true),
+                )
+                .arg(
+                    opt("repo", "GitHub repository name")
+                        .value_name("REPO")
+                        .required(true),
+                )
+                .arg(
+                    opt("pipeline", "GitHub Actions workflow filename (e.g. `ci.yml`)")
+                        .value_name("PIPELINE")
+                        .required(true),
+                )
+                .arg(
+                    opt("env", "GitHub Actions environment the workflow must run in")
+                        .value_name("ENV"),
+                ),
+        )
 }
 
 pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     let command = match args.subcommand() {
         Some(("list", _)) => TrustpubCommand::List,
+        Some(("add", sub)) => TrustpubCommand::Add {
+            repository_owner: sub.get_one::<String>("owner").cloned().unwrap(),
+            repository_name: sub.get_one::<String>("repo").cloned().unwrap(),
+            workflow_filename: sub.get_one::<String>("pipeline").cloned().unwrap(),
+            environment: sub.get_one::<String>("env").cloned(),
+        },
         Some((cmd, _)) => unreachable!("unexpected command {}", cmd),
         None => unreachable!("unexpected command"),
     };

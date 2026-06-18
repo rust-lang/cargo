@@ -161,6 +161,24 @@ pub struct GitHubConfig {
 struct GitHubConfigs {
     github_configs: Vec<GitHubConfig>,
 }
+#[derive(Deserialize)]
+struct GitHubConfigResponse {
+    github_config: GitHubConfig,
+}
+#[derive(Serialize)]
+struct NewGitHubConfig<'a> {
+    #[serde(rename = "crate")]
+    krate: &'a str,
+    repository_owner: &'a str,
+    repository_name: &'a str,
+    workflow_filename: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    environment: Option<&'a str>,
+}
+#[derive(Serialize)]
+struct NewGitHubConfigReq<'a> {
+    github_config: NewGitHubConfig<'a>,
+}
 
 /// Error returned when interacting with a registry.
 #[derive(Debug, thiserror::Error)]
@@ -303,6 +321,27 @@ impl<T: HttpClient> Registry<T> {
         Ok(serde_json::from_str::<GitHubConfigs>(&body)?.github_configs)
     }
 
+    pub fn add_github_trustpub_config(
+        &mut self,
+        krate: &str,
+        repository_owner: &str,
+        repository_name: &str,
+        workflow_filename: &str,
+        environment: Option<&str>,
+    ) -> RegistryResult<GitHubConfig, T::Error> {
+        let body = serde_json::to_string(&NewGitHubConfigReq {
+            github_config: NewGitHubConfig {
+                krate,
+                repository_owner,
+                repository_name,
+                workflow_filename,
+                environment,
+            },
+        })?;
+        let body = self.post("/trusted_publishing/github_configs", Some(body.as_bytes()))?;
+        Ok(serde_json::from_str::<GitHubConfigResponse>(&body)?.github_config)
+    }
+
     pub fn publish(
         &mut self,
         krate: &NewCrate,
@@ -417,6 +456,10 @@ impl<T: HttpClient> Registry<T> {
 
     fn put(&mut self, path: &str, b: Option<&[u8]>) -> RegistryResult<String, T::Error> {
         self.req(Method::PUT, path, b, Auth::Authorized)
+    }
+
+    fn post(&mut self, path: &str, b: Option<&[u8]>) -> RegistryResult<String, T::Error> {
+        self.req(Method::POST, path, b, Auth::Authorized)
     }
 
     fn get(&mut self, path: &str) -> RegistryResult<String, T::Error> {
