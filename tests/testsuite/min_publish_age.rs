@@ -2034,6 +2034,10 @@ fn cargo_add_all_versions_too_new() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] all versions of crate `bar` are too new per `min-publish-age`
+  version 1.1.0 is too new (published 2 days ago, minimum age 7 days)
+  version 1.2.0 is too new (published 24 hours ago, minimum age 7 days)
+  version 1.3.0 is too new (published moments ago, minimum age 7 days)
+[HELP] to add the latest version anyways, re-run with `CARGO_RESOLVER_INCOMPATIBLE_PUBLISH_AGE=allow`
 
 "#]])
         .run();

@@ -823,10 +823,10 @@ fn report_too_new(
     publish_age: Option<&PublishAgePolicy>,
 ) -> Option<String> {
     let summary = resolve.summary(change.package_id);
-    let violation = publish_age?.too_new(summary)?;
+    let note = publish_age?.too_new(summary)?.note();
 
     let warn = style::WARN;
-    Some(format!(" {warn}({}){warn:#}", violation.note()))
+    Some(format!(" {warn}({note}){warn:#}"))
 }
 
 fn report_latest(
