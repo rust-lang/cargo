@@ -352,10 +352,7 @@ impl<T: HttpClient> Registry<T> {
     }
 
     pub fn remove_github_trustpub_config(&mut self, id: u32) -> RegistryResult<(), T::Error> {
-        self.delete(
-            &format!("/trusted_publishing/github_configs/{}", id),
-            None,
-        )?;
+        self.delete(&format!("/trusted_publishing/github_configs/{}", id), None)?;
         Ok(())
     }
 

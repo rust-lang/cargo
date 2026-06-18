@@ -39,10 +39,10 @@ pub use self::fix::{
 pub use self::lockfile::{load_pkg_lockfile, resolve_to_string, write_pkg_lockfile};
 pub use self::registry::OwnersOptions;
 pub use self::registry::PublishOpts;
-pub use self::registry::TrustpubCommand;
-pub use self::registry::TrustpubOptions;
 pub use self::registry::RegistryCredentialConfig;
 pub use self::registry::RegistryOrIndex;
+pub use self::registry::TrustpubCommand;
+pub use self::registry::TrustpubOptions;
 pub use self::registry::info;
 pub use self::registry::modify_owners;
 pub use self::registry::publish;

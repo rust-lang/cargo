@@ -34,9 +34,12 @@ pub fn cli() -> Command {
                         .required(true),
                 )
                 .arg(
-                    opt("pipeline", "GitHub Actions workflow filename (e.g. `ci.yml`)")
-                        .value_name("PIPELINE")
-                        .required(true),
+                    opt(
+                        "pipeline",
+                        "GitHub Actions workflow filename (e.g. `ci.yml`)",
+                    )
+                    .value_name("PIPELINE")
+                    .required(true),
                 )
                 .arg(
                     opt("env", "GitHub Actions environment the workflow must run in")
@@ -47,10 +50,13 @@ pub fn cli() -> Command {
             subcommand("remove")
                 .about("Remove a Trusted Publishing config from a crate")
                 .arg(
-                    opt("id", "Id of the config to remove (see `cargo trustpub list`)")
-                        .value_name("ID")
-                        .value_parser(value_parser!(u32))
-                        .required(true),
+                    opt(
+                        "id",
+                        "Id of the config to remove (see `cargo trustpub list`)",
+                    )
+                    .value_name("ID")
+                    .value_parser(value_parser!(u32))
+                    .required(true),
                 ),
         )
         .subcommand(
