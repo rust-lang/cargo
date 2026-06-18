@@ -92,7 +92,6 @@ impl GlobalDiagnosticStats {
     pub fn scope(&mut self) -> ScopedDiagnosticStats<'_> {
         ScopedDiagnosticStats {
             warning_count: 0,
-            lint_warning_count: 0,
             error_count: 0,
             global: self,
         }
@@ -121,16 +120,11 @@ impl GlobalDiagnosticStats {
 
 pub struct ScopedDiagnosticStats<'g> {
     warning_count: usize,
-    lint_warning_count: usize,
     error_count: usize,
     global: &'g mut GlobalDiagnosticStats,
 }
 
 impl ScopedDiagnosticStats<'_> {
-    pub fn lint_warning_count(&self) -> usize {
-        self.lint_warning_count
-    }
-
     pub fn warning_count(&self) -> usize {
         self.warning_count
     }
@@ -154,7 +148,6 @@ impl ScopedDiagnosticStats<'_> {
                 self.record_error();
             }
             LintLevel::Warn => {
-                self.lint_warning_count += 1;
                 self.global.lint_warning_count += 1;
                 self.record_warning();
             }
