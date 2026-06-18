@@ -342,6 +342,14 @@ impl<T: HttpClient> Registry<T> {
         Ok(serde_json::from_str::<GitHubConfigResponse>(&body)?.github_config)
     }
 
+    pub fn remove_github_trustpub_config(&mut self, id: u32) -> RegistryResult<(), T::Error> {
+        self.delete(
+            &format!("/trusted_publishing/github_configs/{}", id),
+            None,
+        )?;
+        Ok(())
+    }
+
     pub fn publish(
         &mut self,
         krate: &NewCrate,

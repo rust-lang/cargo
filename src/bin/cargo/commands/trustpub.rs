@@ -43,6 +43,16 @@ pub fn cli() -> Command {
                         .value_name("ENV"),
                 ),
         )
+        .subcommand(
+            subcommand("remove")
+                .about("Remove a Trusted Publishing config from a crate")
+                .arg(
+                    opt("id", "Id of the config to remove (see `cargo trustpub list`)")
+                        .value_name("ID")
+                        .value_parser(value_parser!(u32))
+                        .required(true),
+                ),
+        )
 }
 
 pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
@@ -53,6 +63,9 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
             repository_name: sub.get_one::<String>("repo").cloned().unwrap(),
             workflow_filename: sub.get_one::<String>("pipeline").cloned().unwrap(),
             environment: sub.get_one::<String>("env").cloned(),
+        },
+        Some(("remove", sub)) => TrustpubCommand::Remove {
+            id: *sub.get_one::<u32>("id").unwrap(),
         },
         Some((cmd, _)) => unreachable!("unexpected command {}", cmd),
         None => unreachable!("unexpected command"),

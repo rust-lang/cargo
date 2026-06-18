@@ -17,6 +17,9 @@ pub enum TrustpubCommand {
         workflow_filename: String,
         environment: Option<String>,
     },
+    Remove {
+        id: u32,
+    },
 }
 
 pub struct TrustpubOptions {
@@ -113,6 +116,22 @@ pub fn trusted_publish(gctx: &GlobalContext, opts: &TrustpubOptions) -> CargoRes
                     environment,
                     name,
                 ),
+            )?;
+        }
+        TrustpubCommand::Remove { id } => {
+            registry
+                .remove_github_trustpub_config(*id)
+                .with_context(|| {
+                    format!(
+                        "failed to remove trusted publishing config {} from crate `{}` on registry at {}",
+                        id,
+                        name,
+                        registry.host()
+                    )
+                })?;
+            gctx.shell().status(
+                "Removed",
+                format!("trusted publishing config {} for crate `{}`", id, name),
             )?;
         }
     }
