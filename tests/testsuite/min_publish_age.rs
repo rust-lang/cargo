@@ -2001,6 +2001,12 @@ fn cargo_add_all_versions_too_new() {
     Package::new("bar", "1.1.0")
         .pubtime("2006-08-06T00:00:00Z")
         .publish();
+    Package::new("bar", "1.2.0")
+        .pubtime("2006-08-07T00:00:00Z")
+        .publish();
+    Package::new("bar", "1.3.0")
+        .pubtime("2006-08-08T00:00:20Z") // a future version (clock drift)
+        .publish();
 
     let p = project()
         .file(
