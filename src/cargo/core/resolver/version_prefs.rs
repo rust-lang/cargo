@@ -334,6 +334,14 @@ impl PublishAgeViolation {
     pub fn config(&self) -> &str {
         &self.config
     }
+
+    /// A human-readable note describing the violation,
+    /// like `published 2 days ago, minimum age 7 days`.
+    pub fn note(&self) -> String {
+        let age = self.age_label();
+        let config = self.config();
+        format!("published {age}, minimum age {config}",)
+    }
 }
 
 /// Formats an age as a single, friendly-spelled unit, never is multi-unit noise.
