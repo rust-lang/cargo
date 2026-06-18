@@ -8,6 +8,7 @@ mod logout;
 mod owner;
 mod publish;
 mod search;
+mod trustpub;
 mod yank;
 
 use std::collections::HashSet;
@@ -35,6 +36,9 @@ pub use self::owner::modify_owners;
 pub use self::publish::PublishOpts;
 pub use self::publish::publish;
 pub use self::search::search;
+pub use self::trustpub::TrustpubCommand;
+pub use self::trustpub::TrustpubOptions;
+pub use self::trustpub::trusted_publish;
 pub use self::yank::yank;
 
 pub(crate) use self::publish::prepare_transmit;

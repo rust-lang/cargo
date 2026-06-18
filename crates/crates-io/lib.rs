@@ -145,6 +145,23 @@ struct Crates {
     meta: TotalCrates,
 }
 
+#[derive(Deserialize)]
+pub struct GitHubConfig {
+    pub id: u32,
+    #[serde(rename = "crate")]
+    pub krate: String,
+    pub repository_owner: String,
+    pub repository_owner_id: Option<u32>,
+    pub repository_name: String,
+    pub workflow_filename: String,
+    pub environment: Option<String>,
+    pub created_at: Option<String>,
+}
+#[derive(Deserialize)]
+struct GitHubConfigs {
+    github_configs: Vec<GitHubConfig>,
+}
+
 /// Error returned when interacting with a registry.
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
@@ -272,6 +289,18 @@ impl<T: HttpClient> Registry<T> {
     pub fn list_owners(&mut self, krate: &str) -> RegistryResult<Vec<User>, T::Error> {
         let body = self.get(&format!("/crates/{}/owners", krate))?;
         Ok(serde_json::from_str::<Users>(&body)?.users)
+    }
+
+    pub fn list_github_trustpub_configs(
+        &mut self,
+        krate: &str,
+    ) -> RegistryResult<Vec<GitHubConfig>, T::Error> {
+        let krate = percent_encode(krate.as_bytes(), NON_ALPHANUMERIC);
+        let body = self.get(&format!(
+            "/trusted_publishing/github_configs?crate={}",
+            krate
+        ))?;
+        Ok(serde_json::from_str::<GitHubConfigs>(&body)?.github_configs)
     }
 
     pub fn publish(
