@@ -368,6 +368,12 @@ dependencies = [
 
 #[cargo_test]
 fn no_candidates_error() {
+    Package::new("bar", "0.2.0")
+        .pubtime("2006-07-06T00:00:00Z") // ver-req not match, old enough
+        .publish();
+    Package::new("bar", "0.3.0")
+        .pubtime("2006-08-05T00:00:00Z") // ver-req not match, too-new
+        .publish();
     Package::new("bar", "1.1.0")
         .pubtime("2006-08-06T00:00:00Z")
         .publish();
