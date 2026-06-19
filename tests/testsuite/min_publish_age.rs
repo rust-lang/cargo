@@ -368,6 +368,12 @@ dependencies = [
 
 #[cargo_test]
 fn no_candidates_error() {
+    Package::new("bar", "0.2.0")
+        .pubtime("2006-07-06T00:00:00Z") // ver-req not match, old enough
+        .publish();
+    Package::new("bar", "0.3.0")
+        .pubtime("2006-08-05T00:00:00Z") // ver-req not match, too-new
+        .publish();
     Package::new("bar", "1.1.0")
         .pubtime("2006-08-06T00:00:00Z")
         .publish();
@@ -412,6 +418,8 @@ fn no_candidates_error() {
   version 1.3.0 is too new (published moments ago, minimum age 7 days)
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.0 ([ROOT]/foo)`
+[HELP] to preserve the min-publish-age, downgrade the requirement to "0.2.0"
+[HELP] to use too-new packages anyways, re-resolve with `CARGO_RESOLVER_INCOMPATIBLE_PUBLISH_AGE=allow`
 
 "#]])
         .run();
@@ -976,6 +984,7 @@ dependencies = [
   version 1.1.0 is too new (published 2 days ago, minimum age 7 days)
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.0 ([ROOT]/foo)`
+[HELP] to use too-new packages anyways, re-resolve with `CARGO_RESOLVER_INCOMPATIBLE_PUBLISH_AGE=allow`
 
 "#]])
         .run();
