@@ -851,11 +851,29 @@ fn get_latest_dependency(
             // so the `min-publish-age` policy must be applied here too.
             let publish_age = PublishAgePolicy::new(gctx)?;
             if let Some(publish_age) = &publish_age {
-                possibilities.retain(|s| publish_age.too_new(s).is_none());
+                let mut too_new = Vec::new();
+                possibilities.retain(|s| match publish_age.too_new(s) {
+                    Some(violation) => {
+                        too_new.push((s.version().clone(), violation));
+                        false
+                    }
+                    None => true,
+                });
                 if possibilities.is_empty() && has_candidates {
-                    anyhow::bail!(
+                    too_new.sort_by(|(a, _), (b, _)| a.cmp(b));
+                    let mut msg = format!(
                         "all versions of crate `{dependency}` are too new per `min-publish-age`"
                     );
+                    for (version, violation) in &too_new {
+                        let note = violation.note();
+                        let _ = write!(&mut msg, "\n  version {version} is too new ({note})",);
+                    }
+                    let _ = write!(
+                        &mut msg,
+                        "\nhelp: to add the latest version anyways, \
+                         re-run with `CARGO_RESOLVER_INCOMPATIBLE_PUBLISH_AGE=allow`"
+                    );
+                    anyhow::bail!(msg);
                 }
             }
 
