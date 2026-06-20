@@ -1604,10 +1604,13 @@ fn tree_with_build_artifact_dep_inheriting_target() {
 
     p.cargo("tree -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_status(101)
-        .with_stderr_contains(
-            "did not find features for (PackageId { name: \"bar\", version: \"0.5.0\", source: [..] }, HostDep) within activated_features:",
-        )
+        .with_stdout_data(str![[r#"
+foo v0.0.0 ([ROOT]/foo)
+[build-dependencies]
+└── bar v0.5.0 ([ROOT]/foo/bar)
+    └── pm v0.1.0 (proc-macro) ([ROOT]/foo/pm)
+
+"#]])
         .run();
 }
 
