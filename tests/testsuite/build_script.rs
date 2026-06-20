@@ -6831,18 +6831,12 @@ fn target_runner_does_not_apply_to_build_script_with_host_config() {
 
     p.cargo("build -Z target-applies-to-host --verbose -Z host-config")
         .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
-        .with_status(101)
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name build_script_build [..]`
-[RUNNING] `nonexistent-target-runner [ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
-[ERROR] failed to run custom build command for `foo v0.0.1 ([ROOT]/foo)`
-
-Caused by:
-  could not execute process `nonexistent-target-runner [ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build` (never executed)
-
-Caused by:
-  [NOT_FOUND]
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 
 "#]])
         .run();
