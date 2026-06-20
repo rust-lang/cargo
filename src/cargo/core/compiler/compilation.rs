@@ -13,6 +13,7 @@ use crate::core::compiler::BuildContext;
 use crate::core::compiler::CompileTarget;
 use crate::core::compiler::RustdocFingerprint;
 use crate::core::compiler::apply_env_config;
+use crate::core::compiler::build_context::host_artifact_uses_only_host_config;
 use crate::core::compiler::{CompileKind, Unit, UnitHash};
 use crate::util::{CargoResult, GlobalContext};
 
@@ -507,6 +508,11 @@ fn target_runner(
         return Ok(Some((path, runner.val.args.clone())));
     }
 
+    // Host artifacts should not pick up a runner from `[target.'cfg(...)']`.
+    if host_artifact_uses_only_host_config(bcx.gctx, &bcx.build_config.requested_kinds, kind)? {
+        return Ok(None);
+    }
+
     // try target.'cfg(...)'.runner
     let target_cfg = bcx.target_data.info(kind).cfg();
     let mut cfgs = bcx
@@ -546,6 +552,11 @@ fn target_linker(bcx: &BuildContext<'_, '_>, kind: CompileKind) -> CargoResult<O
         .map(|l| l.val.clone().resolve_program(bcx.gctx))
     {
         return Ok(Some(path));
+    }
+
+    // Host artifacts should not pick up a linker from `[target.'cfg(...)']`.
+    if host_artifact_uses_only_host_config(bcx.gctx, &bcx.build_config.requested_kinds, kind)? {
+        return Ok(None);
     }
 
     // Try target.'cfg(...)'.linker.

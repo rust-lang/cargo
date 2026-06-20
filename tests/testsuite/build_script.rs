@@ -6812,3 +6812,61 @@ fn linker_search_path_preference() {
 ...
 "#]]).run();
 }
+
+#[cargo_test]
+fn target_runner_does_not_apply_to_build_script_with_host_config() {
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            &format!(
+                r#"
+                [target.'cfg(r#true)']
+                runner = "nonexistent-target-runner"
+                "#,
+            ),
+        )
+        .file("build.rs", "fn main() {}")
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build -Z target-applies-to-host --verbose -Z host-config")
+        .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name build_script_build [..]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn target_linker_does_not_apply_to_build_script_with_host_config() {
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            &format!(
+                r#"
+                [target.'cfg(r#true)']
+                linker = "nonexistent-host-linker"
+                "#,
+            ),
+        )
+        .file("build.rs", "fn main() {}")
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build -Z target-applies-to-host --verbose -Z host-config")
+        .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name build_script_build [..]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+
+"#]])
+        .run();
+}

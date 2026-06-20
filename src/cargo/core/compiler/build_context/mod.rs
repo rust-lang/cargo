@@ -21,6 +21,7 @@ pub use self::target_info::FileFlavor;
 pub use self::target_info::FileType;
 pub use self::target_info::RustcTargetData;
 pub use self::target_info::TargetInfo;
+pub(crate) use self::target_info::host_artifact_uses_only_host_config;
 
 /// The build context, containing complete information needed for a build task
 /// before it gets started.
