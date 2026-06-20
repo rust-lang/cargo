@@ -783,24 +783,8 @@ fn extra_args(
     kind: CompileKind,
     flags: Flags,
 ) -> CargoResult<Vec<String>> {
-    let target_applies_to_host = gctx.target_applies_to_host()?;
-
-    // Host artifacts should not generally pick up rustflags from anywhere except [host].
-    //
-    // The one exception to this is if `target-applies-to-host = true`, which opts into a
-    // particular (inconsistent) past Cargo behavior where host artifacts _do_ pick up rustflags
-    // set elsewhere when `--target` isn't passed.
-    if kind.is_host() {
-        if target_applies_to_host && requested_kinds == [CompileKind::Host] {
-            // This is the past Cargo behavior where we fall back to the same logic as for other
-            // artifacts without --target.
-        } else {
-            // In all other cases, host artifacts just get flags from [host], regardless of
-            // --target. Or, phrased differently, no `--target` behaves the same as `--target
-            // <host>`, and host artifacts are always "special" (they don't pick up `RUSTFLAGS` for
-            // example).
-            return Ok(rustflags_from_host(gctx, flags, host_triple)?.unwrap_or_else(Vec::new));
-        }
+    if host_artifact_uses_only_host_config(gctx, requested_kinds, kind)? {
+        return Ok(rustflags_from_host(gctx, flags, host_triple)?.unwrap_or_else(Vec::new));
     }
 
     // All other artifacts pick up the RUSTFLAGS, [target.*], and [build], in that order.
@@ -921,6 +905,35 @@ fn rustflags_from_build(gctx: &GlobalContext, flag: Flags) -> CargoResult<Option
         Flags::Rustdoc => &build.rustdocflags,
     };
     Ok(list.as_ref().map(|l| l.as_slice().to_vec()))
+}
+
+/// Whether a host artifact must take its configuration solely from `[host]` and ignore `[target]`.
+pub(crate) fn host_artifact_uses_only_host_config(
+    gctx: &GlobalContext,
+    requested_kinds: &[CompileKind],
+    kind: CompileKind,
+) -> CargoResult<bool> {
+    let target_applies_to_host = gctx.target_applies_to_host()?;
+
+    // Host artifacts should not generally pick up rustflags from anywhere except [host].
+    //
+    // The one exception to this is if `target-applies-to-host = true`, which opts into a
+    // particular (inconsistent) past Cargo behavior where host artifacts _do_ pick up rustflags
+    // set elsewhere when `--target` isn't passed.
+    if kind.is_host() {
+        if target_applies_to_host && requested_kinds == [CompileKind::Host] {
+            // This is the past Cargo behavior where we fall back to the same logic as for other
+            // artifacts without --target.
+        } else {
+            // In all other cases, host artifacts just get flags from [host], regardless of
+            // --target. Or, phrased differently, no `--target` behaves the same as `--target
+            // <host>`, and host artifacts are always "special" (they don't pick up `RUSTFLAGS` for
+            // example).
+            return Ok(true);
+        }
+    }
+
+    Ok(false)
 }
 
 /// Collection of information about `rustc` and the host and target.
