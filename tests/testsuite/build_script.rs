@@ -6841,3 +6841,38 @@ fn target_runner_does_not_apply_to_build_script_with_host_config() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn target_linker_does_not_apply_to_build_script_with_host_config() {
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            &format!(
+                r#"
+                [target.'cfg(r#true)']
+                linker = "nonexistent-host-linker"
+                "#,
+            ),
+        )
+        .file("build.rs", "fn main() {}")
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build -Z target-applies-to-host --verbose -Z host-config")
+        .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name build_script_build [..] -C linker=nonexistent-host-linker [..]`
+[ERROR] linker `nonexistent-host-linker` not found
+  |
+  = [NOTE] [NOT_FOUND]
+
+[ERROR] could not compile `foo` (build script) due to 1 previous error
+
+Caused by:
+  process didn't exit successfully: `rustc --crate-name build_script_build [..] -C linker=nonexistent-host-linker [..]` ([EXIT_STATUS]: 1)
+
+"#]])
+        .run();
+}
