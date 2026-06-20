@@ -554,6 +554,11 @@ fn target_linker(bcx: &BuildContext<'_, '_>, kind: CompileKind) -> CargoResult<O
         return Ok(Some(path));
     }
 
+    // Host artifacts should not pick up a linker from `[target.'cfg(...)']`.
+    if host_artifact_uses_only_host_config(bcx.gctx, &bcx.build_config.requested_kinds, kind)? {
+        return Ok(None);
+    }
+
     // Try target.'cfg(...)'.linker.
     let target_cfg = bcx.target_data.info(kind).cfg();
     let mut cfgs = bcx
