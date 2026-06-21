@@ -199,6 +199,10 @@ inherited by members of a workspace.
 Specifying a workspace dependency is similar to [package dependencies][specifying-dependencies] except:
 - Dependencies from this table cannot be declared as `optional`
 - [`features`][features] declared in this table are additive with the `features` from `[dependencies]`
+- `default-features` declared on a package dependency overrides the value set
+  here in Edition 2024 packages (requires Rust 1.99+). Before Rust 1.99, or in
+  earlier editions, package-level `default-features = false` may be ignored or
+  rejected unless the workspace dependency also disables default features.
 
 You can then [inherit the workspace dependency as a package dependency][inheriting-a-dependency-from-a-workspace]
 
@@ -212,6 +216,7 @@ members = ["bar"]
 cc = "1.0.73"
 rand = "0.8.5"
 regex = { version = "1.6.0", default-features = false, features = ["std"] }
+serde = { version = "1.0.190", default-features = true }
 ```
 
 ```toml
@@ -219,9 +224,11 @@ regex = { version = "1.6.0", default-features = false, features = ["std"] }
 [package]
 name = "bar"
 version = "0.2.0"
+edition = "2024"
 
 [dependencies]
 regex = { workspace = true, features = ["unicode"] }
+serde = { workspace = true, default-features = false }
 
 [build-dependencies]
 cc.workspace = true
