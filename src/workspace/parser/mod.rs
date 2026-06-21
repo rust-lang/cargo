@@ -1216,25 +1216,31 @@ fn inner_dependency_inherit_with<'a>(
     } = &pkg_dep;
     let default_features = default_features.or(*default_features2);
 
-    match (default_features, merged_dep.default_features()) {
-        // member: default-features = true and
-        // workspace: default-features = false should turn on
-        // default-features
-        (Some(true), Some(false)) => {
-            merged_dep.default_features = Some(true);
+    // RFC 3945: Allow workspace members to override the workspace dependency's
+    // `default-features` setting.
+    if edition >= Edition::Edition2024 {
+        merged_dep.default_features = default_features.or(merged_dep.default_features);
+    } else {
+        match (default_features, merged_dep.default_features()) {
+            // member: default-features = true and
+            // workspace: default-features = false should turn on
+            // default-features
+            (Some(true), Some(false)) => {
+                merged_dep.default_features = Some(true);
+            }
+            // member: default-features = false and
+            // workspace: default-features = true should ignore member
+            // default-features
+            (Some(false), Some(true)) => {
+                deprecated_ws_default_features(name, Some(true), warnings);
+            }
+            // member: default-features = false and
+            // workspace: dep = "1.0" should ignore member default-features
+            (Some(false), None) => {
+                deprecated_ws_default_features(name, None, warnings);
+            }
+            _ => {}
         }
-        // member: default-features = false and
-        // workspace: default-features = true should ignore member
-        // default-features
-        (Some(false), Some(true)) => {
-            deprecated_ws_default_features(name, Some(true), edition, warnings)?;
-        }
-        // member: default-features = false and
-        // workspace: dep = "1.0" should ignore member default-features
-        (Some(false), None) => {
-            deprecated_ws_default_features(name, None, edition, warnings)?;
-        }
-        _ => {}
     }
     merged_dep.features = match (merged_dep.features.clone(), features.clone()) {
         (Some(dep_feat), Some(inherit_feat)) => Some(
@@ -1255,24 +1261,18 @@ fn inner_dependency_inherit_with<'a>(
 fn deprecated_ws_default_features(
     label: &str,
     ws_def_feat: Option<bool>,
-    edition: Edition,
     warnings: &mut Vec<String>,
-) -> CargoResult<()> {
+) {
     let ws_def_feat = match ws_def_feat {
         Some(true) => "true",
         Some(false) => "false",
         None => "not specified",
     };
-    if Edition::Edition2024 <= edition {
-        anyhow::bail!("`default-features = false` cannot override workspace's `default-features`");
-    } else {
-        warnings.push(format!(
-            "`default-features` is ignored for {label}, since `default-features` was \
+    warnings.push(format!(
+        "`default-features` is ignored for {label}, since `default-features` was \
                 {ws_def_feat} for `workspace.dependencies.{label}`, \
                 this could become a hard error in the future"
-        ));
-    }
-    Ok(())
+    ));
 }
 
 #[tracing::instrument(skip_all)]
