@@ -5241,7 +5241,7 @@ fn uplift_pdb_of_bin_on_windows() {
     assert!(!p.target_debug_dir().join("d.pdb").exists());
 }
 
-#[cargo_test]
+#[cargo_test(requires_host_split_debuginfo = "packed")]
 #[cfg(target_os = "linux")]
 fn uplift_dwp_of_bin_on_linux() {
     let p = project()

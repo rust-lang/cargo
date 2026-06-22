@@ -38,6 +38,8 @@ use std::sync::LazyLock;
 ///   For example, `requires = "rustfmt"` means the test will only run if the executable `rustfmt` is installed.
 ///   These tests are *always* run on CI.
 ///   This is mainly used to avoid requiring contributors from having every dependency installed.
+/// * `requires_host_split_debuginfo = "<value>"` --- This indicates a `-Csplit-debuginfo` value
+///   that is required to be supported by the host `rustc`.
 /// * `build_std_real` --- This is a "real" `-Zbuild-std` test (in the `build_std` integration test).
 ///   This only runs on nightly, and only if the environment variable `CARGO_RUN_BUILD_STD_TESTS` is set (these tests on run on Linux).
 /// * `build_std_mock` --- This is a "mock" `-Zbuild-std` test (which uses a mock standard library).
@@ -146,6 +148,23 @@ pub fn cargo_test(attr: TokenStream, item: TokenStream) -> TokenStream {
                     panic!("expect a quoted string literal, found: {literal}");
                 };
                 set_ignore!(!has_command(command), "{command} not installed");
+            }
+            s if s.starts_with("requires_host_split_debuginfo=") => {
+                let split_debuginfo = &s[30..];
+                let Ok(literal) = split_debuginfo.parse::<Literal>() else {
+                    panic!("expect a string literal, found: {split_debuginfo}");
+                };
+                let literal = literal.to_string();
+                let Some(split_debuginfo) = literal
+                    .strip_prefix('"')
+                    .and_then(|lit| lit.strip_suffix('"'))
+                else {
+                    panic!("expect a quoted string literal, found: {literal}");
+                };
+                set_ignore!(
+                    !host_supports_split_debuginfo(split_debuginfo),
+                    "host rustc does not support -Csplit-debuginfo={split_debuginfo}"
+                );
             }
             s if s.starts_with(">=1.") => {
                 requires_reason = true;
@@ -319,6 +338,33 @@ static VERSION: std::sync::LazyLock<(u32, bool)> = LazyLock::new(|| {
 
 fn version() -> (u32, bool) {
     LazyLock::force(&VERSION).clone()
+}
+
+fn host_supports_split_debuginfo(split_debuginfo: &str) -> bool {
+    static SPLIT_DEBUGINFO: LazyLock<Vec<String>> = LazyLock::new(|| {
+        let output = Command::new("rustc")
+            .arg("--print=split-debuginfo")
+            .output()
+            .expect("rustc should run");
+
+        let exit_code = output.status.code();
+        if exit_code != Some(0) {
+            let stdout = std::str::from_utf8(&output.stdout).unwrap_or("<invalid utf8>");
+            let stderr = std::str::from_utf8(&output.stderr).unwrap_or("<invalid utf8>");
+            panic!(
+                "'rustc --print=split-debuginfo' exited with non-zero exit code: {exit_code:?}\n\
+                stdout: {stdout}\n\
+                stderr: {stderr}",
+            );
+        }
+
+        let stdout = std::str::from_utf8(&output.stdout).expect("utf8");
+        stdout.lines().map(str::to_owned).collect()
+    });
+
+    SPLIT_DEBUGINFO
+        .iter()
+        .any(|supported| supported == split_debuginfo)
 }
 
 fn check_command(command_path: &Path, args: &[&str]) -> bool {
