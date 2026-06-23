@@ -19,6 +19,14 @@ use crate::util::style;
 use anyhow::Context as _;
 use cargo_util::paths;
 
+pub(crate) use self::imp::lock_exclusive;
+pub(crate) use self::imp::lock_shared;
+#[expect(unused_imports, reason = "for non-blocking lock callers")]
+pub(crate) use self::imp::try_lock_exclusive;
+#[expect(unused_imports, reason = "for non-blocking lock callers")]
+pub(crate) use self::imp::try_lock_shared;
+pub(crate) use self::imp::unlock;
+
 /// A locked file.
 ///
 /// This provides access to file while holding a lock on the file. This type
@@ -478,7 +486,13 @@ fn error_unsupported(err: &std::io::Error) -> bool {
     }
 }
 
+// This is the one place allowed to call `std::fs::File` lock methods.
+// Everything else goes through this shim.
 #[cfg(not(target_os = "solaris"))]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "the OS doesn't need the fcntl shim"
+)]
 mod imp {
     use super::*;
 

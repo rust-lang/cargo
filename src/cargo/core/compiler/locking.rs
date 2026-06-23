@@ -1,10 +1,12 @@
 //! This module handles the locking logic during compilation.
 
+use crate::util::flock;
 use crate::{
     CargoResult,
     core::compiler::{BuildRunner, Unit},
     util::{FileLock, Filesystem},
 };
+
 use anyhow::bail;
 use std::{
     collections::HashMap,
@@ -43,7 +45,7 @@ impl LockManager {
 
         let mut locks = self.locks.write().unwrap();
         if let Some(lock) = locks.get_mut(&key) {
-            lock.file().lock_shared()?;
+            flock::lock_shared(lock.file())?;
         } else {
             let fs = Filesystem::new(key.0.clone());
             let lock_msg = format!(
@@ -62,7 +64,7 @@ impl LockManager {
     pub fn lock(&self, key: &LockKey) -> CargoResult<()> {
         let locks = self.locks.read().unwrap();
         if let Some(lock) = locks.get(&key) {
-            lock.file().lock()?;
+            flock::lock_exclusive(lock.file())?;
         } else {
             bail!("lock was not found in lock manager: {key}");
         }
@@ -77,7 +79,7 @@ impl LockManager {
         let Some(lock) = locks.get(key) else {
             bail!("lock was not found in lock manager: {key}");
         };
-        lock.file().lock_shared()?;
+        flock::lock_shared(lock.file())?;
         Ok(())
     }
 
@@ -85,7 +87,7 @@ impl LockManager {
     pub fn unlock(&self, key: &LockKey) -> CargoResult<()> {
         let locks = self.locks.read().unwrap();
         if let Some(lock) = locks.get(key) {
-            lock.file().unlock()?;
+            flock::unlock(lock.file())?;
         };
 
         Ok(())
