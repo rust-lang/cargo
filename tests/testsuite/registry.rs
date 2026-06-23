@@ -3587,7 +3587,7 @@ internal server error
    [..] DEBUG cargo::core::resolver::restarting: pending=[..]
    [..] DEBUG cargo::core::resolver::restarting: pending=0
 [LOCKING] 3 packages to latest compatible versions
-   [..] DEBUG cargo::core::resolver::restarting: pending=0
+...
 [DOWNLOADING] crates ...
    [..] DEBUG network::fetch: url="[..]/dl/bar/0.0.1/download"
    [..] DEBUG network::fetch: url="[..]/dl/dep1/0.0.1/download"
