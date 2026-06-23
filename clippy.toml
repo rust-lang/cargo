@@ -5,6 +5,11 @@ disallowed-methods = [
     { path = "std::env::var_os", reason = "use `Config::get_env_os` instead. See rust-lang/cargo#11588" },
     { path = "std::env::vars", reason = "not recommended to use in Cargo. See rust-lang/cargo#11588" },
     { path = "std::env::vars_os", reason = "not recommended to use in Cargo. See rust-lang/cargo#11588" },
+    { path = "std::fs::File::lock", reason = "see rust-lang/cargo#17084", replacement = "crate::util::flock::lock_exclusive" },
+    { path = "std::fs::File::lock_shared", reason = "see rust-lang/cargo#17084", replacement = "crate::util::flock::lock_shared" },
+    { path = "std::fs::File::try_lock", reason = "see rust-lang/cargo#17084", replacement = "crate::util::flock::try_lock_exclusive" },
+    { path = "std::fs::File::try_lock_shared", reason = "see rust-lang/cargo#17084", replacement = "crate::util::flock::try_lock_shared" },
+    { path = "std::fs::File::unlock", reason = "see rust-lang/cargo#17084", replacement = "crate::util::flock::unlock" },
 ]
 disallowed-types = [
     { path = "std::sync::atomic::AtomicU64", reason = "not portable; See rust-lang/cargo#12988", replacement = "portable_atomic::AtomicU64" },

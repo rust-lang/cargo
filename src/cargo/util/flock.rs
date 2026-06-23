@@ -486,7 +486,13 @@ fn error_unsupported(err: &std::io::Error) -> bool {
     }
 }
 
+// This is the one place allowed to call `std::fs::File` lock methods.
+// Everything else goes through this shim.
 #[cfg(not(target_os = "solaris"))]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "the OS doesn't need the fcntl shim"
+)]
 mod imp {
     use super::*;
 
