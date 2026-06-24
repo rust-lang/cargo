@@ -7,6 +7,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::prelude::*;
+use crate::utils::cross_compile::disabled as cross_compile_disabled;
 use cargo_test_support::ProjectBuilder;
 use cargo_test_support::cross_compile;
 use cargo_test_support::registry::{Dependency, Package};
@@ -516,6 +517,150 @@ fn depend_same_as_std() {
         .build();
 
     p.cargo("build -v").build_std(&setup).target_host().run();
+}
+
+#[cargo_test(build_std_mock)]
+fn artifact_dep_target_builds_std_for_unrequested_target() {
+    if cross_compile_disabled() {
+        return;
+    }
+    let target = cross_compile::alternate();
+    let setup = setup();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+                    edition = "2021"
+                    resolver = "2"
+
+                    [dependencies]
+                    bindep = {{ path = "bindep", artifact = "bin", target = "{target}" }}
+                "#,
+            ),
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                pub fn foo() {
+                    std::custom_api();
+                    let _bin = include_bytes!(env!("CARGO_BIN_FILE_BINDEP"));
+                }
+            "#,
+        )
+        .file(
+            "bindep/Cargo.toml",
+            r#"
+                [package]
+                name = "bindep"
+                version = "0.0.1"
+                edition = "2021"
+            "#,
+        )
+        .file(
+            "bindep/src/main.rs",
+            r#"
+                fn main() {
+                    std::custom_api();
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("check -v -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .build_std(&setup)
+        .target_host()
+        .with_status(101)
+        .with_stderr_contains("no entry found for key")
+        .run();
+}
+
+#[cargo_test(build_std_mock)]
+fn inactive_artifact_dep_target_does_not_build_std() {
+    if cross_compile_disabled() {
+        return;
+    }
+    let target = cross_compile::alternate();
+    let setup = setup();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+                    edition = "2021"
+                    resolver = "2"
+
+                    [dependencies]
+                    bindep = {{ path = "bindep", artifact = "bin", target = "{target}", optional = true }}
+                "#,
+            ),
+        )
+        .file("src/lib.rs", "pub fn foo() { std::custom_api(); }")
+        .file(
+            "bindep/Cargo.toml",
+            r#"
+                [package]
+                name = "bindep"
+                version = "0.0.1"
+                edition = "2021"
+            "#,
+        )
+        .file("bindep/src/main.rs", "fn main() { std::custom_api(); }")
+        .build();
+
+    p.cargo("check -v -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .build_std(&setup)
+        .target_host()
+        .with_stderr_does_not_contain(str![[r#"
+[RUNNING] `[..]rustc --crate-name std [..]--target [ALT_TARGET][..]`
+"#]])
+        .run();
+}
+
+#[cargo_test(build_std_mock)]
+fn per_package_target_builds_std_for_manifest_target() {
+    if cross_compile_disabled() {
+        return;
+    }
+    let target = cross_compile::alternate();
+    let setup = setup();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    cargo-features = ["per-package-target"]
+
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+                    edition = "2021"
+                    default-target = "{target}"
+                "#,
+            ),
+        )
+        .file("src/lib.rs", "pub fn foo() { std::custom_api(); }")
+        .build();
+
+    let mut cargo = p.cargo("check -v");
+    enable_build_std(&mut cargo, &setup);
+    cargo
+        .arg("-Zbuild-std")
+        .masquerade_as_nightly_cargo(&["build-std", "per-package-target"])
+        .with_status(101)
+        .with_stderr_contains("no entry found for key")
+        .run();
 }
 
 #[cargo_test(build_std_mock)]
