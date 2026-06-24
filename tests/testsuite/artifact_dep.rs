@@ -3377,8 +3377,12 @@ fn transitive_artifact_dep_with_target_and_platform_specific_dep() {
 
     p.cargo("tree -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_status(101)
-        .with_stderr_contains("[..]panicked[..]")
+        .with_stdout_data(str![[r#"
+foo v0.0.0 ([ROOT]/foo)
+└── bar v0.0.0 ([ROOT]/foo/bar)
+    └── baz v0.0.0 ([ROOT]/foo/bar/baz)
+
+"#]])
         .run();
 }
 
@@ -3459,8 +3463,7 @@ fn transitive_build_script_artifact_dep_with_target() {
 
     p.cargo("check -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_status(101)
-        .with_stderr_contains("[..]panicked[..]")
+        .with_status(0)
         .run();
 }
 

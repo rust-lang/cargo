@@ -329,6 +329,14 @@ unable to verify that `{0}` is the same as when the lockfile was generated
             .map(move |(id, deps)| (self.replacement(id).unwrap_or(id), deps))
     }
 
+    pub fn bindeps(&self, pkg: PackageId) -> impl Iterator<Item = (PackageId, &Dependency)> {
+        self.deps(pkg).flat_map(|(dep_id, deps)| {
+            deps.iter()
+                .filter(|dep| dep.artifact().is_some())
+                .map(move |dep| (dep_id, dep))
+        })
+    }
+
     pub fn deps_not_replaced(
         &self,
         pkg: PackageId,
