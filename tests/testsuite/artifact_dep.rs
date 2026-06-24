@@ -991,7 +991,8 @@ fn normal_build_deps_are_picked_up_in_presence_of_an_artifact_build_dep_to_the_s
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stdout_data(str![[r#"
 foo v0.0.0 ([ROOT]/foo)
-└── bar v0.5.0 ([ROOT]/foo/bar)
+└── bar artifact "bin:bar"
+    └── bar v0.5.0 ([ROOT]/foo/bar)
 [build-dependencies]
 └── bar v0.5.0 ([ROOT]/foo/bar)
 
@@ -1003,7 +1004,8 @@ foo v0.0.0 ([ROOT]/foo)
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stdout_data(str![[r#"
 <foo v0.0.0 ([ROOT]/foo)>
-└── <bar v0.5.0 ([ROOT]/foo/bar)>
+└── bar artifact "bin:bar"
+    └── <bar v0.5.0 ([ROOT]/foo/bar)>
 [build-dependencies]
 └── <bar v0.5.0 ([ROOT]/foo/bar)>
 
@@ -1015,7 +1017,8 @@ foo v0.0.0 ([ROOT]/foo)
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stdout_data(str![[r#"
 bar v0.5.0 ([ROOT]/foo/bar)
-└── foo v0.0.0 ([ROOT]/foo)
+└── bar artifact "bin:bar"
+    └── foo v0.0.0 ([ROOT]/foo)
 [build-dependencies]
 └── foo v0.0.0 ([ROOT]/foo)
 
@@ -1061,7 +1064,9 @@ fn cargo_tree_displays_lib_true_as_separate_lib_and_artifact_edges() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stdout_data(str![[r#"
 foo v0.0.0 ([ROOT]/foo)
-└── bar v0.5.0 ([ROOT]/foo/bar)
+├── bar v0.5.0 ([ROOT]/foo/bar)
+└── bar artifact "bin"
+    └── bar v0.5.0 ([ROOT]/foo/bar)
 
 "#]])
         .with_status(0)
@@ -1130,10 +1135,11 @@ fn cargo_tree_artifact_node_traversal() {
 foo v0.0.0 ([ROOT]/foo)
 ├── left v0.0.0 ([ROOT]/foo/left)
 │   [build-dependencies]
-│   └── bar v0.5.0 ([ROOT]/foo/bar)
+│   └── bar artifact "cdylib, staticlib"
+│       └── bar v0.5.0 ([ROOT]/foo/bar)
 └── right v0.0.0 ([ROOT]/foo/right)
     [build-dependencies]
-    └── bar v0.5.0 ([ROOT]/foo/bar)
+    └── bar artifact "cdylib, staticlib" (*)
 
 "#]])
         .run();
@@ -1144,10 +1150,12 @@ foo v0.0.0 ([ROOT]/foo)
 foo v0.0.0 ([ROOT]/foo)
 ├── left v0.0.0 ([ROOT]/foo/left)
 │   [build-dependencies]
-│   └── bar v0.5.0 ([ROOT]/foo/bar)
+│   └── bar artifact "cdylib, staticlib"
+│       └── bar v0.5.0 ([ROOT]/foo/bar)
 └── right v0.0.0 ([ROOT]/foo/right)
     [build-dependencies]
-    └── bar v0.5.0 ([ROOT]/foo/bar)
+    └── bar artifact "cdylib, staticlib"
+        └── bar v0.5.0 ([ROOT]/foo/bar)
 
 "#]])
         .run();
@@ -1158,10 +1166,10 @@ foo v0.0.0 ([ROOT]/foo)
 foo v0.0.0 ([ROOT]/foo)
 ├── left v0.0.0 ([ROOT]/foo/left)
 │   [build-dependencies]
-│   └── bar v0.5.0 ([ROOT]/foo/bar)
+│   └── bar artifact "cdylib, staticlib"
 └── right v0.0.0 ([ROOT]/foo/right)
     [build-dependencies]
-    └── bar v0.5.0 ([ROOT]/foo/bar)
+    └── bar artifact "cdylib, staticlib" (*)
 
 "#]])
         .run();
@@ -1172,10 +1180,11 @@ foo v0.0.0 ([ROOT]/foo)
 foo v0.0.0 ([ROOT]/foo)
 ├── left v0.0.0 ([ROOT]/foo/left)
 │   [build-dependencies]
-│   └── bar v0.5.0 ([ROOT]/foo/bar)
+│   └── bar artifact "cdylib, staticlib"
+│       └── bar v0.5.0 ([ROOT]/foo/bar)
 └── right v0.0.0 ([ROOT]/foo/right)
     [build-dependencies]
-    └── bar v0.5.0 ([ROOT]/foo/bar)
+    └── bar artifact "cdylib, staticlib" (*)
 
 "#]])
         .run();
@@ -1685,14 +1694,16 @@ fn dependencies_of_dependencies_work_in_artifacts() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .run();
 
-    // cargo tree sees artifacts as the dependency kind they are in and doesn't do anything special with it.
+    // cargo tree shows artifact dependencies in their dependency section as
+    // request nodes followed by the packages that provide them.
     p.cargo("tree -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stdout_data(str![[r#"
 foo v0.0.0 ([ROOT]/foo)
 [build-dependencies]
-└── bar v0.5.0 ([ROOT]/foo/bar)
-    └── baz v1.0.0
+└── bar artifact "bin"
+    └── bar v0.5.0 ([ROOT]/foo/bar)
+        └── baz v1.0.0
 
 "#]])
         .run();
@@ -1740,7 +1751,8 @@ fn cargo_tree_displays_multiple_artifact_kinds() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stdout_data(str![[r#"
 foo v0.0.0 ([ROOT]/foo)
-└── bar v0.5.0 ([ROOT]/foo/bar)
+└── bar artifact "bin:baz-suffix, cdylib, staticlib"
+    └── bar v0.5.0 ([ROOT]/foo/bar)
 
 "#]])
         .with_status(0)
@@ -1791,7 +1803,8 @@ fn artifact_dep_target_specified() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stdout_data(str![[r#"
 foo v0.0.0 ([ROOT]/foo)
-└── bindep v0.0.0 ([ROOT]/foo/bindep)
+└── bindep artifact "bin" (target: [ALT_TARGET])
+    └── bindep v0.0.0 ([ROOT]/foo/bindep)
 
 "#]])
         .with_status(0)
@@ -1801,8 +1814,9 @@ foo v0.0.0 ([ROOT]/foo)
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stdout_data(str![[r#"
 foo v0.0.0 ([ROOT]/foo)
-└── bindep feature "default"
-    └── bindep v0.0.0 ([ROOT]/foo/bindep)
+└── bindep artifact "bin" (target: [ALT_TARGET])
+    └── bindep feature "default"
+        └── bindep v0.0.0 ([ROOT]/foo/bindep)
 
 "#]])
         .with_status(0)
@@ -1881,8 +1895,9 @@ fn dep_of_artifact_dep_same_target_specified() {
         .with_stdout_data(
             r#"...
 foo v0.1.0 ([ROOT]/foo)
-└── bar v0.1.0 ([ROOT]/foo/bar)
-    └── baz v0.1.0 ([ROOT]/foo/baz)
+└── bar artifact "bin" (target: [ALT_TARGET])
+    └── bar v0.1.0 ([ROOT]/foo/bar)
+        └── baz v0.1.0 ([ROOT]/foo/baz)
 "#,
         )
         .with_status(0)
@@ -3643,7 +3658,8 @@ fn transitive_artifact_dep_with_target_and_platform_specific_dep() {
         .with_stdout_data(str![[r#"
 foo v0.0.0 ([ROOT]/foo)
 └── bar v0.0.0 ([ROOT]/foo/bar)
-    └── baz v0.0.0 ([ROOT]/foo/bar/baz)
+    └── baz artifact "bin" (target: x86_64-unknown-none)
+        └── baz v0.0.0 ([ROOT]/foo/bar/baz)
 
 "#]])
         .run();

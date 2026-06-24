@@ -2,7 +2,7 @@
 
 use super::TreeOptions;
 use crate::core::compiler::{CompileKind, RustcTargetData};
-use crate::core::dependency::DepKind;
+use crate::core::dependency::{Artifact, ArtifactKind, ArtifactTarget, DepKind};
 use crate::core::resolver::Resolve;
 use crate::core::resolver::features::{CliFeatures, FeaturesFor, ResolvedFeatures};
 use crate::core::{
@@ -65,6 +65,20 @@ pub enum Node {
         /// Name of the feature.
         name: InternedString,
     },
+    /// An artifact request that connects a dependent to the package build
+    /// providing the requested artifacts.
+    Artifact {
+        /// The package providing the artifacts.
+        package_id: PackageId,
+        /// Features enabled for this package build.
+        features: Vec<InternedString>,
+        /// The resolved compilation target for this package build.
+        kind: CompileKind,
+        /// Artifact kinds requested by the dependent.
+        artifacts: Vec<ArtifactKind>,
+        /// The target expression written on the artifact dependency.
+        target: Option<ArtifactTarget>,
+    },
 }
 
 impl Node {
@@ -72,6 +86,7 @@ impl Node {
         match self {
             Self::Package { package_id, .. } => package_id.name(),
             Self::Feature { name, .. } => *name,
+            Self::Artifact { package_id, .. } => package_id.name(),
         }
     }
 }
@@ -101,14 +116,16 @@ impl Edge {
 #[derive(Debug, Copy, Hash, Eq, Clone, PartialEq)]
 pub enum EdgeKind {
     Dep(DepKind),
+    /// Connects an artifact request node to its package or feature nodes.
+    Artifact,
     Feature,
 }
 
 /// Set of outgoing edges for a single node.
 ///
-/// Edges are separated by the edge kind (`DepKind` or `Feature`). This is
-/// primarily done so that the output can easily display separate sections
-/// like `[build-dependencies]`.
+/// Edges are separated by [`EdgeKind`]. Dependency edges determine sections
+/// like `[build-dependencies]`. Artifact and feature edges connect
+/// intermediate request nodes without creating another dependency section.
 ///
 /// The value is a `Vec` because each edge kind can have multiple outgoing
 /// edges. For example, package "foo" can have multiple normal dependencies.
@@ -238,7 +255,9 @@ impl<'a> Graph<'a> {
     fn package_id_for_index(&self, index: NodeId) -> PackageId {
         match self.node(index) {
             Node::Package { package_id, .. } => *package_id,
-            Node::Feature { .. } => panic!("unexpected feature node"),
+            Node::Feature { .. } | Node::Artifact { .. } => {
+                panic!("unexpected non-package node")
+            }
         }
     }
 
@@ -498,6 +517,25 @@ fn add_pkg(
             } else {
                 features_for
             };
+            if dep.artifact().is_some_and(|artifact| artifact.is_lib()) {
+                let dep_index = add_pkg(
+                    graph,
+                    resolve,
+                    resolved_features,
+                    dep_id,
+                    base_features_for,
+                    target_data,
+                    requested_kind,
+                    opts,
+                );
+                let new_edge = Edge {
+                    kind: EdgeKind::Dep(dep.kind()),
+                    node: dep_index,
+                    public: dep.is_public(),
+                };
+                add_dependency_edge(graph, &mut dep_name_map, from_index, dep, new_edge, opts);
+            }
+
             // An explicit artifact target overrides the inherited context.
             let dep_features_for = dep
                 .artifact()
@@ -515,12 +553,39 @@ fn add_pkg(
                 requested_kind,
                 opts,
             );
-            let new_edge = Edge {
-                kind: EdgeKind::Dep(dep.kind()),
-                node: dep_index,
-                public: dep.is_public(),
-            };
-            add_dependency_edge(graph, &mut dep_name_map, from_index, dep, new_edge, opts);
+            if let Some(artifact) = dep.artifact() {
+                let artifact_index = add_artifact(graph, dep_index, artifact);
+                graph.edges_mut(from_index).add_edge(Edge {
+                    kind: EdgeKind::Dep(dep.kind()),
+                    node: artifact_index,
+                    public: dep.is_public(),
+                });
+                add_dependency_edge(
+                    graph,
+                    &mut dep_name_map,
+                    artifact_index,
+                    dep,
+                    Edge {
+                        kind: EdgeKind::Artifact,
+                        node: dep_index,
+                        public: true,
+                    },
+                    opts,
+                );
+            } else {
+                add_dependency_edge(
+                    graph,
+                    &mut dep_name_map,
+                    from_index,
+                    dep,
+                    Edge {
+                        kind: EdgeKind::Dep(dep.kind()),
+                        node: dep_index,
+                        public: dep.is_public(),
+                    },
+                    opts,
+                );
+            }
         }
     }
     if opts.graph_features {
@@ -533,6 +598,30 @@ fn add_pkg(
     }
 
     from_index
+}
+
+fn add_artifact(graph: &mut Graph<'_>, package_index: NodeId, artifact: &Artifact) -> NodeId {
+    let Node::Package {
+        package_id,
+        features,
+        kind,
+    } = graph.node(package_index)
+    else {
+        unreachable!("artifact destination must be a package node");
+    };
+    let mut artifacts = artifact.kinds().to_vec();
+    artifacts.sort_unstable();
+    let node = Node::Artifact {
+        package_id: *package_id,
+        features: features.clone(),
+        kind: *kind,
+        artifacts,
+        target: artifact.target(),
+    };
+    match graph.index.get(&node) {
+        Some(index) => *index,
+        None => graph.add_node(node),
+    }
 }
 
 /// Adds an edge from `from` to the package `edge` points at.
@@ -706,7 +795,7 @@ fn add_internal_features(graph: &mut Graph<'_>, resolve: &Resolve) {
         .iter()
         .enumerate()
         .filter_map(|(i, node)| match node {
-            Node::Package { .. } => None,
+            Node::Package { .. } | Node::Artifact { .. } => None,
             Node::Feature { node_index, name } => {
                 let package_id = graph.package_id_for_index(*node_index);
                 Some((package_id, *node_index, NodeId::new(i, *name), *name))

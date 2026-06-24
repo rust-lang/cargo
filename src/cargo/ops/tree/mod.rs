@@ -359,6 +359,7 @@ fn print_node<'a>(
 
     for kind in &[
         EdgeKind::Dep(DepKind::Normal),
+        EdgeKind::Artifact,
         EdgeKind::Dep(DepKind::Build),
         EdgeKind::Dep(DepKind::Development),
         EdgeKind::Feature,
@@ -413,6 +414,7 @@ fn print_dependencies<'a>(
         EdgeKind::Dep(DepKind::Development) => Some(color_print::cstr!(
             "<bright-cyan,bold>[dev-dependencies]</>"
         )),
+        EdgeKind::Artifact => None,
         EdgeKind::Feature => None,
     };
 
@@ -443,6 +445,12 @@ fn print_dependencies<'a>(
             // Filter out packages to prune.
             match graph.node(dep.node()) {
                 Node::Package { package_id, .. } => {
+                    if filter_non_workspace_member && !ws.is_member_id(*package_id) {
+                        return false;
+                    }
+                    !pkgs_to_prune.iter().any(|spec| spec.matches(*package_id))
+                }
+                Node::Artifact { package_id, .. } => {
                     if filter_non_workspace_member && !ws.is_member_id(*package_id) {
                         return false;
                     }
@@ -481,6 +489,7 @@ fn edge_line_color(kind: EdgeKind) -> anstyle::Style {
         EdgeKind::Dep(DepKind::Normal) => style::DEP_NORMAL,
         EdgeKind::Dep(DepKind::Build) => style::DEP_BUILD,
         EdgeKind::Dep(DepKind::Development) => style::DEP_DEV,
+        EdgeKind::Artifact => style::DEP_NORMAL,
         EdgeKind::Feature => style::DEP_FEATURE,
     }
 }
