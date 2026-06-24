@@ -1539,7 +1539,7 @@ fn warn_inherit_def_feat_true_member_def_feat_false() {
         .build();
 
     p.cargo("check").with_stderr_data(str![[r#"
-[WARNING] Cargo.toml: `default-features` is ignored for dep, since `default-features` was true for `workspace.dependencies.dep`, this could become a hard error in the future
+[WARNING] Cargo.toml: `default-features` is ignored for dep, since `default-features` was true for `workspace.dependencies.dep`; overriding workspace `default-features` to false requires Rust 1.99+ and the 2024 edition
 [WARNING] `bar` (manifest) generated 1 warning
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
@@ -1631,7 +1631,7 @@ fn warn_inherit_simple_member_def_feat_false() {
         .build();
 
     p.cargo("check").with_stderr_data(str![[r#"
-[WARNING] Cargo.toml: `default-features` is ignored for dep, since `default-features` was not specified for `workspace.dependencies.dep`, this could become a hard error in the future
+[WARNING] Cargo.toml: `default-features` is ignored for dep, since `default-features` was not specified for `workspace.dependencies.dep`; overriding workspace `default-features` to false requires Rust 1.99+ and the 2024 edition
 [WARNING] `bar` (manifest) generated 1 warning
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions

@@ -1270,8 +1270,9 @@ fn deprecated_ws_default_features(
     };
     warnings.push(format!(
         "`default-features` is ignored for {label}, since `default-features` was \
-                {ws_def_feat} for `workspace.dependencies.{label}`, \
-                this could become a hard error in the future"
+                {ws_def_feat} for `workspace.dependencies.{label}`; \
+                overriding workspace `default-features` to false requires Rust 1.99+ \
+                and the 2024 edition"
     ));
 }
 
