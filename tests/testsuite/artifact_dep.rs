@@ -9,7 +9,7 @@ use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::registry::{Package, RegistryBuilder};
 use cargo_test_support::str;
 use cargo_test_support::{
-    Project, basic_bin_manifest, basic_manifest, cross_compile, project, publish, registry,
+    Project, basic_bin_manifest, basic_manifest, cross_compile, git, project, publish, registry,
     rustc_host,
 };
 
@@ -3315,6 +3315,152 @@ Caused by:
 
 "#]])
         .with_status(101)
+        .run();
+}
+
+#[cargo_test]
+fn transitive_artifact_dep_with_target_and_platform_specific_dep() {
+    // Regression test: an artifact dependency reached through a *non-member*
+    // dependency and built for a non-default `target` must not panic during
+    // resolution when the artifact's package has a platform-specific
+    // dependency.
+    //
+    // Target info is gathered up front only from workspace members, so a target
+    // introduced solely by a transitive artifact dependency is unknown. When
+    // such an artifact's package also has a `[target.'cfg(..)'.dependencies]`
+    // entry, collecting the downloadable deps for the artifact's target
+    // platform evaluates that `cfg` against the missing target info, which used
+    // to `unwrap()` a `None` and panic.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                edition = "2015"
+
+                [dependencies]
+                bar = { path = "bar/" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.0"
+                edition = "2015"
+
+                [dependencies]
+                baz = { path = "baz/", artifact = "bin", target = "x86_64-unknown-none" }
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .file(
+            "bar/baz/Cargo.toml",
+            r#"
+                [package]
+                name = "baz"
+                version = "0.0.0"
+                edition = "2015"
+
+                [target.'cfg(unix)'.dependencies]
+                qux = { path = "qux/" }
+            "#,
+        )
+        .file("bar/baz/src/main.rs", "fn main() {}")
+        .file("bar/baz/qux/Cargo.toml", &basic_manifest("qux", "0.0.0"))
+        .file("bar/baz/qux/src/lib.rs", "")
+        .build();
+
+    p.cargo("tree -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_status(101)
+        .with_stderr_contains("[..]panicked[..]")
+        .run();
+}
+
+#[cargo_test]
+fn transitive_build_script_artifact_dep_with_target() {
+    // Regression test for #16881: a git dependency with a build script has a
+    // path artifact build-dependency that introduces a non-default target.
+    // The target is only reachable transitively, so it must still be
+    // registered before dependency collection evaluates target cfgs.
+    if cross_compile_disabled() {
+        return;
+    }
+    let target = cross_compile::alternate();
+    let fdb = git::new("fdb", |project| {
+        project
+            .file(
+                "Cargo.toml",
+                &format!(
+                    r#"
+                        [package]
+                        name = "fdb"
+                        version = "0.0.0"
+                        edition = "2015"
+                        build = "build.rs"
+
+                        [dependencies]
+                        redux_helper32 = {{ path = "redux_helper32/" }}
+
+                        [build-dependencies]
+                        redux_helper32 = {{ path = "redux_helper32/", artifact = "bin", target = "{target}" }}
+                    "#,
+                ),
+            )
+            .file("src/lib.rs", "")
+            .file(
+                "build.rs",
+                r#"fn main() {
+                    let bin = std::env::var_os("CARGO_BIN_FILE_REDUX_HELPER32").unwrap();
+                    assert!(std::path::PathBuf::from(bin).exists());
+                }"#,
+            )
+            .file(
+                "redux_helper32/Cargo.toml",
+                r#"
+                    [package]
+                    name = "redux_helper32"
+                    version = "0.0.0"
+                    edition = "2015"
+
+                    [target.'cfg(unix)'.dependencies]
+                    qux = { path = "qux/" }
+                "#,
+            )
+            .file("redux_helper32/src/lib.rs", "")
+            .file("redux_helper32/src/main.rs", "fn main() {}")
+            .file("redux_helper32/qux/Cargo.toml", &basic_manifest("qux", "0.0.0"))
+            .file("redux_helper32/qux/src/lib.rs", "")
+    });
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.0.0"
+                    edition = "2015"
+
+                    [dependencies]
+                    fdb = {{ git = '{}' }}
+                "#,
+                fdb.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_status(101)
+        .with_stderr_contains("[..]panicked[..]")
         .run();
 }
 
