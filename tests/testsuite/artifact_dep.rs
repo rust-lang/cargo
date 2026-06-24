@@ -991,7 +991,7 @@ fn normal_build_deps_are_picked_up_in_presence_of_an_artifact_build_dep_to_the_s
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stdout_data(str![[r#"
 foo v0.0.0 ([ROOT]/foo)
-└── bar v0.5.0 ([ROOT]/foo/bar)
+└── bar v0.5.0 ([ROOT]/foo/bar) (bin:bar)
 [build-dependencies]
 └── bar v0.5.0 ([ROOT]/foo/bar)
 
@@ -1027,7 +1027,8 @@ fn cargo_tree_displays_lib_true_as_separate_lib_and_artifact_edges() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stdout_data(str![[r#"
 foo v0.0.0 ([ROOT]/foo)
-└── bar v0.5.0 ([ROOT]/foo/bar)
+├── bar v0.5.0 ([ROOT]/foo/bar)
+└── bar v0.5.0 ([ROOT]/foo/bar) (bin)
 
 "#]])
         .with_status(0)
@@ -1528,13 +1529,14 @@ fn dependencies_of_dependencies_work_in_artifacts() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .run();
 
-    // cargo tree sees artifacts as the dependency kind they are in.
+    // cargo tree shows artifact dependencies in their dependency section and
+    // annotates the artifact requested by the edge.
     p.cargo("tree -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stdout_data(str![[r#"
 foo v0.0.0 ([ROOT]/foo)
 [build-dependencies]
-└── bar v0.5.0 ([ROOT]/foo/bar)
+└── bar v0.5.0 ([ROOT]/foo/bar) (bin)
     └── baz v1.0.0
 
 "#]])
@@ -1583,7 +1585,7 @@ fn cargo_tree_displays_multiple_artifact_kinds() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stdout_data(str![[r#"
 foo v0.0.0 ([ROOT]/foo)
-└── bar v0.5.0 ([ROOT]/foo/bar)
+└── bar v0.5.0 ([ROOT]/foo/bar) (bin:baz-suffix, staticlib, cdylib)
 
 "#]])
         .with_status(0)
@@ -1634,7 +1636,7 @@ fn artifact_dep_target_specified() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stdout_data(str![[r#"
 foo v0.0.0 ([ROOT]/foo)
-└── bindep v0.0.0 ([ROOT]/foo/bindep)
+└── bindep v0.0.0 ([ROOT]/foo/bindep) (bin, [ALT_TARGET])
 
 "#]])
         .with_status(0)
@@ -1645,7 +1647,7 @@ foo v0.0.0 ([ROOT]/foo)
         .with_stdout_data(str![[r#"
 foo v0.0.0 ([ROOT]/foo)
 └── bindep feature "default"
-    └── bindep v0.0.0 ([ROOT]/foo/bindep)
+    └── bindep v0.0.0 ([ROOT]/foo/bindep) (bin, [ALT_TARGET])
 
 "#]])
         .with_status(0)
@@ -1724,7 +1726,7 @@ fn dep_of_artifact_dep_same_target_specified() {
         .with_stdout_data(
             r#"...
 foo v0.1.0 ([ROOT]/foo)
-└── bar v0.1.0 ([ROOT]/foo/bar)
+└── bar v0.1.0 ([ROOT]/foo/bar) (bin, [ALT_TARGET])
     └── baz v0.1.0 ([ROOT]/foo/baz)
 "#,
         )

@@ -74,11 +74,12 @@ impl Node {
     }
 }
 
-#[derive(Debug, Copy, Hash, Eq, Clone, PartialEq)]
+#[derive(Debug, Hash, Eq, Clone, PartialEq)]
 pub struct Edge {
     kind: EdgeKind,
     node: NodeId,
     public: bool,
+    artifact: Option<ArtifactEdge>,
 }
 
 impl Edge {
@@ -92,6 +93,34 @@ impl Edge {
 
     pub fn public(&self) -> bool {
         self.public
+    }
+
+    pub fn artifact(&self) -> Option<&ArtifactEdge> {
+        self.artifact.as_ref()
+    }
+}
+
+#[derive(Debug, Hash, Eq, Clone, Ord, PartialEq, PartialOrd)]
+pub struct ArtifactEdge {
+    kinds: Vec<String>,
+    target: Option<String>,
+}
+
+impl ArtifactEdge {
+    pub fn display(&self) -> ArtifactEdgeDisplay<'_> {
+        ArtifactEdgeDisplay(self)
+    }
+}
+
+pub struct ArtifactEdgeDisplay<'a>(&'a ArtifactEdge);
+
+impl std::fmt::Display for ArtifactEdgeDisplay<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0.kinds.join(", "))?;
+        if let Some(target) = &self.0.target {
+            write!(f, ", {target}")?;
+        }
+        Ok(())
     }
 }
 
@@ -189,7 +218,11 @@ impl<'a> Graph<'a> {
         let edges = self.edges(from).of_kind(kind);
         // Created a sorted list for consistent output.
         let mut edges = edges.to_owned();
-        edges.sort_unstable_by(|a, b| self.node(a.node()).cmp(&self.node(b.node())));
+        edges.sort_unstable_by(|a, b| {
+            self.node(a.node())
+                .cmp(&self.node(b.node()))
+                .then_with(|| a.artifact.cmp(&b.artifact))
+        });
         edges
     }
 
@@ -275,6 +308,7 @@ impl<'a> Graph<'a> {
                     kind: edge.kind(),
                     node: new_to_index,
                     public: edge.public(),
+                    artifact: edge.artifact().cloned(),
                 };
                 new_graph.edges_mut(new_from).add_edge(new_edge);
             }
@@ -298,6 +332,7 @@ impl<'a> Graph<'a> {
                     kind: edge.kind(),
                     node: NodeId::new(from_idx, self.nodes[from_idx].name()),
                     public: edge.public(),
+                    artifact: edge.artifact().cloned(),
                 };
                 new_edges[edge.node().index].add_edge(new_edge);
             }
@@ -486,33 +521,48 @@ fn add_pkg(
         let dep_pkg = graph.package_map[&dep_id];
 
         for dep in deps {
-            let dep_features_for = match dep
+            let base_features_for = if features_for != FeaturesFor::default() {
+                features_for
+            } else if dep.is_build() || dep_pkg.proc_macro() {
+                FeaturesFor::HostDep
+            } else {
+                features_for
+            };
+
+            if dep.artifact().is_some_and(|artifact| artifact.is_lib()) {
+                let dep_index = add_pkg(
+                    graph,
+                    resolve,
+                    resolved_features,
+                    dep_id,
+                    base_features_for,
+                    target_data,
+                    requested_kind,
+                    opts,
+                );
+                let new_edge = Edge {
+                    kind: EdgeKind::Dep(dep.kind()),
+                    node: dep_index,
+                    public: dep.is_public(),
+                    artifact: None,
+                };
+                add_edge(
+                    graph,
+                    &mut dep_name_map,
+                    from_index,
+                    dep_index,
+                    dep,
+                    new_edge,
+                    opts,
+                );
+            }
+
+            let dep_features_for = dep
                 .artifact()
                 .and_then(|artifact| artifact.target())
                 .and_then(|target| target.to_resolved_compile_target(requested_kind))
-            {
-                // Dependency has a `{ …, target = <triple> }`
-                Some(target) => FeaturesFor::ArtifactDep(target),
-                // Get the information of the dependent crate from `features_for`.
-                // If a dependent crate is
-                //
-                // * specified as an artifact dep with a `target`, or
-                // * a host dep,
-                //
-                // its transitive deps, including build-deps, need to be built on that target.
-                None if features_for != FeaturesFor::default() => features_for,
-                // Dependent crate is a normal dep, then back to old rules:
-                //
-                // * normal deps, dev-deps -> inherited target
-                // * build-deps -> host
-                None => {
-                    if dep.is_build() || dep_pkg.proc_macro() {
-                        FeaturesFor::HostDep
-                    } else {
-                        features_for
-                    }
-                }
-            };
+                .map(FeaturesFor::ArtifactDep)
+                .unwrap_or(base_features_for);
             let dep_index = add_pkg(
                 graph,
                 resolve,
@@ -527,26 +577,24 @@ fn add_pkg(
                 kind: EdgeKind::Dep(dep.kind()),
                 node: dep_index,
                 public: dep.is_public(),
+                artifact: dep.artifact().map(|artifact| ArtifactEdge {
+                    kinds: artifact
+                        .kinds()
+                        .iter()
+                        .map(|kind| kind.to_string())
+                        .collect(),
+                    target: artifact.target().map(|target| target.as_str().to_owned()),
+                }),
             };
-            if opts.graph_features {
-                // Add the dependency node with feature nodes in-between.
-                dep_name_map
-                    .entry(dep.name_in_toml())
-                    .or_default()
-                    .insert((dep_index, dep.is_optional()));
-                if dep.uses_default_features() {
-                    add_feature(graph, INTERNED_DEFAULT, Some(from_index), new_edge);
-                }
-                for feature in dep.features().iter() {
-                    add_feature(graph, *feature, Some(from_index), new_edge);
-                }
-                if !dep.uses_default_features() && dep.features().is_empty() {
-                    // No features, use a direct connection.
-                    graph.edges_mut(from_index).add_edge(new_edge);
-                }
-            } else {
-                graph.edges_mut(from_index).add_edge(new_edge);
-            }
+            add_edge(
+                graph,
+                &mut dep_name_map,
+                from_index,
+                dep_index,
+                dep,
+                new_edge,
+                opts,
+            );
         }
     }
     if opts.graph_features {
@@ -559,6 +607,36 @@ fn add_pkg(
     }
 
     from_index
+}
+
+fn add_edge(
+    graph: &mut Graph<'_>,
+    dep_name_map: &mut HashMap<InternedString, HashSet<(NodeId, bool)>>,
+    from_index: NodeId,
+    dep_index: NodeId,
+    dep: &crate::core::Dependency,
+    new_edge: Edge,
+    opts: &TreeOptions,
+) {
+    if opts.graph_features {
+        // Add the dependency node with feature nodes in-between.
+        dep_name_map
+            .entry(dep.name_in_toml())
+            .or_default()
+            .insert((dep_index, dep.is_optional()));
+        if dep.uses_default_features() {
+            add_feature(graph, INTERNED_DEFAULT, Some(from_index), new_edge.clone());
+        }
+        for feature in dep.features().iter() {
+            add_feature(graph, *feature, Some(from_index), new_edge.clone());
+        }
+        if !dep.uses_default_features() && dep.features().is_empty() {
+            // No features, use a direct connection.
+            graph.edges_mut(from_index).add_edge(new_edge);
+        }
+    } else {
+        graph.edges_mut(from_index).add_edge(new_edge);
+    }
 }
 
 /// Adds a feature node between two nodes.
@@ -593,6 +671,7 @@ fn add_feature(
             kind: to.kind(),
             node: node_index,
             public: to.public(),
+            artifact: to.artifact().cloned(),
         };
         graph.edges_mut(from).add_edge(from_edge);
     }
@@ -600,6 +679,7 @@ fn add_feature(
         kind: EdgeKind::Feature,
         node: to.node(),
         public: true,
+        artifact: to.artifact().cloned(),
     };
     graph.edges_mut(node_index).add_edge(to_edge);
     (missing, node_index)
@@ -638,6 +718,7 @@ fn add_cli_features(
                     kind: EdgeKind::Feature,
                     node: package_index,
                     public: true,
+                    artifact: None,
                 };
                 let index = add_feature(graph, feature, None, feature_edge).1;
                 graph.cli_features.insert(index);
@@ -673,6 +754,7 @@ fn add_cli_features(
                             kind: EdgeKind::Feature,
                             node: package_index,
                             public: true,
+                            artifact: None,
                         };
                         let index = add_feature(graph, dep_name, None, feature_edge).1;
                         graph.cli_features.insert(index);
@@ -681,6 +763,7 @@ fn add_cli_features(
                         kind: EdgeKind::Feature,
                         node: dep_index,
                         public: true,
+                        artifact: None,
                     };
                     let index = add_feature(graph, dep_feature, None, dep_edge).1;
                     graph.cli_features.insert(index);
@@ -742,6 +825,7 @@ fn add_feature_rec(
                     kind: EdgeKind::Feature,
                     node: package_index,
                     public: true,
+                    artifact: None,
                 };
                 let (missing, feat_index) = add_feature(graph, *dep_name, Some(from), feature_edge);
                 // Don't recursive if the edge already exists to deal with cycles.
@@ -793,6 +877,7 @@ fn add_feature_rec(
                             kind: EdgeKind::Feature,
                             node: package_index,
                             public: true,
+                            artifact: None,
                         };
                         add_feature(graph, *dep_name, Some(from), feature_edge);
                     }
@@ -800,6 +885,7 @@ fn add_feature_rec(
                         kind: EdgeKind::Feature,
                         node: dep_index,
                         public: true,
+                        artifact: None,
                     };
                     let (missing, feat_index) =
                         add_feature(graph, *dep_feature, Some(from), dep_edge);
