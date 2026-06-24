@@ -419,6 +419,7 @@ dependencies = [
  "os_info",
  "pasetors",
  "pathdiff",
+ "portable-atomic",
  "rand 0.10.0",
  "regex",
  "rusqlite",
@@ -552,7 +553,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-util"
-version = "0.2.29"
+version = "0.2.30"
 dependencies = [
  "anyhow",
  "core-foundation",
@@ -562,6 +563,7 @@ dependencies = [
  "jobserver",
  "libc",
  "miow",
+ "portable-atomic",
  "same-file",
  "sha2 0.11.0",
  "shell-escape",
