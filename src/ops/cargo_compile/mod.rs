@@ -339,19 +339,20 @@ pub fn create_bcx<'a, 'gctx>(
         logger.log(LogMessage::ResolutionFinished { elapsed });
     }
 
-    let std_resolve_features = if let Some(crates) = &gctx.cli_unstable().build_std {
-        let (std_package_set, std_resolve, std_features) = standard_lib::resolve_std(
-            ws,
-            &mut target_data,
-            &build_config,
-            crates,
-            &build_config.requested_kinds,
-        )?;
-        pkg_set.add_set(std_package_set);
-        Some((std_resolve, std_features))
-    } else {
-        None
-    };
+    let (std_resolve_features, build_std_kinds) =
+        if let Some(crates) = &gctx.cli_unstable().build_std {
+            let std_kinds = standard_lib::resolve_std_kinds(
+                &mut target_data,
+                &build_config.requested_kinds,
+                &resolve,
+            )?;
+            let (std_package_set, std_resolve, std_features) =
+                standard_lib::resolve_std(ws, &mut target_data, crates, &std_kinds)?;
+            pkg_set.add_set(std_package_set);
+            (Some((std_resolve, std_features)), Some(std_kinds))
+        } else {
+            (None, None)
+        };
 
     // Find the packages in the resolver that the user wants to build (those
     // passed in with `-p` or the defaults from the workspace), and convert
@@ -479,12 +480,23 @@ pub fn create_bcx<'a, 'gctx>(
 
         let std_roots = if let Some(crates) = gctx.cli_unstable().build_std.as_ref() {
             let (std_resolve, std_features) = std_resolve_features.as_ref().unwrap();
+            let mut std_kinds = explicit_host_kinds.clone();
+            std_kinds.extend(
+                build_std_kinds
+                    .as_ref()
+                    .unwrap()
+                    .iter()
+                    .copied()
+                    .filter(|kind| !kind.is_host()),
+            );
+            std_kinds.sort();
+            std_kinds.dedup();
             standard_lib::generate_std_roots(
                 &crates,
                 &targeted_root_units,
                 std_resolve,
                 std_features,
-                &explicit_host_kinds,
+                &std_kinds,
                 &pkg_set,
                 interner,
                 &profiles,

@@ -960,6 +960,7 @@ pub struct RustcTargetData<'gctx> {
     target_config: HashMap<CompileTarget, TargetConfig>,
     /// Information about the target platform that we're building for.
     target_info: HashMap<CompileTarget, TargetInfo>,
+    manifest_target_kinds: Vec<CompileKind>,
 }
 
 impl<'gctx> RustcTargetData<'gctx> {
@@ -1006,16 +1007,6 @@ impl<'gctx> RustcTargetData<'gctx> {
             }
         };
 
-        let mut res = RustcTargetData {
-            rustc,
-            gctx,
-            requested_kinds: requested_kinds.into(),
-            host_config,
-            host_info,
-            target_config,
-            target_info,
-        };
-
         // Get all kinds we currently know about.
         //
         // For now, targets can only ever come from the root workspace
@@ -1030,16 +1021,32 @@ impl<'gctx> RustcTargetData<'gctx> {
                 .iter()
                 .filter_map(|d| d.artifact()?.target()?.to_compile_kind())
         }
-        let all_kinds = requested_kinds
-            .iter()
-            .copied()
-            .chain(ws.members().flat_map(|p| {
+        let mut manifest_target_kinds = ws
+            .members()
+            .flat_map(|p| {
                 p.manifest()
                     .default_kind()
                     .into_iter()
                     .chain(p.manifest().forced_kind())
-                    .chain(artifact_targets(p))
-            }));
+            })
+            .collect::<Vec<_>>();
+        manifest_target_kinds.sort();
+        manifest_target_kinds.dedup();
+        let mut res = RustcTargetData {
+            rustc,
+            gctx,
+            requested_kinds: requested_kinds.into(),
+            host_config,
+            host_info,
+            target_config,
+            target_info,
+            manifest_target_kinds: manifest_target_kinds.clone(),
+        };
+        let all_kinds = requested_kinds
+            .iter()
+            .copied()
+            .chain(manifest_target_kinds.iter().copied())
+            .chain(ws.members().flat_map(artifact_targets));
         for kind in all_kinds {
             res.merge_compile_kind(kind)?;
         }
@@ -1130,5 +1137,9 @@ impl<'gctx> RustcTargetData<'gctx> {
 
     pub fn requested_kinds(&self) -> &[CompileKind] {
         &self.requested_kinds
+    }
+
+    pub fn manifest_target_kinds(&self) -> &[CompileKind] {
+        &self.manifest_target_kinds
     }
 }
