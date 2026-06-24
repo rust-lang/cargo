@@ -272,6 +272,31 @@ pub fn resolve_ws_with_opts<'gctx>(
         .iter()
         .map(|(p, _fts)| p.package_id())
         .collect::<Vec<_>>();
+
+    // Artifact dependencies can introduce compile kinds (the artifact's
+    // `target`) beyond those gathered up front from the workspace members in
+    // `RustcTargetData::new`. When such an artifact dependency is reached only
+    // transitively through a non-member dependency, its target is otherwise
+    // unknown, and traversing the resolve graph below would panic looking the
+    // target info up (e.g. when evaluating a `cfg(..)` for that platform).
+    // Register those kinds now that the full graph is resolved.
+    for pkg_id in resolved_with_overrides.iter() {
+        for (_dep_id, deps) in resolved_with_overrides.deps(pkg_id) {
+            for dep in deps {
+                if let Some(kind) = dep
+                    .artifact()
+                    .and_then(|a| a.target())
+                    .and_then(|t| t.to_compile_kind())
+                {
+                    // Best effort: an invalid target triple is reported later,
+                    // with proper context, while building the unit graph, so
+                    // any error here is intentionally ignored.
+                    let _ = target_data.merge_compile_kind(kind);
+                }
+            }
+        }
+    }
+
     pkg_set.download_accessible(
         &resolved_with_overrides,
         &member_ids,
