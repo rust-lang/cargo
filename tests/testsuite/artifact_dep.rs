@@ -986,6 +986,52 @@ fn normal_build_deps_are_picked_up_in_presence_of_an_artifact_build_dep_to_the_s
     p.cargo("check -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .run();
+
+    p.cargo("tree -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_stdout_data(str![[r#"
+foo v0.0.0 ([ROOT]/foo)
+└── bar v0.5.0 ([ROOT]/foo/bar)
+[build-dependencies]
+└── bar v0.5.0 ([ROOT]/foo/bar)
+
+"#]])
+        .with_status(0)
+        .run();
+}
+
+#[cargo_test]
+fn cargo_tree_displays_lib_true_as_separate_lib_and_artifact_edges() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                edition = "2015"
+                authors = []
+                resolver = "2"
+
+                [dependencies]
+                bar = { path = "bar", artifact = "bin", lib = true }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_bin_manifest("bar"))
+        .file("bar/src/lib.rs", "pub fn f() {}")
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("tree -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_stdout_data(str![[r#"
+foo v0.0.0 ([ROOT]/foo)
+└── bar v0.5.0 ([ROOT]/foo/bar)
+
+"#]])
+        .with_status(0)
+        .run();
 }
 
 #[cargo_test]
@@ -1482,7 +1528,7 @@ fn dependencies_of_dependencies_work_in_artifacts() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .run();
 
-    // cargo tree sees artifacts as the dependency kind they are in and doesn't do anything special with it.
+    // cargo tree sees artifacts as the dependency kind they are in.
     p.cargo("tree -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stdout_data(str![[r#"
@@ -1492,6 +1538,55 @@ foo v0.0.0 ([ROOT]/foo)
     └── baz v1.0.0
 
 "#]])
+        .run();
+}
+
+#[cargo_test]
+fn cargo_tree_displays_multiple_artifact_kinds() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                edition = "2015"
+                authors = []
+                resolver = "2"
+
+                [dependencies]
+                bar = { path = "bar", artifact = ["bin:baz-suffix", "staticlib", "cdylib"] }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.5.0"
+                edition = "2015"
+                authors = []
+
+                [lib]
+                crate-type = ["staticlib", "cdylib"]
+
+                [[bin]]
+                name = "baz-suffix"
+            "#,
+        )
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("tree -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_stdout_data(str![[r#"
+foo v0.0.0 ([ROOT]/foo)
+└── bar v0.5.0 ([ROOT]/foo/bar)
+
+"#]])
+        .with_status(0)
         .run();
 }
 
@@ -1540,6 +1635,17 @@ fn artifact_dep_target_specified() {
         .with_stdout_data(str![[r#"
 foo v0.0.0 ([ROOT]/foo)
 └── bindep v0.0.0 ([ROOT]/foo/bindep)
+
+"#]])
+        .with_status(0)
+        .run();
+
+    p.cargo("tree -Z bindeps -e features")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_stdout_data(str![[r#"
+foo v0.0.0 ([ROOT]/foo)
+└── bindep feature "default"
+    └── bindep v0.0.0 ([ROOT]/foo/bindep)
 
 "#]])
         .with_status(0)
