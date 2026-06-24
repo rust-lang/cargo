@@ -581,8 +581,15 @@ fn artifact_dep_target_builds_std_for_unrequested_target() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .build_std(&setup)
         .target_host()
-        .with_status(101)
-        .with_stderr_contains("no entry found for key")
+        .with_stderr_data(
+            str![[r#"
+[RUNNING] `[..]rustc --crate-name std [..]--target [HOST_TARGET][..]`
+[RUNNING] `[..]rustc --crate-name std [..]--target [ALT_TARGET][..]`
+[RUNNING] `[..]rustc --crate-name bindep [..]--target [ALT_TARGET][..]`
+...
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
@@ -664,8 +671,13 @@ fn per_package_target_builds_std_for_manifest_target() {
     cargo
         .arg("-Zbuild-std")
         .masquerade_as_nightly_cargo(&["build-std", "per-package-target"])
-        .with_status(101)
-        .with_stderr_contains("no entry found for key")
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `[..]rustc --crate-name std [..]--target [ALT_TARGET][..]`
+...
+[RUNNING] `[..]rustc --crate-name foo [..]--target [ALT_TARGET][..]`
+...
+"#]])
         .run();
 }
 
