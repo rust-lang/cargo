@@ -505,6 +505,19 @@ fn resolve_dependency(
 
     if let Some(Source::Workspace(_)) = dependency.source() {
         check_invalid_ws_keys(dependency.toml_key(), arg, spec.manifest().edition())?;
+        if spec.manifest().edition() >= Edition::Edition2024 && arg.default_features == Some(true) {
+            let ws_dep = find_workspace_dep(
+                dependency.toml_key(),
+                ws,
+                ws.root_manifest(),
+                ws.unstable_features(),
+            )?;
+            // Only write `default-features = true` when the workspace dependency
+            // explicitly disables default features.
+            if ws_dep.default_features() == Some(false) {
+                dependency.default_features = Some(true);
+            }
+        }
     }
 
     let version_required = dependency.source().and_then(|s| s.as_registry()).is_some();
