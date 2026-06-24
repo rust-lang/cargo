@@ -53,13 +53,11 @@ the target directory.
 {{/option}}
 
 {{#option "`--release`" }}
-Remove artifacts in the `release` directory only (instead of the default,
-which removes all artifacts).
+Remove artifacts in the `release` directory only.
 {{/option}}
 
 {{#option "`--profile` _name_" }}
-Remove artifacts only in the directory with the given profile name (instead
-of the default, which removes all artifacts).
+Remove artifacts only in the directory with the given profile name.
 {{/option}}
 
 {{> options-target-dir }}

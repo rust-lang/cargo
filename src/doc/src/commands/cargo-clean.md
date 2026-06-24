@@ -54,14 +54,12 @@ the target directory.</p>
 
 
 <dt class="option-term" id="option-cargo-clean---release"><a class="option-anchor" href="#option-cargo-clean---release"><code>--release</code></a></dt>
-<dd class="option-desc"><p>Remove artifacts in the <code>release</code> directory only (instead of the
-default, which removes all artifacts).</p>
+<dd class="option-desc"><p>Remove artifacts in the <code>release</code> directory only.</p>
 </dd>
 
 
 <dt class="option-term" id="option-cargo-clean---profile"><a class="option-anchor" href="#option-cargo-clean---profile"><code>--profile</code> <em>name</em></a></dt>
-<dd class="option-desc"><p>Remove artifacts only in the directory with the given profile name
-(instead of the default, which removes all artifacts).</p>
+<dd class="option-desc"><p>Remove artifacts only in the directory with the given profile name.</p>
 </dd>
 
 

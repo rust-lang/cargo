@@ -35,12 +35,10 @@ OPTIONS
            in the target directory.
 
        --release
-           Remove artifacts in the release directory only (instead of the
-           default, which removes all artifacts).
+           Remove artifacts in the release directory only.
 
        --profile name
-           Remove artifacts only in the directory with the given profile name
-           (instead of the default, which removes all artifacts).
+           Remove artifacts only in the directory with the given profile name.
 
        --target-dir directory
            Directory for all generated artifacts and intermediate files. May
