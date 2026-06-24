@@ -4,4 +4,4 @@ version = "0.0.0"
 edition = "2024"
 
 [dependencies]
-foo.workspace = true
+foo = { workspace = true, default-features = true }
