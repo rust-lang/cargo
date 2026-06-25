@@ -868,8 +868,10 @@ _libssh2_packet_add(LIBSSH2_SESSION * session, unsigned char *data,
 
                     nr_extensions -= 1;
 
-                    _libssh2_get_string(&buf, &name, &name_len);
-                    _libssh2_get_string(&buf, &value, &value_len);
+                    if(_libssh2_get_string(&buf, &name, &name_len))
+                        break;
+                    if(_libssh2_get_string(&buf, &value, &value_len))
+                        break;
 
                     if(name && value) {
                         _libssh2_debug((session,
