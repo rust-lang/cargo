@@ -2019,6 +2019,15 @@ This usually must be combined with [build-std](#build-std).
 
 The -`Z hint-msrv` CLI flag enables Cargo to pass `package.rust-version` to rustc which can affect which lints are emitted.
 
+You can set this via your global `~/.cargo/config.toml`, and nightly Cargo will
+automatically use it, while stable Cargo will silently ignore the unstable
+option:
+
+```toml
+[unstable]
+hint-msrv = true
+```
+
 ## min-publish-age
 
 * Tracking Issue: [#17009](https://github.com/rust-lang/cargo/issues/17009)
