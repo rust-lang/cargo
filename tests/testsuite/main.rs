@@ -112,6 +112,7 @@ mod git_shallow;
 mod glob_targets;
 mod global_cache_tracker;
 mod help;
+mod hint_msrv;
 mod hints;
 mod https;
 mod inheritable_workspace_fields;

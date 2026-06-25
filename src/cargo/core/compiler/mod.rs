@@ -1478,6 +1478,12 @@ fn build_base_args(
             .env("RUSTC_BOOTSTRAP", "1");
     }
 
+    if let Some(version) = unit.pkg.manifest().rust_version()
+        && bcx.gctx.cli_unstable().hint_msrv
+    {
+        cmd.arg("-Z").arg(format!("hint-msrv={version}"));
+    }
+
     Ok(())
 }
 
