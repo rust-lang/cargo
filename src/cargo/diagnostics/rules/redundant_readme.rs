@@ -135,6 +135,8 @@ fn lint_package_inner(
     }
     primary = primary.element(Level::NOTE.message(emitted_source));
     let mut report = vec![primary];
+    let mut help =
+        Group::with_title(Level::HELP.secondary_title("consider removing `package.readme`"));
     if let Some(document) = document
         && let Some(contents) = contents
         && let Some(span) = get_key_value_span(document, &["package", "readme"])
@@ -146,15 +148,13 @@ fn lint_package_inner(
         } else {
             span.key.start..span.value.end
         };
-        let mut help =
-            Group::with_title(Level::HELP.secondary_title("consider removing `package.readme`"));
         help = help.element(
             Snippet::source(contents)
                 .path(manifest_path)
                 .patch(Patch::new(span, "")),
         );
-        report.push(help);
     }
+    report.push(help);
 
     pkg_stats.record_lint(lint_level);
     gctx.shell().print_report(&report, lint_level.force())?;

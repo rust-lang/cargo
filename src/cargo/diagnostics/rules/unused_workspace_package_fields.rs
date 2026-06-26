@@ -119,12 +119,11 @@ pub(crate) fn lint_workspace(
             primary = primary.element(Level::NOTE.message(emitted_source));
         }
         let mut report = vec![primary];
+        let mut help =
+            Group::with_title(Level::HELP.secondary_title("consider removing the unused field"));
         if let Some(document) = document
             && let Some(contents) = contents
         {
-            let mut help = Group::with_title(
-                Level::HELP.secondary_title("consider removing the unused field"),
-            );
             let mut snippet = Snippet::source(contents).path(&manifest_path);
             if let Some(span) =
                 get_key_value_span(document, &["workspace", "package", unused.as_ref()])
@@ -132,8 +131,8 @@ pub(crate) fn lint_workspace(
                 snippet = snippet.patch(Patch::new(span.key.start..span.value.end, ""));
             }
             help = help.element(snippet);
-            report.push(help);
         }
+        report.push(help);
 
         pkg_stats.record_lint(lint_level);
         gctx.shell().print_report(&report, lint_level.force())?;
