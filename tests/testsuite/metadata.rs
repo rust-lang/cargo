@@ -2200,7 +2200,7 @@ fn cargo_metadata_with_invalid_artifact_deps() {
 }
 
 #[cargo_test]
-fn cargo_metadata_rejects_one_artifact_lib_alias_to_same_package() {
+fn cargo_metadata_with_one_artifact_lib_alias_to_same_package() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -2242,18 +2242,16 @@ fn cargo_metadata_rejects_one_artifact_lib_alias_to_same_package() {
 
     p.cargo("metadata -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
-[LOCKING] 1 package to latest compatible version
-[ERROR] the crate `foo v0.5.0 ([ROOT]/foo)` depends on crate `bar v0.5.0 ([ROOT]/foo/bar)` multiple times with different names
-
-"#]])
+        .with_stdout_contains(r#"[..]"name":"bar_lib","pkg":"path+[ROOTURL]/foo/bar#0.5.0"[..]"#)
+        .with_stdout_contains(r#"[..]"rename":"bar-lib"[..]"#)
+        .with_stdout_contains(r#"[..]"rename":"bar-bin"[..]"#)
+        .with_stdout_contains(r#"[..]"extern_name":"bar_lib"[..]"#)
+        .with_stdout_contains(r#"[..]"extern_name":"bar_bin"[..]"#)
         .run();
 }
 
 #[cargo_test]
-fn cargo_metadata_rejects_multiple_bin_only_artifact_aliases_to_lib_package() {
+fn cargo_metadata_with_multiple_bin_only_artifact_aliases_to_lib_package() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -2294,13 +2292,12 @@ fn cargo_metadata_rejects_multiple_bin_only_artifact_aliases_to_lib_package() {
 
     p.cargo("metadata -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
-[LOCKING] 1 package to latest compatible version
-[ERROR] the crate `foo v0.5.0 ([ROOT]/foo)` depends on crate `bar v0.5.0 ([ROOT]/foo/bar)` multiple times with different names
-
-"#]])
+        .with_stdout_contains(r#"[..]"rename":"bar-a"[..]"#)
+        .with_stdout_contains(r#"[..]"rename":"bar-b"[..]"#)
+        .with_stdout_contains(r#"[..]"extern_name":"bar_a"[..]"#)
+        .with_stdout_contains(r#"[..]"extern_name":"bar_b"[..]"#)
+        .with_stdout_contains(r#"[..]"dependencies":["path+[ROOTURL]/foo/bar#0.5.0"][..]"#)
+        .with_stdout_contains(r#"[..]"deps":[{"name":"","pkg":"path+[ROOTURL]/foo/bar#0.5.0"[..]"#)
         .run();
 }
 
