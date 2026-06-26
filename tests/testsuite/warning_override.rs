@@ -412,7 +412,7 @@ fn lint_build_result_pass() {
   |             ^^^^^^^^^^^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
-[HELP] remove the dependency
+[HELP] consider removing the unused dependency
   |
 9 -             unused = "0.1.0"
   |
@@ -445,7 +445,7 @@ fn lint_build_result_pass() {
   |             ^^^^^^^^^^^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
-[HELP] remove the dependency
+[HELP] consider removing the unused dependency
   |
 9 -             unused = "0.1.0"
   |

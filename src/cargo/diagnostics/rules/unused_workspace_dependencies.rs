@@ -151,7 +151,7 @@ pub(crate) fn lint_workspace(
         }
         let mut report = vec![primary];
         let mut help = Group::with_title(
-            Level::HELP.secondary_title("consider removing the unused dependency"),
+            Level::HELP.secondary_title("consider removing the unused workspace dependency"),
         );
         if let Some(document) = document
             && let Some(contents) = contents

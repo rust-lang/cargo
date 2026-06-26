@@ -149,7 +149,9 @@ pub(crate) fn lint_package(
             primary = primary.element(Level::NOTE.message(emitted_source));
         }
         let mut report = vec![primary];
-        let mut help = Group::with_title(Level::HELP.secondary_title("remove the dependency"));
+        let mut help = Group::with_title(
+            Level::HELP.secondary_title("consider removing the unused dependency"),
+        );
         if let Some(document) = document
             && let Some(contents) = contents
             && let Some(span) = get_key_value_span(document, &["build-dependencies", dep_name])
@@ -335,8 +337,9 @@ fn lint_package_build_results(
                 }
                 lint_count += 1;
                 let mut report = vec![primary];
-                let mut help =
-                    Group::with_title(Level::HELP.secondary_title("remove the dependency"));
+                let mut help = Group::with_title(
+                    Level::HELP.secondary_title("consider removing the unused dependency"),
+                );
                 if let Some(document) = document
                     && let Some(contents) = contents
                     && let Some(span) = get_key_value_span(document, &toml_path)

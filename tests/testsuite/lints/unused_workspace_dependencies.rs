@@ -86,7 +86,7 @@ workspace = true
    | ^^^^^^^^^^^^^
    |
    = [NOTE] `cargo::unused_workspace_dependencies` is set to `warn` in `[lints]`
-[HELP] consider removing the unused dependency
+[HELP] consider removing the unused workspace dependency
    |
 12 - not-inherited = "1"
    |
@@ -96,7 +96,7 @@ workspace = true
 11 | unused = "1"
    | ^^^^^^
    |
-[HELP] consider removing the unused dependency
+[HELP] consider removing the unused workspace dependency
    |
 11 - unused = "1"
    |
