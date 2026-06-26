@@ -1,0 +1,186 @@
+#!/bin/sh
+# Copyright (C) The libssh2 project and its contributors.
+# SPDX-License-Identifier: BSD-3-Clause
+#
+# Script to build release-archives with. Note that this requires a checkout
+# from git and you should first run 'autoreconf -fi' and './configure'.
+#
+
+set -eu
+
+export LC_ALL=C
+export TZ=UTC
+
+version="${1:-}"
+
+if [ -z "$version" ]; then
+  echo "Specify a version number!"
+  exit
+fi
+
+if [ "only" = "${2:-}" ]; then
+  echo "Setup version number only!"
+  only=1
+else
+  only=
+fi
+
+libversion="$version"
+
+major=$(echo "$libversion" | cut -d. -f1 | sed -e "s/[^0-9]//g")
+minor=$(echo "$libversion" | cut -d. -f2 | sed -e "s/[^0-9]//g")
+patch=$(echo "$libversion" | cut -d. -f3 | cut -d- -f1 | sed -e "s/[^0-9]//g")
+
+numeric="$(printf "%02x%02x%02x\n" "$major" "$minor" "$patch")"
+
+HEADER=include/libssh2.h
+
+if test -z "$only"; then
+  ext=".dist"
+  # when not setting up version numbers locally
+  for a in $HEADER; do
+    cp "$a" "$a$ext"
+  done
+  HEADER="$HEADER$ext"
+fi
+
+# requires a date command that knows + for format and -d for date input
+timestamp=${SOURCE_DATE_EPOCH:-$(date +"%s")}
+datestamp=$(date -d "@$timestamp")
+filestamp=$(date -d "@$timestamp" +"%Y%m%d%H%M.%S")
+
+# Replace version number in header file:
+sed -i.bak \
+  -e "s/^#define LIBSSH2_VERSION .*/#define LIBSSH2_VERSION \"$libversion\"/g" \
+  -e "s/^#define LIBSSH2_VERSION_NUM .*/#define LIBSSH2_VERSION_NUM 0x$numeric/g" \
+  -e "s/^#define LIBSSH2_VERSION_MAJOR .*/#define LIBSSH2_VERSION_MAJOR $major/g" \
+  -e "s/^#define LIBSSH2_VERSION_MINOR .*/#define LIBSSH2_VERSION_MINOR $minor/g" \
+  -e "s/^#define LIBSSH2_VERSION_PATCH .*/#define LIBSSH2_VERSION_PATCH $patch/g" \
+  -e "s/^#define LIBSSH2_TIMESTAMP .*/#define LIBSSH2_TIMESTAMP \"$datestamp\"/g" \
+  "$HEADER"
+rm -f "$HEADER.bak"
+
+if test -n "$only"; then
+  # done!
+  exit
+fi
+
+echo "libssh2 version $libversion"
+echo "libssh2 numerical $numeric"
+echo "datestamp $datestamp"
+
+findprog() {
+  file="$1"
+  for part in $(echo "$PATH" | tr ':' ' '); do
+    path="$part/$file"
+    if [ -x "$path" ]; then
+      # there it is!
+      return 1
+    fi
+  done
+
+  # no such executable
+  return 0
+}
+
+############################################################################
+#
+# automake is needed to run to make a non-GNU Makefile.in if Makefile.am has
+# been modified.
+#
+
+if { findprog automake >/dev/null 2>/dev/null; } then
+  echo "- Could not find or run automake, I hope you know what you are doing!"
+else
+  echo "Runs automake --include-deps"
+  automake --include-deps Makefile >/dev/null
+fi
+
+############################################################################
+#
+# Generate the changelog
+#
+echo "generate NEWS"
+git log --pretty=fuller --no-color --date=short --decorate=full -1000 | ./git2news.pl > NEWS.dist
+
+############################################################################
+#
+# Now run make dist to generate a tar.gz archive
+#
+
+echo "make dist"
+targz="libssh2-$version.tar.gz"
+make -s dist "VERSION=$version"
+res=$?
+
+if test "$res" != 0; then
+  echo "make dist failed"
+  exit 2
+fi
+
+retar() {
+  tempdir=$1
+  rm -rf "$tempdir"
+  mkdir "$tempdir"
+  cd "$tempdir"
+  gzip -dc "../$targz" | tar -xf -
+  find libssh2-* -depth -exec touch -c -t "$filestamp" '{}' +
+  tar --create --format=ustar --owner=0 --group=0 --numeric-owner --sort=name libssh2-* | gzip --best --no-name > out.tar.gz
+  mv out.tar.gz ../
+  cd ..
+  rm -rf "$tempdir"
+}
+
+retar ".tarbuild"
+echo "replace $targz with out.tar.gz"
+mv out.tar.gz "$targz"
+
+############################################################################
+#
+# Now make a bz2 archive from the tar.gz original
+#
+
+bzip2="libssh2-$version.tar.bz2"
+echo "Generating $bzip2"
+gzip -dc "$targz" | bzip2 --best > "$bzip2"
+
+############################################################################
+#
+# Now make an xz archive from the tar.gz original
+#
+
+xz="libssh2-$version.tar.xz"
+echo "Generating $xz"
+gzip -dc "$targz" | xz -6e - > "$xz"
+
+############################################################################
+#
+# Now make a zip archive from the tar.gz original
+#
+makezip() {
+  rm -rf "$tempdir"
+  mkdir "$tempdir"
+  cd "$tempdir"
+  gzip -dc "../$targz" | tar -xf -
+  find . | sort | zip -9 -X "$zip" -@ >/dev/null
+  mv "$zip" ../
+  cd ..
+  rm -rf "$tempdir"
+}
+
+zip="libssh2-$version.zip"
+echo "Generating $zip"
+tempdir=".builddir"
+makezip
+
+# Set deterministic timestamp
+touch -c -t "$filestamp" "$targz" "$bzip2" "$xz" "$zip"
+
+echo "------------------"
+echo "maketgz report:"
+echo ""
+ls -l "$targz" "$bzip2" "$xz" "$zip"
+sha256sum "$targz" "$bzip2" "$xz" "$zip"
+
+echo "Run this:"
+echo "gpg -b -a '$targz' && gpg -b -a '$bzip2' && gpg -b -a '$xz' && gpg -b -a '$zip'"

@@ -1,0 +1,38 @@
+# Copyright (C) The libssh2 project and its contributors.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+#
+name: CIFuzz
+on: [pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  Fuzzing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+    - name: Build Fuzzers
+      id: build
+      uses: google/oss-fuzz/infra/cifuzz/actions/build_fuzzers@master
+      with:
+        oss-fuzz-project-name: 'libssh2'
+        dry-run: false
+        language: c
+    - name: Run Fuzzers
+      uses: google/oss-fuzz/infra/cifuzz/actions/run_fuzzers@master
+      with:
+        oss-fuzz-project-name: 'libssh2'
+        fuzz-seconds: 600
+        dry-run: false
+        language: c
+    - name: Upload Crash
+      uses: actions/upload-artifact@v3
+      if: ${{ failure() && steps.build.outcome == 'success' }}
+      with:
+        name: artifacts
+        path: ./out/artifacts

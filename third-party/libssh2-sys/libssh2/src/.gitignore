@@ -1,0 +1,7 @@
+.deps
+.libs
+Makefile.inc.cmake
+libssh2.pc
+libssh2_config.h
+libssh2_config.h.in
+stamp-h1

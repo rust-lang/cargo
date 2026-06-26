@@ -1,0 +1,36 @@
+[package]
+name = "libssh2-sys"
+version = "0.3.1"
+authors = ["Alex Crichton <alex@alexcrichton.com>", "Wez Furlong <wez@wezfurlong.org>", "Matteo Bigoi <bigo@crisidev.org>"]
+links = "ssh2"
+build = "build.rs"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/alexcrichton/ssh2-rs"
+documentation = "https://docs.rs/libssh2-sys"
+description = "Native bindings to the libssh2 library"
+
+[lib]
+name = "libssh2_sys"
+path = "lib.rs"
+
+[features]
+vendored-openssl = ["openssl-sys/vendored"]
+zlib-ng-compat = ["libz-sys/zlib-ng"]
+openssl-on-win32 = ["openssl-sys"]
+
+[dependencies]
+libc = "0.2"
+libz-sys = { version = "1.1.0", default-features = false, features = ["libc"] }
+
+[target."cfg(unix)".dependencies]
+openssl-sys = "0.9.35"
+
+[target."cfg(windows)".dependencies]
+openssl-sys = { version="0.9.35", optional = true }
+
+[build-dependencies]
+pkg-config = "0.3.11"
+cc = "1.0.25"
+
+[target.'cfg(target_env = "msvc")'.build-dependencies]
+vcpkg = "0.2"

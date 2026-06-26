@@ -300,3 +300,6 @@ http-transport-reqwest = ["gix/blocking-http-transport-reqwest"]
 
 [lints]
 workspace = true
+
+[patch.crates-io]
+libssh2-sys = { path = "third-party/libssh2-sys" }

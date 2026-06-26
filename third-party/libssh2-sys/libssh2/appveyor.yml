@@ -1,0 +1,240 @@
+# Copyright (C) Ruslan Baratov
+# Copyright (C) Alexander Lamaison
+# Copyright (C) Marc Hoersken
+# Copyright (C) Viktor Szakats
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# * Redistributions of source code must retain the above copyright notice, this
+#   list of conditions and the following disclaimer.
+#
+# * Redistributions in binary form must reproduce the above copyright notice,
+#   this list of conditions and the following disclaimer in the documentation
+#   and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
+# https://www.appveyor.com/docs/windows-images-software/
+
+environment:
+  CONFIGURATION: 'Release'
+  FIXTURE_XFER_COUNT: 35020
+  SKIP_CTEST: 'yes'  # Connection to test server has been failing consistently since 2024-08-29
+
+  matrix:
+    - job_name: 'VS2022, OpenSSL 3, x64, Server 2019'
+      APPVEYOR_BUILD_WORKER_IMAGE: 'Visual Studio 2022'
+      GENERATOR: 'Visual Studio 17 2022'
+      PLATFORM: 'x64'
+      CRYPTO_BACKEND: 'OpenSSL'
+      OPENSSL_ROOT_DIR: 'C:/OpenSSL-v33-Win64'
+
+    - job_name: 'VS2015, OpenSSL 1.1, x86, Server 2016'
+      APPVEYOR_BUILD_WORKER_IMAGE: 'Visual Studio 2017'
+      GENERATOR: 'Visual Studio 14 2015'
+      PLATFORM: 'x86'
+      CRYPTO_BACKEND: 'OpenSSL'
+      OPENSSL_ROOT_DIR: 'C:/OpenSSL-v111-Win32'
+
+    - job_name: 'VS2015, OpenSSL 1.1, x64, Server 2012 R2, Logging'
+      APPVEYOR_BUILD_WORKER_IMAGE: 'Visual Studio 2015'
+      GENERATOR: 'Visual Studio 14 2015'
+      PLATFORM: 'x64'
+      CRYPTO_BACKEND: 'OpenSSL'
+      OPENSSL_ROOT_DIR: 'C:/OpenSSL-v111-Win64'
+      ENABLE_DEBUG_LOGGING: 'ON'
+
+    - job_name: 'VS2013, OpenSSL 1.1, x64, Server 2012 R2'
+      APPVEYOR_BUILD_WORKER_IMAGE: 'Visual Studio 2015'
+      GENERATOR: 'Visual Studio 12 2013'
+      PLATFORM: 'x64'
+      CRYPTO_BACKEND: 'OpenSSL'
+      OPENSSL_ROOT_DIR: 'C:/OpenSSL-v111-Win64'
+
+    - job_name: 'VS2013, OpenSSL 1.1, x86, Server 2012 R2, Shared-only'
+      APPVEYOR_BUILD_WORKER_IMAGE: 'Visual Studio 2015'
+      GENERATOR: 'Visual Studio 12 2013'
+      PLATFORM: 'x86'
+      BUILD_STATIC_LIBS: 'OFF'
+      CRYPTO_BACKEND: 'OpenSSL'
+      OPENSSL_ROOT_DIR: 'C:/OpenSSL-v111-Win32'
+      SKIP_CTEST: 'no'
+
+    - job_name: 'VS2013, OpenSSL 1.0.2, x64, Build-only, Static-only'
+      APPVEYOR_BUILD_WORKER_IMAGE: 'Visual Studio 2015'
+      GENERATOR: 'Visual Studio 12 2013'
+      PLATFORM: 'x64'
+      BUILD_SHARED_LIBS: 'OFF'
+      CRYPTO_BACKEND: 'OpenSSL'
+      OPENSSL_ROOT_DIR: 'C:/OpenSSL-Win64'
+      SKIP_CTEST: 'yes'
+
+    - job_name: 'VS2008, WinCNG, x86, Build-only'
+      APPVEYOR_BUILD_WORKER_IMAGE: 'Visual Studio 2015'
+      GENERATOR: 'Visual Studio 9 2008'
+      PLATFORM: 'x86'
+      CRYPTO_BACKEND: 'WinCNG'
+      ENABLE_ECDSA_WINCNG: 'ON'
+      SKIP_CTEST: 'yes'
+
+    - job_name: 'VS2010, WinCNG, x64, Build-only, non-unity'
+      APPVEYOR_BUILD_WORKER_IMAGE: 'Visual Studio 2015'
+      GENERATOR: 'Visual Studio 10 2010'
+      PLATFORM: 'x64'
+      CRYPTO_BACKEND: 'WinCNG'
+      ENABLE_ECDSA_WINCNG: 'ON'
+      UNITY: 'OFF'
+      SKIP_CTEST: 'yes'
+
+    - job_name: 'VS2022, WinCNG, x64, Server 2019, Logging'
+      APPVEYOR_BUILD_WORKER_IMAGE: 'Visual Studio 2022'
+      GENERATOR: 'Visual Studio 17 2022'
+      PLATFORM: 'x64'
+      CRYPTO_BACKEND: 'WinCNG'
+      ENABLE_ECDSA_WINCNG: 'ON'
+      ENABLE_DEBUG_LOGGING: 'ON'
+
+    - job_name: 'VS2022, WinCNG, ARM64, Build-only'
+      APPVEYOR_BUILD_WORKER_IMAGE: 'Visual Studio 2022'
+      GENERATOR: 'Visual Studio 17 2022'
+      PLATFORM: 'ARM64'
+      CRYPTO_BACKEND: 'WinCNG'
+      ENABLE_ECDSA_WINCNG: 'ON'
+
+    - job_name: 'VS2015, WinCNG, x86, Server 2016'
+      APPVEYOR_BUILD_WORKER_IMAGE: 'Visual Studio 2017'
+      GENERATOR: 'Visual Studio 14 2015'
+      PLATFORM: 'x86'
+      CRYPTO_BACKEND: 'WinCNG'
+      ENABLE_ECDSA_WINCNG: 'ON'
+
+    - job_name: 'VS2015, WinCNG, x64, Server 2012 R2'
+      APPVEYOR_BUILD_WORKER_IMAGE: 'Visual Studio 2015'
+      GENERATOR: 'Visual Studio 14 2015'
+      PLATFORM: 'x64'
+      CRYPTO_BACKEND: 'WinCNG'
+      ENABLE_ECDSA_WINCNG: 'OFF'
+      SKIP_CTEST: 'no'
+
+matrix:
+  fast_finish: true
+
+install:
+  # prepare local SSH server for reverse tunneling from GitHub Actions hosting our docker container
+  - ps: |
+      $env:OPENSSH_SERVER_PORT = Get-Random -Minimum 2000 -Maximum 2300
+      [System.Environment]::SetEnvironmentVariable('OPENSSH_SERVER_PORT', $env:OPENSSH_SERVER_PORT)
+      .\ci\appveyor\docker-bridge.ps1
+
+build_script:
+  - ps: |
+      $options = @('-DENABLE_WERROR=ON')
+
+      if($env:GENERATOR -eq 'Visual Studio 17 2022') {
+        if($env:PLATFORM -eq 'x86') {
+          $options += '-A Win32'
+        }
+        else {
+          $options += "-A $env:PLATFORM"
+        }
+      }
+      elseif($env:PLATFORM -eq 'x64') {
+        $env:GENERATOR += ' Win64'
+      }
+      $options += "-G$env:GENERATOR"
+
+      $options += "-DCRYPTO_BACKEND=$env:CRYPTO_BACKEND"
+      if($env:OPENSSL_ROOT_DIR -ne '') {
+        if(Test-Path $env:OPENSSL_ROOT_DIR) {
+          $options += "-DOPENSSL_ROOT_DIR=$env:OPENSSL_ROOT_DIR"
+        }
+        else {
+          Write-Error "Directory '$env:OPENSSL_ROOT_DIR' expected, but not found."
+          exit 1
+        }
+      }
+
+      if($env:ENABLE_DEBUG_LOGGING -eq 'ON') {
+        $options += '-DENABLE_DEBUG_LOGGING=ON'
+      }
+      if($env:UNITY -ne 'OFF') {
+        $options += '-DCMAKE_UNITY_BUILD=ON'
+      }
+      if($env:ENABLE_ECDSA_WINCNG -eq 'ON') {
+        $options += '-DENABLE_ECDSA_WINCNG=ON'
+      }
+      if($env:BUILD_STATIC_LIBS -eq 'OFF') {
+        $options += '-DBUILD_STATIC_LIBS=OFF'
+      }
+      if($env:BUILD_SHARED_LIBS -eq 'OFF') {
+        $options += '-DBUILD_SHARED_LIBS=OFF'
+      }
+      $options += '-DCMAKE_VS_GLOBALS=TrackFileAccess=false'
+      # FIXME: First sshd test sometimes timeouts, subsequent ones almost always fail:
+      #        'libssh2_session_handshake failed (-43): Failed getting banner'
+      $options += '-DRUN_SSHD_TESTS=OFF'
+
+      Write-Host 'CMake options:' $options
+      cmake -B _builds $options
+      cmake --build _builds --config "$env:CONFIGURATION" --parallel 2
+
+test_script:
+  - ps: |
+      if($env:SKIP_CTEST -ne 'yes' -and $env:PLATFORM -ne 'ARM64') {
+        appveyor-retry choco install --yes --no-progress --limit-output --timeout 180 docker-cli
+        Write-Host 'Waiting for SSH connection from GitHub Actions' -NoNewline
+        $endDate = (Get-Date).AddMinutes(5)
+        while((Get-Process -Name 'sshd' -ErrorAction SilentlyContinue).Count -eq 1 -and (Get-Date) -lt $endDate) {
+          Write-Host '.' -NoNewline
+          Start-Sleep -Seconds 1
+        }
+        if((Get-Process -Name 'sshd' -ErrorAction SilentlyContinue).Count -gt 1) {
+          $env:DOCKER_HOST = 'tcp://127.0.0.1:2375'
+          [System.Environment]::SetEnvironmentVariable('DOCKER_HOST', $env:DOCKER_HOST)
+          Write-Host '... ready.'
+        }
+        else {
+          Write-Host '... failed.'
+        }
+        if($env:CRYPTO_BACKEND -eq 'WinCNG') {
+          $env:FIXTURE_TRACE_ALL_CONNECT = '1'
+        }
+        $env:OPENSSH_SERVER_IMAGE=[string] (& bash -c "echo ghcr.io/libssh2/ci_tests_openssh_server:$(git rev-parse --short=20 HEAD:tests/openssh_server)")
+        cd _builds; ctest -VV -C $($env:CONFIGURATION) --output-on-failure --timeout 900
+      }
+
+on_failure:
+  - ps: |
+      if(Test-Path _builds/CMakeFiles/CMakeConfigureLog.yaml) { cat _builds/CMakeFiles/CMakeConfigureLog.yaml }
+      if(Test-Path _builds/CMakeFiles/CMakeOutput.log) { cat _builds/CMakeFiles/CMakeOutput.log }
+      if(Test-Path _builds/CMakeFiles/CMakeError.log) { cat _builds/CMakeFiles/CMakeError.log }
+
+on_finish:
+  - ps: |
+      Get-Process -Name 'sleep' -ErrorAction SilentlyContinue | Stop-Process
+      Start-Sleep -Seconds 3
+      Get-Process -Name 'sshd' -ErrorAction SilentlyContinue | Stop-Process
+
+skip_commits:
+  files:
+    - '.github/**/*'
+
+clone_depth: 10
+
+# Limit branches to avoid testing feature branches twice (as branch and as pull request)
+branches:
+  only:
+    - master

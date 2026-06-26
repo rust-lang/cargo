@@ -1,0 +1,48 @@
+/***************************************************************************
+* libssh2 Windows resource file
+* Copyright (C) The libssh2 project and its contributors.
+*
+* SPDX-License-Identifier: BSD-3-Clause
+***************************************************************************/
+#include <winver.h>
+#include "libssh2.h"
+
+LANGUAGE 0, 0
+
+#define RC_VERSION  LIBSSH2_VERSION_MAJOR, LIBSSH2_VERSION_MINOR, LIBSSH2_VERSION_PATCH, 0
+
+VS_VERSION_INFO VERSIONINFO
+  FILEVERSION     RC_VERSION
+  PRODUCTVERSION  RC_VERSION
+  FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
+#if defined(LIBSSH2DEBUG) || defined(_DEBUG)
+  FILEFLAGS VS_FF_DEBUG
+#else
+  FILEFLAGS 0
+#endif
+  FILEOS      VOS__WINDOWS32
+  FILETYPE    VFT_DLL
+  FILESUBTYPE 0
+
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904b0"  /* 0x0409: en-US, 1200/0x04b0: UTF-16LE */
+    BEGIN
+      VALUE "CompanyName",      "The libssh2 library, https://libssh2.org/\0"
+      VALUE "FileDescription",  "libssh2 Shared Library\0"
+      VALUE "FileVersion",      LIBSSH2_VERSION "\0"
+      VALUE "InternalName",     "libssh2\0"
+      VALUE "OriginalFilename", "libssh2.dll\0"
+      VALUE "ProductName",      "The libssh2 library\0"
+      VALUE "ProductVersion",   LIBSSH2_VERSION "\0"
+      VALUE "LegalCopyright",   "Copyright (C) " LIBSSH2_COPYRIGHT "\0"
+      VALUE "License",          "https://libssh2.org/license.html\0"
+    END
+  END
+
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x0409, 0x04b0  /* 0x0409: en-US, 1200/0x04b0: UTF-16LE */
+  END
+END

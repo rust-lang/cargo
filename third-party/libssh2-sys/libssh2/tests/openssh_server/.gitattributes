@@ -1,0 +1,3 @@
+# OpenSSH requires LF EOLs in key files, even on Windows, where
+# a git checkout may set CRLF EOLs by default.
+* text eol=lf

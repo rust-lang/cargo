@@ -1,0 +1,182 @@
+
+Implementation notes:
+
+  This is a true OS/400 implementation, not a PASE implementation (for PASE,
+use AIX implementation).
+
+It uses ASCII as internal character set. This has been accomplished using the
+QADRT library and include files, a C and system procedures ASCII wrapper
+library. See IBM QADRT description for more information.
+  This results in libssh2 being an ASCII library: any function string
+argument is taken/returned in ASCII and a C/C++ calling program built around
+QADRT may use libssh2 functions as on any other platform.
+  QADRT does not define ASCII wrappers for all C/system procedures: an
+additional module (os400sys.c) define some more of them, that are used by
+libssh2 and that QADRT left out.
+  Since standard library entry points expect and return ASCII character strings,
+additional procedures are provided for string transcoding (see below). No
+wrappers to standard procedures are provided: however, nested calls to
+transcoding procedures may be used.
+
+Crypto API is provided by the IBM QC3 API library. It supports RSA and EC,
+but not DSA.
+
+
+  Standard compilation environment does support neither autotools nor make;
+in fact, very few common utilities are available. As a consequence, the
+libssh2_config.h has been coded manually and the compilation scripts are
+a set of shell scripts stored in subdirectory os400.
+
+  The test environment is currently not supported on OS/400.
+
+
+
+Compiling on OS/400:
+
+  These instructions target people who knows about OS/400, compiling, IFS and
+archive extraction. Do not ask questions about these subjects if you're not
+familiar with.
+
+_ As a prerequisite, QADRT development environment >= 20211112 must be
+  installed.
+  For more information on downloading and installing the QADRT development kit,
+  please see https://www.ibm.com/support/pages/node/6258183
+_ If data compression has to be supported, ZLIB development environment must
+  be installed.
+_ Install the libssh2 sources directory in IFS. Do NOT install it in the
+  installation target directory (which defaults to /libssh2).
+_ Enter shell (QSH). You may need to change the LANG environment variable
+  to be in phase with the libssh2 source files CCSID.
+_ Change current directory to the libssh2 sources installation directory
+_ Change current directory to os400
+- If you want to change the default configuration parameters like debug info
+  generation, optimization level, listing option, target library, zlib
+  availability and location, etc., copy file config400.default to
+  config400.override and edit the latter. Do not edit the original default file
+  as it might be overwritten by a subsequent source installation.
+_ Copy any file in the current directory to makelog (i.e.:
+  cp initscript.sh makelog): this is intended to create the makelog file with
+  an ASCII CCSID!
+_ Enter the command "sh make.sh > makelog 2>&1'
+_ Examine the makelog file to check for compilation errors.
+
+  Without configuration parameters override, this will produce the following
+OS/400 objects:
+_ Library LIBSSH2. All other objects will be stored in this library.
+_ Modules for all libssh2 units.
+_ Binding directory LIBSSH2_A, to be used at calling program link time for
+  statically binding the modules (specify BNDSRVPGM(QADRTTS) when creating a
+  program using LIBSSH2_A. Also give access to the zlib BNDDIR/SRVPGM if
+  libssh2 is compiled with zlib).
+_ Service program LIBSSH2.<soname>, where <soname> is extracted from the
+  src/Makefile.am VERSION variable. To be used at calling program run-time
+  when this program has dynamically bound libssh2 at link time.
+_ Binding directory LIBSSH2. To be used to dynamically bind libssh2 when
+  linking a calling program.
+_ Source file H. It contains all the include members needed to compile a C/C++
+  module using libssh2.
+_ LIBSSH2, SSH2_PKEY, SSH2_SFTP members in file H. These are the C/C++ header
+  files. Original fames have been mangled to fit member name allowed syntax.
+_ Source file LIBSSH2RPG. It contains all the ILE/RPG /INCLUDE members
+  needed to compile an ILE/RPG program calling libssh2 procedures.
+_ LIBSSH2, SSH2_PKEY, SSH2_SFTP members in file LIBSSH2RPG. These are
+  ILE/RPG translations of the corresponding C header files.
+
+
+
+Special programming consideration:
+
+QADRT being used, the following points must be considered:
+_ If static binding is used, service program QADRTTS must be linked too.
+_ Likewise, if libssh2 has been compiled with zlib support, access to the
+  zlib objects must be provided at link time.
+_ The EBCDIC CCSID used by QADRT is 37 by default, NOT THE JOB'S CCSID. If
+  another EBCDIC CCSID is required, it must be set via a locale through a call
+  to setlocale_a (QADRT's setlocale() ASCII wrapper) with category LC_ALL or
+  LC_CTYPE, or by setting environment variable QADRT_ENV_LOCALE to the locale
+  object path before executing the program.
+_ Do not use original source include files unless you know what you are doing.
+  Use the installed members instead (in /QSYS.LIB/LIBSSH2.LIB/H.FILE).
+
+
+
+String transcoding support:
+
+  To help passing arbitrarily encoded string arguments and/or receiving string
+values from/to the libssh2 API, three non-standard additional procedures are
+provided. They use a session pointer and a "string cache" pointer.
+  Each time a string is transcoded, it is cached in the given cache. It is
+the responsibility of the caller to release the cache when its associated
+strings are no longer needed. These procedures and the string cache type are
+defined in a new libssh2_ccsid.h header file.
+  To create a string cache, use:
+
+#include <libssh2_ccsid.h>
+libssh2_string_cache *  cache = NULL;
+
+  To release all strings in a cache, call:
+
+libssh2_release_string_cache(session, &cache);
+
+  The transcoding procedures are:
+
+char * libssh2_from_ccsid(LIBSSH2_SESSION *session,
+                          libssh2_string_cache **cache,
+                          unsigned short ccsid,
+                          const char *string, ssize_t inlen,
+                          size_t *outlen);
+char * libssh2_to_ccsid(LIBSSH2_SESSION *session,
+                        libssh2_string_cache **cache,
+                        unsigned short ccsid,
+                        const char *string, ssize_t inlen,
+                        size_t *outlen);
+
+where:
+    session      is a libssh2 session used for memory allocation or NULL for
+                 global allocation scheme.
+    cache        is the address of a string cache.
+    ccsid        is the external (i.e.: non libssh2) coded character set id.
+                 65535 means no conversion and 0 means the current job's CCSID.
+    string       is the string to convert.
+    inlen        is the source string length in bytes: set to -1 if
+                 null-terminated.
+    outlen       if not NULL, is the address of a variable that will receive
+                 the transcoded string length upon return.
+
+  libssh2_from_ccsid() transcodes the string from the given CCSID to libssh2
+internal encoding (UTF-8). It is intended to be used to convert API input
+parameters.
+  libssh2_to_ccsid() transcodes the string from libssh2 internal encoding
+(UTF-8) to the given CCSID. This has been implemented to get standard API
+string results in a program's native encoding.
+
+  Both these functions return a pointer to the null-terminated converted string,
+or NULL if an error occurred. In addition, the variable pointed by outlen
+receives the effective byte length of the (cached) translated string, or -1
+in case of error.
+
+  Please take care to never mix different sessions into the same cache.
+
+
+
+ILE/RPG support:
+
+  Since 95% of the OS/400 programmers use ILE/RPG exclusively, a definition
+  /INCLUDE member is provided for this language. To include libssh2
+  definitions in an ILE/RPG module, line
+
+     h bnddir('LIBSSH2/LIBSSH2')
+
+must figure in the program header, and line
+
+     d/include libssh2/libssh2rpg,libssh2
+
+in the global data section of the module's source code.
+If required, members ssh2_sftp, ssh2_pkey and ssh2_ccsid may also be included.
+
+For IFS source compilations, include members are located in directory
+/libssh2/include/libssh2rpg and have their original names retained.
+
+ILE/RPG lacks a serious macro preprocessor, thus C macros requiring this
+feature have not been translated. However, function-like C macros have been
+implemented as procedures and therefore supported in ILE/RPG.

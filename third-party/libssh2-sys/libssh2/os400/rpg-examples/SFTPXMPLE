@@ -1,0 +1,326 @@
+      * Example: print a remote ascii file using sftp
+      *
+     h DFTACTGRP(*NO) ACTGRP(*NEW)
+     h OPTION(*NOSHOWCPY)
+     h BNDDIR('LIBSSH2')
+     h BNDDIR('QC2LE')
+      *
+      * Copyright (C) The libssh2 project and its contributors.
+      *
+      * Usage:
+      *
+      * CALL SFTPXMPLE ('<host>' '<port>' '<user>' '<password>' '<filepath>')
+      *
+      * SPDX-License-Identifier: BSD-3-Clause
+      *
+     fQPRINT    o    f  120        printer
+      *
+      /include LIBSSH2RPG,SSH2_SFTP
+      /include LIBSSH2RPG,SSH2_CCSID
+      *
+     d                 pi
+     d host                         120
+     d port                           5
+     d user                          20
+     d password                     120
+     d filepath                     120
+      *
+      **************************************************************************
+      *                          External definitions
+      **************************************************************************
+      *
+     d atoi            pr            10i 0 extproc('atoi')
+     d  numstr                         *   value options(*string)
+      *
+     d inet_addr       pr            10u 0 extproc('inet_addr')
+     d  char_addr                      *   value options(*string)
+      *
+     d socket          pr            10i 0 extproc('socket')
+     d  domain                       10i 0 value
+     d  type                         10i 0 value
+     d  protocol                     10i 0 value
+      *
+     d AF_INET         c                   2
+     d SOCK_STREAM     c                   1
+     d IPPROTO_IP      c                   0
+      *
+     d connect         pr            10i 0 extproc('connect')
+     d  sockfd                       10i 0 value
+     d  addr                           *   value
+     d  addrlen                      10u 0 value
+      *
+     d sockaddr_in     ds                  based(######typedef######)
+     d                                     align qualified
+     d  sin_family                    5i 0
+     d  sin_port                      5i 0
+     d  sin_addr                     10u 0
+     d  sin_zero                      8
+      *
+     d shutdown        pr            10i 0 extproc('shutdown')
+     d  socket                       10i 0 value
+     d  how                          10i 0 value
+      *
+     d SHUT_RDWR       c                   2
+      *
+     d qmhsndpm        pr                  extpgm('QMHSNDPM')
+     d  msgid                         7    const
+     d  qmsgfn                       20    const
+     d  data                     999999    const options(*varsize)
+     d  datalength                   10u 0 const
+     d  msgtype                      10    const
+     d  csentry                  999999    const options(*varsize)
+     d  cscounter                    10u 0 const
+     d  msgkey                        4
+     d  errcode                  999999    options(*varsize)
+     d  csentrylen                   10u 0 const options(*nopass)
+     d  csqual                       20    const options(*nopass)
+     d  waittime                     10u 0 const options(*nopass)
+     d  csentrytype                  10    const options(*nopass)
+     d  ccsid                        10u 0 const options(*nopass)
+      *
+      **************************************************************************
+      *                               Constants
+      **************************************************************************
+      *
+     d EBCDIC_CR       c                   X'0D'
+     d EBCDIC_LF       c                   X'25'
+      *
+      **************************************************************************
+      *                            Global storage
+      **************************************************************************
+      *
+     d sc              s               *   inz(*NULL)                           String cache
+     d session         s               *   inz(*NULL)                           Session
+     d sftp_session    s               *   inz(*NULL)                           LIBSSH2_SFTP *
+     d sftp_handle     s               *   inz(*NULL)                           LIBSSH2_SFTP_HANDLE*
+     d sin             ds                  likeds(sockaddr_in)                  Remote IP address
+     d sock            s             10i 0 inz(LIBSSH2_INVALID_SOCKET)          Socket descriptor
+     d rc              s             10i 0                                      Result code
+     d hostlen         s             10u 0                                      Host name length
+      *
+      **************************************************************************
+      *                            Main program
+      **************************************************************************
+
+        // Initialize ssh lbrary
+        rc = libssh2_init(0);
+        if rc <> 0;
+            error('libssh2 initialization failed (' + %trim(%char(rc)) + ')');
+        else;
+            // Build remote address
+            sin.sin_family = AF_INET;
+            hostlen = trimmed_length(host: %len(host): %addr(port));
+            if hostlen <> 0;
+                 sin.sin_addr = inet_addr(%subst(host: 1: hostlen));
+            else;
+                sin.sin_addr = inet_addr('127.0.0.1');
+            endif;
+            sin.sin_port = atoi(port);
+            if sin.sin_port <= 0;
+                sin.sin_port = 22;
+            endif;
+            sin.sin_zero = *ALLX'00';
+
+            main();
+            cleanout();
+        endif;
+
+        *inlr = *on;
+      /space 3
+        begsr *pssr;
+            cleanout();
+        endsr;
+      /eject
+      **************************************************************************
+      * Main procedure
+      **************************************************************************
+      *
+     p main            b
+      *
+     d buf             s           1024                                         Data buffer
+     d nread           s             10i 0                                      Read bytes count
+
+        // Connect to remote server
+        sock = socket(AF_INET: SOCK_STREAM: IPPROTO_IP);
+        if sock = LIBSSH2_INVALID_SOCKET;
+            error('failed to create socket');
+            return;
+        endif;
+        if connect(sock: %addr(sin): %size(sin)) <> 0;
+            error('failed to connect');
+            return;
+        endif;
+
+        // Create a session instance
+        session = libssh2_session_init();
+        if session = *NULL;
+            error('Could not initialize SSH session');
+            return;
+        endif;
+
+        // Since we have set non-blocking, tell libssh2 we are blocking
+        libssh2_session_set_blocking(session: 1);
+
+        // ... start it up. This will trade welcome banners, exchange keys,
+        // and setup crypto, compression, and MAC layers
+        rc = libssh2_session_handshake(session: sock);
+        if rc <> 0;
+            error('Failure establishing SSH session: ' + %trim(%char(rc)));
+            return;
+        endif;
+
+        // Authenticate
+        if libssh2_userauth_password(session:
+          libssh2_from_ccsid(session: sc: 0: user:
+                             trimmed_length(user: %size(user):
+                                            %addr(password)): *omit):
+          libssh2_from_ccsid(session: sc: 0: password:
+                             trimmed_length(password: %size(password):
+                                            %addr(filepath)): *omit)) <> 0;
+            error('Authentication by password failed');
+            return;
+        endif;
+
+        // Request a file via SFTP
+        sftp_session = libssh2_sftp_init(session);
+
+        if sftp_session = *NULL;
+            error('Unable to init SFTP session');
+            return;
+        endif;
+
+        sftp_handle = libssh2_sftp_open(sftp_session:
+          libssh2_from_ccsid(session: sc: 0: filepath:
+                             trimmed_length(filepath: %size(filepath): *null):
+                                            *omit): LIBSSH2_FXF_READ: 0);
+        if sftp_handle = *NULL;
+            error('Unable to open file with SFTP: ' +
+                  %trim(%char(libssh2_sftp_last_error(sftp_session))));
+            return;
+        endif;
+
+        // Download and display the remote file
+        nread = libssh2_sftp_read(sftp_handle: %addr(buf): %size(buf));
+        dow nread > 0;  // loop until we fail
+            print(libssh2_to_ccsid(session: sc: 0: %addr(buf): nread: *omit):
+                  -1);
+            libssh2_release_string_cache(session: sc);
+            nread = libssh2_sftp_read(sftp_handle: %addr(buf): %size(buf));
+        enddo;
+     p main            e
+      /eject
+      **************************************************************************
+      * Release all allocated resources
+      **************************************************************************
+      *
+     p cleanout        b
+      *
+
+        if sftp_handle <> *NULL;
+            libssh2_sftp_close(sftp_handle);
+        endif;
+
+        if sftp_session <> *NULL;
+            libssh2_sftp_shutdown(sftp_session);
+        endif;
+
+        if session <> *NULL;
+            libssh2_session_disconnect(session: libssh2_from_ccsid(session: sc:
+              0: 'Normal shutdown': -1: *omit));
+            libssh2_release_string_cache(session: sc);
+            libssh2_session_free(session);
+        endif;
+
+        if sock <> LIBSSH2_INVALID_SOCKET;
+                shutdown(sock: SHUT_RDWR);
+                LIBSSH2_SOCKET_CLOSE(sock);
+        endif;
+
+        libssh2_exit();
+     p cleanout        e
+      /eject
+      **************************************************************************
+      * Print data line by line
+      **************************************************************************
+      *
+     p print           b
+     d                 pi
+     d  string                         *   value options(*string)
+     d  len                          10i 0 value
+      *
+     d recout          ds                                                       Output line buffer
+     d  lineout                     120    inz(*blanks)
+      *
+     d i               s             10u 0
+     d j               s             10u 0 inz(0)
+
+        if len < 0;
+            len = %len(%str(string));
+        endif;
+
+        for i = 0 to len - 1;
+            if %str(string + i: 1) <> EBCDIC_CR;
+                if %str(string + i: 1) = EBCDIC_LF;
+                    write QPRINT recout;
+                    lineout = *blanks;
+                    j = 0;
+                else;
+                    if j >= %size(lineout);
+                        write QPRINT recout;
+                        lineout = *blanks;
+                        j = 0;
+                    endif;
+                    j = j + 1;
+                    %subst(lineout: j: 1) = %str(string + i: 1);
+                endif;
+            endif;
+        endfor;
+        if j > 0;
+            write QPRINT recout;
+        endif;
+     p print           e
+      /eject
+      **************************************************************************
+      * Error procedure
+      **************************************************************************
+      *
+     p error           b
+     d                 pi
+     d  message                        *   value options(*string)
+      *
+     d errcode         ds                  qualified
+     d  provided                     10u 0 inz(0)
+     d  available                    10u 0
+      *
+     d msgkey          s              4
+
+        // Send error as an exception to the calling level.
+        qmhsndpm('CPF9898': 'QCPFMSG   QSYS':
+                 %str(message): %len(%str(message)): '*ESCAPE':
+                 '*          ': 1: msgkey: errcode);
+     p error           e
+      /eject
+      **************************************************************************
+      * Get the length of right-trimmed string
+      **************************************************************************
+      *
+     p trimmed_length  b
+     d                 pi            10u 0
+     d  string                   999999    options(*varsize)
+     d  length                       10u 0 value
+     d  nextarg                        *   value
+      *
+     d len             s             10u 0
+
+        if nextarg <> *null;
+            len = nextarg - %addr(string);
+            if length > len;
+                length = len;
+            endif;
+        endif;
+        len = %scan(X'00': string: 1: length); // Maybe zero-terminated
+        if len = 0;
+            len = length + 1;
+        endif;
+        return %checkr(' ': string: len - 1);  // Trim right
+     p trimmed_length  e
