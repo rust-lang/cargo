@@ -310,6 +310,16 @@ fn compute_deps(
         let dep_unit_for = unit_for.with_dependency(unit, dep_lib, unit_for.root_compile_kind());
 
         let manifest_deps = deps.iter().map(|d| (*d).clone()).collect::<Vec<_>>();
+        let lib_dep_name = if deps.iter().any(|dep| dep.artifact().is_some()) {
+            state.resolve().lib_dependency_name(
+                unit.pkg.package_id(),
+                dep_pkg_id,
+                deps.iter().copied(),
+                dep_lib,
+            )?
+        } else {
+            None
+        };
 
         let start = ret.len();
         if state.gctx.cli_unstable().dual_proc_macros
@@ -322,6 +332,7 @@ fn compute_deps(
                 dep_pkg,
                 dep_lib,
                 Some(manifest_deps.clone()),
+                lib_dep_name,
                 dep_unit_for,
                 unit.kind,
                 mode,
@@ -334,6 +345,7 @@ fn compute_deps(
                 dep_pkg,
                 dep_lib,
                 Some(manifest_deps),
+                lib_dep_name,
                 dep_unit_for,
                 CompileKind::Host,
                 mode,
@@ -347,6 +359,7 @@ fn compute_deps(
                 dep_pkg,
                 dep_lib,
                 Some(manifest_deps),
+                lib_dep_name,
                 dep_unit_for,
                 unit.kind.for_target(dep_lib),
                 mode,
@@ -426,6 +439,7 @@ fn compute_deps(
                         &unit.pkg,
                         t,
                         None, // artificial
+                        None,
                         UnitFor::new_normal(unit_for.root_compile_kind()),
                         unit.kind.for_target(t),
                         CompileMode::Build,
@@ -452,6 +466,7 @@ fn calc_artifact_deps<'a>(
     let mut has_artifact_lib = false;
     let mut maybe_non_artifact_lib = false;
     let artifact_pkg = state.get(dep_id);
+    let all_artifact = deps.iter().all(|d| d.artifact().is_some());
     for dep in deps {
         let Some(artifact) = dep.artifact() else {
             maybe_non_artifact_lib = true;
@@ -478,6 +493,7 @@ fn calc_artifact_deps<'a>(
                     .unwrap_or(unit.kind),
                 artifact_pkg,
                 dep,
+                all_artifact.then_some(*dep),
             )?);
         }
     }
@@ -522,6 +538,7 @@ fn compute_deps_custom_build(
         &unit.pkg,
         &unit.target,
         None, // artificial
+        None,
         script_unit_for,
         // Build scripts always compiled for the host.
         CompileKind::Host,
@@ -546,6 +563,7 @@ fn compute_deps_custom_build(
     let root_unit_compile_target = unit_for.root_compile_kind();
     let unit_for = UnitFor::new_host(/*host_features*/ true, root_unit_compile_target);
     for (dep_pkg_id, deps) in state.deps(unit, script_unit_for) {
+        let all_artifact = deps.iter().all(|d| d.artifact().is_some());
         for dep in deps {
             if dep.kind() != DepKind::Build || dep.artifact().is_none() {
                 continue;
@@ -565,6 +583,7 @@ fn compute_deps_custom_build(
                 resolved_artifact_compile_kind.unwrap_or(CompileKind::Host),
                 artifact_pkg,
                 dep,
+                all_artifact.then_some(dep),
             )?);
         }
     }
@@ -589,6 +608,7 @@ fn artifact_targets_to_unit_deps(
     compile_kind: CompileKind,
     artifact_pkg: &Package,
     dep: &Dependency,
+    naming_dep: Option<&Dependency>,
 ) -> CargoResult<Vec<UnitDep>> {
     let ret =
         match_artifacts_kind_with_targets(dep, artifact_pkg.targets(), parent.pkg.name().as_str())?
@@ -608,14 +628,18 @@ fn artifact_targets_to_unit_deps(
                                 _ => false,
                             })
                             .map(|target_kind| {
+                                let mut target = target.clone();
+                                target.set_kind(TargetKind::Lib(vec![target_kind.clone()]));
+                                let name_override = naming_dep.map(|dep| {
+                                    Resolve::dep_extern_crate_name_and_dep_name(dep, &target)
+                                });
                                 new_unit_dep(
                                     state,
                                     parent,
                                     artifact_pkg,
-                                    target
-                                        .clone()
-                                        .set_kind(TargetKind::Lib(vec![target_kind.clone()])),
+                                    &target,
                                     None, // TBD
+                                    name_override,
                                     parent_unit_for,
                                     compile_kind,
                                     CompileMode::Build,
@@ -623,17 +647,22 @@ fn artifact_targets_to_unit_deps(
                                 )
                             }),
                     ) as Box<dyn Iterator<Item = _>>,
-                    _ => Box::new(std::iter::once(new_unit_dep(
-                        state,
-                        parent,
-                        artifact_pkg,
-                        target,
-                        None, // TBD
-                        parent_unit_for,
-                        compile_kind,
-                        CompileMode::Build,
-                        dep.artifact(),
-                    ))),
+                    _ => {
+                        let name_override = naming_dep
+                            .map(|dep| Resolve::dep_extern_crate_name_and_dep_name(dep, target));
+                        Box::new(std::iter::once(new_unit_dep(
+                            state,
+                            parent,
+                            artifact_pkg,
+                            target,
+                            None, // TBD
+                            name_override,
+                            parent_unit_for,
+                            compile_kind,
+                            CompileMode::Build,
+                            dep.artifact(),
+                        )))
+                    }
                 }
             })
             .collect::<Result<Vec<_>, _>>()?;
@@ -659,12 +688,23 @@ fn compute_deps_doc(
         // However, for plugins/proc macros, deps should be built like normal.
         let mode = check_or_build_mode(unit.mode, dep_lib);
         let dep_unit_for = unit_for.with_dependency(unit, dep_lib, unit_for.root_compile_kind());
+        let lib_dep_name = if deps.iter().any(|dep| dep.artifact().is_some()) {
+            state.resolve().lib_dependency_name(
+                unit.pkg.package_id(),
+                id,
+                deps.iter().copied(),
+                dep_lib,
+            )?
+        } else {
+            None
+        };
         let lib_unit_dep = new_unit_dep(
             state,
             unit,
             dep_pkg,
             dep_lib,
             None, // not checking unused deps
+            lib_dep_name,
             dep_unit_for,
             unit.kind.for_target(dep_lib),
             mode,
@@ -679,6 +719,7 @@ fn compute_deps_doc(
                 dep_pkg,
                 dep_lib,
                 None, // not checking unused deps
+                lib_dep_name,
                 dep_unit_for,
                 unit.kind.for_target(dep_lib),
                 unit.mode,
@@ -713,6 +754,7 @@ fn compute_deps_doc(
                 &unit.pkg,
                 lib,
                 None, // not checking unused deps
+                None,
                 dep_unit_for,
                 unit.kind.for_target(lib),
                 unit.mode,
@@ -733,6 +775,7 @@ fn compute_deps_doc(
                 &scrape_unit.pkg,
                 &scrape_unit.target,
                 None, // not checking unused deps
+                None,
                 scrape_unit_for,
                 scrape_unit.kind,
                 scrape_unit.mode,
@@ -761,6 +804,7 @@ fn maybe_lib(
                 unit,
                 &unit.pkg,
                 t,
+                None,
                 None,
                 dep_unit_for,
                 unit.kind.for_target(t),
@@ -824,6 +868,7 @@ fn dep_build_script(
                     &unit.pkg,
                     t,
                     None, // artificial
+                    None,
                     script_unit_for,
                     unit.kind,
                     CompileMode::RunCustomBuild,
@@ -861,6 +906,7 @@ fn new_unit_dep(
     pkg: &Package,
     target: &Target,
     manifest_deps: Option<Vec<Dependency>>,
+    name_override: Option<(InternedString, Option<InternedString>)>,
     unit_for: UnitFor,
     kind: CompileKind,
     mode: CompileMode,
@@ -880,6 +926,7 @@ fn new_unit_dep(
         pkg,
         target,
         manifest_deps,
+        name_override,
         unit_for,
         kind,
         mode,
@@ -894,17 +941,21 @@ fn new_unit_dep_with_profile(
     pkg: &Package,
     target: &Target,
     manifest_deps: Option<Vec<Dependency>>,
+    name_override: Option<(InternedString, Option<InternedString>)>,
     unit_for: UnitFor,
     kind: CompileKind,
     mode: CompileMode,
     profile: Profile,
     artifact: Option<&Artifact>,
 ) -> CargoResult<UnitDep> {
-    let (extern_crate_name, dep_name) = state.resolve().extern_crate_name_and_dep_name(
-        parent.pkg.package_id(),
-        pkg.package_id(),
-        target,
-    )?;
+    let (extern_crate_name, dep_name) = match name_override {
+        Some(name) => name,
+        None => state.resolve().extern_crate_name_and_dep_name(
+            parent.pkg.package_id(),
+            pkg.package_id(),
+            target,
+        )?,
+    };
     let public = state
         .resolve()
         .is_public_dep(parent.pkg.package_id(), pkg.package_id());
