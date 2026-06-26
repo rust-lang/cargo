@@ -5,7 +5,6 @@ use cargo_util_terminal::report::AnnotationKind;
 use cargo_util_terminal::report::Group;
 use cargo_util_terminal::report::Level;
 use cargo_util_terminal::report::Origin;
-use cargo_util_terminal::report::Patch;
 use cargo_util_terminal::report::Snippet;
 use tracing::instrument;
 
@@ -132,25 +131,8 @@ fn lint_package_inner(
     }
     primary = primary.element(Level::NOTE.message(emitted_source));
     let mut report = vec![primary];
-    let mut help =
+    let help =
         Group::with_title(Level::HELP.secondary_title("consider removing `package.homepage`"));
-    if let Some(document) = document
-        && let Some(contents) = contents
-        && let Some(span) = get_key_value_span(document, &["package", "homepage"])
-    {
-        let span = if let Some(workspace_span) =
-            get_key_value_span(document, &["package", "homepage", "workspace"])
-        {
-            span.key.start..workspace_span.value.end
-        } else {
-            span.key.start..span.value.end
-        };
-        help = help.element(
-            Snippet::source(contents)
-                .path(manifest_path)
-                .patch(Patch::new(span, "")),
-        );
-    }
     report.push(help);
 
     pkg_stats.record_lint(lint_level);

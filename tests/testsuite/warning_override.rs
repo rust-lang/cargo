@@ -268,9 +268,6 @@ fn lint_parse_pass() {
   |
   = [NOTE] `cargo::redundant_homepage` is set to `warn` in `[lints]`
 [HELP] consider removing `package.homepage`
-  |
-8 -             homepage = "https://github.com/rust-lang/cargo/"
-  |
 [WARNING] `foo` (manifest) generated 1 warning
 
 "#]])
@@ -288,9 +285,6 @@ fn lint_parse_pass() {
   |
   = [NOTE] `cargo::redundant_homepage` is set to `warn` in `[lints]`
 [HELP] consider removing `package.homepage`
-  |
-8 -             homepage = "https://github.com/rust-lang/cargo/"
-  |
 [WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -330,9 +324,6 @@ fn lint_parse_pass() {
   |
   = [NOTE] `cargo::redundant_homepage` is set to `warn` in `[lints]`
 [HELP] consider removing `package.homepage`
-  |
-8 -             homepage = "https://github.com/rust-lang/cargo/"
-  |
 [WARNING] `foo` (manifest) generated 1 warning
 [ERROR] warnings are denied by `build.warnings` configuration
 
@@ -354,9 +345,6 @@ fn lint_parse_pass() {
   |
   = [NOTE] `cargo::redundant_homepage` is set to `warn` in `[lints]`
 [HELP] consider removing `package.homepage`
-  |
-8 -             homepage = "https://github.com/rust-lang/cargo/"
-  |
 [WARNING] `foo` (manifest) generated 1 warning
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [ERROR] warnings are denied by `build.warnings` configuration
@@ -413,9 +401,6 @@ fn lint_build_result_pass() {
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the unused dependency
-  |
-9 -             unused = "0.1.0"
-  |
 [WARNING] `foo` (manifest) generated 1 warning
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -446,9 +431,6 @@ fn lint_build_result_pass() {
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the unused dependency
-  |
-9 -             unused = "0.1.0"
-  |
 [WARNING] `foo` (manifest) generated 1 warning
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [ERROR] warnings are denied by `build.warnings` configuration

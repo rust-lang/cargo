@@ -35,9 +35,6 @@ redundant_readme = "warn"
   |
   = [NOTE] `cargo::redundant_readme` is set to `warn` in `[lints]`
 [HELP] consider removing `package.readme`
-  |
-7 - readme = "README.md"
-  |
 [WARNING] `foo` (manifest) generated 1 warning
 
 "#]])

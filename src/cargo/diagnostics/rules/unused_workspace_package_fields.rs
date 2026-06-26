@@ -4,7 +4,6 @@ use cargo_util_terminal::report::AnnotationKind;
 use cargo_util_terminal::report::Group;
 use cargo_util_terminal::report::Level;
 use cargo_util_terminal::report::Origin;
-use cargo_util_terminal::report::Patch;
 use cargo_util_terminal::report::Snippet;
 use indexmap::IndexSet;
 use tracing::instrument;
@@ -119,19 +118,8 @@ pub(crate) fn lint_workspace(
             primary = primary.element(Level::NOTE.message(emitted_source));
         }
         let mut report = vec![primary];
-        let mut help =
+        let help =
             Group::with_title(Level::HELP.secondary_title("consider removing the unused field"));
-        if let Some(document) = document
-            && let Some(contents) = contents
-        {
-            let mut snippet = Snippet::source(contents).path(&manifest_path);
-            if let Some(span) =
-                get_key_value_span(document, &["workspace", "package", unused.as_ref()])
-            {
-                snippet = snippet.patch(Patch::new(span.key.start..span.value.end, ""));
-            }
-            help = help.element(snippet);
-        }
         report.push(help);
 
         pkg_stats.record_lint(lint_level);

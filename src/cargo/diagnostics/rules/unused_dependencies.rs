@@ -6,7 +6,6 @@ use cargo_util_terminal::report::AnnotationKind;
 use cargo_util_terminal::report::Group;
 use cargo_util_terminal::report::Level;
 use cargo_util_terminal::report::Origin;
-use cargo_util_terminal::report::Patch;
 use cargo_util_terminal::report::Snippet;
 use indexmap::IndexMap;
 use tracing::{debug, instrument, trace};
@@ -149,20 +148,9 @@ pub(crate) fn lint_package(
             primary = primary.element(Level::NOTE.message(emitted_source));
         }
         let mut report = vec![primary];
-        let mut help = Group::with_title(
+        let help = Group::with_title(
             Level::HELP.secondary_title("consider removing the unused dependency"),
         );
-        if let Some(document) = document
-            && let Some(contents) = contents
-            && let Some(span) = get_key_value_span(document, &["build-dependencies", dep_name])
-        {
-            let span = span.key.start..span.value.end;
-            help = help.element(
-                Snippet::source(contents)
-                    .path(&manifest_path)
-                    .patch(Patch::new(span, "")),
-            );
-        }
         report.push(help);
 
         pkg_stats.record_lint(lint_level);
@@ -337,20 +325,9 @@ fn lint_package_build_results(
                 }
                 lint_count += 1;
                 let mut report = vec![primary];
-                let mut help = Group::with_title(
+                let help = Group::with_title(
                     Level::HELP.secondary_title("consider removing the unused dependency"),
                 );
-                if let Some(document) = document
-                    && let Some(contents) = contents
-                    && let Some(span) = get_key_value_span(document, &toml_path)
-                {
-                    let span = span.key.start..span.value.end;
-                    help = help.element(
-                        Snippet::source(contents)
-                            .path(&manifest_path)
-                            .patch(Patch::new(span, "")),
-                    );
-                }
                 report.push(help);
                 if used_in_dev {
                     let help = Group::with_title(Level::HELP.secondary_title(
