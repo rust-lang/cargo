@@ -1182,9 +1182,8 @@ fn build_script_deps_adopt_specified_target_unconditionally() {
         .run();
 }
 
-/// inverse RFC-3176
 #[cargo_test]
-fn build_script_deps_adopt_do_not_allow_multiple_targets_under_different_name_and_same_version() {
+fn build_script_deps_allow_multiple_targets_under_different_names() {
     if cross_compile_disabled() {
         return;
     }
@@ -1203,16 +1202,9 @@ fn build_script_deps_adopt_do_not_allow_multiple_targets_under_different_name_an
                 authors = []
                 resolver = "2"
 
-                [build-dependencies.bar]
-                path = "bar/"
-                artifact = "bin"
-                target = "{}"
-
-                [build-dependencies.bar-native]
-                package = "bar"
-                path = "bar/"
-                artifact = "bin"
-                target = "{}"
+                [build-dependencies]
+                bar = {{ path = "bar/", artifact = "bin", target = "{}" }}
+                bar-native = {{ package = "bar", path = "bar/", artifact = "bin", target = "{}" }}
             "#,
                 alternate,
                 native
@@ -1233,17 +1225,14 @@ fn build_script_deps_adopt_do_not_allow_multiple_targets_under_different_name_an
 
     p.cargo("check -v -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
-[ERROR] the crate `foo v0.0.0 ([ROOT]/foo)` depends on crate `bar v0.5.0 ([ROOT]/foo/bar)` multiple times with different names
-
-"#]])
+        .with_stderr_contains(
+            "[RUNNING] `rustc --crate-name bar --edition=2015 bar/src/main.rs [..]--target [ALT_TARGET] [..]",
+        )
         .run();
 }
 
 #[cargo_test]
-fn non_build_deps_do_not_allow_multiple_targets_under_different_names() {
+fn non_build_deps_allow_multiple_targets_under_different_names() {
     if cross_compile_disabled() {
         return;
     }
@@ -1262,16 +1251,9 @@ fn non_build_deps_do_not_allow_multiple_targets_under_different_names() {
                 authors = []
                 resolver = "2"
 
-                [dependencies.bar]
-                path = "bar/"
-                artifact = "bin"
-                target = "{alternate}"
-
-                [dependencies.bar-native]
-                package = "bar"
-                path = "bar/"
-                artifact = "bin"
-                target = "{native}"
+                [dependencies]
+                bar = {{ path = "bar/", artifact = "bin", target = "{alternate}" }}
+                bar-native = {{ package = "bar", path = "bar/", artifact = "bin", target = "{native}" }}
             "#
             ),
         )
@@ -1288,19 +1270,16 @@ fn non_build_deps_do_not_allow_multiple_targets_under_different_names() {
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("check -Z bindeps")
+    p.cargo("check -v -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
-[ERROR] the crate `foo v0.0.0 ([ROOT]/foo)` depends on crate `bar v0.5.0 ([ROOT]/foo/bar)` multiple times with different names
-
-"#]])
+        .with_stderr_contains(
+            "[RUNNING] `rustc --crate-name bar --edition=2015 bar/src/main.rs [..]--target [ALT_TARGET] [..]",
+        )
         .run();
 }
 
 #[cargo_test]
-fn build_script_deps_do_not_allow_same_target_under_different_names() {
+fn build_script_deps_allow_same_target_under_different_names() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -1312,14 +1291,9 @@ fn build_script_deps_do_not_allow_same_target_under_different_names() {
                 authors = []
                 resolver = "2"
 
-                [build-dependencies.bar]
-                path = "bar/"
-                artifact = "bin"
-
-                [build-dependencies.bar-alt]
-                package = "bar"
-                path = "bar/"
-                artifact = "bin"
+                [build-dependencies]
+                bar = { path = "bar/", artifact = "bin" }
+                bar-alt = { package = "bar", path = "bar/", artifact = "bin" }
             "#,
         )
         .file("src/lib.rs", "")
@@ -1341,17 +1315,21 @@ fn build_script_deps_do_not_allow_same_target_under_different_names() {
 
     p.cargo("check -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_status(101)
-        .with_stderr_data(str![[r#"
+        .with_stderr_data(
+            str![[r#"
 [LOCKING] 1 package to latest compatible version
-[ERROR] the crate `foo v0.0.0 ([ROOT]/foo)` depends on crate `bar v0.5.0 ([ROOT]/foo/bar)` multiple times with different names
+[COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
+[COMPILING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-"#]])
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
 #[cargo_test]
-fn artifact_output_only_dep_cannot_coexist_with_one_artifact_lib_dep() {
+fn artifact_output_only_dep_can_coexist_with_one_artifact_lib_dep() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -1411,12 +1389,6 @@ fn artifact_output_only_dep_cannot_coexist_with_one_artifact_lib_dep() {
 
     p.cargo("check -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
-[ERROR] the crate `foo v0.0.0 ([ROOT]/foo)` depends on crate `bar v0.5.0 ([ROOT]/foo/bar)` multiple times with different names
-
-"#]])
         .run();
 }
 
@@ -1524,6 +1496,50 @@ fn multiple_artifact_lib_deps_with_different_artifact_targets_still_error() {
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to latest compatible version
 [ERROR] the crate `foo v0.0.0 ([ROOT]/foo)` depends on crate `bar v0.5.0 ([ROOT]/foo/bar)` multiple times with different names
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn multiple_artifact_aliases_no_op_rebuild() {
+    if cross_compile_disabled() {
+        return;
+    }
+
+    let alternate = cross_compile::alternate();
+    let native = cross_compile::native();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                edition = "2015"
+                authors = []
+                resolver = "2"
+
+                [build-dependencies]
+                bar = {{ path = "bar/", artifact = "bin", target = "{alternate}" }}
+                bar-native = {{ package = "bar", path = "bar/", artifact = "bin", target = "{native}" }}
+            "#
+            ),
+        )
+        .file("src/lib.rs", "")
+        .file("build.rs", "fn main() {}")
+        .file("bar/Cargo.toml", &basic_bin_manifest("bar"))
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .run();
+    p.cargo("check -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

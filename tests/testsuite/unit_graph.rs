@@ -239,7 +239,7 @@ fn simple() {
 }
 
 #[cargo_test]
-fn unit_graph_rejects_artifact_alias_edges_to_same_package() {
+fn artifact_alias_edges() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -250,14 +250,9 @@ fn unit_graph_rejects_artifact_alias_edges_to_same_package() {
             edition = "2015"
             authors = []
 
-            [dependencies.bar]
-            path = "bar/"
-            artifact = "bin"
-
-            [dependencies.bar-alt]
-            package = "bar"
-            path = "bar/"
-            artifact = "bin"
+            [dependencies]
+            bar = { path = "bar/", artifact = "bin" }
+            bar-alt = { package = "bar", path = "bar/", artifact = "bin" }
             "#,
         )
         .file("src/lib.rs", "")
@@ -265,13 +260,38 @@ fn unit_graph_rejects_artifact_alias_edges_to_same_package() {
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build --unit-graph -Zunstable-options -Z bindeps")
+    let graph = p
+        .cargo("build --unit-graph -Zunstable-options -Z bindeps")
         .masquerade_as_nightly_cargo(&["unit-graph", "bindeps"])
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
-[ERROR] the crate `foo v0.1.0 ([ROOT]/foo)` depends on crate `bar v0.5.0 ([ROOT]/foo/bar)` multiple times with different names
+        .run_json();
 
-"#]])
-        .run();
+    let units = graph["units"].as_array().unwrap();
+    let artifact_index = units
+        .iter()
+        .position(|unit| unit["target"]["name"] == "bar")
+        .unwrap();
+    let root_unit = units
+        .iter()
+        .find(|unit| unit["target"]["name"] == "foo")
+        .unwrap();
+    let mut aliases = root_unit["dependencies"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|dep| {
+            (
+                dep["extern_crate_name"].as_str().unwrap().to_owned(),
+                dep["index"].as_u64().unwrap(),
+            )
+        })
+        .collect::<Vec<_>>();
+    aliases.sort();
+
+    assert_eq!(
+        aliases,
+        vec![
+            ("bar".to_owned(), artifact_index as u64),
+            ("bar_alt".to_owned(), artifact_index as u64),
+        ]
+    );
 }
