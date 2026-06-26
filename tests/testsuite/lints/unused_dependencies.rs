@@ -50,10 +50,7 @@ fn unused_dep_normal() {
   |             ^^^^^^^^^^^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
-[HELP] remove the dependency
-  |
-9 -             unused = "0.1.0"
-  |
+[HELP] consider removing the unused dependency
 [WARNING] `foo` (manifest) generated 1 warning
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -112,10 +109,7 @@ fn unused_dep_build() {
   |             ^^^^^^^^^^^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
-[HELP] remove the dependency
-  |
-9 -             unused = "0.1.0"
-  |
+[HELP] consider removing the unused dependency
 [WARNING] `foo` (manifest) generated 1 warning
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -162,10 +156,7 @@ fn unused_dep_build_no_build_rs() {
   |             ^^^^^^^^^^^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
-[HELP] remove the dependency
-  |
-9 -             unused = "0.1.0"
-  |
+[HELP] consider removing the unused dependency
 [WARNING] `foo` (manifest) generated 1 warning
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
@@ -249,10 +240,7 @@ fn unused_dep_lib_bins() {
   |             ^^^^^^^^^^^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
-[HELP] remove the dependency
-  |
-9 -             unused = "0.1.0"
-  |
+[HELP] consider removing the unused dependency
 [WARNING] `foo` (manifest) generated 1 warning
 
 "#]]
@@ -342,10 +330,7 @@ fn unused_dep_build_with_used_dep_normal() {
   |             ^^^^^^^^^^^^^^^^^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
-[HELP] remove the dependency
-  |
-9 -             unused_build = "0.1.0"
-  |
+[HELP] consider removing the unused dependency
 [WARNING] `foo` (manifest) generated 1 warning
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -407,10 +392,7 @@ fn unused_dep_normal_but_implicit_used_dep_dev() {
   |             ^^^^^^^^^^^^^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
-[HELP] remove the dependency
-  |
-9 -             used_dev = "0.1.0"
-  |
+[HELP] consider removing the unused dependency
 [WARNING] `foo` (manifest) generated 1 warning
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -428,10 +410,7 @@ fn unused_dep_normal_but_implicit_used_dep_dev() {
   |             ^^^^^^^^^^^^^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
-[HELP] remove the dependency
-  |
-9 -             used_dev = "0.1.0"
-  |
+[HELP] consider removing the unused dependency
 [HELP] to still use for development builds, move to `dev-dependencies`
 [WARNING] `foo` (manifest) generated 1 warning
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -497,10 +476,7 @@ fn unused_dep_normal_but_explicit_used_dep_dev() {
   |             ^^^^^^^^^^^^^^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
-[HELP] remove the dependency
-  |
-9 -             used_once = "0.1.0"
-  |
+[HELP] consider removing the unused dependency
 [WARNING] `foo` (manifest) generated 1 warning
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -631,10 +607,7 @@ fn optional_dependency() {
   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
-[HELP] remove the dependency
-  |
-9 -             unused = { version = "0.1.0", optional = true }
-  |
+[HELP] consider removing the unused dependency
 [WARNING] `foo` (manifest) generated 1 warning
 
 "#]]
@@ -696,10 +669,7 @@ fn unused_dep_renamed() {
   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
-[HELP] remove the dependency
-  |
-9 -             baz = { package = "bar", version = "0.1.0" }
-  |
+[HELP] consider removing the unused dependency
 [WARNING] `foo` (manifest) generated 1 warning
 
 "#]]
@@ -754,10 +724,7 @@ fn warning_replay() {
   |             ^^^^^^^^^^^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
-[HELP] remove the dependency
-  |
-9 -             unused = "0.1.0"
-  |
+[HELP] consider removing the unused dependency
 [WARNING] `foo` (manifest) generated 1 warning
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -774,10 +741,7 @@ fn warning_replay() {
   |             ^^^^^^^^^^^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
-[HELP] remove the dependency
-  |
-9 -             unused = "0.1.0"
-  |
+[HELP] consider removing the unused dependency
 [WARNING] `foo` (manifest) generated 1 warning
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -841,10 +805,7 @@ fn unused_dep_target() {
   |             ^^^^^^^^^^^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
-[HELP] remove the dependency
-  |
-9 -             unused = "0.1.0"
-  |
+[HELP] consider removing the unused dependency
 [WARNING] `foo` (manifest) generated 1 warning
 
 "#]]
@@ -1132,9 +1093,8 @@ fn package_selection() {
   |             ^^^^^^^^^^^^^^^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
-[HELP] remove the dependency
+[HELP] consider removing the unused dependency
   |
-9 -             unused_bar = "0.1.0"
   |
 [WARNING] unused dependency
   --> foo/Cargo.toml:11:13
@@ -1143,32 +1103,19 @@ fn package_selection() {
    |             ^^^
    |
    = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
-[HELP] remove the dependency
+[HELP] consider removing the unused dependency
    |
-11 -             bar.path = "../bar"
-11 +             .path = "../bar"
    |
 [WARNING] unused dependency
   --> foo/Cargo.toml:12:13
-   |
 12 |             external.path = "../external"
    |             ^^^^^^^^
-   |
-[HELP] remove the dependency
-   |
-12 -             external.path = "../external"
-12 +             .path = "../external"
-   |
+[HELP] consider removing the unused dependency
 [WARNING] unused dependency
  --> foo/Cargo.toml:9:13
-  |
 9 |             unused_foo = "0.1.0"
   |             ^^^^^^^^^^^^^^^^^^^^
-  |
-[HELP] remove the dependency
-  |
-9 -             unused_foo = "0.1.0"
-  |
+[HELP] consider removing the unused dependency
 [WARNING] `bar` (manifest) generated 1 warning
 [WARNING] `foo` (manifest) generated 3 warnings
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1189,32 +1136,21 @@ fn package_selection() {
    |             ^^^
    |
    = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
-[HELP] remove the dependency
+[HELP] consider removing the unused dependency
    |
-11 -             bar.path = "../bar"
-11 +             .path = "../bar"
    |
 [WARNING] unused dependency
   --> foo/Cargo.toml:12:13
-   |
 12 |             external.path = "../external"
    |             ^^^^^^^^
-   |
-[HELP] remove the dependency
-   |
-12 -             external.path = "../external"
-12 +             .path = "../external"
-   |
+[HELP] consider removing the unused dependency
 [WARNING] unused dependency
  --> foo/Cargo.toml:9:13
   |
 9 |             unused_foo = "0.1.0"
   |             ^^^^^^^^^^^^^^^^^^^^
   |
-[HELP] remove the dependency
-  |
-9 -             unused_foo = "0.1.0"
-  |
+[HELP] consider removing the unused dependency
 [WARNING] `foo` (manifest) generated 3 warnings
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1234,10 +1170,7 @@ fn package_selection() {
   |             ^^^^^^^^^^^^^^^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
-[HELP] remove the dependency
-  |
-9 -             unused_bar = "0.1.0"
-  |
+[HELP] consider removing the unused dependency
 [WARNING] `bar` (manifest) generated 1 warning
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1431,10 +1364,7 @@ fn allow_rustflags() {
   |             ^^^^^^^^^^^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
-[HELP] remove the dependency
-  |
-9 -             unused = "0.1.0"
-  |
+[HELP] consider removing the unused dependency
 [WARNING] `foo` (manifest) generated 1 warning
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1489,10 +1419,7 @@ fn allow_attribute() {
   |             ^^^^^^^^^^^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
-[HELP] remove the dependency
-  |
-9 -             unused = "0.1.0"
-  |
+[HELP] consider removing the unused dependency
 [WARNING] `foo` (manifest) generated 1 warning
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1546,10 +1473,7 @@ fn deny_in_manifest() {
   |             ^^^^^^^^^^^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `deny` in `[lints]`
-[HELP] remove the dependency
-  |
-9 -             unused = "0.1.0"
-  |
+[HELP] consider removing the unused dependency
 [ERROR] could not finalize `foo` (manifest) due to 1 previous error
 
 "#]])
@@ -1603,10 +1527,7 @@ fn deny_rustflags() {
   |             ^^^^^^^^^^^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
-[HELP] remove the dependency
-  |
-9 -             unused = "0.1.0"
-  |
+[HELP] consider removing the unused dependency
 [WARNING] `foo` (manifest) generated 1 warning
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1661,10 +1582,7 @@ fn deny_attribute() {
   |             ^^^^^^^^^^^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
-[HELP] remove the dependency
-  |
-9 -             unused = "0.1.0"
-  |
+[HELP] consider removing the unused dependency
 [WARNING] `foo` (manifest) generated 1 warning
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1719,10 +1637,7 @@ fn forbid_rustflags() {
   |             ^^^^^^^^^^^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
-[HELP] remove the dependency
-  |
-9 -             unused = "0.1.0"
-  |
+[HELP] consider removing the unused dependency
 [WARNING] `foo` (manifest) generated 1 warning
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1777,10 +1692,7 @@ fn forbid_attribute() {
   |             ^^^^^^^^^^^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
-[HELP] remove the dependency
-  |
-9 -             unused = "0.1.0"
-  |
+[HELP] consider removing the unused dependency
 [WARNING] `foo` (manifest) generated 1 warning
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 

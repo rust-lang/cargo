@@ -484,9 +484,6 @@ fn explicit_lint_level_overrides_default() {
   |
   = [NOTE] `cargo::redundant_homepage` is set to `deny` in `[lints]`
 [HELP] consider removing `package.homepage`
-  |
-8 -             homepage = "https://github.com/rust-lang/cargo/"
-  |
 [ERROR] could not parse `foo` (manifest) due to 1 previous error
 
 "#]])

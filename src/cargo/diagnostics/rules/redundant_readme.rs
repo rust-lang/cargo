@@ -6,7 +6,6 @@ use cargo_util_terminal::report::AnnotationKind;
 use cargo_util_terminal::report::Group;
 use cargo_util_terminal::report::Level;
 use cargo_util_terminal::report::Origin;
-use cargo_util_terminal::report::Patch;
 use cargo_util_terminal::report::Snippet;
 use tracing::instrument;
 
@@ -135,26 +134,8 @@ fn lint_package_inner(
     }
     primary = primary.element(Level::NOTE.message(emitted_source));
     let mut report = vec![primary];
-    if let Some(document) = document
-        && let Some(contents) = contents
-        && let Some(span) = get_key_value_span(document, &["package", "readme"])
-    {
-        let span = if let Some(workspace_span) =
-            get_key_value_span(document, &["package", "readme", "workspace"])
-        {
-            span.key.start..workspace_span.value.end
-        } else {
-            span.key.start..span.value.end
-        };
-        let mut help =
-            Group::with_title(Level::HELP.secondary_title("consider removing `package.readme`"));
-        help = help.element(
-            Snippet::source(contents)
-                .path(manifest_path)
-                .patch(Patch::new(span, "")),
-        );
-        report.push(help);
-    }
+    let help = Group::with_title(Level::HELP.secondary_title("consider removing `package.readme`"));
+    report.push(help);
 
     pkg_stats.record_lint(lint_level);
     gctx.shell().print_report(&report, lint_level.force())?;

@@ -6,7 +6,6 @@ use cargo_util_terminal::report::AnnotationKind;
 use cargo_util_terminal::report::Group;
 use cargo_util_terminal::report::Level;
 use cargo_util_terminal::report::Origin;
-use cargo_util_terminal::report::Patch;
 use cargo_util_terminal::report::Snippet;
 use indexmap::IndexMap;
 use tracing::{debug, instrument, trace};
@@ -149,19 +148,10 @@ pub(crate) fn lint_package(
             primary = primary.element(Level::NOTE.message(emitted_source));
         }
         let mut report = vec![primary];
-        if let Some(document) = document
-            && let Some(contents) = contents
-            && let Some(span) = get_key_value_span(document, &["build-dependencies", dep_name])
-        {
-            let span = span.key.start..span.value.end;
-            let mut help = Group::with_title(Level::HELP.secondary_title("remove the dependency"));
-            help = help.element(
-                Snippet::source(contents)
-                    .path(&manifest_path)
-                    .patch(Patch::new(span, "")),
-            );
-            report.push(help);
-        }
+        let help = Group::with_title(
+            Level::HELP.secondary_title("consider removing the unused dependency"),
+        );
+        report.push(help);
 
         pkg_stats.record_lint(lint_level);
         gctx.shell().print_report(&report, lint_level.force())?;
@@ -335,20 +325,10 @@ fn lint_package_build_results(
                 }
                 lint_count += 1;
                 let mut report = vec![primary];
-                if let Some(document) = document
-                    && let Some(contents) = contents
-                    && let Some(span) = get_key_value_span(document, &toml_path)
-                {
-                    let span = span.key.start..span.value.end;
-                    let mut help =
-                        Group::with_title(Level::HELP.secondary_title("remove the dependency"));
-                    help = help.element(
-                        Snippet::source(contents)
-                            .path(&manifest_path)
-                            .patch(Patch::new(span, "")),
-                    );
-                    report.push(help);
-                }
+                let help = Group::with_title(
+                    Level::HELP.secondary_title("consider removing the unused dependency"),
+                );
+                report.push(help);
                 if used_in_dev {
                     let help = Group::with_title(Level::HELP.secondary_title(
                         "to still use for development builds, move to `dev-dependencies`",

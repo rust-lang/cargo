@@ -37,9 +37,6 @@ redundant_homepage = "warn"
   |
   = [NOTE] `cargo::redundant_homepage` is set to `warn` in `[lints]`
 [HELP] consider removing `package.homepage`
-  |
-7 - homepage = "https://github.com/rust-lang/cargo/"
-  |
 [WARNING] `cargo` (manifest) generated 1 warning
 
 "#]])
@@ -81,9 +78,6 @@ redundant_homepage = "warn"
   |
   = [NOTE] `cargo::redundant_homepage` is set to `warn` in `[lints]`
 [HELP] consider removing `package.homepage`
-  |
-7 - homepage = "https://docs.rs/cargo/latest/cargo/"
-  |
 [WARNING] `cargo` (manifest) generated 1 warning
 
 "#]])
@@ -129,9 +123,6 @@ redundant_homepage = "warn"
    |
    = [NOTE] `cargo::redundant_homepage` is set to `warn` in `[lints]`
 [HELP] consider removing `package.homepage`
-   |
-11 - homepage.workspace = true
-   |
 [WARNING] `cargo` (manifest) generated 1 warning
 
 "#]])
