@@ -1,0 +1,7 @@
+.deps
+.libs
+*.gcno
+*.gcda
+Makefile
+Makefile.in
+Makefile.inc.cmake

@@ -1,0 +1,169 @@
+#!/usr/bin/env bash
+# Copyright (C) Simon Josefsson
+# Copyright (C) Viktor Szakats
+# SPDX-License-Identifier: BSD-3-Clause
+#
+# Start sshd, invoke test(s), saving exit code, kill sshd, and
+# return exit code.
+
+set -e
+set -u
+
+# https://testanything.org/tap-specification.html
+
+d="$(dirname "$0")"
+uname="$(uname)"
+
+# Load list of tests
+
+if [ -n "${1:-}" ]; then
+  # for CMake or manual
+  tests="$*"
+  via_args=1
+else
+  # for autotools
+  via_args=0
+  # Load list of SSHD tests from Makefile.inc
+  tests=''
+  load=0
+  while read -r l; do
+    if [[ "${l}" = 'SSHD_TESTS ='* ]]; then
+      load=1
+    elif [ "${load}" = '1' ]; then
+      [[ "${l}" =~ [a-z0-9_]+ ]] && tests+="${tests:+ }./${BASH_REMATCH[0]}${EXEEXT:-}"
+      [[ ! "${l}" = *"\\" ]] && break
+    fi
+  done <<< "$(tr -d $"\r" < "${d}/Makefile.inc")"
+fi
+
+if [ -n "${SSHD_TESTS_LIMIT_TO:-}" ]; then
+  tests="$(echo "${tests}" | cut -d ' ' -f -"${SSHD_TESTS_LIMIT_TO}")"
+  echo "# limiting tests to the first ${SSHD_TESTS_LIMIT_TO}."
+fi
+
+# Init and start sshd
+
+d="$(cd "${d}" || exit; pwd)"  # sshd needs absolute paths
+
+SSHD="${SSHD:-/usr/sbin/sshd}"
+[[ "${uname}" = *'_NT'* ]] && SSHD="$(cygpath "${SSHD}")"
+ver="$("${SSHD}" -V 2>&1 || true)"
+if [[ "${ver}" =~ OpenSSH_[a-zA-Z0-9_\ .,]+ ]]; then
+  ver="${BASH_REMATCH[0]}"
+else
+  ver=''
+fi
+echo "# sshd executable: '${SSHD}' (${ver})"
+
+# for our test clients:
+[ -z "${PRIVKEY:-}" ] && export PRIVKEY="${d}/key_rsa"
+[ -z "${PUBKEY:-}" ]  && export PUBKEY="${d}/key_rsa.pub"
+cakeys="${d}/openssh_server/ca_user_keys.pub"
+
+logfsrv="$(mktemp)"; readonly logfsrv
+logfcli="$(mktemp)"; readonly logfcli
+
+echo "# sshd log: '${logfsrv}'"
+
+SSHD_FLAGS="${SSHD_FLAGS:-}"
+if [ -n "${DEBUG:-}" ]; then
+  SSHD_FLAGS+=' -d -d'
+else
+  SSHD_FLAGS+=" -E ${logfsrv}"
+fi
+
+chmod go-rwx \
+  "${d}"/openssh_server/ssh_host_* \
+  "${cakeys}"
+
+# shellcheck disable=SC2086
+"${SSHD}" \
+  -f "${SSHD_FIXTURE_CONFIG:-${d}/openssh_server/sshd_config}" \
+  -o 'Port 4711' \
+  -o 'StrictModes no' \
+  -h "${d}/openssh_server/ssh_host_rsa_key" \
+  -h "${d}/openssh_server/ssh_host_ecdsa_key" \
+  -h "${d}/openssh_server/ssh_host_ed25519_key" \
+  -o 'PidFile sshd.pid' \
+  -o "AuthorizedKeysFile ${PUBKEY} ${d}/openssh_server/authorized_keys" \
+  -o "TrustedUserCAKeys ${cakeys}" \
+  -o 'PermitRootLogin yes' \
+  -D \
+  ${SSHD_FLAGS} &
+sshdpid=$!
+
+trap 'kill "${sshdpid}"; echo "# signal killing sshd"; exit 1;' EXIT HUP INT TERM
+
+: "started sshd (${sshdpid})"
+
+SSH="$(command -v "${SSH:-ssh}" || true)"
+if [ -n "${SSH}" ]; then
+  echo "# ssh executable: '${SSH}' ($("${SSH}" -V 2>&1 || true))"
+  echo "# ssh log: '${logfcli}'"
+  chmod go-rwx "${PRIVKEY}"
+  if [[ "${uname}" = *'_NT'* ]]; then
+    export MSYS2_ARG_CONV_EXCL='/reset'
+    icacls "${PRIVKEY}" /reset
+    icacls "${PRIVKEY}" /grant:r "${USERNAME}:(R)"
+    icacls "${PRIVKEY}" /inheritance:r
+  fi
+  count=1
+  # shellcheck disable=SC2086
+  while ! "${SSH:-ssh}" -q -a -k \
+      -F /dev/null \
+      -o 'BatchMode yes' \
+      -o 'StrictHostKeyChecking no' \
+      -o 'UserKnownHostsFile /dev/null' \
+      -o 'ConnectTimeout 3' \
+      -i "${PRIVKEY}" \
+      -p 4711 ${SSH_FLAGS:-} localhost exit 2>>"${logfcli}"; do
+    ((count++))
+    if [[ "${count}" -gt 8 ]]; then
+      echo '# giving up waiting for sshd. Tests are expected to fail.'
+      echo '# sshd log:'
+      sed 's/^/#  /' < "${logfsrv}"
+      echo '# ssh test connect log:'
+      sed 's/^/#  /' < "${logfcli}"
+      break
+    fi
+    echo '# waiting for sshd...'
+    sleep 1
+  done
+else
+  echo '# giving time for sshd to launch...'
+  sleep 5
+fi
+
+# Run tests
+
+ec=0
+count=1
+total="$(echo "${tests}" | wc -w | tr -d ' ')"
+anyerror=0
+
+echo "${count}..${total}"
+
+export OPENSSH_NO_DOCKER=1
+
+for test in ${tests}; do
+  if "${test}"; then
+    res='ok'
+  else
+    testerr=$?
+    anyerror=1
+    [ "${via_args}" = '1' ] && [ "${total}" = '1' ] && ec="${testerr}"
+    res='not ok'
+  fi
+  echo "${res} ${count} - sshd-$(basename "${test}")"
+  ((count++))
+done
+
+# Stop sshd
+
+: "killing sshd (${sshdpid})"
+kill "${sshdpid}" > /dev/null 2>&1
+trap '' EXIT HUP INT TERM
+
+[ "${via_args}" = '1' ] && [ "${total}" != '1' ] && ec="${anyerror}"
+
+exit "${ec}"

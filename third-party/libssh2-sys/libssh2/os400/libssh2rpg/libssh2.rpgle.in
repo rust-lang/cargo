@@ -1,0 +1,1962 @@
+      * Copyright (C) Patrick Monnerat <patrick@monnerat.net>
+      * All rights reserved.
+      *
+      * Redistribution and use in source and binary forms,
+      * with or without modification, are permitted provided
+      * that the following conditions are met:
+      *
+      *   Redistributions of source code must retain the above
+      *   copyright notice, this list of conditions and the
+      *   following disclaimer.
+      *
+      *   Redistributions in binary form must reproduce the above
+      *   copyright notice, this list of conditions and the following
+      *   disclaimer in the documentation and/or other materials
+      *   provided with the distribution.
+      *
+      *   Neither the name of the copyright holder nor the names
+      *   of any other contributors may be used to endorse or
+      *   promote products derived from this software without
+      *   specific prior written permission.
+      *
+      * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+      * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+      * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+      * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+      * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+      * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+      * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+      * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+      * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+      * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+      * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+      * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
+      * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+      * OF SUCH DAMAGE.
+      *
+      * SPDX-License-Identifier: BSD-3-Clause
+
+      /if not defined(LIBSSH2_H_)
+      /define LIBSSH2_H_
+
+     d LIBSSH2_COPYRIGHT...
+     d                 c                   'The libssh2 project and +
+     d                                     its contributors.'
+
+      * We use underscore instead of dash when appending DEV in dev versions
+      * just to make the BANNER define (used by src/session.c) be a valid SSH
+      * banner. Release versions have no appended strings and may of course not
+      * have dashes either.
+     d LIBSSH2_VERSION...
+     d                 c                   '@LIBSSH2_VERSION@'
+
+      * The numeric version number is also available "in parts" by using these
+      * defines:
+     d LIBSSH2_VERSION_MAJOR...
+     d                 c                   @LIBSSH2_VERSION_MAJOR@
+     d LIBSSH2_VERSION_MINOR...
+     d                 c                   @LIBSSH2_VERSION_MINOR@
+     d LIBSSH2_VERSION_PATCH...
+     d                 c                   @LIBSSH2_VERSION_PATCH@
+
+      * This is the numeric version of the libssh2 version number, meant for
+      * easier parsing and comparisons by programs. The LIBSSH2_VERSION_NUM
+      * define will always follow this syntax:
+      *
+      *  X'XXYYZZ'
+      *
+      * Where XX, YY and ZZ are the main version, release and patch numbers in
+      * hexadecimal (using 8 bits each). All three numbers are always
+      * represented using two digits.  1.2 would appear as "0x010200" while
+      * version 9.11.7 appears as X'090b07'.
+      *
+      * This 6-digit (24 bits) hexadecimal number does not show pre-release
+      * number, and it is always a greater number in a more recent release. It
+      * makes comparisons with greater than and less than work.
+
+     d LIBSSH2_VERSION_NUM...
+     d                 c                   X'@LIBSSH2_VERSION_NUM@'
+
+      * This is the date and time when the full source package was created. The
+      * timestamp is not stored in the source code repo, as the timestamp is
+      * properly set in the tarballs by the maketgz script.
+      *
+      * The format of the date should follow this template:
+      *
+      * "Mon Feb 12 11:35:33 UTC 2007"
+
+     d LIBSSH2_TIMESTAMP...
+     d                 c                   '@LIBSSH2_TIMESTAMP@'
+
+     d libssh2_Cchar   s              3i 0 based(######typedef######)
+     d libssh2_Cuchar  s              3u 0 based(######typedef######)
+     d libssh2_Cshort  s              5i 0 based(######typedef######)
+     d libssh2_Cushort...
+     d                 s              5u 0 based(######typedef######)
+     d libssh2_Cint    s             10i 0 based(######typedef######)
+     d libssh2_CuInt   s             10u 0 based(######typedef######)
+     d libssh2_Clong   s             10i 0 based(######typedef######)
+     d libssh2_Culong  s             10u 0 based(######typedef######)
+     d libssh2_Clonglong...
+     d                 s             20i 0 based(######typedef######)
+     d libssh2_Culonglong...
+     d                 s             20u 0 based(######typedef######)
+     d libssh2_Cenum   s             10i 0 based(######typedef######)
+     d libssh2_Cssize_t...
+     d                 s             10i 0 based(######typedef######)
+     d libssh2_Csize_t...
+     d                 s             10u 0 based(######typedef######)
+     d libssh2_Cfloat  s              4f   based(######typedef######)
+     d libssh2_Cdouble...
+     d                 s              8f   based(######typedef######)
+
+     d libssh2_uint8_t...
+     d                 s              3u 0 based(######typedef######)
+     d libssh2_uint16_t...
+     d                 s              5u 0 based(######typedef######)
+     d libssh2_uint32_t...
+     d                 s             10u 0 based(######typedef######)
+     d libssh2_int32_t...
+     d                 s             10i 0 based(######typedef######)
+     d libssh2_uint64_t...
+     d                 s             20u 0 based(######typedef######)
+     d libssh2_int64_t...
+     d                 s             20i 0 based(######typedef######)
+
+     d libssh2_socket_t...
+     d                 s             10i 0 based(######typedef######)
+     d LIBSSH2_INVALID_SOCKET...
+     d                 c                   -1
+     d LIBSSH2_SOCKET_CLOSE...
+     d                 pr                  extproc('close')
+     d                                     like(libssh2_Cint)
+     d  s                                  value like(libssh2_socket_t)
+
+     d libssh2_mode_t  s             10u 0 based(######typedef######)
+     d libssh2_ino_t   s             10u 0 based(######typedef######)
+     d libssh2_uid_t   s             10u 0 based(######typedef######)
+     d libssh2_gid_t   s             10u 0 based(######typedef######)
+     d libssh2_dev_t   s             10u 0 based(######typedef######)
+     d libssh2_off_t   s             20i 0 based(######typedef######)           Use *IFS64IO
+     d libssh2_time_t  s             10i 0 based(######typedef######)
+     d libssh2_nlink_t...
+     d                 s              5u 0 based(######typedef######)
+     d libssh2_qp0l_objtype_t...                                                AS400 object type
+     d                 s             11
+
+     d libssh2_struct_stat_size...
+     d                 s                   based(######typedef######)
+     d                                     like(libssh2_off_t)
+
+     d libssh2_struct_stat...
+     d                 ds                  based(######typedef######)
+     d                                     align qualified
+     d  st_mode                            like(libssh2_mode_t)                 Mode flags
+     d  st_ino                             like(libssh2_ino_t)                  File serial number
+     d  st_nlink                           like(libssh2_nlink_t)                Number of links
+     d  st_uid                             like(libssh2_uid_t)                  Owner ID
+     d  st_gid                             like(libssh2_gid_t)                  Group ID
+     d  st_size                            like(libssh2_off_t)                  File size
+     d  st_atime                           like(libssh2_time_t)                 Last access time
+     d  st_mtime                           like(libssh2_time_t)                 Last update time
+     d  st_ctime                           like(libssh2_time_t)                 Creation time
+     d  st_dev                             like(libssh2_dev_t)                  File root device
+     d  st_blksize                         like(libssh2_Csize_t)                Block size
+     d  st_allocsize                       like(libssh2_Culong)                 Allocation size
+     d  st_objtype                         like(libssh2_qp0l_objtype_t)         AS400 object type
+     d  st_codepage                        like(libssh2_Cushort)                Object data codepage
+     d                               62                                         Reserved
+     d  st_ino_gen_id                      like(libssh2_Cuint)                  File SN gen. ID
+
+     d LIBSSH2_STRUCT_STAT_SIZE_FORMAT...
+     d                 c                   '%lld'
+
+      * Part of every banner, user specified or not.
+     d LIBSSH2_SSH_BANNER...
+     d                 c                   'SSH-2.0-libssh2_@LIBSSH2_VERSION@'
+     d LIBSSH2_SSH_DEFAULT_BANNER...
+     d                 c                   'SSH-2.0-libssh2_@LIBSSH2_VERSION@'
+
+      * Default generate and safe prime sizes for
+      * diffie-hellman-group-exchange-sha1.
+     d LIBSSH2_DH_GEX_MINGROUP...
+     d                 c                   1024
+     d LIBSSH2_DH_GEX_OPTGROUP...
+     d                 c                   1536
+     d LIBSSH2_DH_GEX_MAXGROUP...
+     d                 c                   2048
+
+      * Defaults for pty requests.
+     d LIBSSH2_TERM_WIDTH...
+     d                 c                   80
+     d LIBSSH2_TERM_HEIGHT...
+     d                 c                   24
+     d LIBSSH2_TERM_WIDTH_PX...
+     d                 c                   0
+     d LIBSSH2_TERM_HEIGHT_PX...
+     d                 c                   0
+
+      * 1/4 second.
+     d LIBSSH2_SOCKET_POLL_UDELAY...
+     d                 c                   250000
+      * 0.25 * 120 == 30 seconds.
+     d LIBSSH2_SOCKET_POLL_MAXLOOPS...
+     d                 c                   120
+
+      * Maximum size to allow a payload to compress to, plays it safe by
+      * falling short of spec limits.
+     d LIBSSH2_PACKET_MAXCOMP...
+     d                 c                   32000
+
+      * Maximum size to allow a payload to deccompress to, plays it safe by
+      * allowing more than spec requires.
+     d LIBSSH2_PACKET_MAXDECOMP...
+     d                 c                   40000
+
+      * Maximum size for an inbound compressed payload, plays it safe by
+      * overshooting spec limits.
+     d LIBSSH2_PACKET_MAXPAYLOAD...
+     d                 c                   40000
+
+     d LIBSSH2_USERAUTH_KBDINT_PROMPT...
+     d                 ds                  based(######typedef######)
+     d                                     align qualified
+     d  text                           *                                        unsigned char *
+     d  length                             like(libssh2_Csize_t)
+     d  echo                               like(libssh2_Cuchar)
+
+     d LIBSSH2_USERAUTH_KBDINT_RESPONSE...
+     d                 ds                  based(######typedef######)
+     d                                     align qualified
+     d  text                           *                                        char *
+     d  length                             like(libssh2_Cuint)
+
+     d LIBSSH2_SK_SIG_INFO...
+     d                 ds                  based(######typedef######)
+     d                                     align qualified
+     d  flags                              like(libssh2_uint8_t)
+     d  counter                            like(libssh2_uint32_t)
+     d  sig_r                          *                                        unsigned char *
+     d  sig_r_len                          like(libssh2_Csize_t)
+     d  sig_s                          *                                        unsigned char *
+     d  sig_s_len                          like(libssh2_Csize_t)
+
+      * Flags for SK authentication
+     d LIBSSH2_SK_PRESENCE_REQUIRED...
+     d                 c                   X'01'
+     d LIBSSH2_SK_VERIFICATION_REQUIRED...
+     d                 c                   X'04'
+
+      * libssh2_session_callback_set() constants.
+     d LIBSSH2_CALLBACK_IGNORE...
+     d                 c                   0
+     d LIBSSH2_CALLBACK_DEBUG...
+     d                 c                   1
+     d LIBSSH2_CALLBACK_DISCONNECT...
+     d                 c                   2
+     d LIBSSH2_CALLBACK_MACERROR...
+     d                 c                   3
+     d LIBSSH2_CALLBACK_X11...
+     d                 c                   4
+     d LIBSSH2_CALLBACK_SEND...
+     d                 c                   5
+     d LIBSSH2_CALLBACK_RECV...
+     d                 c                   6
+     d LIBSSH2_CALLBACK_AUTHAGENT...
+     d                 c                   7
+     d LIBSSH2_CALLBACK_AUTHAGENT_IDENTITIES...
+     d                 c                   8
+     d LIBSSH2_CALLBACK_AUTHAGENT_SIGN...
+     d                 c                   9
+
+      * libssh2_session_method_pref() constants.
+     d LIBSSH2_METHOD_KEX...
+     d                 c                   0
+     d LIBSSH2_METHOD_HOSTKEY...
+     d                 c                   1
+     d LIBSSH2_METHOD_CRYPT_CS...
+     d                 c                   2
+     d LIBSSH2_METHOD_CRYPT_SC...
+     d                 c                   3
+     d LIBSSH2_METHOD_MAC_CS...
+     d                 c                   4
+     d LIBSSH2_METHOD_MAC_SC...
+     d                 c                   5
+     d LIBSSH2_METHOD_COMP_CS...
+     d                 c                   6
+     d LIBSSH2_METHOD_COMP_SC...
+     d                 c                   7
+     d LIBSSH2_METHOD_LANG_CS...
+     d                 c                   8
+     d LIBSSH2_METHOD_LANG_SC...
+     d                 c                   9
+     d LIBSSH2_METHOD_SIGN_ALGO...
+     d                 c                   10
+
+      * flags.
+     d LIBSSH2_FLAG_SIGPIPE...
+     d                 c                   X'0001'
+     d LIBSSH2_FLAG_COMPRESS...
+     d                 c                   X'0002'
+     d LIBSSH2_FLAG_QUOTE_PATHS...
+     d                 c                   X'0003'
+
+      * SK signature callback
+     d LIBSSH2_PRIVKEY_SK...
+     d                 ds                  based(######typedef######)
+     d                                     align qualified
+     d  algorithm                          like(libssh2_Cint)
+     d  flags                              like(libssh2_uint8_t)
+     d  application                    *                                        const char *
+     d  key_handle                     *                                        const uchar *
+     d  handle_len                         like(libssh2_Csize_t)
+     d  sign_callback                  *   procptr
+     d  orig_abstract                  *                                        void **
+
+     d libssh2_sign_sk...
+     d                 pr                  extproc('libssh2_sign_sk')
+     d                                     like(libssh2_Cint)
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  sig                            *                                        unsigned char *[]
+     d  sig_len                            value like(libssh2_Csize_t)
+     d  data                           *   value                                const uchar *
+     d  data_len                           value like(libssh2_Csize_t)
+     d  abstract                       *                                        void *
+
+     d LIBSSH2_POLLFD  ds                  based(######typedef######)
+     d                                     align qualified
+     d  type                               like(libssh2_Cuchar)
+     d  fd                             *                                        Union
+     d   socket                            overlay(fd) like(libssh2_socket_t)
+     d   channel                       *   overlay(fd)                          LIBSSH2_CHANNEL *
+     d   listener                      *   overlay(fd)                          LIBSSH2_LISTENER *
+     d  events                             like(libssh2_Culong)
+     d  revents                            like(libssh2_Culong)
+
+      * Poll FD Descriptor Types.
+     d LIBSSH2_POLLFD_SOCKET...
+     d                 c                   1
+     d LIBSSH2_POLLFD_CHANNEL...
+     d                 c                   2
+     d LIBSSH2_POLLFD_LISTENER...
+     d                 c                   3
+
+      * Poll FD events/revents -- Match sys/poll.h where possible.
+     d LIBSSH2_POLLFD_POLLIN...                                                 Input data ready or
+     d                 c                   X'0001'                              connection available
+     d LIBSSH2_POLLFD_POLLPRI...                                                Prio data ready to
+     d                 c                   X'0002'                              be read. Socket only
+     d LIBSSH2_POLLFD_POLLEXT...                                                Ext data ready to be
+     d                 c                   X'0002'                              read. Channel only
+     d LIBSSH2_POLLFD_POLLOUT...                                                Can may be written:
+     d                 c                   X'0004'                              Socket/Channel
+
+      * revents only.
+     d LIBSSH2_POLLFD_POLLERR...                                                Error Condition:
+     d                 c                   X'0008'                              Socket
+     d LIBSSH2_POLLFD_POLLHUP...                                                HangUp/EOF
+     d                 c                   X'0010'                              Socket
+     d LIBSSH2_POLLFD_SESSION_CLOSED...                                         Session Disconnect
+     d                 c                   X'0010'
+     d LIBSSH2_POLLFD_POLLNVAL...                                               Invalid request
+     d                 c                   X'0020'                              Socket
+     d LIBSSH2_POLLFD_POLLEX...                                                 Exception Condition
+     d                 c                   X'0040'                              Socket/Win32
+     d LIBSSH2_POLLFD_CHANNEL_CLOSED...                                         Channel Disconnect
+     d                 c                   X'0080'
+     d LIBSSH2_POLLFD_LISTENER_CLOSED...                                        Listener Disconnect
+     d                 c                   X'0080'
+
+      /define HAVE_LIBSSH2_SESSION_BLOCK_DIRECTION
+      * Block Direction Types.
+     d LIBSSH2_SESSION_BLOCK_INBOUND...
+     d                 c                   X'0001'
+     d LIBSSH2_SESSION_BLOCK_OUTBOUND...
+     d                 c                   X'0002'
+
+      * Hash Types.
+     d LIBSSH2_HOSTKEY_HASH_MD5...
+     d                 c                   1
+     d LIBSSH2_HOSTKEY_HASH_SHA1...
+     d                 c                   2
+     d LIBSSH2_HOSTKEY_HASH_SHA256...
+     d                 c                   3
+
+      * Hostkey Types.
+     d LIBSSH2_HOSTKEY_TYPE_UNKNOWN...
+     d                 c                   0
+     d LIBSSH2_HOSTKEY_TYPE_RSA...
+     d                 c                   1
+     d LIBSSH2_HOSTKEY_TYPE_DSS...
+     d                 c                   2
+     d LIBSSH2_HOSTKEY_TYPE_ECDSA_256...
+     d                 c                   3
+     d LIBSSH2_HOSTKEY_TYPE_ECDSA_384...
+     d                 c                   4
+     d LIBSSH2_HOSTKEY_TYPE_ECDSA_521...
+     d                 c                   5
+     d LIBSSH2_HOSTKEY_TYPE_ED25519...
+     d                 c                   6
+
+      * Disconnect Codes (defined by SSH protocol).
+     d SSH_DISCONNECT_HOST_NOT_ALLOWED_TO_CONNECT...
+     d                 c                   1
+     d SSH_DISCONNECT_PROTOCOL_ERROR...
+     d                 c                   2
+     d SSH_DISCONNECT_KEY_EXCHANGE_FAILED...
+     d                 c                   3
+     d SSH_DISCONNECT_RESERVED...
+     d                 c                   4
+     d SSH_DISCONNECT_MAC_ERROR...
+     d                 c                   5
+     d SSH_DISCONNECT_COMPRESSION_ERROR...
+     d                 c                   6
+     d SSH_DISCONNECT_SERVICE_NOT_AVAILABLE...
+     d                 c                   7
+     d SSH_DISCONNECT_PROTOCOL_VERSION_NOT_SUPPORTED...
+     d                 c                   8
+     d SSH_DISCONNECT_HOST_KEY_NOT_VERIFIABLE...
+     d                 c                   9
+     d SSH_DISCONNECT_CONNECTION_LOST...
+     d                 c                   10
+     d SSH_DISCONNECT_BY_APPLICATION...
+     d                 c                   11
+     d SSH_DISCONNECT_TOO_MANY_CONNECTIONS...
+     d                 c                   12
+     d SSH_DISCONNECT_AUTH_CANCELLED_BY_USER...
+     d                 c                   13
+     d SSH_DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE...
+     d                 c                   14
+     d SSH_DISCONNECT_ILLEGAL_USER_NAME...
+     d                 c                   15
+
+      * Error Codes (defined by libssh2).
+     d LIBSSH2_ERROR_NONE...
+     d                 c                   0
+
+      * The library once used -1 as a generic error return value on numerous
+      * places through the code, which subsequently was converted to
+      * LIBSSH2_ERROR_SOCKET_NONE uses over time. As this is a generic error
+      * code, the goal is to never ever return this code but instead make sure
+      * that a more accurate and descriptive error code is used.
+     d  LIBSSH2_ERROR_SOCKET_NONE...
+     d                 c                   -1
+
+     d LIBSSH2_ERROR_BANNER_RECV...
+     d                 c                   -2
+     d LIBSSH2_ERROR_BANNER_SEND...
+     d                 c                   -3
+     d LIBSSH2_ERROR_INVALID_MAC...
+     d                 c                   -4
+     d LIBSSH2_ERROR_KEX_FAILURE...
+     d                 c                   -5
+     d LIBSSH2_ERROR_ALLOC...
+     d                 c                   -6
+     d LIBSSH2_ERROR_SOCKET_SEND...
+     d                 c                   -7
+     d LIBSSH2_ERROR_KEY_EXCHANGE_FAILURE...
+     d                 c                   -8
+     d LIBSSH2_ERROR_TIMEOUT...
+     d                 c                   -9
+     d LIBSSH2_ERROR_HOSTKEY_INIT...
+     d                 c                   -10
+     d LIBSSH2_ERROR_HOSTKEY_SIGN...
+     d                 c                   -11
+     d LIBSSH2_ERROR_DECRYPT...
+     d                 c                   -12
+     d LIBSSH2_ERROR_SOCKET_DISCONNECT...
+     d                 c                   -13
+     d LIBSSH2_ERROR_PROTO...
+     d                 c                   -14
+     d LIBSSH2_ERROR_PASSWORD_EXPIRED...
+     d                 c                   -15
+     d LIBSSH2_ERROR_FILE...
+     d                 c                   -16
+     d LIBSSH2_ERROR_METHOD_NONE...
+     d                 c                   -17
+     d LIBSSH2_ERROR_AUTHENTICATION_FAILED...
+     d                 c                   -18
+     d LIBSSH2_ERROR_PUBLICKEY_UNRECOGNIZED...
+     d                 c                   -18
+     d LIBSSH2_ERROR_PUBLICKEY_UNVERIFIED...
+     d                 c                   -19
+     d LIBSSH2_ERROR_CHANNEL_OUTOFORDER...
+     d                 c                   -20
+     d LIBSSH2_ERROR_CHANNEL_FAILURE...
+     d                 c                   -21
+     d LIBSSH2_ERROR_CHANNEL_REQUEST_DENIED...
+     d                 c                   -22
+     d LIBSSH2_ERROR_CHANNEL_UNKNOWN...
+     d                 c                   -23
+     d LIBSSH2_ERROR_CHANNEL_WINDOW_EXCEEDED...
+     d                 c                   -24
+     d LIBSSH2_ERROR_CHANNEL_PACKET_EXCEEDED...
+     d                 c                   -25
+     d LIBSSH2_ERROR_CHANNEL_CLOSED...
+     d                 c                   -26
+     d LIBSSH2_ERROR_CHANNEL_EOF_SENT...
+     d                 c                   -27
+     d LIBSSH2_ERROR_SCP_PROTOCOL...
+     d                 c                   -28
+     d LIBSSH2_ERROR_ZLIB...
+     d                 c                   -29
+     d LIBSSH2_ERROR_SOCKET_TIMEOUT...
+     d                 c                   -30
+     d LIBSSH2_ERROR_SFTP_PROTOCOL...
+     d                 c                   -31
+     d LIBSSH2_ERROR_REQUEST_DENIED...
+     d                 c                   -32
+     d LIBSSH2_ERROR_METHOD_NOT_SUPPORTED...
+     d                 c                   -33
+     d LIBSSH2_ERROR_INVAL...
+     d                 c                   -34
+     d LIBSSH2_ERROR_INVALID_POLL_TYPE...
+     d                 c                   -35
+     d LIBSSH2_ERROR_PUBLICKEY_PROTOCOL...
+     d                 c                   -36
+     d LIBSSH2_ERROR_EAGAIN...
+     d                 c                   -37
+     d LIBSSH2_ERROR_BUFFER_TOO_SMALL...
+     d                 c                   -38
+     d LIBSSH2_ERROR_BAD_USE...
+     d                 c                   -39
+     d LIBSSH2_ERROR_COMPRESS...
+     d                 c                   -40
+     d LIBSSH2_ERROR_OUT_OF_BOUNDARY...
+     d                 c                   -41
+     d LIBSSH2_ERROR_AGENT_PROTOCOL...
+     d                 c                   -42
+     d LIBSSH2_ERROR_SOCKET_RECV...
+     d                 c                   -43
+     d LIBSSH2_ERROR_ENCRYPT...
+     d                 c                   -44
+     d LIBSSH2_ERROR_BAD_SOCKET...
+     d                 c                   -45
+     d LIBSSH2_ERROR_KNOWN_HOSTS...
+     d                 c                   -46
+     d LIBSSH2_ERROR_CHANNEL_WINDOW_FULL...
+     d                 c                   -47
+     d LIBSSH2_ERROR_KEYFILE_AUTH_FAILED...
+     d                 c                   -48
+     d LIBSSH2_ERROR_RANDGEN...
+     d                 c                   -49
+     d LIBSSH2_ERROR_MISSING_USERAUTH_BANNER...
+     d                 c                   -50
+     d LIBSSH2_ERROR_ALGO_UNSUPPORTED...
+     d                 c                   -51
+     d LIBSSH2_ERROR_MAC_FAILURE...
+     d                 c                   -52
+     d LIBSSH2_ERROR_HASH_INIT...
+     d                 c                   -53
+
+      * this is a define to provide the old (<= 1.2.7) name.
+     d LIBSSH2_ERROR_BANNER_NONE...
+     d                 c                   -2
+
+      * Global API.
+     d LIBSSH2_INIT_NO_CRYPTO...
+     d                 c                   X'0001'
+
+      * libssh2_init()
+      *
+      * Initialize the libssh2 functions.  This typically initialize the
+      * crypto library.  It uses a global state, and is not thread safe --
+      * you must make sure this function is not called concurrently.
+      *
+      * Flags can be:
+      * 0:                              Normal initialize
+      * LIBSSH2_INIT_NO_CRYPTO:         Do not initialize the crypto library
+      *                                 (ie. OPENSSL_add_cipher_algorithms() for
+      *                                 OpenSSL)
+      *
+      * Returns 0 if succeeded, or a negative value for error.
+
+     d libssh2_init    pr                  extproc('libssh2_init')
+     d                                     like(libssh2_Cint)
+     d  flags                              value like(libssh2_Cint)
+
+      * libssh2_exit()
+      *
+      * Exit the libssh2 functions and free's all memory used internal.
+
+     d libssh2_exit    pr                  extproc('libssh2_exit')
+
+      * libssh2_free()
+      *
+      * Deallocate memory allocated by earlier call to libssh2 functions.
+
+     d libssh2_free    pr                  extproc('libssh2_free')
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  ptr                            *   value                                void *
+
+      * libssh2_session_supported_algs()
+      *
+      * Fills algs with a list of supported cryptographic algorithms. Returns a
+      * non-negative number (number of supported algorithms) on success or a
+      * negative number (an error code) on failure.
+      *
+      * NOTE: on success, algs must be deallocated (by calling libssh2_free)
+      * when not needed anymore
+
+     d libssh2_session_supported_algs...
+     d                 pr                  extproc(
+     d                                       'libssh2_session_supported_algs')
+     d                                     like(libssh2_Cint)
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  method_type                        value like(libssh2_Cint)
+     d  algs                           *                                        const char **(*)
+
+      * Session API.
+     d libssh2_session_init_ex...
+     d                 pr              *   extproc('libssh2_session_init_ex')   LIBSSH2_SESSION *
+     d  my_alloc                       *   value procptr
+     d  my_free                        *   value procptr
+     d  my_realloc                     *   value procptr
+     d  abstract                       *   value                                void *
+
+      * Implementation of C macro.
+     d libssh2_session_init...
+     d                 pr              *   extproc('libssh2_session_init')      LIBSSH2_SESSION *
+
+     d libssh2_session_abstract...
+     d                 pr              *   extproc('libssh2_session_abstract')  void * *
+     d  session                        *   value                                LIBSSH2_SESSION *
+
+     d libssh2_cb_generic_ptr...
+     d                 s               *   based(######typedef######) procptr
+
+     d libssh2_session_callback_set2...
+     d                 pr                  extproc(
+     d                                     'libssh2_session_callback_set2')
+     d                                     like(libssh2_cb_generic_ptr)
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  cbtype                             value like(libssh2_Cint)
+     d  callback                           value like(libssh2_cb_generic_ptr)
+
+     d libssh2_session_callback_set...
+     d                 pr              *   extproc(                             void *
+     d                                     'libssh2_session_callback_set')
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  cbtype                             value like(libssh2_Cint)
+     d  callback                       *   value                                void *
+
+     d libssh2_session_banner_set...
+     d                 pr                  extproc('libssh2_session_banner_set')
+     d                                     like(libssh2_Cint)
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  banner                         *   value options(*string)               const char *
+
+      /if not defined(LIBSSH2_NO_DEPRECATED)
+     d libssh2_banner_set...
+     d                 pr                  extproc('libssh2_banner_set')
+     d                                     like(libssh2_Cint)
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  banner                         *   value options(*string)               const char *
+
+     d libssh2_session_startup...
+     d                 pr                  extproc('libssh2_session_startup')
+     d                                     like(libssh2_Cint)
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  sock                               value like(libssh2_Cint)
+      /endif
+
+     d libssh2_session_handshake...
+     d                 pr                  extproc('libssh2_session_handshake')
+     d                                     like(libssh2_Cint)
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  sock                               value like(libssh2_socket_t)
+
+     d libssh2_session_disconnect_ex...
+     d                 pr                  extproc(
+     d                                     'libssh2_session_disconnect_ex')
+     d                                     like(libssh2_Cint)
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  reason                             value like(libssh2_Cint)
+     d  description                    *   value options(*string)               const char *
+     d  lang                           *   value options(*string)               const char *
+
+      * Implementation of C macro.
+     d libssh2_session_disconnect...
+     d                 pr                  extproc('libssh2_session_disconnect')
+     d                                     like(libssh2_Cint)
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  description                    *   value options(*string)               const char *
+
+     d libssh2_session_free...
+     d                 pr                  extproc('libssh2_session_free')
+     d                                     like(libssh2_Cint)
+     d  session                        *   value                                LIBSSH2_SESSION *
+
+     d libssh2_hostkey_hash...
+     d                 pr              *   extproc('libssh2_hostkey_hash')      const char *
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  hash_type                          value like(libssh2_Cint)
+
+     d libssh2_session_hostkey...
+     d                 pr              *   extproc('libssh2_session_hostkey')   const char *
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  len                                like(libssh2_Csize_t)
+     d  type                               like(libssh2_Cint)
+
+     d libssh2_session_method_pref...
+     d                 pr                  extproc(
+     d                                     'libssh2_session_method_pref')
+     d                                     like(libssh2_Cint)
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  method_type                        value like(libssh2_Cint)
+     d  prefs                          *   value options(*string)               const char *
+
+     d libssh2_session_methods...
+     d                 pr              *   extproc('libssh2_session_methods')   const char *
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  method_type                        value like(libssh2_Cint)
+
+     d libssh2_session_last_error...
+     d                 pr                  extproc('libssh2_session_last_error')
+     d                                     like(libssh2_Cint)
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  errmsg                         *                                        char *(*)
+     d  errmsg_len                         like(libssh2_Cint)
+     d  want_buf                           value like(libssh2_Cint)
+
+     d libssh2_session_last_errno...
+     d                 pr                  extproc('libssh2_session_last_errno')
+     d                                     like(libssh2_Cint)
+     d  session                        *   value                                LIBSSH2_SESSION *
+
+     d libssh2_session_set_last_error...
+     d                 pr                  extproc(
+     d                                     'libssh2_session_set_last_error')
+     d                                     like(libssh2_Cint)
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  errcode                            value like(libssh2_Cint)
+     d  errmsg                         *   value options(*string)               const char *
+
+     d libssh2_session_block_directions...
+     d                 pr                  extproc(
+     d                                     'libssh2_session_block_directions')
+     d                                     like(libssh2_Cint)
+     d  session                        *   value                                LIBSSH2_SESSION *
+
+     d libssh2_session_flag...
+     d                 pr                  extproc('libssh2_session_flag')
+     d                                     like(libssh2_Cint)
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  flag                               value like(libssh2_Cint)
+     d  value                              value like(libssh2_Cint)
+
+     d libssh2_session_banner_get...
+     d                 pr              *   extproc('libssh2_session_banner_get') const char *
+     d  session                        *   value                                LIBSSH2_SESSION *
+
+      * Userauth API.
+
+     d libssh2_userauth_list...
+     d                 pr              *   extproc('libssh2_userauth_list')     char *
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  username                       *   value options(*string)               const char *
+     d  username_len                       value like(libssh2_Cuint)
+
+     d libssh2_userauth_banner...
+     d                 pr                  extproc('libssh2_userauth_banner')
+     d                                     like(libssh2_Cint)
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  banner                         *                                        char *
+
+     d libssh2_userauth_authenticated...
+     d                 pr                  extproc(
+     d                                     'libssh2_userauth_authenticated')
+     d                                     like(libssh2_Cint)
+     d  session                        *   value                                LIBSSH2_SESSION *
+
+     d libssh2_userauth_password_ex...
+     d                 pr                  extproc(
+     d                                     'libssh2_userauth_password_ex')
+     d                                     like(libssh2_Cint)
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  username                       *   value options(*string)               const char *
+     d  username_len                       value like(libssh2_Cuint)
+     d  password                       *   value options(*string)               const char *
+     d  password_len                       value like(libssh2_Cuint)
+     d  passwd_change_cb...
+     d                                 *   value procptr
+
+      * Implementation of C macro.
+     d libssh2_userauth_password...
+     d                 pr                  extproc('libssh2_userauth_password')
+     d                                     like(libssh2_Cint)
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  username                       *   value options(*string)               const char *
+     d  password                       *   value options(*string)               const char *
+
+     d libssh2_userauth_publickey_fromfile_ex...
+     d                 pr                  extproc('libssh2_userauth_publickey_-
+     d                                     fromfile_ex')
+     d                                     like(libssh2_Cint)
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  username                       *   value options(*string)               const char *
+     d  username_len                       value like(libssh2_Cuint)
+     d  publickey                      *   value options(*string)               const char *
+     d  privatekey                     *   value options(*string)               const char *
+     d  passphrase                     *   value options(*string)               const char *
+
+      * Implementation of C macro.
+     d libssh2_userauth_publickey_fromfile...
+     d                 pr                  extproc(
+     d                                     'libssh2_userauth_publickey_fromfile'
+     d                                     )
+     d                                     like(libssh2_Cint)
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  username                       *   value options(*string)               const char *
+     d  publickey                      *   value options(*string)               const char *
+     d  privatekey                     *   value options(*string)               const char *
+     d  passphrase                     *   value options(*string)               const char *
+
+     d libssh2_userauth_publickey...
+     d                 pr                  extproc('libssh2_userauth_publickey')
+     d                                     like(libssh2_Cint)
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  username                       *   value options(*string)               const char *
+     d  pubkeydata                     *   value options(*string)               const unsigned char*
+     d  pubkeydata_len...
+     d                                     value like(libssh2_Csize_t)
+     d  sign_callback                  *   value procptr
+     d  abstract                       *                                        void *(*)
+
+     d libssh2_userauth_hostbased_fromfile_ex...
+     d                 pr                  extproc('libssh2_userauth_hostbased_-
+     d                                     fromfile_ex')
+     d                                     like(libssh2_Cint)
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  username                       *   value options(*string)               const char *
+     d  username_len                       value like(libssh2_Cuint)
+     d  publickey                      *   value options(*string)               const char *
+     d  privatekey                     *   value options(*string)               const char *
+     d  passphrase                     *   value options(*string)               const char *
+     d  hostname                       *   value options(*string)               const char *
+     d  hostname_len                       value like(libssh2_Cuint)
+     d  local_username...
+     d                                 *   value options(*string)               const char *
+     d  local_username_len...
+     d                                     value like(libssh2_Cuint)
+
+      * C macro implementation.
+     d libssh2_userauth_hostbased_fromfile...
+     d                 pr                  extproc(
+     d                                     'libssh2_userauth_hostbased_fromfile'
+     d                                     )
+     d                                     like(libssh2_Cint)
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  username                       *   value options(*string)               const char *
+     d  publickey                      *   value options(*string)               const char *
+     d  privatekey                     *   value options(*string)               const char *
+     d  passphrase                     *   value options(*string)               const char *
+     d  hostname                       *   value options(*string)               const char *
+
+     d libssh2_userauth_publickey_frommemory...
+     d                 pr                  extproc('libssh2_userauth_publickey_-
+     d                                     frommemory')
+     d                                     like(libssh2_Cint)
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  username                       *   value options(*string)               const char *
+     d  username_len                       value like(libssh2_Csize_t)
+     d  publickeyfiledata...
+     d                                 *   value options(*string)               const char *
+     d  publickeyfiledata_len...
+     d                                     value like(libssh2_Csize_t)
+     d  privatekeyfiledata...
+     d                                 *   value options(*string)               const char *
+     d  privatekeyfiledata_len...
+     d                                     value like(libssh2_Csize_t)
+     d  passphrase                     *   value options(*string)               const char *
+
+      * response_callback is provided with filled by library prompts array,
+      * but client must allocate and fill individual responses. Responses
+      * array is already allocated. Responses data will be freed by libssh2
+      * after callback return, but before subsequent callback invocation.
+
+     d libssh2_userauth_keyboard_interactive_ex...
+     d                 pr                  extproc('libssh2_userauth_keyboard_i-
+     d                                     nteractive_ex')
+     d                                     like(libssh2_Cint)
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  username                       *   value options(*string)               const char *
+     d  username_len                       value like(libssh2_Cuint)
+     d  response_callback...
+     d                                 *   value procptr
+
+      * C macro implementation.
+     d libssh2_userauth_keyboard_interactive...
+     d                 pr                  extproc('libssh2_userauth_keyboard_i-
+     d                                     nteractive')
+     d                                     like(libssh2_Cint)
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  username                       *   value options(*string)               const char *
+     d  response_callback...
+     d                                 *   value procptr
+
+     d libssh2_userauth_publickey_sk...
+     d                 pr                  extproc(
+     d                                     'libssh2_userauth_publickey_sk')
+     d                                     like(libssh2_Cint)
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  username                       *   value options(*string)               const char *
+     d  username_len                       value like(libssh2_Csize_t)
+     d  pubkeydata                     *   value                                const uchar *
+     d  pubkeydata_len...
+     d                                     value like(libssh2_Csize_t)
+     d  privatekeydata...
+     d                                 *   value options(*string)               const char *
+     d  privatekeydata_len...
+     d                                     value like(libssh2_Csize_t)
+     d  passphrase                     *   value options(*string)               const char *
+     d  sign_callback                  *   value procptr
+     d  abstract                       *                                        void *
+
+     d libssh2_poll    pr                  extproc('libssh2_poll')
+     d                                     like(libssh2_Cint)
+     d  fds                            *   value                                LIBSSH2_POLLFD *
+     d  nfds                               value like(libssh2_Cuint)
+     d  timeout                            value like(libssh2_Clong)
+
+      * Channel API.
+     d LIBSSH2_CHANNEL_WINDOW_DEFAULT...
+     d                 c                   X'00200000'
+     d LIBSSH2_CHANNEL_PACKET_DEFAULT...
+     d                 c                   32768
+     d LIBSSH2_CHANNEL_MINADJUST...
+     d                 c                   1024
+
+      * Extended Data Handling.
+     d LIBSSH2_CHANNEL_EXTENDED_DATA_NORMAL...
+     d                 c                   0
+     d LIBSSH2_CHANNEL_EXTENDED_DATA_IGNORE...
+     d                 c                   1
+     d LIBSSH2_CHANNEL_EXTENDED_DATA_MERGE...
+     d                 c                   2
+
+     d SSH_EXTENDED_DATA_STDERR...
+     d                 c                   1
+
+      * Returned by any function that would block during a read/write
+      * operation.
+     d LIBSSH2CHANNEL_EAGAIN...                                                 LIBSSH2_ERROR_EAGAIN
+     d                 c                   -37
+
+     d libssh2_channel_open_ex...
+     d                 pr              *   extproc('libssh2_channel_open_ex')   LIBSSH2_CHANNEL *
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  channel_type                   *   value options(*string)               const char *
+     d  channel_type_len...
+     d                                     value like(libssh2_Cuint)
+     d  window_size                        value like(libssh2_Cuint)
+     d  packet_size                        value like(libssh2_Cuint)
+     d  message                        *   value options(*string)               const char *
+     d  message_len                        value like(libssh2_Cuint)
+
+      * C macro implementation.
+     d libssh2_channel_open_session...
+     d                 pr              *   extproc(                             LIBSSH2_CHANNEL *
+     d                                     'libssh2_channel_open_session')
+     d  session                        *   value                                LIBSSH2_SESSION *
+
+     d libssh2_channel_direct_tcpip_ex...
+     d                 pr              *   extproc(                             LIBSSH2_CHANNEL *
+     d                                     'libssh2_channel_direct_tcpip_ex')
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  host                           *   value options(*string)               const char *
+     d  port                               value like(libssh2_Cint)
+     d  shost                          *   value options(*string)               const char *
+     d  sport                              value like(libssh2_Cint)
+
+      * C macro implementation.
+     d libssh2_channel_direct_tcpip...
+     d                 pr              *   extproc(                             LIBSSH2_CHANNEL *
+     d                                     'libssh2_channel_direct_tcpip')
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  host                           *   value options(*string)               const char *
+     d  port                               value like(libssh2_Cint)
+
+     d  libssh2_channel_direct_streamlocal_ex...
+     d                 pr              *   extproc('libssh2_channel_direct-     LIBSSH2_CHANNEL *
+     d                                     _streamlocal_ex')
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  socket_path                    *   value options(*string)               const char *
+     d  shost                          *   value options(*string)               const char *
+     d  sport                              value like(libssh2_Cint)
+
+     d libssh2_channel_forward_listen_ex...
+     d                 pr              *   extproc(                             LIBSSH2_LISTENER *
+     d                                     'libssh2_channel_forward_listen_ex')
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  host                           *   value options(*string)               const char *
+     d  port                               value like(libssh2_Cint)
+     d  bound_port                         like(libssh2_Cint)
+     d  queue_maxsize                      value like(libssh2_Cint)
+
+      * C macro implementation.
+     d libssh2_channel_forward_listen...
+     d                 pr              *   extproc(                             LIBSSH2_LISTENER *
+     d                                     'libssh2_channel_forward_listen')
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  port                               value like(libssh2_Cint)
+
+     d libssh2_channel_forward_cancel...
+     d                 pr                  extproc(
+     d                                     'libssh2_channel_forward_cancel')
+     d                                     like(libssh2_Cint)
+     d  listener                       *   value                                LIBSSH2_LISTENER *
+
+     d libssh2_channel_forward_accept...
+     d                 pr              *   extproc(                             LIBSSH2_CHANNEL *
+     d                                     'libssh2_channel_forward_accept')
+     d  listener                       *   value                                LIBSSH2_LISTENER *
+
+     d libssh2_channel_setenv_ex...
+     d                 pr                  extproc('libssh2_channel_setenv_ex')
+     d                                     like(libssh2_Cint)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+     d  varname                        *   value options(*string)               const char *
+     d  varname_len                        value like(libssh2_Cuint)
+     d  value                          *   value options(*string)               const char *
+     d  value_len                          value like(libssh2_Cuint)
+
+      * C macro implementation.
+     d libssh2_channel_setenv...
+     d                 pr                  extproc('libssh2_channel_setenv')
+     d                                     like(libssh2_Cint)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+     d  varname                        *   value options(*string)               const char *
+     d  value                          *   value options(*string)               const char *
+
+     d libssh2_channel_request_auth_agent...
+     d                 pr                  extproc(
+     d                                     'libssh2_channel_request_auth_agent')
+     d                                     like(libssh2_Cint)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+
+     d libssh2_channel_request_pty_ex...
+     d                 pr                  extproc(
+     d                                     'libssh2_channel_request_pty_ex')
+     d                                     like(libssh2_Cint)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+     d  term                           *   value options(*string)               const char *
+     d  term_len                           value like(libssh2_Cuint)
+     d  modes                          *   value options(*string)               const char *
+     d  modes_len                          value like(libssh2_Cuint)
+     d  width                              value like(libssh2_Cint)
+     d  height                             value like(libssh2_Cint)
+     d  width_px                           value like(libssh2_Cint)
+     d  height_px                          value like(libssh2_Cint)
+
+      * C macro implementation.
+     d libssh2_channel_request_pty...
+     d                 pr                  extproc(
+     d                                     'libssh2_channel_request_pty')
+     d                                     like(libssh2_Cint)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+     d  term                           *   value options(*string)               const char *
+
+     d libssh2_channel_request_pty_size_ex...
+     d                 pr                  extproc(
+     d                                     'libssh2_channel_request_pty_size_ex'
+     d                                     )
+     d                                     like(libssh2_Cint)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+     d  width                              value like(libssh2_Cint)
+     d  height                             value like(libssh2_Cint)
+     d  width_px                           value like(libssh2_Cint)
+     d  height_px                          value like(libssh2_Cint)
+
+      * C macro implementation.
+     d libssh2_channel_request_pty_size...
+     d                 pr                  extproc(
+     d                                     'libssh2_channel_request_pty_size')
+     d                                     like(libssh2_Cint)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+     d  width                              value like(libssh2_Cint)
+     d  height                             value like(libssh2_Cint)
+
+     d libssh2_channel_x11_req_ex...
+     d                 pr                  extproc('libssh2_channel_x11_req_ex')
+     d                                     like(libssh2_Cint)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+     d  single_connection...
+     d                                     value like(libssh2_Cint)
+     d  auth_proto                     *   value options(*string)               const char *
+     d  auth_cookie                    *   value options(*string)               const char *
+     d  screen_number                      value like(libssh2_Cint)
+
+      * C macro implementation.
+     d libssh2_channel_x11_req...
+     d                 pr                  extproc('libssh2_channel_x11_req')
+     d                                     like(libssh2_Cint)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+     d  screen_number                      value like(libssh2_Cint)
+
+     d libssh2_channel_signal_ex...
+     d                 pr                  extproc('libssh2_channel_signal_ex')
+     d                                     like(libssh2_Cint)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+     d  signame                        *   value options(*string)               const char *
+     d  signame_len                        value like(libssh2_Csize_t)
+
+      * C macro implementation
+     d libssh2_channel_signal...
+     d                 pr                  extproc('libssh2_channel_signal_ex')
+     d                                     like(libssh2_Cint)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+     d  signame                        *   value options(*string)               const char *
+
+     d libssh2_channel_process_startup...
+     d                 pr                  extproc(
+     d                                     'libssh2_channel_process_startup')
+     d                                     like(libssh2_Cint)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+     d  request                        *   value options(*string)               const char *
+     d  request_len                        value like(libssh2_Cuint)
+     d  message                        *   value options(*string)               const char *
+     d  message_len                        value like(libssh2_Cuint)
+
+      * C macro implementation.
+     d libssh2_channel_shell...
+     d                 pr                  extproc('libssh2_channel_shell')
+     d                                     like(libssh2_Cint)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+
+      * C macro implementation.
+     d libssh2_channel_exec...
+     d                 pr                  extproc('libssh2_channel_exec')
+     d                                     like(libssh2_Cint)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+     d  command                        *   value options(*string)               const char *
+
+      * C macro implementation.
+     d libssh2_channel_subsystem...
+     d                 pr                  extproc('libssh2_channel_subsystem')
+     d                                     like(libssh2_Cint)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+     d  subsystem                      *   value options(*string)               const char *
+
+     d libssh2_channel_read_ex...
+     d                 pr                  extproc('libssh2_channel_read_ex')
+     d                                     like(libssh2_Cssize_t)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+     d  stream_id                          value like(libssh2_Cint)
+     d  buf                            *   value                                char *
+     d  buflen                             value like(libssh2_Csize_t)
+
+      * C macro implementation.
+     d libssh2_channel_read...
+     d                 pr                  extproc('libssh2_channel_read')
+     d                                     like(libssh2_Cssize_t)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+     d  buf                            *   value                                char *
+     d  buflen                             value like(libssh2_Csize_t)
+
+      * C macro implementation.
+     d libssh2_channel_read_stderr...
+     d                 pr                  extproc(
+     d                                     'libssh2_channel_read_stderr')
+     d                                     like(libssh2_Cssize_t)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+     d  buf                            *   value                                char *
+     d  buflen                             value like(libssh2_Csize_t)
+
+     d libssh2_poll_channel_read...
+     d                 pr                  extproc('libssh2_poll_channel_read')
+     d                                     like(libssh2_Cint)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+     d  extended                           value like(libssh2_Cint)
+
+     d libssh2_channel_window_read_ex...
+     d                 pr                  extproc(
+     d                                     'libssh2_channel_window_read_ex')
+     d                                     like(libssh2_Culong)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+     d  read_avail                         like(libssh2_Culong)
+     d  window_size_initial...
+     d                                     like(libssh2_Culong)
+
+      * C macro implementation.
+     d libssh2_channel_window_read...
+     d                 pr                  extproc(
+     d                                     'libssh2_channel_window_read')
+     d                                     like(libssh2_Culong)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+
+      /if not defined(LIBSSH2_NO_DEPRECATED)
+     d libssh2_channel_receive_window_adjust...
+     d                 pr                  extproc('libssh2_channel_receive_win-
+     d                                     dow_adjust')
+     d                                     like(libssh2_Culong)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+     d  adjustment                         value like(libssh2_Culong)
+     d  force                              value like(libssh2_Cuchar)
+      /endif
+
+     d libssh2_channel_receive_window_adjust2...
+     d                 pr                  extproc('libssh2_channel_receive_win-
+     d                                     dow_adjust2')
+     d                                     like(libssh2_Cint)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+     d  adjustment                         value like(libssh2_Culong)
+     d  force                              value like(libssh2_Cuchar)
+     d  storewindow                        like(libssh2_Cuint)
+
+     d libssh2_channel_write_ex...
+     d                 pr                  extproc('libssh2_channel_write_ex')
+     d                                     like(libssh2_Cssize_t)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+     d  stream_id                          value like(libssh2_Cint)
+     d  buf                            *   value options(*string)               const char *
+     d  buflen                             value like(libssh2_Csize_t)
+
+      * C macro implementation.
+     d libssh2_channel_write...
+     d                 pr                  extproc('libssh2_channel_write')
+     d                                     like(libssh2_Cssize_t)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+     d  buf                            *   value options(*string)               const char *
+     d  buflen                             value like(libssh2_Csize_t)
+
+      * C macro implementation.
+     d libssh2_channel_write_stderr...
+     d                 pr                  extproc(
+     d                                     'libssh2_channel_write_stderr')
+     d                                     like(libssh2_Cssize_t)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+     d  buf                            *   value options(*string)               const char *
+     d  buflen                             value like(libssh2_Csize_t)
+
+     d libssh2_channel_window_write_ex...
+     d                 pr                  extproc(
+     d                                     'libssh2_channel_window_write_ex')
+     d                                     like(libssh2_Culong)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+     d  window_size_initial...
+     d                                     like(libssh2_Culong)
+
+      * C macro implementation.
+     d libssh2_channel_window_write...
+     d                 pr                  extproc(
+     d                                     'libssh2_channel_window_write')
+     d                                     like(libssh2_Culong)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+
+     d libssh2_session_set_blocking...
+     d                 pr                  extproc(
+     d                                     'libssh2_session_set_blocking')
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  blocking                           value like(libssh2_Cint)
+
+     d libssh2_session_get_blocking...
+     d                 pr                  extproc(
+     d                                     'libssh2_session_get_blocking')
+     d                                     like(libssh2_Cint)
+     d  session                        *   value                                LIBSSH2_SESSION *
+
+     d libssh2_channel_set_blocking...
+     d                 pr                  extproc(
+     d                                     'libssh2_channel_set_blocking')
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+     d  blocking                           value like(libssh2_Cint)
+
+     d libssh2_session_set_timeout...
+     d                 pr                  extproc(
+     d                                     'libssh2_session_set_timeout')
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  timeout                            value like(libssh2_Clong)
+
+     d libssh2_session_get_timeout...
+     d                 pr                  extproc(
+     d                                     'libssh2_session_get_timeout')
+     d                                     like(libssh2_Clong)
+     d  session                        *   value                                LIBSSH2_SESSION *
+
+     d libssh2_session_set_read_timeout...
+     d                 pr                  extproc(
+     d                                     'libssh2_session_set_read_timeout')
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  timeout                            value like(libssh2_Clong)
+
+     d libssh2_session_get_read_timeout...
+     d                 pr                  extproc(
+     d                                     'libssh2_session_get_read_timeout')
+     d                                     like(libssh2_Clong)
+     d  session                        *   value                                LIBSSH2_SESSION *
+
+      /if not defined(LIBSSH2_NO_DEPRECATED)
+     d libssh2_channel_handle_extended_data...
+     d                 pr                  extproc('libssh2_channel_handle_exte-
+     d                                     nded_data')
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+     d  ignore_mode                        value like(libssh2_Cint)
+      /endif
+
+     d libssh2_channel_handle_extended_data2...
+     d                 pr                  extproc('libssh2_channel_handle_exte-
+     d                                     nded_data2')
+     d                                     like(libssh2_Cint)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+     d  ignore_mode                        value like(libssh2_Cint)
+
+      /if not defined(LIBSSH2_NO_DEPRECATED)
+      * libssh2_channel_ignore_extended_data() is defined below for BC with
+      * version 0.1.
+      * C macro implementation.
+     d libssh2_channel_ignore_extended_data...
+     d                 pr                  extproc('libssh2_channel-
+     d                                     _ignore_extended_data')
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+     d  ignore                             value like(libssh2_Cint)
+      /endif
+
+     d LIBSSH2_CHANNEL_FLUSH_EXTENDED_DATA...
+     d                 c                   -1
+     d LIBSSH2_CHANNEL_FLUSH_ALL...
+     d                 c                   -2
+
+     d libssh2_channel_flush_ex...
+     d                 pr                  extproc('libssh2_channel_flush_ex')
+     d                                     like(libssh2_Cint)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+     d  streamid                           value like(libssh2_Cint)
+
+      * C macro implementation.
+     d libssh2_channel_flush...
+     d                 pr                  extproc('libssh2_channel_flush')
+     d                                     like(libssh2_Cint)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+
+      * C macro implementation.
+     d libssh2_channel_flush_stderr...
+     d                 pr                  extproc(
+     d                                     'libssh2_channel_flush_stderr')
+     d                                     like(libssh2_Cint)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+
+     d libssh2_channel_get_exit_status...
+     d                 pr                  extproc(
+     d                                     'libssh2_channel_get_exit_status')
+     d                                     like(libssh2_Cint)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+
+     d libssh2_channel_get_exit_signal...
+     d                 pr                  extproc(
+     d                                     'libssh2_channel_get_exit_signal')
+     d                                     like(libssh2_Cint)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+     d  exitsignal                     *                                        char *(*)
+     d  exitsignal_len...
+     d                                     like(libssh2_Csize_t)
+     d  errmsg                         *                                        char *(*)
+     d  errmsg_len                         like(libssh2_Csize_t)
+     d  langtag                        *                                        char *(*)
+     d  langtag_len                        like(libssh2_Csize_t)
+
+     d libssh2_channel_send_eof...
+     d                 pr                  extproc('libssh2_channel_send_eof')
+     d                                     like(libssh2_Cint)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+
+     d libssh2_channel_eof...
+     d                 pr                  extproc('libssh2_channel_eof')
+     d                                     like(libssh2_Cint)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+
+     d libssh2_channel_wait_eof...
+     d                 pr                  extproc('libssh2_channel_wait_eof')
+     d                                     like(libssh2_Cint)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+
+     d libssh2_channel_close...
+     d                 pr                  extproc('libssh2_channel_close')
+     d                                     like(libssh2_Cint)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+
+     d libssh2_channel_wait_closed...
+     d                 pr                  extproc(
+     d                                     'libssh2_channel_wait_closed')
+     d                                     like(libssh2_Cint)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+
+     d libssh2_channel_free...
+     d                 pr                  extproc('libssh2_channel_free')
+     d                                     like(libssh2_Cint)
+     d  channel                        *   value                                LIBSSH2_CHANNEL *
+
+      /if not defined(LIBSSH2_NO_DEPRECATED)
+     d libssh2_scp_recv...
+     d                 pr              *   extproc('libssh2_scp_recv')          LIBSSH2_CHANNEL *
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  path                           *   value options(*string)               const char *
+     d  sb                             *   value                                struct stat *
+      /endif
+
+      * Use libssh2_scp_recv2 for large (> 2GB) file support.
+     d libssh2_scp_recv2...
+     d                 pr              *   extproc('libssh2_scp_recv2')         LIBSSH2_CHANNEL *
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  path                           *   value options(*string)               const char *
+     d  sb                                 likeds(libssh2_struct_stat)
+
+     d libssh2_scp_send_ex...
+     d                 pr              *   extproc('libssh2_scp_send_ex')       LIBSSH2_CHANNEL *
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  path                           *   value options(*string)               const char *
+     d  mode                               value like(libssh2_Cint)
+     d  size                               value like(libssh2_Csize_t)
+     d  mtime                              value like(libssh2_Clong)
+     d  atime                              value like(libssh2_Clong)
+
+     d libssh2_scp_send64...
+     d                 pr              *   extproc('libssh2_scp_send64')        LIBSSH2_CHANNEL *
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  path                           *   value options(*string)               const char *
+     d  mode                               value like(libssh2_Cint)
+     d  size                               value like(libssh2_int64_t)
+     d  mtime                              value like(libssh2_time_t)
+     d  atime                              value like(libssh2_time_t)
+
+      * C macro implementation.
+     d libssh2_scp_send...
+     d                 pr              *   extproc('libssh2_scp_send')          LIBSSH2_CHANNEL *
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  path                           *   value options(*string)               const char *
+     d  mode                               value like(libssh2_Cint)
+     d  size                               value like(libssh2_int64_t)
+
+      * DEPRECATED
+     d libssh2_base64_decode...
+     d                 pr                  extproc('libssh2_base64_decode')
+     d                                     like(libssh2_Cint)
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  dest                           *   value                                char * *
+     d  dest_len                       *   value                                unsigned int *
+     d  src                            *   value options(*string)               const char *
+     d  src_len                            value like(libssh2_Cuint)
+
+      * Procedure libssh2_version renamed to avoid upper/lower case name clash.
+     d libssh2_get_version...
+     d                 pr              *   extproc('libssh2_version')           const char *
+     d  req_version_num...
+     d                                     value like(libssh2_Cint)
+
+     d libssh2_crypto_engine_t...
+     d                 s                   based(######typedef######)
+     d                                     like(libssh2_Cenum)
+     d  libssh2_no_crypto...
+     d                 c                   0
+     d  libssh2_openssl...
+     d                 c                   1
+     d  libssh2_gcrypt...
+     d                 c                   2
+     d  libssh2_mbedtls...
+     d                 c                   3
+     d  libssh2_wincng...
+     d                 c                   4
+     d  libssh2_os400qc3...
+     d                 c                   5
+
+     d libssh2_crypto_engine...
+     d                 pr                  extproc('libssh2_crypto_engine')
+     d                                     like(libssh2_crypto_engine_t)
+
+     d HAVE_LIBSSH2_KNOWNHOST_API...                                            since 1.1.1
+     d                 c                   X'010101'
+     d HAVE_LIBSSH2_VERSION_API...                                              since 1.1
+     d                 c                   X'010100'
+
+     d libssh2_knownhost...
+     d                 ds                  based(######typedef######)
+     d                                     align qualified
+     d  magic                              like(libssh2_Cuint)
+     d  node                           *                                        void *
+     d  name                           *                                        char *
+     d  key                            *                                        char *
+     d  typemask                           like(libssh2_Cint)
+
+      * libssh2_knownhost_init
+      *
+      * Init a collection of known hosts. Returns the pointer to a collection.
+
+     d libssh2_knownhost_init...
+     d                 pr              *   extproc('libssh2_knownhost_init')    LIBSSH2_KNOWNHOSTS *
+     d  session                        *   value                                LIBSSH2_SESSION *
+
+      * libssh2_knownhost_add
+      *
+      * Add a host and its associated key to the collection of known hosts.
+      *
+      * The 'type' argument specifies on what format the given host and
+      * keys are:
+      *
+      * plain  - ascii "hostname.domain.tld"
+      * sha1   - SHA1(<salt> <host>) base64-encoded!
+      * custom - another hash
+      *
+      * If 'sha1' is selected as type, the salt must be provided to the salt
+      * argument. This too base64 encoded.
+      *
+      * The SHA-1 hash is what OpenSSH can be told to use in known_hosts files.
+      * If a custom type is used, salt is ignored and you must provide the host
+      * pre-hashed when checking for it in the libssh2_knownhost_check()
+      * function.
+      *
+      * The keylen parameter may be omitted (zero) if the key is provided as a
+      * NULL-terminated base64-encoded string.
+
+      * host format (2 bits).
+     d LIBSSH2_KNOWNHOST_TYPE_MASK...
+     d                 c                   X'FFFF'
+     d  LIBSSH2_KNOWNHOST_TYPE_PLAIN...
+     d                 c                   1
+     d LIBSSH2_KNOWNHOST_TYPE_SHA1...                                           always base64 ncoded
+     d                 c                   2
+     d LIBSSH2_KNOWNHOST_TYPE_CUSTOM...
+     d                 c                   3
+
+      * key format (2 bits).
+     d LIBSSH2_KNOWNHOST_KEYENC_MASK...
+     d                 c                   X'00030000'
+     d LIBSSH2_KNOWNHOST_KEYENC_RAW...
+     d                 c                   X'00010000'
+     d LIBSSH2_KNOWNHOST_KEYENC_BASE64...
+     d                 c                   X'00020000'
+
+      * type of key (4 bits).
+     d LIBSSH2_KNOWNHOST_KEY_MASK...
+     d                 c                   X'003C0000'
+     d LIBSSH2_KNOWNHOST_KEY_SHIFT...
+     d                 c                   18
+     d LIBSSH2_KNOWNHOST_KEY_RSA1...
+     d                 c                   X'00040000'
+     d LIBSSH2_KNOWNHOST_KEY_SSHRSA...
+     d                 c                   X'00080000'
+     d LIBSSH2_KNOWNHOST_KEY_SSHDSS...
+     d                 c                   X'000C0000'
+     d LIBSSH2_KNOWNHOST_KEY_ECDSA_256...
+     d                 c                   X'00100000'
+     d LIBSSH2_KNOWNHOST_KEY_ECDSA_384...
+     d                 c                   X'00140000'
+     d LIBSSH2_KNOWNHOST_KEY_ECDSA_521...
+     d                 c                   X'00180000'
+     d LIBSSH2_KNOWNHOST_KEY_ED25519...
+     d                 c                   X'001C0000'
+     d LIBSSH2_KNOWNHOST_KEY_UNKNOWN...
+     d                 c                   X'003C0000'
+
+     d libssh2_knownhost_add...
+     d                 pr                  extproc('libssh2_knownhost_add')
+     d                                     like(libssh2_Cint)
+     d  hosts                          *   value                                LIBSSH2_KNOWNHOSTS *
+     d  host                           *   value options(*string)               const char *
+     d  salt                           *   value options(*string)               const char *
+     d  key                            *   value options(*string)               const char *
+     d  keylen                             value like(libssh2_Csize_t)
+     d  typemask                           value like(libssh2_Cint)
+     d  store                          *                                        libssh2_knownhost *
+
+      * libssh2_knownhost_addc
+      *
+      * Add a host and its associated key to the collection of known hosts.
+      *
+      * Takes a comment argument that may be NULL.  A NULL comment indicates
+      * there is no comment and the entry will end directly after the key
+      * when written out to a file.  An empty string "" comment will indicate an
+      * empty comment which will cause a single space to be written after the
+      * key.
+      *
+      * The 'type' argument specifies on what format the given host and keys
+      * are:
+      *
+      * plain  - ascii "hostname.domain.tld"
+      * sha1   - SHA1(<salt> <host>) base64-encoded!
+      * custom - another hash
+      *
+      * If 'sha1' is selected as type, the salt must be provided to the salt
+      * argument. This too base64 encoded.
+      *
+      * The SHA-1 hash is what OpenSSH can be told to use in known_hosts files.
+      * If a custom type is used, salt is ignored and you must provide the host
+      * pre-hashed when checking for it in the libssh2_knownhost_check()
+      * function.
+      *
+      * The keylen parameter may be omitted (zero) if the key is provided as a
+      * NULL-terminated base64-encoded string.
+
+     d libssh2_knownhost_addc...
+     d                 pr                  extproc('libssh2_knownhost_addc')
+     d                                     like(libssh2_Cint)
+     d  hosts                          *   value                                LIBSSH2_KNOWNHOSTS *
+     d  host                           *   value options(*string)               const char *
+     d  salt                           *   value options(*string)               const char *
+     d  key                            *   value options(*string)               const char *
+     d  keylen                             value like(libssh2_Csize_t)
+     d  comment                        *   value options(*string)               const char *
+     d  commentlen                         value like(libssh2_Csize_t)
+     d  typemask                           value like(libssh2_Cint)
+     d  store                          *                                        libssh2_knownhost *
+
+
+      * libssh2_knownhost_check
+      *
+      * Check a host and its associated key against the collection of known
+      * hosts.
+      *
+      * The type is the type/format of the given host name.
+      *
+      * plain  - ascii "hostname.domain.tld"
+      * custom - prehashed base64 encoded. Note that this cannot use any salts.
+      *
+      *
+      * 'knownhost' may be set to NULL if you don't care about that info.
+      *
+      * Returns:
+      *
+      * LIBSSH2_KNOWNHOST_CHECK_* values, see below.
+
+     d LIBSSH2_KNOWNHOST_CHECK_MATCH...
+     d                 c                   0
+     d LIBSSH2_KNOWNHOST_CHECK_MISMATCH...
+     d                 c                   1
+     d LIBSSH2_KNOWNHOST_CHECK_NOTFOUND...
+     d                 c                   2
+     d LIBSSH2_KNOWNHOST_CHECK_FAILURE...
+     d                 c                   3
+
+     d libssh2_knownhost_check...
+     d                 pr                  extproc('libssh2_knownhost_check')
+     d                                     like(libssh2_Cint)
+     d  hosts                          *   value                                LIBSSH2_KNOWNHOSTS *
+     d  host                           *   value options(*string)               const char *
+     d  key                            *   value options(*string)               const char *
+     d  keylen                             value like(libssh2_Csize_t)
+     d  typemask                           value like(libssh2_Cint)
+     d  knownhost                      *                                        libssh2_knownhost *
+
+      * this function is identital to the above one, but also takes a port
+      * argument that allows libssh2 to do a better check.
+     d libssh2_knownhost_checkp...
+     d                 pr                  extproc('libssh2_knownhost_checkp')
+     d                                     like(libssh2_Cint)
+     d  hosts                          *   value                                LIBSSH2_KNOWNHOSTS *
+     d  host                           *   value options(*string)               const char *
+     d  port                               value like(libssh2_Cint)
+     d  key                            *   value options(*string)               const char *
+     d  keylen                             value like(libssh2_Csize_t)
+     d  typemask                           value like(libssh2_Cint)
+     d  knownhost                      *                                        libssh2_knownhost *
+
+      * libssh2_knownhost_del
+      *
+      * Remove a host from the collection of known hosts. The 'entry' struct is
+      * retrieved by a call to libssh2_knownhost_check().
+
+     d libssh2_knownhost_del...
+     d                 pr                  extproc('libssh2_knownhost_del')
+     d                                     like(libssh2_Cint)
+     d  hosts                          *   value                                LIBSSH2_KNOWNHOSTS *
+     d  entry                              likeds(libssh2_knownhost)
+
+      * libssh2_knownhost_free
+      *
+      * Free an entire collection of known hosts.
+
+     d libssh2_knownhost_free...
+     d                 pr                  extproc('libssh2_knownhost_free')
+     d  hosts                          *   value                                LIBSSH2_KNOWNHOSTS *
+
+      * libssh2_knownhost_readline()
+      *
+      * Pass in a line of a file of 'type'. It makes libssh2 read this line.
+      *
+      * LIBSSH2_KNOWNHOST_FILE_OPENSSH is the only supported type.
+
+     d libssh2_knownhost_readline...
+     d                 pr                  extproc('libssh2_knownhost_readline')
+     d                                     like(libssh2_Cint)
+     d  hosts                          *   value                                LIBSSH2_KNOWNHOSTS *
+     d  line                           *   value options(*string)               const char *
+     d  len                                value like(libssh2_Csize_t)
+     d  type                               value like(libssh2_Cint)
+
+      * libssh2_knownhost_readfile
+      *
+      * Add hosts+key pairs from a given file.
+      *
+      * Returns a negative value for error or number of successfully added
+      * hosts.
+      *
+      * This implementation currently only knows one 'type' (openssh), all
+      * others are reserved for future use.
+
+     d LIBSSH2_KNOWNHOST_FILE_OPENSSH...
+     d                 c                   1
+
+     d libssh2_knownhost_readfile...
+     d                 pr                  extproc('libssh2_knownhost_readfile')
+     d                                     like(libssh2_Cint)
+     d  hosts                          *   value                                LIBSSH2_KNOWNHOSTS *
+     d  filename                       *   value options(*string)               const char *
+     d  type                               value like(libssh2_Cint)
+
+      * libssh2_knownhost_writeline()
+      *
+      * Ask libssh2 to convert a known host to an output line for storage.
+      *
+      * Note that this function returns LIBSSH2_ERROR_BUFFER_TOO_SMALL if the
+      * given output buffer is too small to hold the desired output.
+      *
+      * This implementation currently only knows one 'type' (openssh), all
+      * others are reserved for future use.
+
+     d libssh2_knownhost_writeline...
+     d                 pr                  extproc(
+     d                                     'libssh2_knownhost_writeline')
+     d                                     like(libssh2_Cint)
+     d  hosts                          *   value                                LIBSSH2_KNOWNHOSTS *
+     d  known                              likeds(libssh2_knownhost)
+     d  buffer                         *   value options(*string)               char *
+     d  buflen                             value like(libssh2_Csize_t)
+     d  outlen                             like(libssh2_Csize_t)                Written data amount
+     d  type                               value like(libssh2_Cint)
+
+      * libssh2_knownhost_writefile
+      *
+      * Write hosts+key pairs to a given file.
+      *
+      * This implementation currently only knows one 'type' (openssh), all
+      * others are reserved for future use.
+
+     d libssh2_knownhost_writefile...
+     d                 pr                  extproc(
+     d                                     'libssh2_knownhost_writefile')
+     d                                     like(libssh2_Cint)
+     d  hosts                          *   value                                LIBSSH2_KNOWNHOSTS *
+     d  filename                       *   value options(*string)               const char *
+     d  type                               value like(libssh2_Cint)
+
+      * libssh2_knownhost_get()
+      *
+      * Traverse the internal list of known hosts. Pass NULL to 'prev' to get
+      * the first one. Or pass a pointer to the previously returned one to
+      * get the next.
+      *
+      * Returns:
+      * 0 if a fine host was stored in 'store'
+      * 1 if end of hosts
+      * [negative] on errors
+
+     d libssh2_knownhost_get...
+     d                 pr                  extproc('libssh2_knownhost_get')
+     d                                     like(libssh2_Cint)
+     d  hosts                          *   value                                LIBSSH2_KNOWNHOSTS *
+     d  store                          *                                        libssh2_knownhost *
+     d  prev                               likeds(libssh2_knownhost)
+
+     d HAVE_LIBSSH2_AGENT_API...                                                since 1.2.2
+     d                 c                   X'010202'
+
+     d libssh2_agent_publickey...
+     d                 ds                  based(######typedef######)
+     d                                     align qualified
+     d  magic                              like(libssh2_Cuint)
+     d  node                           *                                        void *
+     d  blob                           *                                        unsigned char *
+     d  blob_len                           like(libssh2_Csize_t)
+     d  comment                        *                                        char *
+
+      * libssh2_agent_init
+      *
+      * Init an ssh-agent handle. Returns the pointer to the handle.
+
+     d libssh2_agent_init...
+     d                 pr              *   extproc('libssh2_agent_init')        LIBSSH2_AGENT *
+     d  session                        *   value                                LIBSSH2_SESSION *
+
+      * libssh2_agent_connect()
+      *
+      * Connect to an ssh-agent.
+      *
+      * Returns 0 if succeeded, or a negative value for error.
+
+     d libssh2_agent_connect...
+     d                 pr                  extproc('libssh2_agent_connect')
+     d                                     like(libssh2_Cint)
+     d  agent                          *   value                                LIBSSH2_AGENT *
+
+      * libssh2_agent_list_identities()
+      *
+      * Request an ssh-agent to list identities.
+      *
+      * Returns 0 if succeeded, or a negative value for error.
+
+     d libssh2_agent_list_identities...
+     d                 pr                  extproc(
+     d                                     'libssh2_agent_list_identities')
+     d                                     like(libssh2_Cint)
+     d  agent                          *   value                                LIBSSH2_AGENT *
+
+      * libssh2_agent_get_identity()
+      *
+      * Traverse the internal list of public keys. Pass NULL to 'prev' to get
+      * the first one. Or pass a pointer to the previously returned one to
+      * get the next.
+      *
+      * Returns:
+      * 0 if a fine public key was stored in 'store'
+      * 1 if end of public keys
+      * [negative] on errors
+
+     d libssh2_agent_get_identity...
+     d                 pr                  extproc('libssh2_agent_get_identity')
+     d                                     like(libssh2_Cint)
+     d  agent                          *   value                                LIBSSH2_AGENT *
+     d  store                          *                                        libssh2_agent_...
+     d                                                                          publickey *(*)
+     d  prev                               likeds(libssh2_agent_publickey)
+
+      * libssh2_agent_userauth()
+      *
+      * Do publickey user authentication with the help of ssh-agent.
+      *
+      * Returns 0 if succeeded, or a negative value for error.
+
+     d libssh2_agent_userauth...
+     d                 pr                  extproc('libssh2_agent_userauth')
+     d                                     like(libssh2_Cint)
+     d  agent                          *   value                                LIBSSH2_AGENT *
+     d  username                       *   value options(*string)               const char *
+     d  identity                           likeds(libssh2_agent_publickey)
+
+      * libssh2_agent_sign()
+      *
+      * Sign a payload using a system-installed ssh-agent.
+      *
+      * Returns 0 if succeeded, or a negative value for error.
+
+     d libssh2_agent_sign...
+     d                 pr                  extproc('libssh2_agent_sign')
+     d                                     like(libssh2_Cint)
+     d  agent                          *   value                                LIBSSH2_AGENT *
+     d  identity                           likeds(libssh2_agent_publickey)
+     d  sig                            *                                        unsigned char *
+     d  s_len                              like(libssh2_Csize_t)
+     d  data                           *   value                                const uchar *
+     d  d_len                              value like(libssh2_Csize_t)
+     d  method                         *   value options(*string)               const char *
+     d  method_len                         value like(libssh2_Cuint)
+
+      * libssh2_agent_disconnect()
+      *
+      * Close a connection to an ssh-agent.
+      *
+      * Returns 0 if succeeded, or a negative value for error.
+
+     d libssh2_agent_disconnect...
+     d                 pr                  extproc('libssh2_agent_disconnect')
+     d                                     like(libssh2_Cint)
+     d  agent                          *   value                                LIBSSH2_AGENT *
+
+      * libssh2_agent_free()
+      *
+      * Free an ssh-agent handle. This function also frees the internal
+      * collection of public keys.
+
+     d libssh2_agent_free...
+     d                 pr                  extproc('libssh2_agent_free')
+     d  agent                          *   value                                LIBSSH2_AGENT *
+
+      * libssh2_agent_set_identity_path()
+      *
+      * Allows a custom agent identity socket path beyond SSH_AUTH_SOCK env
+
+     d libssh2_agent_set_identity_path...
+     d                 pr                  extproc(
+     d                                     'libssh2_agent_set_identity_path')
+     d  agent                          *   value                                LIBSSH2_AGENT *
+     d  path                           *   value options(*string)               const char *
+
+      * libssh2_agent_get_identity_path()
+      *
+      * Returns the custom agent identity socket path if set
+
+     d libssh2_agent_get_identity_path...
+     d                 pr              *   extproc(                             const char *
+     d                                     'libssh2_agent_get_identity_path')
+     d  agent                          *   value                                LIBSSH2_AGENT *
+
+      * libssh2_keepalive_config()
+      *
+      * Set how often keepalive messages should be sent.  WANT_REPLY
+      * indicates whether the keepalive messages should request a response
+      * from the server.  INTERVAL is number of seconds that can pass
+      * without any I/O, use 0 (the default) to disable keepalives.  To
+      * avoid some busy-loop corner-cases, if you specify an interval of 1
+      * it will be treated as 2.
+      *
+      * Note that non-blocking applications are responsible for sending the
+      * keepalive messages using libssh2_keepalive_send().
+
+     d libssh2_keepalive_config...
+     d                 pr                  extproc('libssh2_keepalive_config')
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  want_reply                         value like(libssh2_Cint)
+     d  interval                           value like(libssh2_Cuint)
+
+      * libssh2_keepalive_send()
+      *
+      * Send a keepalive message if needed.  SECONDS_TO_NEXT indicates how
+      * many seconds you can sleep after this call before you need to call
+      * it again.  Returns 0 on success, or LIBSSH2_ERROR_SOCKET_SEND on
+      * I/O errors.
+
+     d libssh2_keepalive_send...
+     d                 pr                  extproc('libssh2_keepalive_send')
+     d                                     like(libssh2_Cint)
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  seconds_to_next...
+     d                                     like(libssh2_Cint)
+
+      * NOTE NOTE NOTE
+      * libssh2_trace() has no function in builds that aren't built with debug
+      * enabled.
+
+     d libssh2_trace   pr                  extproc('libssh2_trace')
+     d                                     like(libssh2_Cint)
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  bitmask                            value like(libssh2_Cint)
+
+     d LIBSSH2_TRACE_TRANS...
+     d                 c                   X'0002'
+     d LIBSSH2_TRACE_KEX...
+     d                 c                   X'0004'
+     d LIBSSH2_TRACE_AUTH...
+     d                 c                   X'0008'
+     d LIBSSH2_TRACE_CONN...
+     d                 c                   X'0010'
+     d LIBSSH2_TRACE_SCP...
+     d                 c                   X'0020'
+     d LIBSSH2_TRACE_SFTP...
+     d                 c                   X'0040'
+     d LIBSSH2_TRACE_ERROR...
+     d                 c                   X'0080'
+     d LIBSSH2_TRACE_PUBLICKEY...
+     d                 c                   X'0100'
+     d LIBSSH2_TRACE_SOCKET...
+     d                 c                   X'0200'
+
+     d libssh2_trace_handler_func...
+     d                 s               *   based(######typedef######) procptr
+
+     d libssh2_trace_sethandler...
+     d                 pr                  extproc('libssh2_trace_sethandler')
+     d                                     like(libssh2_Cint)
+     d  session                        *   value                                LIBSSH2_SESSION *
+     d  context                        *   value                                void *
+     d  callback                           value
+     d                                     like(libssh2_trace_handler_func)
+
+      /endif                                                                    LIBSSH2_H_

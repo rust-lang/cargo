@@ -1,0 +1,58 @@
+# Copyright (C) The libssh2 project and its contributors.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
+# This file describes the licensing and copyright situation for files that
+# cannot be annotated directly, for example because of being simply
+# uncommentable. Unless this is the case, a file should be annotated directly.
+#
+# This follows the REUSE specification: https://reuse.software/spec-3.2/#reusetoml
+
+version = 1
+SPDX-PackageName = "libssh2"
+SPDX-PackageDownloadLocation = "https://libssh2.org/"
+
+[[annotations]]
+path = [
+  ".github/ISSUE_TEMPLATE/bug_report.md",
+  ".github/SECURITY.md",
+  "NEWS",
+  "README",
+  "README.md",
+  "RELEASE-NOTES",
+  "ci/spellcheck-words.txt",
+  "docs/AUTHORS",
+  "docs/BINDINGS.md",
+  "docs/HACKING-CRYPTO",
+  "docs/HACKING.md",
+  "docs/INSTALL_CMAKE.md",
+  "docs/Makefile.am",
+  "docs/SECURITY.md",
+  "docs/TODO",
+  "docs/template.3",
+  "os400/README400",
+  "tests/key_*",
+  "tests/openssh_server/.gitattributes",
+  "tests/openssh_server/authorized_keys",
+  "tests/openssh_server/ca_*",
+  "tests/openssh_server/ssh_*",
+  "tests/openssh_server/sshd_config",
+  "tests/ossfuzz/*",
+  "tests/test_read_algos.txt",
+  "vms/libssh2_config.h",
+  "vms/libssh2_*.dcl",
+  "vms/man2help.c",
+  "vms/readme.vms",
+  # dotfiles
+  ".editorconfig",
+  ".gitignore",
+  "docs/.gitignore",
+  "example/.gitignore",
+  "m4/.gitignore",
+  "src/.gitignore",
+  "tests/.gitignore",
+]
+SPDX-FileCopyrightText = "The libssh2 project and its contributors."
+SPDX-License-Identifier = "BSD-3-Clause"
+# If there is licensing/copyright information in or next to these files, prefer that
+precedence = "closest"

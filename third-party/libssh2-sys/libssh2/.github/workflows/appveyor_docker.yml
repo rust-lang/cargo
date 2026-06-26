@@ -1,0 +1,74 @@
+# Copyright (C) Marc Hoersken
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# * Redistributions of source code must retain the above copyright notice, this
+#   list of conditions and the following disclaimer.
+#
+# * Redistributions in binary form must reproduce the above copyright notice,
+#   this list of conditions and the following disclaimer in the documentation
+#   and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: AppVeyor Docker Bridge
+
+on:
+  workflow_dispatch:
+    inputs:
+      ssh_host:
+        required: true
+      ssh_port:
+        required: true
+      ssh_user:
+        required: true
+      ssh_forward:
+        required: true
+      ssh_hostkey:
+        required: true
+      ssh_privkey:
+        required: true
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  daemon:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Setup SSH client configuration
+        run: |
+          cd ~
+          mkdir -m 0700 .ssh
+          install -m 0600 /dev/null .ssh/config
+          {
+            echo 'ServerAliveInterval 45'
+            echo 'Host ${{ github.event.inputs.ssh_host }}'
+            echo '${{ github.event.inputs.ssh_forward }}' | sed 's/,/\n/g' | sed 's/^/  RemoteForward /g'
+          } | tee -a .ssh/config
+          install -m 0600 /dev/null .ssh/known_hosts
+          echo '${{ github.event.inputs.ssh_host }} ${{ github.event.inputs.ssh_hostkey }}' | sed 's/,/\n${{ github.event.inputs.ssh_host }} /g' | tee -a .ssh/known_hosts
+          install -m 0600 /dev/null .ssh/id_rsa
+          echo '${{ github.event.inputs.ssh_privkey }}' | sed 's/,/\n/g' >> .ssh/id_rsa
+
+      # we sleep explicitly to allow the remote system to kill the sleep process
+      - name: Connect to AppVeyor and sleep
+        run: |
+          ssh -v -p ${{ github.event.inputs.ssh_port }} ${{ github.event.inputs.ssh_user }}@${{ github.event.inputs.ssh_host }} sleep 1h

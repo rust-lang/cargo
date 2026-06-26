@@ -1,0 +1,989 @@
+    Definitions needed to implement a specific crypto library
+
+This document offers some hints about implementing a new crypto library
+interface.
+
+A crypto library interface consists of at least a header file, defining
+entities referenced from the libssh2 core modules.
+Real code implementation (if needed), is left at the implementor's choice.
+
+This document lists the entities that must/may be defined in the header file.
+
+Procedures listed as "void" may indeed have a result type: the void indication
+indicates the libssh2 core modules never use the function result.
+
+
+0) Build system.
+
+Adding a crypto backend to the autotools build system (./configure) is easy:
+
+0.1) Add one new line in configure.ac
+
+m4_set_add([crypto_backends], [newname])
+
+This automatically creates a --with-crypto=newname option.
+
+0.2) Add an m4_case stanza to LIBSSH2_CRYPTO_CHECK in acinclude.m4
+
+This must check for all required libraries, and if found set and AC_SUBST a
+variable with the library linking flags. The recommended method is to use
+LIBSSH2_LIB_HAVE_LINKFLAGS from LIBSSH2_CRYPTO_CHECK, which automatically
+creates and handles a --with-$newname-prefix option and sets an
+LTLIBNEWNAME variable on success.
+
+0.3) Add new header to src/Makefile.inc
+
+0.4) Include new source in src/crypto.c
+
+0.5) Add a new block in configure.ac
+
+```
+elif test "$found_crypto" = "newname"; then
+  LIBS="${LIBS} ${LTLIBNEWNAME}"
+```
+
+0.6) Add CMake detection logic to CMakeLists.txt
+
+1) Crypto library initialization/termination.
+
+void libssh2_crypto_init(void);
+Initializes the crypto library. May be an empty macro if not needed.
+
+void libssh2_crypto_exit(void);
+Terminates the crypto library use. May be an empty macro if not needed.
+
+1.1) Crypto runtime detection
+
+The libssh2_crypto_engine_t enum must include the new engine, and
+libssh2_crypto_engine() must return it when it is built in.
+
+2) HMAC
+
+libssh2_hmac_ctx
+Type of an HMAC computation context. Generally a struct.
+Used for all hash algorithms.
+
+int _libssh2_hmac_ctx_init(libssh2_hmac_ctx *ctx);
+Initializes the HMAC computation context ctx.
+Called before setting-up the hash algorithm.
+Must return 1 for success and 0 for failure.
+
+int _libssh2_hmac_update(libssh2_hmac_ctx *ctx,
+                         const void *data, int datalen);
+Continue computation of an HMAC on datalen bytes at data using context ctx.
+Must return 1 for success and 0 for failure.
+
+int _libssh2_hmac_final(libssh2_hmac_ctx *ctx,
+                        void output[]);
+Get the computed HMAC from context ctx into the output buffer. The
+minimum data buffer size depends on the HMAC hash algorithm.
+Must return 1 for success and 0 for failure.
+
+void _libssh2_hmac_cleanup(libssh2_hmac_ctx *ctx);
+Releases the HMAC computation context at ctx.
+
+
+3) Hash algorithms.
+
+3.1) SHA-1
+Must always be implemented.
+
+SHA_DIGEST_LENGTH
+#define to 20, the SHA-1 digest length.
+
+libssh2_sha1_ctx
+Type of an SHA-1 computation context. Generally a struct.
+
+int libssh2_sha1_init(libssh2_sha1_ctx *x);
+Initializes the SHA-1 computation context at x.
+Returns 1 for success and 0 for failure
+
+int libssh2_sha1_update(libssh2_sha1_ctx ctx,
+                        const unsigned char *data,
+                        size_t len);
+Continue computation of SHA-1 on len bytes at data using context ctx.
+Note: if the ctx parameter is modified by the underlying code,
+this procedure must be implemented as a macro to map ctx --> &ctx.
+Must return 1 for success and 0 for failure.
+
+int libssh2_sha1_final(libssh2_sha1_ctx ctx,
+                       unsigned char output[SHA_DIGEST_LEN]);
+Get the computed SHA-1 signature from context ctx and store it into the
+output buffer.
+Release the context.
+Note: if the ctx parameter is modified by the underlying code,
+this procedure must be implemented as a macro to map ctx --> &ctx.
+Must return 1 for success and 0 for failure.
+
+int libssh2_hmac_sha1_init(libssh2_hmac_ctx *ctx,
+                           const void *key,
+                           int keylen);
+Setup the HMAC computation context ctx for an HMAC-SHA-1 computation using the
+keylen-byte key. Is invoked just after libssh2_hmac_ctx_init().
+Returns 1 for success and 0 for failure.
+
+3.2) SHA-256
+Must always be implemented.
+
+SHA256_DIGEST_LENGTH
+#define to 32, the SHA-256 digest length.
+
+libssh2_sha256_ctx
+Type of an SHA-256 computation context. Generally a struct.
+
+int libssh2_sha256_init(libssh2_sha256_ctx *x);
+Initializes the SHA-256 computation context at x.
+Returns 1 for success and 0 for failure
+
+int libssh2_sha256_update(libssh2_sha256_ctx ctx,
+                          const unsigned char *data,
+                          size_t len);
+Continue computation of SHA-256 on len bytes at data using context ctx.
+Note: if the ctx parameter is modified by the underlying code,
+this procedure must be implemented as a macro to map ctx --> &ctx.
+Must return 1 for success and 0 for failure.
+
+int libssh2_sha256_final(libssh2_sha256_ctx ctx,
+                         unsigned char output[SHA256_DIGEST_LENGTH]);
+Gets the computed SHA-256 signature from context ctx into the output buffer.
+Release the context.
+Note: if the ctx parameter is modified by the underlying code,
+this procedure must be implemented as a macro to map ctx --> &ctx.
+Must return 1 for success and 0 for failure.
+
+int libssh2_sha256(const unsigned char *message,
+                   size_t len,
+                   unsigned char output[SHA256_DIGEST_LENGTH]);
+Computes the SHA-256 signature over the given message of length len and
+store the result into the output buffer.
+Return 1 if error, else 0.
+Note: Seems unused in current code, but defined in each crypto library backend.
+
+LIBSSH2_HMAC_SHA256
+#define as 1 if the crypto library supports HMAC-SHA-256, else 0.
+If defined as 0, the rest of this section can be omitted.
+
+int libssh2_hmac_sha256_init(libssh2_hmac_ctx *ctx,
+                             const void *key,
+                             int keylen);
+Setup the HMAC computation context ctx for an HMAC-256 computation using the
+keylen-byte key. Is invoked just after libssh2_hmac_ctx_init().
+Returns 1 for success and 0 for failure.
+
+3.3) SHA-384
+Mandatory if ECDSA is implemented. Can be omitted otherwise.
+
+SHA384_DIGEST_LENGTH
+#define to 48, the SHA-384 digest length.
+
+libssh2_sha384_ctx
+Type of an SHA-384 computation context. Generally a struct.
+
+int libssh2_sha384_init(libssh2_sha384_ctx *x);
+Initializes the SHA-384 computation context at x.
+Returns 1 for success and 0 for failure
+
+int libssh2_sha384_update(libssh2_sha384_ctx ctx,
+                          const unsigned char *data,
+                          size_t len);
+Continue computation of SHA-384 on len bytes at data using context ctx.
+Note: if the ctx parameter is modified by the underlying code,
+this procedure must be implemented as a macro to map ctx --> &ctx.
+Must return 1 for success and 0 for failure.
+
+int libssh2_sha384_final(libssh2_sha384_ctx ctx,
+                         unsigned char output[SHA384_DIGEST_LENGTH]);
+Gets the computed SHA-384 signature from context ctx into the output buffer.
+Release the context.
+Note: if the ctx parameter is modified by the underlying code,
+this procedure must be implemented as a macro to map ctx --> &ctx.
+Must return 1 for success and 0 for failure.
+
+int libssh2_sha384(const unsigned char *message,
+                   size_t len,
+                   unsigned char output[SHA384_DIGEST_LENGTH]);
+Computes the SHA-384 signature over the given message of length len and
+store the result into the output buffer.
+Return 1 if error, else 0.
+
+3.4) SHA-512
+Must always be implemented.
+
+SHA512_DIGEST_LENGTH
+#define to 64, the SHA-512 digest length.
+
+libssh2_sha512_ctx
+Type of an SHA-512 computation context. Generally a struct.
+
+int libssh2_sha512_init(libssh2_sha512_ctx *x);
+Initializes the SHA-512 computation context at x.
+Returns 1 for success and 0 for failure
+
+int libssh2_sha512_update(libssh2_sha512_ctx ctx,
+                          const unsigned char *data,
+                          size_t len);
+Continue computation of SHA-512 on len bytes at data using context ctx.
+Note: if the ctx parameter is modified by the underlying code,
+this procedure must be implemented as a macro to map ctx --> &ctx.
+Must return 1 for success and 0 for failure.
+
+int libssh2_sha512_final(libssh2_sha512_ctx ctx,
+                         unsigned char output[SHA512_DIGEST_LENGTH]);
+Gets the computed SHA-512 signature from context ctx into the output buffer.
+Release the context.
+Note: if the ctx parameter is modified by the underlying code,
+this procedure must be implemented as a macro to map ctx --> &ctx.
+Must return 1 for success and 0 for failure.
+
+int libssh2_sha512(const unsigned char *message,
+                   size_t len,
+                   unsigned char output[SHA512_DIGEST_LENGTH]);
+Computes the SHA-512 signature over the given message of length len and
+store the result into the output buffer.
+Return 1 if error, else 0.
+Note: Seems unused in current code, but defined in each crypto library backend.
+
+LIBSSH2_HMAC_SHA512
+#define as 1 if the crypto library supports HMAC-SHA-512, else 0.
+If defined as 0, the rest of this section can be omitted.
+
+int libssh2_hmac_sha512_init(libssh2_hmac_ctx *ctx,
+                             const void *key,
+                             int keylen);
+Setup the HMAC computation context ctx for an HMAC-512 computation using the
+keylen-byte key. Is invoked just after libssh2_hmac_ctx_init().
+Returns 1 for success and 0 for failure.
+
+3.5) MD5
+LIBSSH2_MD5
+#define to 1 if the crypto library supports MD5, else 0.
+If defined as 0, the rest of this section can be omitted.
+
+MD5_DIGEST_LENGTH
+#define to 16, the MD5 digest length.
+
+libssh2_md5_ctx
+Type of an MD5 computation context. Generally a struct.
+
+int libssh2_md5_init(libssh2_md5_ctx *x);
+Initializes the MD5 computation context at x.
+Returns 1 for success and 0 for failure
+
+int libssh2_md5_update(libssh2_md5_ctx ctx,
+                       const unsigned char *data,
+                       size_t len);
+Continues computation of MD5 on len bytes at data using context ctx.
+Returns 1 for success and 0 for failure.
+Note: if the ctx parameter is modified by the underlying code,
+this procedure must be implemented as a macro to map ctx --> &ctx.
+Must return 1 for success and 0 for failure.
+
+int libssh2_md5_final(libssh2_md5_ctx ctx,
+                      unsigned char output[MD5_DIGEST_LENGTH]);
+Gets the computed MD5 signature from context ctx into the output buffer.
+Release the context.
+Note: if the ctx parameter is modified by the underlying code,
+this procedure must be implemented as a macro to map ctx --> &ctx.
+Must return 1 for success and 0 for failure.
+
+int libssh2_hmac_md5_init(libssh2_hmac_ctx *ctx,
+                          const void *key,
+                          int keylen);
+Setup the HMAC computation context ctx for an HMAC-MD5 computation using the
+keylen-byte key. Is invoked just after libssh2_hmac_ctx_init().
+Returns 1 for success and 0 for failure.
+
+3.6) RIPEMD-160
+LIBSSH2_HMAC_RIPEMD
+#define as 1 if the crypto library supports HMAC-RIPEMD-160, else 0.
+If defined as 0, the rest of this section can be omitted.
+
+int libssh2_hmac_ripemd160_init(libssh2_hmac_ctx *ctx,
+                                const void *key,
+                                int keylen);
+Setup the HMAC computation context ctx for an HMAC-RIPEMD-160 computation using
+the keylen-byte key. Is invoked just after libssh2_hmac_ctx_init().
+Returns 1 for success and 0 for failure.
+
+
+4) Bidirectional key ciphers.
+
+_libssh2_cipher_ctx
+Type of a cipher computation context.
+
+_libssh2_cipher_type(name);
+Macro defining name as storage identifying a cipher algorithm for
+the crypto library interface. No trailing semicolon.
+
+int _libssh2_cipher_init(_libssh2_cipher_ctx *h,
+                         _libssh2_cipher_type(algo),
+                         unsigned char *iv,
+                         unsigned char *secret,
+                         int encrypt);
+Creates a cipher context for the given algorithm with the initialization vector
+iv and the secret key secret. Prepare for encryption or decryption depending on
+encrypt.
+Return 0 if OK, else -1.
+This procedure is already prototyped in crypto.h.
+
+int _libssh2_cipher_crypt(_libssh2_cipher_ctx *ctx,
+                          _libssh2_cipher_type(algo),
+                          int encrypt,
+                          unsigned char *block,
+                          size_t blocksize,
+                          int firstlast);
+Encrypt or decrypt in-place data at (block, blocksize) using the given
+context and/or algorithm.
+Return 0 if OK, else -1.
+This procedure is already prototyped in crypto.h.
+
+void _libssh2_cipher_dtor(_libssh2_cipher_ctx *ctx);
+Release cipher context at ctx.
+
+4.1) AES
+4.1.1) AES in CBC block mode.
+LIBSSH2_AES
+#define as 1 if the crypto library supports AES in CBC mode, else 0.
+If defined as 0, the rest of this section can be omitted.
+
+_libssh2_cipher_aes128
+AES-128-CBC algorithm identifier initializer.
+#define with constant value of type _libssh2_cipher_type().
+
+_libssh2_cipher_aes192
+AES-192-CBC algorithm identifier initializer.
+#define with constant value of type _libssh2_cipher_type().
+
+_libssh2_cipher_aes256
+AES-256-CBC algorithm identifier initializer.
+#define with constant value of type _libssh2_cipher_type().
+
+4.1.2) AES in CTR block mode.
+LIBSSH2_AES_CTR
+#define as 1 if the crypto library supports AES in CTR mode, else 0.
+If defined as 0, the rest of this section can be omitted.
+
+_libssh2_cipher_aes128ctr
+AES-128-CTR algorithm identifier initializer.
+#define with constant value of type _libssh2_cipher_type().
+
+_libssh2_cipher_aes192ctr
+AES-192-CTR algorithm identifier initializer.
+#define with constant value of type _libssh2_cipher_type().
+
+_libssh2_cipher_aes256ctr
+AES-256-CTR algorithm identifier initializer.
+#define with constant value of type _libssh2_cipher_type().
+
+4.2) Blowfish in CBC block mode.
+LIBSSH2_BLOWFISH
+#define as 1 if the crypto library supports blowfish in CBC mode, else 0.
+If defined as 0, the rest of this section can be omitted.
+
+_libssh2_cipher_blowfish
+Blowfish-CBC algorithm identifier initializer.
+#define with constant value of type _libssh2_cipher_type().
+
+4.3) RC4.
+LIBSSH2_RC4
+#define as 1 if the crypto library supports RC4 (arcfour), else 0.
+If defined as 0, the rest of this section can be omitted.
+
+_libssh2_cipher_arcfour
+RC4 algorithm identifier initializer.
+#define with constant value of type _libssh2_cipher_type().
+
+4.4) CAST5 in CBC block mode.
+LIBSSH2_CAST
+#define 1 if the crypto library supports cast, else 0.
+If defined as 0, the rest of this section can be omitted.
+
+_libssh2_cipher_cast5
+CAST5-CBC algorithm identifier initializer.
+#define with constant value of type _libssh2_cipher_type().
+
+4.5) Triple DES in CBC block mode.
+LIBSSH2_3DES
+#define as 1 if the crypto library supports TripleDES in CBC mode, else 0.
+If defined as 0, the rest of this section can be omitted.
+
+_libssh2_cipher_3des
+TripleDES-CBC algorithm identifier initializer.
+#define with constant value of type _libssh2_cipher_type().
+
+
+5) Diffie-Hellman support.
+
+LIBSSH2_DH_GEX_MINGROUP
+The minimum Diffie-Hellman group length in bits supported by the backend.
+Usually defined as 2048.
+
+LIBSSH2_DH_GEX_OPTGROUP
+The preferred Diffie-Hellman group length in bits. Usually defined as 4096.
+
+LIBSSH2_DH_GEX_MAXGROUP
+The maximum Diffie-Hellman group length in bits supported by the backend.
+Usually defined as 8192.
+
+LIBSSH2_DH_MAX_MODULUS_BITS
+The maximum Diffie-Hellman modulus bit count accepted from the server. This
+value must be supported by the backend.  Usually 16384.
+
+5.1) Diffie-Hellman context.
+_libssh2_dh_ctx
+Type of a Diffie-Hellman computation context.
+Must always be defined.
+
+5.2) Diffie-Hellman computation procedures.
+void libssh2_dh_init(_libssh2_dh_ctx *dhctx);
+Initializes the Diffie-Hellman context at `dhctx'. No effective context
+creation needed here.
+
+int libssh2_dh_key_pair(_libssh2_dh_ctx *dhctx, _libssh2_bn *public,
+                        _libssh2_bn *g, _libssh2_bn *p, int group_order,
+                        _libssh2_bn_ctx *bnctx);
+Generates a Diffie-Hellman key pair using base `g', prime `p' and the given
+`group_order'. Can use the given big number context `bnctx' if needed.
+The private key is stored as opaque in the Diffie-Hellman context `*dhctx' and
+the public key is returned in `public'.
+0 is returned upon success, else -1.
+
+int libssh2_dh_secret(_libssh2_dh_ctx *dhctx, _libssh2_bn *secret,
+                      _libssh2_bn *f, _libssh2_bn *p, _libssh2_bn_ctx * bnctx)
+Computes the Diffie-Hellman secret from the previously created context `*dhctx',
+the public key `f' from the other party and the same prime `p' used at
+context creation. The result is stored in `secret'.
+0 is returned upon success, else -1.
+
+void libssh2_dh_dtor(_libssh2_dh_ctx *dhctx)
+Destroys Diffie-Hellman context at `dhctx' and resets its storage.
+
+
+6) Big numbers.
+Positive multi-byte integers support is sufficient.
+
+6.1) Computation contexts.
+This has a real meaning if the big numbers computations need some context
+storage. If not, use a dummy type and functions (macros).
+
+_libssh2_bn_ctx
+Type of multiple precision computation context. May not be empty. if not used,
+#define as char, for example.
+
+_libssh2_bn_ctx _libssh2_bn_ctx_new(void);
+Returns a new multiple precision computation context.
+
+void _libssh2_bn_ctx_free(_libssh2_bn_ctx ctx);
+Releases a multiple precision computation context.
+
+6.2) Computation support.
+_libssh2_bn
+Type of multiple precision numbers (aka bignumbers or huge integers) for the
+crypto library.
+
+_libssh2_bn * _libssh2_bn_init(void);
+Creates a multiple precision number (preset to zero).
+
+_libssh2_bn * _libssh2_bn_init_from_bin(void);
+Create a multiple precision number intended to be set by the
+_libssh2_bn_from_bin() function (see below). Unlike _libssh2_bn_init(), this
+code may be a dummy initializer if the _libssh2_bn_from_bin() actually
+allocates the number. Returns a value of type _libssh2_bn *.
+
+void _libssh2_bn_free(_libssh2_bn *bn);
+Destroys the multiple precision number at bn.
+
+unsigned long _libssh2_bn_bytes(_libssh2_bn *bn);
+Get the number of bytes needed to store the bits of the multiple precision
+number at bn.
+
+unsigned long _libssh2_bn_bits(_libssh2_bn *bn);
+Returns the number of bits of multiple precision number at bn.
+
+int _libssh2_bn_set_word(_libssh2_bn *bn, unsigned long val);
+Sets the value of bn to val.
+Returns 1 on success, 0 otherwise.
+
+_libssh2_bn * _libssh2_bn_from_bin(_libssh2_bn *bn, int len,
+                                   const unsigned char *val);
+Converts the positive integer in big-endian form of length len at val
+into a _libssh2_bn and place it in bn. If bn is NULL, a new _libssh2_bn is
+created.
+Returns a pointer to target _libssh2_bn or NULL if error.
+
+int _libssh2_bn_to_bin(_libssh2_bn *bn, unsigned char *val);
+Converts the absolute value of bn into big-endian form and store it at
+val. val must point to _libssh2_bn_bytes(bn) bytes of memory.
+Returns the length of the big-endian number.
+
+
+7) Private key algorithms.
+Format of an RSA public key:
+a) "ssh-rsa".
+b) RSA exponent, MSB first, with high order bit = 0.
+c) RSA modulus, MSB first, with high order bit = 0.
+Each item is preceded by its 32-bit byte length, MSB first.
+
+Format of a DSA public key:
+a) "ssh-dss".
+b) p, MSB first, with high order bit = 0.
+c) q, MSB first, with high order bit = 0.
+d) g, MSB first, with high order bit = 0.
+e) pub_key, MSB first, with high order bit = 0.
+Each item is preceded by its 32-bit byte length, MSB first.
+
+Format of an ECDSA public key:
+a) "ecdsa-sha2-nistp256" or "ecdsa-sha2-nistp384" or "ecdsa-sha2-nistp521".
+b) domain: "nistp256", "nistp384" or "nistp521" matching a).
+c) raw public key ("octal").
+Each item is preceded by its 32-bit byte length, MSB first.
+
+Format of an ED25519 public key:
+a) "ssh-ed25519".
+b) raw key (32 bytes).
+Each item is preceded by its 32-bit byte length, MSB first.
+
+int _libssh2_pub_priv_keyfile(LIBSSH2_SESSION *session,
+                              unsigned char **method,
+                              size_t *method_len,
+                              unsigned char **pubkeydata,
+                              size_t *pubkeydata_len,
+                              const char *privatekey,
+                              const char *passphrase);
+Reads a private key from file privatekey and extract the public key -->
+(pubkeydata, pubkeydata_len). Store the associated method (ssh-rsa or ssh-dss)
+into (method, method_len).
+Both buffers have to be allocated using LIBSSH2_ALLOC().
+Returns 0 if OK, else -1.
+This procedure is already prototyped in crypto.h.
+
+int _libssh2_pub_priv_keyfilememory(LIBSSH2_SESSION *session,
+                                    unsigned char **method,
+                                    size_t *method_len,
+                                    unsigned char **pubkeydata,
+                                    size_t *pubkeydata_len,
+                                    const char *privatekeydata,
+                                    size_t privatekeydata_len,
+                                    const char *passphrase);
+Gets a private key from bytes at (privatekeydata, privatekeydata_len) and
+extract the public key --> (pubkeydata, pubkeydata_len). Store the associated
+method (ssh-rsa or ssh-dss) into (method, method_len).
+Both buffers have to be allocated using LIBSSH2_ALLOC().
+Returns 0 if OK, else -1.
+This procedure is already prototyped in crypto.h.
+
+
+7.1) RSA
+LIBSSH2_RSA
+#define as 1 if the crypto library supports RSA, else 0.
+If defined as 0, the rest of this section can be omitted.
+
+libssh2_rsa_ctx
+Type of an RSA computation context. Generally a struct.
+
+int _libssh2_rsa_new(libssh2_rsa_ctx **rsa,
+                     const unsigned char *edata,
+                     unsigned long elen,
+                     const unsigned char *ndata,
+                     unsigned long nlen,
+                     const unsigned char *ddata,
+                     unsigned long dlen,
+                     const unsigned char *pdata,
+                     unsigned long plen,
+                     const unsigned char *qdata,
+                     unsigned long qlen,
+                     const unsigned char *e1data,
+                     unsigned long e1len,
+                     const unsigned char *e2data,
+                     unsigned long e2len,
+                     const unsigned char *coeffdata, unsigned long coefflen);
+Creates a new context for RSA computations from key source values:
+    pdata, plen    Prime number p. Only used if private key known (ddata).
+    qdata, qlen    Prime number q. Only used if private key known (ddata).
+    ndata, nlen    Modulus n.
+    edata, elen    Exponent e.
+    ddata, dlen    e^-1 % phi(n) = private key. May be NULL if unknown.
+    e1data, e1len    dp = d % (p-1). Only used if private key known (dtata).
+    e2data, e2len    dq = d % (q-1). Only used if private key known (dtata).
+    coeffdata, coefflen    q^-1 % p. Only used if private key known.
+Returns 0 if OK.
+This procedure is already prototyped in crypto.h.
+Note: the current generic code only calls this function with e and n (public
+key parameters): unless used internally by the backend, it is not needed to
+support the private key and the other parameters here.
+
+int _libssh2_rsa_new_private(libssh2_rsa_ctx **rsa,
+                             LIBSSH2_SESSION *session,
+                             const char *filename,
+                             unsigned const char *passphrase);
+Reads an RSA private key from file filename into a new RSA context.
+Must call _libssh2_init_if_needed().
+Return 0 if OK, else -1.
+This procedure is already prototyped in crypto.h.
+
+int _libssh2_rsa_new_private_frommemory(libssh2_rsa_ctx **rsa,
+                                        LIBSSH2_SESSION *session,
+                                        const char *data,
+                                        size_t data_len,
+                                        unsigned const char *passphrase);
+Gets an RSA private key from data into a new RSA context.
+Must call _libssh2_init_if_needed().
+Return 0 if OK, else -1.
+This procedure is already prototyped in crypto.h.
+
+int _libssh2_rsa_sha1_verify(libssh2_rsa_ctx *rsa,
+                             const unsigned char *sig,
+                             size_t sig_len,
+                             const unsigned char *m, size_t m_len);
+Verify (sig, sig_len) signature of (m, m_len) using an SHA-1 hash and the
+RSA context.
+Return 0 if OK, else -1.
+This procedure is already prototyped in crypto.h.
+
+int _libssh2_rsa_sha1_signv(LIBSSH2_SESSION *session,
+                            unsigned char **sig, size_t *siglen,
+                            int count, const struct iovec vector[],
+                            libssh2_rsa_ctx *ctx);
+RSA signs the SHA-1 hash computed over the count data chunks in vector.
+Signature is stored at (sig, siglen).
+Signature buffer must be allocated from the given session.
+Returns 0 if OK, else -1.
+Note: this procedure is optional: if provided, it MUST be defined as a macro.
+
+int _libssh2_rsa_sha1_sign(LIBSSH2_SESSION *session,
+                           libssh2_rsa_ctx *rsactx,
+                           const unsigned char *hash,
+                           size_t hash_len,
+                           unsigned char **signature,
+                           size_t *signature_len);
+RSA signs the (hash, hashlen) SHA-1 hash bytes and stores the allocated
+signature at (signature, signature_len).
+Signature buffer must be allocated from the given session.
+Returns 0 if OK, else -1.
+This procedure is already prototyped in crypto.h.
+Note: this procedure is not used if macro _libssh2_rsa_sha1_signv() is defined.
+
+void _libssh2_rsa_free(libssh2_rsa_ctx *rsactx);
+Releases the RSA computation context at rsactx.
+
+LIBSSH2_RSA_SHA2
+#define as 1 if the crypto library supports RSA SHA2 256/512, else 0.
+If defined as 0, the rest of this section can be omitted.
+
+int _libssh2_rsa_sha2_sign(LIBSSH2_SESSION * session,
+                           libssh2_rsa_ctx * rsactx,
+                           const unsigned char *hash,
+                           size_t hash_len,
+                           unsigned char **signature,
+                           size_t *signature_len);
+RSA signs the (hash, hashlen) SHA-2 hash bytes based on hash length and stores
+the allocated signature at (signature, signature_len).
+Signature buffer must be allocated from the given session.
+Returns 0 if OK, else -1.
+This procedure is already prototyped in crypto.h.
+Note: this procedure is not used if both macros _libssh2_rsa_sha2_256_signv()
+and _libssh2_rsa_sha2_512_signv are defined.
+
+int _libssh2_rsa_sha2_256_signv(LIBSSH2_SESSION *session,
+                                unsigned char **sig, size_t *siglen,
+                                int count, const struct iovec vector[],
+                                libssh2_rsa_ctx *ctx);
+RSA signs the SHA-256 hash computed over the count data chunks in vector.
+Signature is stored at (sig, siglen).
+Signature buffer must be allocated from the given session.
+Returns 0 if OK, else -1.
+Note: this procedure is optional: if provided, it MUST be defined as a macro.
+
+int _libssh2_rsa_sha2_512_signv(LIBSSH2_SESSION *session,
+                                unsigned char **sig, size_t *siglen,
+                                int count, const struct iovec vector[],
+                                libssh2_rsa_ctx *ctx);
+RSA signs the SHA-512 hash computed over the count data chunks in vector.
+Signature is stored at (sig, siglen).
+Signature buffer must be allocated from the given session.
+Returns 0 if OK, else -1.
+Note: this procedure is optional: if provided, it MUST be defined as a macro.
+
+int _libssh2_rsa_sha2_verify(libssh2_rsa_ctx * rsa,
+                             size_t hash_len,
+                             const unsigned char *sig,
+                             size_t sig_len,
+                             const unsigned char *m, size_t m_len);
+Verify (sig, sig_len) signature of (m, m_len) using an SHA-2 hash based on
+hash length and the RSA context.
+Return 0 if OK, else -1.
+This procedure is already prototyped in crypto.h.
+
+7.2) DSA
+LIBSSH2_DSA
+#define as 1 if the crypto library supports DSA, else 0.
+If defined as 0, the rest of this section can be omitted.
+
+
+libssh2_dsa_ctx
+Type of a DSA computation context. Generally a struct.
+
+int _libssh2_dsa_new(libssh2_dsa_ctx **dsa,
+                     const unsigned char *pdata,
+                     unsigned long plen,
+                     const unsigned char *qdata,
+                     unsigned long qlen,
+                     const unsigned char *gdata,
+                     unsigned long glen,
+                     const unsigned char *ydata,
+                     unsigned long ylen,
+                     const unsigned char *x, unsigned long x_len);
+Creates a new context for DSA computations from source key values:
+    pdata, plen    Prime number p. Only used if private key known (ddata).
+    qdata, qlen    Prime number q. Only used if private key known (ddata).
+    gdata, glen    G number.
+    ydata, ylen    Public key.
+    xdata, xlen    Private key. Only taken if xlen non-zero.
+Returns 0 if OK.
+This procedure is already prototyped in crypto.h.
+
+int _libssh2_dsa_new_private(libssh2_dsa_ctx **dsa,
+                             LIBSSH2_SESSION *session,
+                             const char *filename,
+                             unsigned const char *passphrase);
+Gets a DSA private key from file filename into a new DSA context.
+Must call _libssh2_init_if_needed().
+Return 0 if OK, else -1.
+This procedure is already prototyped in crypto.h.
+
+int _libssh2_dsa_new_private_frommemory(libssh2_dsa_ctx **dsa,
+                                        LIBSSH2_SESSION *session,
+                                        const char *data,
+                                        size_t data_len,
+                                        unsigned const char *passphrase);
+Gets a DSA private key from the data_len-bytes data into a new DSA context.
+Must call _libssh2_init_if_needed().
+Returns 0 if OK, else -1.
+This procedure is already prototyped in crypto.h.
+
+int _libssh2_dsa_sha1_verify(libssh2_dsa_ctx *dsactx,
+                             const unsigned char *sig,
+                             const unsigned char *m, size_t m_len);
+Verify (sig, siglen) signature of (m, m_len) using an SHA-1 hash and the
+DSA context.
+Returns 0 if OK, else -1.
+This procedure is already prototyped in crypto.h.
+
+int _libssh2_dsa_sha1_sign(libssh2_dsa_ctx *dsactx,
+                           const unsigned char *hash,
+                           size_t hash_len, unsigned char *sig);
+DSA signs the (hash, hash_len) data using SHA-1 and store the signature at sig.
+Returns 0 if OK, else -1.
+This procedure is already prototyped in crypto.h.
+
+void _libssh2_dsa_free(libssh2_dsa_ctx *dsactx);
+Releases the DSA computation context at dsactx.
+
+
+7.3) ECDSA
+LIBSSH2_ECDSA
+#define as 1 if the crypto library supports ECDSA, else 0.
+If defined as 0, _libssh2_ec_key should be defined as void and the rest of
+this section can be omitted.
+
+EC_MAX_POINT_LEN
+Maximum point length. Usually defined as ((528 * 2 / 8) + 1) (= 133).
+
+libssh2_ecdsa_ctx
+Type of an ECDSA computation context. Generally a struct.
+
+_libssh2_ec_key
+Type of an elliptic curve key.
+
+libssh2_curve_type
+An enum type defining curve types. Current supported identifiers are:
+    LIBSSH2_EC_CURVE_NISTP256
+    LIBSSH2_EC_CURVE_NISTP384
+    LIBSSH2_EC_CURVE_NISTP521
+
+int _libssh2_ecdsa_create_key(_libssh2_ec_key **out_private_key,
+                              unsigned char **out_public_key_octal,
+                              size_t *out_public_key_octal_len,
+                              libssh2_curve_type curve_type);
+Create a new ECDSA private key of type curve_type and return it at
+out_private_key. If out_public_key_octal is not NULL, store an allocated
+pointer to the associated public key in "octal" form in it and its length
+at out_public_key_octal_len.
+Return 0 if OK, else -1.
+This procedure is already prototyped in crypto.h.
+
+int _libssh2_ecdsa_new_private(libssh2_ecdsa_ctx **ec_ctx,
+                               LIBSSH2_SESSION * session,
+                               const char *filename,
+                               unsigned const char *passphrase);
+Reads an ECDSA private key from PEM file filename into a new ECDSA context.
+Must call _libssh2_init_if_needed().
+Return 0 if OK, else -1.
+This procedure is already prototyped in crypto.h.
+
+int _libssh2_ecdsa_new_private_frommemory(libssh2_ecdsa_ctx ** ec_ctx,
+                                          LIBSSH2_SESSION * session,
+                                          const char *filedata,
+                                          size_t filedata_len,
+                                          unsigned const char *passphrase);
+Builds an ECDSA private key from PEM data at filedata of length filedata_len
+into a new ECDSA context stored at ec_ctx.
+Must call _libssh2_init_if_needed().
+Return 0 if OK, else -1.
+This procedure is already prototyped in crypto.h.
+
+int _libssh2_ecdsa_curve_name_with_octal_new(libssh2_ecdsa_ctx **ecdsactx,
+                                             const unsigned char *k,
+                                             size_t k_len,
+                                             libssh2_curve_type type);
+Stores at ecdsactx a new ECDSA context associated with the given curve type
+and with "octal" form public key (k, k_len).
+Return 0 if OK, else -1.
+This procedure is already prototyped in crypto.h.
+
+int _libssh2_ecdsa_new_openssh_private(libssh2_ecdsa_ctx **ec_ctx,
+                                       LIBSSH2_SESSION * session,
+                                       const char *filename,
+                                       unsigned const char *passphrase);
+Reads a PEM-encoded ECDSA private key from file filename encrypted with
+passphrase and stores at ec_ctx a new ECDSA context for it.
+Return 0 if OK, else -1.
+Currently used only from openssl backend (ought to be private).
+This procedure is already prototyped in crypto.h.
+
+int _libssh2_ecdsa_sign(LIBSSH2_SESSION *session, libssh2_ecdsa_ctx *ec_ctx,
+                        const unsigned char *hash, unsigned long hash_len,
+                        unsigned char **signature, size_t *signature_len);
+ECDSA signs the (hash, hashlen) hash bytes and stores the allocated
+signature at (signature, signature_len). Hash algorithm used should be
+SHA-256, SHA-384 or SHA-512 depending on type stored in ECDSA context at ec_ctx.
+Signature buffer must be allocated from the given session.
+Returns 0 if OK, else -1.
+This procedure is already prototyped in crypto.h.
+
+int _libssh2_ecdsa_verify(libssh2_ecdsa_ctx *ctx,
+                          const unsigned char *r, size_t r_len,
+                          const unsigned char *s, size_t s_len,
+                          const unsigned char *m, size_t m_len);
+Verify the ECDSA signature made of (r, r_len) and (s, s_len) of (m, m_len)
+using the hash algorithm configured in the ECDSA context ctx.
+Return 0 if OK, else -1.
+This procedure is already prototyped in crypto.h.
+
+libssh2_curve_type _libssh2_ecdsa_get_curve_type(libssh2_ecdsa_ctx *ecdsactx);
+Returns the curve type associated with given context.
+This procedure is already prototyped in crypto.h.
+
+int _libssh2_ecdsa_curve_type_from_name(const char *name,
+                                        libssh2_curve_type *out_type);
+Stores in out_type the curve type matching string name of the form
+"ecdsa-sha2-nistpxxx".
+Return 0 if OK, else -1.
+Currently used only from openssl backend (ought to be private).
+This procedure is already prototyped in crypto.h.
+
+void _libssh2_ecdsa_free(libssh2_ecdsa_ctx *ecdsactx);
+Releases the ECDSA computation context at ecdsactx.
+
+
+7.4) ED25519
+LIBSSH2_ED25519
+#define as 1 if the crypto library supports ED25519, else 0.
+If defined as 0, the rest of this section can be omitted.
+
+
+libssh2_ed25519_ctx
+Type of an ED25519 computation context. Generally a struct.
+
+int _libssh2_curve25519_new(LIBSSH2_SESSION *session, libssh2_ed25519_ctx **ctx,
+                            uint8_t **out_public_key,
+                            uint8_t **out_private_key);
+Generates an ED25519 key pair, stores a pointer to them at out_private_key
+and out_public_key respectively and stores at ctx a new ED25519 context for
+this key.
+Argument ctx, out_private_key and out_public key may be NULL to disable storing
+the corresponding value.
+Length of each key is LIBSSH2_ED25519_KEY_LEN (32 bytes).
+Key buffers are allocated and should be released by caller after use.
+Returns 0 if OK, else -1.
+This procedure is already prototyped in crypto.h.
+
+int _libssh2_ed25519_new_private(libssh2_ed25519_ctx **ed_ctx,
+                                 LIBSSH2_SESSION *session,
+                                 const char *filename,
+                                 const uint8_t *passphrase);
+Reads an ED25519 private key from PEM file filename into a new ED25519 context.
+Must call _libssh2_init_if_needed().
+Return 0 if OK, else -1.
+This procedure is already prototyped in crypto.h.
+
+int _libssh2_ed25519_new_public(libssh2_ed25519_ctx **ed_ctx,
+                                LIBSSH2_SESSION *session,
+                                const unsigned char *raw_pub_key,
+                                const size_t key_len);
+Stores at ed_ctx a new ED25519 key context for raw public key (raw_pub_key,
+key_len).
+Return 0 if OK, else -1.
+This procedure is already prototyped in crypto.h.
+
+int _libssh2_ed25519_new_private_frommemory(libssh2_ed25519_ctx **ed_ctx,
+                                            LIBSSH2_SESSION *session,
+                                            const char *filedata,
+                                            size_t filedata_len,
+                                            unsigned const char *passphrase);
+Builds an ED25519 private key from PEM data at filedata of length filedata_len
+into a new ED25519 context stored at ed_ctx.
+Must call _libssh2_init_if_needed().
+Return 0 if OK, else -1.
+This procedure is already prototyped in crypto.h.
+
+int _libssh2_ed25519_sign(libssh2_ed25519_ctx *ctx, LIBSSH2_SESSION *session,
+                          uint8_t **out_sig, size_t *out_sig_len,
+                          const uint8_t *message, size_t message_len);
+ED25519 signs the (message, message_len) bytes and stores the allocated
+signature at (sig, sig_len).
+Signature buffer is allocated from the given session.
+Returns 0 if OK, else -1.
+This procedure is already prototyped in crypto.h.
+
+int _libssh2_ed25519_verify(libssh2_ed25519_ctx *ctx, const uint8_t *s,
+                            size_t s_len, const uint8_t *m, size_t m_len);
+Verify (s, s_len) signature of (m, m_len) using the given ED25519 context.
+Return 0 if OK, else -1.
+This procedure is already prototyped in crypto.h.
+
+int _libssh2_curve25519_gen_k(_libssh2_bn **k,
+                              uint8_t private_key[LIBSSH2_ED25519_KEY_LEN],
+                              uint8_t srvr_public_key[LIBSSH2_ED25519_KEY_LEN]);
+Computes a shared ED25519 secret key from the given raw server public key and
+raw client public key and stores it as a big number in *k. Big number should
+have been initialized before calling this function.
+Returns 0 if OK, else -1.
+This procedure is already prototyped in crypto.h.
+
+void _libssh2_ed25519_free(libssh2_ed25519_ctx *ed25519ctx);
+Releases the ED25519 computation context at ed25519ctx.
+
+
+8) Miscellaneous
+
+void libssh2_prepare_iovec(struct iovec *vector, unsigned int len);
+Prepare len consecutive iovec slots before using them.
+In example, this is needed to preset unused structure slacks on platforms
+requiring it.
+If this is not needed, it should be defined as an empty macro.
+
+int _libssh2_random(unsigned char *buf, size_t len);
+Store len random bytes at buf.
+Returns 0 if OK, else -1.
+
+const char * _libssh2_supported_key_sign_algorithms(LIBSSH2_SESSION *session,
+                                                    unsigned char *key_method,
+                                                    size_t key_method_len);
+
+This function is for implementing key hash upgrading as defined in RFC 8332.
+
+Based on the incoming key_method value, this function will return a
+list of supported algorithms that can upgrade the original key method algorithm
+as a comma separated list, if there is no upgrade option this function should
+return NULL.

@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Copyright (C) Viktor Szakats
+# SPDX-License-Identifier: BSD-3-Clause
+
+set -e
+set -u
+
+# https://testanything.org/tap-specification.html
+
+testbin="./test_read${EXEEXT:-}"
+
+d="$(dirname "$0")"
+algos="$(tr -d $"\r" < "${d}/test_read_algos.txt")"
+
+count=1
+total="$(echo "${algos}" | wc -l | tr -d ' ')"
+
+echo "${count}..${total}"
+
+while read -r test; do
+  if [[ "${test}" = *'mac-'* ]]; then
+    if FIXTURE_TEST_MAC="${test}" "${testbin}"; then
+      res='ok'
+    else
+      res='not ok'
+    fi
+  else
+    if FIXTURE_TEST_CRYPT="${test}" "${testbin}"; then
+      res='ok'
+    else
+      res='not ok'
+    fi
+  fi
+  echo "${res} ${count} - test_read-${test}"
+  ((count++))
+done <<< "${algos}"
