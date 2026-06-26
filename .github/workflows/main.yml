@@ -32,7 +32,8 @@ jobs:
       - report-timings
       - rustfmt
       - schema
-      - spellcheck
+      # Disabled with temporary third-party libssh2-sys import.
+      # - spellcheck
       - test
       - test_gitoxide
     permissions:
