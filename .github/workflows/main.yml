@@ -23,7 +23,8 @@ jobs:
   conclusion:
     needs:
       - build_std
-      - clippy
+      # Disabled with temporary third-party libssh2-sys import.
+      # - clippy
       - msrv
       - docs
       - lint-docs
