@@ -37,6 +37,7 @@ These lints are all set to the 'warn' level by default.
 - [`unknown_lints`](#unknown_lints)
 - [`unused_dependencies`](#unused_dependencies)
 - [`unused_workspace_dependencies`](#unused_workspace_dependencies)
+- [`unused_workspace_exclude`](#unused_workspace_exclude)
 - [`unused_workspace_package_fields`](#unused_workspace_package_fields)
 
 ## Deny-by-default
@@ -539,6 +540,26 @@ They can give the false impression that these dependencies are used
 regex = "1"
 
 [dependencies]
+```
+
+
+## `unused_workspace_exclude`
+Group: `suspicious`
+
+Level: `warn`
+
+MSRV: `1.79.0`
+
+### What it does
+Checks for any entry in `[workspace.exclude]` that does not match any workspace member
+
+### Why it is bad
+They can give the false impression that a package is excluded when it is actually not present
+
+### Example
+```toml
+[workspace]
+exclude = ["does-not-exist"]
 ```
 
 

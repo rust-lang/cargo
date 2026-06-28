@@ -33,13 +33,13 @@ fn unused_exclude_missing_directory() {
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unknown lint: `unused_workspace_exclude`
- --> Cargo.toml:7:17
+[WARNING] unused exclude pattern 'crates/does-not-exist'
+ --> Cargo.toml:4:17
   |
-7 |                 unused_workspace_exclude = "warn"
-  |                 ^^^^^^^^^^^^^^^^^^^^^^^^
+4 |                 exclude = ["crates/does-not-exist"]
+  |                 ^^^^^^^
   |
-  = [NOTE] `cargo::unknown_lints` is set to `warn` by default
+  = [NOTE] `cargo::unused_workspace_exclude` is set to `warn` in `[lints]`
 [WARNING] workspace (manifest) generated 1 warning
 [CHECKING] foo v0.0.1 ([ROOT]/foo/crates/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -81,14 +81,6 @@ fn unused_exclude_directory_without_manifest() {
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unknown lint: `unused_workspace_exclude`
- --> Cargo.toml:7:17
-  |
-7 |                 unused_workspace_exclude = "warn"
-  |                 ^^^^^^^^^^^^^^^^^^^^^^^^
-  |
-  = [NOTE] `cargo::unknown_lints` is set to `warn` by default
-[WARNING] workspace (manifest) generated 1 warning
 [CHECKING] foo v0.0.1 ([ROOT]/foo/crates/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -128,13 +120,13 @@ fn unused_exclude_glob_matches_nothing() {
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unknown lint: `unused_workspace_exclude`
- --> Cargo.toml:7:17
+[WARNING] unused exclude pattern 'crates/not-*'
+ --> Cargo.toml:4:17
   |
-7 |                 unused_workspace_exclude = "warn"
-  |                 ^^^^^^^^^^^^^^^^^^^^^^^^
+4 |                 exclude = ["crates/not-*"]
+  |                 ^^^^^^^
   |
-  = [NOTE] `cargo::unknown_lints` is set to `warn` by default
+  = [NOTE] `cargo::unused_workspace_exclude` is set to `warn` in `[lints]`
 [WARNING] workspace (manifest) generated 1 warning
 [CHECKING] foo v0.0.1 ([ROOT]/foo/crates/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -188,14 +180,6 @@ fn unused_exclude_valid_no_warning() {
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unknown lint: `unused_workspace_exclude`
- --> Cargo.toml:7:17
-  |
-7 |                 unused_workspace_exclude = "warn"
-  |                 ^^^^^^^^^^^^^^^^^^^^^^^^
-  |
-  = [NOTE] `cargo::unknown_lints` is set to `warn` by default
-[WARNING] workspace (manifest) generated 1 warning
 [CHECKING] foo v0.0.1 ([ROOT]/foo/crates/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 

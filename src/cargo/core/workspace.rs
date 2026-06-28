@@ -631,6 +631,11 @@ impl<'gctx> Workspace<'gctx> {
         self.packages.packages.values()
     }
 
+    /// Returns a set of all workspace exclude patterns that actually matched a path.
+    pub fn used_exclude_patterns(&self) -> &HashSet<String> {
+        &self.used_exclude_patterns
+    }
+
     /// Returns an iterator over all packages in this workspace
     pub fn members(&self) -> impl Iterator<Item = &Package> {
         let packages = &self.packages;

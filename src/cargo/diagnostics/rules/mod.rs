@@ -16,6 +16,7 @@ mod text_direction_codepoint_in_literal;
 mod unknown_lints;
 pub mod unused_dependencies;
 mod unused_workspace_dependencies;
+mod unused_workspace_exclude;
 mod unused_workspace_package_fields;
 
 use super::LintGroup;
@@ -49,6 +50,10 @@ pub const PARSE_PASS_RULES: &[ParsePassRule<'static>] = &[
     ParsePassRule::LintWorkspace {
         rule: unused_workspace_dependencies::lint_workspace,
         lint: unused_workspace_dependencies::LINT,
+    },
+    ParsePassRule::LintWorkspace {
+        rule: unused_workspace_exclude::lint_workspace,
+        lint: unused_workspace_exclude::LINT,
     },
     ParsePassRule::LintWorkspace {
         rule: unused_workspace_package_fields::lint_workspace,
@@ -123,6 +128,7 @@ pub static LINTS: &[&crate::diagnostics::Lint] = &[
     unknown_lints::LINT,
     unused_dependencies::LINT,
     unused_workspace_dependencies::LINT,
+    unused_workspace_exclude::LINT,
     unused_workspace_package_fields::LINT,
 ];
 
