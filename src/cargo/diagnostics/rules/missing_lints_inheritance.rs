@@ -49,6 +49,14 @@ Should be written as:
 [lints]
 workspace = true
 ```
+
+or make it explicit that you don't intend to inherit by adding an empty `[lints]` table:
+
+```toml
+[workspace.lints.cargo]
+
+[lints]
+```
 "#,
     ),
 };

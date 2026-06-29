@@ -161,6 +161,14 @@ Should be written as:
 workspace = true
 ```
 
+or make it explicit that you don't intend to inherit by adding an empty `[lints]` table:
+
+```toml
+[workspace.lints.cargo]
+
+[lints]
+```
+
 
 ## `non_kebab_case_bins`
 
