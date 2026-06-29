@@ -625,7 +625,7 @@ impl TargetInfo {
             }
         }
         if !result.is_empty() {
-            if gctx.cli_unstable().no_embed_metadata
+            if !gctx.should_embed_metadata()
                 && crate_types
                     .iter()
                     .any(|ct| ct.benefits_from_no_embed_metadata())

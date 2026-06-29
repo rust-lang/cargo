@@ -22,61 +22,61 @@
 </tspan>
     <tspan x="10px" y="64px"><tspan>    -Z allow-features              Allow *only* the listed unstable features</tspan>
 </tspan>
-    <tspan x="10px" y="82px"><tspan>    -Z any-build-script-metadata   Allow any build script to specify env vars via cargo::metadata=key=value</tspan>
+    <tspan x="10px" y="82px"><tspan>    -Z embed-metadata              Avoid embedding metadata in library artifacts</tspan>
 </tspan>
-    <tspan x="10px" y="100px"><tspan>    -Z asymmetric-token            Allows authenticating with asymmetric tokens</tspan>
+    <tspan x="10px" y="100px"><tspan>    -Z any-build-script-metadata   Allow any build script to specify env vars via cargo::metadata=key=value</tspan>
 </tspan>
-    <tspan x="10px" y="118px"><tspan>    -Z avoid-dev-deps              Avoid installing dev-dependencies if possible</tspan>
+    <tspan x="10px" y="118px"><tspan>    -Z asymmetric-token            Allows authenticating with asymmetric tokens</tspan>
 </tspan>
-    <tspan x="10px" y="136px"><tspan>    -Z binary-dep-depinfo          Track changes to dependency artifacts</tspan>
+    <tspan x="10px" y="136px"><tspan>    -Z avoid-dev-deps              Avoid installing dev-dependencies if possible</tspan>
 </tspan>
-    <tspan x="10px" y="154px"><tspan>    -Z bindeps                     Allow Cargo packages to depend on bin, cdylib, and staticlib crates, and use the artifacts built by those crates</tspan>
+    <tspan x="10px" y="154px"><tspan>    -Z binary-dep-depinfo          Track changes to dependency artifacts</tspan>
 </tspan>
-    <tspan x="10px" y="172px"><tspan>    -Z build-analysis              Record and persist build metrics across runs, with commands to query past builds.</tspan>
+    <tspan x="10px" y="172px"><tspan>    -Z bindeps                     Allow Cargo packages to depend on bin, cdylib, and staticlib crates, and use the artifacts built by those crates</tspan>
 </tspan>
-    <tspan x="10px" y="190px"><tspan>    -Z build-dir-new-layout        Use the new build-dir filesystem layout</tspan>
+    <tspan x="10px" y="190px"><tspan>    -Z build-analysis              Record and persist build metrics across runs, with commands to query past builds.</tspan>
 </tspan>
-    <tspan x="10px" y="208px"><tspan>    -Z build-std                   Enable Cargo to compile the standard library itself as part of a crate graph compilation</tspan>
+    <tspan x="10px" y="208px"><tspan>    -Z build-dir-new-layout        Use the new build-dir filesystem layout</tspan>
 </tspan>
-    <tspan x="10px" y="226px"><tspan>    -Z build-std-features          Configure features enabled for the standard library itself when building the standard library</tspan>
+    <tspan x="10px" y="226px"><tspan>    -Z build-std                   Enable Cargo to compile the standard library itself as part of a crate graph compilation</tspan>
 </tspan>
-    <tspan x="10px" y="244px"><tspan>    -Z cargo-lints                 Enable the `[lints.cargo]` table</tspan>
+    <tspan x="10px" y="244px"><tspan>    -Z build-std-features          Configure features enabled for the standard library itself when building the standard library</tspan>
 </tspan>
-    <tspan x="10px" y="262px"><tspan>    -Z checksum-freshness          Use a checksum to determine if output is fresh rather than filesystem mtime</tspan>
+    <tspan x="10px" y="262px"><tspan>    -Z cargo-lints                 Enable the `[lints.cargo]` table</tspan>
 </tspan>
-    <tspan x="10px" y="280px"><tspan>    -Z codegen-backend             Enable the `codegen-backend` option in profiles in .cargo/config.toml file</tspan>
+    <tspan x="10px" y="280px"><tspan>    -Z checksum-freshness          Use a checksum to determine if output is fresh rather than filesystem mtime</tspan>
 </tspan>
-    <tspan x="10px" y="298px"><tspan>    -Z direct-minimal-versions     Resolve minimal dependency versions instead of maximum (direct dependencies only)</tspan>
+    <tspan x="10px" y="298px"><tspan>    -Z codegen-backend             Enable the `codegen-backend` option in profiles in .cargo/config.toml file</tspan>
 </tspan>
-    <tspan x="10px" y="316px"><tspan>    -Z dual-proc-macros            Build proc-macros for both the host and the target</tspan>
+    <tspan x="10px" y="316px"><tspan>    -Z direct-minimal-versions     Resolve minimal dependency versions instead of maximum (direct dependencies only)</tspan>
 </tspan>
-    <tspan x="10px" y="334px"><tspan>    -Z feature-unification         Enable new feature unification modes in workspaces</tspan>
+    <tspan x="10px" y="334px"><tspan>    -Z dual-proc-macros            Build proc-macros for both the host and the target</tspan>
 </tspan>
-    <tspan x="10px" y="352px"><tspan>    -Z fine-grain-locking          Use fine grain locking instead of locking the entire build cache</tspan>
+    <tspan x="10px" y="352px"><tspan>    -Z feature-unification         Enable new feature unification modes in workspaces</tspan>
 </tspan>
-    <tspan x="10px" y="370px"><tspan>    -Z fix-edition                 Permanently unstable edition migration helper</tspan>
+    <tspan x="10px" y="370px"><tspan>    -Z fine-grain-locking          Use fine grain locking instead of locking the entire build cache</tspan>
 </tspan>
-    <tspan x="10px" y="388px"><tspan>    -Z gc                          Track cache usage and "garbage collect" unused files</tspan>
+    <tspan x="10px" y="388px"><tspan>    -Z fix-edition                 Permanently unstable edition migration helper</tspan>
 </tspan>
-    <tspan x="10px" y="406px"><tspan>    -Z git                         Enable support for shallow git fetch operations</tspan>
+    <tspan x="10px" y="406px"><tspan>    -Z gc                          Track cache usage and "garbage collect" unused files</tspan>
 </tspan>
-    <tspan x="10px" y="424px"><tspan>    -Z gitoxide                    Use gitoxide for the given git interactions, or all of them if no argument is given</tspan>
+    <tspan x="10px" y="424px"><tspan>    -Z git                         Enable support for shallow git fetch operations</tspan>
 </tspan>
-    <tspan x="10px" y="442px"><tspan>    -Z hint-msrv                   Enable passing `package.rust-version` to rustc for lints</tspan>
+    <tspan x="10px" y="442px"><tspan>    -Z gitoxide                    Use gitoxide for the given git interactions, or all of them if no argument is given</tspan>
 </tspan>
-    <tspan x="10px" y="460px"><tspan>    -Z host-config                 Enable the `[host]` section in the .cargo/config.toml file</tspan>
+    <tspan x="10px" y="460px"><tspan>    -Z hint-msrv                   Enable passing `package.rust-version` to rustc for lints</tspan>
 </tspan>
-    <tspan x="10px" y="478px"><tspan>    -Z json-target-spec            Enable `.json` target spec files</tspan>
+    <tspan x="10px" y="478px"><tspan>    -Z host-config                 Enable the `[host]` section in the .cargo/config.toml file</tspan>
 </tspan>
-    <tspan x="10px" y="496px"><tspan>    -Z min-publish-age             Enable the `min-publish-age` configuration for dependency version age filtering</tspan>
+    <tspan x="10px" y="496px"><tspan>    -Z json-target-spec            Enable `.json` target spec files</tspan>
 </tspan>
-    <tspan x="10px" y="514px"><tspan>    -Z minimal-versions            Resolve minimal dependency versions instead of maximum</tspan>
+    <tspan x="10px" y="514px"><tspan>    -Z min-publish-age             Enable the `min-publish-age` configuration for dependency version age filtering</tspan>
 </tspan>
-    <tspan x="10px" y="532px"><tspan>    -Z msrv-policy                 Enable rust-version aware policy within cargo</tspan>
+    <tspan x="10px" y="532px"><tspan>    -Z minimal-versions            Resolve minimal dependency versions instead of maximum</tspan>
 </tspan>
-    <tspan x="10px" y="550px"><tspan>    -Z mtime-on-use                Configure Cargo to update the mtime of used files</tspan>
+    <tspan x="10px" y="550px"><tspan>    -Z msrv-policy                 Enable rust-version aware policy within cargo</tspan>
 </tspan>
-    <tspan x="10px" y="568px"><tspan>    -Z no-embed-metadata           Avoid embedding metadata in library artifacts</tspan>
+    <tspan x="10px" y="568px"><tspan>    -Z mtime-on-use                Configure Cargo to update the mtime of used files</tspan>
 </tspan>
     <tspan x="10px" y="586px"><tspan>    -Z no-index-update             Do not update the registry index even if the cache is outdated</tspan>
 </tspan>
