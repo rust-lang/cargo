@@ -46,11 +46,11 @@ These lints are all set to the 'deny' level by default.
 - [`text_direction_codepoint_in_literal`](#text_direction_codepoint_in_literal)
 
 ## `blanket_hint_mostly_unused`
-Group: `suspicious`
 
-Level: `warn`
+- Group: `suspicious`
+- Level: `warn`
+- MSRV: `1.79.0`
 
-MSRV: `1.79.0`
 
 ### What it does
 Checks if `hint-mostly-unused` being applied to all dependencies.
@@ -78,9 +78,10 @@ hint-mostly-unused = true
 
 
 ## `implicit_minimum_version_req`
-Group: `pedantic`
 
-Level: `allow`
+- Group: `pedantic`
+- Level: `allow`
+
 
 ### What it does
 
@@ -129,11 +130,11 @@ serde = "1.0.219"
 
 
 ## `missing_lints_inheritance`
-Group: `suspicious`
 
-Level: `warn`
+- Group: `suspicious`
+- Level: `warn`
+- MSRV: `1.79.0`
 
-MSRV: `1.79.0`
 
 ### What it does
 
@@ -162,11 +163,11 @@ workspace = true
 
 
 ## `non_kebab_case_bins`
-Group: `style`
 
-Level: `warn`
+- Group: `style`
+- Level: `warn`
+- MSRV: `1.79.0`
 
-MSRV: `1.79.0`
 
 ### What it does
 
@@ -200,9 +201,10 @@ name = "foo-bar"
 
 
 ## `non_kebab_case_features`
-Group: `restriction`
 
-Level: `allow`
+- Group: `restriction`
+- Level: `allow`
+
 
 ### What it does
 
@@ -232,9 +234,10 @@ foo-bar = []
 
 
 ## `non_kebab_case_packages`
-Group: `restriction`
 
-Level: `allow`
+- Group: `restriction`
+- Level: `allow`
+
 
 ### What it does
 
@@ -264,9 +267,10 @@ name = "foo-bar"
 
 
 ## `non_snake_case_features`
-Group: `restriction`
 
-Level: `allow`
+- Group: `restriction`
+- Level: `allow`
+
 
 ### What it does
 
@@ -296,9 +300,10 @@ foo_bar = []
 
 
 ## `non_snake_case_packages`
-Group: `restriction`
 
-Level: `allow`
+- Group: `restriction`
+- Level: `allow`
+
 
 ### What it does
 
@@ -328,11 +333,11 @@ name = "foo-bar"
 
 
 ## `redundant_homepage`
-Group: `style`
 
-Level: `warn`
+- Group: `style`
+- Level: `warn`
+- MSRV: `1.79.0`
 
-MSRV: `1.79.0`
 
 ### What it does
 
@@ -365,11 +370,11 @@ repository = "https://github.com/rust-lang/cargo/"
 
 
 ## `redundant_readme`
-Group: `style`
 
-Level: `warn`
+- Group: `style`
+- Level: `warn`
+- MSRV: `1.79.0`
 
-MSRV: `1.79.0`
 
 ### What it does
 
@@ -402,11 +407,11 @@ name = "foo"
 
 
 ## `text_direction_codepoint_in_comment`
-Group: `correctness`
 
-Level: `deny`
+- Group: `correctness`
+- Level: `deny`
+- MSRV: `1.79.0`
 
-MSRV: `1.79.0`
 
 ### What it does
 Detects Unicode codepoints in manifest comments that change the visual representation of text on screen
@@ -423,11 +428,11 @@ by default we deny their use.
 
 
 ## `text_direction_codepoint_in_literal`
-Group: `correctness`
 
-Level: `deny`
+- Group: `correctness`
+- Level: `deny`
+- MSRV: `1.79.0`
 
-MSRV: `1.79.0`
 
 ### What it does
 Detects Unicode codepoints in literals in manifests that change the visual representation of text on screen
@@ -444,11 +449,11 @@ by default we deny their use.
 
 
 ## `unknown_lints`
-Group: `suspicious`
 
-Level: `warn`
+- Group: `suspicious`
+- Level: `warn`
+- MSRV: `1.79.0`
 
-MSRV: `1.79.0`
 
 ### What it does
 Checks for unknown lints in the `[lints.cargo]` table
@@ -467,11 +472,11 @@ this-lint-does-not-exist = "warn"
 
 
 ## `unused_dependencies`
-Group: `style`
 
-Level: `warn`
+- Group: `style`
+- Level: `warn`
+- MSRV: `1.79.0`
 
-MSRV: `1.79.0`
 
 ### What it does
 
@@ -521,11 +526,11 @@ name = "foo"
 
 
 ## `unused_workspace_dependencies`
-Group: `suspicious`
 
-Level: `warn`
+- Group: `suspicious`
+- Level: `warn`
+- MSRV: `1.79.0`
 
-MSRV: `1.79.0`
 
 ### What it does
 Checks for any entry in `[workspace.dependencies]` that has not been inherited
@@ -543,11 +548,11 @@ regex = "1"
 
 
 ## `unused_workspace_package_fields`
-Group: `suspicious`
 
-Level: `warn`
+- Group: `suspicious`
+- Level: `warn`
+- MSRV: `1.79.0`
 
-MSRV: `1.79.0`
 
 ### What it does
 Checks for any fields in `[workspace.package]` that has not been inherited
