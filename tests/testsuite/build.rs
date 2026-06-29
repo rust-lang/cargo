@@ -6403,8 +6403,8 @@ fn renamed_uplifted_artifact_remains_unmodified_after_rebuild() {
     assert!(not_the_same, "renamed uplifted artifact must be unmodified");
 }
 
-#[cargo_test(nightly, reason = "-Zno-embed-metadata is nightly only")]
-fn no_embed_metadata() {
+#[cargo_test(nightly, reason = "-Zembed-metadata is nightly only")]
+fn embed_metadata_no() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -6431,8 +6431,8 @@ fn no_embed_metadata() {
         )
         .build();
 
-    p.cargo("build -Z no-embed-metadata")
-        .masquerade_as_nightly_cargo(&["-Z no-embed-metadata"])
+    p.cargo("build -Z embed-metadata=no")
+        .masquerade_as_nightly_cargo(&["-Z embed-metadata"])
         .arg("-v")
         .with_stderr_contains("[RUNNING] `[..]-Z embed-metadata=no[..]`")
         .with_stderr_contains(
@@ -6443,8 +6443,8 @@ fn no_embed_metadata() {
 
 // Make sure that cargo passes --extern=<dep>.rmeta even if <dep>
 // is compiled as a dylib.
-#[cargo_test(nightly, reason = "-Zno-embed-metadata is nightly only")]
-fn no_embed_metadata_dylib_dep() {
+#[cargo_test(nightly, reason = "-Zembed-metadata is nightly only")]
+fn embed_metadata_no_dylib_dep() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -6481,8 +6481,8 @@ fn no_embed_metadata_dylib_dep() {
         )
         .build();
 
-    p.cargo("build -Z no-embed-metadata")
-        .masquerade_as_nightly_cargo(&["-Z no-embed-metadata"])
+    p.cargo("build -Z embed-metadata=no")
+        .masquerade_as_nightly_cargo(&["-Z embed-metadata"])
         .arg("-v")
         .with_stderr_contains("[RUNNING] `[..]-Z embed-metadata=no[..]`")
         .with_stderr_contains(
@@ -6491,9 +6491,9 @@ fn no_embed_metadata_dylib_dep() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zno-embed-metadata is nightly only")]
-fn no_embed_metadata_invalidate() {
-    // Invalidate all deps when -Zno-embed-metadata is toggled
+#[cargo_test(nightly, reason = "-Zembed-metadata is nightly only")]
+fn embed_metadata_no_invalidate() {
+    // Invalidate all deps when -Zembed-metadata is toggled
     let p = project()
         .file(
             "Cargo.toml",
@@ -6520,8 +6520,8 @@ fn no_embed_metadata_invalidate() {
         )
         .build();
 
-    p.cargo("build -Z no-embed-metadata")
-        .masquerade_as_nightly_cargo(&["-Z no-embed-metadata"])
+    p.cargo("build -Z embed-metadata=no")
+        .masquerade_as_nightly_cargo(&["-Z embed-metadata"])
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to latest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
@@ -6531,7 +6531,7 @@ fn no_embed_metadata_invalidate() {
 "#]])
         .run();
     p.cargo("build")
-        .masquerade_as_nightly_cargo(&["-Z no-embed-metadata"])
+        .masquerade_as_nightly_cargo(&["-Z embed-metadata"])
         .with_stderr_data(str![[r#"
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.5.0 ([ROOT]/foo)

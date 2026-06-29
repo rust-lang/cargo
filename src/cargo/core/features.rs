@@ -408,6 +408,18 @@ enum Status {
     Removed,
 }
 
+/// Config for the `-Zembed-metadata` option.
+#[derive(Debug, Default, Deserialize)]
+pub enum EmbedMetadata {
+    /// Embed metadata in .rlib files, the original rustc behavior.
+    Embed,
+    /// Do not embed metadata in .rlib files.
+    DoNotEmbed,
+    /// The `-Zembed-metadata` flag wasn't set.
+    #[default]
+    Unset,
+}
+
 /// A listing of stable and unstable new syntax in Cargo.toml.
 ///
 /// This generates definitions and impls for [`Features`] and [`Feature`]
@@ -843,7 +855,8 @@ macro_rules! unstable_cli_options {
                     location.line()
                 );
                 let mut expected = vec![$(stringify!($element)),*];
-                expected[2..].sort();
+                // Skip permanently unstable fields
+                expected[3..].sort();
                 let expected = format!("{:#?}", expected);
                 let actual = format!("{:#?}", vec![$(stringify!($element)),*]);
                 snapbox::assert_data_eq!(actual, expected);
@@ -855,6 +868,7 @@ macro_rules! unstable_cli_options {
 unstable_cli_options!(
     // Permanently unstable features:
     allow_features: Option<AllowFeatures> = ("Allow *only* the listed unstable features"),
+    embed_metadata: EmbedMetadata = ("Avoid embedding metadata in library artifacts"),
     print_im_a_teapot: bool,
 
     // All other unstable features.
@@ -893,7 +907,6 @@ unstable_cli_options!(
     msrv_policy: bool = ("Enable rust-version aware policy within cargo"),
     mtime_on_use: bool = ("Configure Cargo to update the mtime of used files"),
     next_lockfile_bump: bool,
-    no_embed_metadata: bool = ("Avoid embedding metadata in library artifacts"),
     no_index_update: bool = ("Do not update the registry index even if the cache is outdated"),
     panic_abort_tests: bool = ("Enable support to run tests with -Cpanic=abort"),
     panic_immediate_abort: bool = ("Enable setting `panic = \"immediate-abort\"` in profiles"),
@@ -1288,6 +1301,15 @@ impl CliUnstable {
             }
         }
 
+        fn parse_embed_metadata(key: &str, value: Option<&str>) -> CargoResult<EmbedMetadata> {
+            match value {
+                None => Ok(EmbedMetadata::Unset),
+                Some("yes") => Ok(EmbedMetadata::Embed),
+                Some("no") => Ok(EmbedMetadata::DoNotEmbed),
+                Some(s) => bail!("flag -Z{key} expected `no` or `yes`, found: `{s}`"),
+            }
+        }
+
         /// Parse a comma-separated list
         fn parse_list(value: Option<&str>) -> Vec<String> {
             match value {
@@ -1339,6 +1361,7 @@ impl CliUnstable {
             // Permanently unstable features
             // Sorted alphabetically:
             "allow-features" => self.allow_features = Some(parse_list(v).into_iter().collect()),
+            "embed-metadata" => self.embed_metadata = parse_embed_metadata(k, v)?,
             "print-im-a-teapot" => self.print_im_a_teapot = parse_bool(k, v)?,
 
             // Stabilized features
@@ -1440,7 +1463,6 @@ impl CliUnstable {
             "msrv-policy" => self.msrv_policy = parse_empty(k, v)?,
             // can also be set in .cargo/config or with and ENV
             "mtime-on-use" => self.mtime_on_use = parse_empty(k, v)?,
-            "no-embed-metadata" => self.no_embed_metadata = parse_empty(k, v)?,
             "no-index-update" => self.no_index_update = parse_empty(k, v)?,
             "panic-abort-tests" => self.panic_abort_tests = parse_empty(k, v)?,
             "public-dependency" => self.public_dependency = parse_empty(k, v)?,

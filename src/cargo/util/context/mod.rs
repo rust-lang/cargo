@@ -134,9 +134,9 @@ mod environment;
 use environment::Env;
 
 mod schema;
-pub use schema::*;
-
 use super::auth::RegistryConfig;
+use crate::core::features::EmbedMetadata;
+pub use schema::*;
 
 /// Helper macro for creating typed access methods.
 macro_rules! get_value_typed {
@@ -1259,6 +1259,17 @@ impl GlobalContext {
 
     pub fn extra_verbose(&self) -> bool {
         self.extra_verbose
+    }
+
+    pub fn should_embed_metadata(&self) -> bool {
+        match self.cli_unstable().embed_metadata {
+            EmbedMetadata::Embed => true,
+            EmbedMetadata::DoNotEmbed => false,
+            EmbedMetadata::Unset => {
+                // TODO: detect nightly rustc instead
+                false
+            }
+        }
     }
 
     pub fn network_allowed(&self) -> bool {
