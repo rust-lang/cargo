@@ -6520,7 +6520,7 @@ fn embed_metadata_no_invalidate() {
         )
         .build();
 
-    p.cargo("build -Z embed-metadata=no")
+    p.cargo("build -Z embed-metadata=yes")
         .masquerade_as_nightly_cargo(&["-Z embed-metadata"])
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to latest compatible version

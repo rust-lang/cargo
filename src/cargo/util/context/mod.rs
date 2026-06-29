@@ -1261,13 +1261,14 @@ impl GlobalContext {
         self.extra_verbose
     }
 
-    pub fn should_embed_metadata(&self) -> bool {
+    pub fn should_embed_metadata(&self, rustc: &Rustc) -> bool {
         match self.cli_unstable().embed_metadata {
             EmbedMetadata::Embed => true,
             EmbedMetadata::DoNotEmbed => false,
             EmbedMetadata::Unset => {
-                // TODO: detect nightly rustc instead
-                false
+                // Enable -Zembed-metadata=no by default if both cargo and rustc are nightly
+                let is_nightly = self.nightly_features_allowed && rustc.is_nightly;
+                !is_nightly
             }
         }
     }

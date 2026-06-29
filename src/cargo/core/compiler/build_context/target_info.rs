@@ -579,9 +579,10 @@ impl TargetInfo {
         target_kind: &TargetKind,
         target_triple: &str,
         gctx: &GlobalContext,
+        rustc: &Rustc,
     ) -> CargoResult<(Vec<FileType>, Vec<CrateType>)> {
         match mode {
-            CompileMode::Build => self.calc_rustc_outputs(target_kind, target_triple, gctx),
+            CompileMode::Build => self.calc_rustc_outputs(target_kind, target_triple, gctx, rustc),
             CompileMode::Test => {
                 match self.file_types(&CrateType::Bin, FileFlavor::Normal, target_triple)? {
                     Some(fts) => Ok((fts, Vec::new())),
@@ -603,6 +604,7 @@ impl TargetInfo {
         target_kind: &TargetKind,
         target_triple: &str,
         gctx: &GlobalContext,
+        rustc: &Rustc,
     ) -> CargoResult<(Vec<FileType>, Vec<CrateType>)> {
         let mut unsupported = Vec::new();
         let mut result = Vec::new();
@@ -624,7 +626,7 @@ impl TargetInfo {
             }
         }
         if !result.is_empty() {
-            if !gctx.should_embed_metadata()
+            if !gctx.should_embed_metadata(rustc)
                 && crate_types
                     .iter()
                     .any(|ct| ct.benefits_from_no_embed_metadata())
