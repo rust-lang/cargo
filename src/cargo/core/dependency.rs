@@ -48,6 +48,11 @@ struct Inner {
     // The presence of this information turns a dependency into an artifact dependency.
     artifact: Option<Artifact>,
 
+    /// A package this dependency previously resolved to. This version is
+    /// tried first, but doesn't lock the dependency in case transitive
+    /// update is required.
+    preferred_package_id: Option<PackageId>,
+
     // This dependency should be used only for this platform.
     // `None` means *all platforms*.
     platform: Option<Platform>,
@@ -162,6 +167,7 @@ impl Dependency {
                 platform: None,
                 explicit_name_in_toml: None,
                 artifact: None,
+                preferred_package_id: None,
             }),
         }
     }
@@ -388,6 +394,17 @@ impl Dependency {
         let me = Arc::make_mut(&mut self.inner);
         me.req.lock_to(version);
         self
+    }
+
+    /// Prefer this package during resolution without preventing backtracking.
+    pub fn prefer_package_id(&mut self, id: PackageId) -> &mut Dependency {
+        Arc::make_mut(&mut self.inner).preferred_package_id = Some(id);
+        self
+    }
+
+    /// Returns the package that should be tried first for this dependency.
+    pub fn preferred_package_id(&self) -> Option<PackageId> {
+        self.inner.preferred_package_id
     }
 
     /// Returns `true` if this is a "locked" dependency. Basically a locked

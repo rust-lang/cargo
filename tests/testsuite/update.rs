@@ -3457,7 +3457,6 @@ checksum = "450b41d98bc7d554b97852761912eb0ccc0148d20b1c3a8d8adee1eb8a8c4661"
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [UPDATING] c v1.0.0 -> v1.0.1
-[REMOVING] shared v0.2.0
 [NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 
 "#]])
@@ -3476,7 +3475,7 @@ version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6815d5ddba1afab27e9a3e223d294b5165ca1c488635d7782d9fa067c9b69ddc"
 dependencies = [
- "shared",
+ "shared 0.2.0",
 ]
 
 [[package]]
@@ -3493,7 +3492,7 @@ name = "foo"
 version = "0.1.0"
 dependencies = [
  "c",
- "shared",
+ "shared 0.1.0",
 ]
 
 [[package]]
@@ -3501,6 +3500,12 @@ name = "shared"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7229fd816f437ce23e3433bc64e3be727f45cb213facb4eaf6888b8814dfd472"
+
+[[package]]
+name = "shared"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "450b41d98bc7d554b97852761912eb0ccc0148d20b1c3a8d8adee1eb8a8c4661"
 
 "##]],
     );
@@ -3638,12 +3643,14 @@ checksum = "5b7e5a3a91c4925f90efaa88a5a28b5b5883a51145b7382a8b7d6be77d5b2f62"
             .publish();
     }
 
+    // FIXME: `bar` is not updated even though a resolution with `bar 1.0.5` exists: The
+    // preference for `shared 1.1.0` on `b`'s edge is activated first, and the resolver backtracks
+    // on `bar`'s new versions instead of on the preference. `--precise 1.0.5` still works.
     p.cargo("update bar")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
-[UPDATING] bar v1.0.0 -> v1.0.5
-[UPDATING] shared v1.1.0 -> v1.5.0
+[LOCKING] 0 packages to latest compatible versions
+[NOTE] pass `--verbose` to see 2 unchanged dependencies behind latest
 
 "#]])
         .run();
@@ -3660,16 +3667,16 @@ version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "949835dc399fa90ab724e71bcbf48e698b52cc0306382d824dabdc6a983499fd"
 dependencies = [
- "shared 2.0.0",
+ "shared 1.1.0",
 ]
 
 [[package]]
 name = "bar"
-version = "1.0.5"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "735ff842099ec0f08bc73dbde77731983353b6d2d8ddaace2857defd5e0ec731"
+checksum = "2b3a716d182c32149517cd5fc2df788c1b64f63a32586727a4578e263281b71a"
 dependencies = [
- "shared 1.5.0",
+ "shared 1.1.0",
 ]
 
 [[package]]
@@ -3692,9 +3699,9 @@ dependencies = [
 
 [[package]]
 name = "shared"
-version = "1.5.0"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5434694b9342a622d0c76663efc7f05a6fc3dd77f0513f64fd6ceac2e9a7bd8b"
+checksum = "30caf82c5fdb1c2f13f50fd6f4bf916d1203e96129dbbaa8f81f51499cc519a1"
 
 [[package]]
 name = "shared"

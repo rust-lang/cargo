@@ -194,6 +194,18 @@ impl<'a, T: Registry> RegistryQueryerAsync<'a, T> {
 
         self.version_prefs
             .sort_summaries(&mut summaries, *first_version);
+        // Explicit first-version modes take precedence over lockfile guidance.
+        if first_version.is_none() {
+            // Put a preference, if any, in first place.
+            if let Some(preferred) = dep.preferred_package_id() {
+                if let Some(index) = summaries
+                    .iter()
+                    .position(|summary| summary.package_id() == preferred)
+                {
+                    summaries[..=index].rotate_right(1);
+                }
+            }
+        }
         Ok(Rc::new(summaries))
     }
 }
