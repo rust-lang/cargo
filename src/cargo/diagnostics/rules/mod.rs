@@ -268,6 +268,21 @@ mod tests {
     }
 
     #[test]
+    fn ensure_visible_lint_msrv() {
+        let invalid_msrvs = LINTS
+            .iter()
+            // Only relevant for default lints
+            .filter(|l| !matches!(l.primary_group.default_level, LintLevel::Allow))
+            .filter(|l| l.msrv.map(|v| v < CARGO_LINTS_MSRV).unwrap_or(false))
+            .map(|l| l.name)
+            .join(", ");
+        assert!(
+            invalid_msrvs.is_empty(),
+            "{invalid_msrvs} need `msrv` set so users can use `[lints.cargo]` to disable them"
+        );
+    }
+
+    #[test]
     fn ensure_sorted_lints() {
         // This will be printed out if the fields are not sorted.
         let location = std::panic::Location::caller();
