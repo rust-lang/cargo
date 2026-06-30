@@ -133,21 +133,22 @@ pub struct PackageRegistry<'gctx> {
 /// and is used to guide dependency resolution by altering summaries as they're
 /// queried from this source.
 ///
-/// This map can be thought of as a glorified `Vec<MySummary>` where `MySummary`
-/// has a `PackageId` for which package it represents as well as a list of
-/// `PackageId` for the resolved dependencies. The hash map is otherwise
-/// structured though for easy access throughout this registry.
+/// This map can be thought of as a glorified `Vec<LockedPackage>`. The hash map
+/// is otherwise structured for easy access throughout this registry.
 type LockedMap = HashMap<
     // The first level of key-ing done in this hash map is the source that
     // dependencies come from, identified by a `SourceId`.
     // The next level is keyed by the name of the package...
     (SourceId, InternedString),
-    // ... and the value here is a list of tuples. The first element of each
-    // tuple is a package which has the source/name used to get to this
-    // point. The second element of each tuple is the list of locked
-    // dependencies that the first element has.
-    Vec<(PackageId, Vec<PackageId>)>,
+    // ... and the value here is the list of matching locked packages.
+    Vec<LockedPackage>,
 >;
+
+struct LockedPackage {
+    id: PackageId,
+    // The locked dependencies that this package has.
+    deps: Vec<PackageId>,
+}
 
 /// Kinds of sources a [`PackageRegistry`] has loaded.
 #[derive(PartialEq, Eq, Clone, Copy)]
@@ -298,7 +299,7 @@ impl<'gctx> PackageRegistry<'gctx> {
             .locked
             .entry((id.source_id(), id.name()))
             .or_insert_with(Vec::new);
-        sub_vec.push((id, deps));
+        sub_vec.push(LockedPackage { id, deps });
     }
 
     /// Insert a `[patch]` section into this registry.
@@ -828,13 +829,13 @@ fn lock(
 ) -> Summary {
     let pair = locked
         .get(&(summary.source_id(), summary.name()))
-        .and_then(|vec| vec.iter().find(|&&(id, _)| id == summary.package_id()));
+        .and_then(|vec| vec.iter().find(|locked| locked.id == summary.package_id()));
 
     trace!("locking summary of {}", summary.package_id());
 
     // Lock the summary's ID if possible
     let summary = match pair {
-        Some((precise, _)) => summary.override_id(*precise),
+        Some(locked) => summary.override_id(locked.id),
         None => summary,
     };
     summary.map_dependencies(|dep| {
@@ -868,8 +869,9 @@ fn lock(
         //
         // Cases 1/2 are handled by `matches_id`, case 3 is handled specially,
         // and case 4 is handled by falling through to the logic below.
-        if let Some((_, locked_deps)) = pair {
-            let locked = locked_deps
+        if let Some(locked_package) = pair {
+            let locked = locked_package
+                .deps
                 .iter()
                 .find(|&&id| dependency_matches_previous_id(&dep, id, patches));
 
@@ -895,11 +897,11 @@ fn lock(
         // If anything does then we lock it to that and move on.
         let v = locked
             .get(&(dep.source_id(), dep.package_name()))
-            .and_then(|vec| vec.iter().find(|&&(id, _)| dep.matches_id(id)));
-        if let Some(&(id, _)) = v {
-            trace!("\tsecond hit on {}", id);
+            .and_then(|vec| vec.iter().find(|locked| dep.matches_id(locked.id)));
+        if let Some(locked) = v {
+            trace!("\tsecond hit on {}", locked.id);
             let mut dep = dep;
-            dep.lock_to(id);
+            dep.lock_to(locked.id);
             return dep;
         }
 
