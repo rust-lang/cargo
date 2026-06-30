@@ -1451,6 +1451,9 @@ pub trait TestEnvCommandExt: Sized {
             .env_remove("MAKEFLAGS")
             .env_remove("MFLAGS")
             .env_remove("MSYSTEM") // assume cmd.exe everywhere on windows
+            .env_remove("MANPAGER")
+            .env_remove("PAGER")
+            .env_remove("LESS")
             .env_remove("RUSTC")
             .env_remove("RUST_BACKTRACE")
             .env_remove("RUSTC_WORKSPACE_WRAPPER")
