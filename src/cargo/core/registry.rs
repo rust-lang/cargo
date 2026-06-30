@@ -869,30 +869,9 @@ fn lock(
         // Cases 1/2 are handled by `matches_id`, case 3 is handled specially,
         // and case 4 is handled by falling through to the logic below.
         if let Some((_, locked_deps)) = pair {
-            let locked = locked_deps.iter().find(|&&id| {
-                // If the dependency matches the package id exactly then we've
-                // found a match, this is the id the dependency was previously
-                // locked to.
-                if dep.matches_id(id) {
-                    return true;
-                }
-
-                // If the name/version doesn't match, then we definitely don't
-                // have a match whatsoever. Otherwise we need to check
-                // `[patch]`...
-                if !dep.matches_ignoring_source(id) {
-                    return false;
-                }
-
-                // ... so here we look up the dependency url in the patches
-                // map, and we see if `id` is contained in the list of patches
-                // for that url. If it is then this lock is still valid,
-                // otherwise the lock is no longer valid.
-                match patches.get(dep.source_id().canonical_url()) {
-                    Some(list) => list.contains(&id),
-                    None => false,
-                }
-            });
+            let locked = locked_deps
+                .iter()
+                .find(|&&id| dependency_matches_previous_id(&dep, id, patches));
 
             if let Some(&locked) = locked {
                 trace!("\tfirst hit on {}", locked);
@@ -927,6 +906,28 @@ fn lock(
         trace!("\tnope, unlocked");
         dep
     })
+}
+
+fn dependency_matches_previous_id(
+    dep: &Dependency,
+    id: PackageId,
+    patches: &HashMap<CanonicalUrl, Vec<PackageId>>,
+) -> bool {
+    // If the dependency matches the package id exactly then we've found the
+    // package this dependency previously resolved to.
+    if dep.matches_id(id) {
+        return true;
+    }
+
+    // A dependency can also have resolved to a package from a different source
+    // through `[patch]`.
+    if !dep.matches_ignoring_source(id) {
+        return false;
+    }
+
+    patches
+        .get(dep.source_id().canonical_url())
+        .is_some_and(|available| available.contains(&id))
 }
 
 /// A helper for selecting the summary, or generating a helpful error message.
