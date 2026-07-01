@@ -1397,7 +1397,6 @@ fn dylib_deps_output_overwrite() {
         .masquerade_as_nightly_cargo(&["build-dir-new-layout"])
         .env("__CARGO_DEFAULT_LIB_METADATA", "1")
         .enable_mac_dsym()
-        .with_status(127)
         .with_stderr_data(
             str![[r#"
 [LOCKING] 2 packages to latest compatible versions
@@ -1407,12 +1406,6 @@ fn dylib_deps_output_overwrite() {
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] unittests src/main.rs (build-dir/debug/build/main/[HASH]/out/[..])
 [RUNNING] tests/use_both_dylibs.rs (build-dir/debug/build/main/[HASH]/out/[..])
-[..]: error while loading shared libraries: [..]
-
-Caused by:
-[..]
-  process didn't exit successfully: `[ROOT]/foo/build-dir/debug/build/main/[HASH]/out/use_both_dylibs-[HASH]` ([EXIT_STATUS]: 127)
-[NOTE] test exited abnormally; to see the full output pass --no-capture to the harness.
 
 "#]]
             .unordered(),

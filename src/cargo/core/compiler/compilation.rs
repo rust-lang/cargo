@@ -95,9 +95,9 @@ pub struct Compilation<'gctx> {
     /// Root output directory (for the local package's artifacts)
     pub root_output: HashMap<CompileKind, PathBuf>,
 
-    /// Output directory for rust dependencies.
+    /// Output directories for rust dependencies.
     /// May be for the host or for a specific target.
-    pub deps_output: HashMap<CompileKind, PathBuf>,
+    pub deps_output: HashMap<CompileKind, BTreeSet<PathBuf>>,
 
     /// The path to libstd for each target
     sysroot_target_libdir: HashMap<CompileKind, PathBuf>,
@@ -375,7 +375,7 @@ impl<'gctx> Compilation<'gctx> {
                     &self.root_output[&CompileKind::Host],
                 ));
             }
-            search_path.push(self.deps_output[&CompileKind::Host].clone());
+            search_path.extend(self.deps_output[&CompileKind::Host].clone());
         } else {
             if let Some(path) = self.root_output.get(&kind) {
                 search_path.extend(super::filter_dynamic_search_path(
@@ -384,7 +384,7 @@ impl<'gctx> Compilation<'gctx> {
                 ));
                 search_path.push(path.clone());
             }
-            search_path.push(self.deps_output[&kind].clone());
+            search_path.extend(self.deps_output[&kind].clone());
             // For build-std, we don't want to accidentally pull in any shared
             // libs from the sysroot that ships with rustc. This may not be
             // required (at least I cannot craft a situation where it
