@@ -1,6 +1,7 @@
+use std::collections::VecDeque;
 use std::path::Path;
 
-use crate::util::data_structures::IndexMap;
+use crate::util::data_structures::{HashSet, IndexMap};
 use cargo_util_schemas::manifest;
 use cargo_util_schemas::manifest::TomlPackageBuild;
 use cargo_util_terminal::report::AnnotationKind;
@@ -366,7 +367,8 @@ fn is_transitive_dep(
     seen_units: &Vec<Unit>,
     bcx: &BuildContext<'_, '_>,
 ) -> bool {
-    let mut queue = std::collections::VecDeque::new();
+    let mut queue = VecDeque::new();
+    let mut visited: HashSet<&Unit> = HashSet::default();
     for root_unit in seen_units {
         for unit_dep in &bcx.unit_graph[root_unit] {
             if root_unit.pkg.package_id() == unit_dep.unit.pkg.package_id() {
@@ -375,7 +377,9 @@ fn is_transitive_dep(
             if unit_dep.unit == *direct_dep_unit {
                 continue;
             }
-            queue.push_back(&unit_dep.unit);
+            if visited.insert(&unit_dep.unit) {
+                queue.push_back(&unit_dep.unit);
+            }
         }
     }
 
@@ -384,7 +388,9 @@ fn is_transitive_dep(
             if unit_dep.unit == *direct_dep_unit {
                 return true;
             }
-            queue.push_back(&unit_dep.unit);
+            if visited.insert(&unit_dep.unit) {
+                queue.push_back(&unit_dep.unit);
+            }
         }
     }
 
