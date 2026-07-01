@@ -1220,6 +1220,121 @@ CARGO_BIN_FILE_BAR_bar=[ROOT]/foo/build-dir/debug/deps/artifact/bar-[HASH]/bin/b
 "#]]);
 }
 
+/// Verify multiple dylibs are properly added to the search path.
+/// Regression test for https://github.com/rust-lang/rust/issues/158526
+#[cargo_test]
+fn dylib_deps_output() {
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [build]
+            target-dir = "target-dir"
+            build-dir = "build-dir"
+            rustflags = ["-C", "prefer-dynamic"]
+            "#,
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                edition = "2021"
+                resolver = "2"
+
+                [dependencies]
+                bar = { path = "bar" }
+                baz = { path = "baz" }
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                use bar::bar_value;
+                use baz::baz_value;
+
+                fn main() {
+                    println!("sum = {}", bar_value() + baz_value());
+                }
+            "#,
+        )
+        .file(
+            "tests/use_both_dylibs.rs",
+            r#"
+                use bar::bar_value;
+                use baz::baz_value;
+
+                #[test]
+                fn uses_both_dylibs() {
+                    assert_eq!(bar_value() + baz_value(), 300);
+                }
+            "#,
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                edition = "2021"
+                authors = []
+
+                [lib]
+                crate-type = ["dylib"]
+            "#,
+        )
+        .file("bar/src/lib.rs", r#"pub fn bar_value() -> i32 { 100 }"#)
+        .file(
+            "baz/Cargo.toml",
+            r#"
+                [package]
+                name = "baz"
+                version = "0.1.0"
+                edition = "2021"
+                authors = []
+
+                [lib]
+                crate-type = ["dylib"]
+            "#,
+        )
+        .file("baz/src/lib.rs", r#"pub fn baz_value() -> i32 { 200 }"#)
+        .build();
+
+    p.cargo("test")
+        .env("__CARGO_DEFAULT_LIB_METADATA", "repro")
+        .enable_mac_dsym()
+        .with_stderr_data(
+            str![[r#"
+[LOCKING] 2 packages to latest compatible versions
+[COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
+[COMPILING] baz v0.1.0 ([ROOT]/foo/baz)
+[COMPILING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/main.rs (build-dir/debug/deps/[..])
+[RUNNING] tests/use_both_dylibs.rs (build-dir/debug/deps/[..])
+
+"#]]
+            .unordered(),
+        )
+        .run();
+
+    assert_exists_pattern(
+        &p.root()
+            .join(format!(
+                "build-dir/debug/deps/{DLL_PREFIX}bar-*{DLL_SUFFIX}",
+            ))
+            .to_string_lossy(),
+    );
+    assert_exists_pattern(
+        &p.root()
+            .join(format!(
+                "build-dir/debug/deps/{DLL_PREFIX}baz-*{DLL_SUFFIX}",
+            ))
+            .to_string_lossy(),
+    );
+}
+
 fn parse_workspace_manifest_path_hash(hash_dir: &PathBuf) -> PathBuf {
     // Since the hash will change between test runs simply find the first directories and assume
     // that is the hash dir. The format is a 2 char directory followed by the remaining hash in the

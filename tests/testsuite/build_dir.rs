@@ -1311,6 +1311,133 @@ CARGO_BIN_FILE_BAR_bar=[ROOT]/foo/build-dir/debug/build/bar/[HASH]/artifact/bin/
 "#]]);
 }
 
+/// Verify multiple dylibs are properly added to the search path.
+/// Regression test for https://github.com/rust-lang/rust/issues/158526
+#[cargo_test]
+fn dylib_deps_output_overwrite() {
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [build]
+            target-dir = "target-dir"
+            build-dir = "build-dir"
+            rustflags = ["-C", "prefer-dynamic"]
+            "#,
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "main"
+                version = "0.0.0"
+                edition = "2021"
+                authors = []
+                resolver = "2"
+
+                [dependencies]
+                bar = { path = "bar" }
+                baz = { path = "baz" }
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                use bar::bar_value;
+                use baz::baz_value;
+
+                fn main() {
+                    println!("sum = {}", bar_value() + baz_value());
+                }
+            "#,
+        )
+        .file(
+            "tests/use_both_dylibs.rs",
+            r#"
+                use bar::bar_value;
+                use baz::baz_value;
+
+                #[test]
+                fn uses_both_dylibs() {
+                    assert_eq!(bar_value() + baz_value(), 300);
+                }
+            "#,
+        )
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                edition = "2021"
+                authors = []
+
+                [lib]
+                crate-type = ["dylib"]
+            "#,
+        )
+        .file("bar/src/lib.rs", r#"pub fn bar_value() -> i32 { 100 }"#)
+        .file(
+            "baz/Cargo.toml",
+            r#"
+                [package]
+                name = "baz"
+                version = "0.1.0"
+                edition = "2021"
+                authors = []
+
+                [lib]
+                crate-type = ["dylib"]
+            "#,
+        )
+        .file("baz/src/lib.rs", r#"pub fn baz_value() -> i32 { 200 }"#)
+        .build();
+
+    p.cargo("test -Zbuild-dir-new-layout")
+        .masquerade_as_nightly_cargo(&["build-dir-new-layout"])
+        .env("__CARGO_DEFAULT_LIB_METADATA", "1")
+        .enable_mac_dsym()
+        .with_stderr_data(
+            str![[r#"
+[LOCKING] 2 packages to latest compatible versions
+[COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
+[COMPILING] baz v0.1.0 ([ROOT]/foo/baz)
+[COMPILING] main v0.0.0 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/main.rs (build-dir/debug/build/main/[HASH]/out/[..])
+[RUNNING] tests/use_both_dylibs.rs (build-dir/debug/build/main/[HASH]/out/[..])
+
+"#]]
+            .unordered(),
+        )
+        .run();
+
+    // Check that the dylibs are uplifted
+    assert_exists_patterns_with_base_dir(
+        &p.root().join("target-dir/debug"),
+        &[
+            &format!("{DLL_PREFIX}bar{DLL_SUFFIX}"),
+            &format!("{DLL_PREFIX}baz{DLL_SUFFIX}"),
+        ],
+    );
+
+    // Check the correctly-named (hashed) dylibs exist in per-unit out/ dirs.
+    assert_exists_pattern(
+        &p.root()
+            .join(format!(
+                "build-dir/debug/build/bar/*/out/{DLL_PREFIX}bar-*{DLL_SUFFIX}"
+            ))
+            .to_string_lossy(),
+    );
+    assert_exists_pattern(
+        &p.root()
+            .join(format!(
+                "build-dir/debug/build/baz/*/out/{DLL_PREFIX}baz-*{DLL_SUFFIX}"
+            ))
+            .to_string_lossy(),
+    );
+}
+
 /// __CARGO_DEFAULT_LIB_METADATA is internal but used by rustc bootstrap and Miri
 /// Regression test for https://github.com/rust-lang/cargo/issues/16854
 #[cargo_test]
