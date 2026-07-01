@@ -101,7 +101,7 @@ mod imp {
     type mach_msg_type_number_t = i32;
     type kern_return_t = i32;
 
-    const PROESSOR_CPU_LOAD_INFO: processor_flavor_t = 2;
+    const PROCESSOR_CPU_LOAD_INFO: processor_flavor_t = 2;
     const CPU_STATE_USER: usize = 0;
     const CPU_STATE_SYSTEM: usize = 1;
     const CPU_STATE_IDLE: usize = 2;
@@ -149,7 +149,7 @@ mod imp {
             let mut msg_type = 0;
             let err = host_processor_info(
                 mach_host_self(),
-                PROESSOR_CPU_LOAD_INFO,
+                PROCESSOR_CPU_LOAD_INFO,
                 &mut num_cpus_u,
                 &mut cpu_info,
                 &mut msg_type,

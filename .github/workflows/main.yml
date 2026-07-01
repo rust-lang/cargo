@@ -329,7 +329,7 @@ jobs:
     - name: Checkout Actions Repository
       uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
     - name: Spell Check Repo
-      uses: crate-ci/typos@f8a58b6b53f2279f71eb605f03a4ae4d10608f45  # v1.47.0
+      uses: crate-ci/typos@bee27e3a4fd1ea2111cf90ab89cd076c870fce14  # v1.48.0
 
   report-timings:
     name: Timing HTML report
