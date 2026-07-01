@@ -67,7 +67,7 @@ http-auth = { version = "0.1.10", default-features = false }
 ignore = "0.4.25"
 im-rc = "15.1.0"
 indexmap = "2.13.0"
-itertools = "0.14.0"
+itertools = "0.15.0"
 jiff = { version = "0.2.23", default-features = false, features = [ "std" ] }
 jobserver = "0.1.34"
 libc = "0.2.184"
