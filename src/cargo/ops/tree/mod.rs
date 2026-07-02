@@ -182,7 +182,7 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
         .collect();
 
     for SpecsAndResolvedFeatures {
-        specs,
+        specs: entry_specs,
         resolved_features,
     } in ws_resolve.specs_and_features
     {
@@ -190,7 +190,7 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
             ws,
             &ws_resolve.targeted_resolve,
             &resolved_features,
-            &specs,
+            &entry_specs,
             &opts.cli_features,
             &target_data,
             &requested_kinds,
@@ -198,15 +198,30 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
             opts,
         )?;
 
-        let root_specs = if opts.invert.is_empty() {
-            specs
+        let root_ids = if opts.invert.is_empty() {
+            let entry_ids = ws_resolve.targeted_resolve.specs_to_ids(&entry_specs)?;
+            let requested_ids = ws_resolve
+                .targeted_resolve
+                .specs_to_ids(&specs)?
+                .into_iter()
+                .collect::<HashSet<_>>();
+
+            // `entry_specs` can be broader than the CLI request (for example,
+            // all workspace members when `feature-unification=workspace`).
+            // Keep only the packages explicitly requested by `-p`.
+            entry_ids
+                .into_iter()
+                .filter(|id| requested_ids.contains(id))
+                .collect()
         } else {
-            opts.invert
+            let invert_specs = opts
+                .invert
                 .iter()
                 .map(|p| PackageIdSpec::parse(p))
-                .collect::<Result<Vec<PackageIdSpec>, _>>()?
+                .collect::<Result<Vec<PackageIdSpec>, _>>()?;
+
+            ws_resolve.targeted_resolve.specs_to_ids(&invert_specs)?
         };
-        let root_ids = ws_resolve.targeted_resolve.specs_to_ids(&root_specs)?;
         let root_indexes = graph.indexes_from_ids(&root_ids);
 
         let root_indexes = if opts.duplicates {
