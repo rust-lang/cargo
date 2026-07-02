@@ -1,7 +1,7 @@
 //! Code for building the graph used by `cargo tree`.
 
 use super::TreeOptions;
-use crate::core::compiler::{CompileKind, RustcTargetData};
+use crate::core::compiler::{CompileKind, CompileTarget, RustcTargetData};
 use crate::core::dependency::DepKind;
 use crate::core::resolver::Resolve;
 use crate::core::resolver::features::{CliFeatures, FeaturesFor, ResolvedFeatures};
@@ -486,25 +486,24 @@ fn add_pkg(
         let dep_pkg = graph.package_map[&dep_id];
 
         for dep in deps {
-            let dep_features_for = match dep
-                .artifact()
-                .and_then(|artifact| artifact.target())
-                .and_then(|target| target.to_resolved_compile_target(requested_kind))
-            {
-                // Dependency has a `{ …, target = <triple> }`
-                Some(target) => FeaturesFor::ArtifactDep(target),
-                // Get the information of the dependent crate from `features_for`.
-                // If a dependent crate is
-                //
-                // * specified as an artifact dep with a `target`, or
-                // * a host dep,
-                //
-                // its transitive deps, including build-deps, need to be built on that target.
-                None if features_for != FeaturesFor::default() => features_for,
-                // Dependent crate is a normal dep, then back to old rules:
-                //
-                // * normal deps, dev-deps -> inherited target
-                // * build-deps -> host
+            // Keep this in sync with `FeatureResolver::deps`: `cargo tree`
+            // looks up already-resolved features, so it must use the same key.
+            let dep_features_for = match dep.artifact().and_then(|artifact| artifact.target()) {
+                // `target = "target"` with a host requested kind is keyed as
+                // `ArtifactDep(<host triple>)`, not `HostDep`.
+                Some(artifact_target) => {
+                    match artifact_target.to_resolved_compile_kind(requested_kind) {
+                        CompileKind::Target(target) => FeaturesFor::ArtifactDep(target),
+                        CompileKind::Host => {
+                            let host = CompileTarget::new(
+                                &target_data.rustc.host,
+                                target_data.gctx.cli_unstable().json_target_spec,
+                            )
+                            .expect("host target triple is always valid");
+                            FeaturesFor::ArtifactDep(host)
+                        }
+                    }
+                }
                 None => {
                     if dep.is_build() || dep_pkg.proc_macro() {
                         FeaturesFor::HostDep
