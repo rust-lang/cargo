@@ -7,6 +7,7 @@ use crate::util::Graph;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use cargo_util_schemas::lockfile::TomlLockfileMetadata;
+use rustc_hash::FxHashSet;
 use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
@@ -20,7 +21,7 @@ pub struct Resolve {
     /// A graph, whose vertices are packages and edges are dependency specifications
     /// from `Cargo.toml`. We need a `HashSet` here because the same package
     /// might be present in both `[dependencies]` and `[build-dependencies]`.
-    graph: Graph<PackageId, HashSet<Dependency>>,
+    graph: Graph<PackageId, FxHashSet<Dependency>>,
     /// Replacements from the `[replace]` table.
     replacements: HashMap<PackageId, PackageId>,
     /// Inverted version of `replacements`.
@@ -152,7 +153,7 @@ impl ResolveVersion {
 
 impl Resolve {
     pub fn new(
-        graph: Graph<PackageId, HashSet<Dependency>>,
+        graph: Graph<PackageId, FxHashSet<Dependency>>,
         replacements: HashMap<PackageId, PackageId>,
         features: HashMap<PackageId, Vec<InternedString>>,
         checksums: HashMap<PackageId, Option<String>>,
@@ -197,7 +198,7 @@ impl Resolve {
     pub fn path_to_top<'a>(
         &'a self,
         pkg: &'a PackageId,
-    ) -> Vec<(&'a PackageId, Option<&'a HashSet<Dependency>>)> {
+    ) -> Vec<(&'a PackageId, Option<&'a FxHashSet<Dependency>>)> {
         self.graph.path_to_top(pkg)
     }
 
@@ -324,7 +325,10 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         self.graph.len()
     }
 
-    pub fn deps(&self, pkg: PackageId) -> impl Iterator<Item = (PackageId, &HashSet<Dependency>)> {
+    pub fn deps(
+        &self,
+        pkg: PackageId,
+    ) -> impl Iterator<Item = (PackageId, &FxHashSet<Dependency>)> {
         self.deps_not_replaced(pkg)
             .map(move |(id, deps)| (self.replacement(id).unwrap_or(id), deps))
     }
@@ -332,7 +336,7 @@ unable to verify that `{0}` is the same as when the lockfile was generated
     pub fn deps_not_replaced(
         &self,
         pkg: PackageId,
-    ) -> impl Iterator<Item = (PackageId, &HashSet<Dependency>)> {
+    ) -> impl Iterator<Item = (PackageId, &FxHashSet<Dependency>)> {
         self.graph.edges(&pkg).map(|(id, deps)| (*id, deps))
     }
 
@@ -404,7 +408,7 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         to: PackageId,
         to_target: &Target,
     ) -> CargoResult<(InternedString, Option<InternedString>)> {
-        let empty_set: HashSet<Dependency> = HashSet::new();
+        let empty_set: FxHashSet<Dependency> = FxHashSet::default();
         let deps = if from == to {
             &empty_set
         } else {
@@ -429,7 +433,7 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         Ok((extern_crate_name.into(), dep_name))
     }
 
-    fn dependencies_listed(&self, from: PackageId, to: PackageId) -> &HashSet<Dependency> {
+    fn dependencies_listed(&self, from: PackageId, to: PackageId) -> &FxHashSet<Dependency> {
         // We've got a dependency on `from` to `to`, but this dependency edge
         // may be affected by [replace]. If the `to` package is listed as the
         // target of a replacement (aka the key of a reverse replacement map)
