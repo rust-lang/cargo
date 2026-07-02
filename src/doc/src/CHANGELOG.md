@@ -196,6 +196,17 @@
   [#16953](https://github.com/rust-lang/cargo/pull/16953)
   [#16979](https://github.com/rust-lang/cargo/pull/16979)
 
+## Cargo 1.96.1 (2026-06-30)
+[0.97.1...0.97.2](https://github.com/rust-lang/cargo/compare/0.97.1...0.97.2)
+
+### Fixed
+
+- 🚨 [CVE-2025-15661](https://www.cve.org/CVERecord?id=CVE-2025-15661), [CVE-2026-55199](https://www.cve.org/CVERecord?id=CVE-2026-55199), and [CVE-2026-55200](https://www.cve.org/CVERecord?id=CVE-2026-55200): Fixed a critical and two high security issues in libssh2.
+  [#17140](https://github.com/rust-lang/cargo/pull/17140)
+- Fixed automatic retries for spurious HTTP errors.
+  [#17131](https://github.com/rust-lang/cargo/pull/17131)
+  [#17134](https://github.com/rust-lang/cargo/pull/17134)
+
 ## Cargo 1.96 (2026-05-28)
 [f298b8c8...rust-1.96.0](https://github.com/rust-lang/cargo/compare/f298b8c8...rust-1.96.0)
 
