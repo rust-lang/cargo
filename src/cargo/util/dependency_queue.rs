@@ -9,7 +9,7 @@
 //! some nodes may only require one of the outputs and can start before the
 //! whole node is finished.
 
-use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
+use crate::util::data_structures::{HashMap, HashSet};
 use std::hash::Hash;
 
 #[derive(Debug)]

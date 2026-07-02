@@ -1,5 +1,6 @@
+use crate::util::data_structures::HashMap;
 use futures::{FutureExt, future::LocalBoxFuture, stream::FuturesUnordered};
-use std::{collections::HashMap, hash::Hash, ops::Deref, task::Poll};
+use std::{hash::Hash, ops::Deref, task::Poll};
 
 /// A local (!Send) adapter for caching and executing an async method
 /// from a non-async context.

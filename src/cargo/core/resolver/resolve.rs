@@ -4,12 +4,11 @@ use cargo_util_schemas::manifest::RustVersion;
 use crate::core::dependency::DepKind;
 use crate::core::{Dependency, PackageId, PackageIdSpec, PackageIdSpecQuery, Summary, Target};
 use crate::util::Graph;
+use crate::util::data_structures::{HashMap, HashSet};
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use cargo_util_schemas::lockfile::TomlLockfileMetadata;
-use rustc_hash::FxHashSet;
 use std::borrow::Borrow;
-use crate::util::data_structures::{HashMap, HashSet};
 use std::fmt;
 
 /// Represents a fully-resolved package dependency graph. Each node in the graph
@@ -21,7 +20,7 @@ pub struct Resolve {
     /// A graph, whose vertices are packages and edges are dependency specifications
     /// from `Cargo.toml`. We need a `HashSet` here because the same package
     /// might be present in both `[dependencies]` and `[build-dependencies]`.
-    graph: Graph<PackageId, FxHashSet<Dependency>>,
+    graph: Graph<PackageId, HashSet<Dependency>>,
     /// Replacements from the `[replace]` table.
     replacements: HashMap<PackageId, PackageId>,
     /// Inverted version of `replacements`.
@@ -135,8 +134,8 @@ impl ResolveVersion {
                 pre: None,
                 build: None,
             }
-                .try_into()
-                .unwrap()
+            .try_into()
+            .unwrap()
         };
 
         if rust_version >= &rust(1, 83) {
@@ -153,7 +152,7 @@ impl ResolveVersion {
 
 impl Resolve {
     pub fn new(
-        graph: Graph<PackageId, FxHashSet<Dependency>>,
+        graph: Graph<PackageId, HashSet<Dependency>>,
         replacements: HashMap<PackageId, PackageId>,
         features: HashMap<PackageId, Vec<InternedString>>,
         checksums: HashMap<PackageId, Option<String>>,
@@ -198,11 +197,11 @@ impl Resolve {
     pub fn path_to_top<'a>(
         &'a self,
         pkg: &'a PackageId,
-    ) -> Vec<(&'a PackageId, Option<&'a FxHashSet<Dependency>>)> {
+    ) -> Vec<(&'a PackageId, Option<&'a HashSet<Dependency>>)> {
         self.graph.path_to_top(pkg)
     }
 
-    pub fn register_used_patches<'a>(&mut self, patches: impl Iterator<Item=&'a Summary>) {
+    pub fn register_used_patches<'a>(&mut self, patches: impl Iterator<Item = &'a Summary>) {
         for summary in patches {
             if !self.graph.contains(&summary.package_id()) {
                 self.unused_patches.push(summary.package_id())
@@ -317,7 +316,7 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         self.graph.sort()
     }
 
-    pub fn iter(&self) -> impl Iterator<Item=PackageId> + '_ {
+    pub fn iter(&self) -> impl Iterator<Item = PackageId> + '_ {
         self.graph.iter().cloned()
     }
 
@@ -325,10 +324,7 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         self.graph.len()
     }
 
-    pub fn deps(
-        &self,
-        pkg: PackageId,
-    ) -> impl Iterator<Item=(PackageId, &FxHashSet<Dependency>)> {
+    pub fn deps(&self, pkg: PackageId) -> impl Iterator<Item = (PackageId, &HashSet<Dependency>)> {
         self.deps_not_replaced(pkg)
             .map(move |(id, deps)| (self.replacement(id).unwrap_or(id), deps))
     }
@@ -336,7 +332,7 @@ unable to verify that `{0}` is the same as when the lockfile was generated
     pub fn deps_not_replaced(
         &self,
         pkg: PackageId,
-    ) -> impl Iterator<Item=(PackageId, &FxHashSet<Dependency>)> {
+    ) -> impl Iterator<Item = (PackageId, &HashSet<Dependency>)> {
         self.graph.edges(&pkg).map(|(id, deps)| (*id, deps))
     }
 
@@ -345,7 +341,7 @@ unable to verify that `{0}` is the same as when the lockfile was generated
     pub fn transitive_deps_not_replaced(
         &self,
         pkg: PackageId,
-    ) -> impl Iterator<Item=(PackageId, &Dependency)> {
+    ) -> impl Iterator<Item = (PackageId, &Dependency)> {
         self.graph.edges(&pkg).filter_map(|(id, deps)| {
             deps.iter()
                 .find(|d| d.is_transitive())
@@ -408,7 +404,7 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         to: PackageId,
         to_target: &Target,
     ) -> CargoResult<(InternedString, Option<InternedString>)> {
-        let empty_set: FxHashSet<Dependency> = FxHashSet::default();
+        let empty_set: HashSet<Dependency> = HashSet::default();
         let deps = if from == to {
             &empty_set
         } else {
@@ -433,7 +429,7 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         Ok((extern_crate_name.into(), dep_name))
     }
 
-    fn dependencies_listed(&self, from: PackageId, to: PackageId) -> &FxHashSet<Dependency> {
+    fn dependencies_listed(&self, from: PackageId, to: PackageId) -> &HashSet<Dependency> {
         // We've got a dependency on `from` to `to`, but this dependency edge
         // may be affected by [replace]. If the `to` package is listed as the
         // target of a replacement (aka the key of a reverse replacement map)

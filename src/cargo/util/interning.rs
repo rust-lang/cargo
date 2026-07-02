@@ -1,4 +1,4 @@
-use rustc_hash::FxHashSet;
+use crate::util::data_structures::HashSet;
 use serde::{Serialize, Serializer};
 use serde_untagged::UntaggedEnumVisitor;
 use std::borrow::Borrow;
@@ -16,11 +16,11 @@ use std::sync::OnceLock;
 
 pub static INTERNED_DEFAULT: InternedString = InternedString { inner: "default" };
 
-fn interned_storage() -> std::sync::MutexGuard<'static, FxHashSet<&'static str>> {
-    static STRING_CACHE: OnceLock<Mutex<FxHashSet<&'static str>>> = OnceLock::new();
+fn interned_storage() -> std::sync::MutexGuard<'static, HashSet<&'static str>> {
+    static STRING_CACHE: OnceLock<Mutex<HashSet<&'static str>>> = OnceLock::new();
     STRING_CACHE
         .get_or_init(|| {
-            let mut out: FxHashSet<&'static str> = Default::default();
+            let mut out: HashSet<&'static str> = Default::default();
             out.insert(INTERNED_DEFAULT.as_str());
             Mutex::new(out)
         })

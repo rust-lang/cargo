@@ -16,6 +16,7 @@ use crate::util::toml_mut::upgrade::upgrade_requirement;
 use crate::util::{CargoResult, VersionExt};
 use crate::util::{OptVersionReq, style};
 
+use crate::util::data_structures::{HashMap, HashSet};
 use crate::util::data_structures::{IndexMap, IndexSet};
 use anyhow::Context as _;
 use cargo_util_schemas::core::PartialVersion;
@@ -23,7 +24,7 @@ use cargo_util_terminal::Verbosity;
 use itertools::Itertools;
 use semver::{Op, Version, VersionReq};
 use std::cmp::Ordering;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::BTreeMap;
 use tracing::{debug, trace};
 
 pub type UpgradeMap = HashMap<(String, SourceId), Version>;

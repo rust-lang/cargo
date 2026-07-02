@@ -1,8 +1,9 @@
 //! dep-info files for external build system integration.
 //! See [`output_depinfo`] for more.
 
+use crate::util::data_structures::HashSet;
 use cargo_util::paths::normalize_path;
-use std::collections::{BTreeSet, HashSet};
+use std::collections::BTreeSet;
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 

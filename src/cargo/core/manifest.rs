@@ -1,5 +1,6 @@
+use crate::util::data_structures::HashMap;
 use std::borrow::Cow;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};

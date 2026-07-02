@@ -117,6 +117,7 @@
 use crate::core::gc::GcOpts;
 use crate::ops::CleanContext;
 use crate::util::cache_lock::CacheLockMode;
+use crate::util::data_structures::HashMap;
 use crate::util::interning::InternedString;
 use crate::util::sqlite::{self, Migration, basic_migration};
 use crate::util::{Filesystem, Progress, ProgressStyle};
@@ -125,7 +126,7 @@ use anyhow::{Context as _, bail};
 use cargo_util::paths;
 use cargo_util_terminal::Verbosity;
 use rusqlite::{Connection, ErrorCode, params};
-use std::collections::{HashMap, hash_map};
+use std::collections::hash_map;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 use tracing::{debug, trace};

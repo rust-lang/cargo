@@ -1,6 +1,7 @@
+use crate::util::data_structures::{HashMap, HashSet};
 use std::cell::RefCell;
-use std::collections::hash_map::{Entry, HashMap};
-use std::collections::{BTreeMap, BTreeSet, HashSet};
+use std::collections::hash_map::Entry;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
