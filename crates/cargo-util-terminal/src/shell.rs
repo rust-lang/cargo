@@ -233,6 +233,14 @@ impl Shell {
         self.print_report(report, false)
     }
 
+    /// Prints a cyan 'help' message.
+    pub fn help<T: fmt::Display>(&mut self, message: T) -> CargoResult<()> {
+        let report = &[annotate_snippets::Group::with_title(
+            annotate_snippets::Level::HELP.secondary_title(message.to_string()),
+        )];
+        self.print_report(report, false)
+    }
+
     /// Updates the verbosity of the shell.
     pub fn set_verbosity(&mut self, verbosity: Verbosity) {
         self.verbosity = verbosity;
