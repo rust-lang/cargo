@@ -231,7 +231,7 @@ impl TargetInfo {
                 )?;
 
             let mut lines = output.lines();
-            let mut map = HashMap::new();
+            let mut map = HashMap::default();
             for crate_type in KNOWN_CRATE_TYPES {
                 let out = parse_crate_type(crate_type, &process, &output, &error, &mut lines)?;
                 map.insert(crate_type.clone(), out);
@@ -969,8 +969,8 @@ impl<'gctx> RustcTargetData<'gctx> {
     ) -> CargoResult<RustcTargetData<'gctx>> {
         let gctx = ws.gctx();
         let rustc = gctx.load_global_rustc(Some(ws))?;
-        let mut target_config = HashMap::new();
-        let mut target_info = HashMap::new();
+        let mut target_config = HashMap::default();
+        let mut target_info = HashMap::default();
         let target_applies_to_host = gctx.target_applies_to_host()?;
         let host_target = CompileTarget::new(&rustc.host, gctx.cli_unstable().json_target_spec)?;
         let host_info = TargetInfo::new(gctx, requested_kinds, &rustc, CompileKind::Host)?;

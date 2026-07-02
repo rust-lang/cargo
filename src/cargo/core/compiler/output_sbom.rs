@@ -1,7 +1,8 @@
 //! cargo-sbom precursor files for external tools to create SBOM files from.
 //! See [`build_sbom_graph`] for more.
 
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use crate::util::data_structures::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 
 use cargo_util_schemas::core::PackageIdSpec;
@@ -146,7 +147,7 @@ fn build_sbom_graph<'a>(
 
     let mut queue = Vec::new();
     let mut sbom_graph: BTreeMap<&Unit, BTreeSet<(&Unit, SbomDependencyType)>> = BTreeMap::new();
-    let mut visited = HashSet::new();
+    let mut visited = HashSet::default();
 
     // Search to collect all dependencies of the root unit.
     queue.push((root, root, false));

@@ -1,6 +1,6 @@
 //! Helpers to verify a packaged `.crate` file.
 
-use std::collections::HashMap;
+use crate::util::data_structures::HashMap;
 use std::fs;
 use std::fs::File;
 use std::io::SeekFrom;
@@ -139,7 +139,7 @@ pub fn run_verify(
 /// macros trying to modify source files. Cargo disallows that.
 fn hash_all(path: &Path) -> CargoResult<HashMap<PathBuf, u64>> {
     fn wrap(path: &Path) -> CargoResult<HashMap<PathBuf, u64>> {
-        let mut result = HashMap::new();
+        let mut result = HashMap::default();
         let walker = walkdir::WalkDir::new(path).into_iter();
         for entry in walker.filter_entry(|e| !(e.depth() == 1 && e.file_name() == "target")) {
             let entry = entry?;

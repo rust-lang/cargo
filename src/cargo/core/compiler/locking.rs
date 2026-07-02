@@ -24,7 +24,7 @@ pub struct LockManager {
 impl LockManager {
     pub fn new() -> Self {
         Self {
-            locks: RwLock::new(HashMap::new()),
+            locks: RwLock::new(HashMap::default()),
         }
     }
 

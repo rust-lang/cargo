@@ -132,7 +132,7 @@ fn add_deps_for_unit(
 pub fn output_depinfo(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<()> {
     let bcx = build_runner.bcx;
     let mut deps = BTreeSet::new();
-    let mut visited = HashSet::new();
+    let mut visited = HashSet::default();
     let success = add_deps_for_unit(&mut deps, build_runner, unit, &mut visited).is_ok();
     let basedir_string;
     let basedir = match bcx.gctx.build_config()?.dep_info_basedir.clone() {

@@ -78,6 +78,7 @@ use crate::sources::RecursivePathSource;
 use crate::util::CanonicalUrl;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::context::FeatureUnification;
+use crate::util::data_structures::{HashMap, HashSet};
 use crate::util::errors::CargoResult;
 use anyhow::Context as _;
 use cargo_util::paths;
@@ -85,7 +86,6 @@ use cargo_util_schemas::core::PartialVersion;
 use cargo_util_terminal::report::Group;
 use cargo_util_terminal::report::Level;
 use std::borrow::Cow;
-use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use tracing::{debug, trace};
 
@@ -461,7 +461,7 @@ pub fn resolve_with_previous<'gctx>(
     let avoid_patch_ids = if register_patches {
         register_patch_entries(registry, ws, previous, &mut version_prefs, keep_previous)?
     } else {
-        HashSet::new()
+        HashSet::default()
     };
 
     // Refine `keep` with patches that should avoid locking.
@@ -634,7 +634,7 @@ fn register_previous_locks(
     // however, nothing else in the dependency graph depends on `log` and the
     // newer version of `serde` requires a new version of `log` it'll get pulled
     // in (as we didn't accidentally lock it to an old version).
-    let mut avoid_locking = HashSet::new();
+    let mut avoid_locking = HashSet::default();
     for node in resolve.iter() {
         if !keep(&node) {
             add_deps(resolve, node, &mut avoid_locking);
@@ -675,7 +675,7 @@ fn register_previous_locks(
     {
         let _span = tracing::span!(tracing::Level::TRACE, "poison").entered();
         let mut path_deps = ws.members().cloned().collect::<Vec<_>>();
-        let mut visited = HashSet::new();
+        let mut visited = HashSet::default();
         while let Some(member) = path_deps.pop() {
             if !visited.insert(member.package_id()) {
                 continue;
@@ -824,22 +824,22 @@ fn emit_warnings_of_unused_patches(
     const MESSAGE: &str = "was not used in the crate graph";
 
     // Patch package with the source URLs being patch
-    let mut patch_pkgid_to_urls = HashMap::new();
+    let mut patch_pkgid_to_urls = HashMap::default();
     for (url, summaries) in registry.patches().iter() {
         for summary in summaries.iter() {
             patch_pkgid_to_urls
                 .entry(summary.package_id())
-                .or_insert_with(HashSet::new)
+                .or_insert_with(HashSet::default)
                 .insert(url);
         }
     }
 
     // pkg name -> all source IDs of under the same pkg name
-    let mut source_ids_grouped_by_pkg_name = HashMap::new();
+    let mut source_ids_grouped_by_pkg_name = HashMap::default();
     for pkgid in resolve.iter() {
         source_ids_grouped_by_pkg_name
             .entry(pkgid.name())
-            .or_insert_with(HashSet::new)
+            .or_insert_with(HashSet::default)
             .insert(pkgid.source_id());
     }
 
@@ -905,7 +905,7 @@ fn register_patch_entries(
     version_prefs: &mut VersionPreferences,
     keep_previous: Keep<'_>,
 ) -> CargoResult<HashSet<PackageId>> {
-    let mut avoid_patch_ids = HashSet::new();
+    let mut avoid_patch_ids = HashSet::default();
     for (url, patches) in ws.root_patch()?.iter() {
         for patch in patches {
             version_prefs.prefer_dependency(patch.dep.clone());

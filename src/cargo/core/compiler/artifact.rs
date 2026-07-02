@@ -5,7 +5,7 @@ use crate::core::compiler::unit_graph::UnitDep;
 use crate::core::compiler::{BuildRunner, CrateType, FileFlavor, Unit};
 use crate::core::dependency::ArtifactKind;
 use crate::core::{Dependency, Target, TargetKind};
-use std::collections::{HashMap, HashSet};
+use crate::util::data_structures::{HashMap, HashSet};
 use std::ffi::OsString;
 
 /// Return all environment variables for the given unit-dependencies
@@ -15,7 +15,7 @@ pub fn get_env(
     unit: &Unit,
     dependencies: &[UnitDep],
 ) -> CargoResult<HashMap<String, OsString>> {
-    let mut env = HashMap::new();
+    let mut env = HashMap::default();
 
     // Add `CARGO_BIN_EXE_` environment variables for building tests.
     //
@@ -103,7 +103,7 @@ pub(crate) fn match_artifacts_kind_with_targets<'t, 'd>(
     targets: &'t [Target],
     parent_package: &str,
 ) -> CargoResult<HashSet<(&'d ArtifactKind, &'t Target)>> {
-    let mut out = HashSet::new();
+    let mut out = HashSet::default();
     let artifact_requirements = artifact_dep.artifact().expect("artifact present");
     for artifact_kind in artifact_requirements.kinds() {
         let mut extend = |kind, filter: &dyn Fn(&&Target) -> bool| {

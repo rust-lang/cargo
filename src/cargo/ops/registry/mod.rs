@@ -10,7 +10,7 @@ mod publish;
 mod search;
 mod yank;
 
-use std::collections::HashSet;
+use crate::util::data_structures::HashSet;
 use std::str;
 
 use anyhow::{Context as _, bail, format_err};

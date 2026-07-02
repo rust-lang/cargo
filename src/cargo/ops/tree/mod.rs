@@ -8,11 +8,11 @@ use crate::core::{Package, PackageId, PackageIdSpec, PackageIdSpecQuery, Workspa
 use crate::ops::resolve::SpecsAndResolvedFeatures;
 use crate::ops::{self, Packages};
 use crate::util::CargoResult;
+use crate::util::data_structures::{HashMap, HashSet};
 use crate::util::style;
 use crate::{drop_print, drop_println};
 use anyhow::Context as _;
 use graph::Graph;
-use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
 mod format;
@@ -265,7 +265,7 @@ fn print(
 
     // The visited deps is used to display a (*) whenever a dep has
     // already been printed (ignored with --no-dedupe).
-    let mut visited_deps = HashSet::new();
+    let mut visited_deps = HashSet::default();
 
     for (i, root_index) in roots.into_iter().enumerate() {
         if i != 0 {

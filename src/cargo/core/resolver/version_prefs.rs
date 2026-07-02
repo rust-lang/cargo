@@ -1,8 +1,8 @@
 //! This module implements support for preferring some versions of a package
 //! over other versions.
 
+use crate::util::data_structures::{HashMap, HashSet};
 use std::cmp::Ordering;
-use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 
 use cargo_util_schemas::core::PartialVersion;
@@ -54,7 +54,7 @@ impl VersionPreferences {
     pub fn prefer_dependency(&mut self, dep: Dependency) {
         self.prefer_patch_deps
             .entry(dep.package_name())
-            .or_insert_with(HashSet::new)
+            .or_insert_with(HashSet::default)
             .insert(dep);
     }
 
@@ -218,7 +218,7 @@ impl PublishAgePolicy {
             "registry.min-publish-age",
             registry.and_then(|r| r.min_publish_age),
         )?;
-        let mut per_registry = HashMap::new();
+        let mut per_registry = HashMap::default();
         if let Some(registries) =
             gctx.get::<Option<HashMap<String, RegistryConfig>>>("registries")?
         {

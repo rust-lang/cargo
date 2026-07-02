@@ -7,8 +7,8 @@ use crate::core::resolver::Resolve;
 use crate::core::resolver::features::{CliFeatures, FeaturesFor, ResolvedFeatures};
 use crate::core::{FeatureMap, FeatureValue, Package, PackageId, PackageIdSpec, Workspace};
 use crate::util::CargoResult;
+use crate::util::data_structures::{HashMap, HashSet};
 use crate::util::interning::{INTERNED_DEFAULT, InternedString};
-use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Copy, Clone)]
 pub struct NodeId {
@@ -115,7 +115,7 @@ struct Edges(HashMap<EdgeKind, Vec<Edge>>);
 
 impl Edges {
     fn new() -> Edges {
-        Edges(HashMap::new())
+        Edges(HashMap::default())
     }
 
     /// Adds an edge pointing to the given node.
@@ -168,10 +168,10 @@ impl<'a> Graph<'a> {
         Graph {
             nodes: Vec::new(),
             edges: Vec::new(),
-            index: HashMap::new(),
+            index: HashMap::default(),
             package_map,
-            cli_features: HashSet::new(),
-            dep_name_map: HashMap::new(),
+            cli_features: HashSet::default(),
+            dep_name_map: HashMap::default(),
         }
     }
 
@@ -312,7 +312,7 @@ impl<'a> Graph<'a> {
         assert!(self.dep_name_map.is_empty());
 
         // Collect a map of package name to Vec<(&Node, NodeId)>.
-        let mut packages = HashMap::new();
+        let mut packages = HashMap::default();
         for (i, node) in self.nodes.iter().enumerate() {
             if let Node::Package { package_id, .. } = node {
                 packages
@@ -429,7 +429,7 @@ fn add_pkg(
     }
     let from_index = graph.add_node(node);
     // Compute the dep name map which is later used for foo/bar feature lookups.
-    let mut dep_name_map: HashMap<InternedString, HashSet<(NodeId, bool)>> = HashMap::new();
+    let mut dep_name_map: HashMap<InternedString, HashSet<(NodeId, bool)>> = HashMap::default();
     let mut deps: Vec<_> = resolve.deps(package_id).collect();
     deps.sort_unstable_by_key(|(dep_id, _)| *dep_id);
     let show_all_targets = opts.target == super::Target::All;
@@ -620,7 +620,7 @@ fn add_cli_features(
     // add_internal_features.
 
     // Create a set of feature names requested on the command-line.
-    let mut to_add: HashSet<FeatureValue> = HashSet::new();
+    let mut to_add: HashSet<FeatureValue> = HashSet::default();
     if cli_features.all_features {
         to_add.extend(feature_map.keys().map(|feat| FeatureValue::Feature(*feat)));
     }

@@ -12,8 +12,8 @@ use crate::core::dependency::Dependency;
 use crate::core::profiles::{Profile, UnitFor};
 use crate::util::CargoResult;
 use crate::util::Unhashed;
+use crate::util::data_structures::HashMap;
 use crate::util::interning::InternedString;
-use std::collections::HashMap;
 
 /// The dependency graph of Units.
 pub type UnitGraph = HashMap<Unit, Vec<UnitDep>>;

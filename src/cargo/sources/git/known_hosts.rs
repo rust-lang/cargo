@@ -24,6 +24,7 @@
 
 use crate::CargoResult;
 use crate::util::context::{Definition, GlobalContext, Value};
+use crate::util::data_structures::HashSet;
 use crate::util::restricted_names::is_glob_pattern;
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD;
@@ -31,7 +32,6 @@ use base64::engine::general_purpose::STANDARD_NO_PAD;
 use git2::CertificateCheckStatus;
 use git2::cert::{Cert, SshHostKeyType};
 use hmac::Mac;
-use std::collections::HashSet;
 use std::fmt::{Display, Write};
 use std::path::{Path, PathBuf};
 

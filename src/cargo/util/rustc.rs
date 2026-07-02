@@ -208,8 +208,8 @@ impl Cache {
             (Some(cache_location), Ok(rustc_fingerprint)) => {
                 let empty = CacheData {
                     rustc_fingerprint,
-                    outputs: HashMap::new(),
-                    successes: HashMap::new(),
+                    outputs: HashMap::default(),
+                    successes: HashMap::default(),
                 };
                 let mut dirty = true;
                 let data = match read(&cache_location) {

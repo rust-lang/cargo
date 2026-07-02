@@ -1,7 +1,7 @@
 //! A small TCP server to handle collection of diagnostics information in a
 //! cross-platform way for the `cargo fix` command.
 
-use std::collections::HashSet;
+use crate::util::data_structures::HashSet;
 use std::io::{BufReader, Read, Write};
 use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream};
 use std::path::PathBuf;
@@ -99,7 +99,7 @@ impl<'a> DiagnosticPrinter<'a> {
         DiagnosticPrinter {
             gctx,
             workspace_wrapper,
-            dedupe: HashSet::new(),
+            dedupe: HashSet::default(),
         }
     }
 

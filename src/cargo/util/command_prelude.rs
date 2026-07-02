@@ -1332,7 +1332,7 @@ pub fn get_pkg_id_spec_candidates() -> Vec<clap_complete::CompletionCandidate> {
 
     let mut duplicate_name_candidates = vec![];
     for (name, packages) in duplicate_name_pairs {
-        let mut version_count: HashMap<&Version, usize> = HashMap::new();
+        let mut version_count: HashMap<&Version, usize> = HashMap::default();
 
         for package in packages {
             *version_count.entry(package.version()).or_insert(0) += 1;

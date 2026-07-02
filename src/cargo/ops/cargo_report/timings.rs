@@ -1,6 +1,6 @@
 //! The `cargo report timings` command.
 
-use std::collections::HashSet;
+use crate::util::data_structures::HashSet;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
@@ -152,9 +152,9 @@ where
     };
     let mut units: IndexMap<_, UnitEntry> = IndexMap::new();
 
-    let mut platform_targets = HashSet::new();
+    let mut platform_targets = HashSet::default();
 
-    let mut requested_units: HashSet<UnitIndex> = HashSet::new();
+    let mut requested_units: HashSet<UnitIndex> = HashSet::default();
 
     for msg in log {
         match msg {

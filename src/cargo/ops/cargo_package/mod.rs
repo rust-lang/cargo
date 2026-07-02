@@ -1,6 +1,6 @@
+use crate::util::data_structures::HashMap;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
-use std::collections::HashMap;
 use std::fs::File;
 use std::io::SeekFrom;
 use std::io::prelude::*;
@@ -501,7 +501,7 @@ fn build_ar_list(
     vcs_info: Option<vcs::VcsInfo>,
     include_lockfile: bool,
 ) -> CargoResult<Vec<ArchiveFile>> {
-    let mut result = HashMap::new();
+    let mut result = HashMap::default();
     let root = pkg.root();
     for src_file in &src_files {
         let rel_path = src_file.strip_prefix(&root)?;
@@ -1136,7 +1136,7 @@ impl<'a> TmpRegistry<'a> {
             gctx,
             root,
             upstream,
-            checksums: HashMap::new(),
+            checksums: HashMap::default(),
             _lock,
         };
         // If there's an old temporary registry, delete it.

@@ -10,7 +10,7 @@ use crate::core::{PackageId, PackageSet, Resolve, Workspace};
 use crate::ops::{self, Packages};
 use crate::util::errors::CargoResult;
 
-use std::collections::{HashMap, HashSet};
+use crate::util::data_structures::{HashMap, HashSet};
 use std::path::PathBuf;
 
 use super::BuildConfig;
@@ -128,7 +128,7 @@ pub fn generate_std_roots(
     target_data: &RustcTargetData<'_>,
 ) -> CargoResult<HashMap<CompileKind, Vec<Unit>>> {
     // Generate a map of Units for each kind requested.
-    let mut ret = HashMap::new();
+    let mut ret = HashMap::default();
     let (maybe_std, maybe_core): (Vec<&CompileKind>, Vec<_>) = kinds
         .iter()
         .partition(|kind| target_data.info(**kind).maybe_support_std());

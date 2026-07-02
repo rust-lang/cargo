@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use crate::util::data_structures::HashMap;
 use std::fmt;
 use std::fmt::Debug;
 

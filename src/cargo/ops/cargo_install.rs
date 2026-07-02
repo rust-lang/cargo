@@ -1,6 +1,6 @@
+use crate::util::data_structures::HashMap;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::{env, fmt, fs};
@@ -969,7 +969,7 @@ fn remove_orphaned_bins(
 ) -> CargoResult<()> {
     let filter = ops::CompileFilter::new_all_targets();
     let all_self_names = exe_names(pkg, &filter);
-    let mut to_remove: HashMap<PackageId, BTreeSet<String>> = HashMap::new();
+    let mut to_remove: HashMap<PackageId, BTreeSet<String>> = HashMap::default();
     // For each package that we stomped on.
     for other_pkg in duplicates.values().flatten() {
         // Only for packages with the same name.
