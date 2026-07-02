@@ -11,7 +11,7 @@ use crate::util::CargoResult;
 use crate::util::style;
 use crate::{drop_print, drop_println};
 use anyhow::Context as _;
-use graph::Graph;
+use graph::{Edge, Graph};
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
@@ -283,6 +283,7 @@ fn print(
             ws,
             graph,
             root_index,
+            None,
             &format,
             symbols,
             pkgs_to_prune,
@@ -303,6 +304,7 @@ fn print_node<'a>(
     ws: &Workspace<'_>,
     graph: &'a Graph<'_>,
     node_index: NodeId,
+    incoming_edge: Option<&Edge>,
     format: &Pattern,
     symbols: &Symbols,
     pkgs_to_prune: &[PackageIdSpec],
@@ -350,7 +352,21 @@ fn print_node<'a>(
     } else {
         color_print::cstr!(" <yellow,dim>(*)</>")
     };
-    drop_println!(ws.gctx(), "{}{}", format.display(graph, node_index), star);
+    let artifact = match graph.node(node_index) {
+        Node::Package { .. } => incoming_edge.and_then(|edge| edge.artifact()),
+        Node::Feature { .. } => None,
+    };
+    if let Some(artifact) = artifact {
+        drop_println!(
+            ws.gctx(),
+            "{} ({}){}",
+            format.display(graph, node_index),
+            artifact.display(),
+            star
+        );
+    } else {
+        drop_println!(ws.gctx(), "{}{}", format.display(graph, node_index), star);
+    }
 
     if !new || in_cycle {
         return Ok(());
@@ -460,6 +476,7 @@ fn print_dependencies<'a>(
             ws,
             graph,
             dependency.node(),
+            Some(dependency),
             format,
             symbols,
             pkgs_to_prune,

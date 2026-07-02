@@ -1080,6 +1080,11 @@ For each kind of dependency, these variables are supplied to the same part of th
 - For normal dependencies, these variables are supplied during the compilation of the crate, and can be accessed using the [`env!`] macro.
 - For dev-dependencies, these variables are supplied during the compilation of examples, tests, and benchmarks, and can be accessed using the [`env!`] macro.
 
+`cargo tree -Z bindeps` annotates artifact dependency edges with the requested
+artifact kinds and `target`, when present. An artifact dependency with
+`lib = true` is shown as both a normal dependency edge and an artifact
+dependency edge.
+
 [`env!`]: https://doc.rust-lang.org/std/macro.env.html
 
 ### artifact-dependencies: Examples
