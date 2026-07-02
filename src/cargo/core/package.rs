@@ -1,7 +1,7 @@
 use std::cell::OnceCell;
 use std::cell::{Cell, Ref, RefCell};
 use std::cmp::Ordering;
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::hash;
 use std::path::{Path, PathBuf};
@@ -14,6 +14,7 @@ use futures::FutureExt;
 use futures::TryStreamExt;
 use futures::stream::FuturesUnordered;
 use http::Request;
+use rustc_hash::{FxHashMap, FxHashSet};
 use semver::Version;
 use serde::Serialize;
 use tracing::debug;
@@ -285,7 +286,7 @@ impl hash::Hash for Package {
 /// This is primarily used to convert a set of `PackageId`s to `Package`s. It
 /// will download as needed, or used the cached download if available.
 pub struct PackageSet<'gctx> {
-    packages: HashMap<PackageId, OnceCell<Package>>,
+    packages: FxHashMap<PackageId, OnceCell<Package>>,
     sources: RefCell<SourceMap<'gctx>>,
     gctx: &'gctx GlobalContext,
 }
@@ -716,7 +717,7 @@ impl<'gctx> PackageSet<'gctx> {
         target_data: &RustcTargetData<'_>,
         force_all_targets: ForceAllTargets,
     ) -> CargoResult<()> {
-        let no_lib_pkgs: BTreeMap<PackageId, Vec<(&Package, &HashSet<Dependency>)>> = root_ids
+        let no_lib_pkgs: BTreeMap<PackageId, Vec<(&Package, &FxHashSet<Dependency>)>> = root_ids
             .iter()
             .map(|&root_id| {
                 let dep_pkgs_to_deps: Vec<_> = PackageSet::filter_deps(
@@ -767,7 +768,7 @@ impl<'gctx> PackageSet<'gctx> {
         requested_kinds: &'a [CompileKind],
         target_data: &'a RustcTargetData<'_>,
         force_all_targets: ForceAllTargets,
-    ) -> impl Iterator<Item = (PackageId, &'a HashSet<Dependency>)> + 'a {
+    ) -> impl Iterator<Item = (PackageId, &'a FxHashSet<Dependency>)> + 'a {
         resolve
             .deps(pkg_id)
             .filter(move |&(_id, deps)| {
