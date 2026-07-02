@@ -133,21 +133,27 @@ pub struct PackageRegistry<'gctx> {
 /// and is used to guide dependency resolution by altering summaries as they're
 /// queried from this source.
 ///
-/// This map can be thought of as a glorified `Vec<MySummary>` where `MySummary`
-/// has a `PackageId` for which package it represents as well as a list of
-/// `PackageId` for the resolved dependencies. The hash map is otherwise
-/// structured though for easy access throughout this registry.
+/// This map can be thought of as a glorified `Vec<LockedPackage>`. The hash map
+/// is otherwise structured for easy access throughout this registry.
 type LockedMap = HashMap<
     // The first level of key-ing done in this hash map is the source that
     // dependencies come from, identified by a `SourceId`.
     // The next level is keyed by the name of the package...
     (SourceId, InternedString),
-    // ... and the value here is a list of tuples. The first element of each
-    // tuple is a package which has the source/name used to get to this
-    // point. The second element of each tuple is the list of locked
-    // dependencies that the first element has.
-    Vec<(PackageId, Vec<PackageId>)>,
+    // ... and the value here is the list of matching locked packages.
+    Vec<LockedPackage>,
 >;
+
+struct LockedPackage {
+    id: PackageId,
+    // If true, lock the package itself, if false, only use the previous
+    // dependency edges as preferences.
+    lock_package: bool,
+    // Dependencies that are fully locked.
+    deps: Vec<PackageId>,
+    // Dependencies whose previous versions should be tried first.
+    preferred_deps: Vec<PackageId>,
+}
 
 /// Kinds of sources a [`PackageRegistry`] has loaded.
 #[derive(PartialEq, Eq, Clone, Copy)]
@@ -289,16 +295,30 @@ impl<'gctx> PackageRegistry<'gctx> {
 
     /// Registers one "locked package" to the registry, for guiding the
     /// dependency resolution. See [`LockedMap`] for more.
-    pub fn register_lock(&mut self, id: PackageId, deps: Vec<PackageId>) {
-        trace!("register_lock: {}", id);
+    pub fn register_lock(
+        &mut self,
+        id: PackageId,
+        lock_package: bool,
+        deps: Vec<PackageId>,
+        preferred_deps: Vec<PackageId>,
+    ) {
+        trace!("register_lock: {} (lock package: {lock_package})", id);
         for dep in deps.iter() {
             trace!("\t-> {}", dep);
+        }
+        for dep in preferred_deps.iter() {
+            trace!("\t~> {}", dep);
         }
         let sub_vec = self
             .locked
             .entry((id.source_id(), id.name()))
             .or_insert_with(Vec::new);
-        sub_vec.push((id, deps));
+        sub_vec.push(LockedPackage {
+            id,
+            lock_package,
+            deps,
+            preferred_deps,
+        });
     }
 
     /// Insert a `[patch]` section into this registry.
@@ -828,16 +848,16 @@ fn lock(
 ) -> Summary {
     let pair = locked
         .get(&(summary.source_id(), summary.name()))
-        .and_then(|vec| vec.iter().find(|&&(id, _)| id == summary.package_id()));
+        .and_then(|vec| vec.iter().find(|locked| locked.id == summary.package_id()));
 
     trace!("locking summary of {}", summary.package_id());
 
     // Lock the summary's ID if possible
     let summary = match pair {
-        Some((precise, _)) => summary.override_id(*precise),
-        None => summary,
+        Some(locked) if locked.lock_package => summary.override_id(locked.id),
+        _ => summary,
     };
-    summary.map_dependencies(|dep| {
+    summary.map_dependencies(|mut dep| {
         trace!(
             "\t{}/{}/{}",
             dep.package_name(),
@@ -868,36 +888,14 @@ fn lock(
         //
         // Cases 1/2 are handled by `matches_id`, case 3 is handled specially,
         // and case 4 is handled by falling through to the logic below.
-        if let Some((_, locked_deps)) = pair {
-            let locked = locked_deps.iter().find(|&&id| {
-                // If the dependency matches the package id exactly then we've
-                // found a match, this is the id the dependency was previously
-                // locked to.
-                if dep.matches_id(id) {
-                    return true;
-                }
-
-                // If the name/version doesn't match, then we definitely don't
-                // have a match whatsoever. Otherwise we need to check
-                // `[patch]`...
-                if !dep.matches_ignoring_source(id) {
-                    return false;
-                }
-
-                // ... so here we look up the dependency url in the patches
-                // map, and we see if `id` is contained in the list of patches
-                // for that url. If it is then this lock is still valid,
-                // otherwise the lock is no longer valid.
-                match patches.get(dep.source_id().canonical_url()) {
-                    Some(list) => list.contains(&id),
-                    None => false,
-                }
-            });
+        if let Some(locked_package) = pair {
+            let locked = locked_package
+                .deps
+                .iter()
+                .find(|&&id| dependency_matches_previous_id(&dep, id, patches));
 
             if let Some(&locked) = locked {
                 trace!("\tfirst hit on {}", locked);
-                let mut dep = dep;
-
                 // If we found a locked version where the sources match, then
                 // we can `lock_to` to get an exact lock on this dependency.
                 // Otherwise we got a lock via `[patch]` so we only lock the
@@ -909,6 +907,19 @@ fn lock(
                 }
                 return dep;
             }
+
+            // This dependency previously resolved to a package that was
+            // intentionally left unlocked. Prefer the previously locked
+            // version to avoid churn, but do not lock the version.
+            if let Some(&preferred) = locked_package
+                .preferred_deps
+                .iter()
+                .find(|&&id| dependency_matches_previous_id(&dep, id, patches))
+            {
+                trace!("\tpreferring previously unlocked dependency {}", preferred);
+                dep.prefer_package_id(preferred);
+                return dep;
+            }
         }
 
         // If this dependency did not have a locked version, then we query
@@ -916,17 +927,42 @@ fn lock(
         // If anything does then we lock it to that and move on.
         let v = locked
             .get(&(dep.source_id(), dep.package_name()))
-            .and_then(|vec| vec.iter().find(|&&(id, _)| dep.matches_id(id)));
-        if let Some(&(id, _)) = v {
-            trace!("\tsecond hit on {}", id);
+            .and_then(|vec| {
+                vec.iter()
+                    .find(|locked| locked.lock_package && dep.matches_id(locked.id))
+            });
+        if let Some(locked) = v {
+            trace!("\tsecond hit on {}", locked.id);
             let mut dep = dep;
-            dep.lock_to(id);
+            dep.lock_to(locked.id);
             return dep;
         }
 
         trace!("\tnope, unlocked");
         dep
     })
+}
+
+fn dependency_matches_previous_id(
+    dep: &Dependency,
+    id: PackageId,
+    patches: &HashMap<CanonicalUrl, Vec<PackageId>>,
+) -> bool {
+    // If the dependency matches the package id exactly then we've found the
+    // package this dependency previously resolved to.
+    if dep.matches_id(id) {
+        return true;
+    }
+
+    // A dependency can also have resolved to a package from a different source
+    // through `[patch]`.
+    if !dep.matches_ignoring_source(id) {
+        return false;
+    }
+
+    patches
+        .get(dep.source_id().canonical_url())
+        .is_some_and(|available| available.contains(&id))
 }
 
 /// A helper for selecting the summary, or generating a helpful error message.

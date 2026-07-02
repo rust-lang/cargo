@@ -192,8 +192,11 @@ impl<'a, T: Registry> RegistryQueryerAsync<'a, T> {
             }
         }
 
-        self.version_prefs
-            .sort_summaries(&mut summaries, *first_version);
+        self.version_prefs.sort_summaries(
+            &mut summaries,
+            *first_version,
+            dep.preferred_package_id(),
+        );
         Ok(Rc::new(summaries))
     }
 }

@@ -95,9 +95,11 @@ impl VersionPreferences {
     /// Note: all summaries presumed to be for the same package.
     ///
     /// Sort order:
-    /// 1. Preferred packages
-    /// 2. Most compatible [`VersionPreferences::rust_versions`]
-    /// 3. `first_version`, falling back to [`VersionPreferences::version_ordering`] when `None`
+    /// 1. `previously_resolved`, the package the dependency resolved to in the previous
+    ///    resolution, unless `first_version` is set
+    /// 2. Preferred packages
+    /// 3. Most compatible [`VersionPreferences::rust_versions`]
+    /// 4. `first_version`, falling back to [`VersionPreferences::version_ordering`] when `None`
     ///
     /// Filtering:
     /// - `publish_time`
@@ -106,6 +108,7 @@ impl VersionPreferences {
         &self,
         summaries: &mut Vec<Summary>,
         first_version: Option<VersionOrdering>,
+        previously_resolved: Option<PackageId>,
     ) {
         if let Some(max_publish_time) = self.publish_time {
             summaries.retain(|s| {
@@ -116,7 +119,22 @@ impl VersionPreferences {
                 }
             });
         }
+        // Explicit first-version modes take precedence over lockfile guidance.
+        let previously_resolved = if first_version.is_none() {
+            previously_resolved
+        } else {
+            None
+        };
         summaries.sort_unstable_by(|a, b| {
+            // The version from the previous resolution, if any, sorts first.
+            let a_previously_resolved = Some(a.package_id()) == previously_resolved;
+            let b_previously_resolved = Some(b.package_id()) == previously_resolved;
+            match (a_previously_resolved, b_previously_resolved) {
+                (true, false) => return Ordering::Less,
+                (false, true) => return Ordering::Greater,
+                _ => {}
+            }
+
             let prefer_a = self.should_prefer(&a.package_id());
             let prefer_b = self.should_prefer(&b.package_id());
             let previous_cmp = prefer_a.cmp(&prefer_b).reverse();
@@ -442,14 +460,14 @@ mod test {
         ];
 
         vp.version_ordering(VersionOrdering::MaximumVersionsFirst);
-        vp.sort_summaries(&mut summaries, None);
+        vp.sort_summaries(&mut summaries, None, None);
         assert_eq!(
             describe(&summaries),
             "foo/1.2.3, foo/1.2.4, foo/1.1.0, foo/1.0.9".to_string()
         );
 
         vp.version_ordering(VersionOrdering::MinimumVersionsFirst);
-        vp.sort_summaries(&mut summaries, None);
+        vp.sort_summaries(&mut summaries, None, None);
         assert_eq!(
             describe(&summaries),
             "foo/1.2.3, foo/1.0.9, foo/1.1.0, foo/1.2.4".to_string()
@@ -469,14 +487,14 @@ mod test {
         ];
 
         vp.version_ordering(VersionOrdering::MaximumVersionsFirst);
-        vp.sort_summaries(&mut summaries, None);
+        vp.sort_summaries(&mut summaries, None, None);
         assert_eq!(
             describe(&summaries),
             "foo/1.2.3, foo/1.2.4, foo/1.1.0, foo/1.0.9".to_string()
         );
 
         vp.version_ordering(VersionOrdering::MinimumVersionsFirst);
-        vp.sort_summaries(&mut summaries, None);
+        vp.sort_summaries(&mut summaries, None, None);
         assert_eq!(
             describe(&summaries),
             "foo/1.2.3, foo/1.0.9, foo/1.1.0, foo/1.2.4".to_string()
@@ -497,14 +515,14 @@ mod test {
         ];
 
         vp.version_ordering(VersionOrdering::MaximumVersionsFirst);
-        vp.sort_summaries(&mut summaries, None);
+        vp.sort_summaries(&mut summaries, None, None);
         assert_eq!(
             describe(&summaries),
             "foo/1.2.3, foo/1.1.0, foo/1.2.4, foo/1.0.9".to_string()
         );
 
         vp.version_ordering(VersionOrdering::MinimumVersionsFirst);
-        vp.sort_summaries(&mut summaries, None);
+        vp.sort_summaries(&mut summaries, None, None);
         assert_eq!(
             describe(&summaries),
             "foo/1.1.0, foo/1.2.3, foo/1.0.9, foo/1.2.4".to_string()
@@ -527,7 +545,7 @@ mod test {
         ];
 
         vp.version_ordering(VersionOrdering::MaximumVersionsFirst);
-        vp.sort_summaries(&mut summaries, None);
+        vp.sort_summaries(&mut summaries, None, None);
         assert_eq!(
             describe(&summaries),
             "foo/1.2.4, foo/1.2.2, foo/1.2.1, foo/1.2.0, foo/1.1.0, foo/1.0.9, foo/1.2.3"
@@ -535,7 +553,7 @@ mod test {
         );
 
         vp.version_ordering(VersionOrdering::MinimumVersionsFirst);
-        vp.sort_summaries(&mut summaries, None);
+        vp.sort_summaries(&mut summaries, None, None);
         assert_eq!(
             describe(&summaries),
             "foo/1.0.9, foo/1.1.0, foo/1.2.0, foo/1.2.1, foo/1.2.2, foo/1.2.4, foo/1.2.3"
@@ -559,7 +577,7 @@ mod test {
         ];
 
         vp.version_ordering(VersionOrdering::MaximumVersionsFirst);
-        vp.sort_summaries(&mut summaries, None);
+        vp.sort_summaries(&mut summaries, None, None);
         assert_eq!(
             describe(&summaries),
             "foo/1.2.4, foo/1.2.2, foo/1.2.0, foo/1.1.0, foo/1.0.9, foo/1.2.1, foo/1.2.3"
@@ -567,7 +585,7 @@ mod test {
         );
 
         vp.version_ordering(VersionOrdering::MinimumVersionsFirst);
-        vp.sort_summaries(&mut summaries, None);
+        vp.sort_summaries(&mut summaries, None, None);
         assert_eq!(
             describe(&summaries),
             "foo/1.0.9, foo/1.1.0, foo/1.2.0, foo/1.2.2, foo/1.2.4, foo/1.2.1, foo/1.2.3"
@@ -580,7 +598,11 @@ mod test {
         let vp = VersionPreferences::default();
         let mut summaries = vec![];
 
-        vp.sort_summaries(&mut summaries, Some(VersionOrdering::MaximumVersionsFirst));
+        vp.sort_summaries(
+            &mut summaries,
+            Some(VersionOrdering::MaximumVersionsFirst),
+            None,
+        );
         assert_eq!(summaries, vec![]);
     }
 
