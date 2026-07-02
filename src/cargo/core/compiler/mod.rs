@@ -1836,6 +1836,10 @@ fn add_dep_arg<'a, 'b: 'a>(
     }
 
     for dep in build_runner.unit_deps(unit) {
+        // Don't include build script out dir in the args to reduce rustc command bloat.
+        if dep.unit.target.is_custom_build() {
+            continue;
+        }
         add_dep_arg(unit_to_build, map, build_runner, &dep.unit);
     }
 }

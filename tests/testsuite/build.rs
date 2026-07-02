@@ -6586,12 +6586,13 @@ fn should_not_include_build_script_out_dir_path_in_rustc_args() {
     p.cargo("-Zbuild-dir-new-layout -v build")
         .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .enable_mac_dsym()
-        // Currently we pass build script out dirs.
+        // Don't pass build script `out` dirs and avoid bloating the rustc command args which can
+        // lead to problems on Windows.
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name build_script_build [..]`
 [RUNNING] `[ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/build_script_build`
-[RUNNING] `rustc --crate-name foo [..] --out-dir [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out -L dependency=[ROOT]/foo/build-dir/debug/build/foo/[HASH]/out -L dependency=[ROOT]/foo/build-dir/debug/build/foo/[HASH]/out --verbose`
+[RUNNING] `rustc --crate-name foo [..] --out-dir [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out --verbose`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
