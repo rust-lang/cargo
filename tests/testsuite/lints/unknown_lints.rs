@@ -26,6 +26,7 @@ this-lint-does-not-exist = "warn"
     p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
+[WARNING] Cargo.toml: `lints.cargo.this-lint-does-not-exist` is deprecated in favor of `lints.cargo.this_lint_does_not_exist` and will not work in a future edition
 [WARNING] unknown lint: `this-lint-does-not-exist`
   --> Cargo.toml:11:1
    |
@@ -33,7 +34,7 @@ this-lint-does-not-exist = "warn"
    | ^^^^^^^^^^^^^^^^^^^^^^^^
    |
    = [NOTE] `cargo::unknown_lints` is set to `warn` in `[lints]`
-[WARNING] `foo` (manifest) generated 1 warning
+[WARNING] `foo` (manifest) generated 2 warnings
 
 "#]])
         .run();
@@ -73,6 +74,7 @@ workspace = true
     p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
+[WARNING] Cargo.toml: `lints.cargo.this-lint-does-not-exist` is deprecated in favor of `lints.cargo.this_lint_does_not_exist` and will not work in a future edition
 [WARNING] unknown lint: `this-lint-does-not-exist`
  --> Cargo.toml:8:1
   |
@@ -80,7 +82,9 @@ workspace = true
   | ^^^^^^^^^^^^^^^^^^^^^^^^
   |
   = [NOTE] `cargo::unknown_lints` is set to `warn` in `[lints]`
-[WARNING] workspace (manifest) generated 1 warning
+[WARNING] workspace (manifest) generated 2 warnings
+[WARNING] foo/Cargo.toml: `lints.cargo.this-lint-does-not-exist` is deprecated in favor of `lints.cargo.this_lint_does_not_exist` and will not work in a future edition
+[WARNING] `foo` (manifest) generated 1 warning
 
 "#]])
         .run();
@@ -117,6 +121,7 @@ authors = []
     p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
+[WARNING] Cargo.toml: `lints.cargo.this-lint-does-not-exist` is deprecated in favor of `lints.cargo.this_lint_does_not_exist` and will not work in a future edition
 [WARNING] unknown lint: `this-lint-does-not-exist`
  --> Cargo.toml:8:1
   |
@@ -124,7 +129,7 @@ authors = []
   | ^^^^^^^^^^^^^^^^^^^^^^^^
   |
   = [NOTE] `cargo::unknown_lints` is set to `warn` in `[lints]`
-[WARNING] workspace (manifest) generated 1 warning
+[WARNING] workspace (manifest) generated 2 warnings
 [WARNING] missing `[lints]` to inherit `[workspace.lints]`
  --> foo/Cargo.toml
   = [NOTE] `cargo::missing_lints_inheritance` is set to `warn` by default

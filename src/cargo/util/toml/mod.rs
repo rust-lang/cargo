@@ -2690,7 +2690,23 @@ supported tools: {}",
         if tool == "cargo" && !gctx.cli_unstable().cargo_lints {
             warn_for_cargo_lint_feature(gctx, warnings);
         }
+        let mut seen_normalized: HashMap<String, String> = HashMap::new();
         for (name, config) in lints {
+            let normalized = name.replace('-', "_");
+            if name.contains('-') {
+                warnings.push(format!(
+                    "`lints.{tool}.{name}` is deprecated in favor of \
+                     `lints.{tool}.{normalized}` and will not work in a \
+                     future edition"
+                ));
+            }
+            if let Some(existing) = seen_normalized.get(&normalized) {
+                anyhow::bail!(
+                    "duplicate lint `{existing}` in `[lints.{tool}]`, \
+                     conflicts with `{name}`"
+                );
+            }
+            seen_normalized.insert(normalized.clone(), name.to_string());
             if let Some((prefix, suffix)) = name.split_once("::") {
                 if tool == prefix {
                     anyhow::bail!(
@@ -2772,10 +2788,11 @@ fn lints_to_rustflags(lints: &manifest::TomlLints) -> CargoResult<Vec<String>> {
                     manifest::TomlLintLevel::Allow => "--allow",
                 };
 
+                let normalized_name = name.replace('-', "_");
                 let option = if tool == "rust" {
-                    format!("{flag}={name}")
+                    format!("{flag}={normalized_name}")
                 } else {
-                    format!("{flag}={tool}::{name}")
+                    format!("{flag}={tool}::{normalized_name}")
                 };
                 (
                     config.priority(),
