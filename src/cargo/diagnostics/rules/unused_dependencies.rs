@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use crate::util::data_structures::IndexMap;
 use cargo_util_schemas::manifest;
 use cargo_util_schemas::manifest::TomlPackageBuild;
 use cargo_util_terminal::report::AnnotationKind;
@@ -7,7 +8,6 @@ use cargo_util_terminal::report::Group;
 use cargo_util_terminal::report::Level;
 use cargo_util_terminal::report::Origin;
 use cargo_util_terminal::report::Snippet;
-use indexmap::IndexMap;
 use tracing::{debug, instrument, trace};
 
 use super::STYLE;

@@ -5,6 +5,8 @@ use crate::core::resolver::{CliFeatures, ForceAllTargets, HasDevUnits};
 use crate::core::{Edition, Package, TargetKind, Workspace, profiles::Profiles};
 use crate::ops::registry::RegistryOrIndex;
 use crate::ops::{self, CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
+use crate::util::data_structures::IndexSet;
+use crate::util::data_structures::{HashMap, HashSet};
 use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::interning::InternedString;
 use crate::util::is_rustup;
@@ -23,7 +25,6 @@ use cargo_util_terminal as shell;
 use clap::builder::UnknownArgumentValueParser;
 use clap_complete::ArgValueCandidates;
 use home::cargo_home_with_cwd;
-use indexmap::IndexSet;
 use itertools::Itertools;
 use semver::Version;
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -1450,7 +1451,7 @@ pub fn get_direct_dependencies_pkg_name_candidates() -> Vec<clap_complete::Compl
         .map(|dep| dep.package_name().to_string())
         .sorted();
 
-    let mut package_names_set = IndexSet::new();
+    let mut package_names_set = IndexSet::default();
     package_names_set.extend(current_package_deps_package_names);
     package_names_set.extend(all_package_deps_package_names);
 
