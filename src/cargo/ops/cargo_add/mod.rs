@@ -20,6 +20,7 @@ use toml_edit::Item as TomlItem;
 
 use crate::CargoResult;
 use crate::GlobalContext;
+use crate::core::Edition;
 use crate::core::Feature;
 use crate::core::FeatureValue;
 use crate::core::Features;
@@ -503,7 +504,20 @@ fn resolve_dependency(
     }
 
     if let Some(Source::Workspace(_)) = dependency.source() {
-        check_invalid_ws_keys(dependency.toml_key(), arg)?;
+        check_invalid_ws_keys(dependency.toml_key(), arg, spec.manifest().edition())?;
+        if spec.manifest().edition() >= Edition::Edition2024 && arg.default_features == Some(true) {
+            let ws_dep = find_workspace_dep(
+                dependency.toml_key(),
+                ws,
+                ws.root_manifest(),
+                ws.unstable_features(),
+            )?;
+            // Only write `default-features = true` when the workspace dependency
+            // explicitly disables default features.
+            if ws_dep.default_features() == Some(false) {
+                dependency.default_features = Some(true);
+            }
+        }
     }
 
     let version_required = dependency.source().and_then(|s| s.as_registry()).is_some();
@@ -703,14 +717,16 @@ fn fuzzy_lookup(
 
 /// When { workspace = true } you cannot define other keys that configure
 /// the source of the dependency such as `version`, `registry`, `registry-index`,
-/// `path`, `git`, `branch`, `tag`, `rev`, or `package`. You can also not define
-/// `default-features`.
+/// `path`, `git`, `branch`, `tag`, `rev`, or `package`.
+/// Prior to Edition 2024 (RFC 3945) `default-features` was also forbidden;
+/// from Edition 2024 onwards a package-level `default-features` overrides the
+/// workspace value, so it is allowed.
 ///
 /// Only `default-features`, `registry` and `rename` need to be checked
 ///  for currently. This is because `git` and its associated keys, `path`, and
 /// `version`  should all bee checked before this is called. `rename` is checked
 /// for as it turns into `package`
-fn check_invalid_ws_keys(toml_key: &str, arg: &DepOp) -> CargoResult<()> {
+fn check_invalid_ws_keys(toml_key: &str, arg: &DepOp, edition: Edition) -> CargoResult<()> {
     fn err_msg(toml_key: &str, flag: &str, field: &str) -> String {
         format!(
             "cannot override workspace dependency with `{flag}`, \
@@ -719,7 +735,7 @@ fn check_invalid_ws_keys(toml_key: &str, arg: &DepOp) -> CargoResult<()> {
         )
     }
 
-    if arg.default_features.is_some() {
+    if arg.default_features.is_some() && edition < Edition::Edition2024 {
         anyhow::bail!(
             "{}",
             err_msg(toml_key, "--default-features", "default-features")

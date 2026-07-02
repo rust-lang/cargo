@@ -1539,7 +1539,7 @@ fn warn_inherit_def_feat_true_member_def_feat_false() {
         .build();
 
     p.cargo("check").with_stderr_data(str![[r#"
-[WARNING] Cargo.toml: `default-features` is ignored for dep, since `default-features` was true for `workspace.dependencies.dep`, this could become a hard error in the future
+[WARNING] Cargo.toml: `default-features` is ignored for dep, since `default-features` was true for `workspace.dependencies.dep`; overriding workspace `default-features` to false requires Rust 1.98+ and the 2024 edition
 [WARNING] `bar` (manifest) generated 1 warning
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
@@ -1555,7 +1555,7 @@ fn warn_inherit_def_feat_true_member_def_feat_false() {
 }
 
 #[cargo_test]
-fn warn_inherit_def_feat_true_member_def_feat_false_2024_edition() {
+fn inherit_def_feat_true_member_def_feat_false_2024_edition() {
     Package::new("dep", "0.1.0")
         .feature("default", &["fancy_dep"])
         .add_dep(Dependency::new("fancy_dep", "0.2").optional(true))
@@ -1586,15 +1586,14 @@ fn warn_inherit_def_feat_true_member_def_feat_false_2024_edition() {
         .build();
 
     p.cargo("check")
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  error inheriting `dep` from workspace root manifest's `workspace.dependencies.dep`
-
-Caused by:
-  `default-features = false` cannot override workspace's `default-features`
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest Rust [..] compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] dep v0.1.0 (registry `dummy-registry`)
+[CHECKING] dep v0.1.0
+[CHECKING] bar v0.2.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1632,7 +1631,7 @@ fn warn_inherit_simple_member_def_feat_false() {
         .build();
 
     p.cargo("check").with_stderr_data(str![[r#"
-[WARNING] Cargo.toml: `default-features` is ignored for dep, since `default-features` was not specified for `workspace.dependencies.dep`, this could become a hard error in the future
+[WARNING] Cargo.toml: `default-features` is ignored for dep, since `default-features` was not specified for `workspace.dependencies.dep`; overriding workspace `default-features` to false requires Rust 1.98+ and the 2024 edition
 [WARNING] `bar` (manifest) generated 1 warning
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
@@ -1648,7 +1647,7 @@ fn warn_inherit_simple_member_def_feat_false() {
 }
 
 #[cargo_test]
-fn warn_inherit_simple_member_def_feat_false_2024_edition() {
+fn inherit_simple_member_def_feat_false_2024_edition() {
     Package::new("dep", "0.1.0")
         .feature("default", &["fancy_dep"])
         .add_dep(Dependency::new("fancy_dep", "0.2").optional(true))
@@ -1679,15 +1678,14 @@ fn warn_inherit_simple_member_def_feat_false_2024_edition() {
         .build();
 
     p.cargo("check")
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  error inheriting `dep` from workspace root manifest's `workspace.dependencies.dep`
-
-Caused by:
-  `default-features = false` cannot override workspace's `default-features`
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest Rust [..] compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] dep v0.1.0 (registry `dummy-registry`)
+[CHECKING] dep v0.1.0
+[CHECKING] bar v0.2.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
