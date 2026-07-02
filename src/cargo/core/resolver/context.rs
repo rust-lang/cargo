@@ -5,9 +5,9 @@ use super::types::{ActivationsKey, ConflictMap, ConflictReason, FeaturesSet, Res
 use crate::core::{Dependency, PackageId, Registry, Summary};
 use crate::util::Graph;
 use crate::util::data_structures::HashMap;
+use crate::util::data_structures::HashSet;
 use crate::util::interning::{INTERNED_DEFAULT, InternedString};
 use anyhow::format_err;
-use rustc_hash::FxHashSet;
 use std::collections::BTreeSet;
 use tracing::debug;
 
@@ -188,8 +188,8 @@ impl ResolverContext {
             .collect()
     }
 
-    pub fn graph(&self) -> Graph<PackageId, FxHashSet<Dependency>> {
-        let mut graph: Graph<PackageId, FxHashSet<Dependency>> = Graph::new();
+    pub fn graph(&self) -> Graph<PackageId, HashSet<Dependency>> {
+        let mut graph: Graph<PackageId, HashSet<Dependency>> = Graph::new();
         self.activations
             .values()
             .for_each(|(r, _)| graph.add(r.package_id()));

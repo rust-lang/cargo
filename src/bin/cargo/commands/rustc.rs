@@ -91,7 +91,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     }
 
     let crate_types = {
-        let mut seen = std::collections::HashSet::new();
+        let mut seen = crate::util::data_structures::HashSet::default();
         args.get_many::<String>(CRATE_TYPE_ARG_NAME)
             .into_iter()
             .flatten()

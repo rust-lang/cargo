@@ -1,7 +1,8 @@
+use crate::util::data_structures::HashMap;
 use cargo_util_terminal::report::{AnnotationKind, Group, Level, Snippet};
 use std::borrow::Cow;
 use std::cell::OnceCell;
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
@@ -2495,7 +2496,7 @@ fn unique_build_targets(
     targets: &[Target],
     package_root: &Path,
 ) -> Result<(), HashMap<PathBuf, Vec<Target>>> {
-    let mut source_targets = HashMap::<_, Vec<_>>::new();
+    let mut source_targets = HashMap::<_, Vec<_>>::default();
     for target in targets {
         if let TargetSourcePath::Path(path) = target.src_path() {
             let full = package_root.join(path);

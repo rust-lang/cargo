@@ -22,8 +22,9 @@ use cargo_platform::{Cfg, CfgExpr};
 use cargo_util::ProcessBuilder;
 use serde::Deserialize;
 
+use crate::util::data_structures::HashMap;
 use std::cell::RefCell;
-use std::collections::hash_map::{Entry, HashMap};
+use std::collections::hash_map::Entry;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::str::{self, FromStr};

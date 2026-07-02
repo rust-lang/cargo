@@ -7,9 +7,9 @@ use crate::{
     util::{FileLock, Filesystem},
 };
 
+use crate::util::data_structures::HashMap;
 use anyhow::bail;
 use std::{
-    collections::HashMap,
     fmt::{Display, Formatter},
     path::PathBuf,
     sync::RwLock,

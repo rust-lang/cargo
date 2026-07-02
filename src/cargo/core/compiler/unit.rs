@@ -10,8 +10,8 @@ use crate::core::compiler::{CompileKind, CompileMode, CompileTarget, CrateType};
 use crate::core::manifest::{Target, TargetKind};
 use crate::core::profiles::Profile;
 use crate::util::GlobalContext;
+use crate::util::data_structures::HashSet;
 use crate::util::interning::InternedString;
-use rustc_hash::FxHashSet;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::fmt;
@@ -230,7 +230,7 @@ pub struct UnitInterner {
 }
 
 struct InternerState {
-    cache: FxHashSet<Rc<UnitInner>>,
+    cache: HashSet<Rc<UnitInner>>,
 }
 
 impl UnitInterner {
@@ -238,7 +238,7 @@ impl UnitInterner {
     pub fn new() -> UnitInterner {
         UnitInterner {
             state: RefCell::new(InternerState {
-                cache: FxHashSet::default(),
+                cache: HashSet::default(),
             }),
         }
     }

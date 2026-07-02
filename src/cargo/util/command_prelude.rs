@@ -27,7 +27,7 @@ use clap_complete::ArgValueCandidates;
 use home::cargo_home_with_cwd;
 use itertools::Itertools;
 use semver::Version;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::BTreeMap;
 use std::ffi::{OsStr, OsString};
 use std::path::Path;
 use std::path::PathBuf;
@@ -1299,7 +1299,7 @@ fn get_ws_member_packages() -> CargoResult<Vec<Package>> {
 pub fn get_pkg_id_spec_candidates() -> Vec<clap_complete::CompletionCandidate> {
     let mut candidates = vec![];
 
-    let package_map = HashMap::<&str, Vec<Package>>::new();
+    let package_map = HashMap::<&str, Vec<Package>>::default();
     let package_map =
         get_packages()
             .unwrap_or_default()
