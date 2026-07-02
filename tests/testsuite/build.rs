@@ -6540,3 +6540,30 @@ fn no_embed_metadata_invalidate() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn should_not_include_current_build_unit_path_in_rustc_args() {
+    let p = project()
+        .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [build]
+            target-dir = "target-dir"
+            build-dir = "build-dir"
+            "#,
+        )
+        .build();
+
+    p.cargo("-Zbuild-dir-new-layout -v build")
+        .masquerade_as_nightly_cargo(&["new build-dir layout"])
+        .enable_mac_dsym()
+        // We currently pass the current build unit's out_dir as a `-L` arg to rustc
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..] --out-dir [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out -L dependency=[ROOT]/foo/build-dir/debug/build/foo/[HASH]/out --verbose`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
