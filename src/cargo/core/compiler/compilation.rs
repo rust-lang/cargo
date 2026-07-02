@@ -81,6 +81,9 @@ pub struct Compilation<'gctx> {
     /// An array of all cdylibs created.
     pub cdylibs: Vec<UnitOutput>,
 
+    /// An array of all dylibs created.
+    pub dylibs: Vec<UnitOutput>,
+
     /// The crate names of the root units specified on the command-line.
     pub root_crate_names: Vec<String>,
 
@@ -100,7 +103,7 @@ pub struct Compilation<'gctx> {
     pub deps_output: HashMap<CompileKind, BTreeSet<PathBuf>>,
 
     /// The path to libstd for each target
-    sysroot_target_libdir: HashMap<CompileKind, PathBuf>,
+    pub(crate) sysroot_target_libdir: HashMap<CompileKind, PathBuf>,
 
     /// Extra environment variables that were passed to compilations and should
     /// be passed to future invocations of programs.
@@ -187,6 +190,7 @@ impl<'gctx> Compilation<'gctx> {
             tests: Vec::new(),
             binaries: Vec::new(),
             cdylibs: Vec::new(),
+            dylibs: Vec::new(),
             root_crate_names: Vec::new(),
             extra_env: HashMap::new(),
             to_doc_test: Vec::new(),
