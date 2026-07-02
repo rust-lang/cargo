@@ -4,8 +4,8 @@ use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
 use std::path::{Path, PathBuf};
 
+use crate::util::data_structures::IndexSet;
 use cargo_util_schemas::manifest::PathBaseName;
-use indexmap::IndexSet;
 use itertools::Itertools;
 use toml_edit::KeyMut;
 

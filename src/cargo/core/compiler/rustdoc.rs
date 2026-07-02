@@ -4,10 +4,10 @@ use crate::core::compiler::build_runner::BuildRunner;
 use crate::core::compiler::unit::Unit;
 use crate::core::compiler::{BuildContext, CompileKind};
 use crate::sources::CRATES_IO_REGISTRY;
+use crate::util::data_structures::HashMap;
+use crate::util::data_structures::HashSet;
 use crate::util::errors::{CargoResult, internal};
 use cargo_util::ProcessBuilder;
-use std::collections::HashMap;
-use std::collections::HashSet;
 use std::fmt;
 use std::hash;
 use url::Url;
@@ -74,7 +74,7 @@ pub struct RustdocExternMap {
 impl Default for RustdocExternMap {
     fn default() -> Self {
         Self {
-            registries: HashMap::from([(CRATES_IO_REGISTRY.into(), DOCS_RS_URL.into())]),
+            registries: HashMap::from_iter([(CRATES_IO_REGISTRY.into(), DOCS_RS_URL.into())]),
             std: None,
         }
     }
@@ -203,7 +203,7 @@ pub fn add_root_urls(
         &name2url,
         map,
         &mut unstable_opts,
-        &mut HashSet::new(),
+        &mut HashSet::default(),
     );
     let std_url = match &map.std {
         None | Some(RustdocExternMode::Remote) => None,

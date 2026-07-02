@@ -58,10 +58,11 @@
 //! that we're implementing something that probably shouldn't be allocating all
 //! over the place.
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use crate::util::data_structures::{HashMap, HashSet};
+use rustc_hash::FxBuildHasher;
+use std::collections::BTreeMap;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
-
 use tracing::{debug, trace};
 
 use crate::core::PackageIdSpec;
@@ -154,7 +155,7 @@ pub fn resolve(
         }
     };
 
-    let mut cksums = HashMap::new();
+    let mut cksums = HashMap::default();
     for (summary, _) in resolver_ctx.activations.values() {
         let cksum = summary.checksum().map(|s| s.to_string());
         cksums.insert(summary.package_id(), cksum);
@@ -1007,9 +1008,9 @@ fn check_cycles(resolve: &Resolve) -> CargoResult<()> {
     // We visit each node at most once and we keep
     // track of the path through the graph as we walk it. If we walk onto the
     // same node twice that's a cycle.
-    let mut checked = HashSet::with_capacity(resolve.len());
+    let mut checked = HashSet::with_capacity_and_hasher(resolve.len(), FxBuildHasher::default());
     let mut path = Vec::with_capacity(4);
-    let mut visited = HashSet::with_capacity(4);
+    let mut visited = HashSet::with_capacity_and_hasher(4, FxBuildHasher::default());
     for pkg in resolve.iter() {
         if !checked.contains(&pkg) {
             visit(&resolve, pkg, &mut visited, &mut path, &mut checked)?
@@ -1065,7 +1066,7 @@ fn check_cycles(resolve: &Resolve) -> CargoResult<()> {
 /// particular, we don't store paths of path dependencies. That means that
 /// *different* packages may collide in the lock file, hence this check.
 fn check_duplicate_pkgs_in_lockfile(resolve: &Resolve) -> CargoResult<()> {
-    let mut unique_pkg_ids = HashMap::new();
+    let mut unique_pkg_ids = HashMap::default();
     let state = encode::EncodeState::new(resolve);
     for pkg_id in resolve.iter() {
         let encodable_pkd_id = encode::encodable_package_id(pkg_id, &state, resolve.version());

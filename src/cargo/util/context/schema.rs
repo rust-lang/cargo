@@ -10,8 +10,8 @@
 //! Schema types here should only contain data and simple accessor methods.
 //! Avoid depending on [`GlobalContext`](super::GlobalContext) directly.
 
+use crate::util::data_structures::HashMap;
 use std::borrow::Cow;
-use std::collections::HashMap;
 use std::ffi::OsStr;
 
 use serde::Deserialize;

@@ -11,10 +11,10 @@ use crate::core::dependency::DepKind;
 use crate::core::profiles::Profiles;
 use crate::util::Rustc;
 use crate::util::context::GlobalContext;
+use crate::util::data_structures::{HashMap, HashSet};
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::logger::BuildLogger;
-use std::collections::{HashMap, HashSet};
 
 mod target_info;
 pub use self::target_info::FileFlavor;

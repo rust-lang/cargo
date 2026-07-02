@@ -8,13 +8,13 @@ use std::collections::VecDeque;
 use std::fmt::Write;
 use std::path::Path;
 
+use crate::util::data_structures::IndexSet;
 use anyhow::Context as _;
 use cargo_util::paths;
 use cargo_util_schemas::core::PartialVersion;
 use cargo_util_schemas::manifest::PathBaseName;
 use cargo_util_schemas::manifest::RustVersion;
 use cargo_util_terminal::Shell;
-use indexmap::IndexSet;
 use itertools::Itertools;
 use toml_edit::Item as TomlItem;
 

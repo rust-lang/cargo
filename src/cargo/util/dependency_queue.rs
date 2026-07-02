@@ -9,7 +9,7 @@
 //! some nodes may only require one of the outputs and can start before the
 //! whole node is finished.
 
-use std::collections::{HashMap, HashSet};
+use crate::util::data_structures::{HashMap, HashSet};
 use std::hash::Hash;
 
 #[derive(Debug)]
@@ -48,10 +48,10 @@ impl<N: Hash + Eq, E: Hash + Eq, V> DependencyQueue<N, E, V> {
     /// Creates a new dependency queue with 0 packages.
     pub fn new() -> DependencyQueue<N, E, V> {
         DependencyQueue {
-            dep_map: HashMap::new(),
-            reverse_dep_map: HashMap::new(),
-            priority: HashMap::new(),
-            cost: HashMap::new(),
+            dep_map: HashMap::default(),
+            reverse_dep_map: HashMap::default(),
+            priority: HashMap::default(),
+            cost: HashMap::default(),
         }
     }
 }
@@ -81,14 +81,14 @@ impl<N: Hash + Eq + Clone, E: Eq + Hash + Clone, V> DependencyQueue<N, E, V> {
     ) {
         assert!(!self.dep_map.contains_key(&key));
 
-        let mut my_dependencies = HashSet::new();
+        let mut my_dependencies = HashSet::default();
         for (dep, edge) in dependencies {
             my_dependencies.insert((dep.clone(), edge.clone()));
             self.reverse_dep_map
                 .entry(dep)
-                .or_insert_with(HashMap::new)
+                .or_insert_with(HashMap::default)
                 .entry(edge)
-                .or_insert_with(HashSet::new)
+                .or_insert_with(HashSet::default)
                 .insert(key.clone());
         }
         self.dep_map.insert(key.clone(), (my_dependencies, value));
@@ -98,7 +98,7 @@ impl<N: Hash + Eq + Clone, E: Eq + Hash + Clone, V> DependencyQueue<N, E, V> {
     /// All nodes have been added, calculate some internal metadata and prepare
     /// for `dequeue`.
     pub fn queue_finished(&mut self) {
-        let mut out = HashMap::new();
+        let mut out = HashMap::default();
         for key in self.dep_map.keys() {
             depth(key, &self.reverse_dep_map, &mut out);
         }
@@ -125,9 +125,9 @@ impl<N: Hash + Eq + Clone, E: Eq + Hash + Clone, V> DependencyQueue<N, E, V> {
                 assert!(!depth.is_empty(), "cycle in DependencyQueue");
                 return depth;
             }
-            results.insert(key.clone(), HashSet::new());
+            results.insert(key.clone(), HashSet::default());
 
-            let mut set = HashSet::new();
+            let mut set = HashSet::default();
             set.insert(key.clone());
 
             for dep in map

@@ -376,7 +376,8 @@ mod dep_info;
 mod dirty_reason;
 mod rustdoc;
 
-use std::collections::hash_map::{Entry, HashMap};
+use crate::util::data_structures::HashMap;
+use std::collections::hash_map::Entry;
 use std::env;
 use std::ffi::OsString;
 use std::fs;
@@ -1249,7 +1250,7 @@ impl Fingerprint {
         assert!(!self.fs_status.up_to_date());
 
         let pkg_root = pkg.root();
-        let mut mtimes = HashMap::new();
+        let mut mtimes = HashMap::default();
 
         // Get the `mtime` of all outputs. Optionally update their mtime
         // afterwards based on the `mtime_on_use` flag. Afterwards we want the

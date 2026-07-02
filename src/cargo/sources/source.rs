@@ -1,6 +1,7 @@
 //! [`Source`] trait for sources of Cargo packages.
 
-use std::collections::hash_map::HashMap;
+use crate::util::data_structures::HashMap;
+
 use std::fmt;
 use std::rc::Rc;
 
@@ -248,7 +249,7 @@ impl<'src> SourceMap<'src> {
     /// Creates an empty map.
     pub fn new() -> SourceMap<'src> {
         SourceMap {
-            map: HashMap::new(),
+            map: HashMap::default(),
         }
     }
 

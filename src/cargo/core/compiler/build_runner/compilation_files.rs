@@ -1,7 +1,7 @@
 //! See [`CompilationFiles`].
 
+use crate::util::data_structures::HashMap;
 use std::cell::OnceCell;
-use std::collections::HashMap;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
@@ -167,7 +167,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         host: Layout,
         target: HashMap<CompileTarget, Layout>,
     ) -> CompilationFiles<'a, 'gctx> {
-        let mut metas = HashMap::new();
+        let mut metas = HashMap::default();
         for unit in &build_runner.bcx.roots {
             metadata_of(unit, build_runner, &mut metas);
         }

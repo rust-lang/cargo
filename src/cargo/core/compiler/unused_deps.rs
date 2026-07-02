@@ -1,7 +1,7 @@
 use std::collections::BTreeSet;
 
-use indexmap::IndexMap;
-use indexmap::IndexSet;
+use crate::util::data_structures::IndexMap;
+use crate::util::data_structures::IndexSet;
 use tracing::{instrument, trace};
 
 use super::BuildContext;
@@ -22,7 +22,7 @@ impl UnusedDepState {
     #[instrument(name = "UnusedDepState::new", skip_all)]
     pub fn new(bcx: &BuildContext<'_, '_>) -> Self {
         // Find all units for a package that can report unused externs
-        let mut root_build_script_builds = IndexSet::new();
+        let mut root_build_script_builds = IndexSet::default();
         let roots = &bcx.roots;
         for root in roots.iter() {
             for build_script_run in bcx.unit_graph[root].iter() {
@@ -46,7 +46,7 @@ impl UnusedDepState {
         }
 
         trace!("selected dep kinds: {:?}", bcx.selected_dep_kinds);
-        let mut states = IndexMap::<_, IndexMap<_, DependenciesState>>::new();
+        let mut states = IndexMap::<_, IndexMap<_, DependenciesState>>::default();
         for root in roots.iter().chain(root_build_script_builds.iter()) {
             let pkg_id = root.pkg.package_id();
             let dep_kind = dep_kind_of(root);

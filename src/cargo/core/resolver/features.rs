@@ -44,10 +44,11 @@ use crate::core::resolver::types::FeaturesSet;
 use crate::core::resolver::{Resolve, ResolveBehavior};
 use crate::core::{FeatureValue, PackageId, PackageIdSpec, PackageSet, Workspace};
 use crate::util::CargoResult;
+use crate::util::data_structures::{HashMap, HashSet};
 use crate::util::interning::{INTERNED_DEFAULT, InternedString};
 use anyhow::{Context, bail};
 use itertools::Itertools;
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 use std::rc::Rc;
 
 /// The key used in various places to store features for a particular dependency.
@@ -463,11 +464,11 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
             resolve,
             package_set,
             opts,
-            activated_features: HashMap::new(),
-            activated_dependencies: HashMap::new(),
-            processed_deps: HashSet::new(),
+            activated_features: HashMap::default(),
+            activated_dependencies: HashMap::default(),
+            processed_deps: HashSet::default(),
             track_for_host,
-            deferred_weak_dependencies: HashMap::new(),
+            deferred_weak_dependencies: HashMap::default(),
         };
         r.do_resolve(specs, cli_features)?;
         tracing::debug!("features={:#?}", r.activated_features);

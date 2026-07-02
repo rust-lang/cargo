@@ -8,7 +8,7 @@ use crate::util::CargoResult;
 use crate::util::GlobalContext;
 use crate::util::context::JobsConfig;
 use crate::util::context::WarningHandling;
-use std::collections::HashSet;
+use crate::util::data_structures::HashSet;
 
 pub struct FetchOptions<'a> {
     pub gctx: &'a GlobalContext,
@@ -34,7 +34,7 @@ pub fn fetch<'a>(
     let build_config =
         BuildConfig::new(gctx, jobs, keep_going, &options.targets, UserIntent::Build)?;
     let mut data = RustcTargetData::new(ws, &build_config.requested_kinds)?;
-    let mut fetched_packages = HashSet::new();
+    let mut fetched_packages = HashSet::default();
     let mut deps_to_fetch = ws.members().map(|p| p.package_id()).collect::<Vec<_>>();
     let mut to_download = Vec::new();
 

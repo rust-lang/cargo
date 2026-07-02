@@ -7,9 +7,9 @@ use crate::{
     util::{FileLock, Filesystem},
 };
 
+use crate::util::data_structures::HashMap;
 use anyhow::bail;
 use std::{
-    collections::HashMap,
     fmt::{Display, Formatter},
     path::PathBuf,
     sync::RwLock,
@@ -24,7 +24,7 @@ pub struct LockManager {
 impl LockManager {
     pub fn new() -> Self {
         Self {
-            locks: RwLock::new(HashMap::new()),
+            locks: RwLock::new(HashMap::default()),
         }
     }
 

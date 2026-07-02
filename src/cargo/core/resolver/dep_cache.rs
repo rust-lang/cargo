@@ -26,9 +26,10 @@ use crate::util::closest_msg;
 use crate::util::errors::CargoResult;
 use crate::util::interning::{INTERNED_DEFAULT, InternedString};
 
+use crate::util::data_structures::{HashMap, HashSet};
 use anyhow::Context as _;
 use std::cell::RefCell;
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::BTreeSet;
 use std::fmt::Write;
 use std::rc::Rc;
 use std::task::Poll;
@@ -52,7 +53,7 @@ impl<'a, T: Registry> RegistryQueryerAsync<'a, T> {
             registry,
             replacements,
             version_prefs,
-            used_replacements: RefCell::new(HashMap::new()),
+            used_replacements: RefCell::new(HashMap::default()),
         }
     }
 
@@ -234,7 +235,7 @@ impl<'a, T: Registry> RegistryQueryer<'a, T> {
         Self {
             inner: inner.clone(),
             poller: LocalPollAdapter::new(inner),
-            summary_cache: HashMap::new(),
+            summary_cache: HashMap::default(),
         }
     }
 
@@ -365,7 +366,7 @@ pub fn resolve_features<'b>(
     let reqs = build_requirements(parent, s, opts)?;
     let mut ret = Vec::new();
     let default_dep = BTreeSet::new();
-    let mut valid_dep_names = HashSet::new();
+    let mut valid_dep_names = HashSet::default();
 
     // Next, collect all actually enabled dependencies and their features.
     for dep in deps {
@@ -493,8 +494,8 @@ impl Requirements<'_> {
     fn new(summary: &Summary) -> Requirements<'_> {
         Requirements {
             summary,
-            deps: HashMap::new(),
-            features: HashSet::new(),
+            deps: HashMap::default(),
+            features: HashSet::default(),
         }
     }
 

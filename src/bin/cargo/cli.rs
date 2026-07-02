@@ -1,3 +1,4 @@
+use crate::util::data_structures::HashMap;
 use anyhow::{Context as _, anyhow};
 use cargo::core::{CliUnstable, features};
 use cargo::util::context::TermConfig;
@@ -5,7 +6,6 @@ use cargo::{CargoResult, drop_print, drop_println};
 use cargo_util_terminal::report::Level;
 use clap::builder::UnknownArgumentValueParser;
 use itertools::Itertools;
-use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::ffi::OsString;
 use std::fmt::Write;
@@ -153,7 +153,7 @@ fn print_list(gctx: &GlobalContext, is_verbose: bool) {
     // to their description, for the help page. Reserved for external
     // subcommands that are core within the rust ecosystem (esp ones that
     // might become internal in the future).
-    let known_external_command_descriptions = HashMap::from([
+    let known_external_command_descriptions = HashMap::from_iter([
         (
             "clippy",
             "Checks a package to catch common mistakes and improve your Rust code.",

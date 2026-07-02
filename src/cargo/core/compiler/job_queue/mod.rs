@@ -113,8 +113,8 @@
 mod job;
 mod job_state;
 
+use crate::util::data_structures::{HashMap, HashSet};
 use std::cell::RefCell;
-use std::collections::{HashMap, HashSet};
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -313,7 +313,7 @@ struct DiagDedupe<'gctx> {
 impl<'gctx> DiagDedupe<'gctx> {
     fn new(gctx: &'gctx GlobalContext) -> Self {
         DiagDedupe {
-            seen: RefCell::new(HashSet::new()),
+            seen: RefCell::new(HashSet::default()),
             gctx,
         }
     }
@@ -395,7 +395,7 @@ impl<'gctx> JobQueue<'gctx> {
     pub fn new(bcx: &BuildContext<'_, 'gctx>) -> JobQueue<'gctx> {
         JobQueue {
             queue: DependencyQueue::new(),
-            counts: HashMap::new(),
+            counts: HashMap::default(),
             timings: Timings::new(bcx),
         }
     }
@@ -499,11 +499,11 @@ impl<'gctx> JobQueue<'gctx> {
             // caching_large_output, too.
             messages: Arc::new(Queue::new(100)),
             diag_dedupe: DiagDedupe::new(build_runner.bcx.gctx),
-            warning_count: HashMap::new(),
-            active: HashMap::new(),
-            compiled: HashSet::new(),
-            documented: HashSet::new(),
-            scraped: HashSet::new(),
+            warning_count: HashMap::default(),
+            active: HashMap::default(),
+            compiled: HashSet::default(),
+            documented: HashSet::default(),
+            scraped: HashSet::default(),
             counts: self.counts,
             progress,
             next_id: 0,

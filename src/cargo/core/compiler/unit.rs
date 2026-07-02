@@ -3,21 +3,21 @@
 use serde::Deserialize;
 use serde::Serialize;
 
+use super::BuildOutput;
 use crate::core::Package;
 use crate::core::compiler::unit_dependencies::IsArtifact;
 use crate::core::compiler::{CompileKind, CompileMode, CompileTarget, CrateType};
 use crate::core::manifest::{Target, TargetKind};
 use crate::core::profiles::Profile;
 use crate::util::GlobalContext;
+use crate::util::data_structures::HashSet;
 use crate::util::interning::InternedString;
 use std::cell::RefCell;
-use std::collections::{BTreeMap, HashSet};
+use std::collections::BTreeMap;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 use std::rc::Rc;
-
-use super::BuildOutput;
 
 /// Stable identifier for referencing a [`Unit`].
 ///
@@ -238,7 +238,7 @@ impl UnitInterner {
     pub fn new() -> UnitInterner {
         UnitInterner {
             state: RefCell::new(InternerState {
-                cache: HashSet::new(),
+                cache: HashSet::default(),
             }),
         }
     }

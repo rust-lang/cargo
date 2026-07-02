@@ -4,11 +4,11 @@ use cargo_util_schemas::manifest::RustVersion;
 use crate::core::dependency::DepKind;
 use crate::core::{Dependency, PackageId, PackageIdSpec, PackageIdSpecQuery, Summary, Target};
 use crate::util::Graph;
+use crate::util::data_structures::{HashMap, HashSet};
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use cargo_util_schemas::lockfile::TomlLockfileMetadata;
 use std::borrow::Borrow;
-use std::collections::{HashMap, HashSet};
 use std::fmt;
 
 /// Represents a fully-resolved package dependency graph. Each node in the graph
@@ -404,7 +404,7 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         to: PackageId,
         to_target: &Target,
     ) -> CargoResult<(InternedString, Option<InternedString>)> {
-        let empty_set: HashSet<Dependency> = HashSet::new();
+        let empty_set: HashSet<Dependency> = HashSet::default();
         let deps = if from == to {
             &empty_set
         } else {

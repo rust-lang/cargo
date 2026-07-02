@@ -245,10 +245,10 @@ fn find_lint_or_group<'a>(
 
 #[cfg(test)]
 mod tests {
+    use crate::util::data_structures::HashSet;
     use itertools::Itertools;
     use snapbox::ToDebug;
     use std::cmp::Reverse;
-    use std::collections::HashSet;
 
     use super::*;
 
@@ -353,10 +353,7 @@ mod tests {
     fn ensure_parse_passed_in_lints() {
         let parse_pass_lint_names =
             HashSet::from_iter(parse_pass_rule_names(PARSE_PASS_RULES).into_iter());
-        let lint_names = LINTS
-            .iter()
-            .map(|l| l.name)
-            .collect::<std::collections::HashSet<_>>();
+        let lint_names = LINTS.iter().map(|l| l.name).collect::<HashSet<_>>();
         let diff = parse_pass_lint_names
             .difference(&lint_names)
             .sorted()
@@ -390,7 +387,7 @@ mod tests {
     #[test]
     fn ensure_updated_lints() {
         let dir = snapbox::utils::current_dir!();
-        let mut expected = HashSet::new();
+        let mut expected = HashSet::default();
         for entry in std::fs::read_dir(&dir).unwrap() {
             let entry = entry.unwrap();
             let path = entry.path();

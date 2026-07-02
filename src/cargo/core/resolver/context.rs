@@ -4,9 +4,11 @@ use super::errors::ActivateResult;
 use super::types::{ActivationsKey, ConflictMap, ConflictReason, FeaturesSet, ResolveOpts};
 use crate::core::{Dependency, PackageId, Registry, Summary};
 use crate::util::Graph;
+use crate::util::data_structures::HashMap;
+use crate::util::data_structures::HashSet;
 use crate::util::interning::{INTERNED_DEFAULT, InternedString};
 use anyhow::format_err;
-use std::collections::{BTreeSet, HashMap};
+use std::collections::BTreeSet;
 use tracing::debug;
 
 // A `Context` is basically a bunch of local resolution information which is
@@ -186,8 +188,8 @@ impl ResolverContext {
             .collect()
     }
 
-    pub fn graph(&self) -> Graph<PackageId, std::collections::HashSet<Dependency>> {
-        let mut graph: Graph<PackageId, std::collections::HashSet<Dependency>> = Graph::new();
+    pub fn graph(&self) -> Graph<PackageId, HashSet<Dependency>> {
+        let mut graph: Graph<PackageId, HashSet<Dependency>> = Graph::new();
         self.activations
             .values()
             .for_each(|(r, _)| graph.add(r.package_id()));

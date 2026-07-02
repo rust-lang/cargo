@@ -61,8 +61,8 @@
 //! read the environment variable due to ambiguity. (See `ConfigMapAccess` for
 //! more details.)
 
+use crate::util::data_structures::{HashMap, HashSet};
 use std::borrow::Cow;
-use std::collections::{HashMap, HashSet};
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fmt;
@@ -788,32 +788,32 @@ impl GlobalContext {
             .collect_vec();
 
         let path = val
-                .resolve_templated_path(self, replacements)
-                .map_err(|e| match e {
-                    path::ResolveTemplateError::UnexpectedVariable {
-                        variable,
-                        raw_template,
-                    } => {
-                        let mut suggestion = closest_msg(&variable, template_variables.iter(), |key| key, "template variable");
-                        if suggestion == "" {
-                            let variables = template_variables.iter().map(|v| format!("`{{{v}}}`")).join(", ");
-                            suggestion = format!("\n\nhelp: available template variables are {variables}");
-                        }
-                        anyhow!(
+            .resolve_templated_path(self, replacements)
+            .map_err(|e| match e {
+                path::ResolveTemplateError::UnexpectedVariable {
+                    variable,
+                    raw_template,
+                } => {
+                    let mut suggestion = closest_msg(&variable, template_variables.iter(), |key| key, "template variable");
+                    if suggestion == "" {
+                        let variables = template_variables.iter().map(|v| format!("`{{{v}}}`")).join(", ");
+                        suggestion = format!("\n\nhelp: available template variables are {variables}");
+                    }
+                    anyhow!(
                             "unexpected variable `{variable}` in build.build-dir path `{raw_template}`{suggestion}"
                         )
-                    },
-                    path::ResolveTemplateError::UnexpectedBracket { bracket_type, raw_template } => {
-                        let (btype, literal) = match bracket_type {
-                            path::BracketType::Opening => ("opening", "{"),
-                            path::BracketType::Closing => ("closing", "}"),
-                        };
+                }
+                path::ResolveTemplateError::UnexpectedBracket { bracket_type, raw_template } => {
+                    let (btype, literal) = match bracket_type {
+                        path::BracketType::Opening => ("opening", "{"),
+                        path::BracketType::Closing => ("closing", "}"),
+                    };
 
-                        anyhow!(
+                    anyhow!(
                             "unexpected {btype} bracket `{literal}` in build.build-dir path `{raw_template}`"
                         )
-                    }
-                })?;
+                }
+            })?;
 
         // Check if the target directory is set to an empty string in the config.toml file.
         if val.raw_value().is_empty() {
@@ -1303,7 +1303,7 @@ impl GlobalContext {
     /// This is primarily crafted for `cargo config` command.
     pub(crate) fn load_values_unmerged(&self) -> CargoResult<Vec<ConfigValue>> {
         let mut result = Vec::new();
-        let mut seen = HashSet::new();
+        let mut seen = HashSet::default();
         let home = self.home_path.clone().into_path_unlocked();
         self.walk_tree(&self.cwd, &home, |path| {
             let mut cv = self._load_file(path, &mut seen, false, WhyLoad::FileDiscovery)?;
@@ -1349,7 +1349,7 @@ impl GlobalContext {
     fn load_values_from(&self, path: &Path) -> CargoResult<HashMap<String, ConfigValue>> {
         // The root config value container isn't from any external source,
         // so its definition should be built-in.
-        let mut cfg = CV::Table(HashMap::new(), Definition::BuiltIn);
+        let mut cfg = CV::Table(HashMap::default(), Definition::BuiltIn);
         let home = self.home_path.clone().into_path_unlocked();
 
         self.walk_tree(path, &home, |path| {
@@ -1371,7 +1371,7 @@ impl GlobalContext {
     ///
     /// This is used during config file discovery.
     fn load_file(&self, path: &Path) -> CargoResult<ConfigValue> {
-        self._load_file(path, &mut HashSet::new(), true, WhyLoad::FileDiscovery)
+        self._load_file(path, &mut HashSet::default(), true, WhyLoad::FileDiscovery)
     }
 
     /// Loads a config value from a path with options.
@@ -1434,7 +1434,7 @@ impl GlobalContext {
         let includes = self.include_paths(&mut value, true)?;
 
         // Accumulate all values here.
-        let mut root = CV::Table(HashMap::new(), value.definition().clone());
+        let mut root = CV::Table(HashMap::default(), value.definition().clone());
         for include in includes {
             let Some(abs_path) = include.resolve_path(self) else {
                 continue;
@@ -1548,11 +1548,11 @@ impl GlobalContext {
 
     /// Parses the CLI config args and returns them as a table.
     pub(crate) fn cli_args_as_table(&self) -> CargoResult<ConfigValue> {
-        let mut loaded_args = CV::Table(HashMap::new(), Definition::Cli(None));
+        let mut loaded_args = CV::Table(HashMap::default(), Definition::Cli(None));
         let Some(cli_args) = &self.cli_config else {
             return Ok(loaded_args);
         };
-        let mut seen = HashSet::new();
+        let mut seen = HashSet::default();
         for arg in cli_args {
             let arg_as_path = self.cwd.join(arg);
             let tmp_table = if !arg.is_empty() && arg_as_path.exists() {
@@ -1610,7 +1610,7 @@ impl GlobalContext {
                     .with_context(|| format!("failed to convert --config argument `{arg}`"))?
             };
             let tmp_table = self
-                .load_includes(tmp_table, &mut HashSet::new(), WhyLoad::Cli)
+                .load_includes(tmp_table, &mut HashSet::default(), WhyLoad::Cli)
                 .context("failed to load --config include".to_string())?;
             loaded_args
                 .merge(tmp_table, true)
@@ -1671,12 +1671,11 @@ impl GlobalContext {
                 } else {
                     self.shell().print_report(&[
                         Level::WARNING.secondary_title(
-                        format!(
-                        "`{}` is deprecated in favor of `{filename_without_extension}.toml`",
-                        possible.display(),
-                    )).element(Level::HELP.message(
-                        format!("if you need to support cargo 1.38 or earlier, you can symlink `{filename_without_extension}` to `{filename_without_extension}.toml`")))
-
+                            format!(
+                                "`{}` is deprecated in favor of `{filename_without_extension}.toml`",
+                                possible.display(),
+                            )).element(Level::HELP.message(
+                            format!("if you need to support cargo 1.38 or earlier, you can symlink `{filename_without_extension}` to `{filename_without_extension}.toml`")))
                     ], false)?;
                 }
             }
@@ -1693,7 +1692,7 @@ impl GlobalContext {
     where
         F: FnMut(&Path) -> CargoResult<()>,
     {
-        let mut seen_dir = HashSet::new();
+        let mut seen_dir = HashSet::default();
 
         for current in paths::ancestors(pwd, self.search_stop_path.as_deref()) {
             let config_root = current.join(".cargo");
@@ -1787,13 +1786,13 @@ impl GlobalContext {
 
             if let Some(token) = value_map.remove("token") {
                 value_map.entry("registry".into()).or_insert_with(|| {
-                    let map = HashMap::from([("token".into(), token)]);
+                    let map = HashMap::from_iter([("token".into(), token)]);
                     CV::Table(map, def.clone())
                 });
             }
         }
 
-        let mut credential_values = HashMap::new();
+        let mut credential_values = HashMap::default();
         if let CV::Table(map, _) = value {
             let base_map = self.values()?;
             for (k, v) in map {
@@ -2226,7 +2225,7 @@ pub fn save_credentials(
 
     // Move the old token location to the new one.
     if let Some(token) = toml.remove("token") {
-        let map = HashMap::from([("token".to_string(), token)]);
+        let map = std::collections::HashMap::from([("token".to_string(), token)]);
         toml.insert("registry".into(), map.into());
     }
 
@@ -2240,11 +2239,11 @@ pub fn save_credentials(
 
                 let key = "token".to_string();
                 let value = ConfigValue::String(token.expose(), path_def.clone());
-                let map = HashMap::from([(key, value)]);
+                let map = HashMap::from_iter([(key, value)]);
                 let table = CV::Table(map, path_def.clone());
 
                 if let Some(registry) = registry {
-                    let map = HashMap::from([(registry.to_string(), table)]);
+                    let map = HashMap::from_iter([(registry.to_string(), table)]);
                     ("registries".into(), CV::Table(map, path_def.clone()))
                 } else {
                     ("registry".into(), table)
@@ -2255,7 +2254,7 @@ pub fn save_credentials(
 
                 let key = "secret-key".to_string();
                 let value = ConfigValue::String(secret_key.expose(), path_def.clone());
-                let mut map = HashMap::from([(key, value)]);
+                let mut map = HashMap::from_iter([(key, value)]);
                 if let Some(key_subject) = key_subject {
                     let key = "secret-key-subject".to_string();
                     let value = ConfigValue::String(key_subject, path_def.clone());
@@ -2264,7 +2263,7 @@ pub fn save_credentials(
                 let table = CV::Table(map, path_def.clone());
 
                 if let Some(registry) = registry {
-                    let map = HashMap::from([(registry.to_string(), table)]);
+                    let map = HashMap::from_iter([(registry.to_string(), table)]);
                     ("registries".into(), CV::Table(map, path_def.clone()))
                 } else {
                     ("registry".into(), table)

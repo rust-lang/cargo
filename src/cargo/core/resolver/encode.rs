@@ -113,6 +113,7 @@
 
 use super::{Resolve, ResolveVersion};
 use crate::core::{Dependency, GitReference, Package, PackageId, Patch, SourceId, Workspace};
+use crate::util::data_structures::{HashMap, HashSet};
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::{Graph, internal};
@@ -122,7 +123,6 @@ use cargo_util_schemas::lockfile::{
     TomlLockfileSourceId,
 };
 use serde::ser;
-use std::collections::{HashMap, HashSet};
 use tracing::debug;
 
 /// Convert a `Cargo.lock` to a Resolve.
@@ -139,7 +139,7 @@ pub fn into_resolve(
     ws: &Workspace<'_>,
 ) -> CargoResult<Resolve> {
     let path_deps: HashMap<String, HashMap<semver::Version, SourceId>> = build_path_deps(ws)?;
-    let mut checksums = HashMap::new();
+    let mut checksums = HashMap::default();
 
     let mut version = match resolve.version {
         Some(n @ 5) if ws.gctx().nightly_features_allowed => {
@@ -174,8 +174,8 @@ pub fn into_resolve(
     // `PackageId`s in the lock file don't include the `source` part
     // for workspace members, so we reconstruct proper IDs.
     let live_pkgs = {
-        let mut live_pkgs = HashMap::new();
-        let mut all_pkgs = HashSet::new();
+        let mut live_pkgs = HashMap::default();
+        let mut all_pkgs = HashSet::default();
         for pkg in packages.iter() {
             let enc_id = TomlLockfilePackageId {
                 name: pkg.name.clone(),
@@ -220,12 +220,12 @@ pub fn into_resolve(
     // is used to find package ids even if dependencies have missing
     // information. This map is from name to version to source to actual
     // package ID. (various levels to drill down step by step)
-    let mut map = HashMap::new();
+    let mut map = HashMap::default();
     for (id, _) in live_pkgs.values() {
         map.entry(id.name().as_str())
-            .or_insert_with(HashMap::new)
+            .or_insert_with(HashMap::default)
             .entry(id.version().to_string())
-            .or_insert_with(HashMap::new)
+            .or_insert_with(HashMap::default)
             .insert(id.source_id(), *id);
     }
 
@@ -308,7 +308,7 @@ pub fn into_resolve(
     }
 
     let replacements = {
-        let mut replacements = HashMap::new();
+        let mut replacements = HashMap::default();
         for &(ref id, pkg) in live_pkgs.values() {
             if let Some(ref replace) = pkg.replace {
                 assert!(pkg.dependencies.is_none());
@@ -396,12 +396,12 @@ pub fn into_resolve(
     return Ok(Resolve::new(
         g,
         replacements,
-        HashMap::new(),
+        HashMap::default(),
         checksums,
         metadata,
         unused_patches,
         version,
-        HashMap::new(),
+        HashMap::default(),
     ));
 
     fn get_source_id<'a>(
@@ -439,11 +439,11 @@ fn build_path_deps(
         .filter(|p| p.package_id().source_id().is_path())
         .collect::<Vec<_>>();
 
-    let mut ret: HashMap<String, HashMap<semver::Version, SourceId>> = HashMap::new();
-    let mut visited = HashSet::new();
+    let mut ret: HashMap<String, HashMap<semver::Version, SourceId>> = HashMap::default();
+    let mut visited = HashSet::default();
     for member in members.iter() {
         ret.entry(member.package_id().name().to_string())
-            .or_insert_with(HashMap::new)
+            .or_insert_with(HashMap::default)
             .insert(
                 member.package_id().version().clone(),
                 member.package_id().source_id(),
@@ -491,7 +491,7 @@ fn build_path_deps(
         };
         let Ok(pkg) = ws.load(&path) else { return };
         ret.entry(pkg.package_id().name().to_string())
-            .or_insert_with(HashMap::new)
+            .or_insert_with(HashMap::default)
             .insert(
                 pkg.package_id().version().clone(),
                 pkg.package_id().source_id(),
@@ -577,11 +577,11 @@ pub struct EncodeState<'a> {
 impl<'a> EncodeState<'a> {
     pub fn new(resolve: &'a Resolve) -> EncodeState<'a> {
         let counts = if resolve.version() >= ResolveVersion::V2 {
-            let mut map = HashMap::new();
+            let mut map = HashMap::default();
             for id in resolve.iter() {
                 let slot = map
                     .entry(id.name())
-                    .or_insert_with(HashMap::new)
+                    .or_insert_with(HashMap::default)
                     .entry(id.version())
                     .or_insert(0);
                 *slot += 1;

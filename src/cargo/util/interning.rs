@@ -1,9 +1,9 @@
+use crate::util::data_structures::HashSet;
 use serde::{Serialize, Serializer};
 use serde_untagged::UntaggedEnumVisitor;
 use std::borrow::Borrow;
 use std::borrow::Cow;
 use std::cmp::Ordering;
-use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::fmt;
 use std::hash::{Hash, Hasher};
