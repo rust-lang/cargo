@@ -17,6 +17,15 @@ pub fn get_env(
 ) -> CargoResult<HashMap<String, OsString>> {
     let mut env = HashMap::new();
 
+    if unit.target.is_test() || unit.target.is_bench() {
+        if let Ok(value) = build_runner.bcx.gctx.get_env("__CARGO_TEST_OUT_DIR_OVERRIDE") {
+            env.insert("OUT_DIR".to_string(), OsString::from(value));
+        }
+        if let Ok(value) = build_runner.bcx.gctx.get_env("__CARGO_TEST_MANIFEST_DIR_OVERRIDE") {
+            env.insert("CARGO_MANIFEST_DIR".to_string(), OsString::from(value));
+        }
+    }
+
     // Add `CARGO_BIN_EXE_` environment variables for building tests.
     //
     // These aren't built for `cargo check`, so can't use `dependencies`
@@ -35,12 +44,17 @@ pub fn get_env(
             // For `cargo check` builds we do not uplift the CARGO_BIN_EXE_ artifacts to the
             // artifact-dir. We do not want to provide a path to a non-existent binary but we still
             // need to provide *something* so `env!("CARGO_BIN_EXE_...")` macros will compile.
-            let exe_path = build_runner
+            let exe_path = if let Ok(dir) = build_runner.bcx.gctx.get_env("__CARGO_TEST_BIN_EXE_DIR_OVERRIDE") {
+                let mut path = std::path::PathBuf::from(dir);
+                path.push(&name);
+                path.into_os_string()
+            } else {
+                build_runner
                 .files()
                 .bin_link_for_target(bin_target, unit.kind, build_runner.bcx)?
                 .map(|path| path.as_os_str().to_os_string())
-                .unwrap_or_else(|| OsString::from(format!("placeholder:{name}")));
-
+                .unwrap_or_else(|| OsString::from(format!("placeholder:{name}")))
+            };
             let key = format!("CARGO_BIN_EXE_{name}");
             env.insert(key, exe_path);
         }
