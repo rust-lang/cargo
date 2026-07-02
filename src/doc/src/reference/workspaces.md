@@ -137,11 +137,12 @@ members = ["path/to/member1", "path/to/member2", "path/to/member3/*"]
 default-members = ["path/to/member2", "path/to/member3/foo"]
 ```
 
-> Note: when a [root package](#root-package) is present,
-> you can only operate on it using `--package` and `--workspace` flags.
+> Note: If `default-members` is specified and a [root package](#root-package) is present,
+> you can only operate on the root package using `--package` and `--workspace` flags.
+> There is no way to specify the root package explicitly in the `default-members` field.
 
-When unspecified, the [root package](#root-package) will be used.
-In the case of a [virtual workspace](#virtual-workspace), all members will be used
+When unspecified, the [root package](#root-package) will be used, except in the case of
+a [virtual workspace](#virtual-workspace), where all members will be used
 (as if `--workspace` were specified on the command-line).
 
 ## The `package` table
