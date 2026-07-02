@@ -1,4 +1,9 @@
 mod add_basic;
+mod add_latest;
+mod add_latest_alt_registry;
+mod add_latest_no_existing;
+mod add_latest_rust_version;
+mod add_latest_workspace;
 mod add_multiple;
 mod add_no_vendored_package_with_alter_registry;
 mod add_no_vendored_package_with_vendor;

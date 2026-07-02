@@ -7,6 +7,24 @@ use crate::CargoResult;
 use crate::util::toml_mut::dependency::RegistrySource;
 use cargo_util_schemas::manifest::PackageName;
 
+/// A user-provided version selector from `<name>@<value>`.
+#[derive(Debug)]
+pub(super) enum VersionSpec {
+    /// A semver requirement that can be written to the manifest.
+    Requirement(String),
+    /// The special `@latest` selector, used for diagnostics only.
+    Latest,
+}
+
+impl std::fmt::Display for VersionSpec {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Requirement(req) => req.fmt(f),
+            Self::Latest => "latest".fmt(f),
+        }
+    }
+}
+
 /// User-specified crate
 ///
 /// This can be a
@@ -16,8 +34,8 @@ use cargo_util_schemas::manifest::PackageName;
 pub struct CrateSpec {
     /// Crate name
     name: String,
-    /// Optional version requirement
-    version_req: Option<String>,
+    /// Optional version selector
+    version: Option<VersionSpec>,
 }
 
 impl CrateSpec {
@@ -46,22 +64,34 @@ impl CrateSpec {
 
         package_name?;
 
-        if let Some(version) = version {
-            semver::VersionReq::parse(version).with_context(|| {
-                if let Some(stripped) = version.strip_prefix("v") {
-                    return format!(
-                        "the version provided, `{version}` is not a \
-                         valid SemVer requirement\n\n\
-                         help: changing the package to `{name}@{stripped}`",
-                    );
-                }
-                format!("invalid version requirement `{version}`")
-            })?;
-        }
+        let version = if let Some(version) = version {
+            // `latest` is the only supported special version selector. It is
+            // not a SemVer requirement.
+            //
+            // We intentionally keep it case-sensitive to match other package
+            // managers we may be helping users transition from.
+            if version == "latest" {
+                Some(VersionSpec::Latest)
+            } else {
+                semver::VersionReq::parse(version).with_context(|| {
+                    if let Some(stripped) = version.strip_prefix("v") {
+                        return format!(
+                            "the version provided, `{version}` is not a \
+                             valid SemVer requirement\n\n\
+                             help: changing the package to `{name}@{stripped}`",
+                        );
+                    }
+                    format!("invalid version requirement `{version}`")
+                })?;
+                Some(VersionSpec::Requirement(version.to_owned()))
+            }
+        } else {
+            None
+        };
 
         let id = Self {
             name: name.to_owned(),
-            version_req: version.map(|s| s.to_owned()),
+            version,
         };
 
         Ok(id)
@@ -70,8 +100,14 @@ impl CrateSpec {
     /// Generate a dependency entry for this crate specifier
     pub fn to_dependency(&self) -> CargoResult<Dependency> {
         let mut dep = Dependency::new(self.name());
-        if let Some(version_req) = self.version_req() {
-            dep = dep.set_source(RegistrySource::new(version_req));
+        match self.version.as_ref() {
+            Some(VersionSpec::Latest) => {
+                anyhow::bail!("`latest` is not a valid dependency requirement")
+            }
+            Some(VersionSpec::Requirement(req)) => {
+                dep = dep.set_source(RegistrySource::new(req));
+            }
+            None => {}
         }
         Ok(dep)
     }
@@ -80,7 +116,7 @@ impl CrateSpec {
         &self.name
     }
 
-    pub fn version_req(&self) -> Option<&str> {
-        self.version_req.as_deref()
+    pub(crate) fn version(&self) -> Option<&VersionSpec> {
+        self.version.as_ref()
     }
 }
