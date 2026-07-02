@@ -60,9 +60,9 @@
 </tspan>
     <tspan x="10px" y="370px"><tspan class="fg-bright-green bold">Compilation Options:</tspan>
 </tspan>
-    <tspan x="10px" y="388px"><tspan>  </tspan><tspan class="fg-bright-cyan bold">-r</tspan><tspan>, </tspan><tspan class="fg-bright-cyan bold">--release</tspan><tspan>                 Whether or not to clean release artifacts</tspan>
+    <tspan x="10px" y="388px"><tspan>  </tspan><tspan class="fg-bright-cyan bold">-r</tspan><tspan>, </tspan><tspan class="fg-bright-cyan bold">--release</tspan><tspan>                 Clean only release artifacts</tspan>
 </tspan>
-    <tspan x="10px" y="406px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--profile</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PROFILE-NAME&gt;</tspan><tspan>  Clean artifacts of the specified profile</tspan>
+    <tspan x="10px" y="406px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--profile</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PROFILE-NAME&gt;</tspan><tspan>  Clean only artifacts of the specified profile</tspan>
 </tspan>
     <tspan x="10px" y="424px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--target</tspan><tspan class="fg-cyan"> [</tspan><tspan class="fg-cyan">&lt;TRIPLE&gt;</tspan><tspan class="fg-cyan">]</tspan><tspan>       Target triple to clean output for</tspan>
 </tspan>

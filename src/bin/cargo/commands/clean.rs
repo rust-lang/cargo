@@ -26,8 +26,8 @@ pub fn cli() -> Command {
             flag("workspace", "Clean artifacts of the workspace members")
                 .help_heading(heading::PACKAGE_SELECTION),
         )
-        .arg_release("Whether or not to clean release artifacts")
-        .arg_profile("Clean artifacts of the specified profile")
+        .arg_release("Clean only release artifacts")
+        .arg_profile("Clean only artifacts of the specified profile")
         .arg_target_triple("Target triple to clean output for")
         .arg_target_dir()
         .arg_manifest_path()
