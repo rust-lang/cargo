@@ -1,9 +1,9 @@
 //! Tests for --unit-graph option.
 
 use crate::prelude::*;
-use cargo_test_support::project;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
+use cargo_test_support::{basic_bin_manifest, project};
 
 #[cargo_test]
 fn gated() {
@@ -236,4 +236,62 @@ fn simple() {
             .is_json(),
         )
         .run();
+}
+
+#[cargo_test]
+fn artifact_alias_edges() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2015"
+            authors = []
+
+            [dependencies]
+            bar = { path = "bar/", artifact = "bin" }
+            bar-alt = { package = "bar", path = "bar/", artifact = "bin" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_bin_manifest("bar"))
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    let graph = p
+        .cargo("build --unit-graph -Zunstable-options -Z bindeps")
+        .masquerade_as_nightly_cargo(&["unit-graph", "bindeps"])
+        .run_json();
+
+    let units = graph["units"].as_array().unwrap();
+    let artifact_index = units
+        .iter()
+        .position(|unit| unit["target"]["name"] == "bar")
+        .unwrap();
+    let root_unit = units
+        .iter()
+        .find(|unit| unit["target"]["name"] == "foo")
+        .unwrap();
+    let mut aliases = root_unit["dependencies"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|dep| {
+            (
+                dep["extern_crate_name"].as_str().unwrap().to_owned(),
+                dep["index"].as_u64().unwrap(),
+            )
+        })
+        .collect::<Vec<_>>();
+    aliases.sort();
+
+    assert_eq!(
+        aliases,
+        vec![
+            ("bar".to_owned(), artifact_index as u64),
+            ("bar_alt".to_owned(), artifact_index as u64),
+        ]
+    );
 }
