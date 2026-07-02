@@ -5653,3 +5653,270 @@ fn cargo_test_set_out_dir_env_var() {
     p.cargo("test --package foo --test case -- tests::test_add --exact --no-capture")
         .run();
 }
+
+#[cargo_test]
+fn doc_opt_level() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+
+                [profile.test]
+                opt-level = "s"
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+            //! ```
+            //! // empty
+            //! ```
+        "#,
+        )
+        .build();
+
+    // Release flag sets opt-level=3
+    p.cargo("test --doc --release -v")
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `rustdoc[..] -C opt-level=3[..]`
+...
+"#]])
+        .run();
+
+    // Uses `test` profile settings by default
+    p.cargo("test --doc -v")
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `rustdoc[..] -C opt-level=s[..]`
+...
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn doc_codegen_units() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+
+                [profile.test]
+                codegen-units = 1
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+            //! ```
+            //! // empty
+            //! ```
+        "#,
+        )
+        .build();
+
+    p.cargo("test --doc -v")
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `rustdoc[..] -C codegen-units=1[..]`
+...
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn doc_debuginfo() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+
+                [profile.test]
+                debug = 1
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+            //! ```
+            //! // empty
+            //! ```
+        "#,
+        )
+        .build();
+
+    p.cargo("test --doc -v")
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `rustdoc[..] -C debuginfo=1[..]`
+...
+"#]])
+        .run();
+}
+
+#[cargo_test(ignore_windows = "Only `packed` is supported on Windows, and it's the default")]
+fn doc_split_debuginfo() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+
+                [profile.test]
+                debug = "full"
+                split-debuginfo = "packed"
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+            //! ```
+            //! // empty
+            //! ```
+        "#,
+        )
+        .build();
+
+    p.cargo("test --doc -v")
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `rustdoc[..] -C split-debuginfo=packed[..]`
+...
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn doc_debug_assert() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+
+                [profile.test]
+                debug-assertions = false
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+            //! ```
+            //! debug_assert!(false)
+            //! ```
+        "#,
+        )
+        .build();
+
+    p.cargo("test --doc -v")
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `rustdoc[..] -C debug-assertions=off[..]`
+...
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn doc_overflow_checks() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+
+                [profile.test]
+                overflow-checks = false
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+            //! ```
+            //! // empty
+            //! ```
+        "#,
+        )
+        .build();
+
+    p.cargo("test --doc -v")
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `rustdoc[..] -C overflow-checks=off[..]`
+...
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn doc_rpath() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+
+                [profile.test]
+                rpath = true
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+            //! ```
+            //! // empty
+            //! ```
+        "#,
+        )
+        .build();
+
+    p.cargo("test --doc -v")
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `rustdoc[..] -C rpath[..]`
+...
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn doc_strip_symbols() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+
+                [profile.test]
+                strip = true
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+            //! ```
+            //! // empty
+            //! ```
+        "#,
+        )
+        .build();
+
+    p.cargo("test --doc -v")
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `rustdoc[..] -C strip=symbols[..]`
+...
+"#]])
+        .run();
+}
