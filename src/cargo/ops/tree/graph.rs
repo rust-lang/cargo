@@ -6,8 +6,8 @@ use crate::core::dependency::DepKind;
 use crate::core::resolver::Resolve;
 use crate::core::resolver::features::{CliFeatures, FeaturesFor, ResolvedFeatures};
 use crate::core::{FeatureMap, FeatureValue, Package, PackageId, PackageIdSpec, Workspace};
-use crate::util::CargoResult;
 use crate::util::interning::{INTERNED_DEFAULT, InternedString};
+use crate::util::{CargoResult, OptVersionReq};
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Copy, Clone)]
@@ -161,6 +161,8 @@ pub struct Graph<'a> {
     /// Key is the index of a package node, value is a map of `dep_name` to a
     /// set of `(pkg_node_index, is_optional)`.
     dep_name_map: HashMap<NodeId, HashMap<InternedString, HashSet<(NodeId, bool)>>>,
+    /// Map for looking up version requirements for dependency packages.
+    version_req_map: HashMap<PackageId, OptVersionReq>,
 }
 
 impl<'a> Graph<'a> {
@@ -172,6 +174,7 @@ impl<'a> Graph<'a> {
             package_map,
             cli_features: HashSet::new(),
             dep_name_map: HashMap::new(),
+            version_req_map: HashMap::new(),
         }
     }
 
@@ -238,6 +241,12 @@ impl<'a> Graph<'a> {
             Node::Package { package_id, .. } => *package_id,
             Node::Feature { .. } => panic!("unexpected feature node"),
         }
+    }
+
+    /// Returns the version requirement for the given package ID. Returns `None`
+    /// if no version requirement is recorded (e.g., root packages).
+    pub fn version_req_for_id(&self, package_id: PackageId) -> Option<&OptVersionReq> {
+        self.version_req_map.get(&package_id)
     }
 
     /// Returns `true` if the given feature node index is a feature enabled
@@ -522,6 +531,12 @@ fn add_pkg(
                 target_data,
                 requested_kind,
                 opts,
+            );
+            // Store the version requirement for this dependency for
+            // later use in formatting.
+            graph.version_req_map.insert(
+                graph.package_id_for_index(dep_index),
+                dep.version_req().clone(),
             );
             let new_edge = Edge {
                 kind: EdgeKind::Dep(dep.kind()),
