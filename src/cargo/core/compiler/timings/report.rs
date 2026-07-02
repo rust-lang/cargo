@@ -5,7 +5,7 @@ use crate::util::data_structures::HashSet;
 use std::borrow::Cow;
 use std::io::Write;
 
-use indexmap::IndexMap;
+use crate::util::data_structures::IndexMap;
 use itertools::Itertools as _;
 
 use crate::CargoResult;

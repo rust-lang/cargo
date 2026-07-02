@@ -5,10 +5,10 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
 
+use crate::util::data_structures::IndexMap;
 use anyhow::Context as _;
 use cargo_util::paths;
 use cargo_util_terminal::report::Level;
-use indexmap::IndexMap;
 use indexmap::map::Entry;
 use itertools::Itertools as _;
 use tempfile::TempDir;
@@ -150,7 +150,7 @@ where
         num_cpus: None,
         error: &None,
     };
-    let mut units: IndexMap<_, UnitEntry> = IndexMap::new();
+    let mut units: IndexMap<_, UnitEntry> = IndexMap::default();
 
     let mut platform_targets = HashSet::default();
 
@@ -228,7 +228,7 @@ where
                     UnitEntry {
                         target,
                         data,
-                        sections: IndexMap::new(),
+                        sections: IndexMap::default(),
                         rmeta_time: None,
                     },
                 );
@@ -332,7 +332,7 @@ where
     }
 
     ctx.root_units = {
-        let mut root_map: IndexMap<_, Vec<_>> = IndexMap::new();
+        let mut root_map: IndexMap<_, Vec<_>> = IndexMap::default();
         for index in requested_units {
             let unit = &units[&index];
             // Pretty much like `core::Target::description_named`

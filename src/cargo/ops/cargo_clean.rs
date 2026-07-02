@@ -3,6 +3,7 @@ use crate::core::profiles::Profiles;
 use crate::core::{PackageIdSpec, PackageIdSpecQuery, TargetKind, Workspace};
 use crate::ops;
 use crate::util::HumanBytes;
+use crate::util::data_structures::{IndexMap, IndexSet};
 use crate::util::edit_distance;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
@@ -10,7 +11,6 @@ use crate::util::{GlobalContext, Progress, ProgressStyle};
 use anyhow::bail;
 use cargo_util::paths;
 use cargo_util_terminal::report::Level;
-use indexmap::{IndexMap, IndexSet};
 
 use std::ffi::OsString;
 use std::io::Read;

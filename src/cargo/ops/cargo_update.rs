@@ -16,10 +16,10 @@ use crate::util::toml_mut::upgrade::upgrade_requirement;
 use crate::util::{CargoResult, VersionExt};
 use crate::util::{OptVersionReq, style};
 
+use crate::util::data_structures::{IndexMap, IndexSet};
 use anyhow::Context as _;
 use cargo_util_schemas::core::PartialVersion;
 use cargo_util_terminal::Verbosity;
-use indexmap::{IndexMap, IndexSet};
 use itertools::Itertools;
 use semver::{Op, Version, VersionReq};
 use std::cmp::Ordering;
@@ -1005,7 +1005,7 @@ impl PackageChange {
     ) -> IndexMap<PackageId, Self> {
         let member_ids: HashSet<_> = ws.members().map(|p| p.package_id()).collect();
 
-        let mut changes = IndexMap::new();
+        let mut changes = IndexMap::default();
         for diff in diff {
             if let Some((previous_id, package_id)) = diff.change() {
                 // If versions differ only in build metadata, we call it an "update"
