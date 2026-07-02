@@ -300,6 +300,7 @@ fn cargo_compile_forbird_git_httpsrepo_offline() {
         .build();
 
     p.cargo("check --offline").with_status(101).with_stderr_data(str![[r#"
+[UPDATING] git repository `https://github.com/some_user/dep1.git`
 [ERROR] failed to get `dep1` as a dependency of package `foo v0.5.0 ([ROOT]/foo)`
 
 Caused by:

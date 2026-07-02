@@ -1375,6 +1375,7 @@ Valid operations are the following:
 
 * `shallow-index` - perform a shallow clone of the index.
 * `shallow-deps` - perform a shallow clone of git dependencies.
+* `sha256` - allow SHA256 git repositories
 
 **Details on shallow clones**
 
@@ -1385,6 +1386,11 @@ Valid operations are the following:
   - `~/.cargo/git/checkouts/*-shallow`
 * When the unstable feature is on, fetching/cloning a git repository is always a shallow fetch. This roughly equals to `git fetch --depth 1` everywhere.
 * Even with the presence of `Cargo.lock` or specifying a commit `{ rev = "…" }`, gitoxide and libgit2 are still smart enough to shallow fetch without unshallowing the existing repository.
+
+**Details on SHA256 git repositories**
+
+* To enable SHA256 git repositories, add `-Zgit=sha256`.
+* SHA256 git repositories are only supported when using libgit2.
 
 ## script
 
