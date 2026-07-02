@@ -1822,6 +1822,7 @@ fn build_deps_args(
 }
 
 fn add_dep_arg<'a, 'b: 'a>(
+    unit_to_build: &'a Unit,
     map: &mut BTreeMap<&'a Unit, PathBuf>,
     build_runner: &'b BuildRunner<'b, '_>,
     unit: &'a Unit,
@@ -1829,10 +1830,13 @@ fn add_dep_arg<'a, 'b: 'a>(
     if map.contains_key(&unit) {
         return;
     }
-    map.insert(&unit, build_runner.files().deps_dir(&unit));
+    // Don't include our own `out` dir as a `-L` arg.
+    if unit_to_build != unit {
+        map.insert(&unit, build_runner.files().deps_dir(&unit));
+    }
 
     for dep in build_runner.unit_deps(unit) {
-        add_dep_arg(map, build_runner, &dep.unit);
+        add_dep_arg(unit_to_build, map, build_runner, &dep.unit);
     }
 }
 
@@ -1873,7 +1877,7 @@ pub fn lib_search_paths(
         let mut map = BTreeMap::new();
 
         // Recursively add all dependency args to rustc process
-        add_dep_arg(&mut map, build_runner, unit);
+        add_dep_arg(unit, &mut map, build_runner, unit);
 
         let paths = map.into_iter().map(|(_, path)| path).sorted_unstable();
 
