@@ -6,6 +6,7 @@ use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::str::{self, FromStr};
+use std::sync::Arc;
 
 use crate::AlreadyPrintedError;
 use crate::core::summary::MissingDependencyError;
@@ -1828,7 +1829,7 @@ note: only a feature named `default` will be enabled by default"
     let metabuild = normalized_package.metabuild.clone().map(|sov| sov.0);
     let manifest = Manifest::new(
         contents.map(Rc::new),
-        document.map(Rc::new),
+        document.map(Arc::new),
         Some(Rc::new(original_toml)),
         Rc::new(normalized_toml),
         summary,
