@@ -63,7 +63,7 @@ impl EitherManifest {
 pub struct Manifest {
     // alternate forms of manifests:
     contents: Option<Rc<String>>,
-    document: Option<Rc<toml::Spanned<toml::de::DeTable<'static>>>>,
+    document: Option<Arc<toml::Spanned<toml::de::DeTable<'static>>>>,
     original_toml: Option<Rc<TomlManifest>>,
     normalized_toml: Rc<TomlManifest>,
     summary: Summary,
@@ -497,7 +497,7 @@ compact_debug! {
 impl Manifest {
     pub fn new(
         contents: Option<Rc<String>>,
-        document: Option<Rc<toml::Spanned<toml::de::DeTable<'static>>>>,
+        document: Option<Arc<toml::Spanned<toml::de::DeTable<'static>>>>,
         original_toml: Option<Rc<TomlManifest>>,
         normalized_toml: Rc<TomlManifest>,
         summary: Summary,
@@ -571,6 +571,12 @@ impl Manifest {
     pub fn document(&self) -> Option<&toml::Spanned<toml::de::DeTable<'static>>> {
         self.document.as_deref()
     }
+
+    /// Collection of spans for the original TOML, returned as a cloned Arc.
+    pub fn document_rc(&self) -> Option<Arc<toml::Spanned<toml::de::DeTable<'static>>>> {
+        self.document.clone()
+    }
+
     /// The [`TomlManifest`] as parsed from [`Manifest::document`]
     pub fn original_toml(&self) -> Option<&TomlManifest> {
         self.original_toml.as_deref()
