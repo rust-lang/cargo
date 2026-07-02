@@ -41,12 +41,15 @@ pub use self::registry::OwnersOptions;
 pub use self::registry::PublishOpts;
 pub use self::registry::RegistryCredentialConfig;
 pub use self::registry::RegistryOrIndex;
+pub use self::registry::TrustpubCommand;
+pub use self::registry::TrustpubOptions;
 pub use self::registry::info;
 pub use self::registry::modify_owners;
 pub use self::registry::publish;
 pub use self::registry::registry_login;
 pub use self::registry::registry_logout;
 pub use self::registry::search;
+pub use self::registry::trusted_publish;
 pub use self::registry::yank;
 pub use self::resolve::{
     WorkspaceResolve, add_overrides, get_resolved_packages, resolve_with_previous, resolve_ws,
