@@ -1,5 +1,5 @@
+use crate::util::data_structures::{HashMap, HashSet};
 use std::cell::{Cell, RefCell};
-use std::collections::{HashMap, HashSet};
 use std::fmt::{self, Debug, Formatter};
 use std::fs;
 use std::io;
@@ -991,8 +991,8 @@ fn read_packages(
     source_id: SourceId,
     gctx: &GlobalContext,
 ) -> CargoResult<HashMap<PackageId, Vec<Package>>> {
-    let mut all_packages = HashMap::new();
-    let mut visited = HashSet::<PathBuf>::new();
+    let mut all_packages = HashMap::default();
+    let mut visited = HashSet::<PathBuf>::default();
     let mut errors = Vec::<anyhow::Error>::new();
 
     trace!(

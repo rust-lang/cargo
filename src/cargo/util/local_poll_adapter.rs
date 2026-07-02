@@ -24,7 +24,7 @@ where
     pub fn new(self_parameter: S) -> Self {
         Self {
             pool: FuturesUnordered::new(),
-            cache: HashMap::new(),
+            cache: HashMap::default(),
             self_parameter,
         }
     }

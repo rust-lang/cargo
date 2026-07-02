@@ -4,7 +4,7 @@
 //! structure usable by Cargo itself. Currently, this is primarily used to map
 //! sources to one another via the `replace-with` key in `.cargo/config`.
 
-use std::collections::HashMap;
+use crate::util::data_structures::HashMap;
 
 use crate::core::GitReference;
 use crate::core::SourceId;
@@ -106,9 +106,9 @@ impl<'gctx> SourceConfigMap<'gctx> {
     /// replacement into account.
     pub fn empty(gctx: &'gctx GlobalContext) -> CargoResult<SourceConfigMap<'gctx>> {
         let mut base = SourceConfigMap {
-            cfgs: HashMap::new(),
-            id2name: HashMap::new(),
-            overlays: HashMap::new(),
+            cfgs: HashMap::default(),
+            id2name: HashMap::default(),
+            overlays: HashMap::default(),
             gctx,
         };
         base.add(

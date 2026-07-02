@@ -2147,7 +2147,7 @@ fn patch(
     me: &TomlManifest,
     manifest_ctx: &mut ManifestContext<'_, '_>,
 ) -> CargoResult<HashMap<Url, Vec<Patch>>> {
-    let mut patch = HashMap::new();
+    let mut patch = HashMap::default();
     for (toml_url, deps) in me.patch.iter().flatten() {
         let url = match &toml_url[..] {
             CRATES_IO_REGISTRY => CRATES_IO_INDEX.parse().unwrap(),

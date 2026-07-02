@@ -35,7 +35,7 @@
 //! [`drain_the_queue`]: crate::core::compiler::job_queue
 //! ["Cargo Target"]: https://doc.rust-lang.org/nightly/cargo/reference/cargo-targets.html
 
-use std::collections::{HashMap, HashSet};
+use crate::util::data_structures::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
@@ -419,7 +419,7 @@ pub fn create_bcx<'a, 'gctx>(
         .collect();
 
     let mut root_units = Vec::new();
-    let mut unit_graph = HashMap::new();
+    let mut unit_graph = HashMap::default();
     let mut scrape_units = Vec::new();
 
     if let Some(logger) = logger {
@@ -576,7 +576,7 @@ pub fn create_bcx<'a, 'gctx>(
         logger.log(LogMessage::UnitGraphFinished { elapsed });
     }
 
-    let mut extra_compiler_args = HashMap::new();
+    let mut extra_compiler_args = HashMap::default();
     if let Some(args) = extra_args {
         if root_units.len() != 1 {
             anyhow::bail!(
@@ -841,10 +841,10 @@ fn rebuild_unit_graph_shared(
     to_host: Option<CompileKind>,
     compile_time_deps_only: bool,
 ) -> (Vec<Unit>, Vec<Unit>, UnitGraph) {
-    let mut result = UnitGraph::new();
+    let mut result = UnitGraph::default();
     // Map of the old unit to the new unit, used to avoid recursing into units
     // that have already been computed to improve performance.
-    let mut memo = HashMap::new();
+    let mut memo = HashMap::default();
     let new_roots = roots
         .iter()
         .map(|root| {
@@ -894,9 +894,9 @@ fn traverse_and_share(
     let mut dep_hash = StableHasher::new();
     let skip_non_compile_time_deps = compile_time_deps_only
         && (!unit.target.is_compile_time_dependency() ||
-            // Root unit is not a dependency unless other units are dependant
-            // to it.
-            unit_is_root);
+        // Root unit is not a dependency unless other units are dependant
+        // to it.
+        unit_is_root);
     let new_deps: Vec<_> = unit_graph[unit]
         .iter()
         .map(|dep| {
@@ -1040,7 +1040,7 @@ fn remove_duplicate_doc(
 ) {
     // First, create a mapping of crate_name -> Unit so we can see where the
     // duplicates are.
-    let mut all_docs: HashMap<String, Vec<Unit>> = HashMap::new();
+    let mut all_docs: HashMap<String, Vec<Unit>> = HashMap::default();
     for unit in unit_graph.keys() {
         if unit.mode.is_doc() {
             all_docs
@@ -1051,7 +1051,7 @@ fn remove_duplicate_doc(
     }
     // Keep track of units to remove so that they can be efficiently removed
     // from the unit_deps.
-    let mut removed_units: HashSet<Unit> = HashSet::new();
+    let mut removed_units: HashSet<Unit> = HashSet::default();
     let mut remove = |units: Vec<Unit>, reason: &str, cb: &dyn Fn(&Unit) -> bool| -> Vec<Unit> {
         let (to_remove, remaining_units): (Vec<Unit>, Vec<Unit>) = units
             .into_iter()
@@ -1090,7 +1090,7 @@ fn remove_duplicate_doc(
         }
         // Prefer newer versions over older.
         let mut source_map: HashMap<(InternedString, SourceId, CompileKind), Vec<Unit>> =
-            HashMap::new();
+            HashMap::default();
         for unit in units {
             let pkg_id = unit.pkg.package_id();
             // Note, this does not detect duplicates from different sources.
@@ -1124,7 +1124,7 @@ fn remove_duplicate_doc(
         unit_deps.retain(|unit_dep| !removed_units.contains(&unit_dep.unit));
     }
     // Remove any orphan units that were detached from the graph.
-    let mut visited = HashSet::new();
+    let mut visited = HashSet::default();
     fn visit(unit: &Unit, graph: &UnitGraph, visited: &mut HashSet<Unit>) {
         if !visited.insert(unit.clone()) {
             return;

@@ -1453,13 +1453,13 @@ pub struct DeferredGlobalLastUse {
 impl DeferredGlobalLastUse {
     pub fn new() -> DeferredGlobalLastUse {
         DeferredGlobalLastUse {
-            registry_keys: HashMap::new(),
-            git_keys: HashMap::new(),
-            registry_index_timestamps: HashMap::new(),
-            registry_crate_timestamps: HashMap::new(),
-            registry_src_timestamps: HashMap::new(),
-            git_db_timestamps: HashMap::new(),
-            git_checkout_timestamps: HashMap::new(),
+            registry_keys: HashMap::default(),
+            git_keys: HashMap::default(),
+            registry_index_timestamps: HashMap::default(),
+            registry_crate_timestamps: HashMap::default(),
+            registry_src_timestamps: HashMap::default(),
+            git_db_timestamps: HashMap::default(),
+            git_checkout_timestamps: HashMap::default(),
             save_err_has_warned: false,
             now: now(),
         }

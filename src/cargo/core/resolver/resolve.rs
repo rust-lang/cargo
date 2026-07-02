@@ -9,7 +9,7 @@ use crate::util::interning::InternedString;
 use cargo_util_schemas::lockfile::TomlLockfileMetadata;
 use rustc_hash::FxHashSet;
 use std::borrow::Borrow;
-use std::collections::{HashMap, HashSet};
+use crate::util::data_structures::{HashMap, HashSet};
 use std::fmt;
 
 /// Represents a fully-resolved package dependency graph. Each node in the graph
@@ -135,8 +135,8 @@ impl ResolveVersion {
                 pre: None,
                 build: None,
             }
-            .try_into()
-            .unwrap()
+                .try_into()
+                .unwrap()
         };
 
         if rust_version >= &rust(1, 83) {
@@ -202,7 +202,7 @@ impl Resolve {
         self.graph.path_to_top(pkg)
     }
 
-    pub fn register_used_patches<'a>(&mut self, patches: impl Iterator<Item = &'a Summary>) {
+    pub fn register_used_patches<'a>(&mut self, patches: impl Iterator<Item=&'a Summary>) {
         for summary in patches {
             if !self.graph.contains(&summary.package_id()) {
                 self.unused_patches.push(summary.package_id())
@@ -317,7 +317,7 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         self.graph.sort()
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = PackageId> + '_ {
+    pub fn iter(&self) -> impl Iterator<Item=PackageId> + '_ {
         self.graph.iter().cloned()
     }
 
@@ -328,7 +328,7 @@ unable to verify that `{0}` is the same as when the lockfile was generated
     pub fn deps(
         &self,
         pkg: PackageId,
-    ) -> impl Iterator<Item = (PackageId, &FxHashSet<Dependency>)> {
+    ) -> impl Iterator<Item=(PackageId, &FxHashSet<Dependency>)> {
         self.deps_not_replaced(pkg)
             .map(move |(id, deps)| (self.replacement(id).unwrap_or(id), deps))
     }
@@ -344,7 +344,7 @@ unable to verify that `{0}` is the same as when the lockfile was generated
     pub fn deps_not_replaced(
         &self,
         pkg: PackageId,
-    ) -> impl Iterator<Item = (PackageId, &FxHashSet<Dependency>)> {
+    ) -> impl Iterator<Item=(PackageId, &FxHashSet<Dependency>)> {
         self.graph.edges(&pkg).map(|(id, deps)| (*id, deps))
     }
 
@@ -353,7 +353,7 @@ unable to verify that `{0}` is the same as when the lockfile was generated
     pub fn transitive_deps_not_replaced(
         &self,
         pkg: PackageId,
-    ) -> impl Iterator<Item = (PackageId, &Dependency)> {
+    ) -> impl Iterator<Item=(PackageId, &Dependency)> {
         self.graph.edges(&pkg).filter_map(|(id, deps)| {
             deps.iter()
                 .find(|d| d.is_transitive())

@@ -1,9 +1,10 @@
 use crate::core::compiler::{BuildContext, CompileMode, CrateType, Unit};
 use crate::core::profiles;
 use crate::util::interning::InternedString;
+use std::collections::hash_map::Entry;
 
+use crate::util::data_structures::HashMap;
 use crate::util::errors::CargoResult;
-use std::collections::hash_map::{Entry, HashMap};
 
 /// Possible ways to run rustc and request various parts of [LTO].
 ///
@@ -43,7 +44,7 @@ pub enum Lto {
 }
 
 pub fn generate(bcx: &BuildContext<'_, '_>) -> CargoResult<HashMap<Unit, Lto>> {
-    let mut map = HashMap::new();
+    let mut map = HashMap::default();
     for unit in bcx.roots.iter() {
         let root_lto = match unit.profile.lto {
             // LTO not requested, no need for bitcode.

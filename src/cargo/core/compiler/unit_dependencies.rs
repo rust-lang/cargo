@@ -15,7 +15,7 @@
 //! (for example, with and without tests), so we actually build a dependency
 //! graph of [`Unit`]s, which capture these properties.
 
-use std::collections::{HashMap, HashSet};
+use crate::util::data_structures::{HashMap, HashSet};
 
 use tracing::trace;
 
@@ -105,7 +105,7 @@ pub fn build_unit_dependencies<'a, 'gctx>(
         // If -Zbuild-std, don't attach units if there is nothing to build.
         // Otherwise, other parts of the code may be confused by seeing units
         // in the dep graph without a root.
-        return Ok(HashMap::new());
+        return Ok(HashMap::default());
     }
     let (std_resolve, std_features) = match std_resolve {
         Some((r, f)) => (Some(r), Some(f)),
@@ -114,7 +114,7 @@ pub fn build_unit_dependencies<'a, 'gctx>(
     let mut state = State {
         ws,
         gctx: ws.gctx(),
-        unit_dependencies: HashMap::new(),
+        unit_dependencies: HashMap::default(),
         package_set,
         usr_resolve: resolve,
         usr_features: features,
@@ -126,7 +126,7 @@ pub fn build_unit_dependencies<'a, 'gctx>(
         profiles,
         interner,
         scrape_units,
-        dev_dependency_edges: HashSet::new(),
+        dev_dependency_edges: HashSet::default(),
     };
 
     let std_unit_deps = calc_deps_of_std(&mut state, std_roots)?;
@@ -966,13 +966,13 @@ fn connect_run_custom_build_deps(state: &mut State<'_, '_>) {
         // example a library might depend on a build script, so this map will
         // have the build script as the key and the library would be in the
         // value's set.
-        let mut reverse_deps_map = HashMap::new();
+        let mut reverse_deps_map = HashMap::default();
         for (unit, deps) in state.unit_dependencies.iter() {
             for dep in deps {
                 if dep.unit.mode == CompileMode::RunCustomBuild {
                     reverse_deps_map
                         .entry(dep.unit.clone())
-                        .or_insert_with(HashSet::new)
+                        .or_insert_with(HashSet::default)
                         .insert(unit);
                 }
             }

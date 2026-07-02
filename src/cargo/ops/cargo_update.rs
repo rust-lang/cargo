@@ -95,7 +95,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
         }
     };
     let mut registry = ws.package_registry()?;
-    let mut to_avoid = HashSet::new();
+    let mut to_avoid = HashSet::default();
 
     if opts.to_update.is_empty() {
         if !opts.workspace {
@@ -107,7 +107,12 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
         for name in opts.to_update.iter() {
             let pid = previous_resolve.query(name)?;
             if opts.recursive {
-                fill_with_deps(&previous_resolve, pid, &mut to_avoid, &mut HashSet::new());
+                fill_with_deps(
+                    &previous_resolve,
+                    pid,
+                    &mut to_avoid,
+                    &mut HashSet::default(),
+                );
             } else {
                 to_avoid.insert(pid);
                 sources.push(match opts.precise {
@@ -222,8 +227,8 @@ pub fn upgrade_manifests(
     to_update: &Vec<String>,
 ) -> CargoResult<UpgradeMap> {
     let gctx = ws.gctx();
-    let mut upgrades = HashMap::new();
-    let mut upgrade_messages = HashSet::new();
+    let mut upgrades = HashMap::default();
+    let mut upgrade_messages = HashSet::default();
 
     let to_update = to_update
         .iter()

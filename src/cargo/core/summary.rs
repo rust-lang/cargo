@@ -203,7 +203,7 @@ fn build_feature_map(
 ) -> CargoResult<FeatureMap> {
     use self::FeatureValue::*;
     // A map of dependency names to whether there are any that are optional.
-    let mut dep_map: HashMap<InternedString, bool> = HashMap::new();
+    let mut dep_map: HashMap<InternedString, bool> = HashMap::default();
     for dep in dependencies.iter() {
         *dep_map.entry(dep.name_in_toml()).or_insert(false) |= dep.is_optional();
     }

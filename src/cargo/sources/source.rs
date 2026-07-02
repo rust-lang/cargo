@@ -248,7 +248,7 @@ impl<'src> SourceMap<'src> {
     /// Creates an empty map.
     pub fn new() -> SourceMap<'src> {
         SourceMap {
-            map: HashMap::new(),
+            map: HashMap::default(),
         }
     }
 

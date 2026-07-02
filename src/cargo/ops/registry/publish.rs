@@ -2,9 +2,9 @@
 //!
 //! [1]: https://doc.rust-lang.org/nightly/cargo/reference/registry-web-api.html#publish
 
+use crate::util::data_structures::HashMap;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
-use std::collections::HashMap;
 use std::fs::File;
 use std::io::Seek;
 use std::io::SeekFrom;

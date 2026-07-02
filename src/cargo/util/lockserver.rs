@@ -11,7 +11,7 @@
 //! the main server, inform the server what its name is, and then wait for the
 //! server to give it the lock (aka write a byte).
 
-use std::collections::HashMap;
+use crate::util::data_structures::HashMap;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -52,7 +52,7 @@ impl LockServer {
         Ok(LockServer {
             listener,
             addr,
-            threads: HashMap::new(),
+            threads: HashMap::default(),
             done: Arc::new(AtomicBool::new(false)),
         })
     }

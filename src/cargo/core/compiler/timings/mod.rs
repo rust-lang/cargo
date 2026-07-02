@@ -17,8 +17,8 @@ use crate::util::log_message::LogMessage;
 use crate::util::style;
 use crate::util::{CargoResult, GlobalContext};
 
+use crate::util::data_structures::HashMap;
 use cargo_util::paths;
-use std::collections::HashMap;
 use std::io::BufWriter;
 use std::time::{Duration, Instant};
 
@@ -88,8 +88,8 @@ impl<'gctx> Timings<'gctx> {
                 gctx: bcx.gctx,
                 enabled,
                 start,
-                unit_to_index: HashMap::new(),
-                active: HashMap::new(),
+                unit_to_index: HashMap::default(),
+                active: HashMap::default(),
                 last_cpu_state: None,
                 last_cpu_recording: Instant::now(),
                 cpu_usage: Vec::new(),
@@ -109,7 +109,7 @@ impl<'gctx> Timings<'gctx> {
             enabled,
             start,
             unit_to_index: bcx.unit_to_index.clone(),
-            active: HashMap::new(),
+            active: HashMap::default(),
             last_cpu_state,
             last_cpu_recording: Instant::now(),
             cpu_usage: Vec::new(),

@@ -1,6 +1,6 @@
 //! [`BuildRunner`] is the mutable state used during the build process.
 
-use std::collections::{HashMap, HashSet};
+use crate::util::data_structures::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
@@ -120,19 +120,19 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
             bcx,
             compilation: Compilation::new(bcx)?,
             build_script_outputs: Arc::new(Mutex::new(BuildScriptOutputs::default())),
-            fingerprints: HashMap::new(),
-            mtime_cache: HashMap::new(),
-            checksum_cache: HashMap::new(),
-            compiled: HashSet::new(),
-            build_scripts: HashMap::new(),
-            build_explicit_deps: HashMap::new(),
+            fingerprints: HashMap::default(),
+            mtime_cache: HashMap::default(),
+            checksum_cache: HashMap::default(),
+            compiled: HashSet::default(),
+            build_scripts: HashMap::default(),
+            build_explicit_deps: HashMap::default(),
             jobserver,
-            primary_packages: HashSet::new(),
+            primary_packages: HashSet::default(),
             files: None,
-            rmeta_required: HashSet::new(),
-            lto: HashMap::new(),
-            metadata_for_doc_units: HashMap::new(),
-            failed_scrape_units: Arc::new(Mutex::new(HashSet::new())),
+            rmeta_required: HashSet::default(),
+            lto: HashMap::default(),
+            metadata_for_doc_units: HashMap::default(),
+            failed_scrape_units: Arc::new(Mutex::new(HashSet::default())),
             unused_dep_state: UnusedDepState::new(bcx),
             lock_manager: Arc::new(LockManager::new()),
         })
@@ -358,7 +358,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
             return Ok(());
         }
 
-        let mut doc_parts_map: HashMap<_, Vec<_>> = HashMap::new();
+        let mut doc_parts_map: HashMap<_, Vec<_>> = HashMap::default();
 
         let unit_iter = if self.bcx.build_config.intent.wants_deps_docs() {
             itertools::Either::Left(self.bcx.unit_graph.keys())
@@ -431,7 +431,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
         };
         let host_layout =
             Layout::new(self.bcx.ws, None, &dest, must_take_artifact_dir_lock, false)?;
-        let mut targets = HashMap::new();
+        let mut targets = HashMap::default();
         for kind in self.bcx.all_kinds.iter() {
             if let CompileKind::Target(target) = *kind {
                 let layout = Layout::new(
@@ -589,7 +589,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
     /// See <https://github.com/rust-lang/cargo/issues/6313> for more.
     #[tracing::instrument(skip_all)]
     fn check_collisions(&self) -> CargoResult<()> {
-        let mut output_collisions = HashMap::new();
+        let mut output_collisions = HashMap::default();
         let describe_collision = |unit: &Unit, other_unit: &Unit| -> String {
             format!(
                 "the {} target `{}` in package `{}` has the same output filename as the {} target `{}` in package `{}`",
@@ -674,8 +674,8 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
         // duplicate libs or duplicate bins (but not both). Ideally this
         // shouldn't be here, but since there isn't a complete workaround,
         // yet, this retains the old behavior.
-        let mut doc_libs = HashMap::new();
-        let mut doc_bins = HashMap::new();
+        let mut doc_libs = HashMap::default();
+        let mut doc_bins = HashMap::default();
         for unit in keys {
             if unit.mode.is_doc() && self.is_primary_package(unit) {
                 // These situations have been an error since before 1.0, so it

@@ -1,5 +1,5 @@
+use crate::util::data_structures::{HashMap, HashSet};
 use std::cell::RefCell;
-use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 
 use crate::core::Workspace;
@@ -434,10 +434,10 @@ impl<'a> UnitGenerator<'a, '_> {
                             let types = target.rustc_crate_types();
                             let types_str: Vec<&str> = types.iter().map(|t| t.as_str()).collect();
                             self.ws.gctx().shell().warn(format!(
-                      "doc tests are not supported for crate type(s) `{}` in package `{}`",
-                      types_str.join(", "),
-                      pkg.name()
-                  ))?;
+                                "doc tests are not supported for crate type(s) `{}` in package `{}`",
+                                types_str.join(", "),
+                                pkg.name()
+                            ))?;
                         } else {
                             libs.push(proposal)
                         }
@@ -710,11 +710,11 @@ Rustdoc did not scrape the following examples because they require dev-dependenc
         // `features_map` is a map of &Package -> enabled_features
         // It is computed by the set of enabled features for the package plus
         // every enabled feature of every enabled dependency.
-        let mut features_map = HashMap::new();
+        let mut features_map = HashMap::default();
         // This needs to be a set to de-duplicate units. Due to the way the
         // targets are filtered, it is possible to have duplicate proposals for
         // the same thing.
-        let mut units = HashSet::new();
+        let mut units = HashSet::default();
         for Proposal {
             pkg,
             target,

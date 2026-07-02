@@ -1,5 +1,5 @@
+use crate::util::data_structures::HashMap;
 use std::cell::{Cell, RefCell};
-use std::collections::HashMap;
 use std::fmt::{self, Debug, Formatter};
 use std::path::{Path, PathBuf};
 
@@ -84,7 +84,7 @@ impl<'gctx> DirectorySource<'gctx> {
             source_id: id,
             root: path.to_path_buf(),
             gctx,
-            packages: RefCell::new(HashMap::new()),
+            packages: RefCell::new(HashMap::default()),
             updated: Cell::new(false),
         }
     }

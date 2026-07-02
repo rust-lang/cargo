@@ -2,7 +2,7 @@
 
 use crate::command_prelude::*;
 
-use std::collections::HashMap;
+use crate::util::data_structures::HashMap;
 use std::process;
 
 pub fn cli() -> Command {
@@ -21,11 +21,11 @@ See https://github.com/rust-lang/cargo/issues/14679.",
 pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     if let Err(e) = args.workspace(gctx) {
         gctx.shell()
-            .print_json(&HashMap::from([("invalid", e.to_string())]))?;
+            .print_json(&HashMap::from_iter([("invalid", e.to_string())]))?;
         process::exit(1)
     }
 
     gctx.shell()
-        .print_json(&HashMap::from([("success", "true")]))?;
+        .print_json(&HashMap::from_iter([("success", "true")]))?;
     Ok(())
 }
