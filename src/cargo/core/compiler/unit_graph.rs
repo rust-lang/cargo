@@ -6,7 +6,7 @@ use cargo_util_schemas::core::PackageIdSpec;
 
 use crate::GlobalContext;
 use crate::core::Target;
-use crate::core::compiler::Unit;
+use crate::core::compiler::{self, Unit};
 use crate::core::compiler::{CompileKind, CompileMode};
 use crate::core::dependency::Dependency;
 use crate::core::profiles::{Profile, UnitFor};
@@ -67,6 +67,10 @@ struct SerializedUnit<'a> {
     platform: CompileKind,
     mode: CompileMode,
     features: &'a Vec<InternedString>,
+    /// Resolved rustc flags from the package's `[lints]` table.
+    #[serde(skip_serializing_if = "<[_]>::is_empty")]
+    lint_rustflags: &'a [String],
+    check_cfg_args: Vec<String>,
     #[serde(skip_serializing_if = "std::ops::Not::not")] // hide for unstable build-std
     is_std: bool,
     dependencies: Vec<SerializedUnitDep>,
@@ -137,6 +141,11 @@ pub fn emit_serialized_unit_graph(
                 platform: unit.kind,
                 mode: unit.mode,
                 features: &unit.features,
+                lint_rustflags: unit.pkg.manifest().lint_rustflags(),
+                check_cfg_args: compiler::check_cfg_args(unit)
+                    .into_iter()
+                    .map(|arg| arg.to_string_lossy().into_owned())
+                    .collect(),
                 is_std: unit.is_std,
                 dependencies,
             }
