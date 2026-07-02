@@ -1,5 +1,6 @@
 pub use self::dependency::{Dependency, Patch, PatchLocation, SerializedDependency};
 pub use self::features::{CliUnstable, Edition, Feature, Features};
+pub use self::global_cache_tracker::TargetDirectory;
 pub use self::manifest::{EitherManifest, VirtualManifest};
 pub use self::manifest::{Manifest, Target, TargetKind};
 pub use self::package::{Package, PackageSet};

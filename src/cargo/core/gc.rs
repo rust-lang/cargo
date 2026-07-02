@@ -131,6 +131,10 @@ pub struct GcOpts {
     pub max_git_size: Option<u64>,
     /// The `--max-download-size` CLI option.
     pub max_download_size: Option<u64>,
+    /// The `--max-target-dir-age` CLI option.
+    pub max_target_dir_age: Option<Duration>,
+    /// The `--max-target-dir-size` CLI option.
+    pub max_target_dir_size: Option<u64>,
 }
 
 impl GcOpts {

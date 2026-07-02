@@ -2127,3 +2127,948 @@ fn resilient_to_unexpected_files() {
 "#]])
         .run();
 }
+
+fn target_dir_timestamps() -> Vec<(String, String, u64)> {
+    let gctx = GlobalContextBuilder::new().build();
+    let _lock = gctx
+        .acquire_package_cache_lock(CacheLockMode::MutateExclusive)
+        .unwrap();
+    let tracker = GlobalCacheTracker::new(&gctx).unwrap();
+    let mut rows = tracker
+        .target_directory_all()
+        .unwrap()
+        .into_iter()
+        .map(|(td, ts)| {
+            (
+                td.workspace_manifest.as_str().to_owned(),
+                td.target_dir.as_str().to_owned(),
+                ts,
+            )
+        })
+        .collect::<Vec<_>>();
+    rows.sort();
+    rows
+}
+
+fn target_dir_rows_for_path(path: &Path) -> Vec<(String, String, u64)> {
+    let path = path.to_string_lossy().to_string();
+    target_dir_timestamps()
+        .into_iter()
+        .filter(|(_, target_dir, _)| target_dir == &path)
+        .collect()
+}
+
+#[cargo_test]
+fn tracks_target_dir_on_build() {
+    // Verifies that building a project creates a target_directory entry
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
+        .file("src/lib.rs", "")
+        .build();
+
+    // Build to create the target directory
+    p.cargo("build").run();
+
+    let target_dirs = target_dir_timestamps();
+    let has_entry = target_dirs.iter().any(|(_, target_dir, _)| {
+        target_dir.ends_with("/target") || target_dir.ends_with("\\target")
+    });
+    assert!(
+        has_entry,
+        "Expected target directory entry but found: {:?}",
+        target_dirs
+    );
+}
+
+#[cargo_test]
+fn tracks_target_dir_on_check() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+    let rows = target_dir_timestamps();
+    let first = rows
+        .iter()
+        .find(|(_, target_dir, _)| {
+            target_dir.ends_with("/target") || target_dir.ends_with("\\target")
+        })
+        .cloned()
+        .expect("missing target dir row after check");
+
+    p.cargo("check")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(1))
+        .run();
+    let rows = target_dir_timestamps();
+    let second = rows
+        .iter()
+        .find(|(_, target_dir, _)| target_dir == &first.1)
+        .cloned()
+        .expect("missing target dir row after second check");
+
+    assert!(
+        second.2 > first.2,
+        "expected check to refresh target dir timestamp: {first:?} -> {second:?}"
+    );
+}
+
+#[cargo_test]
+fn tracks_target_dir_on_doc() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("doc")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+    let rows = target_dir_timestamps();
+    let first = rows
+        .iter()
+        .find(|(_, target_dir, _)| {
+            target_dir.ends_with("/target") || target_dir.ends_with("\\target")
+        })
+        .cloned()
+        .expect("missing target dir row after doc");
+
+    p.cargo("doc")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(1))
+        .run();
+    let rows = target_dir_timestamps();
+    let second = rows
+        .iter()
+        .find(|(_, target_dir, _)| target_dir == &first.1)
+        .cloned()
+        .expect("missing target dir row after second doc");
+
+    assert!(
+        second.2 > first.2,
+        "expected doc to refresh target dir timestamp: {first:?} -> {second:?}"
+    );
+}
+
+#[cargo_test]
+fn does_not_track_target_dir_on_fetch() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    Package::new("bar", "1.0.0").publish();
+
+    p.cargo("fetch")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+
+    let rows = target_dir_timestamps();
+    assert!(
+        rows.is_empty(),
+        "fetch should not create target-directory entries, found: {:?}",
+        rows
+    );
+}
+
+#[cargo_test]
+fn does_not_track_target_dir_on_metadata() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("metadata --format-version=1")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+
+    let rows = target_dir_timestamps();
+    assert!(
+        rows.is_empty(),
+        "metadata should not create target-directory entries, found: {:?}",
+        rows
+    );
+}
+
+#[cargo_test]
+fn clean_target_dir_gc_skips_invalid_cachedir_tag() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+
+    let target_dir = p.root().join("target");
+    assert!(target_dir.exists());
+    std::fs::write(target_dir.join("CACHEDIR.TAG"), "Signature: 1234").unwrap();
+
+    p.cargo("clean gc -v -Zgc")
+        .arg("--max-target-dir-age=3 days")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_stderr_data(str![[r#"
+[REMOVED] 0 files
+
+"#]])
+        .run();
+
+    assert!(
+        target_dir.exists(),
+        "target dir with invalid CACHEDIR.TAG should be skipped by gc"
+    );
+    let rows = target_dir_rows_for_path(&target_dir);
+    assert_eq!(
+        rows.len(),
+        1,
+        "tracking row should remain when unsafe target dir is skipped: {rows:?}"
+    );
+}
+
+#[cargo_test]
+fn clean_target_dir_age() {
+    // --max-target-dir-age flag deletes dirs older than threshold
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
+        .file("src/lib.rs", "")
+        .build();
+
+    // Build to create target directory and mark as 4 days old
+    p.cargo("build")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+
+    // Verify target dir was created
+    assert!(p.root().join("target").exists());
+
+    // Should delete the target dir
+    p.cargo("clean gc -v -Zgc")
+        .arg("--max-target-dir-age=3 days")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_stderr_data(str![[r#"
+[REMOVING] [ROOT]/foo/target
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
+"#]])
+        .run();
+
+    // Target dir should be deleted
+    assert!(!p.root().join("target").exists());
+}
+
+#[cargo_test]
+fn clean_target_dir_age_preserves_recent() {
+    // Target dirs accessed within threshold are NOT deleted
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
+        .file("src/lib.rs", "")
+        .build();
+
+    // Build to create target directory and mark as 2 days old
+    p.cargo("build")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(2))
+        .run();
+
+    // Verify target dir was created
+    assert!(p.root().join("target").exists());
+
+    // Should NOT delete the target dir (it's only 2 days old)
+    p.cargo("clean gc -v -Zgc")
+        .arg("--max-target-dir-age=3 days")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_stderr_data(str![[r#"
+[REMOVED] 0 files
+
+"#]])
+        .run();
+
+    // Target dir should still exist
+    assert!(p.root().join("target").exists());
+}
+
+#[cargo_test]
+fn clean_target_dir_leaked() {
+    // Target dir deleted when workspace manifest no longer exists
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
+        .file("src/lib.rs", "")
+        .build();
+
+    // Build to create target directory and mark as old
+    p.cargo("build")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+
+    assert!(p.root().join("target").exists());
+
+    // Remove the workspace manifest
+    std::fs::remove_file(p.root().join("Cargo.toml")).unwrap();
+
+    // Clean should still delete the leaked target dir
+    p.cargo("clean gc -v -Zgc")
+        .arg("--max-target-dir-age=3 days")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_stderr_data(str![[r#"
+[REMOVING] [ROOT]/foo/target
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
+"#]])
+        .run();
+
+    // Target dir should be deleted
+    assert!(!p.root().join("target").exists());
+}
+
+#[cargo_test]
+fn clean_target_dir_dry_run() {
+    // --dry-run shows paths without deleting
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
+        .file("src/lib.rs", "")
+        .build();
+
+    // Build to create target directory and mark as old
+    p.cargo("build")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+
+    assert!(p.root().join("target").exists());
+
+    // Dry run should NOT delete the target dir
+    p.cargo("clean gc --dry-run -Zgc")
+        .arg("--max-target-dir-age=3 days")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_stderr_data(str![[r#"
+[SUMMARY] [FILE_NUM] files, [FILE_SIZE]B total
+[WARNING] no files deleted due to --dry-run
+
+"#]])
+        .run();
+
+    // Target dir should still exist
+    assert!(p.root().join("target").exists());
+}
+
+#[cargo_test]
+fn clean_target_dir_all() {
+    // --max-target-dir-age with age > 0 should delete target dirs marked as old
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
+        .file("src/lib.rs", "")
+        .build();
+
+    // Build to create target directory and mark as 4 days old
+    p.cargo("build")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+
+    // Verify target dir was created
+    assert!(p.root().join("target").exists());
+
+    // Should delete the target dir (age=0 means delete anything older than now)
+    p.cargo("clean gc -v -Zgc")
+        .arg("--max-target-dir-age=0 days")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_stderr_data(str![[r#"
+[REMOVING] [ROOT]/foo/target
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
+"#]])
+        .run();
+
+    // Target dir should be deleted
+    assert!(!p.root().join("target").exists());
+}
+
+#[cargo_test]
+fn clean_target_dir_age_with_shared_target() {
+    // Multiple workspaces sharing CARGO_TARGET_DIR are tracked correctly
+    let p1 = project()
+        .at("foo")
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
+        .file("src/lib.rs", "")
+        .build();
+    let p2 = project()
+        .at("bar")
+        .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("src/lib.rs", "")
+        .build();
+
+    let shared_target = p1.root().parent().unwrap().join("shared-target");
+
+    // Build first project with shared target dir
+    p1.cargo("build")
+        .env("CARGO_TARGET_DIR", shared_target.as_os_str())
+        .run();
+
+    // Build second project with same shared target dir
+    p2.cargo("build")
+        .env("CARGO_TARGET_DIR", shared_target.as_os_str())
+        .run();
+
+    // With 3 day age limit, should delete the shared target
+    // Note: Since p1 is built first and we can't update its timestamp via fetch alone,
+    // and p2's build may share the same target dir entry, we just verify the GC works
+    p1.cargo("clean gc -v -Zgc")
+        .env("CARGO_TARGET_DIR", shared_target.as_os_str())
+        .arg("--max-target-dir-age=0 days")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_stderr_data(str![[r#"
+[REMOVING] [ROOT]/shared-target
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn clean_target_dir_leaked_preserves_valid() {
+    // Valid workspaces with same target dir are NOT deleted when another workspace is deleted
+    let p1 = project()
+        .at("foo")
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
+        .file("src/lib.rs", "")
+        .build();
+    let p2 = project()
+        .at("bar")
+        .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("src/lib.rs", "")
+        .build();
+
+    let shared_target = p1.root().parent().unwrap().join("shared-target");
+
+    // Build first project with shared target dir, mark as 4 days old
+    p1.cargo("build")
+        .env("CARGO_TARGET_DIR", shared_target.as_os_str())
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+
+    // Build second project with same shared target dir, mark as recent (1 day old)
+    p2.cargo("build")
+        .env("CARGO_TARGET_DIR", shared_target.as_os_str())
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(1))
+        .run();
+
+    let all_rows = target_dir_timestamps();
+    let before = target_dir_rows_for_path(&shared_target);
+    assert_eq!(
+        before.len(),
+        2,
+        "expected two associations before gc: {before:?}; all rows: {all_rows:?}"
+    );
+
+    // Verify shared target exists
+    assert!(shared_target.exists());
+
+    // With 3 day age limit, should NOT delete because p2 is recent
+    p1.cargo("clean gc -v -Zgc")
+        .env("CARGO_TARGET_DIR", shared_target.as_os_str())
+        .arg("--max-target-dir-age=3 days")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_stderr_data(str![[r#"
+[REMOVED] 0 files
+
+"#]])
+        .run();
+
+    // Shared target should still exist and valid associations should remain intact.
+    assert!(shared_target.exists());
+    let after = target_dir_rows_for_path(&shared_target);
+    assert_eq!(
+        after.len(),
+        2,
+        "expected valid shared-target associations to remain after gc: {after:?}"
+    );
+    assert!(
+        after
+            .iter()
+            .any(|(manifest, _, _)| manifest.ends_with("/foo/Cargo.toml")
+                || manifest.ends_with("\\foo\\Cargo.toml")),
+        "expected foo workspace association to remain: {after:?}"
+    );
+    assert!(
+        after
+            .iter()
+            .any(|(manifest, _, _)| manifest.ends_with("/bar/Cargo.toml")
+                || manifest.ends_with("\\bar\\Cargo.toml")),
+        "expected bar workspace association to remain: {after:?}"
+    );
+}
+
+#[cargo_test]
+fn clean_target_dir_age_shared_deletes_when_all_stale() {
+    let p1 = project()
+        .at("foo")
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
+        .file("src/lib.rs", "")
+        .build();
+    let p2 = project()
+        .at("bar")
+        .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("src/lib.rs", "")
+        .build();
+
+    let shared_target = p1.root().parent().unwrap().join("shared-target-all-stale");
+
+    p1.cargo("build")
+        .env("CARGO_TARGET_DIR", shared_target.as_os_str())
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(5))
+        .run();
+    p2.cargo("build")
+        .env("CARGO_TARGET_DIR", shared_target.as_os_str())
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+
+    let before = target_dir_rows_for_path(&shared_target);
+    assert_eq!(
+        before.len(),
+        2,
+        "expected two associations before gc: {before:?}"
+    );
+    assert!(shared_target.exists());
+
+    p1.cargo("clean gc -v -Zgc")
+        .env("CARGO_TARGET_DIR", shared_target.as_os_str())
+        .arg("--max-target-dir-age=3 days")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_stderr_data(str![[r#"
+[REMOVING] [ROOT]/shared-target-all-stale
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
+"#]])
+        .run();
+
+    assert!(!shared_target.exists());
+    let after = target_dir_rows_for_path(&shared_target);
+    assert!(
+        after.is_empty(),
+        "expected rows for deleted shared target to be removed: {after:?}"
+    );
+}
+
+#[cargo_test]
+fn clean_target_dir_size_counts_shared_dir_once() {
+    let p1 = project()
+        .at("foo")
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
+        .file("src/lib.rs", "")
+        .build();
+    let p2 = project()
+        .at("bar")
+        .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("src/lib.rs", "")
+        .build();
+    let p3 = project()
+        .at("baz")
+        .file("Cargo.toml", &basic_manifest("baz", "0.0.1"))
+        .file("src/lib.rs", "")
+        .build();
+
+    let shared_target = p1.root().parent().unwrap().join("shared-target-size-once");
+
+    p1.cargo("build")
+        .env("CARGO_TARGET_DIR", shared_target.as_os_str())
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(5))
+        .run();
+    p2.cargo("build")
+        .env("CARGO_TARGET_DIR", shared_target.as_os_str())
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+    p3.cargo("build")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(3))
+        .run();
+
+    assert!(shared_target.exists());
+    assert!(p3.root().join("target").exists());
+    let shared_size = cargo_util::du(&shared_target, &[]).unwrap();
+    let other_size = cargo_util::du(&p3.root().join("target"), &[]).unwrap();
+
+    let threshold = shared_size + other_size + 1;
+    assert!(
+        threshold < shared_size * 2 + other_size,
+        "test setup requires threshold between single-count and double-count totals"
+    );
+
+    p1.cargo("clean gc -v -Zgc")
+        .env("CARGO_TARGET_DIR", shared_target.as_os_str())
+        .arg(format!("--max-target-dir-size={threshold}"))
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_stderr_data(str![[r#"
+[REMOVED] 0 files
+
+"#]])
+        .run();
+
+    assert!(
+        shared_target.exists(),
+        "shared target should remain if counted once"
+    );
+    assert!(
+        p3.root().join("target").exists(),
+        "other target should remain"
+    );
+    let rows = target_dir_rows_for_path(&shared_target);
+    assert_eq!(
+        rows.len(),
+        2,
+        "shared target rows should remain intact: {rows:?}"
+    );
+}
+
+#[cargo_test]
+fn clean_target_dir_size_shared_deletes_once_when_over_threshold() {
+    let p1 = project()
+        .at("foo")
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
+        .file("src/lib.rs", "")
+        .build();
+    let p2 = project()
+        .at("bar")
+        .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("src/lib.rs", "")
+        .build();
+
+    let shared_target = p1
+        .root()
+        .parent()
+        .unwrap()
+        .join("shared-target-size-delete");
+
+    p1.cargo("build")
+        .env("CARGO_TARGET_DIR", shared_target.as_os_str())
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(5))
+        .run();
+    p2.cargo("build")
+        .env("CARGO_TARGET_DIR", shared_target.as_os_str())
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+
+    let before = target_dir_rows_for_path(&shared_target);
+    assert_eq!(
+        before.len(),
+        2,
+        "expected two associations before gc: {before:?}"
+    );
+    assert!(shared_target.exists());
+    let shared_size = cargo_util::du(&shared_target, &[]).unwrap();
+
+    p1.cargo("clean gc -v -Zgc")
+        .env("CARGO_TARGET_DIR", shared_target.as_os_str())
+        .arg(format!(
+            "--max-target-dir-size={}",
+            shared_size.saturating_sub(1)
+        ))
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_stderr_data(str![[r#"
+[REMOVING] [ROOT]/shared-target-size-delete
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
+"#]])
+        .run();
+
+    assert!(!shared_target.exists());
+    let after = target_dir_rows_for_path(&shared_target);
+    assert!(
+        after.is_empty(),
+        "expected rows for deleted shared target to be removed: {after:?}"
+    );
+}
+
+#[cargo_test]
+fn clean_target_dir_leaked_row_cleanup_is_scoped_to_target_dir() {
+    let p1 = project()
+        .at("foo")
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
+        .file("src/lib.rs", "")
+        .build();
+    let p2 = project()
+        .at("bar")
+        .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("src/lib.rs", "")
+        .build();
+
+    let shared_target = p1
+        .root()
+        .parent()
+        .unwrap()
+        .join("shared-target-scoped-leak");
+    let leaked_target = p1
+        .root()
+        .parent()
+        .unwrap()
+        .join("leaked-target-scoped-leak");
+
+    p1.cargo("build")
+        .env("CARGO_TARGET_DIR", shared_target.as_os_str())
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+    p2.cargo("build")
+        .env("CARGO_TARGET_DIR", shared_target.as_os_str())
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(1))
+        .run();
+    p1.cargo("build")
+        .env("CARGO_TARGET_DIR", leaked_target.as_os_str())
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+
+    assert!(shared_target.exists());
+    assert!(leaked_target.exists());
+    assert_eq!(target_dir_rows_for_path(&shared_target).len(), 2);
+    assert_eq!(target_dir_rows_for_path(&leaked_target).len(), 1);
+
+    std::fs::remove_file(p1.root().join("Cargo.toml")).unwrap();
+
+    p2.cargo("clean gc -v -Zgc")
+        .env("CARGO_TARGET_DIR", shared_target.as_os_str())
+        .arg("--max-target-dir-age=3 days")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_stderr_data(str![[r#"
+[REMOVING] [ROOT]/leaked-target-scoped-leak
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
+"#]])
+        .run();
+
+    assert!(
+        shared_target.exists(),
+        "shared target should be preserved by bar association"
+    );
+    assert!(
+        !leaked_target.exists(),
+        "leaked solo target should be deleted"
+    );
+
+    let shared_rows = target_dir_rows_for_path(&shared_target);
+    assert_eq!(
+        shared_rows.len(),
+        1,
+        "only bar association should remain for shared target: {shared_rows:?}"
+    );
+    assert!(
+        shared_rows[0].0.ends_with("/bar/Cargo.toml")
+            || shared_rows[0].0.ends_with("\\bar\\Cargo.toml"),
+        "expected remaining shared-target row to belong to bar: {shared_rows:?}"
+    );
+    let leaked_rows = target_dir_rows_for_path(&leaked_target);
+    assert!(
+        leaked_rows.is_empty(),
+        "leaked target rows should be removed after deletion: {leaked_rows:?}"
+    );
+}
+
+#[cargo_test]
+fn clean_target_dir_shared_path_spelling_is_grouped() {
+    let p1 = project()
+        .at("foo")
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
+        .file("src/lib.rs", "")
+        .build();
+    let p2 = project()
+        .at("bar")
+        .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("src/lib.rs", "")
+        .build();
+
+    let normalized_shared_target = p1
+        .root()
+        .parent()
+        .unwrap()
+        .join("shared-target-path-spelling");
+    let dotted_shared_target = p2.root().join("../shared-target-path-spelling");
+
+    p1.cargo("build")
+        .env("CARGO_TARGET_DIR", normalized_shared_target.as_os_str())
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+    p2.cargo("build")
+        .env("CARGO_TARGET_DIR", dotted_shared_target.as_os_str())
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(1))
+        .run();
+
+    assert!(normalized_shared_target.exists());
+    let rows = target_dir_timestamps();
+    assert_eq!(
+        rows.len(),
+        2,
+        "expected both associations to be recorded: {rows:?}"
+    );
+
+    p1.cargo("clean gc -v -Zgc")
+        .env("CARGO_TARGET_DIR", normalized_shared_target.as_os_str())
+        .arg("--max-target-dir-age=3 days")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_stderr_data(str![[r#"
+[REMOVED] 0 files
+
+"#]])
+        .run();
+
+    assert!(
+        normalized_shared_target.exists(),
+        "recent association via alternate path spelling should protect the shared target dir"
+    );
+}
+
+#[cargo_test]
+fn clean_target_dir_size() {
+    // --max-target-dir-size with very large value means no limit (keeps all)
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
+        .file("src/lib.rs", "")
+        .build();
+
+    // Build to create target directory
+    p.cargo("build").run();
+
+    // Verify target dir was created
+    assert!(p.root().join("target").exists());
+
+    // Use a very large threshold (effectively no limit)
+    p.cargo("clean gc -v -Zgc")
+        .arg("--max-target-dir-size=1000000000")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_stderr_data(str![[r#"
+[REMOVED] 0 files
+
+"#]])
+        .run();
+
+    // Target dir should still exist
+    assert!(p.root().join("target").exists());
+}
+
+#[cargo_test]
+fn clean_target_dir_size_under_threshold() {
+    // Target dir is kept when total size is under threshold
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
+        .file("src/lib.rs", "")
+        .build();
+
+    // Build to create target directory
+    p.cargo("build").run();
+
+    // Verify target dir was created
+    assert!(p.root().join("target").exists());
+
+    // Get the target dir size
+    let target_size = cargo_util::du(&p.root().join("target"), &[]).unwrap();
+
+    // Use a threshold larger than the target dir size
+    p.cargo("clean gc -v -Zgc")
+        .arg(format!("--max-target-dir-size={}", target_size + 1000))
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_stderr_data(str![[r#"
+[REMOVED] 0 files
+
+"#]])
+        .run();
+
+    // Target dir should still exist
+    assert!(p.root().join("target").exists());
+}
+
+#[cargo_test]
+fn clean_target_dir_size_over_threshold() {
+    // Target dir is deleted when total size exceeds threshold
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
+        .file("src/lib.rs", "")
+        .build();
+
+    // Build to create target directory
+    p.cargo("build").run();
+
+    // Verify target dir was created
+    assert!(p.root().join("target").exists());
+
+    // Get the target dir size
+    let target_size = cargo_util::du(&p.root().join("target"), &[]).unwrap();
+
+    // Use a threshold smaller than the target dir size
+    p.cargo("clean gc -v -Zgc")
+        .arg(format!("--max-target-dir-size={}", target_size / 2))
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_stderr_data(str![[r#"
+[REMOVING] [ROOT]/foo/target
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
+"#]])
+        .run();
+
+    // Target dir should be deleted
+    assert!(!p.root().join("target").exists());
+}
+
+#[cargo_test]
+fn clean_target_dir_size_multiple_dirs() {
+    // Multiple target dirs - oldest is deleted first
+    let p1 = project()
+        .at("foo")
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
+        .file("src/lib.rs", "")
+        .build();
+    let p2 = project()
+        .at("bar")
+        .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("src/lib.rs", "")
+        .build();
+
+    // Build both projects to create target directories with deterministic ages.
+    p1.cargo("build")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(5))
+        .run();
+    p2.cargo("build")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+
+    // Verify both target dirs exist
+    assert!(p1.root().join("target").exists());
+    assert!(p2.root().join("target").exists());
+
+    // Get sizes
+    let size1 = cargo_util::du(&p1.root().join("target"), &[]).unwrap();
+    let size2 = cargo_util::du(&p2.root().join("target"), &[]).unwrap();
+
+    // Set threshold above either individual dir but below their combined size.
+    let threshold = if size1 > size2 {
+        size1 + 100
+    } else {
+        size2 + 100
+    };
+    assert!(
+        size1 + size2 > threshold,
+        "test setup requires combined size over threshold"
+    );
+
+    // Clean with threshold that should delete the oldest target dir first.
+    p1.cargo("clean gc -v -Zgc")
+        .arg(format!("--max-target-dir-size={}", threshold))
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_stderr_data(str![[r#"
+[REMOVING] [ROOT]/foo/target
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
+"#]])
+        .run();
+
+    assert!(
+        !p1.root().join("target").exists(),
+        "oldest target dir should be removed first"
+    );
+    assert!(
+        p2.root().join("target").exists(),
+        "newer target dir should remain"
+    );
+}

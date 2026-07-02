@@ -55,7 +55,7 @@ pub use self::resolve::{
 pub use self::vendor::{VendorOptions, vendor};
 
 pub mod cargo_add;
-mod cargo_clean;
+pub(crate) mod cargo_clean;
 pub(crate) mod cargo_compile;
 pub mod cargo_config;
 mod cargo_doc;
