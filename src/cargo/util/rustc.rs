@@ -12,7 +12,7 @@ use tracing::{debug, info, warn};
 
 use crate::core::compiler::apply_env_config;
 use crate::util::interning::InternedString;
-use crate::util::{CargoResult, GlobalContext, StableHasher};
+use crate::util::{CargoResult, GlobalContext, StableHasher, VersionExt};
 
 /// Information on the `rustc` executable
 #[derive(Debug)]
@@ -32,6 +32,8 @@ pub struct Rustc {
     pub host: InternedString,
     /// The rustc full commit hash, this comes from `verbose_version`.
     pub commit_hash: Option<String>,
+    /// Is the rustc on a nightly or a dev channel?
+    pub is_nightly: bool,
     cache: Mutex<Cache>,
 }
 
@@ -87,6 +89,8 @@ impl Rustc {
                 verbose_version
             )
         })?;
+        let is_nightly =
+            version.is_prerelease() && matches!(version.pre.as_str(), "dev" | "nightly");
         let commit_hash = extract("commit-hash: ").ok().map(|hash| {
             // Possible commit-hash values from rustc are SHA hex string and "unknown". See:
             // * https://github.com/rust-lang/rust/blob/531cb83fc/src/bootstrap/src/utils/channel.rs#L73
@@ -113,6 +117,7 @@ impl Rustc {
             version,
             host,
             commit_hash,
+            is_nightly,
             cache: Mutex::new(cache),
         })
     }

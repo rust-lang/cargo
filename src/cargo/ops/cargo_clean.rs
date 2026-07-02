@@ -288,9 +288,14 @@ fn clean_specs(
                 ] {
                     for (compile_kind, layout) in &layouts {
                         let triple = target_data.short_name(compile_kind);
-                        let (file_types, _unsupported) = target_data
-                            .info(*compile_kind)
-                            .rustc_outputs(mode, target.kind(), triple, clean_ctx.gctx)?;
+                        let (file_types, _unsupported) =
+                            target_data.info(*compile_kind).rustc_outputs(
+                                mode,
+                                target.kind(),
+                                triple,
+                                clean_ctx.gctx,
+                                &target_data.rustc,
+                            )?;
                         let artifact_dir = layout
                             .artifact_dir()
                             .expect("artifact-dir was not locked during clean");
@@ -365,9 +370,14 @@ fn clean_specs(
                 ] {
                     for (compile_kind, layout) in &layouts {
                         let triple = target_data.short_name(compile_kind);
-                        let (file_types, _unsupported) = target_data
-                            .info(*compile_kind)
-                            .rustc_outputs(mode, target.kind(), triple, clean_ctx.gctx)?;
+                        let (file_types, _unsupported) =
+                            target_data.info(*compile_kind).rustc_outputs(
+                                mode,
+                                target.kind(),
+                                triple,
+                                clean_ctx.gctx,
+                                &target_data.rustc,
+                            )?;
                         let artifact_dir = layout
                             .artifact_dir()
                             .expect("artifact-dir was not locked during clean");
