@@ -214,7 +214,7 @@ jobs:
     - name: Configure extra test environment
       run: echo CARGO_CONTAINER_TESTS=1 >> $GITHUB_ENV
       if: matrix.os == 'ubuntu-latest'
-    - run: cargo test -p cargo
+    - run: cargo test --release -p cargo
     - name: Clear intermediate test output
       run: ci/clean-test-output.sh
 
@@ -271,7 +271,7 @@ jobs:
       - run: rustup target add wasm32-unknown-unknown
       - run: sudo apt update -y && sudo apt install gcc-multilib libsecret-1-0 libsecret-1-dev -y
       - run: rustup component add rustfmt || echo "rustfmt not available"
-      - run: cargo test -p cargo
+      - run: cargo test -p cargo --release
         env:
           __CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2: 1
 
