@@ -409,12 +409,10 @@ fn rustdoc_bin() {
 fn rustdoc_bench() {
     full_project()
         .cargo("rustdoc -v --bench 'be*1'")
+        .with_status(1)
         .with_stderr_data(str![[r#"
-[DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustdoc --edition=2015 --crate-type bin --crate-name bench1 [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[GENERATED] [ROOT]/foo/target/doc/bench1/index.html
-
+[ERROR] unexpected argument '--bench' found
+...
 "#]])
         .run();
 }
@@ -423,12 +421,10 @@ fn rustdoc_bench() {
 fn rustdoc_test() {
     full_project()
         .cargo("rustdoc -v --test 'te*1'")
+        .with_status(1)
         .with_stderr_data(str![[r#"
-[DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustdoc --edition=2015 --crate-type bin --crate-name test1 [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[GENERATED] [ROOT]/foo/target/doc/test1/index.html
-
+[ERROR] unexpected argument '--test' found
+...
 "#]])
         .run();
 }

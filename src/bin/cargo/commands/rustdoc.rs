@@ -19,17 +19,12 @@ pub fn cli() -> Command {
         .arg_message_format()
         .arg_silent_suggestion()
         .arg_package("Package to document")
-        .arg_targets_all(
+        .arg_targets_lib_bin_example(
             "Build only this package's library",
             "Build only the specified binary",
             "Build all binaries",
             "Build only the specified example",
             "Build all examples",
-            "Build only the specified test target",
-            "Build all targets that have `test = true` set",
-            "Build only the specified bench target",
-            "Build all targets that have `bench = true` set",
-            "Build all targets",
         )
         .arg_features()
         .arg_parallel()
