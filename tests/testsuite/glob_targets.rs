@@ -217,7 +217,7 @@ fn test_example() {
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name example1 [..]`
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/debug/examples/example1-[HASH][EXE]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/example1-[HASH][EXE]`
 
 "#]])
         .run();
@@ -231,7 +231,7 @@ fn test_bin() {
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name bin1 [..]`
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/debug/deps/bin1-[HASH][EXE]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/bin1-[HASH][EXE]`
 
 "#]])
         .run();
@@ -249,7 +249,7 @@ fn test_bench() {
 [RUNNING] `rustc --crate-name bench1 [..]`
 [RUNNING] `rustc --crate-name bin1 [..]`
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/debug/deps/bench1-[HASH][EXE]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/bench1-[HASH][EXE]`
 
 "#]]
             .unordered(),
@@ -269,7 +269,7 @@ fn test_test() {
 [RUNNING] `rustc --crate-name foo [..]`
 [RUNNING] `rustc --crate-name bin2 [..]`
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/debug/deps/test1-[HASH][EXE]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/test1-[HASH][EXE]`
 
 "#]]
             .unordered(),
@@ -285,7 +285,7 @@ fn bench_example() {
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name example1 [..]`
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/release/examples/example1-[HASH][EXE] --bench`
+[RUNNING] `[ROOT]/foo/target/release/build/foo/[HASH]/out/example1-[HASH][EXE] --bench`
 
 "#]])
         .run();
@@ -299,7 +299,7 @@ fn bench_bin() {
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name bin1 [..]`
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/release/deps/bin1-[HASH][EXE] --bench`
+[RUNNING] `[ROOT]/foo/target/release/build/foo/[HASH]/out/bin1-[HASH][EXE] --bench`
 
 "#]])
         .run();
@@ -317,7 +317,7 @@ fn bench_bench() {
 [RUNNING] `rustc --crate-name foo [..]`
 [RUNNING] `rustc --crate-name bench1 [..]`
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/release/deps/bench1-[HASH][EXE] --bench`
+[RUNNING] `[ROOT]/foo/target/release/build/foo/[HASH]/out/bench1-[HASH][EXE] --bench`
 
 "#]]
             .unordered(),
@@ -337,7 +337,7 @@ fn bench_test() {
 [RUNNING] `rustc --crate-name test1 [..]`
 [RUNNING] `rustc --crate-name bin1 [..]`
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/release/deps/test1-[HASH][EXE] --bench`
+[RUNNING] `[ROOT]/foo/target/release/build/foo/[HASH]/out/test1-[HASH][EXE] --bench`
 
 "#]]
             .unordered(),

@@ -227,6 +227,13 @@ fn add_regex_redactions(subs: &mut snapbox::Redactions) {
         regex!(r"\.cargo/target/(?<redacted>[0-9a-f]{2}/[0-9a-f]{14})"),
     )
     .unwrap();
+    // Avoid 2 letter crate names being merged into hashes in file paths.
+    // e.g. target/debug/build/d1/[HASH]/out
+    subs.insert(
+        "[HASH]",
+        regex!(r"build/[a-z0-9]{2}/(?<redacted>[a-f0-9]{16})"),
+    )
+    .unwrap();
     subs.insert("[HASH]", regex!(r"/[a-z0-9\-_]+-(?<redacted>[0-9a-f]{16})"))
         .unwrap();
     // Match multi-part hashes like `06/b451d0d6f88b1d` used in directory paths
