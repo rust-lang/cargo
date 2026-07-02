@@ -1447,9 +1447,6 @@ fn uninstall_cwd_no_project() {
         .with_stderr_data(str![[r#"
 [ERROR] failed to read `[ROOT]/Cargo.toml`
 
-Caused by:
-  [NOT_FOUND]
-
 "#]])
         .run();
 }
