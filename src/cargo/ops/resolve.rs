@@ -517,8 +517,7 @@ pub fn resolve_with_previous<'gctx>(
         Some(ws.gctx()),
     )?;
 
-    let patches = registry.patches().values().flat_map(|v| v.iter());
-    resolved.register_used_patches(patches);
+    resolved.register_used_patches(registry.patches());
 
     if register_patches && !resolved.unused_patches().is_empty() {
         emit_warnings_of_unused_patches(ws, &resolved, registry)?;
@@ -823,14 +822,12 @@ fn emit_warnings_of_unused_patches(
 ) -> CargoResult<()> {
     const MESSAGE: &str = "was not used in the crate graph";
 
-    // Patch package with the source URLs being patch
-    let mut patch_pkgid_to_urls = HashMap::new();
-    for (url, summaries) in registry.patches().iter() {
-        for summary in summaries.iter() {
-            patch_pkgid_to_urls
-                .entry(summary.package_id())
-                .or_insert_with(HashSet::new)
-                .insert(url);
+    let mut used_patches = HashSet::new();
+    for pkg in resolve.iter() {
+        for (dep_pkg_id, deps) in resolve.deps_not_replaced(pkg) {
+            for dep in deps {
+                used_patches.insert((dep.source_id().canonical_url().clone(), dep_pkg_id));
+            }
         }
     }
 
@@ -844,33 +841,37 @@ fn emit_warnings_of_unused_patches(
     }
 
     let mut unemitted_unused_patches = Vec::new();
-    for unused in resolve.unused_patches().iter() {
-        // Show alternative source URLs if the source URLs being patched
-        // cannot be found in the crate graph.
-        match (
-            source_ids_grouped_by_pkg_name.get(&unused.name()),
-            patch_pkgid_to_urls.get(unused),
-        ) {
-            (Some(ids), Some(patched_urls))
-                if ids
-                    .iter()
-                    .all(|id| !patched_urls.contains(id.canonical_url())) =>
-            {
-                let mut help = "perhaps you meant one of the following:".to_owned();
-                for id in ids {
-                    help.push_str("\n\t");
-                    help.push_str(&id.display_registry_name());
+    for (url, summaries) in registry.patches().iter() {
+        for summary in summaries.iter() {
+            let unused = summary.package_id();
+            if !used_patches.contains(&(url.clone(), unused)) {
+                // Show alternative source URLs if the source URLs being patched
+                // cannot be found in the crate graph.
+                match source_ids_grouped_by_pkg_name.get(&unused.name()) {
+                    Some(ids) if ids.iter().all(|id| id.canonical_url() != url) => {
+                        let mut ids: Vec<_> = ids.into_iter().collect();
+                        ids.sort_by_key(|id| id.url()); // SourceId implements Ord but url() is safe
+                        let mut help = "perhaps you meant one of the following:".to_owned();
+                        for id in ids {
+                            help.push_str("\n\t");
+                            help.push_str(&id.display_registry_name());
+                        }
+                        ws.gctx().shell().print_report(
+                            &[Level::WARNING
+                                .secondary_title(format!("patch `{unused}` {MESSAGE}"))
+                                .element(Level::HELP.message(help))],
+                            false,
+                        )?;
+                    }
+                    _ => unemitted_unused_patches.push(unused),
                 }
-                ws.gctx().shell().print_report(
-                    &[Level::WARNING
-                        .secondary_title(format!("patch `{unused}` {MESSAGE}"))
-                        .element(Level::HELP.message(help))],
-                    false,
-                )?;
             }
-            _ => unemitted_unused_patches.push(unused),
         }
     }
+
+    // Deduplicate general warnings by PackageId
+    unemitted_unused_patches.sort();
+    unemitted_unused_patches.dedup();
 
     // Show general help message.
     if !unemitted_unused_patches.is_empty() {
