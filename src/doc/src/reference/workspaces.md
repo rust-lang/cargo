@@ -144,6 +144,52 @@ When unspecified, the [root package](#root-package) will be used.
 In the case of a [virtual workspace](#virtual-workspace), all members will be used
 (as if `--workspace` were specified on the command-line).
 
+## Recommended structure
+
+For larger workspaces, or workspaces that grow over time, a recommended
+structure is to use a [virtual workspace](#virtual-workspace) manifest at the
+workspace root, and keep all member packages in a flat layout under a directory
+named `crates/` (or `packages/`).
+
+Under this structure, each member crate's directory name should match its crate
+name. The workspace `Cargo.toml` is configured using glob patterns to
+automatically include any subdirectories:
+
+```toml
+# [PROJECT_DIR]/Cargo.toml
+[workspace]
+members = ["crates/*"]
+resolver = "3"
+```
+
+A typical directory structure looks like this:
+
+```text
+.
+├── Cargo.lock
+├── Cargo.toml
+├── target/
+└── crates/
+    ├── member1/
+    │   ├── Cargo.toml
+    │   └── src/
+    └── member2/
+        ├── Cargo.toml
+        └── src/
+```
+
+This structure is recommended for several reasons:
+
+* **Scalability**: As the workspace grows, new member crates can be added by
+  simply creating a directory and running `cargo init` inside it. There is no
+  need to update the root `Cargo.toml` file to list the new member.
+* **Initialization Ergonomics**: By using a glob pattern like `crates/*`, Cargo
+  does not require all workspace member directories to exist or be initialized
+  beforehand. This avoids warnings or errors about missing member paths when
+  initializing a new member with commands like `cargo new` or `cargo init`.
+* **Cleanliness**: It keeps the workspace root clean, separating member package
+  source code from root configuration, lock files, and the output directory.
+
 ## The `package` table
 
 The `workspace.package` table is where you define keys that can be
