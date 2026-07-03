@@ -77,6 +77,8 @@ pub fn read_manifest(
     let original_toml = deserialize_toml(&document)
         .map_err(|e| emit_toml_diagnostic(e.into(), &contents, path, gctx))?;
 
+    let document = make_document_owned(document);
+
     let mut manifest = (|| {
         let empty = Vec::new();
         let cargo_features = original_toml.cargo_features.as_ref().unwrap_or(&empty);
@@ -152,6 +154,22 @@ pub fn read_manifest(
     Ok(manifest)
 }
 
+/// Transform the parsed TOML document so that all its values are owned, so that it has a 'static
+/// lifetime, to make it easier to work with it.
+fn make_document_owned(
+    mut document: toml::Spanned<toml::de::DeTable<'_>>,
+) -> toml::Spanned<toml::de::DeTable<'static>> {
+    document.get_mut().make_owned();
+    // SAFETY: `DeTable::make_owned` ensures no borrows remain and the lifetime does not affect
+    // layout
+    unsafe {
+        std::mem::transmute::<
+            toml::Spanned<toml::de::DeTable<'_>>,
+            toml::Spanned<toml::de::DeTable<'static>>,
+        >(document)
+    }
+}
+
 #[tracing::instrument(skip_all)]
 fn read_toml_string(path: &Path, is_embedded: bool, gctx: &GlobalContext) -> CargoResult<String> {
     let mut contents = paths::read(path).map_err(|err| ManifestError::new(err, path.into()))?;
@@ -166,25 +184,13 @@ fn read_toml_string(path: &Path, is_embedded: bool, gctx: &GlobalContext) -> Car
 }
 
 #[tracing::instrument(skip_all)]
-fn parse_document(
-    contents: &str,
-) -> Result<toml::Spanned<toml::de::DeTable<'static>>, toml::de::Error> {
-    let mut table = toml::de::DeTable::parse(contents)?;
-    table.get_mut().make_owned();
-    // SAFETY: `DeTable::make_owned` ensures no borrows remain and the lifetime does not affect
-    // layout
-    let table = unsafe {
-        std::mem::transmute::<
-            toml::Spanned<toml::de::DeTable<'_>>,
-            toml::Spanned<toml::de::DeTable<'static>>,
-        >(table)
-    };
-    Ok(table)
+fn parse_document(contents: &str) -> Result<toml::Spanned<toml::de::DeTable<'_>>, toml::de::Error> {
+    toml::de::DeTable::parse(&contents)
 }
 
 #[tracing::instrument(skip_all)]
 fn deserialize_toml(
-    document: &toml::Spanned<toml::de::DeTable<'static>>,
+    document: &toml::Spanned<toml::de::DeTable<'_>>,
 ) -> Result<manifest::TomlManifest, toml::de::Error> {
     let mut unused = BTreeSet::new();
     let deserializer = toml::de::Deserializer::from(document.clone());
