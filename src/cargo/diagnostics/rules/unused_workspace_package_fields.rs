@@ -61,7 +61,8 @@ pub(crate) fn lint_workspace(
 
     let workspace_package_fields: IndexSet<_> = maybe_pkg
         .document()
-        .and_then(|d| d.get_ref().get("workspace"))
+        .get_ref()
+        .get("workspace")
         .and_then(|w| w.get_ref().get("package"))
         .and_then(|p| p.get_ref().as_table())
         .iter()
@@ -74,7 +75,8 @@ pub(crate) fn lint_workspace(
             member
                 .manifest()
                 .document()
-                .and_then(|w| w.get_ref().get("package"))
+                .get_ref()
+                .get("package")
                 .and_then(|p| p.get_ref().as_table())
                 .iter()
                 .flat_map(|d| {
@@ -101,9 +103,7 @@ pub(crate) fn lint_workspace(
         let emitted_source = LINT.emitted_source(lint_level, source);
 
         let mut primary = Group::with_title(level.primary_title(LINT.desc));
-        if let Some(document) = document
-            && let Some(contents) = contents
-        {
+        if let Some(contents) = contents {
             let mut snippet = Snippet::source(contents).path(&manifest_path);
             if let Some(span) =
                 get_key_value_span(document, &["workspace", "package", unused.as_ref()])

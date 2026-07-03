@@ -55,10 +55,9 @@ pub(crate) fn lint_package(
 
         let mut desc = Group::with_title(level.primary_title(LINT.desc));
 
-        if let Some(document) = manifest.document()
-            && let Some(contents) = manifest.contents()
-        {
-            let span = get_key_value_span(document, &["package", "im-a-teapot"]).unwrap();
+        if let Some(contents) = manifest.contents() {
+            let span =
+                get_key_value_span(manifest.document(), &["package", "im-a-teapot"]).unwrap();
 
             desc = desc.element(
                 Snippet::source(contents)

@@ -122,8 +122,8 @@ pub(crate) fn lint_workspace(
         let mut report = Vec::new();
         let mut primary_group = Group::with_title(level.clone().primary_title(title));
 
+        let document = maybe_pkg.document();
         if let Some(contents) = maybe_pkg.contents()
-            && let Some(document) = maybe_pkg.document()
             && let Some(span) = get_key_value_span(document, &path)
             && let Some(table_span) = get_key_value_span(document, &path[..path.len() - 1])
         {
@@ -144,8 +144,8 @@ pub(crate) fn lint_workspace(
 
             report.push(
                 if let Some(contents) = maybe_pkg.contents()
-                    && let Some(document) = maybe_pkg.document()
-                    && let Some(table_span) = get_key_value_span(document, &path[..path.len() - 1])
+                    && let Some(table_span) =
+                        get_key_value_span(maybe_pkg.document(), &path[..path.len() - 1])
                 {
                     help_group.element(Snippet::source(contents).path(&manifest_path).patch(
                         Patch::new(

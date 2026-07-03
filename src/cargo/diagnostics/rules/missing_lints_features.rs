@@ -116,14 +116,12 @@ fn report_feature_not_enabled(
         Level::ERROR.primary_title(format!("use of unstable lint `{lint_name}`")),
     );
 
-    if let Some(document) = manifest.document()
-        && let Some(contents) = manifest.contents()
-    {
+    if let Some(contents) = manifest.contents() {
         let key_path = match manifest {
             ManifestFor::Package(_) => &["lints", "cargo", lint_name][..],
             ManifestFor::Workspace { .. } => &["workspace", "lints", "cargo", lint_name][..],
         };
-        let Some(span) = get_key_value_span(document, key_path) else {
+        let Some(span) = get_key_value_span(manifest.document(), key_path) else {
             // This lint is handled by either package or workspace lint.
             return Ok(());
         };

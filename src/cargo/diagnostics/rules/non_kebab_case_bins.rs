@@ -138,8 +138,7 @@ fn lint_package_inner(
                 Level::HELP
                     .secondary_title("to change the binary name to kebab case, convert `bin.name`"),
             );
-            if let Some(document) = document
-                && let Some(contents) = contents
+            if let Some(contents) = contents
                 && let Some(span) = get_key_value_span(
                     document,
                     &["bin".as_index(), i.as_index(), "name".as_index()],
@@ -174,8 +173,7 @@ fn lint_package_inner(
             // Preferring it over moving the file to avoid having to get into moving the
             // files it `mod`s
             let help_bin_table = "to change the binary name to kebab case, specify `bin.name`";
-            if let Some(document) = document
-                && let Some(contents) = contents
+            if let Some(contents) = contents
                 && let Some(span) = get_key_value_span(document, &["package", "name"])
             {
                 report.push(

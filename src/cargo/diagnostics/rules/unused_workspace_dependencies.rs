@@ -132,9 +132,7 @@ pub(crate) fn lint_workspace(
         let emitted_source = LINT.emitted_source(lint_level, source);
 
         let mut primary = Group::with_title(level.primary_title(LINT.desc));
-        if let Some(document) = document
-            && let Some(contents) = contents
-        {
+        if let Some(contents) = contents {
             let mut snippet = Snippet::source(contents).path(&manifest_path);
             if let Some(span) =
                 get_key_value_span(document, &["workspace", "dependencies", unused.as_str()])

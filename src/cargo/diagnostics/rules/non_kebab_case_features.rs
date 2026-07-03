@@ -99,8 +99,7 @@ fn lint_package_inner(
         let emitted_source = LINT.emitted_source(lint_level, source);
 
         let mut primary = Group::with_title(level.primary_title(LINT.desc));
-        if let Some(document) = document
-            && let Some(contents) = contents
+        if let Some(contents) = contents
             && let Some(span) = get_key_value_span(document, &["features", original_name])
         {
             primary = primary.element(
@@ -108,8 +107,7 @@ fn lint_package_inner(
                     .path(manifest_path)
                     .annotation(AnnotationKind::Primary.span(span.key)),
             );
-        } else if let Some(document) = document
-            && let Some(contents) = contents
+        } else if let Some(contents) = contents
             && let Some(dep_span) = get_key_value_span(document, &["dependencies", original_name])
             && let Some(optional_span) =
                 get_key_value_span(document, &["dependencies", original_name, "optional"])
@@ -129,8 +127,7 @@ fn lint_package_inner(
         }
         primary = primary.element(Level::NOTE.message(emitted_source));
         let mut report = vec![primary];
-        if let Some(document) = document
-            && let Some(contents) = contents
+        if let Some(contents) = contents
             && let Some(span) = get_key_value_span(document, &["features", original_name])
         {
             let mut help = Group::with_title(Level::HELP.secondary_title(

@@ -102,7 +102,7 @@ pub fn read_manifest(
         if normalized_toml.package().is_some() {
             to_real_manifest(
                 Some(contents),
-                Some(document),
+                document,
                 original_toml,
                 normalized_toml,
                 features,
@@ -119,7 +119,7 @@ pub fn read_manifest(
             assert!(!is_embedded);
             to_virtual_manifest(
                 Some(contents),
-                Some(document),
+                document,
                 original_toml,
                 normalized_toml,
                 features,
@@ -1271,7 +1271,7 @@ fn deprecated_ws_default_features(
 #[tracing::instrument(skip_all)]
 pub fn to_real_manifest(
     contents: Option<String>,
-    document: Option<toml::Spanned<toml::de::DeTable<'static>>>,
+    document: toml::Spanned<toml::de::DeTable<'static>>,
     original_toml: manifest::TomlManifest,
     normalized_toml: manifest::TomlManifest,
     features: Features,
@@ -1766,7 +1766,7 @@ pub fn to_real_manifest(
                 missing_dep_diagnostic(
                     missing_dep,
                     &original_toml,
-                    document.as_ref(),
+                    &document,
                     contents.as_deref(),
                     manifest_file,
                     gctx,
@@ -1829,7 +1829,7 @@ note: only a feature named `default` will be enabled by default"
     let metabuild = normalized_package.metabuild.clone().map(|sov| sov.0);
     let manifest = Manifest::new(
         contents.map(Rc::new),
-        document.map(Arc::new),
+        Arc::new(document),
         Some(Rc::new(original_toml)),
         Rc::new(normalized_toml),
         summary,
@@ -1891,7 +1891,7 @@ note: only a feature named `default` will be enabled by default"
 fn missing_dep_diagnostic(
     missing_dep: &MissingDependencyError,
     orig_toml: &TomlManifest,
-    document: Option<&toml::Spanned<toml::de::DeTable<'static>>>,
+    document: &toml::Spanned<toml::de::DeTable<'static>>,
     contents: Option<&str>,
     manifest_file: &Path,
     gctx: &GlobalContext,
@@ -1910,9 +1910,7 @@ fn missing_dep_diagnostic(
     );
     let group = Group::with_title(Level::ERROR.primary_title(&title));
     let group =
-        if let Some(contents) = contents
-            && let Some(document) = document
-        {
+        if let Some(contents) = contents {
             let feature_span =
                 get_key_value_span(&document, &["features", missing_dep.feature.as_str()]).unwrap();
 
@@ -1979,7 +1977,7 @@ fn missing_dep_diagnostic(
 
 fn to_virtual_manifest(
     contents: Option<String>,
-    document: Option<toml::Spanned<toml::de::DeTable<'static>>>,
+    document: toml::Spanned<toml::de::DeTable<'static>>,
     original_toml: manifest::TomlManifest,
     normalized_toml: manifest::TomlManifest,
     features: Features,
@@ -2019,7 +2017,7 @@ fn to_virtual_manifest(
     }
     let manifest = VirtualManifest::new(
         contents.map(Rc::new),
-        document.map(Rc::new),
+        Rc::new(document),
         Some(Rc::new(original_toml)),
         Rc::new(normalized_toml),
         replace,
@@ -2950,7 +2948,7 @@ pub fn prepare_for_publish(
     let gctx = ws.gctx();
     let manifest = to_real_manifest(
         contents.map(|c| c.to_owned()),
-        document.cloned(),
+        document.clone(),
         original_toml,
         normalized_toml,
         features,

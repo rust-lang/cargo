@@ -248,7 +248,7 @@ fn report<'a>(
     lint_level: LintLevel,
     source: LintLevelSource,
     contents: Option<&'a str>,
-    document: Option<&toml::Spanned<toml::de::DeTable<'static>>>,
+    document: &toml::Spanned<toml::de::DeTable<'static>>,
     key_path: &[&str],
     manifest_path: &str,
     suggested_req: &str,
@@ -263,9 +263,7 @@ fn report<'a>(
     let mut desc = Group::with_title(level.primary_title(LINT.desc));
     let mut help = Group::with_title(Level::HELP.secondary_title(secondary_title));
 
-    if let Some(document) = document
-        && let Some(contents) = contents
-    {
+    if let Some(contents) = contents {
         let Some(span) = span_of_version_req(document, key_path) else {
             return None;
         };

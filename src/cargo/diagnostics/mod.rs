@@ -230,7 +230,7 @@ impl ManifestFor<'_> {
         }
     }
 
-    pub fn document(&self) -> Option<&toml::Spanned<toml::de::DeTable<'static>>> {
+    pub fn document(&self) -> &toml::Spanned<toml::de::DeTable<'static>> {
         match self {
             ManifestFor::Package(p) => p.manifest().document(),
             ManifestFor::Workspace { ws: _, maybe_pkg } => maybe_pkg.document(),

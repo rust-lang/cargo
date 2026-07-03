@@ -156,10 +156,8 @@ fn lint_manifest_inner(
         let mut report = Vec::new();
         let mut group = Group::with_title(level.clone().primary_title(title));
 
-        if let Some(document) = manifest.document()
-            && let Some(contents) = manifest.contents()
-        {
-            let Some(span) = get_key_value_span(document, key_path) else {
+        if let Some(contents) = manifest.contents() {
+            let Some(span) = get_key_value_span(manifest.document(), key_path) else {
                 // This lint is handled by either package or workspace lint.
                 return Ok(());
             };

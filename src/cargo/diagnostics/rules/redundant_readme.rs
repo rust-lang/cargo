@@ -119,8 +119,7 @@ fn lint_package_inner(
     let emitted_source = LINT.emitted_source(lint_level, source);
 
     let mut primary = Group::with_title(level.primary_title(LINT.desc));
-    if let Some(document) = document
-        && let Some(contents) = contents
+    if let Some(contents) = contents
         && let Some(span) = get_key_value_span(document, &["package", "readme"])
     {
         let span = span.key.start..span.value.end;

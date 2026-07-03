@@ -514,7 +514,7 @@ fn prepare_for_vendor(
     let mut errors = Default::default();
     let manifest = crate::util::toml::to_real_manifest(
         contents.map(|c| c.to_owned()),
-        document.cloned(),
+        document.clone(),
         original_toml,
         normalized_toml,
         features,

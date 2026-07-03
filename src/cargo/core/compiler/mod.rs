@@ -2111,7 +2111,7 @@ struct ManifestErrorContext {
     /// The path to the manifest.
     path: PathBuf,
     /// The locations of various spans within the manifest.
-    spans: Option<Arc<toml::Spanned<toml::de::DeTable<'static>>>>,
+    spans: Arc<toml::Spanned<toml::de::DeTable<'static>>>,
     /// The raw manifest contents.
     contents: Option<String>,
     /// A lookup for all the unambiguous renamings, mapping from the original package
@@ -2533,13 +2533,9 @@ impl ManifestErrorContext {
     /// baz = { path = "../bar", package = "bar" }
     /// ```
     fn find_crate_span(&self, unrenamed: &str) -> Option<Range<usize>> {
-        let Some(ref spans) = self.spans else {
-            return None;
-        };
-
         let orig_name = self.rename_table.get(unrenamed)?.as_str();
 
-        if let Some((k, v)) = get_key_value(&spans, &["dependencies", orig_name]) {
+        if let Some((k, v)) = get_key_value(&self.spans, &["dependencies", orig_name]) {
             // We make some effort to find the unrenamed text: in
             //
             // ```
@@ -2559,7 +2555,8 @@ impl ManifestErrorContext {
         // [target.x86_64-unknown-linux-gnu.dependencies] or
         // [target.'cfg(something)'.dependencies]. We filter out target tables
         // that don't match a requested target or a requested cfg.
-        if let Some(target) = spans
+        if let Some(target) = self
+            .spans
             .deref()
             .as_ref()
             .get("target")

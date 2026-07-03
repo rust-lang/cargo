@@ -131,8 +131,7 @@ pub(crate) fn lint_package(
         let emitted_source = LINT.emitted_source(lint_level, source);
 
         let mut primary = Group::with_title(level.primary_title(LINT.desc));
-        if let Some(document) = document
-            && let Some(contents) = contents
+        if let Some(contents) = contents
             && let Some(span) = get_key_value_span(document, &["build-dependencies", dep_name])
         {
             let span = span.key.start..span.value.end;
@@ -307,8 +306,7 @@ fn lint_package_build_results(
                 let toml_path = dependency.toml_path();
 
                 let mut primary = Group::with_title(level.primary_title(LINT.desc));
-                if let Some(document) = document
-                    && let Some(contents) = contents
+                if let Some(contents) = contents
                     && let Some(span) = get_key_value_span(document, &toml_path)
                 {
                     let span = span.key.start..span.value.end;

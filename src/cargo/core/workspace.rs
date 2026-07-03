@@ -1917,7 +1917,7 @@ impl MaybePackage {
         }
     }
 
-    pub fn document(&self) -> Option<&toml::Spanned<toml::de::DeTable<'static>>> {
+    pub fn document(&self) -> &toml::Spanned<toml::de::DeTable<'static>> {
         match self {
             MaybePackage::Package(p) => p.manifest().document(),
             MaybePackage::Virtual(v) => v.document(),
