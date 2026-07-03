@@ -166,7 +166,7 @@ fn read_toml_string(path: &Path, is_embedded: bool, gctx: &GlobalContext) -> Car
 }
 
 #[tracing::instrument(skip_all)]
-fn parse_document(
+pub(crate) fn parse_document(
     contents: &str,
 ) -> Result<toml::Spanned<toml::de::DeTable<'static>>, toml::de::Error> {
     let mut table = toml::de::DeTable::parse(contents)?;
