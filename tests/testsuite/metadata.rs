@@ -1215,7 +1215,6 @@ fn workspace_metadata() {
 #[cargo_test]
 fn workspace_metadata_with_dependencies_no_deps() {
     let p = project()
-        // NOTE that 'artifact' isn't mentioned in the workspace here, yet it shows up as member.
         .file(
             "Cargo.toml",
             r#"
@@ -1234,18 +1233,14 @@ fn workspace_metadata_with_dependencies_no_deps() {
 
                 [dependencies]
                 baz = { path = "../baz/" }
-                artifact = { path = "../artifact/", artifact = "bin" }
            "#,
         )
         .file("bar/src/lib.rs", "")
         .file("baz/Cargo.toml", &basic_lib_manifest("baz"))
         .file("baz/src/lib.rs", "")
-        .file("artifact/Cargo.toml", &basic_bin_manifest("artifact"))
-        .file("artifact/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("metadata --no-deps -Z bindeps")
-        .masquerade_as_nightly_cargo(&["bindeps"])
+    p.cargo("metadata --no-deps")
         .with_stdout_data(
             str![[r#"
 {
@@ -1258,26 +1253,6 @@ fn workspace_metadata_with_dependencies_no_deps() {
       "categories": [],
       "default_run": null,
       "dependencies": [
-        {
-          "artifact": {
-            "kinds": [
-              "bin"
-            ],
-            "lib": false,
-            "target": null
-          },
-          "features": [],
-          "kind": null,
-          "name": "artifact",
-          "optional": false,
-          "path": "[ROOT]/foo/artifact",
-          "registry": null,
-          "rename": null,
-          "req": "*",
-          "source": null,
-          "target": null,
-          "uses_default_features": true
-        },
         {
           "features": [],
           "kind": null,
@@ -1340,49 +1315,6 @@ fn workspace_metadata_with_dependencies_no_deps() {
       "edition": "2015",
       "features": {},
       "homepage": null,
-      "id": "path+[ROOTURL]/foo/artifact#0.5.0",
-      "keywords": [],
-      "license": null,
-      "license_file": null,
-      "links": null,
-      "manifest_path": "[ROOT]/foo/artifact/Cargo.toml",
-      "metadata": null,
-      "name": "artifact",
-      "publish": null,
-      "readme": null,
-      "repository": null,
-      "rust_version": null,
-      "source": null,
-      "targets": [
-        {
-          "crate_types": [
-            "bin"
-          ],
-          "doc": true,
-          "doctest": false,
-          "edition": "2015",
-          "kind": [
-            "bin"
-          ],
-          "name": "artifact",
-          "src_path": "[ROOT]/foo/artifact/src/main.rs",
-          "test": true
-        }
-      ],
-      "version": "0.5.0"
-    },
-    {
-      "authors": [
-        "wycats@example.com"
-      ],
-      "categories": [],
-      "default_run": null,
-      "dependencies": [],
-      "description": null,
-      "documentation": null,
-      "edition": "2015",
-      "features": {},
-      "homepage": null,
       "id": "path+[ROOTURL]/foo/baz#0.5.0",
       "keywords": [],
       "license": null,
@@ -1421,12 +1353,10 @@ fn workspace_metadata_with_dependencies_no_deps() {
   "version": 1,
   "workspace_default_members": [
     "path+[ROOTURL]/foo/bar#0.5.0",
-    "path+[ROOTURL]/foo/artifact#0.5.0",
     "path+[ROOTURL]/foo/baz#0.5.0"
   ],
   "workspace_members": [
     "path+[ROOTURL]/foo/bar#0.5.0",
-    "path+[ROOTURL]/foo/artifact#0.5.0",
     "path+[ROOTURL]/foo/baz#0.5.0"
   ],
   "workspace_root": "[ROOT]/foo"
@@ -4386,7 +4316,6 @@ fn cargo_metadata_non_utf8() {
         .run();
 }
 
-// TODO: Consider using this test instead of the version without the 'artifact' suffix or merge them because they should be pretty much the same.
 #[cargo_test]
 fn workspace_metadata_with_dependencies_no_deps_artifact() {
     let p = project()
