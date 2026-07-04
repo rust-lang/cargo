@@ -191,20 +191,20 @@ impl IndexSummary {
 }
 
 fn index_package_to_summary(
-    pkg: &IndexPackage<'_>,
+    pkg: IndexPackage<'_>,
     source_id: SourceId,
     cli_unstable: &CliUnstable,
 ) -> CargoResult<Summary> {
     // ****CAUTION**** Please be extremely careful with returning errors, see
     // `IndexSummary::parse` for details
-    let pkgid = PackageId::new(pkg.name.as_ref().into(), pkg.vers.clone(), source_id);
+    let pkgid = PackageId::new(pkg.name.as_ref().into(), pkg.vers, source_id);
     let deps = pkg
         .deps
-        .iter()
-        .map(|dep| registry_dependency_into_dep(dep.clone(), source_id, cli_unstable))
+        .into_iter()
+        .map(|dep| registry_dependency_into_dep(dep, source_id, cli_unstable))
         .collect::<CargoResult<Vec<_>>>()?;
-    let mut features = pkg.features.clone();
-    if let Some(features2) = pkg.features2.clone() {
+    let mut features = pkg.features;
+    if let Some(features2) = pkg.features2 {
         for (name, values) in features2 {
             features.entry(name).or_default().extend(values);
         }
@@ -214,8 +214,8 @@ fn index_package_to_summary(
         .map(|(name, values)| (name.into(), values.into_iter().map(|v| v.into()).collect()))
         .collect::<BTreeMap<_, _>>();
     let links: Option<InternedString> = pkg.links.as_ref().map(|l| l.as_ref().into());
-    let mut summary = Summary::new(pkgid, deps, &features, links, pkg.rust_version.clone())?;
-    summary.set_checksum(pkg.cksum.clone());
+    let mut summary = Summary::new(pkgid, deps, &features, links, pkg.rust_version)?;
+    summary.set_checksum(pkg.cksum);
     if let Some(pubtime) = pkg.pubtime {
         summary.set_pubtime(pubtime);
     }
@@ -700,6 +700,13 @@ impl IndexSummary {
         source_id: SourceId,
         cli_unstable: &CliUnstable,
     ) -> CargoResult<IndexSummary> {
+        // Subset of the index that is used at the end of the function
+        // Extracted so that we do not have to clone IndexPackage's fields
+        struct IndexSubset {
+            v: Option<u32>,
+            yanked: Option<bool>,
+        }
+
         // ****CAUTION**** Please be extremely careful with returning errors
         // from this function. Entries that error are not included in the
         // index cache, and can cause cargo to get confused when switching
@@ -708,11 +715,16 @@ impl IndexSummary {
         // values carefully when making changes here.
         let index_summary = (|| {
             let index = serde_json::from_slice::<IndexPackage<'_>>(line)?;
-            let summary = index_package_to_summary(&index, source_id, cli_unstable)?;
-            Ok((index, summary))
+            let subset = IndexSubset {
+                v: index.v,
+                yanked: index.yanked,
+            };
+            tracing::trace!("json parsed registry {}/{}", index.name, index.vers);
+            let summary = index_package_to_summary(index, source_id, cli_unstable)?;
+            Ok((subset, summary))
         })();
-        let (index, summary, valid) = match index_summary {
-            Ok((index, summary)) => (index, summary, true),
+        let (subset, summary, valid) = match index_summary {
+            Ok((subset, summary)) => (subset, summary, true),
             Err(err) => {
                 let Ok(IndexPackageMinimum { name, vers }) =
                     serde_json::from_slice::<IndexPackageMinimum<'_>>(line)
@@ -727,6 +739,10 @@ impl IndexSummary {
                     serde_json::from_slice::<IndexPackageRustVersion>(line).unwrap_or_default();
                 let IndexPackageV { v } =
                     serde_json::from_slice::<IndexPackageV>(line).unwrap_or_default();
+                let subset = IndexSubset {
+                    v,
+                    yanked: Default::default(),
+                };
                 let index = IndexPackage {
                     name,
                     vers,
@@ -740,12 +756,12 @@ impl IndexSummary {
                     links: Default::default(),
                     pubtime: Default::default(),
                 };
-                let summary = index_package_to_summary(&index, source_id, cli_unstable)?;
-                (index, summary, false)
+                tracing::trace!("json parsed registry {}/{}", index.name, index.vers);
+                let summary = index_package_to_summary(index, source_id, cli_unstable)?;
+                (subset, summary, false)
             }
         };
-        let v = index.v.unwrap_or(1);
-        tracing::trace!("json parsed registry {}/{}", index.name, index.vers);
+        let v = subset.v.unwrap_or(1);
 
         let v_max = if cli_unstable.bindeps {
             INDEX_V_MAX + 1
@@ -757,7 +773,7 @@ impl IndexSummary {
             Ok(IndexSummary::Unsupported(summary, v))
         } else if !valid {
             Ok(IndexSummary::Invalid(summary))
-        } else if index.yanked.unwrap_or(false) {
+        } else if subset.yanked.unwrap_or(false) {
             Ok(IndexSummary::Yanked(summary))
         } else {
             Ok(IndexSummary::Candidate(summary))
