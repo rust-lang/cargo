@@ -633,15 +633,18 @@ impl Summaries {
     pub fn parse_cache(contents: Vec<u8>) -> CargoResult<(Summaries, InternedString)> {
         let cache = SummariesCache::parse(&contents)?;
         let index_version = cache.index_version.into();
-        let mut ret = Summaries::default();
+        let mut versions = Vec::with_capacity(cache.versions.len());
         for (version, summary) in cache.versions {
             let (start, end) = subslice_bounds(&contents, summary);
-            ret.versions.push((
+            versions.push((
                 version,
                 RefCell::new(MaybeIndexSummary::Unparsed { start, end }),
             ));
         }
-        ret.raw_data = contents;
+        let ret = Summaries {
+            raw_data: contents,
+            versions,
+        };
         return Ok((ret, index_version));
 
         // Returns the start/end offsets of `inner` with `outer`. Asserts that
