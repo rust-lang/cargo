@@ -368,7 +368,7 @@ fn to_bin_targets(
 
     validate_unique_names(&bins, TARGET_KIND_HUMAN_BIN)?;
 
-    let mut result = Vec::new();
+    let mut result = Vec::with_capacity(bins.len());
     for bin in bins {
         let path = package_root.join(&bin.path.as_ref().expect("previously normalized").0);
         let mut target = Target::bin_target(
@@ -442,7 +442,7 @@ fn to_example_targets(
 ) -> CargoResult<Vec<Target>> {
     validate_unique_names(&targets, TARGET_KIND_EXAMPLE)?;
 
-    let mut result = Vec::new();
+    let mut result = Vec::with_capacity(targets.len());
     for toml in targets {
         let path = package_root.join(&toml.path.as_ref().expect("previously normalized").0);
         let crate_types = match toml.crate_types() {
@@ -500,7 +500,7 @@ fn to_test_targets(
 ) -> CargoResult<Vec<Target>> {
     validate_unique_names(&targets, TARGET_KIND_TEST)?;
 
-    let mut result = Vec::new();
+    let mut result = Vec::with_capacity(targets.len());
     for toml in targets {
         let path = package_root.join(&toml.path.as_ref().expect("previously normalized").0);
         let mut target = Target::test_target(
@@ -568,7 +568,7 @@ fn to_bench_targets(
 ) -> CargoResult<Vec<Target>> {
     validate_unique_names(&targets, TARGET_KIND_BENCH)?;
 
-    let mut result = Vec::new();
+    let mut result = Vec::with_capacity(targets.len());
     for toml in targets {
         let path = package_root.join(&toml.path.as_ref().expect("previously normalized").0);
         let mut target = Target::bench_target(
