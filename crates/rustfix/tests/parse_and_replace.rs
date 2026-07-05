@@ -12,7 +12,12 @@
 //! To override snapshots, run `SNAPSHOTS=overwrite cargo test`.
 //! See [`snapbox::assert::Action`] for different actions.
 
-#![allow(clippy::disallowed_methods, clippy::print_stdout, clippy::print_stderr)]
+#![allow(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::print_stdout,
+    clippy::print_stderr
+)]
 
 use anyhow::{Context, Error, anyhow};
 use rustfix::apply_suggestions;

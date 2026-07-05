@@ -1,3 +1,5 @@
+#![allow(clippy::disallowed_types)]
+
 mod xtask;
 
 fn main() {

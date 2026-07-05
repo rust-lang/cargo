@@ -40,6 +40,7 @@
 //! ```
 
 #![allow(clippy::disallowed_methods)]
+#![allow(clippy::disallowed_types)]
 #![allow(clippy::print_stderr)]
 #![allow(clippy::print_stdout)]
 

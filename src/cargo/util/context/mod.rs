@@ -2225,6 +2225,10 @@ pub fn save_credentials(
 
     // Move the old token location to the new one.
     if let Some(token) = toml.remove("token") {
+        #[expect(
+            clippy::disallowed_types,
+            reason = "need stdlib's HashMap because of TOML compatibility"
+        )]
         let map = std::collections::HashMap::from([("token".to_string(), token)]);
         toml.insert("registry".into(), map.into());
     }
