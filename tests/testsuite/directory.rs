@@ -1,6 +1,7 @@
 //! Tests for directory sources.
 
-use std::collections::HashMap;
+use cargo::util::data_structures::HashMap;
+
 use std::fs;
 use std::str;
 
@@ -45,7 +46,7 @@ impl VendorPackage {
             p: Some(project().at(&format!("index/{}", name))),
             cksum: Checksum {
                 package: Some(String::new()),
-                files: HashMap::new(),
+                files: HashMap::default(),
             },
         }
     }
