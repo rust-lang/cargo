@@ -463,7 +463,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-credential"
-version = "0.4.10"
+version = "0.4.11"
 dependencies = [
  "anyhow",
  "libc",
@@ -533,7 +533,7 @@ version = "0.4.13"
 
 [[package]]
 name = "cargo-test-support"
-version = "0.11.4"
+version = "0.11.5"
 dependencies = [
  "anyhow",
  "cargo-test-macro",
@@ -4183,7 +4183,7 @@ checksum = "781442f29170c5c93b7185ad559492601acdc71d5bb0706f5868094f45cfcd08"
 
 [[package]]
 name = "rustfix"
-version = "0.9.7"
+version = "0.9.8"
 dependencies = [
  "anyhow",
  "proptest",
