@@ -131,6 +131,9 @@ pub struct Workspace<'gctx> {
 
     /// Local overlay configuration. See [`crate::sources::overlay`].
     local_overlays: HashMap<SourceId, PathBuf>,
+
+    /// A set of exclude patterns from the workspace manifest that actually matched a crate.
+    used_exclude_patterns: HashSet<String>,
 }
 
 // Separate structure for tracking loaded packages (to avoid loading anything
@@ -178,7 +181,7 @@ impl WorkspaceConfig {
         match self {
             WorkspaceConfig::Root(ances_root_config) => {
                 debug!("find_root - found a root checking exclusion");
-                if !ances_root_config.is_excluded(look_from) {
+                if ances_root_config.is_excluded(look_from).is_none() {
                     debug!("find_root - found!");
                     Some(self_path.to_owned())
                 } else {
@@ -267,6 +270,7 @@ impl<'gctx> Workspace<'gctx> {
             resolve_publish_time: None,
             custom_metadata: None,
             local_overlays: HashMap::new(),
+            used_exclude_patterns: HashSet::new(),
         }
     }
 
@@ -627,6 +631,11 @@ impl<'gctx> Workspace<'gctx> {
         self.packages.packages.values()
     }
 
+    /// Returns a set of all workspace exclude patterns that actually matched a path.
+    pub fn used_exclude_patterns(&self) -> &HashSet<String> {
+        &self.used_exclude_patterns
+    }
+
     /// Returns an iterator over all packages in this workspace
     pub fn members(&self) -> impl Iterator<Item = &Package> {
         let packages = &self.packages;
@@ -910,10 +919,11 @@ impl<'gctx> Workspace<'gctx> {
                     // manifest path, both because `members_paths` doesn't
                     // include `/Cargo.toml`, and because excluded paths may not
                     // be crates.
-                    let exclude = members_paths.iter().any(|(m, _)| *m == normalized_path)
-                        && workspace_config.is_excluded(&normalized_path);
-                    if exclude {
-                        continue;
+                    if members_paths.iter().any(|(m, _)| *m == normalized_path) {
+                        if let Some(pattern) = workspace_config.is_excluded(&normalized_path) {
+                            self.used_exclude_patterns.insert(pattern.clone());
+                            continue;
+                        }
                     }
                     bail!(
                         "package `{}` is listed in default-members{} but is not a member\n\
@@ -962,7 +972,8 @@ impl<'gctx> Workspace<'gctx> {
         if let WorkspaceConfig::Root(ref root_config) =
             *self.packages.load(root_manifest)?.workspace_config()
         {
-            if root_config.is_excluded(&manifest_path) {
+            if let Some(pattern) = root_config.is_excluded(&manifest_path) {
+                self.used_exclude_patterns.insert(pattern.clone());
                 return Ok(());
             }
         }
@@ -1982,11 +1993,11 @@ impl WorkspaceRootConfig {
     /// Checks the path against the `excluded` list.
     ///
     /// This method does **not** consider the `members` list.
-    fn is_excluded(&self, manifest_path: &Path) -> bool {
+    fn is_excluded(&self, manifest_path: &Path) -> Option<&String> {
         let excluded = self
             .exclude
             .iter()
-            .any(|ex| manifest_path.starts_with(self.root_dir.join(ex)));
+            .find(|ex| manifest_path.starts_with(self.root_dir.join(*ex)));
 
         let explicit_member = match self.members {
             Some(ref members) => members
@@ -1995,7 +2006,7 @@ impl WorkspaceRootConfig {
             None => false,
         };
 
-        !explicit_member && excluded
+        if !explicit_member { excluded } else { None }
     }
 
     /// Checks if the path is explicitly listed as a workspace member.
@@ -2202,7 +2213,7 @@ pub fn find_workspace_root_with_membership_check(
             // Verify the workspace includes this package in its members
             if let WorkspaceConfig::Root(ref root_config) = *ws_manifest.workspace_config() {
                 if root_config.is_explicitly_listed_member(manifest_path)
-                    && !root_config.is_excluded(manifest_path)
+                    && root_config.is_excluded(manifest_path).is_none()
                 {
                     return Ok(Some(ws_manifest_path));
                 }
@@ -2217,7 +2228,7 @@ pub fn find_workspace_root_with_membership_check(
                 let manifest = read_manifest(candidate_manifest_path, source_id, gctx)?;
                 if let WorkspaceConfig::Root(ref root_config) = *manifest.workspace_config() {
                     if root_config.is_explicitly_listed_member(manifest_path)
-                        && !root_config.is_excluded(manifest_path)
+                        && root_config.is_excluded(manifest_path).is_none()
                     {
                         return Ok(Some(candidate_manifest_path.to_path_buf()));
                     }
@@ -2244,7 +2255,7 @@ fn find_workspace_root_with_loader(
         // root. Note we skip the first item since that is just the path itself
         for current in manifest_path.ancestors().skip(1) {
             if let Some(ws_config) = roots.get(current) {
-                if !ws_config.is_excluded(manifest_path) {
+                if ws_config.is_excluded(manifest_path).is_none() {
                     // Add `Cargo.toml` since ws_root is the root and not the file
                     return Ok(Some(current.join("Cargo.toml")));
                 }
