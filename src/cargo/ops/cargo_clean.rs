@@ -143,7 +143,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     Ok(())
 }
 
-fn validate_target_dir_tag(target_dir_path: &Path) -> CargoResult<()> {
+pub(crate) fn validate_target_dir_tag(target_dir_path: &Path) -> CargoResult<()> {
     const TAG_SIGNATURE: &[u8] = b"Signature: 8a477f597d28d172789f06886806bc55";
 
     let tag_path = target_dir_path.join("CACHEDIR.TAG");
