@@ -480,7 +480,7 @@ fn report_rust_version_note_over_too_new_note() {
         .publish();
     // 2 days before `NOW`, and needs a newer Rust than the workspace.
     Package::new("bar", "1.1.0")
-        .rust_version("1.99.0")
+        .rust_version("1.65535.0")
         .pubtime("2006-08-06T00:00:00Z")
         .publish();
 
@@ -517,7 +517,7 @@ fn report_rust_version_note_over_too_new_note() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
-[ADDING] bar v1.1.0 (requires Rust 1.99.0)
+[ADDING] bar v1.1.0 (requires Rust 1.65535.0)
 
 "#]])
         .run();
