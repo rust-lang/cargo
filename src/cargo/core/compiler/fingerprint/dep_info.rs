@@ -3,6 +3,7 @@
 //!
 //! [the documentation]: crate::core::compiler::fingerprint#dep-info-files
 
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::ffi::OsString;
 use std::fmt;
@@ -33,7 +34,7 @@ pub struct RustcDepInfo {
     /// The list of files that the main target in the dep-info file depends on.
     ///
     /// The optional checksums are parsed from the special `# checksum:...` comments.
-    pub files: HashMap<PathBuf, Option<(u64, Checksum)>>,
+    pub files: BTreeMap<PathBuf, Option<(u64, Checksum)>>,
     /// The list of environment variables we found that the rustc compilation
     /// depends on.
     ///
