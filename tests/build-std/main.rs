@@ -524,11 +524,7 @@ fn duplicate_lang_item_with_panic_abort() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("check")
-        .build_std_arg("std")
-        .with_stderr_contains("error[E0152]: duplicate lang item in crate `core`: `sized`")
-        .with_status(101)
-        .run();
+    p.cargo("check").build_std_arg("std").run();
 }
 
 pub trait CargoProjectExt {

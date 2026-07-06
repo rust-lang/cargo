@@ -26,6 +26,7 @@ fn std_crates<'a>(crates: &'a [String], default: &'static str, units: &[Unit]) -
         crates.insert("core");
         crates.insert("alloc");
         crates.insert("proc_macro");
+        crates.insert("panic_abort");
         crates.insert("panic_unwind");
         crates.insert("compiler_builtins");
         // Only build libtest if it looks like it is needed (libtest depends on libstd)
