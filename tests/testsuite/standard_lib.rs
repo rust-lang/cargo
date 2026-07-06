@@ -1008,6 +1008,7 @@ fn panic_abort_build_std() {
         .build_std_arg(&setup, "std")
         .target_host()
         .with_stderr_contains("[COMPILING] panic_abort [..]")
+        .with_stderr_does_not_contain("[COMPILING] panic_unwind [..]")
         .with_stderr_contains("[RUNNING] `[..]rustc --crate-name foo [..] -C panic=abort [..]")
         .run();
 }
@@ -1038,6 +1039,7 @@ fn panic_immediate_abort_build_std() {
         .build_std_arg(&setup, "std")
         .target_host()
         .with_stderr_contains("[COMPILING] panic_abort [..]")
+        .with_stderr_does_not_contain("[COMPILING] panic_unwind [..]")
         .with_stderr_contains(
             "[RUNNING] `[..]rustc --crate-name foo [..] -C panic=immediate-abort [..]",
         )
