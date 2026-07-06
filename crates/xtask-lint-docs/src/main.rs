@@ -61,6 +61,9 @@ fn main() -> anyhow::Result<()> {
 
     buf.push_str(&lint_docs);
 
+    writeln!(buf)?;
+    writeln!(buf, "[`package.rust-version`]: rust-version.md")?;
+
     if check {
         let old = std::fs::read_to_string(lint_docs_path())?;
         if old != buf {
@@ -125,7 +128,7 @@ fn add_lint(lint: &Lint, buf: &mut String) -> std::fmt::Result {
     writeln!(buf, "- Group: `{}`", lint.primary_group.name)?;
     writeln!(buf, "- Level: `{}`", lint.primary_group.default_level)?;
     if let Some(msrv) = &lint.msrv {
-        writeln!(buf, "- MSRV: `{msrv}`")?;
+        writeln!(buf, "- Minimal [`package.rust-version`]: `{msrv}`")?;
     }
     writeln!(buf)?;
     writeln!(buf, "{}\n", lint.docs.as_ref().unwrap())
