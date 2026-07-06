@@ -55,7 +55,7 @@ fn collision_dylib() {
     p.cargo("build -j=1")
         .with_stderr_data(&format!("\
 ...
-[WARNING] output filename collision at [ROOT]/foo/target/debug/deps/{}a{}
+[WARNING] output filename collision at [ROOT]/foo/target/debug/{}a{}
   |
   = [NOTE] the lib target `a` in package `b v1.0.0 ([ROOT]/foo/b)` has the same output filename as the lib target `a` in package `a v1.0.0 ([ROOT]/foo/a)`
   = [NOTE] this may become a hard error in the future; see <https://github.com/rust-lang/cargo/issues/6313>
