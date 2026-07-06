@@ -1,8 +1,8 @@
 use super::unit_graph::UnitGraph;
 use crate::core::resolver::errors::describe_path;
 use crate::core::{PackageId, Resolve};
+use crate::util::data_structures::{HashMap, HashSet};
 use crate::util::errors::CargoResult;
-use std::collections::{HashMap, HashSet};
 
 /// Validates [`package.links`] field in the manifest file does not conflict
 /// between packages.
@@ -18,8 +18,8 @@ use std::collections::{HashMap, HashSet};
 /// [rust-lang/cargo#4978]: https://github.com/rust-lang/cargo/pull/4978
 /// [`package.links`]: https://doc.rust-lang.org/nightly/cargo/reference/build-scripts.html#the-links-manifest-key
 pub fn validate_links(resolve: &Resolve, unit_graph: &UnitGraph) -> CargoResult<()> {
-    let mut validated: HashSet<PackageId> = HashSet::new();
-    let mut links: HashMap<String, PackageId> = HashMap::new();
+    let mut validated: HashSet<PackageId> = HashSet::default();
+    let mut links: HashMap<String, PackageId> = HashMap::default();
     let mut units: Vec<_> = unit_graph.keys().collect();
     // Sort primarily to make testing easier.
     units.sort_unstable();

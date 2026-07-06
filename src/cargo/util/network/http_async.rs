@@ -3,7 +3,7 @@
 //! Requests are executed in parallel using cURL [`Multi`] on
 //! a worker thread that is owned by the Client.
 
-use std::collections::HashMap;
+use crate::util::data_structures::HashMap;
 use std::io::Cursor;
 use std::io::Read;
 use std::str::FromStr;
@@ -239,7 +239,7 @@ impl WorkerServer {
         let mut worker = Self {
             incoming_work,
             multi,
-            handles: HashMap::new(),
+            handles: HashMap::default(),
             token: 0,
             timeout,
             stats,

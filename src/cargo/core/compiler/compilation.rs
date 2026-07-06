@@ -1,6 +1,7 @@
 //! Type definitions for the result of a compilation.
 
-use std::collections::{BTreeSet, HashMap};
+use crate::util::data_structures::HashMap;
+use std::collections::BTreeSet;
 use std::ffi::{OsStr, OsString};
 use std::path::Path;
 use std::path::PathBuf;
@@ -181,14 +182,14 @@ impl<'gctx> Compilation<'gctx> {
         }
         Ok(Compilation {
             native_dirs: BTreeSet::new(),
-            root_output: HashMap::new(),
-            deps_output: HashMap::new(),
+            root_output: HashMap::default(),
+            deps_output: HashMap::default(),
             sysroot_target_libdir: get_sysroot_target_libdir(bcx)?,
             tests: Vec::new(),
             binaries: Vec::new(),
             cdylibs: Vec::new(),
             root_crate_names: Vec::new(),
-            extra_env: HashMap::new(),
+            extra_env: HashMap::default(),
             to_doc_test: Vec::new(),
             rustdoc_fingerprints: None,
             gctx: bcx.gctx,

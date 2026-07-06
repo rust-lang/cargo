@@ -1,4 +1,5 @@
 #![allow(clippy::print_stderr)]
+#![allow(clippy::disallowed_types)]
 
 use anyhow::{Context, Error, bail, format_err};
 use mdman::{Format, ManMap};

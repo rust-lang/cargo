@@ -3,6 +3,7 @@
 //! > crate may make major changes to its APIs or be deprecated without warning.
 
 #![allow(clippy::print_stderr)]
+#![allow(clippy::disallowed_types)]
 
 pub mod helpers;
 pub mod sat;

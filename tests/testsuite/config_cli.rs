@@ -1,6 +1,7 @@
 //! Tests for the --config CLI option.
 
-use std::{collections::HashMap, fs};
+use cargo::util::data_structures::HashMap;
+use std::fs;
 
 use crate::prelude::*;
 use cargo_test_support::compare::assert_e2e;
@@ -276,22 +277,31 @@ fn enforces_format() {
     assert_eq!(gctx.get::<bool>("a").unwrap(), true);
     assert_eq!(
         gctx.get::<HashMap<String, bool>>("b").unwrap(),
-        HashMap::from([("a".to_string(), true)])
+        HashMap::from_iter([("a".to_string(), true)])
     );
     assert_eq!(
         gctx.get::<HashMap<String, HashMap<String, bool>>>("c")
             .unwrap(),
-        HashMap::from([("b".to_string(), HashMap::from([("a".to_string(), true)]))])
+        HashMap::from_iter([(
+            "b".to_string(),
+            HashMap::from_iter([("a".to_string(), true)])
+        )])
     );
     assert_eq!(
         gctx.get::<HashMap<String, HashMap<String, bool>>>("d")
             .unwrap(),
-        HashMap::from([("=".to_string(), HashMap::from([("=".to_string(), true)]))])
+        HashMap::from_iter([(
+            "=".to_string(),
+            HashMap::from_iter([("=".to_string(), true)])
+        )])
     );
     assert_eq!(
         gctx.get::<HashMap<String, HashMap<String, bool>>>("e")
             .unwrap(),
-        HashMap::from([("'".to_string(), HashMap::from([("\"".to_string(), true)]))])
+        HashMap::from_iter([(
+            "'".to_string(),
+            HashMap::from_iter([("\"".to_string(), true)])
+        )])
     );
 
     // But anything that's not a dotted key expression should be disallowed.

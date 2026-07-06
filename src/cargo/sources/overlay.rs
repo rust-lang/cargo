@@ -1,8 +1,8 @@
 use tracing::debug;
 
-use crate::sources::IndexSummary;
-
 use super::source::{MaybePackage, Source};
+use crate::sources::IndexSummary;
+use crate::util::data_structures::HashSet;
 
 /// A `Source` that overlays one source over another, pretending that the packages
 /// available in the overlay are actually available in the other one.
@@ -54,7 +54,7 @@ impl<'gctx> Source for DependencyConfusionThreatOverlaySource<'gctx> {
         let remote_source = self.remote.source_id();
 
         let local_dep = dep.clone().map_source(remote_source, local_source);
-        let mut local_packages = std::collections::HashSet::new();
+        let mut local_packages = HashSet::default();
         let mut local_callback = |index: IndexSummary| {
             let index = index.map_summary(|s| s.map_source(local_source, remote_source));
             local_packages.insert(index.clone());

@@ -53,9 +53,10 @@ pub mod unit_dependencies;
 pub mod unit_graph;
 pub mod unused_deps;
 
+use crate::util::data_structures::{HashMap, HashSet};
 use std::borrow::Cow;
 use std::cell::OnceCell;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::BTreeMap;
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fmt::Display;
@@ -2495,8 +2496,8 @@ fn on_stderr_line_inner(
 
 impl ManifestErrorContext {
     fn new(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> ManifestErrorContext {
-        let mut duplicates = HashSet::new();
-        let mut rename_table = HashMap::new();
+        let mut duplicates = HashSet::default();
+        let mut rename_table = HashMap::default();
 
         for dep in build_runner.unit_deps(unit) {
             let unrenamed_id = dep.unit.pkg.package_id().name();

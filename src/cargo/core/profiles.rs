@@ -26,6 +26,7 @@ use crate::core::compiler::{CompileKind, CompileTarget, Unit};
 use crate::core::dependency::Artifact;
 use crate::core::resolver::features::FeaturesFor;
 use crate::core::{PackageId, PackageIdSpec, PackageIdSpecQuery, Resolve, Target, Workspace};
+use crate::util::data_structures::{HashMap, HashSet};
 use crate::util::interning::InternedString;
 use crate::util::toml::validate_profile;
 use crate::util::{CargoResult, GlobalContext, closest_msg, context};
@@ -36,7 +37,7 @@ use cargo_util_schemas::manifest::{
     ProfilePackageSpec, StringOrBool, TomlDebugInfo, TomlProfile, TomlProfiles,
 };
 use cargo_util_terminal::Shell;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::BTreeMap;
 use std::hash::Hash;
 use std::{cmp, fmt, hash};
 
@@ -79,7 +80,7 @@ impl Profiles {
         let mut profile_makers = Profiles {
             incremental,
             dir_names: Self::predefined_dir_names(),
-            by_name: HashMap::new(),
+            by_name: HashMap::default(),
             original_profiles: profiles.clone(),
             requested_profile,
             rustc_host,
@@ -117,12 +118,11 @@ impl Profiles {
 
     /// Returns the hard-coded directory names for built-in profiles.
     fn predefined_dir_names() -> HashMap<InternedString, InternedString> {
-        [
+        HashMap::from_iter([
             ("dev".into(), "debug".into()),
             ("test".into(), "debug".into()),
             ("bench".into(), "release".into()),
-        ]
-        .into()
+        ])
     }
 
     /// Initialize `by_name` with the two "root" profiles, `dev`, and
@@ -201,7 +201,7 @@ impl Profiles {
         }
 
         // Keep track for inherits cycles.
-        let mut set = HashSet::new();
+        let mut set = HashSet::default();
         set.insert(name);
         let maker = self.process_chain(name, profile, &mut set, profiles)?;
         self.by_name.insert(name, maker);
@@ -1279,7 +1279,7 @@ fn merge_config_profiles(
         None => BTreeMap::new(),
     };
     // Set of profile names to check if defined in config only.
-    let mut check_to_add = HashSet::new();
+    let mut check_to_add = HashSet::default();
     check_to_add.insert(requested_profile);
     // Merge config onto manifest profiles.
     for (name, profile) in &mut profiles {
@@ -1297,7 +1297,7 @@ fn merge_config_profiles(
     }
     // Add config-only profiles.
     // Need to iterate repeatedly to get all the inherits values.
-    let mut current = HashSet::new();
+    let mut current = HashSet::default();
     while !check_to_add.is_empty() {
         std::mem::swap(&mut current, &mut check_to_add);
         for name in current.drain() {
@@ -1351,13 +1351,13 @@ fn validate_packages_unique(
     toml: &Option<TomlProfile>,
 ) -> CargoResult<HashSet<PackageIdSpec>> {
     let Some(toml) = toml else {
-        return Ok(HashSet::new());
+        return Ok(HashSet::default());
     };
     let Some(overrides) = toml.package.as_ref() else {
-        return Ok(HashSet::new());
+        return Ok(HashSet::default());
     };
     // Verify that a package doesn't match multiple spec overrides.
-    let mut found = HashSet::new();
+    let mut found = HashSet::default();
     for pkg_id in resolve.iter() {
         let matches: Vec<&PackageIdSpec> = overrides
             .keys()

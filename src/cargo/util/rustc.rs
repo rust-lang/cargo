@@ -1,4 +1,4 @@
-use std::collections::hash_map::HashMap;
+use crate::util::data_structures::HashMap;
 use std::env;
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
@@ -208,8 +208,8 @@ impl Cache {
             (Some(cache_location), Ok(rustc_fingerprint)) => {
                 let empty = CacheData {
                     rustc_fingerprint,
-                    outputs: HashMap::new(),
-                    successes: HashMap::new(),
+                    outputs: HashMap::default(),
+                    successes: HashMap::default(),
                 };
                 let mut dirty = true;
                 let data = match read(&cache_location) {

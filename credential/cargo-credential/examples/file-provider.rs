@@ -1,5 +1,6 @@
 //! Example credential provider that stores credentials in a JSON file.
 //! This is not secure
+#![allow(clippy::disallowed_types)]
 
 use cargo_credential::{
     Action, CacheControl, Credential, CredentialResponse, RegistryInfo, Secret,

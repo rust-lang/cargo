@@ -16,8 +16,8 @@ use cargo_util_terminal::Verbosity;
 use serde::Serialize;
 use walkdir::WalkDir;
 
-use std::collections::HashSet;
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use crate::util::data_structures::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::OsStr;
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read, Write};
@@ -128,7 +128,7 @@ fn sync(
     let vendor_dir_already_exists = vendor_dir.exists();
 
     paths::create_dir_all(&vendor_dir)?;
-    let mut to_remove = HashSet::new();
+    let mut to_remove = HashSet::default();
     if !opts.no_delete {
         for entry in vendor_dir.read_dir()? {
             let entry = entry?;
@@ -145,7 +145,7 @@ fn sync(
     let mut source_replacement_cache =
         SourceReplacementCache::new(gctx, opts.respect_source_config)?;
 
-    let mut checksums = HashMap::new();
+    let mut checksums = HashMap::default();
     let mut ids = BTreeMap::new();
 
     // Let's download all crates and start storing internal tables about them.
@@ -183,7 +183,7 @@ fn sync(
         }
     }
 
-    let mut versions = HashMap::new();
+    let mut versions = HashMap::default();
     for id in ids.keys() {
         let map = versions.entry(id.name()).or_insert_with(BTreeMap::default);
         if let Some(prev) = map.get(&id.version()) {

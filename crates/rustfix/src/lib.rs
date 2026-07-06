@@ -23,6 +23,8 @@
 //! > and not intended for external use (except as a transitive dependency). This
 //! > crate may make major changes to its APIs or be deprecated without warning.
 
+#![allow(clippy::disallowed_types)]
+
 use std::collections::HashSet;
 use std::ops::Range;
 

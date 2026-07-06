@@ -9,8 +9,8 @@
 //! The former is just one kind of source,
 //! while the latter involves operations on the registry Web API.
 
+use crate::util::data_structures::{HashMap, HashSet};
 use std::cell::RefCell;
-use std::collections::{HashMap, HashSet};
 
 use crate::core::{Dependency, PackageId, PackageSet, Patch, SourceId, Summary};
 use crate::sources::IndexSummary;
@@ -197,13 +197,13 @@ impl<'gctx> PackageRegistry<'gctx> {
         Ok(PackageRegistry {
             gctx,
             sources: RefCell::new(SourceMap::new()),
-            source_ids: RefCell::new(HashMap::new()),
+            source_ids: RefCell::new(HashMap::default()),
             overrides: RefCell::new(Vec::new()),
             source_config,
-            locked: HashMap::new(),
-            patches: HashMap::new(),
+            locked: HashMap::default(),
+            patches: HashMap::default(),
             patches_locked: false,
-            patches_available: HashMap::new(),
+            patches_available: HashMap::default(),
         })
     }
 
@@ -284,7 +284,7 @@ impl<'gctx> PackageRegistry<'gctx> {
     /// remove all residual state from previous lock files.
     pub fn clear_lock(&mut self) {
         trace!("clear_lock");
-        self.locked = HashMap::new();
+        self.locked = HashMap::default();
     }
 
     /// Registers one "locked package" to the registry, for guiding the
@@ -445,7 +445,7 @@ impl<'gctx> PackageRegistry<'gctx> {
             Ok(summary)
         }).collect::<CargoResult<Vec<_>>>()?;
 
-        let mut name_and_version = HashSet::new();
+        let mut name_and_version = HashSet::default();
         for summary in unlocked_summaries.iter() {
             let name = summary.package_id().name();
             let version = summary.package_id().version();

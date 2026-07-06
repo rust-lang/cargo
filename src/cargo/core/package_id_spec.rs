@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use crate::util::data_structures::HashMap;
 
 use anyhow::{Context as _, bail};
 
@@ -124,7 +124,7 @@ help: re-run this command with one of the following specifications",
         };
 
         fn minimize(msg: &mut String, ids: &[PackageId], spec: &PackageIdSpec) {
-            let mut version_cnt = HashMap::new();
+            let mut version_cnt = HashMap::default();
             for id in ids {
                 *version_cnt.entry(id.version()).or_insert(0) += 1;
             }

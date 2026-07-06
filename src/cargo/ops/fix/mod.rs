@@ -36,7 +36,8 @@
 //!   break anything. The change will be backed out if it fails (unless
 //!   `--broken-code` is used).
 
-use std::collections::{BTreeSet, HashMap, HashSet};
+use crate::util::data_structures::{HashMap, HashSet};
+use std::collections::BTreeSet;
 use std::ffi::OsString;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -861,7 +862,7 @@ fn rustfix_crate(
     let _lock = LockServerClient::lock(&lock_addr.parse()?, "global")?;
 
     // Map of files that have been modified.
-    let mut files = HashMap::new();
+    let mut files = HashMap::default();
 
     if !args.can_run_rustfix(gctx)? {
         // This fix should not be run. Skipping...
@@ -987,7 +988,7 @@ fn rustfix_and_fix(
 ) -> CargoResult<(Output, bool)> {
     // If not empty, filter by these lints.
     // TODO: implement a way to specify this.
-    let only = HashSet::new();
+    let only = HashSet::default();
 
     debug!("calling rustc to collect suggestions and validate previous fixes: {rustc}");
     let output = rustc.output()?;
@@ -1025,7 +1026,7 @@ fn rustfix_and_fix(
         .filter_map(|diag| rustfix::collect_suggestions(&diag, &only, fix_mode));
 
     // Collect suggestions by file so we can apply them one at a time later.
-    let mut file_map = HashMap::new();
+    let mut file_map = HashMap::default();
     let mut num_suggestion = 0;
     // It's safe since we won't read any content under home dir.
     let home_path = gctx.home().as_path_unlocked();

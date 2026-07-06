@@ -28,7 +28,7 @@ base64 = "0.22.1"
 blake3 = "1.8.4"
 build-rs = { version = "0.3.5", path = "crates/build-rs" }
 cargo = { path = "" }
-cargo-credential = { version = "0.4.10", path = "credential/cargo-credential" }
+cargo-credential = { version = "0.4.11", path = "credential/cargo-credential" }
 cargo-credential-libsecret = { version = "0.5.9", path = "credential/cargo-credential-libsecret" }
 cargo-credential-macos-keychain = { version = "0.4.24", path = "credential/cargo-credential-macos-keychain" }
 cargo-credential-wincred = { version = "0.4.24", path = "credential/cargo-credential-wincred" }
@@ -91,7 +91,7 @@ regex = "1.12.3"
 rusqlite = { version = "0.40.0", features = ["bundled"] }
 rustc-hash = "2.1.2"
 rustc-stable-hash = "0.1.2"
-rustfix = { version = "0.9.7", path = "crates/rustfix" }
+rustfix = { version = "0.9.8", path = "crates/rustfix" }
 same-file = "1.0.6"
 schemars = "1.2.1"
 security-framework = "3.7.0"

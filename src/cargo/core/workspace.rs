@@ -1,6 +1,7 @@
+use crate::util::data_structures::{HashMap, HashSet};
 use std::cell::RefCell;
-use std::collections::hash_map::{Entry, HashMap};
-use std::collections::{BTreeMap, BTreeSet, HashSet};
+use std::collections::hash_map::Entry;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
@@ -247,17 +248,17 @@ impl<'gctx> Workspace<'gctx> {
             current_manifest,
             packages: Packages {
                 gctx,
-                packages: HashMap::new(),
+                packages: HashMap::default(),
             },
             root_manifest: None,
             target_dir: None,
             build_dir: None,
             members: Vec::new(),
-            member_ids: HashSet::new(),
+            member_ids: HashSet::default(),
             default_members: Vec::new(),
             is_ephemeral: false,
             require_optional_deps: true,
-            loaded_packages: RefCell::new(HashMap::new()),
+            loaded_packages: RefCell::new(HashMap::default()),
             ignore_lock: false,
             requested_lockfile_path: None,
             resolve_behavior: ResolveBehavior::V1,
@@ -266,7 +267,7 @@ impl<'gctx> Workspace<'gctx> {
             resolve_honors_publish_age: true,
             resolve_publish_time: None,
             custom_metadata: None,
-            local_overlays: HashMap::new(),
+            local_overlays: HashMap::default(),
         }
     }
 
@@ -539,7 +540,7 @@ impl<'gctx> Workspace<'gctx> {
 
         let mut warnings = Vec::new();
 
-        let mut patch = HashMap::new();
+        let mut patch = HashMap::default();
         for (url, deps) in config_patch.into_iter().flatten() {
             let url = match &url[..] {
                 CRATES_IO_REGISTRY => CRATES_IO_INDEX.parse().unwrap(),
@@ -1716,7 +1717,7 @@ impl<'gctx> Workspace<'gctx> {
         // Split off any features with the syntax `member-name/feature-name` into a map
         // so that those features can be applied directly to those workspace-members.
         let mut member_specific_features: HashMap<InternedString, BTreeSet<FeatureValue>> =
-            HashMap::new();
+            HashMap::default();
         // Features for the member in the current directory.
         let mut cwd_features = BTreeSet::new();
         for feature in cli_features.features.iter() {

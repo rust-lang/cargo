@@ -37,6 +37,8 @@ use crate::core::compiler::artifact;
 use crate::core::compiler::build_runner::UnitHash;
 use crate::core::compiler::job_queue::JobState;
 use crate::core::{PackageId, Target, profiles::ProfileRoot};
+use crate::util::data_structures::HashMap;
+use crate::util::data_structures::HashSet;
 use crate::util::errors::CargoResult;
 use crate::util::internal;
 use crate::util::machine_message::{self, Message};
@@ -44,8 +46,8 @@ use anyhow::{Context as _, bail};
 use cargo_platform::Cfg;
 use cargo_util::paths;
 use cargo_util_schemas::manifest::RustVersion;
-use std::collections::hash_map::{Entry, HashMap};
-use std::collections::{BTreeSet, HashSet};
+use std::collections::BTreeSet;
+use std::collections::hash_map::Entry;
 use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::{Arc, Mutex};
@@ -415,7 +417,7 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
         cmd.env(&format!("CARGO_FEATURE_{}", super::envify(feat)), "1");
     }
 
-    let mut cfg_map = HashMap::new();
+    let mut cfg_map = HashMap::default();
     cfg_map.insert(
         "feature",
         unit.features.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
@@ -1273,7 +1275,7 @@ impl BuildDeps {
 /// [`build_explicit_deps`]: BuildRunner::build_explicit_deps
 /// [`build_script_outputs`]: BuildRunner::build_script_outputs
 pub fn build_map(build_runner: &mut BuildRunner<'_, '_>) -> CargoResult<()> {
-    let mut ret = HashMap::new();
+    let mut ret = HashMap::default();
     for unit in &build_runner.bcx.roots {
         build(&mut ret, build_runner, unit)?;
     }

@@ -15,6 +15,7 @@ use crate::util::Progress;
 use crate::util::ProgressStyle;
 use crate::util::auth;
 use crate::util::cache_lock::CacheLockMode;
+use crate::util::data_structures::HashSet;
 use crate::util::errors::CargoResult;
 use crate::util::errors::HttpNotSuccessful;
 use crate::util::interning::InternedString;
@@ -29,7 +30,6 @@ use http::HeaderValue;
 use http::Response;
 use std::cell::Cell;
 use std::cell::RefCell;
-use std::collections::HashSet;
 use std::fs;
 use std::fs::File;
 use std::io::ErrorKind;
@@ -411,7 +411,7 @@ impl<'gctx> HttpBackend<'gctx> {
                 ProgressStyle::Indeterminate,
                 gctx,
             ))),
-            fresh: RefCell::new(HashSet::new()),
+            fresh: RefCell::new(HashSet::default()),
             requested_update: Cell::new(false),
             fetch_started: Cell::new(false),
             auth_required: Cell::new(false),

@@ -25,8 +25,8 @@ use crate::util::context::key::ArrayItemKeyPath;
 use crate::util::context::value;
 use crate::util::context::{ConfigError, ConfigKey, GlobalContext};
 use crate::util::context::{ConfigValue as CV, Definition, Value};
+use crate::util::data_structures::HashSet;
 use serde::{de, de::IntoDeserializer};
-use std::collections::HashSet;
 use std::vec;
 
 /// Serde deserializer used to convert config values to a target type using
@@ -306,7 +306,7 @@ impl<'gctx> ConfigMapAccess<'gctx> {
             }
         }
 
-        let mut fields = HashSet::new();
+        let mut fields = HashSet::default();
 
         // If the caller is interested in a field which we can provide from
         // the environment, get it from there.

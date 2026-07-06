@@ -40,10 +40,11 @@ use crate::sources::SourceConfigMap;
 use crate::sources::source::QueryKind;
 use crate::util::CargoResult;
 use crate::util::cache_lock::CacheLockMode;
+use crate::util::data_structures::{HashMap, HashSet};
 use anyhow::{Context, bail, format_err};
 use futures::stream::FuturesUnordered;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 use std::io::{Read, Write};
 

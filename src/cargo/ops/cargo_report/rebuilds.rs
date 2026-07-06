@@ -1,6 +1,6 @@
 //! The `cargo report rebuilds` command.
 
-use std::collections::{HashMap, HashSet};
+use crate::util::data_structures::{HashMap, HashSet};
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
@@ -95,9 +95,9 @@ struct RootRebuild {
 fn prepare_context(log: &Path) -> CargoResult<Context> {
     let reader = BufReader::new(File::open(log)?);
 
-    let mut units: HashMap<UnitIndex, UnitInfo> = HashMap::new();
-    let mut dependencies: HashMap<UnitIndex, Vec<UnitIndex>> = HashMap::new();
-    let mut dirty_reasons: HashMap<UnitIndex, DirtyReason> = HashMap::new();
+    let mut units: HashMap<UnitIndex, UnitInfo> = HashMap::default();
+    let mut dependencies: HashMap<UnitIndex, Vec<UnitIndex>> = HashMap::default();
+    let mut dirty_reasons: HashMap<UnitIndex, DirtyReason> = HashMap::default();
     let mut total_cached = 0;
     let mut total_new = 0;
     let mut total_rebuilt = 0;
@@ -160,7 +160,7 @@ fn prepare_context(log: &Path) -> CargoResult<Context> {
     }
 
     // reverse dependency graph (dependents of each unit)
-    let mut reverse_deps: HashMap<UnitIndex, Vec<UnitIndex>> = HashMap::new();
+    let mut reverse_deps: HashMap<UnitIndex, Vec<UnitIndex>> = HashMap::default();
     for (unit_id, deps) in &dependencies {
         for dep_id in deps {
             reverse_deps.entry(*dep_id).or_default().push(*unit_id);
@@ -215,7 +215,7 @@ fn find_cascading_rebuilds(
     rebuilt_units: &HashSet<UnitIndex>,
 ) -> Vec<UnitIndex> {
     let mut affected = Vec::new();
-    let mut visited = HashSet::new();
+    let mut visited = HashSet::default();
     let mut queue = vec![root_rebuild];
     visited.insert(root_rebuild);
 

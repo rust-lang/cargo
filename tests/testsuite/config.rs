@@ -1,7 +1,8 @@
 //! Tests for config settings.
 
+use cargo::util::data_structures::HashMap;
 use std::borrow::Borrow;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 use std::fs;
 use std::io;
 use std::os;
@@ -38,7 +39,7 @@ pub struct GlobalContextBuilder {
 impl GlobalContextBuilder {
     pub fn new() -> GlobalContextBuilder {
         GlobalContextBuilder {
-            env: HashMap::new(),
+            env: HashMap::default(),
             unstable: Vec::new(),
             config_args: Vec::new(),
             root: None,
@@ -749,12 +750,12 @@ asdf = 3
     type Nested = HashMap<String, HashMap<String, u8>>;
 
     let n: Nested = gctx.get("nest").unwrap();
-    let mut expected = HashMap::new();
-    let mut foo = HashMap::new();
+    let mut expected = HashMap::default();
+    let mut foo = HashMap::default();
     foo.insert("f1".to_string(), 1);
     foo.insert("f2".to_string(), 3);
     expected.insert("foo".to_string(), foo);
-    let mut bar = HashMap::new();
+    let mut bar = HashMap::default();
     bar.insert("asdf".to_string(), 3);
     expected.insert("bar".to_string(), bar);
     assert_eq!(n, expected);

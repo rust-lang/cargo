@@ -1,11 +1,11 @@
 //! Render HTML report from timing tracking data.
 
+use crate::util::data_structures::HashMap;
+use crate::util::data_structures::HashSet;
 use std::borrow::Cow;
-use std::collections::HashMap;
-use std::collections::HashSet;
 use std::io::Write;
 
-use indexmap::IndexMap;
+use crate::util::data_structures::IndexMap;
 use itertools::Itertools as _;
 
 use crate::CargoResult;
@@ -364,7 +364,7 @@ pub fn compute_concurrency(unit_data: &[UnitData]) -> Vec<Concurrency> {
     }
 
     // unit_id -> unit that unblocks it.
-    let mut unblocked_by: HashMap<_, _> = HashMap::new();
+    let mut unblocked_by: HashMap<_, _> = HashMap::default();
     for unit in unit_data {
         for id in unit.unblocked_rmeta_units.iter() {
             assert!(
@@ -432,8 +432,8 @@ pub fn compute_concurrency(unit_data: &[UnitData]) -> Vec<Concurrency> {
 
     let mut concurrency: Vec<Concurrency> = Vec::new();
     let mut inactive: HashSet<UnitIndex> = unit_data.iter().map(|unit| unit.i).collect();
-    let mut waiting: HashSet<UnitIndex> = HashSet::new();
-    let mut active: HashSet<UnitIndex> = HashSet::new();
+    let mut waiting: HashSet<UnitIndex> = HashSet::default();
+    let mut active: HashSet<UnitIndex> = HashSet::default();
 
     for (t, state, unit_id) in events {
         match state {

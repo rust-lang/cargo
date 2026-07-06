@@ -3,7 +3,7 @@
 //! See [the module-level doc](crate::util::context)
 //! for how configuration is parsed and deserialized.
 
-use std::collections::HashMap;
+use crate::util::data_structures::HashMap;
 use std::collections::hash_map::Entry;
 use std::fmt;
 use std::mem;

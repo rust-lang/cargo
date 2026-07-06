@@ -1,13 +1,14 @@
 use std::cell::OnceCell;
 use std::cell::{Cell, Ref, RefCell};
 use std::cmp::Ordering;
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::hash;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
+use crate::util::data_structures::{HashMap, HashSet};
 use anyhow::Context as _;
 use cargo_util_schemas::manifest::{Hints, RustVersion};
 use futures::FutureExt;

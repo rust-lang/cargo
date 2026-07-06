@@ -1,6 +1,6 @@
 //! Tests for git authentication.
 
-use std::collections::HashSet;
+use cargo::util::data_structures::HashSet;
 use std::io::BufReader;
 use std::io::prelude::*;
 use std::net::{SocketAddr, TcpListener};
