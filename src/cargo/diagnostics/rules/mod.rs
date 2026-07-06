@@ -246,6 +246,7 @@ fn find_lint_or_group<'a>(
 #[cfg(test)]
 mod tests {
     use crate::util::data_structures::HashSet;
+    use crate::util::data_structures::IndexMap;
     use itertools::Itertools;
     use snapbox::ToDebug;
     use std::cmp::Reverse;
@@ -280,6 +281,53 @@ mod tests {
             invalid_msrvs.is_empty(),
             "{invalid_msrvs} need `msrv` set so users can use `[lints.cargo]` to disable them"
         );
+    }
+
+    #[test]
+    fn ensure_docs_sections() {
+        let expected_sections = &[
+            "### What it does",
+            "### Why it is bad",
+            "### Drawbacks",
+            "### Example",
+        ];
+        for lint in LINTS {
+            dbg!(lint.name);
+            let mut sections = IndexMap::default();
+            let mut title = "";
+            let mut body = Vec::new();
+            let Some(docs) = lint.docs else {
+                continue;
+            };
+            for line in docs.trim().lines() {
+                if line.starts_with("#") {
+                    if !title.is_empty() || !body.is_empty() {
+                        let old = sections.insert(title, body);
+                        assert!(old.is_none(), "duplicate title: `{title:?}`");
+                    }
+                    title = line;
+                    body = Vec::new();
+                } else {
+                    body.push(line);
+                }
+            }
+            if !title.is_empty() || !body.is_empty() {
+                let old = sections.insert(title, body);
+                assert!(old.is_none(), "duplicate title: `{title:?}`");
+            }
+
+            let mut expected = Vec::new();
+            for section in expected_sections {
+                let body = match sections.get(section) {
+                    Some(body) => body,
+                    None => continue,
+                };
+                expected.push(*section);
+                expected.extend(body.iter().copied());
+            }
+            let expected = expected.join("\n");
+            snapbox::assert_data_eq!(docs.trim(), expected);
+        }
     }
 
     #[test]
