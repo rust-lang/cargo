@@ -181,14 +181,11 @@ fn binary_depinfo_correctly_encoded() {
 
     assert_deps_contains(
         &p,
-        &format!("target/{}/debug/build/foo/*/fingerprint/dep-bin-foo", host),
+        &format!("target/{}/debug/.fingerprint/foo-*/dep-bin-foo", host),
         &[
             (0, "src/main.rs"),
-            (1, &format!("{}/debug/build/bar/*/out/libbar-*.rlib", host)),
-            (
-                1,
-                &format!("{}/debug/build/regdep/*/out/libregdep-*.rlib", host),
-            ),
+            (1, &format!("{}/debug/deps/libbar-*.rlib", host)),
+            (1, &format!("{}/debug/deps/libregdep-*.rlib", host)),
         ],
     );
 
@@ -435,7 +432,7 @@ fn changing_profiles_caches_targets() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
 [DOCTEST] foo
 
 "#]])
@@ -455,7 +452,7 @@ fn changing_profiles_caches_targets() {
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stderr_data(str![[r#"
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
 
 "#]])
         .run();
@@ -710,14 +707,27 @@ feature on
         .run();
 
     /* Targets should be cached from the first build */
-    p.cargo("build -Zchecksum-freshness -v")
-        .masquerade_as_nightly_cargo(&["checksum-freshness"])
-        .with_stderr_data(str![[r#"
+
+    let mut e = p.cargo("build -Zchecksum-freshness -v");
+    e.masquerade_as_nightly_cargo(&["checksum-freshness"]);
+
+    // MSVC does not include hash in binary filename, so it gets recompiled.
+    if cfg!(target_env = "msvc") {
+        e.with_stderr_data(str![[r#"
+[DIRTY] foo v0.0.1 ([ROOT]/foo): the list of features changed
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]);
+    } else {
+        e.with_stderr_data(str![[r#"
 [FRESH] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-"#]])
-        .run();
+"#]]);
+    }
+    e.run();
     p.rename_run("foo", "off2")
         .with_stdout_data(str![[r#"
 feature off
@@ -725,14 +735,24 @@ feature off
 "#]])
         .run();
 
-    p.cargo("build -Zchecksum-freshness --features foo -v")
-        .masquerade_as_nightly_cargo(&["checksum-freshness"])
-        .with_stderr_data(str![[r#"
+    let mut e = p.cargo("build -Zchecksum-freshness --features foo -v");
+    e.masquerade_as_nightly_cargo(&["checksum-freshness"]);
+    if cfg!(target_env = "msvc") {
+        e.with_stderr_data(str![[r#"
+[DIRTY] foo v0.0.1 ([ROOT]/foo): the list of features changed
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]);
+    } else {
+        e.with_stderr_data(str![[r#"
 [FRESH] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-"#]])
-        .run();
+"#]]);
+    }
+    e.run();
     p.rename_run("foo", "on2")
         .with_stdout_data(str![[r#"
 feature on
@@ -767,7 +787,7 @@ fn rebuild_tests_if_lib_changes() {
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo_test [..]`
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/foo_test-[HASH][EXE]`
+[RUNNING] `[ROOT]/foo/target/debug/deps/foo_test-[HASH][EXE]`
 
 "#]])
         .run();
@@ -835,8 +855,8 @@ fn no_rebuild_transitive_target_deps() {
 [COMPILING] b v0.0.1 ([ROOT]/foo/b)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[EXECUTABLE] unittests src/lib.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
-[EXECUTABLE] tests/foo.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
+[EXECUTABLE] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[EXECUTABLE] tests/foo.rs (target/debug/deps/foo-[HASH][EXE])
 
 "#]])
         .run();
@@ -1414,7 +1434,7 @@ fn reuse_workspace_lib() {
 [COMPILING] baz v0.1.1 ([ROOT]/foo/baz)
 [RUNNING] `rustc --crate-name baz [..]
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[EXECUTABLE] `[ROOT]/foo/target/debug/build/baz/[HASH]/out/baz-[HASH][EXE]`
+[EXECUTABLE] `[ROOT]/foo/target/debug/deps/baz-[HASH][EXE]`
 
 "#]])
         .run();
@@ -1592,10 +1612,10 @@ fn reuse_panic_build_dep_test() {
 [RUNNING] `rustc --crate-name bar [..]
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name build_script_build [..]
-[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/build_script_build`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
 [RUNNING] `rustc --crate-name foo [..] src/lib.rs [..]--test[..]
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[EXECUTABLE] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/foo-[HASH][EXE]`
+[EXECUTABLE] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
 
 "#]])
         .run();
@@ -2027,10 +2047,7 @@ fn edition_change_invalidates() {
 
 "#]])
         .run();
-    assert_eq!(
-        p.glob("target/debug/build/foo/*/out/libfoo-*.rlib").count(),
-        1
-    );
+    assert_eq!(p.glob("target/debug/deps/libfoo-*.rlib").count(), 1);
 }
 
 #[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
@@ -2208,7 +2225,7 @@ fn rerun_if_changes() {
         .with_stderr_data(str![[r#"
 [DIRTY] foo v0.0.1 ([ROOT]/foo): the env variable FOO changed
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/build_script_build`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
 [RUNNING] `rustc [..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -2230,7 +2247,7 @@ fn rerun_if_changes() {
         .with_stderr_data(str![[r#"
 [DIRTY] foo v0.0.1 ([ROOT]/foo): the env variable BAR changed
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/build_script_build`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
 [RUNNING] `rustc [..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -2252,7 +2269,7 @@ fn rerun_if_changes() {
         .with_stderr_data(str![[r#"
 [DIRTY] foo v0.0.1 ([ROOT]/foo): the env variable FOO changed
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/build_script_build`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
 [RUNNING] `rustc [..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -2573,7 +2590,7 @@ fn linking_interrupted() {
 [RUNNING] `rustc --crate-name foo [..]
 [RUNNING] `rustc --crate-name t1 [..]
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/t1-[HASH][EXE]`
+[RUNNING] `[ROOT]/foo/target/debug/deps/t1-[HASH][EXE]`
 
 "#]])
         .run();
@@ -2980,7 +2997,7 @@ fn incremental_build_script_execution_got_new_mtime_and_cargo_check() {
         .with_stderr_data(str![[r#"
 [DIRTY] foo v0.0.1 ([ROOT]/foo): the file `touch-me` has changed ([TIME_DIFF_AFTER_LAST_BUILD])
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/build_script_build`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
 [RUNNING] `rustc --crate-name foo [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 

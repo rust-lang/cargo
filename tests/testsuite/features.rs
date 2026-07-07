@@ -674,15 +674,28 @@ fn no_feature_doesnt_build() {
         .run();
     p.process(&p.bin("foo")).with_stdout_data("").run();
 
-    p.cargo("build --features bar -v")
-        .with_stderr_data(str![[r#"
+    let expected = if cfg!(target_os = "windows") && cfg!(target_env = "msvc") {
+        str![[r#"
+[COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
+[RUNNING] `rustc --crate-name bar [..]`
+[DIRTY] foo v0.0.1 ([ROOT]/foo): the list of features changed
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+    } else {
+        str![[r#"
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [RUNNING] `rustc --crate-name bar [..]`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-"#]])
+"#]]
+    };
+    p.cargo("build --features bar -v")
+        .with_stderr_data(expected)
         .run();
     p.process(&p.bin("foo"))
         .with_stdout_data(str![[r#"
@@ -743,13 +756,24 @@ bar
 "#]])
         .run();
 
-    p.cargo("build --no-default-features -v")
-        .with_stderr_data(str![[r#"
+    let expected = if cfg!(target_os = "windows") && cfg!(target_env = "msvc") {
+        str![[r#"
+[DIRTY] foo v0.0.1 ([ROOT]/foo): the list of features changed
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-"#]])
+"#]]
+    } else {
+        str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+    };
+    p.cargo("build --no-default-features -v")
+        .with_stderr_data(expected)
         .run();
     p.process(&p.bin("foo")).with_stdout_data("").run();
 }

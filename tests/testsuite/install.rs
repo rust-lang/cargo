@@ -2617,7 +2617,7 @@ To reuse those artifacts with a future compilation, set the environment variable
     let end = stderr.find('.').unwrap() - 1;
     let path = Path::new(&stderr[..end]);
     assert!(path.exists());
-    assert!(path.join("release/build/foo").exists());
+    assert!(path.join("release/deps").exists());
 }
 
 #[cargo_test]
