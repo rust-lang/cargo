@@ -143,7 +143,7 @@ fn clears_cache_after_fix() {
 "#]])
         .run();
     let cpath = p
-        .glob("target/debug/build/foo/*/fingerprint/output-*")
+        .glob("target/debug/.fingerprint/foo-*/output-*")
         .next()
         .unwrap()
         .unwrap();
@@ -164,8 +164,7 @@ fn clears_cache_after_fix() {
 "#]])
         .run();
     assert_eq!(
-        p.glob("target/debug/build/foo/*/fingerprint/output-*")
-            .count(),
+        p.glob("target/debug/.fingerprint/foo-*/output-*").count(),
         0
     );
 
@@ -197,8 +196,7 @@ fn rustdoc() {
     assert!(rustdoc_stderr.contains("missing"));
     assert!(rustdoc_stderr.contains("\x1b["));
     assert_eq!(
-        p.glob("target/debug/build/foo/*/fingerprint/output-*")
-            .count(),
+        p.glob("target/debug/.fingerprint/foo-*/output-*").count(),
         1
     );
 
@@ -304,13 +302,11 @@ fn doesnt_create_extra_files() {
     p.cargo("check").run();
 
     assert_eq!(
-        p.glob("target/debug/build/foo/*/fingerprint/output-*")
-            .count(),
+        p.glob("target/debug/.fingerprint/foo-*/output-*").count(),
         0
     );
     assert_eq!(
-        p.glob("target/debug/build/foo/*/fingerprint/dep-*/output-*")
-            .count(),
+        p.glob("target/debug/.fingerprint/dep-*/output-*").count(),
         0
     );
     if is_coarse_mtime() {
@@ -319,8 +315,7 @@ fn doesnt_create_extra_files() {
     p.change_file("src/lib.rs", "fn unused() {}");
     p.cargo("check").run();
     assert_eq!(
-        p.glob("target/debug/build/foo/*/fingerprint/output-*")
-            .count(),
+        p.glob("target/debug/.fingerprint/foo-*/output-*").count(),
         1
     );
 }
