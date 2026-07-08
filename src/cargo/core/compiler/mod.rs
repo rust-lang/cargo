@@ -1853,12 +1853,15 @@ fn add_dep_arg<'a, 'b: 'a>(
     build_runner: &'b BuildRunner<'b, '_>,
     unit: &'a Unit,
 ) {
-    if map.contains_key(&unit) {
-        return;
-    }
-    map.insert(&unit, build_runner.files().deps_dir(&unit));
-
     for dep in build_runner.unit_deps(unit) {
+        // Don't include build script out dir in the args to reduce rustc command bloat.
+        if dep.unit.target.is_custom_build() {
+            continue;
+        }
+        if map.contains_key(&dep.unit) {
+            continue;
+        }
+        map.insert(&dep.unit, build_runner.files().deps_dir(&dep.unit));
         add_dep_arg(map, build_runner, &dep.unit);
     }
 }
