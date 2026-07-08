@@ -133,19 +133,16 @@ Run with `{literal}cargo -Z{literal:#} {placeholder}[FLAG] [COMMAND]{placeholder
     );
     if !gctx.nightly_features_allowed {
         gctx.shell().print_report(
-            &[
-                Level::WARNING.secondary_title(format!(
+            &[Level::WARNING
+                .secondary_title(format!(
                     "unstable flags are unavailable on the current (`{}`) channel",
                     features::channel()
-                )).element(
-                    Level::HELP.message("run on the nightly channel to use them")
-                ).element(
-                    Level::HELP.message(format!(
-                        "see {} for more information about Rust release channels",
-                        features::SEE_CHANNELS
-                    ))
-                ),
-            ],
+                ))
+                .element(Level::HELP.message("run on the nightly channel to use them"))
+                .element(Level::HELP.message(format!(
+                    "see {} for more information about Rust release channels",
+                    features::SEE_CHANNELS
+                )))],
             false,
         )?;
     }
