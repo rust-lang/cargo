@@ -1854,6 +1854,10 @@ fn add_dep_arg<'a, 'b: 'a>(
     unit: &'a Unit,
 ) {
     for dep in build_runner.unit_deps(unit) {
+        // Don't include build script out dir in the args to reduce rustc command bloat.
+        if dep.unit.target.is_custom_build() {
+            continue;
+        }
         if map.contains_key(&dep.unit) {
             continue;
         }
