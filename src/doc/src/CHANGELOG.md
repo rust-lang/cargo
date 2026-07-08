@@ -1,5 +1,38 @@
 # Changelog
 
+## Cargo 1.99 (2026-10-01)
+[f40cc7a1...HEAD](https://github.com/rust-lang/cargo/compare/f40cc7a1...HEAD)
+
+### Added
+
+### Changed
+
+- Various performance improvements,
+  including using `FxHasher` for hash maps and sets,
+  and avoid redundant allocations for manifest and registry index parsing.
+  [#17167](https://github.com/rust-lang/cargo/pull/17167)
+  [#17169](https://github.com/rust-lang/cargo/pull/17169)
+  [#17176](https://github.com/rust-lang/cargo/pull/17176)
+  [#17177](https://github.com/rust-lang/cargo/pull/17177)
+  [#17178](https://github.com/rust-lang/cargo/pull/17178)
+  [#17180](https://github.com/rust-lang/cargo/pull/17180)
+- Reduce rustc command-line length pressure by stop passing lint rustflags
+  when `--cap-lints=allow` is set.
+  [#17174](https://github.com/rust-lang/cargo/pull/17174)
+
+### Fixed
+
+### Nightly only
+
+- `-Zbindeps`: Fixed panics by registering transitive artifact dependency targets
+  [#17135](https://github.com/rust-lang/cargo/pull/17135)
+
+### Internal
+
+- test: Separate bindeps no-deps coverage for cargo-metadata
+  [#17068](https://github.com/rust-lang/cargo/pull/17068)
+
+
 ## Cargo 1.98 (2026-08-20)
 [c25859fa...rust-1.98.0](https://github.com/rust-lang/cargo/compare/c25859fa...rust-1.98.0)
 
