@@ -132,21 +132,22 @@ fn print_zhelp(gctx: &GlobalContext) {
 Run with `{literal}cargo -Z{literal:#} {placeholder}[FLAG] [COMMAND]{placeholder:#}`",
     );
     if !gctx.nightly_features_allowed {
-        let report = [Level::WARNING
-            .secondary_title(format!(
-                "unstable flags are unavailable on the current (`{}`) channel",
-                features::channel()
-            ))
-            .element(Level::HELP.message(
-                "run on the nightly channel to use them",
-            ))
-            .element(
-                Level::HELP.message(format!(
-                    "see {} for more information about Rust release channels",
-                    features::SEE_CHANNELS
-                )),
-            )];
-        gctx.shell().print_report(&report, false)?;
+        gctx.shell().print_report(
+            &[
+                Level::WARNING.secondary_title(format!(
+                    "unstable flags are unavailable on the current (`{}`) channel",
+                    features::channel()
+                )).element(
+                    Level::HELP.message("run on the nightly channel to use them")
+                ).element(
+                    Level::HELP.message(format!(
+                        "see {} for more information about Rust release channels",
+                        features::SEE_CHANNELS
+                    ))
+                ),
+            ],
+            false,
+        )?;
     }
     drop_println!(
         gctx,
