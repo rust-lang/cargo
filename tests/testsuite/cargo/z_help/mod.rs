@@ -10,8 +10,5 @@ fn case() {
         .assert()
         .success()
         .stdout_eq(file!["stdout.term.svg"])
-        .stderr_eq(str![[r#"
-[NOTE] to see rustc unstable features, run `rustc -Zhelp`
-
-"#]]);
+        .stderr_eq(str![""]);
 }

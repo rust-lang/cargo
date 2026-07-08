@@ -149,11 +149,9 @@ Run with `{literal}cargo -Z{literal:#} {placeholder}[FLAG] [COMMAND]{placeholder
     drop_println!(
         gctx,
         "\nSee https://doc.rust-lang.org/nightly/cargo/reference/unstable.html \
-             for more information about these flags."
+             for more information about these flags.\n\n\
+             note: to see rustc unstable features, run `rustc -Zhelp`"
     );
-    let _ = gctx
-        .shell()
-        .note("to see rustc unstable features, run `rustc -Zhelp`");
 }
 
 fn print_list(gctx: &GlobalContext, is_verbose: bool) {

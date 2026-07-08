@@ -1,4 +1,4 @@
-<svg width="1255px" height="1010px" xmlns="http://www.w3.org/2000/svg">
+<svg width="1255px" height="1050px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
     .bg { fill: #000000 }
@@ -125,6 +125,10 @@
     <tspan x="10px" y="982px"><tspan>See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html for more information about these flags.</tspan>
 </tspan>
     <tspan x="10px" y="1000px">
+</tspan>
+    <tspan x="10px" y="1018px"><tspan>note: to see rustc unstable features, run `rustc -Zhelp`</tspan>
+</tspan>
+    <tspan x="10px" y="1036px">
 </tspan>
   </text>
 
