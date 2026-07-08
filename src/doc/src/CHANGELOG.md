@@ -1,23 +1,54 @@
 # Changelog
 
 ## Cargo 1.98 (2026-08-20)
-[c25859fa...HEAD](https://github.com/rust-lang/cargo/compare/c25859fa...HEAD)
+[c25859fa...rust-1.98.0](https://github.com/rust-lang/cargo/compare/c25859fa...rust-1.98.0)
 
 ### Added
 
 ### Changed
 
-- Forward verbose flag to rustc for local crates
+- Forward `--verbose` flag to rustc for local crates
   [#17006](https://github.com/rust-lang/cargo/pull/17006)
 
 ### Fixed
 
+- Strip the trailing carriage return from tokens of `cargo:token-from-stdout`
+  credential providers. This was a regression in 1.96 that caused a confusing
+  "failed to parse header value" error on Windows.
+  [#17081](https://github.com/rust-lang/cargo/pull/17081)
+- Ensure error messages are lower case
+  [#17037](https://github.com/rust-lang/cargo/pull/17037)
+
 ### Nightly only
 
+- 🔥 `-Zmin-publish-age`: New unstable feature for setting the minimum publish
+  age used for dependency resolution.
+  ([RFC 3923](https://github.com/rust-lang/rfcs/pull/3923))
+  [docs](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#min-publish-age)
+  [#17012](https://github.com/rust-lang/cargo/pull/17012)
+  [#17117](https://github.com/rust-lang/cargo/pull/17117)
+  [#17118](https://github.com/rust-lang/cargo/pull/17118)
+- 🔥 `-Zhint-msrv`: New flag that passes the package's `rust-version`
+  to rustc as `-Zhint-msrv` for MSRV-aware diagnostics
+  [docs](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#hint-msrv)
+  [#17106](https://github.com/rust-lang/cargo/pull/17106)
 - `-Zbindeps`: Remove compat mode from artifacts
   [#17016](https://github.com/rust-lang/cargo/pull/17016)
+- `-Zbuild-dir-new-layout`: - Fixed `Compilation::deps_output` keeping only the
+  last dependency, which could miss search paths when depending on multiple dylibs.
+  [#17164](https://github.com/rust-lang/cargo/pull/17164)
 - rustdoc-output-format: Add `--output-format=json` to `cargo doc` as an unstable option
   [#17025](https://github.com/rust-lang/cargo/pull/17025)
+- `-Zcargo-lints`: Remove sometimes-invalid removal suggestions
+  [#17139](https://github.com/rust-lang/cargo/pull/17139)
+- `-Zcargo-lints`: Support `build.warnings` config for cargo lints
+  [#17112](https://github.com/rust-lang/cargo/pull/17112)
+- `-Zcargo-lints`: cargo-install runs cargo lints like rustc lints
+  [#17107](https://github.com/rust-lang/cargo/pull/17107)
+- `-Zcargo-lints`: Give diagnostics the same display path behavior as rustc
+  [#17101](https://github.com/rust-lang/cargo/pull/17101)
+- `-Zcargo-lints`: Report all errors, in order
+  [#17095](https://github.com/rust-lang/cargo/pull/17095)
 - `-Zcargo-lints`: Add the `cargo::default` group
   [#17033](https://github.com/rust-lang/cargo/pull/17033)
 - `-Zcargo-lints`: Report summaries for unused_deps
@@ -28,24 +59,86 @@
   [#17008](https://github.com/rust-lang/cargo/pull/17008)
   [#17015](https://github.com/rust-lang/cargo/pull/17015)
   [#17019](https://github.com/rust-lang/cargo/pull/17019)
+- `-Zcargo-lints`: Add a false-positive example solution for `missing_lints_inheritance`
+  [#17147](https://github.com/rust-lang/cargo/pull/17147)
+- `-Zcargo-lints`: Reduce the superfluous whitespace by grouping bullet items
+  [#17146](https://github.com/rust-lang/cargo/pull/17146)
 - `-Zscript`: Add edition for scripts anytime we mutate the manifest
   [#17038](https://github.com/rust-lang/cargo/pull/17038)
+- `-Zfine-grain-locking`: `LockManager` uses an OS-aware flock shim
+  [#17128](https://github.com/rust-lang/cargo/pull/17128)
+- `-Zhost-config`: Don't apply `[target.'cfg(...)']` config to host artifacts
+  [#17123](https://github.com/rust-lang/cargo/pull/17123)
+- `-Ztrim-paths`: Emit `CARGO_TRIM_PATHS_REMAP` env var for build scripts,
+  so they can forward remap pairs to compilers embedding local paths
+  [#17104](https://github.com/rust-lang/cargo/pull/17104)
 
 ### Documentation
 
+- contrib: Provide jumping off points for writing diagnostics and passes
+  [#17090](https://github.com/rust-lang/cargo/pull/17090)
+- guide: Use fresh `actions/checkout` version in GitHub Actions examples
+  [#17087](https://github.com/rust-lang/cargo/pull/17087)
 - Clarified on crate removal according to RFC 3660
   [#17036](https://github.com/rust-lang/cargo/pull/17036)
 
 ### Internal
 
-- Drop `-Zunstable-options` for `rustdoc --emit`, as the flag is stabilized.
-  [#17002](https://github.com/rust-lang/cargo/pull/17002)
-- cargo-util-schemas: Break out `RegistryConfig` and `crate_url` for interpreting `RegistryConfig::dl`
+- Add funding links to the repository
+  [#17103](https://github.com/rust-lang/cargo/pull/17103)
+- Keep file locking working on Solaris by switching to `fcntl`,
+  as std no longer provides `File::lock` support there.
+  [#17110](https://github.com/rust-lang/cargo/pull/17110)
+- Move yank policy to the resolver layer
+  [#17014](https://github.com/rust-lang/cargo/pull/17014)
+  [#17083](https://github.com/rust-lang/cargo/pull/17083)
+  [#17091](https://github.com/rust-lang/cargo/pull/17091)
+  [#17092](https://github.com/rust-lang/cargo/pull/17092)
+- Fix Cargo compilation for Redox OS due to a wrong constant type
+  [#17064](https://github.com/rust-lang/cargo/pull/17064)
+- cargo-util-schemas: bump to 0.14.2 to fix SemVer-breaking change
+  [#17048](https://github.com/rust-lang/cargo/pull/17048)
+- cargo-util-schemas: Break out `RegistryConfig` and `crate_url`
+  for interpreting `RegistryConfig::dl`
   [#17011](https://github.com/rust-lang/cargo/pull/17011)
+- cargo-test-support: Improved the error messages when `rustc -V` fails
+  [#17108](https://github.com/rust-lang/cargo/pull/17108)
+- cargo-test-support: Don't hang on macOS with a custom man pager
+  [#17151](https://github.com/rust-lang/cargo/pull/17151)
+- test: Fix flaky test `sparse_blocking_count`
+  [#17130](https://github.com/rust-lang/cargo/pull/17130)
+- test: Skip dwp uplift test without packed debuginfo
+  [#17127](https://github.com/rust-lang/cargo/pull/17127)
+- test: Show some odd `--precise` cases
+  [#17082](https://github.com/rust-lang/cargo/pull/17082)
+  [#17119](https://github.com/rust-lang/cargo/pull/17119)
+- test: `cargo install --path` honors MSRV
+  [#17102](https://github.com/rust-lang/cargo/pull/17102)
+- test: correctly attribute network/non-network tests
+  [#17027](https://github.com/rust-lang/cargo/pull/17027)
+  [#17017](https://github.com/rust-lang/cargo/pull/17017)
 - test: Avoid compiling where possible
   [#17007](https://github.com/rust-lang/cargo/pull/17007)
 - Update dependencies.
   [#17001](https://github.com/rust-lang/cargo/pull/17001)
+  [#17041](https://github.com/rust-lang/cargo/pull/17041)
+  [#17054](https://github.com/rust-lang/cargo/pull/17054)
+  [#17057](https://github.com/rust-lang/cargo/pull/17057)
+  [#17058](https://github.com/rust-lang/cargo/pull/17058)
+  [#17059](https://github.com/rust-lang/cargo/pull/17059)
+  [#17060](https://github.com/rust-lang/cargo/pull/17060)
+  [#17063](https://github.com/rust-lang/cargo/pull/17063)
+  [#17121](https://github.com/rust-lang/cargo/pull/17121)
+  [#17152](https://github.com/rust-lang/cargo/pull/17152)
+  [#17155](https://github.com/rust-lang/cargo/pull/17155)
+  [#17156](https://github.com/rust-lang/cargo/pull/17156)
+  [#17157](https://github.com/rust-lang/cargo/pull/17157)
+  [#17158](https://github.com/rust-lang/cargo/pull/17158)
+  [#17115](https://github.com/rust-lang/cargo/pull/17115)
+  [#17159](https://github.com/rust-lang/cargo/pull/17159)
+  [#17160](https://github.com/rust-lang/cargo/pull/17160)
+  [#17162](https://github.com/rust-lang/cargo/pull/17162)
+  [#17163](https://github.com/rust-lang/cargo/pull/17163)
 
 ## Cargo 1.97 (2026-07-09)
 [eb94155a...rust-1.97.0](https://github.com/rust-lang/cargo/compare/eb94155a...rust-1.97.0)
@@ -94,6 +187,10 @@
 - cargo-help: add `.1` extension to man page temp file,
   so platforms like NetBSD recognize it as a man page.
   [#16917](https://github.com/rust-lang/cargo/pull/16917)
+- cargo-publish: Fixed workspace publish failing with a false deadlock error
+  while packages were still waiting for registry confirmation.
+  This was a regression in 1.96.
+  [#17094](https://github.com/rust-lang/cargo/pull/17094)
 
 ### Nightly only
 
