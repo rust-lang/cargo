@@ -49,7 +49,7 @@ These lints are all set to the 'deny' level by default.
 
 - Group: `suspicious`
 - Level: `warn`
-- MSRV: `1.79.0`
+- Minimal [`package.rust-version`]: `1.79.0`
 
 
 ### What it does
@@ -133,7 +133,7 @@ serde = "1.0.219"
 
 - Group: `suspicious`
 - Level: `warn`
-- MSRV: `1.79.0`
+- Minimal [`package.rust-version`]: `1.79.0`
 
 
 ### What it does
@@ -174,7 +174,7 @@ or make it explicit that you don't intend to inherit by adding an empty `[lints]
 
 - Group: `style`
 - Level: `warn`
-- MSRV: `1.79.0`
+- Minimal [`package.rust-version`]: `1.79.0`
 
 
 ### What it does
@@ -344,7 +344,7 @@ name = "foo-bar"
 
 - Group: `style`
 - Level: `warn`
-- MSRV: `1.79.0`
+- Minimal [`package.rust-version`]: `1.79.0`
 
 
 ### What it does
@@ -381,7 +381,7 @@ repository = "https://github.com/rust-lang/cargo/"
 
 - Group: `style`
 - Level: `warn`
-- MSRV: `1.79.0`
+- Minimal [`package.rust-version`]: `1.79.0`
 
 
 ### What it does
@@ -418,7 +418,7 @@ name = "foo"
 
 - Group: `correctness`
 - Level: `deny`
-- MSRV: `1.79.0`
+- Minimal [`package.rust-version`]: `1.79.0`
 
 
 ### What it does
@@ -439,7 +439,7 @@ by default we deny their use.
 
 - Group: `correctness`
 - Level: `deny`
-- MSRV: `1.79.0`
+- Minimal [`package.rust-version`]: `1.79.0`
 
 
 ### What it does
@@ -460,7 +460,7 @@ by default we deny their use.
 
 - Group: `suspicious`
 - Level: `warn`
-- MSRV: `1.79.0`
+- Minimal [`package.rust-version`]: `1.79.0`
 
 
 ### What it does
@@ -483,7 +483,7 @@ this-lint-does-not-exist = "warn"
 
 - Group: `style`
 - Level: `warn`
-- MSRV: `1.79.0`
+- Minimal [`package.rust-version`]: `1.79.0`
 
 
 ### What it does
@@ -537,7 +537,7 @@ name = "foo"
 
 - Group: `suspicious`
 - Level: `warn`
-- MSRV: `1.79.0`
+- Minimal [`package.rust-version`]: `1.79.0`
 
 
 ### What it does
@@ -559,7 +559,7 @@ regex = "1"
 
 - Group: `suspicious`
 - Level: `warn`
-- MSRV: `1.79.0`
+- Minimal [`package.rust-version`]: `1.79.0`
 
 
 ### What it does
@@ -578,3 +578,5 @@ name = "foo"
 ```
 
 
+
+[`package.rust-version`]: rust-version.md
