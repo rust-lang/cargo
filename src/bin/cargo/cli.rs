@@ -132,7 +132,7 @@ fn print_zhelp(gctx: &GlobalContext) {
 Run with `{literal}cargo -Z{literal:#} {placeholder}[FLAG] [COMMAND]{placeholder:#}`",
     );
     if !gctx.nightly_features_allowed {
-        gctx.shell().print_report(
+        let _ = gctx.shell().print_report(
             &[Level::WARNING
                 .secondary_title(format!(
                     "unstable flags are unavailable on the current (`{}`) channel",
@@ -144,15 +144,16 @@ Run with `{literal}cargo -Z{literal:#} {placeholder}[FLAG] [COMMAND]{placeholder
                     features::SEE_CHANNELS
                 )))],
             false,
-        )?;
+        );
     }
     drop_println!(
         gctx,
         "\nSee https://doc.rust-lang.org/nightly/cargo/reference/unstable.html \
              for more information about these flags."
     );
-    gctx.shell()
-        .note("to see rustc unstable features, run `rustc -Zhelp`")?;
+    let _ = gctx
+        .shell()
+        .note("to see rustc unstable features, run `rustc -Zhelp`");
 }
 
 fn print_list(gctx: &GlobalContext, is_verbose: bool) {

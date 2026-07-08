@@ -1,5 +1,6 @@
 use crate::prelude::*;
 use cargo_test_support::file;
+use cargo_test_support::str;
 
 #[cargo_test]
 fn case() {
@@ -9,5 +10,8 @@ fn case() {
         .assert()
         .success()
         .stdout_eq(file!["stdout.term.svg"])
-        .stderr_eq(file!["stderr.term.svg"]);
+        .stderr_eq(str![[r#"
+[NOTE] to see rustc unstable features, run `rustc -Zhelp`
+
+"#]]);
 }
