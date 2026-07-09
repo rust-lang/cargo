@@ -1133,6 +1133,117 @@ Caused by:
 }
 
 #[cargo_test]
+fn target_cfg_linker_build_script() {
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [target.'cfg(all())']
+            linker = "/path/to/cfg/linker"
+            "#,
+        )
+        .file("build.rs", "fn main() {}")
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build -v")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name build_script_build [..]--crate-type bin [..]-C linker=[..]/path/to/cfg/linker [..]`
+[ERROR] linker `[..]/path/to/cfg/linker` not found
+...
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn target_cfg_linker_build_script_with_target() {
+    let target = rustc_host();
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [target.'cfg(all())']
+            linker = "/path/to/cfg/linker"
+            "#,
+        )
+        .file("build.rs", "fn main() {}")
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build -v --target")
+        .arg(&target)
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name build_script_build [..]--crate-type bin [..]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `rustc --crate-name foo [..]-C linker=[..]/path/to/cfg/linker [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn target_linker_build_script_with_target() {
+    let target = rustc_host();
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            &format!(
+                r#"
+                [target.{target}]
+                linker = "/path/to/target/linker"
+                "#,
+            ),
+        )
+        .file("build.rs", "fn main() {}")
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build -v --target")
+        .arg(&target)
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name build_script_build [..]--crate-type bin [..]-C linker=[..]/path/to/target/linker [..]`
+[ERROR] linker `[..]/path/to/target/linker` not found
+...
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn target_cfg_linker_build_script_with_host_config_and_target() {
+    let target = rustc_host();
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [target.'cfg(all())']
+            linker = "/path/to/cfg/linker"
+            "#,
+        )
+        .file("build.rs", "fn main() {}")
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build -v -Ztarget-applies-to-host -Zhost-config --target")
+        .arg(&target)
+        .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name build_script_build [..]--crate-type bin [..]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `rustc --crate-name foo [..]-C linker=[..]/path/to/cfg/linker [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn custom_build_script_wrong_rustc_flags() {
     let p = project()
         .file(
