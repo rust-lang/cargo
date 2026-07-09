@@ -29,7 +29,7 @@ pub static LINT: &Lint = &Lint {
 
 Checks for packages without a `lints` table while `workspace.lints` is present.
 
-### Why it is bad
+### Why is this bad?
 
 Many people mistakenly think that `workspace.lints` is implicitly inherited when it is not.
 

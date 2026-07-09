@@ -35,7 +35,7 @@ Checks if the value of `package.homepage` is already covered by another field.
 
 See also [`package.homepage` reference documentation](manifest.md#the-homepage-field).
 
-### Why it is bad
+### Why is this bad?
 
 When package browsers render each link, a redundant link adds visual noise.
 

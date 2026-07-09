@@ -33,7 +33,7 @@ pub static LINT: &Lint = &Lint {
 
 Detect feature names that are not snake-case.
 
-### Why restrict this
+### Why restrict this?
 
 Having multiple naming styles within a workspace can be confusing.
 

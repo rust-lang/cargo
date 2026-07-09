@@ -33,7 +33,7 @@ pub static LINT: &Lint = &Lint {
 
 Detect package names that are not kebab-case.
 
-### Why restrict this
+### Why restrict this?
 
 Having multiple naming styles within a workspace can be confusing.
 

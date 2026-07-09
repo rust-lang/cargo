@@ -287,13 +287,13 @@ mod tests {
     fn ensure_docs_sections() {
         let expected_sections_restriction = &[
             "### What it does",
-            "### Why restrict this",
+            "### Why restrict this?",
             "### Drawbacks",
             "### Example",
         ];
         let expected_sections = &[
             "### What it does",
-            "### Why it is bad",
+            "### Why is this bad?",
             "### Drawbacks",
             "### Example",
         ];

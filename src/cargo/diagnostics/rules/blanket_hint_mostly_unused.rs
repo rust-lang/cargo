@@ -31,7 +31,7 @@ pub static LINT: &Lint = &Lint {
 ### What it does
 Checks if `hint-mostly-unused` being applied to all dependencies.
 
-### Why it is bad
+### Why is this bad?
 `hint-mostly-unused` indicates that most of a crate's API surface will go
 unused by anything depending on it; this hint can speed up the build by
 attempting to minimize compilation time for items that aren't used at all.
