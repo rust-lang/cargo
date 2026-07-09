@@ -285,6 +285,12 @@ mod tests {
 
     #[test]
     fn ensure_docs_sections() {
+        let expected_sections_restriction = &[
+            "### What it does",
+            "### Why restrict this",
+            "### Drawbacks",
+            "### Example",
+        ];
         let expected_sections = &[
             "### What it does",
             "### Why it is bad",
@@ -317,6 +323,10 @@ mod tests {
             }
 
             let mut expected = Vec::new();
+            let expected_sections = match lint.primary_group.name {
+                "restriction" => expected_sections_restriction,
+                _ => expected_sections,
+            };
             for section in expected_sections {
                 let body = match sections.get(section) {
                     Some(body) => body,

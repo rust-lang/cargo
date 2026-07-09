@@ -218,7 +218,7 @@ name = "foo-bar"
 
 Detect feature names that are not kebab-case.
 
-### Why it is bad
+### Why restrict this
 
 Having multiple naming styles within a workspace can be confusing.
 
@@ -251,7 +251,7 @@ foo-bar = []
 
 Detect package names that are not kebab-case.
 
-### Why it is bad
+### Why restrict this
 
 Having multiple naming styles within a workspace can be confusing.
 
@@ -284,7 +284,7 @@ name = "foo-bar"
 
 Detect feature names that are not snake-case.
 
-### Why it is bad
+### Why restrict this
 
 Having multiple naming styles within a workspace can be confusing.
 
@@ -317,7 +317,7 @@ foo_bar = []
 
 Detect package names that are not snake-case.
 
-### Why it is bad
+### Why restrict this
 
 Having multiple naming styles within a workspace can be confusing.
 
