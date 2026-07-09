@@ -1,7 +1,9 @@
 //! Tests for configuration values that point to programs.
 
 use crate::prelude::*;
-use cargo_test_support::{basic_lib_manifest, project, rustc_host, rustc_host_env, str};
+use crate::utils::cross_compile::disabled as cross_compile_disabled;
+use cargo_test_support::cross_compile::alternate as cross_compile_alternate;
+use cargo_test_support::{Project, basic_lib_manifest, project, rustc_host, rustc_host_env, str};
 
 #[cargo_test]
 fn pathless_tools() {
@@ -443,6 +445,341 @@ Caused by:
 }
 
 #[cargo_test]
+fn custom_runner_proc_macro_test() {
+    let target = rustc_host();
+    let p = proc_macro_package();
+    p.change_file(
+        ".cargo/config.toml",
+        &format!(
+            r#"
+            [target.{target}]
+            runner = "nonexistent-runner -r"
+        "#,
+        ),
+    );
+
+    p.cargo("test --lib -v")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `nonexistent-runner -r [ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+[ERROR] test failed, to rerun pass `--lib`
+
+Caused by:
+  could not execute process `nonexistent-runner -r [ROOT]/foo/target/debug/deps/foo-[HASH][EXE]` (never executed)
+
+Caused by:
+  [NOT_FOUND]
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn custom_runner_cfg_proc_macro_test() {
+    let p = proc_macro_package();
+    p.change_file(
+        ".cargo/config.toml",
+        r#"
+            [target.'cfg(all())']
+            runner = "nonexistent-runner -r"
+        "#,
+    );
+
+    p.cargo("test --lib -v")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `nonexistent-runner -r [ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+[ERROR] test failed, to rerun pass `--lib`
+
+Caused by:
+  could not execute process `nonexistent-runner -r [ROOT]/foo/target/debug/deps/foo-[HASH][EXE]` (never executed)
+
+Caused by:
+  [NOT_FOUND]
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn custom_runner_proc_macro_test_with_target() {
+    let target = rustc_host();
+    let p = proc_macro_package();
+    p.change_file(
+        ".cargo/config.toml",
+        &format!(
+            r#"
+            [target.{target}]
+            runner = "nonexistent-runner -r"
+        "#,
+        ),
+    );
+
+    p.cargo("test --lib -v --target")
+        .arg(&target)
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `nonexistent-runner -r [ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+[ERROR] test failed, to rerun pass `--lib`
+
+Caused by:
+  could not execute process `nonexistent-runner -r [ROOT]/foo/target/debug/deps/foo-[HASH][EXE]` (never executed)
+
+Caused by:
+  [NOT_FOUND]
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn custom_runner_cfg_proc_macro_test_with_target() {
+    let target = rustc_host();
+    let p = proc_macro_package();
+    p.change_file(
+        ".cargo/config.toml",
+        r#"
+            [target.'cfg(all())']
+            runner = "nonexistent-runner -r"
+        "#,
+    );
+
+    p.cargo("test --lib -v --target")
+        .arg(&target)
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+
+"#]])
+        .with_stdout_data(str![[r#"
+...
+running 1 test
+...
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn custom_runner_proc_macro_test_with_host_config() {
+    let target = rustc_host();
+    let p = proc_macro_package();
+    p.change_file(
+        ".cargo/config.toml",
+        &format!(
+            r#"
+            [host]
+            runner = "nonexistent-host-runner"
+            [target.{target}]
+            runner = "nonexistent-target-runner"
+        "#,
+        ),
+    );
+
+    p.cargo("test --lib -v -Ztarget-applies-to-host -Zhost-config --target")
+        .arg(&target)
+        .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `nonexistent-target-runner [ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+[ERROR] test failed, to rerun pass `--lib`
+
+Caused by:
+  could not execute process `nonexistent-target-runner [ROOT]/foo/target/debug/deps/foo-[HASH][EXE]` (never executed)
+
+Caused by:
+  [NOT_FOUND]
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn custom_runner_cfg_proc_macro_test_with_host_config() {
+    let target = rustc_host();
+    let p = proc_macro_package();
+    p.change_file(
+        ".cargo/config.toml",
+        r#"
+            [host]
+            runner = "nonexistent-host-runner"
+            [target.'cfg(all())']
+            runner = "nonexistent-cfg-runner"
+        "#,
+    );
+
+    p.cargo("test --lib -v -Ztarget-applies-to-host -Zhost-config --target")
+        .arg(&target)
+        .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `nonexistent-cfg-runner [ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+[ERROR] test failed, to rerun pass `--lib`
+
+Caused by:
+  could not execute process `nonexistent-cfg-runner [ROOT]/foo/target/debug/deps/foo-[HASH][EXE]` (never executed)
+
+Caused by:
+  [NOT_FOUND]
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn custom_runner_cfg_proc_macro_test_with_host_config_no_target() {
+    let p = proc_macro_package();
+    p.change_file(
+        ".cargo/config.toml",
+        r#"
+            [host]
+            runner = "nonexistent-host-runner"
+            [target.'cfg(all())']
+            runner = "nonexistent-cfg-runner"
+        "#,
+    );
+
+    p.cargo("test --lib -v -Ztarget-applies-to-host -Zhost-config")
+        .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `nonexistent-cfg-runner [ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+[ERROR] test failed, to rerun pass `--lib`
+
+Caused by:
+  could not execute process `nonexistent-cfg-runner [ROOT]/foo/target/debug/deps/foo-[HASH][EXE]` (never executed)
+
+Caused by:
+  [NOT_FOUND]
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn host_runner_proc_macro_test() {
+    let target = rustc_host();
+    let p = proc_macro_package();
+    p.change_file(
+        ".cargo/config.toml",
+        r#"
+            [host]
+            runner = "nonexistent-host-runner"
+        "#,
+    );
+
+    p.cargo("test --lib -v -Ztarget-applies-to-host -Zhost-config --target")
+        .arg(&target)
+        .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+
+"#]])
+        .with_stdout_data(str![[r#"
+...
+running 1 test
+...
+"#]])
+        .run();
+
+    p.cargo("test --lib -v -Ztarget-applies-to-host -Zhost-config")
+        .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+
+"#]])
+        .with_stdout_data(str![[r#"
+...
+running 1 test
+...
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn custom_runner_proc_macro_test_with_cross_target() {
+    if cross_compile_disabled() {
+        return;
+    }
+    let target = rustc_host();
+    let alternate = cross_compile_alternate();
+    let p = proc_macro_package();
+    p.change_file(
+        ".cargo/config.toml",
+        &format!(
+            r#"
+            [target.{target}]
+            runner = "nonexistent-runner -r"
+            [target.'cfg(all())']
+            runner = "nonexistent-cfg-runner"
+        "#,
+        ),
+    );
+
+    p.cargo("test --lib -v --target")
+        .arg(alternate)
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `nonexistent-runner -r [ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+[ERROR] test failed, to rerun pass `--lib`
+
+Caused by:
+  could not execute process `nonexistent-runner -r [ROOT]/foo/target/debug/deps/foo-[HASH][EXE]` (never executed)
+
+Caused by:
+  [NOT_FOUND]
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn custom_runner_proc_macro_test_with_cross_target_host_config() {
+    if cross_compile_disabled() {
+        return;
+    }
+    let target = rustc_host();
+    let alternate = cross_compile_alternate();
+    let p = proc_macro_package();
+    p.change_file(
+        ".cargo/config.toml",
+        &format!(
+            r#"
+            [host]
+            runner = "nonexistent-host-runner"
+            [target.{target}]
+            runner = "nonexistent-runner -r"
+            [target.'cfg(all())']
+            runner = "nonexistent-cfg-runner"
+        "#,
+        ),
+    );
+
+    p.cargo("test --lib -v -Ztarget-applies-to-host -Zhost-config --target")
+        .arg(alternate)
+        .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+
+"#]])
+        .with_stdout_data(str![[r#"
+...
+running 1 test
+...
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn custom_linker_env() {
     let p = project().file("src/main.rs", "fn main() {}").build();
 
@@ -518,4 +855,23 @@ fn cfg_ignored_fields() {
 
 "#]])
         .run();
+}
+
+/// Creates a bare proc-macro package with a unit test.
+fn proc_macro_package() -> Project {
+    project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                edition = "2015"
+
+                [lib]
+                proc-macro = true
+            "#,
+        )
+        .file("src/lib.rs", "#[test] fn it_works() {}")
+        .build()
 }
