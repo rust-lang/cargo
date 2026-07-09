@@ -30,7 +30,7 @@ pub static LINT: &Lint = &Lint {
 ### What it does
 Checks for any fields in `[workspace.package]` that has not been inherited
 
-### Why it is bad
+### Why is this bad?
 They can give the false impression that these fields are used
 
 ### Example

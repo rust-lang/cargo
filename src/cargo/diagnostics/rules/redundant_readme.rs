@@ -37,7 +37,7 @@ Checks for `package.readme` fields that can be inferred.
 
 See also [`package.readme` reference documentation](manifest.md#the-readme-field).
 
-### Why it is bad
+### Why is this bad?
 
 Adds boilerplate.
 

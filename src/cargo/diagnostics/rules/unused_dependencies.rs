@@ -42,7 +42,7 @@ pub static LINT: &Lint = &Lint {
 
 Checks for dependencies that are not used by any of the cargo targets.
 
-### Why it is bad
+### Why is this bad?
 
 Slows down compilation time.
 

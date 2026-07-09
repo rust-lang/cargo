@@ -35,7 +35,7 @@ pub static LINT: &Lint = &Lint {
 Detects Unicode codepoints in manifest comments that change the visual representation of text on screen
 in a way that does not correspond to their on memory representation.
 
-### Why it is bad
+### Why is this bad?
 Unicode allows changing the visual flow of text on screen
 in order to support scripts that are written right-to-left,
 but a specially crafted comment can make code that will be compiled appear to be part of a comment,

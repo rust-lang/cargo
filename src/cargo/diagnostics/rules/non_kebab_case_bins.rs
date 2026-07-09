@@ -34,7 +34,7 @@ pub static LINT: &Lint = &Lint {
 
 Detect binary names, explicit and implicit, that are not kebab-case
 
-### Why it is bad
+### Why is this bad?
 
 Kebab-case binary names is a common convention among command line tools.
 
