@@ -76,11 +76,13 @@ jobs:
           os: windows-latest
     name: Clippy ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
+    env:
+      CARGO_BUILD_WARNINGS: deny
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
       - run: rustup update stable && rustup default stable
       - run: rustup component add clippy
-      - run: cargo clippy --workspace --all-targets --no-deps -- -D warnings
+      - run: cargo clippy --workspace --all-targets --no-deps --keep-going
 
   stale-label:
     runs-on: ubuntu-latest
@@ -298,9 +300,9 @@ jobs:
     - name: Run semver-check
       run: cargo +stable run -p semver-check
     - name: Ensure intradoc links are valid
-      run: cargo doc --workspace --document-private-items --no-deps
+      run: cargo doc --workspace --document-private-items --no-deps --keep-going
       env:
-        RUSTDOCFLAGS: -D warnings
+        CARGO_BUILD_WARNINGS: deny
     - name: Install mdbook
       run: |
         mkdir mdbook
