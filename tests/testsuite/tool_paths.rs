@@ -549,15 +549,18 @@ fn custom_runner_cfg_proc_macro_test_with_target() {
 
     p.cargo("test --lib -v --target")
         .arg(&target)
+        .with_status(101)
         .with_stderr_data(str![[r#"
 ...
-[RUNNING] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+[RUNNING] `nonexistent-runner -r [ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+[ERROR] test failed, to rerun pass `--lib`
 
-"#]])
-        .with_stdout_data(str![[r#"
-...
-running 1 test
-...
+Caused by:
+  could not execute process `nonexistent-runner -r [ROOT]/foo/target/debug/deps/foo-[HASH][EXE]` (never executed)
+
+Caused by:
+  [NOT_FOUND]
+
 "#]])
         .run();
 }
@@ -793,11 +796,12 @@ fn target_cfg_linker_proc_macro_with_target() {
 
     p.cargo("build -v --target")
         .arg(&target)
+        .with_status(101)
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo [..]--crate-type proc-macro [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-
+[RUNNING] `rustc --crate-name foo [..]--crate-type proc-macro [..]-C linker=[..]/path/to/cfg/linker [..]`
+[ERROR] linker `[..]/path/to/cfg/linker` not found
+...
 "#]])
         .run();
 }
@@ -918,16 +922,11 @@ fn target_cfg_linker_proc_macro_test_with_target() {
 
     p.cargo("test --lib -v --target")
         .arg(&target)
+        .with_status(101)
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo [..]--test [..]`
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
-
-"#]])
-        .with_stdout_data(str![[r#"
-...
-running 1 test
+[RUNNING] `rustc --crate-name foo [..]--test [..]-C linker=[..]/path/to/cfg/linker [..]`
+[ERROR] linker `[..]/path/to/cfg/linker` not found
 ...
 "#]])
         .run();

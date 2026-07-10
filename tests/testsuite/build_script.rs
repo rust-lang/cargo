@@ -1174,13 +1174,12 @@ fn target_cfg_linker_build_script_with_target() {
 
     p.cargo("build -v --target")
         .arg(&target)
+        .with_status(101)
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name build_script_build [..]--crate-type bin [..]`
-[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
-[RUNNING] `rustc --crate-name foo [..]-C linker=[..]/path/to/cfg/linker [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-
+[RUNNING] `rustc --crate-name build_script_build [..]--crate-type bin [..]-C linker=[..]/path/to/cfg/linker [..]`
+[ERROR] linker `[..]/path/to/cfg/linker` not found
+...
 "#]])
         .run();
 }
