@@ -5,7 +5,9 @@ use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::DepKind;
 use crate::core::resolver::Resolve;
 use crate::core::resolver::features::{CliFeatures, FeaturesFor, ResolvedFeatures};
-use crate::core::{FeatureMap, FeatureValue, Package, PackageId, PackageIdSpec, Workspace};
+use crate::core::{
+    Dependency, FeatureMap, FeatureValue, Package, PackageId, PackageIdSpec, Workspace,
+};
 use crate::util::CargoResult;
 use crate::util::data_structures::{HashMap, HashSet};
 use crate::util::interning::{INTERNED_DEFAULT, InternedString};
@@ -486,33 +488,23 @@ fn add_pkg(
         let dep_pkg = graph.package_map[&dep_id];
 
         for dep in deps {
-            let dep_features_for = match dep
+            // Inherit the dependent package's compilation context. Artifact
+            // dependencies with an explicit target and host dependencies need
+            // their transitive dependencies built in that same context.
+            let base_features_for = if features_for != FeaturesFor::default() {
+                features_for
+            } else if dep.is_build() || dep_pkg.proc_macro() {
+                FeaturesFor::HostDep
+            } else {
+                features_for
+            };
+            // An explicit artifact target overrides the inherited context.
+            let dep_features_for = dep
                 .artifact()
                 .and_then(|artifact| artifact.target())
                 .and_then(|target| target.to_resolved_compile_target(requested_kind))
-            {
-                // Dependency has a `{ …, target = <triple> }`
-                Some(target) => FeaturesFor::ArtifactDep(target),
-                // Get the information of the dependent crate from `features_for`.
-                // If a dependent crate is
-                //
-                // * specified as an artifact dep with a `target`, or
-                // * a host dep,
-                //
-                // its transitive deps, including build-deps, need to be built on that target.
-                None if features_for != FeaturesFor::default() => features_for,
-                // Dependent crate is a normal dep, then back to old rules:
-                //
-                // * normal deps, dev-deps -> inherited target
-                // * build-deps -> host
-                None => {
-                    if dep.is_build() || dep_pkg.proc_macro() {
-                        FeaturesFor::HostDep
-                    } else {
-                        features_for
-                    }
-                }
-            };
+                .map(FeaturesFor::ArtifactDep)
+                .unwrap_or(base_features_for);
             let dep_index = add_pkg(
                 graph,
                 resolve,
@@ -528,25 +520,7 @@ fn add_pkg(
                 node: dep_index,
                 public: dep.is_public(),
             };
-            if opts.graph_features {
-                // Add the dependency node with feature nodes in-between.
-                dep_name_map
-                    .entry(dep.name_in_toml())
-                    .or_default()
-                    .insert((dep_index, dep.is_optional()));
-                if dep.uses_default_features() {
-                    add_feature(graph, INTERNED_DEFAULT, Some(from_index), new_edge);
-                }
-                for feature in dep.features().iter() {
-                    add_feature(graph, *feature, Some(from_index), new_edge);
-                }
-                if !dep.uses_default_features() && dep.features().is_empty() {
-                    // No features, use a direct connection.
-                    graph.edges_mut(from_index).add_edge(new_edge);
-                }
-            } else {
-                graph.edges_mut(from_index).add_edge(new_edge);
-            }
+            add_dependency_edge(graph, &mut dep_name_map, from_index, dep, new_edge, opts);
         }
     }
     if opts.graph_features {
@@ -559,6 +533,39 @@ fn add_pkg(
     }
 
     from_index
+}
+
+/// Adds an edge from `from` to the package `edge` points at.
+///
+/// When feature edges are enabled, the edge is routed through the feature
+/// nodes requested by the dependency. Otherwise, it is added directly.
+fn add_dependency_edge(
+    graph: &mut Graph<'_>,
+    dep_name_map: &mut HashMap<InternedString, HashSet<(NodeId, bool)>>,
+    from: NodeId,
+    dep: &Dependency,
+    edge: Edge,
+    opts: &TreeOptions,
+) {
+    if opts.graph_features {
+        // Add the dependency node with feature nodes in-between.
+        dep_name_map
+            .entry(dep.name_in_toml())
+            .or_default()
+            .insert((edge.node(), dep.is_optional()));
+        if dep.uses_default_features() {
+            add_feature(graph, INTERNED_DEFAULT, Some(from), edge);
+        }
+        for feature in dep.features().iter() {
+            add_feature(graph, *feature, Some(from), edge);
+        }
+        if !dep.uses_default_features() && dep.features().is_empty() {
+            // No features, use a direct connection.
+            graph.edges_mut(from).add_edge(edge);
+        }
+    } else {
+        graph.edges_mut(from).add_edge(edge);
+    }
 }
 
 /// Adds a feature node between two nodes.
