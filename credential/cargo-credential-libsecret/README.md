@@ -5,9 +5,9 @@ See the [credential-provider] documentation for how to use this.
 
 This credential provider is built-in to cargo as `cargo:libsecret`.
 
-It is available on Unix-like platforms such as Linux and the BSDs — except
-macOS, which uses its OS-specific keyring via the `cargo:macos-keychain`
-provider instead, and mobile platforms, where libsecret does not exist.
+It is available on Unix-like platforms such as Linux and the BSDs.
+Apple and mobile platforms either use their OS-specific keyring,
+or libsecret doesn't exist there.
 
 > This crate is maintained by the Cargo team, primarily for use by Cargo
 > and not intended for external use (except as a transitive dependency). This
