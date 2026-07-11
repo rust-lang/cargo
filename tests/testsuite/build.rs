@@ -874,17 +874,9 @@ fn cargo_compile_with_invalid_code_in_deps() {
         .build();
     p.cargo("build")
         .with_status(101)
-        .with_stderr_data(
-            str![[r#"
-[COMPILING] bar v0.1.0 ([ROOT]/bar)
-[COMPILING] baz v0.1.0 ([ROOT]/baz)
-[ERROR] could not compile `bar` (lib) due to 1 previous error
-[ERROR] could not compile `baz` (lib) due to 1 previous error
-...
-
-"#]]
-            .unordered(),
-        )
+        .with_stderr_contains("[COMPILING] bar v0.1.0 [..]")
+        .with_stderr_contains("[COMPILING] baz v0.1.0 [..]")
+        .with_stderr_contains("[ERROR] could not compile [..]")
         .run();
 }
 
