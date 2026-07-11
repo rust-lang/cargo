@@ -55,12 +55,10 @@ The Keychain Access app can be used to view stored tokens.
 ### `cargo:libsecret`
 Uses [libsecret](https://wiki.gnome.org/Projects/Libsecret) to store tokens.
 
-This provider is available on Unix-like platforms, including Linux and the
-BSDs — except macOS, which uses its OS-specific keyring via
-[`cargo:macos-keychain`](#cargomacos-keychain), and mobile platforms (iOS,
-Android, and similar), where libsecret does not exist. The `libsecret` library
-is loaded at runtime, so it only needs to be installed when this provider is
-used.
+It is available on Unix-like platforms such as Linux and the BSDs.
+Apple and mobile platforms either use their OS-specific keyring,
+or libsecret doesn't exist there. The `libsecret` library is loaded at
+runtime, so it only needs to be installed when this provider is used.
 
 Any password manager with libsecret support can be used to view stored tokens.
 The following are a few examples (non-exhaustive):
