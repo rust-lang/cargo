@@ -919,6 +919,77 @@ Hello, Ferris!
     );
 }
 
+#[cfg(all(target_os = "windows", target_env = "gnu", not(target_abi = "llvm")))]
+#[cargo_test(requires = "gdb")]
+fn gdb_works_after_trimmed() {
+    use cargo_test_support::compare::assert_e2e;
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2015"
+
+                [profile.dev]
+                trim-paths = "object"
+           "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {
+                    let msg = "Hello, Ferris!";
+                    println!("{msg}");
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("build --verbose -Ztrim-paths")
+        .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.0 ([ROOT]/foo)
+[RUNNING] `rustc [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    let bin_path = p.bin("foo");
+    assert!(bin_path.is_file());
+
+    // GitHub's Windows runner uses MinGW-builds GDB wrapper,
+    // which loses the boundary of spaced `-ex` args when forwarding them to `gdborig.exe`.
+    // Therefore we use a command file instead here.
+    //
+    // See <https://github.com/niXman/mingw-builds/blob/1d6a1c28/sources/gdb-wrapper/gdb-wrapper.c#L141-L145>
+    p.change_file(
+        "gdb.commands",
+        "break -source src/main.rs -line 4\nrun\nlist\ncontinue\n",
+    );
+    let stdout = String::from_utf8(
+        p.process("gdb")
+            .args(&["--batch", "--nx", "--quiet", "--command=gdb.commands"])
+            .arg(bin_path.strip_prefix(p.root()).unwrap())
+            .run()
+            .stdout,
+    )
+    .unwrap();
+    assert_e2e().eq(
+        &stdout,
+        str![[r#"
+...
+[..]Breakpoint 1,[..]
+...
+Hello, Ferris!
+...
+
+"#]],
+    );
+}
+
 #[cfg(target_env = "msvc")]
 #[cargo_test(
     requires = "cdb",

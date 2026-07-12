@@ -219,6 +219,9 @@ jobs:
     - name: Check Windows GNU object tool
       run: objdump --version
       if: matrix.os == 'windows-latest' && matrix.rust == 'nightly-gnu'
+    - name: Check Windows GNU debugger tool
+      run: gdb --version
+      if: matrix.os == 'windows-latest' && matrix.rust == 'nightly-gnu'
     - name: Configure extra test environment
       run: echo CARGO_CONTAINER_TESTS=1 >> $GITHUB_ENV
       if: matrix.os == 'ubuntu-latest'
