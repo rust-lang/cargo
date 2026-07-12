@@ -611,7 +611,7 @@ mod object_works {
 }
 
 fn object_works_helper(split_debuginfo: &str, run: impl Fn(&std::path::Path) -> Vec<u8>) {
-    let registry_src = paths::home().join(".cargo/registry/src");
+    let registry_src = paths::home().join(".cargo").join("registry").join("src");
     let registry_src_bytes = registry_src.as_os_str().as_encoded_bytes();
     let rust_src = "/lib/rustc/src/rust".as_bytes();
 
