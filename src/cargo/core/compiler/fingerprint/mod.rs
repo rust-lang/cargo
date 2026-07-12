@@ -384,6 +384,7 @@ use std::fs;
 use std::fs::File;
 use std::hash::{self, Hash, Hasher};
 use std::io::{self};
+use std::ops::Not;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
@@ -1659,13 +1660,13 @@ fn calculate_normal(
         && build_runner.unit_deps(unit).iter().any(|dep| !dep.public)
         && super::is_public_dependency_enabled(build_runner, unit))
     .hash(&mut config);
-    // -Zno-embed-metadata changes how all units are compiled, and it also changes how we tell
+    // -Zembed-metadata changes how all units are compiled, and it also changes how we tell
     // rustc to link to deps using `--extern`. If it changes, we should rebuild everything.
     build_runner
         .bcx
         .gctx
-        .cli_unstable()
-        .no_embed_metadata
+        .should_embed_metadata()
+        .not()
         .hash(&mut config);
 
     let compile_kind = unit.kind.fingerprint_hash();
