@@ -655,14 +655,16 @@ fn object_works_helper(split_debuginfo: &str, run: impl Fn(&std::path::Path) -> 
     // <https://github.com/rust-lang/cargo/pull/12625#discussion_r1371714791>
     // assert!(memchr::memmem::find(&stdout, rust_src).is_some());
 
+    // `file!()` in `bar()` keeps untrimmed registry source in the executable
+    // even when debuginfo is separate.
+    assert!(memchr::memmem::find(&stdout, registry_src_bytes).is_some());
+
     // The local package root occurs only in debuginfo in this fixture.
     // MSVC puts that debuginfo in the PDB,
     // while the other inspectors read embedded debuginfo.
     if cfg!(target_env = "msvc") {
-        assert!(memchr::memmem::find(&stdout, registry_src_bytes).is_none());
         assert!(memchr::memmem::find(&stdout, pkg_root).is_none());
     } else {
-        assert!(memchr::memmem::find(&stdout, registry_src_bytes).is_some());
         assert!(memchr::memmem::find(&stdout, pkg_root).is_some());
     }
     p.cargo("clean").run();
