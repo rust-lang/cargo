@@ -649,17 +649,16 @@ fn object_works_helper(split_debuginfo: &str, run: impl Fn(&std::path::Path) -> 
     let bin_path = p.bin("foo");
     assert!(bin_path.is_file());
     let stdout = run(&bin_path);
+
+    // TODO: re-enable this check when rustc bootstrap disables remapping
+    // <https://github.com/rust-lang/cargo/pull/12625#discussion_r1371714791>
+    // assert!(memchr::memmem::find(&stdout, rust_src).is_some());
+
     // On windows-msvc every debuginfo is in pdb file, so can't find anything here.
     if cfg!(target_env = "msvc") {
-        // TODO: re-enable this check when rustc bootstrap disables remapping
-        // <https://github.com/rust-lang/cargo/pull/12625#discussion_r1371714791>
-        // assert!(memchr::memmem::find(&stdout, rust_src).is_some());
         assert!(memchr::memmem::find(&stdout, registry_src_bytes).is_none());
         assert!(memchr::memmem::find(&stdout, pkg_root).is_none());
     } else {
-        // TODO: re-enable this check when rustc bootstrap disables remapping
-        // <https://github.com/rust-lang/cargo/pull/12625#discussion_r1371714791>
-        // assert!(memchr::memmem::find(&stdout, rust_src).is_some());
         assert!(memchr::memmem::find(&stdout, registry_src_bytes).is_some());
         assert!(memchr::memmem::find(&stdout, pkg_root).is_some());
     }
