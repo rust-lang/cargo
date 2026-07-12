@@ -1,5 +1,4 @@
 use crate::core::compiler::{Compilation, Doctest, Unit, UnitHash, UnitOutput};
-use crate::core::profiles::PanicStrategy;
 use crate::core::{TargetKind, Workspace};
 use crate::ops;
 use crate::util::data_structures::HashMap;
@@ -185,9 +184,9 @@ fn run_doc_tests(
             args,
             unstable_opts,
             unit,
-            linker,
             script_metas,
             env,
+            ..
         } = doctest_info;
 
         gctx.shell().status("Doc-tests", unit.target.name())?;
@@ -217,15 +216,6 @@ fn run_doc_tests(
             for arg in runtool_args {
                 p.arg("--test-runtool-arg").arg(arg);
             }
-        }
-        if let Some(linker) = linker {
-            let mut joined = OsString::from("linker=");
-            joined.push(linker);
-            p.arg("-C").arg(joined);
-        }
-
-        if unit.profile.panic != PanicStrategy::Unwind {
-            p.arg("-C").arg(format!("panic={}", unit.profile.panic));
         }
 
         for native_dep in compilation.native_dirs.iter() {
