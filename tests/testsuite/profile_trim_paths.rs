@@ -887,8 +887,6 @@ Hello, Ferris!
     );
 }
 
-// This test is disabled, as it currently doesn't work.
-#[cfg(any())]
 #[cfg(target_env = "msvc")]
 #[cargo_test(
     requires = "cdb",
@@ -900,7 +898,7 @@ fn cdb_works_after_trimmed() {
 
     let run_debugger = |path| {
         std::process::Command::new("cdb")
-            .args(["-c", "bp `main.rs:4`;g;g;q"])
+            .args(["-lines", "-c", r"bp `src\main.rs:3`;g;g;q"])
             .arg(path)
             .output()
             .expect("debugger works")
