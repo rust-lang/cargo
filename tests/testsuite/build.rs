@@ -6702,8 +6702,8 @@ fn should_only_include_dylibs_on_lib_search_path() {
         .enable_mac_dsym()
         .with_stdout_data(str![[r#"
 bar (dylib) on search path: true
-baz (rlib) on search path: true
-qux (cdylib) on search path: true
+baz (rlib) on search path: false
+qux (cdylib) on search path: false
 
 "#]])
         .run();
