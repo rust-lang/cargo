@@ -1444,13 +1444,18 @@
       "type": "string"
     },
     "TomlDebugInfo": {
-      "type": "string",
+      "type": ["string", "integer", "boolean"],
       "enum": [
-        "None",
-        "LineDirectivesOnly",
-        "LineTablesOnly",
-        "Limited",
-        "Full"
+        "none",
+        "line-directives-only",
+        "line-tables-only",
+        "limited",
+        "full",
+        0,
+        1,
+        2,
+        false,
+        true
       ]
     },
     "PackageIdSpec": {

@@ -1122,12 +1122,38 @@ impl<'de> de::Deserialize<'de> for TomlOptLevel {
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
+#[cfg_attr(feature = "unstable-schema", schemars(rename_all = "kebab-case"))]
+#[cfg_attr(feature = "unstable-schema", schemars(transform = Self::schema_add_aliases))]
 pub enum TomlDebugInfo {
     None,
     LineDirectivesOnly,
     LineTablesOnly,
     Limited,
     Full,
+}
+
+#[cfg(feature = "unstable-schema")]
+impl TomlDebugInfo {
+    fn schema_add_aliases(schema: &mut schemars::Schema) {
+        use serde_json::Value;
+
+        if let Some(obj) = schema.as_object_mut() {
+            obj.get_mut("type").map(|v| match v {
+                Value::Array(v) => v.extend_from_slice(&["integer".into(), "boolean".into()]),
+                Value::String(s) => {
+                    let s = std::mem::replace(s, String::with_capacity(0));
+                    *v = Value::Array(vec![s.into(), "integer".into(), "boolean".into()])
+                }
+                _ => *v = Value::Array(vec!["string".into(), "integer".into(), "boolean".into()]),
+            });
+
+            if let Some(variants) = obj.get_mut("enum").and_then(|v| v.as_array_mut()) {
+                variants.reserve(5);
+                variants.extend((0..=2).map(Into::into));
+                variants.extend_from_slice(&[false.into(), true.into()]);
+            }
+        }
+    }
 }
 
 impl Display for TomlDebugInfo {
