@@ -375,7 +375,9 @@ impl<'gctx> Compilation<'gctx> {
                     &self.root_output[&CompileKind::Host],
                 ));
             }
-            search_path.extend(self.deps_output[&CompileKind::Host].clone());
+            if let Some(paths) = self.deps_output.get(&CompileKind::Host) {
+                search_path.extend(paths.clone());
+            }
         } else {
             if let Some(path) = self.root_output.get(&kind) {
                 search_path.extend(super::filter_dynamic_search_path(
@@ -384,7 +386,9 @@ impl<'gctx> Compilation<'gctx> {
                 ));
                 search_path.push(path.clone());
             }
-            search_path.extend(self.deps_output[&kind].clone());
+            if let Some(paths) = self.deps_output.get(&kind) {
+                search_path.extend(paths.clone());
+            }
             // For build-std, we don't want to accidentally pull in any shared
             // libs from the sysroot that ships with rustc. This may not be
             // required (at least I cannot craft a situation where it
