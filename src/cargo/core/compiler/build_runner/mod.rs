@@ -485,11 +485,13 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
                 for (unit, _) in self.bcx.unit_graph.iter() {
                     let dep_dir = self.files().deps_dir(unit);
                     paths::create_dir_all(&dep_dir)?;
-                    self.compilation
-                        .deps_output
-                        .entry(kind)
-                        .or_default()
-                        .insert(dep_dir);
+                    if unit.target.is_dylib() {
+                        self.compilation
+                            .deps_output
+                            .entry(kind)
+                            .or_default()
+                            .insert(dep_dir);
+                    }
                 }
             } else {
                 self.compilation
