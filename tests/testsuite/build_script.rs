@@ -6922,9 +6922,9 @@ fn build_script_dylib_search_path_excludes_target_dylibs() {
                         let found_bar = paths.iter()
                             .any(|dir| dir.join("{DLL_PREFIX}bar{DLL_SUFFIX}").exists());
                         assert!(
-                            found_bar,
-                            "bar ({target}-arch regular dependency dylib) must be on \
-                             the host build script's search path, but was not: {{:?}}",
+                            !found_bar,
+                            "bar ({target}-arch regular dependency dylib) must NOT be on \
+                             the host build script's search path, but was: {{:?}}",
                             paths
                         );
                     }}
