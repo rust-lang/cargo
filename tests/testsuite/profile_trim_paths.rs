@@ -610,6 +610,38 @@ mod object_works {
     }
 }
 
+#[cfg(all(target_os = "windows", target_env = "gnu", not(target_abi = "llvm")))]
+mod object_works {
+    use super::*;
+
+    fn inspect_debuginfo(path: &std::path::Path) -> Vec<u8> {
+        let parent = path.parent().expect("binary has a parent directory");
+        let file_name = path.file_name().expect("binary has a file name");
+        let output = std::process::Command::new("objdump")
+            // Avoid echoing the absolute input path in objdump's file header.
+            .current_dir(parent)
+            .arg("--dwarf=info")
+            .arg(file_name)
+            .output()
+            .expect("objdump works");
+        assert!(
+            output.status.success(),
+            "objdump failed with {}\nstdout:\n{}\nstderr:\n{}",
+            output.status,
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr),
+        );
+        output.stdout
+    }
+
+    // rustc currently supports only split-debuginfo=off on windows-gnu.
+    // <https://github.com/rust-lang/rust/blob/47101adcea71daee3c2879218f5b883bcdf180aa/compiler/rustc_target/src/spec/base/windows_gnu.rs#L105-L107>
+    #[cargo_test(requires = "objdump")]
+    fn with_split_debuginfo_off() {
+        object_works_helper("off", inspect_debuginfo);
+    }
+}
+
 fn object_works_helper(split_debuginfo: &str, run: impl Fn(&std::path::Path) -> Vec<u8>) {
     let registry_src = paths::home().join(".cargo").join("registry").join("src");
     let registry_src_bytes = registry_src.as_os_str().as_encoded_bytes();
