@@ -1310,10 +1310,6 @@ fn no_duplicate_package_warning_with_dotdot_cargo_home() {
         .env("CARGO_HOME", &cargo_home)
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `[ROOTURL]/dep`
-[WARNING] skipping duplicate package `member v0.1.0 ([ROOTURL]/dep#[..])`:
-  [ROOT]/home/../cargo-home/git/checkouts/dep-[HASH]/[..]/member/Cargo.toml
-in favor of [ROOT]/cargo-home/git/checkouts/dep-[HASH]/[..]/member/Cargo.toml
-
 [LOCKING] 2 packages to latest compatible versions
 [CHECKING] member v0.1.0 ([ROOTURL]/dep#[..])
 [CHECKING] dep v0.1.0 ([ROOTURL]/dep#[..])
