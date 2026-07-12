@@ -483,6 +483,9 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
             }
             if self.bcx.gctx.cli_unstable().build_dir_new_layout {
                 for (unit, _) in self.bcx.unit_graph.iter() {
+                    if kind != unit.kind {
+                        continue;
+                    }
                     let dep_dir = self.files().deps_dir(unit);
                     paths::create_dir_all(&dep_dir)?;
                     if unit.target.is_dylib() {
