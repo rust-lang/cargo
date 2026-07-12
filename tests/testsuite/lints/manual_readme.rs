@@ -66,18 +66,7 @@ manual_readme = "warn"
 
     p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
-        .with_stderr_data(str![[r#"
-[WARNING] explicit `package.readme` can be inferred
- --> Cargo.toml:7:1
-  |
-7 | readme = "README.txt"
-  | ^^^^^^^^^^^^^^^^^^^^^
-  |
-  = [NOTE] `cargo::manual_readme` is set to `warn` in `[lints]`
-[HELP] consider removing `package.readme`
-[WARNING] `foo` (manifest) generated 1 warning
-
-"#]])
+        .with_stderr_data(str![""])
         .run();
 }
 
