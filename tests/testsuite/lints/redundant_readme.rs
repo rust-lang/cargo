@@ -42,6 +42,74 @@ redundant_readme = "warn"
 }
 
 #[cargo_test]
+fn lower_priority_readme() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+[package]
+name = "foo"
+version = "0.0.1"
+edition = "2015"
+authors = []
+readme = "README.txt"
+
+[lints.cargo]
+default = { level = "allow", priority = -1 }
+redundant_readme = "warn"
+"#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("README.md", "")
+        .file("README.txt", "")
+        .build();
+
+    p.cargo("fetch -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints"])
+        .with_stderr_data(str![""])
+        .run();
+}
+
+#[cargo_test]
+fn explicit_readme_txt() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+[package]
+name = "foo"
+version = "0.0.1"
+edition = "2015"
+authors = []
+readme = "README.txt"
+
+[lints.cargo]
+default = { level = "allow", priority = -1 }
+redundant_readme = "warn"
+"#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("README.txt", "")
+        .build();
+
+    p.cargo("fetch -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints"])
+        .with_stderr_data(str![[r#"
+[WARNING] explicit `package.readme` can be inferred
+ --> Cargo.toml:7:1
+  |
+7 | readme = "README.txt"
+  | ^^^^^^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::redundant_readme` is set to `warn` in `[lints]`
+[HELP] consider removing `package.readme`
+[WARNING] `foo` (manifest) generated 1 warning
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn implicit_readme() {
     let p = project()
         .file(
