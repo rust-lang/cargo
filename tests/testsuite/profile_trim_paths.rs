@@ -644,6 +644,7 @@ fn object_works_helper(split_debuginfo: &str, run: impl Fn(&std::path::Path) -> 
     let pkg_root = p.root();
     let pkg_root = pkg_root.as_os_str().as_encoded_bytes();
 
+    // Our baseline of which source roots are discoverable without object trimming.
     p.cargo("build").run();
 
     let bin_path = p.bin("foo");
@@ -654,7 +655,9 @@ fn object_works_helper(split_debuginfo: &str, run: impl Fn(&std::path::Path) -> 
     // <https://github.com/rust-lang/cargo/pull/12625#discussion_r1371714791>
     // assert!(memchr::memmem::find(&stdout, rust_src).is_some());
 
-    // On windows-msvc every debuginfo is in pdb file, so can't find anything here.
+    // The local package root occurs only in debuginfo in this fixture.
+    // MSVC puts that debuginfo in the PDB,
+    // while the other inspectors read embedded debuginfo.
     if cfg!(target_env = "msvc") {
         assert!(memchr::memmem::find(&stdout, registry_src_bytes).is_none());
         assert!(memchr::memmem::find(&stdout, pkg_root).is_none());
@@ -688,11 +691,17 @@ fn object_works_helper(split_debuginfo: &str, run: impl Fn(&std::path::Path) -> 
     let bin_path = p.bin("foo");
     assert!(bin_path.is_file());
     let stdout = run(&bin_path);
+
+    // Original sysroot source root should be trimmed.
     assert!(memchr::memmem::find(&stdout, rust_src).is_none());
+
+    // Check line by line so macOS can exempt untrimmable `OSO` symbols.
     for line in stdout.split(|c| c == &b'\n') {
-        let registry = memchr::memmem::find(line, registry_src_bytes).is_none();
-        let local = memchr::memmem::find(line, pkg_root).is_none();
-        if registry && local {
+        // original registry source root was trimmed.
+        let registry_is_trimmed = memchr::memmem::find(line, registry_src_bytes).is_none();
+        // original project root was trimmed.
+        let local_is_trimmed = memchr::memmem::find(line, pkg_root).is_none();
+        if registry_is_trimmed && local_is_trimmed {
             continue;
         }
 
