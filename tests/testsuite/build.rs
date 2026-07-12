@@ -872,11 +872,16 @@ fn cargo_compile_with_invalid_code_in_deps() {
         .file("Cargo.toml", &basic_manifest("baz", "0.1.0"))
         .file("src/lib.rs", "invalid rust code!")
         .build();
-    p.cargo("build")
+    p.cargo("build -j1")
         .with_status(101)
-        .with_stderr_contains("[COMPILING] bar v0.1.0 [..]")
-        .with_stderr_contains("[COMPILING] baz v0.1.0 [..]")
-        .with_stderr_contains("[ERROR] could not compile [..]")
+        .with_stderr_data(str![[r#"
+...
+[COMPILING] ba[..] v0.1.0 ([ROOT]/ba[..])
+[ERROR] [..]
+...
+[ERROR] could not compile `ba[..]` (lib) due to 1 previous error
+...
+"#]])
         .run();
 }
 
