@@ -1251,6 +1251,80 @@ in favor of [ROOT]/home/.cargo/git/checkouts/dep-[HASH]/[..]/duplicate1/Cargo.to
 }
 
 #[cargo_test]
+fn no_duplicate_package_warning_with_dotdot_cargo_home() {
+    // Regression test for https://github.com/rust-lang/cargo/issues/15981.
+    //
+    // A `CARGO_HOME` containing a `..` segment can make the git checkout path retain
+    // the `..`, so a workspace member discovered by walking the checkout (raw path)
+    // and by following the root's `path` dependency (normalized path) looked
+    // like two different packages, producing an incorrect duplicate warning.
+    let git_project = git::new("dep", |project| {
+        project
+            .file(
+                "Cargo.toml",
+                r#"
+                    [package]
+                    name = "dep"
+                    version = "0.1.0"
+                    edition = "2015"
+
+                    [dependencies]
+                    member = { path = "member" }
+                "#,
+            )
+            .file("src/lib.rs", "")
+            .file(
+                "member/Cargo.toml",
+                r#"
+                    [package]
+                    name = "member"
+                    version = "0.1.0"
+                    edition = "2015"
+                "#,
+            )
+            .file("member/src/lib.rs", "")
+    });
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+                    edition = "2015"
+
+                    [dependencies]
+                    dep = {{ git = '{}' }}
+                "#,
+                git_project.url()
+            ),
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    // `paths::home()` is created by the test harness, so the `..` resolves on disk.
+    let cargo_home = paths::home().join("..").join("cargo-home");
+
+    p.cargo("check")
+        .env("CARGO_HOME", &cargo_home)
+        .with_stderr_data(str![[r#"
+[UPDATING] git repository `[ROOTURL]/dep`
+[WARNING] skipping duplicate package `member v0.1.0 ([ROOTURL]/dep#[..])`:
+  [ROOT]/home/../cargo-home/git/checkouts/dep-[HASH]/[..]/member/Cargo.toml
+in favor of [ROOT]/cargo-home/git/checkouts/dep-[HASH]/[..]/member/Cargo.toml
+
+[LOCKING] 2 packages to latest compatible versions
+[CHECKING] member v0.1.0 ([ROOTURL]/dep#[..])
+[CHECKING] dep v0.1.0 ([ROOTURL]/dep#[..])
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn unused_ambiguous_published_deps() {
     let project = project();
     let git_project = git::new("dep", |project| {
