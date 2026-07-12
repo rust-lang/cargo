@@ -1,6 +1,7 @@
 //! Tests for build.rs scripts.
 
 use std::env;
+use std::env::consts::{DLL_PREFIX, DLL_SUFFIX};
 use std::fs;
 use std::io;
 use std::thread;
@@ -17,6 +18,7 @@ use cargo_test_support::registry::Package;
 use cargo_test_support::str;
 use cargo_test_support::{basic_manifest, cross_compile, is_coarse_mtime, project, project_in};
 use cargo_test_support::{git, rustc_host, sleep_ms, slow_cpu_multiplier, symlink_supported};
+use cargo_util::paths::dylib_path_envvar;
 use cargo_util::paths::{self, remove_dir_all};
 
 #[cargo_test]
@@ -6868,5 +6870,102 @@ fn target_linker_does_not_apply_to_build_script_with_host_config() {
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 
 "#]])
+        .run();
+}
+
+#[cargo_test(
+    nightly,
+    reason = "Depends on https://github.com/rust-lang/rust/pull/155439/changes/61f3e086acc1c187bb262ab43cac71f44018c397"
+)]
+fn build_script_dylib_search_path_excludes_target_dylibs() {
+    if cross_compile_disabled() {
+        return;
+    }
+
+    let envvar = dylib_path_envvar();
+    let target = cross_compile::alternate();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                edition = "2021"
+                authors = []
+
+                [dependencies]
+                bar = { path = "bar" }
+
+                [build-dependencies]
+                hostbar = { path = "hostbar" }
+            "#,
+        )
+        .file(
+            "build.rs",
+            &format!(
+                r#"
+                    fn main() {{
+                        let search_path = std::env::var_os("{envvar}").unwrap();
+                        let paths: Vec<_> = std::env::split_paths(&search_path).collect();
+
+                        let found_hostbar = paths.iter()
+                            .any(|dir| dir.join("{DLL_PREFIX}hostbar{DLL_SUFFIX}").exists());
+                        assert!(
+                            found_hostbar,
+                            "hostbar (host-arch build-dependency dylib) should be on \
+                             the build script's search path, but wasn't: {{:?}}",
+                            paths
+                        );
+
+                        let found_bar = paths.iter()
+                            .any(|dir| dir.join("{DLL_PREFIX}bar{DLL_SUFFIX}").exists());
+                        assert!(
+                            !found_bar,
+                            "bar ({target}-arch regular dependency dylib) must NOT be on \
+                             the host build script's search path, but was: {{:?}}",
+                            paths
+                        );
+                    }}
+                "#
+            ),
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                edition = "2021"
+                authors = []
+                [lib]
+                crate-type = ["dylib"]
+            "#,
+        )
+        .file("bar/src/lib.rs", "pub fn bar_value() -> i32 { 100 }")
+        .file(
+            "hostbar/Cargo.toml",
+            r#"
+                [package]
+                name = "hostbar"
+                version = "0.1.0"
+                edition = "2021"
+                authors = []
+                [lib]
+                crate-type = ["dylib"]
+            "#,
+        )
+        .file(
+            "hostbar/src/lib.rs",
+            "pub fn hostbar_value() -> i32 { 200 }",
+        )
+        .build();
+
+    p.cargo("build -Zbuild-dir-new-layout -v --target")
+        .arg(&target)
+        .masquerade_as_nightly_cargo(&["new build-dir layout"])
+        .enable_mac_dsym()
         .run();
 }
