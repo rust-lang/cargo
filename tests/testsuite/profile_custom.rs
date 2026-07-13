@@ -785,15 +785,10 @@ fn debug_inherits_dev() {
         .file("src/lib.rs", "")
         .build();
     p.cargo("check --profile=debug -v")
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] profile name `debug` is reserved
-       To configure the default development profile, use the name `dev` as in [profile.dev]
-       See https://doc.rust-lang.org/cargo/reference/profiles.html for more on configuring profiles.
-  --> Cargo.toml:10:22
-   |
-10 |             [profile.debug]
-   |                      ^^^^^
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `debug` profile [optimized] target(s) in [ELAPSED]s
 
 "#]])
         .with_stdout_does_not_contain("[..] -C debuginfo=0[..]")
@@ -820,15 +815,9 @@ fn change_debug_inheritance() {
         .file("src/lib.rs", "")
         .build();
     p.cargo("check --profile=debug")
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] profile name `debug` is reserved
-       To configure the default development profile, use the name `dev` as in [profile.dev]
-       See https://doc.rust-lang.org/cargo/reference/profiles.html for more on configuring profiles.
- --> Cargo.toml:7:22
-  |
-7 |             [profile.debug]
-  |                      ^^^^^
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `debug` profile [optimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

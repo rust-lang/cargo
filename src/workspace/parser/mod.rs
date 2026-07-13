@@ -2564,15 +2564,6 @@ pub fn validate_profile(
         );
     }
 
-    // `inherits` validation
-    if matches!(root.inherits.as_deref(), Some("debug")) {
-        bail!(
-            "profile.{}.inherits=\"debug\" should be profile.{}.inherits=\"dev\"",
-            name,
-            name
-        );
-    }
-
     match name {
         "doc" => {
             warnings.push("profile `doc` is deprecated and has no effect".to_string());

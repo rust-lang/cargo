@@ -157,6 +157,13 @@ impl Profiles {
     fn predefined_profiles() -> Vec<(&'static str, TomlProfile)> {
         vec![
             (
+                "debug",
+                TomlProfile {
+                    inherits: Some(String::from("dev")),
+                    ..TomlProfile::default()
+                },
+            ),
+            (
                 "bench",
                 TomlProfile {
                     inherits: Some(String::from("release")),
@@ -1298,7 +1305,7 @@ fn merge_config_profiles(
     }
     // Add the built-in profiles. This is important for things like `cargo
     // test` which implicitly use the "dev" profile for dependencies.
-    for name in ["dev", "release", "test", "bench"] {
+    for name in ["dev", "release", "debug", "test", "bench"] {
         check_to_add.insert(name.into());
     }
     // Add config-only profiles.

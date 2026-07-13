@@ -46,9 +46,9 @@ DESCRIPTION
        By default, cargo bench uses the bench profile
        <https://doc.rust-lang.org/cargo/reference/profiles.html#bench>, which
        enables optimizations and disables debugging information. If you need to
-       debug a benchmark, you can use the --profile=dev command-line option to
-       switch to the dev profile. You can then run the debug-enabled benchmark
-       within a debugger.
+       debug a benchmark, you can use the --profile=debug command-line option
+       to switch to the debug profile. You can then run the debug-enabled
+       benchmark within a debugger.
 
    Working directory of benchmarks
        The working directory of every benchmark is set to the root directory of
