@@ -527,6 +527,7 @@ fn check_ignores_install_profile() {
         .file("src/main.rs", "fn main() {}")
         .build();
     p.cargo("check")
+        .env("CARGO_INSTALL_PROFILE", "release")
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -575,6 +576,7 @@ fn test_ignores_install_profile() {
         .file("src/main.rs", "fn main() {}")
         .build();
     p.cargo("test --no-run")
+        .env("CARGO_INSTALL_PROFILE", "release")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -598,7 +600,8 @@ fn install_uses_install_profile() {
         )
         .file("src/main.rs", "fn main() {}")
         .build();
-    p.cargo("install --debug")
+    p.cargo("install")
+        .env("CARGO_INSTALL_PROFILE", "debug")
         .with_stderr_data(str![[r#"
 [WARNING] using `cargo install` to install the binaries from the package in current working directory is deprecated, use `cargo install --path .` instead. [NOTE] use `cargo build` if you want to simply build the package.
 [INSTALLING] foo v0.1.0 ([ROOT]/foo)
