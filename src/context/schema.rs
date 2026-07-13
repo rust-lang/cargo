@@ -18,6 +18,7 @@ use std::str::FromStr;
 use std::{fmt, hash};
 
 use cargo_credential::Secret;
+use cargo_util_schemas::manifest::ProfileName;
 use serde::Deserialize;
 use serde::Serialize;
 use serde::de;
@@ -413,6 +414,7 @@ pub struct CargoBuildConfig {
     pub build_dir: Option<ConfigRelativePath>,
     pub incremental: Option<bool>,
     pub target: Option<BuildTargetConfig>,
+    pub profile: Option<ProfileName>,
     pub jobs: Option<JobsConfig>,
     pub rustflags: Option<StringList>,
     pub rustdocflags: Option<StringList>,
