@@ -71,6 +71,7 @@ rustc-wrapper = "…"           # run this wrapper instead of `rustc`
 rustc-workspace-wrapper = "…" # run this wrapper instead of `rustc` for workspace members
 rustdoc = "rustdoc"           # the doc generator tool
 target = "triple"             # build for the target triple (ignored by `cargo install`)
+profile = "dev"               # build using the specified profile (ignored by `cargo install`)
 target-dir = "target"         # path of where to place generated artifacts
 build-dir = "target"          # path of where to place intermediate build artifacts
 rustflags = ["…", "…"]        # custom flags to pass to all compiler invocations
@@ -542,6 +543,20 @@ Can be overridden with the `--target` CLI option.
 ```toml
 [build]
 target = ["x86_64-unknown-linux-gnu", "i686-unknown-linux-gnu"]
+```
+
+#### `build.profile`
+* Type: string
+* Default: `"dev"`
+* Environment: `CARGO_BUILD_PROFILE`
+
+The default [profile] to compile with.
+
+Can be overridden with the `--release` or `--profile` CLI options.
+
+```toml
+[build]
+profile = "debug"
 ```
 
 #### `build.target-dir`
@@ -1551,6 +1566,7 @@ Report progress to the terminal emulator for display in places like the task bar
 [source replacement]: source-replacement.md
 [revision]: https://git-scm.com/docs/gitrevisions
 [registries]: registries.md
+[profile]: profiles.md
 [`cargo:token`]: registry-authentication.md#cargotoken
 [crates.io]: https://crates.io/
 [target triple]: ../appendix/glossary.md#target '"target" (glossary)'
