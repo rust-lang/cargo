@@ -137,14 +137,6 @@ pub(crate) fn validate_profile_name(name: &str) -> Result<()> {
     }
 
     let lower_name = name.to_lowercase();
-    if lower_name == "debug" {
-        return Err(ErrorKind::ProfileNameReservedKeyword {
-            name: name.into(),
-            help: "To configure the default development profile, \
-                use the name `dev` as in [profile.dev]",
-        }
-        .into());
-    }
     if lower_name == "build-override" {
         return Err(ErrorKind::ProfileNameReservedKeyword {
             name: name.into(),

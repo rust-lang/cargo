@@ -92,12 +92,9 @@ pub fn cli() -> Command {
         .arg_features()
         .arg_parallel()
         .arg(
-            flag(
-                "debug",
-                "Build in debug mode (with the 'dev' profile) instead of release mode",
-            )
-            .conflicts_with("profile")
-            .help_heading(heading::COMPILATION_OPTIONS),
+            flag("debug", "Build in debug mode instead of release mode")
+                .conflicts_with("profile")
+                .help_heading(heading::COMPILATION_OPTIONS),
         )
         .arg_redundant_default_mode("release", "install", "debug")
         .arg_profile("Install artifacts with the specified profile")
