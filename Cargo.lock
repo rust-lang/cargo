@@ -486,7 +486,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-credential-libsecret"
-version = "0.5.9"
+version = "0.5.10"
 dependencies = [
  "anyhow",
  "cargo-credential",
@@ -495,7 +495,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-credential-macos-keychain"
-version = "0.4.24"
+version = "0.4.25"
 dependencies = [
  "cargo-credential",
  "security-framework",
@@ -503,7 +503,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-credential-wincred"
-version = "0.4.24"
+version = "0.4.25"
 dependencies = [
  "cargo-credential",
  "windows-sys 0.61.2",
@@ -529,7 +529,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-test-macro"
-version = "0.4.13"
+version = "0.4.14"
 
 [[package]]
 name = "cargo-test-support"
@@ -559,7 +559,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-util"
-version = "0.2.31"
+version = "0.2.32"
 dependencies = [
  "anyhow",
  "core-foundation",
@@ -599,7 +599,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-util-terminal"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "annotate-snippets",
  "anstream",
@@ -842,7 +842,7 @@ dependencies = [
 
 [[package]]
 name = "crates-io"
-version = "0.41.1"
+version = "0.41.2"
 dependencies = [
  "http",
  "percent-encoding",
