@@ -815,7 +815,14 @@ Run `{cmd}` to see possible targets."
             intent,
         )?;
         build_config.message_format = message_format.unwrap_or(MessageFormat::Human);
-        build_config.requested_profile = self.get_profile_name("dev", profile_checking)?;
+        let default_profile = gctx
+            .build_config()?
+            .profile
+            .as_ref()
+            .map(|p| p.as_ref())
+            .unwrap_or_else(|| "dev");
+        build_config.requested_profile =
+            self.get_profile_name(default_profile, profile_checking)?;
         build_config.unit_graph = self.flag("unit-graph");
         build_config.future_incompat_report = self.flag("future-incompat-report");
         build_config.compile_time_deps_only = self.flag("compile-time-deps");
