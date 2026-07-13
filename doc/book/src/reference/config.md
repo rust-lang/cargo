@@ -121,6 +121,7 @@ user-agent = "…"            # the user-agent header
 
 [install]
 root = "/some/path"         # `cargo install` destination directory
+profile = "release"         # build using the specified profile
 
 [net]
 retry = 3                   # network retries
@@ -947,6 +948,26 @@ The default if not specified is Cargo's home directory (default `.cargo` in
 your home directory).
 
 Can be overridden with the `--root` command-line option.
+
+#### `install.profile`
+* Type: string
+* Default: `"release"`
+* Environment: `CARGO_INSTALL_PROFILE`
+
+The default [profile] for `cargo install` to compile with.
+
+Can be overridden with the `--debug` or `--profile` CLI options.
+
+```toml
+[install]
+profile = "tool"
+
+[profile.tool]
+inherits = "release"
+lto = true
+```
+
+> **MSRV:** Respected as of 1.100.
 
 ### `[net]`
 
