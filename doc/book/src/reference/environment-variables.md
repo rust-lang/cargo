@@ -117,6 +117,7 @@ In summary, the supported environment variables are:
 * `CARGO_HTTP_MULTIPLEXING` --- Whether HTTP/2 multiplexing is used, see [`http.multiplexing`].
 * `CARGO_HTTP_USER_AGENT` --- The HTTP user-agent header, see [`http.user-agent`].
 * `CARGO_INSTALL_ROOT` --- The default directory for [`cargo install`], see [`install.root`].
+* `CARGO_INSTALL_PROFILE` --- The default profile, see [`install.profile`].
 * `CARGO_NET_RETRY` --- Number of times to retry network errors, see [`net.retry`].
 * `CARGO_NET_GIT_FETCH_WITH_CLI` --- Enables the use of the `git` executable to fetch, see [`net.git-fetch-with-cli`].
 * `CARGO_NET_OFFLINE` --- Offline mode, see [`net.offline`].
@@ -196,6 +197,7 @@ In summary, the supported environment variables are:
 [`http.multiplexing`]: config.md#httpmultiplexing
 [`http.user-agent`]: config.md#httpuser-agent
 [`install.root`]: config.md#installroot
+[`install.profile`]: config.md#installprofile
 [`net.retry`]: config.md#netretry
 [`net.git-fetch-with-cli`]: config.md#netgit-fetch-with-cli
 [`net.offline`]: config.md#netoffline
