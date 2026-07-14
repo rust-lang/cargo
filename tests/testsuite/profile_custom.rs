@@ -742,3 +742,30 @@ fn test_inherits_dev() {
         .with_stdout_does_not_contain("[..] -C opt-level=0[..]")
         .run();
 }
+
+#[cargo_test]
+fn change_test_inheritance() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2015"
+
+            [profile.test]
+            inherits = "release"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("test --lib --no-run")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `test` profile [optimized] target(s) in [ELAPSED]s
+[EXECUTABLE] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+
+"#]])
+        .run();
+}
