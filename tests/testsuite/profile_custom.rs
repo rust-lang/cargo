@@ -599,35 +599,6 @@ See https://doc.rust-lang.org/cargo/reference/profiles.html for more on configur
             ))
             .run();
     }
-
-    p.change_file(
-        "Cargo.toml",
-        r#"
-               [package]
-               name = "foo"
-               version = "0.1.0"
-               edition = "2015"
-               authors = []
-
-               [profile.debug]
-               debug = 1
-               inherits = "dev"
-            "#,
-    );
-
-    p.cargo("build")
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[ERROR] profile name `debug` is reserved
-       To configure the default development profile, use the name `dev` as in [profile.dev]
-       See https://doc.rust-lang.org/cargo/reference/profiles.html for more on configuring profiles.
- --> Cargo.toml:8:25
-  |
-8 |                [profile.debug]
-  |                         ^^^^^
-
-"#]])
-        .run();
 }
 
 #[cargo_test]
@@ -788,6 +759,41 @@ fn request_test_profile() {
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn override_debug_propfile() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+               [package]
+               name = "foo"
+               version = "0.1.0"
+               edition = "2015"
+               authors = []
+
+               [profile.debug]
+               debug = 1
+               inherits = "dev"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] profile name `debug` is reserved
+       To configure the default development profile, use the name `dev` as in [profile.dev]
+       See https://doc.rust-lang.org/cargo/reference/profiles.html for more on configuring profiles.
+ --> Cargo.toml:8:25
+  |
+8 |                [profile.debug]
+  |                         ^^^^^
 
 "#]])
         .run();
