@@ -37,6 +37,11 @@ The libtest harness may be disabled by setting `harness = false` in the target
 manifest settings, in which case your code will need to provide its own `main`
 function to handle running tests.
 
+By default, `cargo test` uses the [`test` profile], which enables
+debugging.
+
+[`test` profile]: ../reference/profiles.html#test
+
 ### Documentation tests
 
 Documentation tests are also run by default, which is handled by `rustdoc`. It
