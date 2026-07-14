@@ -699,7 +699,7 @@ fn legacy_rustc() {
 }
 
 #[cargo_test]
-fn test_with_dev_profile() {
+fn test_inherits_dev() {
     // The `test` profile inherits from `dev` for both local crates and
     // dependencies.
     Package::new("somedep", "1.0.0").publish();
@@ -714,12 +714,17 @@ fn test_with_dev_profile() {
 
             [dependencies]
             somedep = "1.0"
+
+            [profile.dev]
+            debug = 0
+
+            [profile.test]
+            opt-level = 3
             "#,
         )
         .file("src/lib.rs", "")
         .build();
     p.cargo("test --lib --no-run -v")
-        .env("CARGO_PROFILE_DEV_DEBUG", "0")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
@@ -729,10 +734,11 @@ fn test_with_dev_profile() {
 [RUNNING] `rustc --crate-name somedep [..]`
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]`
-[FINISHED] `test` profile [unoptimized] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [optimized] target(s) in [ELAPSED]s
 [EXECUTABLE] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
 
 "#]])
         .with_stdout_does_not_contain("[..] -C debuginfo=0[..]")
+        .with_stdout_does_not_contain("[..] -C opt-level=0[..]")
         .run();
 }
