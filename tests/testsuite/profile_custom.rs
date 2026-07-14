@@ -765,35 +765,70 @@ fn request_test_profile() {
 }
 
 #[cargo_test]
-fn override_debug_propfile() {
+fn debug_inherits_dev() {
     let p = project()
         .file(
             "Cargo.toml",
             r#"
-               [package]
-               name = "foo"
-               version = "0.1.0"
-               edition = "2015"
-               authors = []
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2015"
 
-               [profile.debug]
-               debug = 1
-               inherits = "dev"
+            [profile.dev]
+            debug = 0
+
+            [profile.debug]
+            opt-level = 3
             "#,
         )
         .file("src/lib.rs", "")
         .build();
-
-    p.cargo("build")
+    p.cargo("check --profile=debug -v")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] profile name `debug` is reserved
        To configure the default development profile, use the name `dev` as in [profile.dev]
        See https://doc.rust-lang.org/cargo/reference/profiles.html for more on configuring profiles.
- --> Cargo.toml:8:25
+  --> Cargo.toml:10:22
+   |
+10 |             [profile.debug]
+   |                      ^^^^^
+
+"#]])
+        .with_stdout_does_not_contain("[..] -C debuginfo=0[..]")
+        .with_stdout_does_not_contain("[..] -C opt-level=0[..]")
+        .run();
+}
+
+#[cargo_test]
+fn change_debug_inheritance() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2015"
+
+            [profile.debug]
+            inherits = "release"
+            debug = true
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("check --profile=debug")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] profile name `debug` is reserved
+       To configure the default development profile, use the name `dev` as in [profile.dev]
+       See https://doc.rust-lang.org/cargo/reference/profiles.html for more on configuring profiles.
+ --> Cargo.toml:7:22
   |
-8 |                [profile.debug]
-  |                         ^^^^^
+7 |             [profile.debug]
+  |                      ^^^^^
 
 "#]])
         .run();
