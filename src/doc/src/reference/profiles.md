@@ -308,12 +308,24 @@ rpath = false
 ### test
 
 The `test` profile is the default profile used by [`cargo test`].
-The `test` profile inherits the settings from the [`dev`](#dev) profile.
+
+The default settings for the `test` profile are:
+
+```toml
+[profile.test]
+inherits = "dev"
+```
 
 ### bench
 
 The `bench` profile is the default profile used by [`cargo bench`].
-The `bench` profile inherits the settings from the [`release`](#release) profile.
+
+The default settings for the `bench` profile are:
+
+```toml
+[profile.bench]
+inherits = "release"
+```
 
 ### Build Dependencies
 

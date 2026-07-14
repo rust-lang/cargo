@@ -2813,7 +2813,7 @@ fn ambiguous_registry_vs_local_package() {
 }
 
 #[cargo_test]
-fn install_with_redundant_default_mode() {
+fn install_with_redundant_default_profile() {
     pkg("foo", "0.0.1");
 
     cargo_process("install foo --release")
@@ -2828,6 +2828,26 @@ For more information, try '--help'.
 
 "#]])
         .with_status(1)
+        .run();
+}
+
+#[cargo_test]
+fn install_with_debug_profile() {
+    pkg("foo", "0.0.1");
+
+    cargo_process("install foo --debug")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
+[INSTALLING] foo v0.0.1
+[COMPILING] foo v0.0.1
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
         .run();
 }
 

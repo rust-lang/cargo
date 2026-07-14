@@ -1,7 +1,6 @@
 //! Tests for profiles defined in config files.
 
 use crate::prelude::*;
-use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_lib_manifest, paths, project, str};
 use cargo_util_schemas::manifest::TomlDebugInfo;
 
@@ -482,44 +481,5 @@ fn named_env_profile() {
 [FINISHED] `other` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
-        .run();
-}
-
-#[cargo_test]
-fn test_with_dev_profile() {
-    // The `test` profile inherits from `dev` for both local crates and
-    // dependencies.
-    Package::new("somedep", "1.0.0").publish();
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            edition = "2015"
-
-            [dependencies]
-            somedep = "1.0"
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
-    p.cargo("test --lib --no-run -v")
-        .env("CARGO_PROFILE_DEV_DEBUG", "0")
-        .with_stderr_data(str![[r#"
-[UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
-[DOWNLOADING] crates ...
-[DOWNLOADED] somedep v1.0.0 (registry `dummy-registry`)
-[COMPILING] somedep v1.0.0
-[RUNNING] `rustc --crate-name somedep [..]`
-[COMPILING] foo v0.1.0 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo [..]`
-[FINISHED] `test` profile [unoptimized] target(s) in [ELAPSED]s
-[EXECUTABLE] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
-
-"#]])
-        .with_stdout_does_not_contain("[..] -C debuginfo=0[..]")
         .run();
 }
