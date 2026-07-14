@@ -769,3 +769,26 @@ fn change_test_inheritance() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn request_test_profile() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2015"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("check --profile test")
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
