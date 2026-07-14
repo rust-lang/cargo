@@ -13,7 +13,6 @@ use crate::core::compiler::BuildContext;
 use crate::core::compiler::CompileTarget;
 use crate::core::compiler::RustdocFingerprint;
 use crate::core::compiler::apply_env_config;
-use crate::core::compiler::build_context::host_artifact_uses_only_host_config;
 use crate::core::compiler::{CompileKind, Unit, UnitHash};
 use crate::util::{CargoResult, GlobalContext};
 
@@ -512,8 +511,10 @@ fn target_runner(
         return Ok(Some((path, runner.val.args.clone())));
     }
 
-    // Host artifacts should not pick up a runner from `[target.'cfg(...)']`.
-    if host_artifact_uses_only_host_config(bcx.gctx, &bcx.build_config.requested_kinds, kind)? {
+    // With `target-applies-to-host = true`,
+    // host artifacts must fall through to pick up from [target]
+    // since this is the stable behavior
+    if kind.is_host() && !bcx.gctx.target_applies_to_host()? {
         return Ok(None);
     }
 
@@ -558,8 +559,10 @@ fn target_linker(bcx: &BuildContext<'_, '_>, kind: CompileKind) -> CargoResult<O
         return Ok(Some(path));
     }
 
-    // Host artifacts should not pick up a linker from `[target.'cfg(...)']`.
-    if host_artifact_uses_only_host_config(bcx.gctx, &bcx.build_config.requested_kinds, kind)? {
+    // With `target-applies-to-host = true`,
+    // host artifacts must fall through to pick up from [target]
+    // since this is the stable behavior
+    if kind.is_host() && !bcx.gctx.target_applies_to_host()? {
         return Ok(None);
     }
 
