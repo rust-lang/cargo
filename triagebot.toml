@@ -62,7 +62,7 @@ contributing_url = "https://rust-lang.github.io/cargo/contrib/"
 warn_non_default_branch = true
 
 [assign.owners]
-"*" = ["@ehuss", "@epage", "@weihanglo"]
+"*" = ["@epage", "@weihanglo"]
 
 [review-submitted]
 reviewed_label = "S-waiting-on-author"
