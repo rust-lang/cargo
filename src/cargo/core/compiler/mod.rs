@@ -1541,9 +1541,6 @@ fn trim_paths_args_rustdoc(
         _ => {}
     }
 
-    // feature gate was checked during manifest/config parsing.
-    cmd.arg("-Zunstable-options");
-
     for pair in trim_paths_remap(build_runner, unit) {
         let mut arg = OsString::from("--remap-path-prefix=");
         arg.push(pair);

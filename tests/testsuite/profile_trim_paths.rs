@@ -65,7 +65,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test(nightly, reason = "--remap-path-scope will be stabilized in 1.95")]
+#[cargo_test]
 fn release_profile_default_to_object() {
     let p = project()
         .file(
@@ -91,7 +91,7 @@ fn release_profile_default_to_object() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "--remap-path-scope will be stabilized in 1.95")]
+#[cargo_test]
 fn one_option() {
     let build = |option| {
         let p = project()
@@ -137,7 +137,7 @@ fn one_option() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "--remap-path-scope will be stabilized in 1.95")]
+#[cargo_test]
 fn multiple_options() {
     let p = project()
         .file(
@@ -166,7 +166,7 @@ fn multiple_options() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "--remap-path-scope will be stabilized in 1.95")]
+#[cargo_test]
 fn profile_merge_works() {
     let p = project()
         .file(
@@ -199,7 +199,7 @@ fn profile_merge_works() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "--remap-path-scope will be stabilized in 1.95")]
+#[cargo_test]
 fn registry_dependency() {
     Package::new("bar", "0.0.1")
         .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
@@ -246,7 +246,7 @@ fn registry_dependency() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "--remap-path-scope will be stabilized in 1.95")]
+#[cargo_test]
 fn registry_dependency_with_build_script_codegen() {
     Package::new("bar", "0.0.1")
         .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
@@ -318,7 +318,7 @@ fn registry_dependency_with_build_script_codegen() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "--remap-path-scope will be stabilized in 1.95")]
+#[cargo_test]
 fn git_dependency() {
     let git_project = git::new("bar", |project| {
         project
@@ -368,7 +368,7 @@ bar-[..]/[..]/src/lib.rs
         .run();
 }
 
-#[cargo_test(nightly, reason = "--remap-path-scope will be stabilized in 1.95")]
+#[cargo_test]
 fn path_dependency() {
     let p = project()
         .file(
@@ -413,7 +413,7 @@ cocktail-bar/src/lib.rs
         .run();
 }
 
-#[cargo_test(nightly, reason = "--remap-path-scope will be stabilized in 1.95")]
+#[cargo_test]
 fn path_dependency_outside_workspace() {
     let _bar = project()
         .at("bar")
@@ -459,7 +459,7 @@ bar-0.0.1/src/lib.rs
         .run();
 }
 
-#[cargo_test(nightly, reason = "--remap-path-scope will be stabilized in 1.95")]
+#[cargo_test]
 fn diagnostics_works() {
     Package::new("bar", "0.0.1")
         .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
@@ -514,29 +514,17 @@ mod object_works {
         command_output(&mut command, "nm").stdout
     }
 
-    #[cargo_test(
-        requires = "nm",
-        nightly,
-        reason = "--remap-path-scope will be stabilized in 1.95"
-    )]
+    #[cargo_test(requires = "nm")]
     fn with_split_debuginfo_off() {
         object_works_helper("off", inspect_debuginfo);
     }
 
-    #[cargo_test(
-        requires = "nm",
-        nightly,
-        reason = "--remap-path-scope will be stabilized in 1.95"
-    )]
+    #[cargo_test(requires = "nm")]
     fn with_split_debuginfo_packed() {
         object_works_helper("packed", inspect_debuginfo);
     }
 
-    #[cargo_test(
-        requires = "nm",
-        nightly,
-        reason = "--remap-path-scope will be stabilized in 1.95"
-    )]
+    #[cargo_test(requires = "nm")]
     fn with_split_debuginfo_unpacked() {
         object_works_helper("unpacked", inspect_debuginfo);
     }
@@ -555,29 +543,17 @@ mod object_works {
         command_output(&mut command, "readelf").stdout
     }
 
-    #[cargo_test(
-        requires = "readelf",
-        nightly,
-        reason = "--remap-path-scope will be stabilized in 1.95"
-    )]
+    #[cargo_test(requires = "readelf")]
     fn with_split_debuginfo_off() {
         object_works_helper("off", inspect_debuginfo);
     }
 
-    #[cargo_test(
-        requires = "readelf",
-        nightly,
-        reason = "--remap-path-scope will be stabilized in 1.95"
-    )]
+    #[cargo_test(requires = "readelf")]
     fn with_split_debuginfo_packed() {
         object_works_helper("packed", inspect_debuginfo);
     }
 
-    #[cargo_test(
-        requires = "readelf",
-        nightly,
-        reason = "--remap-path-scope will be stabilized in 1.95"
-    )]
+    #[cargo_test(requires = "readelf")]
     fn with_split_debuginfo_unpacked() {
         object_works_helper("unpacked", inspect_debuginfo);
     }
@@ -594,11 +570,7 @@ mod object_works {
     }
 
     // windows-msvc supports split-debuginfo=packed only
-    #[cargo_test(
-        requires = "strings",
-        nightly,
-        reason = "--remap-path-scope will be stabilized in 1.95"
-    )]
+    #[cargo_test(requires = "strings")]
     fn with_split_debuginfo_packed() {
         object_works_helper("packed", inspect_debuginfo);
     }
@@ -742,7 +714,7 @@ fn object_works_helper(split_debuginfo: &str, run: impl Fn(&std::path::Path) -> 
 }
 
 // TODO: might want to move to test/testsuite/build_script.rs once stabilized.
-#[cargo_test(nightly, reason = "--remap-path-scope will be stabilized in 1.95")]
+#[cargo_test]
 fn custom_build_env_var_trim_paths() {
     let p = project()
         .file(
@@ -824,11 +796,7 @@ fn custom_build_env_var_trim_paths() {
 }
 
 #[cfg(unix)]
-#[cargo_test(
-    requires = "lldb",
-    nightly,
-    reason = "--remap-path-scope will be stabilized in 1.95"
-)]
+#[cargo_test(requires = "lldb")]
 fn lldb_works_after_trimmed() {
     use cargo_test_support::compare::assert_e2e;
 
@@ -983,11 +951,7 @@ Hello, Ferris!
 }
 
 #[cfg(target_env = "msvc")]
-#[cargo_test(
-    requires = "cdb",
-    nightly,
-    reason = "--remap-path-scope will be stabilized in 1.95"
-)]
+#[cargo_test(requires = "cdb")]
 fn cdb_works_after_trimmed() {
     use cargo_test_support::compare::assert_e2e;
 
@@ -1048,7 +1012,7 @@ Hello, Ferris!
     );
 }
 
-#[cargo_test(nightly, reason = "rustdoc --remap-path-prefix is unstable")]
+#[cargo_test]
 fn rustdoc_without_diagnostics_scope() {
     Package::new("bar", "0.0.1")
         .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
@@ -1090,9 +1054,8 @@ fn rustdoc_without_diagnostics_scope() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "rustdoc --remap-path-prefix is unstable")]
+#[cargo_test]
 fn rustdoc_diagnostics_works() {
-    // This is expected to work after rust-lang/rust#128736
     Package::new("bar", "0.0.1")
         .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file(
