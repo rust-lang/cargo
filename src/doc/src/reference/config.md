@@ -641,9 +641,10 @@ Additional flags may also be passed with the [`cargo rustdoc`] command.
 * Default: from profile
 * Environment: `CARGO_BUILD_INCREMENTAL` or `CARGO_INCREMENTAL`
 
-Whether or not to perform [incremental compilation]. The default if not set is
-to use the value from the [profile](profiles.md#incremental). Otherwise this overrides the setting of
-all profiles.
+Whether or not to perform [incremental compilation].
+
+In environments with `CI` set, the default if not set is `CARGO_BUILD_INCREMENTAL=false`.
+Otherwise, the default is to use the value from the [profile](profiles.md#incremental).
 
 The `CARGO_INCREMENTAL` environment variable can be set to `1` to force enable
 incremental compilation for all profiles, or `0` to disable it. This env var
