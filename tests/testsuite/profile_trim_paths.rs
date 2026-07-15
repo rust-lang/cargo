@@ -610,8 +610,40 @@ mod object_works {
     }
 }
 
+#[cfg(all(target_os = "windows", target_env = "gnu", not(target_abi = "llvm")))]
+mod object_works {
+    use super::*;
+
+    fn inspect_debuginfo(path: &std::path::Path) -> Vec<u8> {
+        let parent = path.parent().expect("binary has a parent directory");
+        let file_name = path.file_name().expect("binary has a file name");
+        let output = std::process::Command::new("objdump")
+            // Avoid echoing the absolute input path in objdump's file header.
+            .current_dir(parent)
+            .arg("--dwarf=info")
+            .arg(file_name)
+            .output()
+            .expect("objdump works");
+        assert!(
+            output.status.success(),
+            "objdump failed with {}\nstdout:\n{}\nstderr:\n{}",
+            output.status,
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr),
+        );
+        output.stdout
+    }
+
+    // rustc currently supports only split-debuginfo=off on windows-gnu.
+    // <https://github.com/rust-lang/rust/blob/47101adcea71daee3c2879218f5b883bcdf180aa/compiler/rustc_target/src/spec/base/windows_gnu.rs#L105-L107>
+    #[cargo_test(requires = "objdump")]
+    fn with_split_debuginfo_off() {
+        object_works_helper("off", inspect_debuginfo);
+    }
+}
+
 fn object_works_helper(split_debuginfo: &str, run: impl Fn(&std::path::Path) -> Vec<u8>) {
-    let registry_src = paths::home().join(".cargo/registry/src");
+    let registry_src = paths::home().join(".cargo").join("registry").join("src");
     let registry_src_bytes = registry_src.as_os_str().as_encoded_bytes();
     let rust_src = "/lib/rustc/src/rust".as_bytes();
 
@@ -644,23 +676,27 @@ fn object_works_helper(split_debuginfo: &str, run: impl Fn(&std::path::Path) -> 
     let pkg_root = p.root();
     let pkg_root = pkg_root.as_os_str().as_encoded_bytes();
 
+    // Our baseline of which source roots are discoverable without object trimming.
     p.cargo("build").run();
 
     let bin_path = p.bin("foo");
     assert!(bin_path.is_file());
     let stdout = run(&bin_path);
-    // On windows-msvc every debuginfo is in pdb file, so can't find anything here.
+
+    // TODO: re-enable this check when rustc bootstrap disables remapping
+    // <https://github.com/rust-lang/cargo/pull/12625#discussion_r1371714791>
+    // assert!(memchr::memmem::find(&stdout, rust_src).is_some());
+
+    // `file!()` in `bar()` keeps untrimmed registry source in the executable
+    // even when debuginfo is separate.
+    assert!(memchr::memmem::find(&stdout, registry_src_bytes).is_some());
+
+    // The local package root occurs only in debuginfo in this fixture.
+    // MSVC puts that debuginfo in the PDB,
+    // while the other inspectors read embedded debuginfo.
     if cfg!(target_env = "msvc") {
-        // TODO: re-enable this check when rustc bootstrap disables remapping
-        // <https://github.com/rust-lang/cargo/pull/12625#discussion_r1371714791>
-        // assert!(memchr::memmem::find(&stdout, rust_src).is_some());
-        assert!(memchr::memmem::find(&stdout, registry_src_bytes).is_none());
         assert!(memchr::memmem::find(&stdout, pkg_root).is_none());
     } else {
-        // TODO: re-enable this check when rustc bootstrap disables remapping
-        // <https://github.com/rust-lang/cargo/pull/12625#discussion_r1371714791>
-        // assert!(memchr::memmem::find(&stdout, rust_src).is_some());
-        assert!(memchr::memmem::find(&stdout, registry_src_bytes).is_some());
         assert!(memchr::memmem::find(&stdout, pkg_root).is_some());
     }
     p.cargo("clean").run();
@@ -689,11 +725,17 @@ fn object_works_helper(split_debuginfo: &str, run: impl Fn(&std::path::Path) -> 
     let bin_path = p.bin("foo");
     assert!(bin_path.is_file());
     let stdout = run(&bin_path);
+
+    // Original sysroot source root should be trimmed.
     assert!(memchr::memmem::find(&stdout, rust_src).is_none());
+
+    // Check line by line so macOS can exempt untrimmable `OSO` symbols.
     for line in stdout.split(|c| c == &b'\n') {
-        let registry = memchr::memmem::find(line, registry_src_bytes).is_none();
-        let local = memchr::memmem::find(line, pkg_root).is_none();
-        if registry && local {
+        // original registry source root was trimmed.
+        let registry_is_trimmed = memchr::memmem::find(line, registry_src_bytes).is_none();
+        // original project root was trimmed.
+        let local_is_trimmed = memchr::memmem::find(line, pkg_root).is_none();
+        if registry_is_trimmed && local_is_trimmed {
             continue;
         }
 
@@ -877,8 +919,77 @@ Hello, Ferris!
     );
 }
 
-// This test is disabled, as it currently doesn't work.
-#[cfg(any())]
+#[cfg(all(target_os = "windows", target_env = "gnu", not(target_abi = "llvm")))]
+#[cargo_test(requires = "gdb")]
+fn gdb_works_after_trimmed() {
+    use cargo_test_support::compare::assert_e2e;
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2015"
+
+                [profile.dev]
+                trim-paths = "object"
+           "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {
+                    let msg = "Hello, Ferris!";
+                    println!("{msg}");
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("build --verbose -Ztrim-paths")
+        .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.0 ([ROOT]/foo)
+[RUNNING] `rustc [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    let bin_path = p.bin("foo");
+    assert!(bin_path.is_file());
+
+    // GitHub's Windows runner uses MinGW-builds GDB wrapper,
+    // which loses the boundary of spaced `-ex` args when forwarding them to `gdborig.exe`.
+    // Therefore we use a command file instead here.
+    //
+    // See <https://github.com/niXman/mingw-builds/blob/1d6a1c28/sources/gdb-wrapper/gdb-wrapper.c#L141-L145>
+    p.change_file(
+        "gdb.commands",
+        "break -source src/main.rs -line 4\nrun\nlist\ncontinue\n",
+    );
+    let stdout = String::from_utf8(
+        p.process("gdb")
+            .args(&["--batch", "--nx", "--quiet", "--command=gdb.commands"])
+            .arg(bin_path.strip_prefix(p.root()).unwrap())
+            .run()
+            .stdout,
+    )
+    .unwrap();
+    assert_e2e().eq(
+        &stdout,
+        str![[r#"
+...
+[..]Breakpoint 1,[..]
+...
+Hello, Ferris!
+...
+
+"#]],
+    );
+}
+
 #[cfg(target_env = "msvc")]
 #[cargo_test(
     requires = "cdb",
@@ -890,7 +1001,7 @@ fn cdb_works_after_trimmed() {
 
     let run_debugger = |path| {
         std::process::Command::new("cdb")
-            .args(["-c", "bp `main.rs:4`;g;g;q"])
+            .args(["-lines", "-c", r"bp `src\main.rs:3`;g;g;q"])
             .arg(path)
             .output()
             .expect("debugger works")

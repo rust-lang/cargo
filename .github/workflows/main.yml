@@ -213,6 +213,15 @@ jobs:
       shell: pwsh
       run: Add-Content $env:GITHUB_PATH "C:\Program Files (x86)\Windows Kits\10\Debuggers\arm64"
       if: matrix.os == 'windows-11-arm'
+    - name: Check Windows MSVC debugger tool
+      run: cdb -version
+      if: matrix.rust == 'nightly-msvc'
+    - name: Check Windows GNU object tool
+      run: objdump --version
+      if: matrix.os == 'windows-latest' && matrix.rust == 'nightly-gnu'
+    - name: Check Windows GNU debugger tool
+      run: gdb --version
+      if: matrix.os == 'windows-latest' && matrix.rust == 'nightly-gnu'
     - name: Configure extra test environment
       run: echo CARGO_CONTAINER_TESTS=1 >> $GITHUB_ENV
       if: matrix.os == 'ubuntu-latest'
