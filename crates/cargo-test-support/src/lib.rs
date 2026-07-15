@@ -1439,6 +1439,7 @@ pub trait TestEnvCommandExt: Sized {
             .env("CARGO_INCREMENTAL", "0")
             // Don't read the system git config which is out of our control.
             .env("GIT_CONFIG_NOSYSTEM", "1")
+            .env_remove("CI")
             .env_remove("__CARGO_DEFAULT_LIB_METADATA")
             .env_remove("ALL_PROXY")
             .env_remove("EMAIL")
