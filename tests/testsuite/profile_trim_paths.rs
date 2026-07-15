@@ -844,7 +844,10 @@ fn lldb_works_after_trimmed() {
     let run_lldb = |path| {
         let mut command = std::process::Command::new("lldb");
         command
-            .args(["-o", "breakpoint set --file src/main.rs --line 4"])
+            .args([
+                "-o",
+                "breakpoint set --one-shot true --file src/main.rs --line 4",
+            ])
             .args(["-o", "run"])
             .args(["-o", "continue"])
             .args(["-o", "exit"])
@@ -894,8 +897,12 @@ fn lldb_works_after_trimmed() {
         &stdout,
         str![[r#"
 ...
+(lldb) breakpoint set --one-shot true --file src/main.rs --line 4
+Breakpoint 1: [..]locations.
+(lldb) run
+...
 [..]stopped[..]
-[..]stop reason = breakpoint 1.1[..]
+[..]stop reason = one-shot breakpoint 1[..]
 ...
 (lldb) continue
 ...
