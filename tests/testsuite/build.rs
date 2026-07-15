@@ -202,6 +202,26 @@ fn incremental_config() {
 }
 
 #[cargo_test]
+fn ci_implies_no_cargo_incremental() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/main.rs", &main_file(r#""i am foo""#, &[]))
+        .build();
+
+    p.cargo("build -v")
+        .env("CI", "1")
+        .env_remove("CARGO_INCREMENTAL")
+        .with_stderr_does_not_contain("[..]C incremental=[..]")
+        .run();
+
+    p.cargo("test -v")
+        .env("CI", "1")
+        .env_remove("CARGO_INCREMENTAL")
+        .with_stderr_does_not_contain("[..]C incremental=[..]")
+        .run();
+}
+
+#[cargo_test]
 fn cargo_compile_with_redundant_default_mode() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))

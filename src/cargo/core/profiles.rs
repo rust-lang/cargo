@@ -31,6 +31,7 @@ use crate::util::interning::InternedString;
 use crate::util::toml::validate_profile;
 use crate::util::{CargoResult, GlobalContext, closest_msg, context};
 use anyhow::{Context as _, bail};
+use cargo_util::is_ci;
 use cargo_util_schemas::manifest::TomlTrimPaths;
 use cargo_util_schemas::manifest::TomlTrimPathsValue;
 use cargo_util_schemas::manifest::{
@@ -72,7 +73,10 @@ impl Profiles {
         let gctx = ws.gctx();
         let incremental = match gctx.get_env_os("CARGO_INCREMENTAL") {
             Some(v) => Some(v == "1"),
-            None => gctx.build_config()?.incremental,
+            None => gctx
+                .build_config()?
+                .incremental
+                .or_else(|| is_ci().then_some(false)),
         };
         let mut profiles = merge_config_profiles(ws, requested_profile)?;
         let rustc_host = ws.gctx().load_global_rustc(Some(ws))?.host;
