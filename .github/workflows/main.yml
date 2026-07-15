@@ -168,22 +168,27 @@ jobs:
         - name: Windows x86_64 MSVC stable
           os: windows-latest
           rust: stable-msvc
+          target_env: msvc
           other: i686-pc-windows-msvc
         - name: Windows x86_64 MSVC nightly
           os: windows-latest
           rust: nightly-msvc
+          target_env: msvc
           other: i686-pc-windows-msvc
         - name: Windows aarch64 MSVC stable
           os: windows-11-arm
           rust: stable-msvc
+          target_env: msvc
           other: i686-pc-windows-msvc
         - name: Windows aarch64 MSVC nightly
           os: windows-11-arm
           rust: nightly-msvc
+          target_env: msvc
           other: i686-pc-windows-msvc
         - name: Windows x86_64 gnu nightly # runs out of space while trying to link the test suite
           os: windows-latest
           rust: nightly-gnu
+          target_env: gnu
           other: i686-pc-windows-gnu
     name: Tests ${{ matrix.name }}
     steps:
@@ -204,6 +209,12 @@ jobs:
       if: startsWith(matrix.rust, 'nightly')
     - run: sudo apt update -y && sudo apt install lldb gcc-multilib libsecret-1-0 libsecret-1-dev -y
       if: matrix.os == 'ubuntu-latest'
+    - name: Install LLDB on Linux ARM
+      run: sudo apt update -y && sudo apt install lldb -y
+      if: matrix.os == 'ubuntu-24.04-arm'
+    - name: Check LLDB debugger tool
+      run: lldb --version
+      if: runner.os != 'Windows'
     - run: rustup component add rustfmt || echo "rustfmt not available"
     - name: Add Windows debuggers bin to PATH
       shell: pwsh
@@ -215,13 +226,13 @@ jobs:
       if: matrix.os == 'windows-11-arm'
     - name: Check Windows MSVC debugger tool
       run: cdb -version
-      if: matrix.rust == 'nightly-msvc'
+      if: runner.os == 'Windows' && matrix.target_env == 'msvc'
     - name: Check Windows GNU object tool
       run: objdump --version
-      if: matrix.os == 'windows-latest' && matrix.rust == 'nightly-gnu'
+      if: runner.os == 'Windows' && matrix.target_env == 'gnu'
     - name: Check Windows GNU debugger tool
       run: gdb --version
-      if: matrix.os == 'windows-latest' && matrix.rust == 'nightly-gnu'
+      if: runner.os == 'Windows' && matrix.target_env == 'gnu'
     - name: Configure extra test environment
       run: echo CARGO_CONTAINER_TESTS=1 >> $GITHUB_ENV
       if: matrix.os == 'ubuntu-latest'
