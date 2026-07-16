@@ -370,7 +370,7 @@ fn search_directories(gctx: &GlobalContext) -> Vec<PathBuf> {
 
 /// Initialize libgit2.
 #[tracing::instrument(skip_all)]
-fn init_git(gctx: &GlobalContext) {
+fn init_git() {
     // Disabling the owner validation in git can, in theory, lead to code execution
     // vulnerabilities. However, libgit2 does not launch executables, which is the foundation of
     // the original security issue. Meanwhile, issues with refusing to load git repos in
@@ -392,8 +392,6 @@ fn init_git(gctx: &GlobalContext) {
         git2::opts::set_verify_owner_validation(false)
             .expect("set_verify_owner_validation should never fail");
     }
-
-    init_git_transports(gctx);
 }
 
 /// Configure libgit2 to use libcurl if necessary.

@@ -94,7 +94,8 @@ pub fn main(gctx: &mut GlobalContext) -> CliResult {
             global_args,
             Some(&exec),
         )?;
-        super::init_git(gctx);
+        super::init_git();
+        super::init_git_transports(gctx);
 
         exec.exec(gctx, subcommand_args)?;
     }
