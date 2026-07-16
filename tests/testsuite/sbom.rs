@@ -110,12 +110,13 @@ fn enabling_sbom_invalidates_fingerprint() {
         .env("CARGO_BUILD_SBOM", "true")
         .masquerade_as_nightly_cargo(&["sbom"])
         .with_stderr_data(cargo_test_support::str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
 
-    assert!(!file.exists());
+    assert!(file.is_file());
 
     p.cargo("build -Zsbom")
         .env("CARGO_BUILD_SBOM", "true")
