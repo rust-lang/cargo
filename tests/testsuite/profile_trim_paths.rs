@@ -509,12 +509,9 @@ mod object_works {
     use super::*;
 
     fn inspect_debuginfo(path: &std::path::Path) -> Vec<u8> {
-        std::process::Command::new("nm")
-            .arg("-pa")
-            .arg(path)
-            .output()
-            .expect("nm works")
-            .stdout
+        let mut command = std::process::Command::new("nm");
+        command.arg("-pa").arg(path);
+        command_output(&mut command, "nm").stdout
     }
 
     #[cargo_test(
@@ -550,13 +547,12 @@ mod object_works {
     use super::*;
 
     fn inspect_debuginfo(path: &std::path::Path) -> Vec<u8> {
-        std::process::Command::new("readelf")
+        let mut command = std::process::Command::new("readelf");
+        command
             .arg("--debug-dump=info")
             .arg("--debug-dump=no-follow-links") // older version can't recognized but just a warning
-            .arg(path)
-            .output()
-            .expect("readelf works")
-            .stdout
+            .arg(path);
+        command_output(&mut command, "readelf").stdout
     }
 
     #[cargo_test(
@@ -592,11 +588,9 @@ mod object_works {
     use super::*;
 
     fn inspect_debuginfo(path: &std::path::Path) -> Vec<u8> {
-        std::process::Command::new("strings")
-            .arg(path)
-            .output()
-            .expect("strings works")
-            .stdout
+        let mut command = std::process::Command::new("strings");
+        command.arg(path);
+        command_output(&mut command, "strings").stdout
     }
 
     // windows-msvc supports split-debuginfo=packed only
@@ -617,21 +611,13 @@ mod object_works {
     fn inspect_debuginfo(path: &std::path::Path) -> Vec<u8> {
         let parent = path.parent().expect("binary has a parent directory");
         let file_name = path.file_name().expect("binary has a file name");
-        let output = std::process::Command::new("objdump")
-            // Avoid echoing the absolute input path in objdump's file header.
+        let mut command = std::process::Command::new("objdump");
+        // Avoid echoing the absolute input path in objdump's file header.
+        command
             .current_dir(parent)
             .arg("--dwarf=info")
-            .arg(file_name)
-            .output()
-            .expect("objdump works");
-        assert!(
-            output.status.success(),
-            "objdump failed with {}\nstdout:\n{}\nstderr:\n{}",
-            output.status,
-            String::from_utf8_lossy(&output.stdout),
-            String::from_utf8_lossy(&output.stderr),
-        );
-        output.stdout
+            .arg(file_name);
+        command_output(&mut command, "objdump").stdout
     }
 
     // rustc currently supports only split-debuginfo=off on windows-gnu.
@@ -856,15 +842,15 @@ fn lldb_works_after_trimmed() {
     }
 
     let run_lldb = |path| {
-        std::process::Command::new("lldb")
+        let mut command = std::process::Command::new("lldb");
+        command
             .args(["-o", "breakpoint set --file src/main.rs --line 4"])
             .args(["-o", "run"])
             .args(["-o", "continue"])
             .args(["-o", "exit"])
             .arg("--no-use-colors")
-            .arg(path)
-            .output()
-            .expect("lldb works")
+            .arg(path);
+        command_output(&mut command, "lldb")
     };
 
     let p = project()
@@ -1000,11 +986,11 @@ fn cdb_works_after_trimmed() {
     use cargo_test_support::compare::assert_e2e;
 
     let run_debugger = |path| {
-        std::process::Command::new("cdb")
+        let mut command = std::process::Command::new("cdb");
+        command
             .args(["-lines", "-c", r"bp `src\main.rs:3`;g;g;q"])
-            .arg(path)
-            .output()
-            .expect("debugger works")
+            .arg(path);
+        command_output(&mut command, "cdb")
     };
 
     let p = project()
@@ -1141,4 +1127,18 @@ fn rustdoc_diagnostics_works() {
 ...
 "#]])
         .run();
+}
+
+fn command_output(command: &mut std::process::Command, name: &str) -> std::process::Output {
+    let output = command
+        .output()
+        .unwrap_or_else(|err| panic!("{name} failed to start: {err}"));
+    assert!(
+        output.status.success(),
+        "{name} failed with {}\nstdout:\n{}\nstderr:\n{}",
+        output.status,
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr),
+    );
+    output
 }
