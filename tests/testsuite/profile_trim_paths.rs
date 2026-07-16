@@ -833,9 +833,9 @@ fn custom_build_env_var_trim_paths() {
 )]
 fn lldb_works_after_trimmed() {
     use cargo_test_support::compare::assert_e2e;
-    use cargo_util::is_ci;
 
-    if !is_ci() {
+    #[cfg(target_os = "macos")]
+    if !cargo_util::is_ci() {
         // On macOS lldb requires elevated privileges to run developer tools.
         // See rust-lang/cargo#13413
         return;
