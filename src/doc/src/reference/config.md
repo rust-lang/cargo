@@ -473,6 +473,7 @@ Allowed levels are:
 
 Only warnings that are lints (i.e. level is adjustable) are affected,
 e.g. leaving as-is non-lint warnings or warnings from dependencies visible through `--verbose --verbose`.
+`build.warnings` and `CARGO_BUILD_WARNINGS` do not apply to MIRI.
 
 > **MSRV:** Respected as of 1.97.
 
