@@ -95,6 +95,40 @@ fn simple() {
 }
 
 #[cargo_test]
+fn enabling_sbom_invalidates_fingerprint() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/main.rs", r#"fn main() {}"#)
+        .build();
+
+    p.cargo("build").run();
+
+    let file = append_sbom_suffix(&p.bin("foo"));
+    assert!(!file.exists());
+
+    p.cargo("build -Zsbom")
+        .env("CARGO_BUILD_SBOM", "true")
+        .masquerade_as_nightly_cargo(&["sbom"])
+        .with_stderr_data(cargo_test_support::str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    assert!(file.is_file());
+
+    p.cargo("build -Zsbom")
+        .env("CARGO_BUILD_SBOM", "true")
+        .masquerade_as_nightly_cargo(&["sbom"])
+        .with_stderr_data(cargo_test_support::str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn with_multiple_crate_types() {
     let p = project()
         .file(
