@@ -844,13 +844,13 @@ fn lldb_works_after_trimmed() {
     let run_lldb = |path| {
         let mut command = std::process::Command::new("lldb");
         command
+            .args(["--batch", "--no-lldbinit"])
             .args([
                 "-o",
                 "breakpoint set --one-shot true --file src/main.rs --line 4",
             ])
             .args(["-o", "run"])
             .args(["-o", "continue"])
-            .args(["-o", "exit"])
             .arg("--no-use-colors")
             .arg(path);
         command_output(&mut command, "lldb")
