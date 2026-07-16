@@ -40,6 +40,13 @@ use crate::util::interning::InternedString;
 
 const IS_NO_ARTIFACT_DEP: Option<&'static Artifact> = None;
 
+/// Sentinel `extern_crate_name` for the cross-crate dead-fn-elimination ordering edges that
+/// `inject_dead_fn_probe_units` adds from a pruned library's `Build` unit to the used-set-emitting
+/// probe/check units. Such an edge exists only to sequence the build (probe before prune); it must
+/// never contribute an `--extern`. The rustc-args builder (`add_deps_extern`) skips deps whose
+/// `extern_crate_name` equals this value. Not a valid crate identifier, so it never collides.
+pub(crate) const DCE_ORDER_ONLY_EXTERN_NAME: &str = "\u{0}dce-order-only";
+
 /// Collection of stuff used while creating the [`UnitGraph`].
 struct State<'a, 'gctx> {
     ws: &'a Workspace<'gctx>,
@@ -140,6 +147,12 @@ pub fn build_unit_dependencies<'a, 'gctx>(
     }
 
     connect_run_custom_build_deps(&mut state);
+
+    // Cross-crate dead-function elimination (option 1): split each binary unit into a
+    // frontend/probe pass (emits per-dependency used-sets) scheduled before dependency codegen.
+    if state.gctx.cli_unstable().dead_fn_elimination {
+        inject_dead_fn_probe_units(&mut state);
+    }
 
     // Dependencies are used in tons of places throughout the backend, many of
     // which affect the determinism of the build itself. As a result be sure
@@ -837,6 +850,320 @@ fn dep_build_script(
 }
 
 /// Choose the correct mode for dependencies.
+/// Cross-crate dead-function elimination, option 1: the binary-unit split.
+///
+/// A first-build codegen cut needs each dependency's used-set - which of its functions the
+/// build reaches - to exist BEFORE that dependency codegens. The used-set comes from the
+/// binary's frontend, but a binary links its dependencies, so cargo normally schedules it
+/// last. This pass rewires the graph so the ordering is
+///
+///     dependency rmeta (check)  ->  binary probe (emits used-sets)
+///                               ->  dependency codegen (pruned)  ->  binary link
+///
+/// For each binary `Build` unit it interns a **probe**: a `Check`-mode clone of the same binary
+/// whose frontend runs rustc's `-Zdead-fn-emit-used-set`. The probe depends on the *check*
+/// units of the binary's library dependencies (rmeta only). Each eliminable dependency library
+/// `Build` unit then depends on the probe and prunes against its used-set. The binary's own
+/// `Build`/link unit depends on the probe too. The result is acyclic:
+///
+///     dep(check)  ->  probe  ->  dep(build, pruned)  ->  bin(build/link)
+///
+/// The used-set is keyed by crate-relative def-path (metadata-invariant), so the fact that a
+/// dependency's check unit and build unit are compiled with different `-Cmetadata` does not
+/// matter: both compute the same key for a given function.
+fn inject_dead_fn_probe_units(state: &mut State<'_, '_>) {
+    let graph = &state.unit_dependencies;
+    let bins: Vec<Unit> = graph
+        .keys()
+        .filter(|u| u.mode == CompileMode::Build && u.target.is_bin())
+        .cloned()
+        .collect();
+    if bins.is_empty() {
+        return;
+    }
+    // Compute the set of *build-time* units: the transitive closure of every proc-macro target
+    // and every build-script (`RunCustomBuild`) unit. A library reachable from one of these runs
+    // (or feeds code that runs) at build time, so the runtime binary's used-set does not see its
+    // callers — pruning it would drop functions a proc-macro needs (e.g. `strsim` under
+    // `darling`). We must never prune these. NOTE: `kind.is_host()` is NOT a usable proxy — in a
+    // normal (non-cross) build cargo marks the *entire* graph `CompileKind::Host`.
+    let build_time: std::collections::HashSet<Unit> = {
+        let mut seen = std::collections::HashSet::new();
+        let mut stack: Vec<Unit> = graph
+            .keys()
+            .filter(|u| u.target.for_host() || u.mode.is_run_custom_build())
+            .cloned()
+            .collect();
+        while let Some(u) = stack.pop() {
+            if let Some(deps) = graph.get(&u) {
+                for d in &*deps {
+                    if seen.insert(d.unit.clone()) {
+                        stack.push(d.unit.clone());
+                    }
+                }
+            }
+        }
+        seen
+    };
+
+    let is_eliminable_lib = |u: &Unit| {
+        u.mode == CompileMode::Build
+            && !u.target.is_bin()
+            && !u.target.is_custom_build()
+            && !u.target.for_host() // not a proc-macro / plugin target
+            && !build_time.contains(u) // not a build-time dependency (see `build_time` above)
+            && u.target
+                .rustc_crate_types()
+                .iter()
+                .any(|t| matches!(t, CrateType::Lib | CrateType::Rlib))
+    };
+    let elim_libs: Vec<Unit> = graph.keys().filter(|u| is_eliminable_lib(u)).cloned().collect();
+
+    // Intern the Check-mode form of a Build unit (same fields, mode = Check).
+    let as_check = |state: &State<'_, '_>, u: &Unit| -> Unit {
+        state.interner.intern(
+            &u.pkg,
+            &u.target,
+            u.profile.clone(),
+            u.kind,
+            CompileMode::Check { test: false },
+            u.features.clone(),
+            u.rustflags.clone(),
+            u.rustdocflags.clone(),
+            u.links_overrides.clone(),
+            u.is_std,
+            u.dep_hash,
+            u.artifact,
+            u.artifact_target_for_features,
+            u.skip_non_compile_time_dep,
+        )
+    };
+
+    let mut new_units: Vec<(Unit, Vec<UnitDep>)> = Vec::new();
+    // Deferred wait-edges: (dependency-Build-unit, probe). Added only after we know each probe's
+    // transitive closure, so we never create a `dep -> probe` edge for a `dep` the probe already
+    // depends on (which would be a cycle — notably via build-script chains like
+    // `num-traits(check) -> build-script -> autocfg(build)`).
+    let mut extra_edges: Vec<(Unit, UnitDep)> = Vec::new();
+    let mut want_check: Vec<Unit> = Vec::new();
+    let mut probes: Vec<Unit> = Vec::new();
+
+    for bin in &bins {
+        let probe = as_check(state, bin);
+        probes.push(probe.clone());
+
+        // Probe depends on the check form of each eliminable library dep (rmeta only); other
+        // deps (build scripts, proc macros) pass through unchanged. Guard against self-loops: a
+        // binary can depend on its own package's lib, whose check form could coincide with the
+        // probe — never let the probe depend on itself.
+        let bin_deps = state.unit_dependencies[bin].clone();
+        let mut probe_deps: Vec<UnitDep> = Vec::new();
+        for dep in &bin_deps {
+            if is_eliminable_lib(&dep.unit) && as_check(state, &dep.unit) != probe {
+                let cu = as_check(state, &dep.unit);
+                want_check.push(dep.unit.clone());
+                probe_deps.push(UnitDep {
+                    unit: cu,
+                    unit_for: dep.unit_for,
+                    extern_crate_name: dep.extern_crate_name,
+                    dep_name: dep.dep_name,
+                    public: dep.public,
+                    noprelude: dep.noprelude,
+                    nounused: dep.nounused,
+                    manifest_deps: Unhashed(None),
+                });
+            } else {
+                probe_deps.push(dep.clone());
+            }
+        }
+        new_units.push((probe.clone(), probe_deps));
+
+        // Binary link waits on the probe.
+        extra_edges.push((
+            bin.clone(),
+            UnitDep {
+                unit: probe.clone(),
+                unit_for: UnitFor::new_normal(bin.kind),
+                extern_crate_name: bin.pkg.name(),
+                dep_name: None,
+                public: false,
+                noprelude: false,
+                nounused: true,
+                manifest_deps: Unhashed(None),
+            },
+        ));
+
+    }
+
+    // Materialise the check units the probes depend on, plus their transitive check subgraph, so
+    // cargo knows how to build them (they mirror the Build units' library dep edges, in check).
+    let mut check_graph: HashMap<Unit, Vec<UnitDep>> = HashMap::new();
+    for u in &want_check {
+        build_check_subgraph(state, u, &as_check, &is_eliminable_lib, &mut check_graph);
+    }
+    let check_graph_keys: Vec<Unit> = check_graph.keys().cloned().collect();
+
+    for (probe, deps) in new_units {
+        state.unit_dependencies.entry(probe).or_insert(deps);
+    }
+    for (unit, deps) in check_graph {
+        state.unit_dependencies.entry(unit).or_insert(deps);
+    }
+    for (unit, dep) in extra_edges {
+        if let Some(list) = state.unit_dependencies.get_mut(&unit) {
+            list.push(dep);
+        }
+    }
+
+    // A library's used-set is the *union* over every crate that calls it, and each such crate
+    // contributes during its own frontend probe (the bin probe or a dependency's check unit). So a
+    // library's pruned `Build` must wait for ALL of those probes to finish — not just the binary's.
+    // Make every eliminable library `Build` unit depend on every used-set-emitting unit (all bin
+    // probes + all check units), skipping any emitter reachable *from* the library (that would be a
+    // cycle: the emitter needs this library's rmeta). A skipped emitter just means this library
+    // keeps a slightly larger closure — always sound.
+    // Emitters to wait on: every used-set-emitting unit — the binary probes AND every library
+    // check unit. Waiting on the bin probe alone is not enough in a large graph: a library's
+    // used-set is appended to (concurrently) by each caller's check unit, and the consumer reads
+    // the file ONCE, so the library must not codegen until every emitter has finished appending.
+    // These edges to check units are marked (see `DCE_ORDER_ONLY`) and dropped from `--extern`.
+    let emitters: Vec<Unit> = probes
+        .iter()
+        .cloned()
+        .chain(check_graph_keys.iter().cloned())
+        .collect();
+    let closure_of = |start: &Unit, g: &UnitGraph| -> std::collections::HashSet<Unit> {
+        let mut seen = std::collections::HashSet::new();
+        let mut stack = vec![start.clone()];
+        while let Some(u) = stack.pop() {
+            if let Some(deps) = g.get(&u) {
+                for d in deps {
+                    if seen.insert(d.unit.clone()) {
+                        stack.push(d.unit.clone());
+                    }
+                }
+            }
+        }
+        seen
+    };
+    // Precompute the closure of each library (to detect emitter-in-closure = would-be cycle).
+    let mut lib_closures: HashMap<Unit, std::collections::HashSet<Unit>> = HashMap::new();
+    for lib in &elim_libs {
+        lib_closures.insert(lib.clone(), closure_of(lib, &state.unit_dependencies));
+    }
+    for lib in &elim_libs {
+        let lib_closure = &lib_closures[lib];
+        for emitter in &emitters {
+            if emitter == lib || lib_closure.contains(emitter) {
+                continue; // emitter depends on this lib (or is it) -> cycle; skip
+            }
+            if let Some(list) = state.unit_dependencies.get_mut(lib) {
+                list.push(UnitDep {
+                    unit: emitter.clone(),
+                    unit_for: UnitFor::new_normal(lib.kind),
+                    // Ordering-only edge (see `DCE_ORDER_ONLY_EXTERN_NAME`): scheduling only, never
+                    // an `--extern`. The rustc-args builder drops deps carrying this sentinel name.
+                    extern_crate_name: DCE_ORDER_ONLY_EXTERN_NAME.into(),
+                    dep_name: None,
+                    public: false,
+                    noprelude: false,
+                    nounused: true,
+                    manifest_deps: Unhashed(None),
+                });
+            }
+        }
+    }
+
+    // Debug: detect any cycle we introduced (DFS with a recursion stack), and report the path.
+    if std::env::var_os("XDCE_CYCLE_CHECK").is_some() {
+        let g = &state.unit_dependencies;
+        let mut color: HashMap<*const (), u8> = HashMap::new();
+        let mut path: Vec<String> = Vec::new();
+        fn dfs(
+            u: &Unit,
+            g: &UnitGraph,
+            color: &mut HashMap<*const (), u8>,
+            path: &mut Vec<String>,
+        ) -> bool {
+            let key = std::ptr::from_ref(&**u) as *const ();
+            let label = format!("{}:{:?}:{}", u.pkg.name(), u.mode, u.target.name());
+            match color.get(&key) {
+                Some(1) => {
+                    path.push(label);
+                    return true; // back-edge -> cycle
+                }
+                Some(2) => return false,
+                _ => {}
+            }
+            color.insert(key, 1);
+            path.push(label);
+            if let Some(deps) = g.get(u) {
+                for d in deps {
+                    if dfs(&d.unit, g, color, path) {
+                        return true;
+                    }
+                }
+            }
+            path.pop();
+            color.insert(key, 2);
+            false
+        }
+        for u in g.keys() {
+            let key = std::ptr::from_ref(&**u) as *const ();
+            if !color.contains_key(&key) {
+                path.clear();
+                if dfs(u, g, &mut color, &mut path) {
+                    panic!("XDCE introduced a unit-graph cycle:\n  {}", path.join("\n  -> "));
+                }
+            }
+        }
+    }
+}
+
+/// Given a library `Build` unit, materialise its Check-mode form's dependency edges (the check
+/// forms of its own library deps), recursing so the probe's rmeta subgraph is fully present.
+fn build_check_subgraph(
+    state: &State<'_, '_>,
+    build_unit: &Unit,
+    as_check: &dyn Fn(&State<'_, '_>, &Unit) -> Unit,
+    is_eliminable_lib: &dyn Fn(&Unit) -> bool,
+    out: &mut HashMap<Unit, Vec<UnitDep>>,
+) {
+    let check_unit = as_check(state, build_unit);
+    if out.contains_key(&check_unit) {
+        return;
+    }
+    // Build this unit's check-dep list and record which children to recurse into. Insert the
+    // node into `out` BEFORE recursing so that a dependency cycle (which large graphs have, e.g.
+    // via shared or dev dependencies) terminates instead of overflowing the stack.
+    let mut deps: Vec<UnitDep> = Vec::new();
+    let mut recurse_into: Vec<Unit> = Vec::new();
+    if let Some(build_deps) = state.unit_dependencies.get(build_unit) {
+        for dep in build_deps {
+            if is_eliminable_lib(&dep.unit) {
+                let cu = as_check(state, &dep.unit);
+                deps.push(UnitDep {
+                    unit: cu,
+                    unit_for: dep.unit_for,
+                    extern_crate_name: dep.extern_crate_name,
+                    dep_name: dep.dep_name,
+                    public: dep.public,
+                    noprelude: dep.noprelude,
+                    nounused: dep.nounused,
+                    manifest_deps: Unhashed(None),
+                });
+                recurse_into.push(dep.unit.clone());
+            } else {
+                deps.push(dep.clone());
+            }
+        }
+    }
+    out.insert(check_unit, deps);
+    for child in recurse_into {
+        build_check_subgraph(state, &child, as_check, is_eliminable_lib, out);
+    }
+}
+
 fn check_or_build_mode(mode: CompileMode, target: &Target) -> CompileMode {
     match mode {
         CompileMode::Check { .. } | CompileMode::Doc { .. } | CompileMode::Docscrape => {

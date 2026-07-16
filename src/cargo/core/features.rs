@@ -890,6 +890,7 @@ unstable_cli_options!(
     min_publish_age: bool = ("Enable the `min-publish-age` configuration for dependency version age filtering"),
     minimal_versions: bool = ("Resolve minimal dependency versions instead of maximum"),
     msrv_policy: bool = ("Enable rust-version aware policy within cargo"),
+    dead_fn_elimination: bool = ("Cross-crate dead-function elimination: probe the binary's frontend for a per-dependency used-set, then codegen each dependency pruned"),
     mtime_on_use: bool = ("Configure Cargo to update the mtime of used files"),
     next_lockfile_bump: bool,
     no_embed_metadata: bool = ("Avoid embedding metadata in library artifacts"),
@@ -1434,6 +1435,7 @@ impl CliUnstable {
             "json-target-spec" => self.json_target_spec = parse_empty(k, v)?,
             "min-publish-age" => self.min_publish_age = parse_empty(k, v)?,
             "next-lockfile-bump" => self.next_lockfile_bump = parse_empty(k, v)?,
+            "dead-fn-elimination" => self.dead_fn_elimination = parse_empty(k, v)?,
             "minimal-versions" => self.minimal_versions = parse_empty(k, v)?,
             "msrv-policy" => self.msrv_policy = parse_empty(k, v)?,
             // can also be set in .cargo/config or with and ENV

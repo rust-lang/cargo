@@ -1221,6 +1221,45 @@ fn add_error_format_and_color(build_runner: &BuildRunner<'_, '_>, cmd: &mut Proc
     }
 }
 
+/// Is `unit` a *build-time* unit — reachable from any proc-macro target or build-script
+/// (`RunCustomBuild`) unit in the current unit graph? Such a library's callers run at build time,
+/// so the runtime binary's used-set does not observe them and it must not be pruned (see the
+/// `strsim`/`darling` case). Used by the cross-crate dead-fn-elimination gate.
+fn unit_is_build_time(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> bool {
+    let graph = &build_runner.bcx.unit_graph;
+    let mut seen: std::collections::HashSet<&Unit> = std::collections::HashSet::new();
+    let mut stack: Vec<&Unit> = graph
+        .keys()
+        .filter(|u| u.target.for_host() || u.mode.is_run_custom_build())
+        .collect();
+    while let Some(u) = stack.pop() {
+        if let Some(deps) = graph.get(u) {
+            for d in deps {
+                if &d.unit == unit {
+                    return true;
+                }
+                if seen.insert(&d.unit) {
+                    stack.push(&d.unit);
+                }
+            }
+        }
+    }
+    false
+}
+
+/// Number of cross-crate dead-fn-elimination *probe* units (Check-mode, non-host, non-build)
+/// in the whole unit graph — i.e. how many compiles will append to the used-sets. Consumers use
+/// this as the barrier count: they wait until this many probes have registered as done before
+/// reading a used-set, so no consumer ever reads a partially-written one.
+fn dead_fn_probe_total(build_runner: &BuildRunner<'_, '_>) -> usize {
+    build_runner
+        .bcx
+        .unit_graph
+        .keys()
+        .filter(|u| u.mode.is_check() && !u.target.for_host() && !u.target.is_custom_build())
+        .count()
+}
+
 /// Adds essential rustc flags and environment variables to the command to execute.
 fn build_base_args(
     build_runner: &BuildRunner<'_, '_>,
@@ -1308,6 +1347,72 @@ fn build_base_args(
             cmd.arg("--emit=dep-info,metadata,link");
         } else {
             cmd.arg("--emit=dep-info,link");
+        }
+    }
+
+    // Cross-crate dead-function elimination (option 1). Every Check-mode probe unit (the binary
+    // and — via `inject_dead_fn_probe_units` — the check form of each library dependency) emits
+    // its extern-fn references into the per-dependency used-sets during its frontend. This forms
+    // the transitive union: `main`'s probe names `a::f`, `a`'s probe names `b::used`. Each
+    // eliminable dependency library `Build` unit, scheduled after the probes, then prunes against
+    // its accumulated used-set.
+    if bcx.gctx.cli_unstable().dead_fn_elimination {
+        let xdce_dir = build_runner
+            .files()
+            .layout(unit.kind)
+            .build_dir()
+            .root()
+            .join("xdce");
+        let is_lib = unit
+            .target
+            .rustc_crate_types()
+            .iter()
+            .any(|t| matches!(t, CrateType::Lib | CrateType::Rlib));
+        // Completeness barrier: a library's used-set is appended to (concurrently) by every probe
+        // that calls it; the consumer must not read it until *all* probes are done, or it will
+        // miss late appends (a `pub fn` present in the file but written after the read is pruned →
+        // undefined symbol). Count the probe (check) units once; each probe records completion in
+        // `xdce/.probes_done`; each consumer waits until that many probes have finished.
+        let probe_total = dead_fn_probe_total(build_runner);
+        let done_file = xdce_dir.join(".probes_done");
+        if unit.mode.is_check() && !unit.target.for_host() && !unit.target.is_custom_build() {
+            // A probe (binary or library check unit): walk its MIR, append to each dependency's
+            // used-set, then register completion in the barrier file.
+            cmd.arg(format!("-Zdead-fn-emit-used-set={}", xdce_dir.display()));
+            cmd.arg(format!("-Zdead-fn-probe-done={}", done_file.display()));
+            // Encode full MIR into the check unit's `rmeta`. The *binary's* probe runs the
+            // monomorphization collector to catch functions reached only through generic
+            // instantiation (a ZST fn item passed to a combinator, called in its monomorphized
+            // body). The collector must read the callees' MIR cross-crate; without this a
+            // dependency's check rmeta omits it and the collector errors "missing optimized MIR".
+            cmd.arg("-Zalways-encode-mir");
+        } else if unit.mode == CompileMode::Build
+            && is_lib
+            && !unit.target.is_custom_build()
+            && !unit.target.for_host()
+            && !unit_is_build_time(build_runner, unit)
+        {
+            // A *runtime* library dependency: prune against its used-set. Ordering is enforced
+            // purely by the graph edges `inject_dead_fn_probe_units` adds (this Build unit depends
+            // on every probe that can append to its used-set), so by the time Cargo *schedules*
+            // this unit, the used-set is already complete. We deliberately do NOT block in-process
+            // on a barrier: a blocked rustc holds a Cargo job slot, and at scale enough dependency
+            // Build units block to starve the probe that would release them (a job-slot deadlock).
+            // Build-time deps (proc-macro / build-script closures) are excluded above. A short
+            // `wait-used-set` only smooths filesystem latency; a missing used-set keeps the full
+            // closure.
+            let usedset = xdce_dir.join(format!("{}.usedset", unit.target.crate_name()));
+            cmd.arg("-Zdead-fn-elimination");
+            cmd.arg(format!("-Zdead-fn-used-set={}", usedset.display()));
+            let _ = (probe_total, &done_file);
+            // Short filesystem-latency safety net: the used-set file is already complete by graph
+            // ordering, this only covers the rare case of a not-yet-flushed write.
+            // Bounded wait for the per-crate `.done` completeness marker (written by the binary's
+            // collector probe). Graph edges already order most dependencies after that probe, so
+            // the marker is normally present with no wait. A dependency that raced ahead waits up
+            // to this long, then keeps its full closure (sound) — bounded so a cluster of waiters
+            // cannot starve the probe into a deadlock.
+            cmd.arg("-Zdead-fn-wait-used-set=30");
         }
     }
 
@@ -1975,6 +2080,13 @@ pub fn extern_args(
     };
 
     for dep in deps {
+        // Skip cross-crate dead-fn-elimination ordering-only edges: they sequence the build
+        // (probe before prune) and must not become an `--extern`.
+        if dep.extern_crate_name.as_str()
+            == crate::core::compiler::unit_dependencies::DCE_ORDER_ONLY_EXTERN_NAME
+        {
+            continue;
+        }
         if dep.unit.target.is_linkable() && !dep.unit.mode.is_doc() {
             link_to(dep, dep.extern_crate_name, dep.noprelude, dep.nounused)?;
         }
