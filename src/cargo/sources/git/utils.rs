@@ -9,6 +9,8 @@ use crate::sources::git::source::GitSource;
 use crate::sources::source::Source as _;
 use crate::util::HumanBytes;
 use crate::util::errors::{CargoResult, GitCliError};
+use crate::util::network::http::http_handle;
+use crate::util::network::http::needs_custom_http_transport;
 use crate::util::{GlobalContext, IntoUrl, MetricsCounter, Progress, network};
 
 use anyhow::{Context as _, anyhow};
@@ -23,6 +25,7 @@ use std::borrow::Cow;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str;
+use std::sync::Once;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
@@ -1308,6 +1311,24 @@ fn fetch_with_libgit2(
 ) -> CargoResult<()> {
     debug!(target: "git-fetch", backend = "libgit2");
 
+    static INIT: Once = Once::new();
+    INIT.call_once(|| {
+        // SAFETY:
+        //
+        // The unsafety of the registration function derives from two aspects:
+        //
+        // 1. This call must be synchronized with all other registration calls as
+        //    well as construction of new transports.
+        // 2. The argument is leaked.
+        //
+        // We're clear on point (1) because this is the only `register` call we make in the
+        // cargo-binary and cargo-library is not officially supported and it is under a lock.
+        // Technically, `git2_curl` also has a lock but that isn't part of their API guarantees.
+        //
+        // We're mostly clear on point (2) because we'd only free it after everything is done anyway
+        unsafe { init_git_transports(gctx) };
+    });
+
     let git_config = git2::Config::open_default()?;
     with_fetch_options(&git_config, remote_url, gctx, &mut |mut opts| {
         if tags {
@@ -1354,6 +1375,32 @@ fn fetch_with_libgit2(
         }
         Ok(())
     })
+}
+
+/// Configure libgit2 to use libcurl if necessary.
+///
+/// If the user has a non-default network configuration, then libgit2 will be
+/// configured to use libcurl instead of the built-in networking support so
+/// that those configuration settings can be used.
+///
+/// # Safety
+///
+/// See [git2_curl::register]
+#[tracing::instrument(skip_all)]
+unsafe fn init_git_transports(gctx: &GlobalContext) {
+    match needs_custom_http_transport(gctx) {
+        Ok(true) => {}
+        _ => return,
+    }
+
+    let handle = match http_handle(gctx) {
+        Ok(handle) => handle,
+        Err(..) => return,
+    };
+
+    unsafe {
+        git2_curl::register(handle);
+    }
 }
 
 /// Attempts to `git gc` a repository.
