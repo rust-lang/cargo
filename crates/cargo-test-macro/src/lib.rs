@@ -36,7 +36,8 @@ use std::sync::LazyLock;
 ///   A `reason` field is required to explain why it is nightly-only.
 /// * `requires = "<cmd>"` --- This indicates a command that is required to be installed to be run.
 ///   For example, `requires = "rustfmt"` means the test will only run if the executable `rustfmt` is installed.
-///   These tests are *always* run on CI.
+///   These tests are run in Cargo's CI when CARGO_TEST_REQUIRE_EXTERNAL_TOOLS is set.
+///   Other environments, including rust-lang/rust's CI, ignore the test when the command is unavailable.
 ///   This is mainly used to avoid requiring contributors from having every dependency installed.
 /// * `requires_host_split_debuginfo = "<value>"` --- This indicates a `-Csplit-debuginfo` value
 ///   that is required to be supported by the host `rustc`.
@@ -374,11 +375,7 @@ fn check_command(command_path: &Path, args: &[&str]) -> bool {
     let output = match command.output() {
         Ok(output) => output,
         Err(e) => {
-            // * hg is not installed on GitHub macOS or certain constrained
-            //   environments like Docker. Consider installing it if Cargo
-            //   gains more hg support, but otherwise it isn't critical.
-            // * lldb is not pre-installed on Ubuntu and Windows, so skip.
-            if is_ci() && !matches!(command_name.as_str(), "hg" | "lldb") {
+            if is_ci() {
                 panic!("expected command `{command_name}` to be somewhere in PATH: {e}",);
             }
             return false;
@@ -404,7 +401,7 @@ fn has_command(command: &str) -> bool {
     let Some(paths) = std::env::var_os("PATH") else {
         return false;
     };
-    std::env::split_paths(&paths)
+    let found = std::env::split_paths(&paths)
         .flat_map(|path| {
             let candidate = path.join(&command);
             let with_exe = if EXE_EXTENSION.is_empty() {
@@ -415,7 +412,14 @@ fn has_command(command: &str) -> bool {
             std::iter::once(candidate).chain(with_exe)
         })
         .find(|p| is_executable(p))
-        .is_some()
+        .is_some();
+    // * hg is not installed on GitHub macOS or certain constrained
+    //   environments like Docker. Consider installing it if Cargo
+    //   gains more hg support, but otherwise it isn't critical.
+    if !found && requires_external_tools() && command != "hg" {
+        panic!("expected command `{command}` to be somewhere in PATH");
+    }
+    found
 }
 
 #[cfg(unix)]
@@ -454,4 +458,9 @@ fn is_ci() -> bool {
     // `tracked_env` will handle changes, but not require rebuilding the macro
     // itself like option_env does.
     option_env!("CI").is_some() || option_env!("TF_BUILD").is_some()
+}
+
+/// Whether to enforce external tools (`requires=<tool>`) availability.
+fn requires_external_tools() -> bool {
+    option_env!("CARGO_TEST_REQUIRE_EXTERNAL_TOOLS").is_some()
 }

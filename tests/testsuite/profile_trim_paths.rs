@@ -65,7 +65,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test(nightly, reason = "--remap-path-scope will be stabilized in 1.95")]
+#[cargo_test]
 fn release_profile_default_to_object() {
     let p = project()
         .file(
@@ -91,7 +91,7 @@ fn release_profile_default_to_object() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "--remap-path-scope will be stabilized in 1.95")]
+#[cargo_test]
 fn one_option() {
     let build = |option| {
         let p = project()
@@ -137,7 +137,7 @@ fn one_option() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "--remap-path-scope will be stabilized in 1.95")]
+#[cargo_test]
 fn multiple_options() {
     let p = project()
         .file(
@@ -166,7 +166,7 @@ fn multiple_options() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "--remap-path-scope will be stabilized in 1.95")]
+#[cargo_test]
 fn profile_merge_works() {
     let p = project()
         .file(
@@ -199,7 +199,7 @@ fn profile_merge_works() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "--remap-path-scope will be stabilized in 1.95")]
+#[cargo_test]
 fn registry_dependency() {
     Package::new("bar", "0.0.1")
         .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
@@ -246,7 +246,7 @@ fn registry_dependency() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "--remap-path-scope will be stabilized in 1.95")]
+#[cargo_test]
 fn registry_dependency_with_build_script_codegen() {
     Package::new("bar", "0.0.1")
         .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
@@ -318,7 +318,7 @@ fn registry_dependency_with_build_script_codegen() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "--remap-path-scope will be stabilized in 1.95")]
+#[cargo_test]
 fn git_dependency() {
     let git_project = git::new("bar", |project| {
         project
@@ -368,7 +368,7 @@ bar-[..]/[..]/src/lib.rs
         .run();
 }
 
-#[cargo_test(nightly, reason = "--remap-path-scope will be stabilized in 1.95")]
+#[cargo_test]
 fn path_dependency() {
     let p = project()
         .file(
@@ -413,7 +413,7 @@ cocktail-bar/src/lib.rs
         .run();
 }
 
-#[cargo_test(nightly, reason = "--remap-path-scope will be stabilized in 1.95")]
+#[cargo_test]
 fn path_dependency_outside_workspace() {
     let _bar = project()
         .at("bar")
@@ -459,7 +459,7 @@ bar-0.0.1/src/lib.rs
         .run();
 }
 
-#[cargo_test(nightly, reason = "--remap-path-scope will be stabilized in 1.95")]
+#[cargo_test]
 fn diagnostics_works() {
     Package::new("bar", "0.0.1")
         .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
@@ -509,37 +509,22 @@ mod object_works {
     use super::*;
 
     fn inspect_debuginfo(path: &std::path::Path) -> Vec<u8> {
-        std::process::Command::new("nm")
-            .arg("-pa")
-            .arg(path)
-            .output()
-            .expect("nm works")
-            .stdout
+        let mut command = std::process::Command::new("nm");
+        command.arg("-pa").arg(path);
+        command_output(&mut command, "nm").stdout
     }
 
-    #[cargo_test(
-        requires = "nm",
-        nightly,
-        reason = "--remap-path-scope will be stabilized in 1.95"
-    )]
+    #[cargo_test(requires = "nm")]
     fn with_split_debuginfo_off() {
         object_works_helper("off", inspect_debuginfo);
     }
 
-    #[cargo_test(
-        requires = "nm",
-        nightly,
-        reason = "--remap-path-scope will be stabilized in 1.95"
-    )]
+    #[cargo_test(requires = "nm")]
     fn with_split_debuginfo_packed() {
         object_works_helper("packed", inspect_debuginfo);
     }
 
-    #[cargo_test(
-        requires = "nm",
-        nightly,
-        reason = "--remap-path-scope will be stabilized in 1.95"
-    )]
+    #[cargo_test(requires = "nm")]
     fn with_split_debuginfo_unpacked() {
         object_works_helper("unpacked", inspect_debuginfo);
     }
@@ -550,38 +535,25 @@ mod object_works {
     use super::*;
 
     fn inspect_debuginfo(path: &std::path::Path) -> Vec<u8> {
-        std::process::Command::new("readelf")
+        let mut command = std::process::Command::new("readelf");
+        command
             .arg("--debug-dump=info")
             .arg("--debug-dump=no-follow-links") // older version can't recognized but just a warning
-            .arg(path)
-            .output()
-            .expect("readelf works")
-            .stdout
+            .arg(path);
+        command_output(&mut command, "readelf").stdout
     }
 
-    #[cargo_test(
-        requires = "readelf",
-        nightly,
-        reason = "--remap-path-scope will be stabilized in 1.95"
-    )]
+    #[cargo_test(requires = "readelf")]
     fn with_split_debuginfo_off() {
         object_works_helper("off", inspect_debuginfo);
     }
 
-    #[cargo_test(
-        requires = "readelf",
-        nightly,
-        reason = "--remap-path-scope will be stabilized in 1.95"
-    )]
+    #[cargo_test(requires = "readelf")]
     fn with_split_debuginfo_packed() {
         object_works_helper("packed", inspect_debuginfo);
     }
 
-    #[cargo_test(
-        requires = "readelf",
-        nightly,
-        reason = "--remap-path-scope will be stabilized in 1.95"
-    )]
+    #[cargo_test(requires = "readelf")]
     fn with_split_debuginfo_unpacked() {
         object_works_helper("unpacked", inspect_debuginfo);
     }
@@ -592,19 +564,13 @@ mod object_works {
     use super::*;
 
     fn inspect_debuginfo(path: &std::path::Path) -> Vec<u8> {
-        std::process::Command::new("strings")
-            .arg(path)
-            .output()
-            .expect("strings works")
-            .stdout
+        let mut command = std::process::Command::new("strings");
+        command.arg(path);
+        command_output(&mut command, "strings").stdout
     }
 
     // windows-msvc supports split-debuginfo=packed only
-    #[cargo_test(
-        requires = "strings",
-        nightly,
-        reason = "--remap-path-scope will be stabilized in 1.95"
-    )]
+    #[cargo_test(requires = "strings")]
     fn with_split_debuginfo_packed() {
         object_works_helper("packed", inspect_debuginfo);
     }
@@ -617,21 +583,13 @@ mod object_works {
     fn inspect_debuginfo(path: &std::path::Path) -> Vec<u8> {
         let parent = path.parent().expect("binary has a parent directory");
         let file_name = path.file_name().expect("binary has a file name");
-        let output = std::process::Command::new("objdump")
-            // Avoid echoing the absolute input path in objdump's file header.
+        let mut command = std::process::Command::new("objdump");
+        // Avoid echoing the absolute input path in objdump's file header.
+        command
             .current_dir(parent)
             .arg("--dwarf=info")
-            .arg(file_name)
-            .output()
-            .expect("objdump works");
-        assert!(
-            output.status.success(),
-            "objdump failed with {}\nstdout:\n{}\nstderr:\n{}",
-            output.status,
-            String::from_utf8_lossy(&output.stdout),
-            String::from_utf8_lossy(&output.stderr),
-        );
-        output.stdout
+            .arg(file_name);
+        command_output(&mut command, "objdump").stdout
     }
 
     // rustc currently supports only split-debuginfo=off on windows-gnu.
@@ -756,7 +714,7 @@ fn object_works_helper(split_debuginfo: &str, run: impl Fn(&std::path::Path) -> 
 }
 
 // TODO: might want to move to test/testsuite/build_script.rs once stabilized.
-#[cargo_test(nightly, reason = "--remap-path-scope will be stabilized in 1.95")]
+#[cargo_test]
 fn custom_build_env_var_trim_paths() {
     let p = project()
         .file(
@@ -837,34 +795,31 @@ fn custom_build_env_var_trim_paths() {
     }
 }
 
-// This test is disabled, as it currently doesn't work due to issues with lldb.
-#[cfg(any())]
 #[cfg(unix)]
-#[cargo_test(
-    requires = "lldb",
-    nightly,
-    reason = "--remap-path-scope will be stabilized in 1.95"
-)]
+#[cargo_test(requires = "lldb")]
 fn lldb_works_after_trimmed() {
     use cargo_test_support::compare::assert_e2e;
-    use cargo_util::is_ci;
 
-    if !is_ci() {
+    #[cfg(target_os = "macos")]
+    if !cargo_util::is_ci() {
         // On macOS lldb requires elevated privileges to run developer tools.
         // See rust-lang/cargo#13413
         return;
     }
 
     let run_lldb = |path| {
-        std::process::Command::new("lldb")
-            .args(["-o", "breakpoint set --file src/main.rs --line 4"])
+        let mut command = std::process::Command::new("lldb");
+        command
+            .args(["--batch", "--no-lldbinit"])
+            .args([
+                "-o",
+                "breakpoint set --one-shot true --file src/main.rs --line 4",
+            ])
             .args(["-o", "run"])
             .args(["-o", "continue"])
-            .args(["-o", "exit"])
             .arg("--no-use-colors")
-            .arg(path)
-            .output()
-            .expect("lldb works")
+            .arg(path);
+        command_output(&mut command, "lldb")
     };
 
     let p = project()
@@ -908,10 +863,15 @@ fn lldb_works_after_trimmed() {
         &stdout,
         str![[r#"
 ...
+(lldb) breakpoint set --one-shot true --file src/main.rs --line 4
+Breakpoint 1: [..]locations.
+(lldb) run
+...
 [..]stopped[..]
-[..]stop reason = breakpoint 1.1[..]
+[..]stop reason = one-shot breakpoint 1[..]
 ...
 (lldb) continue
+...
 Hello, Ferris!
 ...
 
@@ -991,20 +951,16 @@ Hello, Ferris!
 }
 
 #[cfg(target_env = "msvc")]
-#[cargo_test(
-    requires = "cdb",
-    nightly,
-    reason = "--remap-path-scope will be stabilized in 1.95"
-)]
+#[cargo_test(requires = "cdb")]
 fn cdb_works_after_trimmed() {
     use cargo_test_support::compare::assert_e2e;
 
     let run_debugger = |path| {
-        std::process::Command::new("cdb")
+        let mut command = std::process::Command::new("cdb");
+        command
             .args(["-lines", "-c", r"bp `src\main.rs:3`;g;g;q"])
-            .arg(path)
-            .output()
-            .expect("debugger works")
+            .arg(path);
+        command_output(&mut command, "cdb")
     };
 
     let p = project()
@@ -1056,7 +1012,7 @@ Hello, Ferris!
     );
 }
 
-#[cargo_test(nightly, reason = "rustdoc --remap-path-prefix is unstable")]
+#[cargo_test]
 fn rustdoc_without_diagnostics_scope() {
     Package::new("bar", "0.0.1")
         .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
@@ -1098,9 +1054,8 @@ fn rustdoc_without_diagnostics_scope() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "rustdoc --remap-path-prefix is unstable")]
+#[cargo_test]
 fn rustdoc_diagnostics_works() {
-    // This is expected to work after rust-lang/rust#128736
     Package::new("bar", "0.0.1")
         .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file(
@@ -1141,4 +1096,18 @@ fn rustdoc_diagnostics_works() {
 ...
 "#]])
         .run();
+}
+
+fn command_output(command: &mut std::process::Command, name: &str) -> std::process::Output {
+    let output = command
+        .output()
+        .unwrap_or_else(|err| panic!("{name} failed to start: {err}"));
+    assert!(
+        output.status.success(),
+        "{name} failed with {}\nstdout:\n{}\nstderr:\n{}",
+        output.status,
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr),
+    );
+    output
 }
