@@ -1,4 +1,5 @@
 use cargo::core::features;
+use cargo::util::context::WarningHandling;
 use cargo::util::network::http::http_handle;
 use cargo::util::network::http::needs_custom_http_transport;
 use cargo::util::{self, CargoResult, closest_msg, command_prelude};
@@ -315,6 +316,11 @@ fn execute_subcommand(
         None => ProcessBuilder::new(&cargo_exe),
     };
     cmd.env(cargo::CARGO_ENV, cargo_exe).args(args);
+    if let Ok(handling) = gctx.warning_handling() {
+        if handling != WarningHandling::Warn {
+            cmd.env("CARGO_BUILD_WARNINGS", handling.as_str());
+        }
+    }
     if let Some(client) = gctx.jobserver_from_env() {
         cmd.inherit_jobserver(client);
     }

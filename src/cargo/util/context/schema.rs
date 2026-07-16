@@ -237,6 +237,16 @@ pub enum WarningHandling {
     Deny,
 }
 
+impl WarningHandling {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            WarningHandling::Warn => "warn",
+            WarningHandling::Allow => "allow",
+            WarningHandling::Deny => "deny",
+        }
+    }
+}
+
 /// Configuration for `build.target`.
 ///
 /// Accepts in the following forms:
