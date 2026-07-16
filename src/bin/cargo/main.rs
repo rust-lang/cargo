@@ -1,6 +1,4 @@
 use cargo::core::features;
-use cargo::util::network::http::http_handle;
-use cargo::util::network::http::needs_custom_http_transport;
 use cargo::util::{self, CargoResult, closest_msg, command_prelude};
 use cargo_util::{ProcessBuilder, ProcessError};
 use cargo_util_schemas::manifest::StringOrVec;
@@ -370,7 +368,7 @@ fn search_directories(gctx: &GlobalContext) -> Vec<PathBuf> {
 
 /// Initialize libgit2.
 #[tracing::instrument(skip_all)]
-fn init_git(gctx: &GlobalContext) {
+fn init_git() {
     // Disabling the owner validation in git can, in theory, lead to code execution
     // vulnerabilities. However, libgit2 does not launch executables, which is the foundation of
     // the original security issue. Meanwhile, issues with refusing to load git repos in
@@ -391,39 +389,5 @@ fn init_git(gctx: &GlobalContext) {
     unsafe {
         git2::opts::set_verify_owner_validation(false)
             .expect("set_verify_owner_validation should never fail");
-    }
-
-    init_git_transports(gctx);
-}
-
-/// Configure libgit2 to use libcurl if necessary.
-///
-/// If the user has a non-default network configuration, then libgit2 will be
-/// configured to use libcurl instead of the built-in networking support so
-/// that those configuration settings can be used.
-#[tracing::instrument(skip_all)]
-fn init_git_transports(gctx: &GlobalContext) {
-    match needs_custom_http_transport(gctx) {
-        Ok(true) => {}
-        _ => return,
-    }
-
-    let handle = match http_handle(gctx) {
-        Ok(handle) => handle,
-        Err(..) => return,
-    };
-
-    // The unsafety of the registration function derives from two aspects:
-    //
-    // 1. This call must be synchronized with all other registration calls as
-    //    well as construction of new transports.
-    // 2. The argument is leaked.
-    //
-    // We're clear on point (1) because this is only called at the start of this
-    // binary (we know what the state of the world looks like) and we're mostly
-    // clear on point (2) because we'd only free it after everything is done
-    // anyway
-    unsafe {
-        git2_curl::register(handle);
     }
 }
