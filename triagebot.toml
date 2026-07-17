@@ -321,7 +321,7 @@ trigger_files = ["src/bin/cargo/commands/login.rs", "src/ops/registry/cargo_logi
 trigger_files = ["src/bin/cargo/commands/logout.rs", "src/ops/registry/cargo_logout.rs"]
 
 [autolabel."Command-metadata"]
-trigger_files = ["src/bin/cargo/commands/metadata.rs", "src/ops/cargo_output_metadata.rs"]
+trigger_files = ["src/bin/cargo/commands/metadata.rs", "src/ops/cargo_metadata.rs"]
 
 [autolabel."Command-new"]
 trigger_files = ["src/bin/cargo/commands/new.rs", "src/ops/cargo_new.rs"]
