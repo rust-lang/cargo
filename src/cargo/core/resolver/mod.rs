@@ -149,6 +149,7 @@ pub fn resolve(
             first_version,
             gctx,
             &mut past_conflicting_activations,
+            resolve_version,
         )?;
         if registry.wait()? {
             break resolver_ctx;
@@ -201,6 +202,7 @@ fn activate_deps_loop(
     first_version: Option<VersionOrdering>,
     gctx: Option<&GlobalContext>,
     past_conflicting_activations: &mut conflict_cache::ConflictCache,
+    version: ResolveVersion,
 ) -> CargoResult<ResolverContext> {
     let mut resolver_ctx = ResolverContext::new();
     let mut backtrack_stack = Vec::new();
@@ -216,9 +218,10 @@ fn activate_deps_loop(
             summary.clone(),
             first_version,
             opts,
+            version,
         );
         match res {
-            Ok(Some((frame, _))) => remaining_deps.push(frame),
+            Ok(Some((frame, _, _))) => remaining_deps.push(frame),
             Ok(None) => (),
             Err(ActivateError::Fatal(e)) => return Err(e),
             Err(ActivateError::Conflict(_, _)) => panic!("bad error from activate"),
@@ -418,6 +421,7 @@ fn activate_deps_loop(
                 candidate,
                 first_version,
                 &opts,
+                version,
             );
 
             let successfully_activated = match res {
@@ -425,8 +429,15 @@ fn activate_deps_loop(
                 // and we're almost ready to move on. We may want to scrap this
                 // frame in the end if it looks like it's not going to end well,
                 // so figure that out here.
-                Ok(Some((mut frame, dur))) => {
+                Ok(Some((mut frame, dur, frames_from_weak_deps))) => {
                     printed.elapsed(dur);
+                    // Each frame in `frames_from_weak_deps` contains only one
+                    // dependency to resolve, which is actually this `frame`
+                    // (`frame` resolve C's deps, with `frames_from_weak_deps` has
+                    // A and B as C's parent).
+                    //
+                    // Currently the following check is simpily skipped for
+                    // `frames_from_weak_deps`
 
                     // Our `frame` here is a new package with its own list of
                     // dependencies. Do a sanity check here of all those
@@ -557,6 +568,9 @@ fn activate_deps_loop(
                     frame.just_for_error_messages = has_past_conflicting_dep;
                     if !has_past_conflicting_dep || activate_for_error_message {
                         remaining_deps.push(frame);
+                        for frame in frames_from_weak_deps {
+                            remaining_deps.push(frame);
+                        }
                         true
                     } else {
                         trace!(
@@ -630,7 +644,8 @@ fn activate(
     candidate: Summary,
     first_version: Option<VersionOrdering>,
     opts: &ResolveOpts,
-) -> ActivateResult<Option<(DepsFrame, Duration)>> {
+    version: ResolveVersion,
+) -> ActivateResult<Option<(DepsFrame, Duration, Vec<DepsFrame>)>> {
     let candidate_pid = candidate.package_id();
     cx.age += 1;
     if let Some((parent, dep)) = parent {
@@ -670,6 +685,53 @@ fn activate(
         }
     };
 
+    // --Check Weak Dependency--
+    // Here we check if some weak dependency related packages are activated
+    // NOTE: if one package is already activated before one weak dependency occurs,
+    // `resolve_features` will treat it as strong one
+    let frames_todo: Vec<_> = if version >= ResolveVersion::V5 {
+        // replace with `extract_if` if there is
+        let matches: Vec<_> = cx
+            .weak_dep_with_feats
+            .keys()
+            .filter(|dep| dep.matches(&candidate))
+            .cloned()
+            .collect();
+        matches
+            .into_iter()
+            .map(|key| cx.weak_dep_with_feats.remove_with_key(&key).unwrap())
+            .flat_map(|(dep, extra)| {
+                extra
+                    .into_iter()
+                    .map(move |(features, candidates, parent)| {
+                        ((dep.clone(), candidates, features), parent)
+                    })
+            })
+            .inspect(|(pak, parent)| {
+                // Here we relink the package with its parent
+                cx.parents
+                    .link(candidate_pid, parent.package_id())
+                    .insert(pak.0.clone());
+            })
+            .inspect(|(pak, parent)| {
+                // Here we update its parent's used_features if necessary
+                if parent.features().contains_key(&pak.0.name_in_toml()) {
+                    Rc::make_mut(cx.resolve_features.entry(parent.package_id()).or_default())
+                        .insert(pak.0.name_in_toml());
+                }
+            })
+            .map(|(pak, parent)| DepsFrame {
+                parent,
+                just_for_error_messages: false,
+                remaining_siblings: RcVecIter::new(Rc::new(vec![pak])),
+            })
+            .collect()
+    } else {
+        Vec::new()
+    };
+    // Update registry.summary_cache seems unnecessary.
+    // --
+
     let now = Instant::now();
     let (used_features, deps) = &*registry.build_deps(
         cx,
@@ -677,6 +739,7 @@ fn activate(
         &candidate,
         opts,
         first_version,
+        version,
     )?;
 
     // Record what list of features is active for this package.
@@ -694,7 +757,7 @@ fn activate(
         just_for_error_messages: false,
         remaining_siblings: RcVecIter::new(Rc::clone(deps)),
     };
-    Ok(Some((frame, now.elapsed())))
+    Ok(Some((frame, now.elapsed(), frames_todo)))
 }
 
 #[derive(Clone)]
