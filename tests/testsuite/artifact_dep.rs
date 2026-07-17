@@ -1546,6 +1546,74 @@ foo v0.0.0 ([ROOT]/foo)
         .run();
 }
 
+#[cargo_test]
+fn tree_with_build_artifact_dep_inheriting_target() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                edition = "2015"
+                authors = []
+                resolver = "2"
+
+                [build-dependencies]
+                bar = { path = "bar/", artifact = "cdylib", target = "target" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("build.rs", "fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.5.0"
+                edition = "2015"
+                authors = []
+
+                [lib]
+                crate-type = ["cdylib"]
+
+                [dependencies]
+                pm = { path = "../pm" }
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .file(
+            "pm/Cargo.toml",
+            r#"
+                [package]
+                name = "pm"
+                version = "0.1.0"
+                edition = "2015"
+                authors = []
+
+                [lib]
+                proc-macro = true
+            "#,
+        )
+        .file("pm/src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .run();
+
+    p.cargo("tree -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_stdout_data(str![[r#"
+foo v0.0.0 ([ROOT]/foo)
+[build-dependencies]
+└── bar v0.5.0 ([ROOT]/foo/bar)
+    └── pm v0.1.0 (proc-macro) ([ROOT]/foo/pm)
+
+"#]])
+        .run();
+}
+
 /// From issue #10593
 /// The case where:
 /// *   artifact dep is { target = <specified> }
