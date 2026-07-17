@@ -51,13 +51,6 @@ OPTIONS
        be skipped if its name is the same as the lib target. Binaries are
        skipped if they have required-features that are missing.
 
-       Passing target selection flags will document only the specified targets.
-
-       Note that --bin, --example, --test and --bench flags also support common
-       Unix glob patterns like *, ? and []. However, to avoid your shell
-       accidentally expanding glob patterns before Cargo handles them, you must
-       use single quotes or double quotes around each glob pattern.
-
        --lib
            Document the package’s library.
 
@@ -74,36 +67,6 @@ OPTIONS
 
        --examples
            Document all example targets.
-
-       --test name…
-           Document the specified integration test. This flag may be specified
-           multiple times and supports common Unix glob patterns.
-
-       --tests
-           Document all targets that have the test = true manifest flag set. By
-           default this includes the library and binaries built as unittests,
-           and integration tests. Be aware that this will also build any
-           required dependencies, so the lib target may be built twice (once as
-           a unittest, and once as a dependency for binaries, integration
-           tests, etc.). Targets may be enabled or disabled by setting the test
-           flag in the manifest settings for the target.
-
-       --bench name…
-           Document the specified benchmark. This flag may be specified
-           multiple times and supports common Unix glob patterns.
-
-       --benches
-           Document all targets that have the bench = true manifest flag set.
-           By default this includes the library and binaries built as
-           benchmarks, and bench targets. Be aware that this will also build
-           any required dependencies, so the lib target may be built twice
-           (once as a benchmark, and once as a dependency for binaries,
-           benchmarks, etc.). Targets may be enabled or disabled by setting the
-           bench flag in the manifest settings for the target.
-
-       --all-targets
-           Document all targets. This is equivalent to specifying --lib --bins
-           --tests --benches --examples.
 
    Feature Selection
        The feature flags allow you to control which features are enabled. When

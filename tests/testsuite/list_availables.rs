@@ -701,32 +701,6 @@ No binaries available.
 
 
 "#]])
-            .with_test(str![[r#"
-[ERROR] "--test" takes one argument.
-Available test targets:
-    test1
-    test2
-
-
-"#]], str![[r#"
-[ERROR] "--test" takes one argument.
-No test targets available.
-
-
-"#]])
-            .with_bench(str![[r#"
-[ERROR] "--bench" takes one argument.
-Available bench targets:
-    bench1
-    bench2
-
-
-"#]], str![[r#"
-[ERROR] "--bench" takes one argument.
-No bench targets available.
-
-
-"#]])
             .with_package(str![[r#"
 [ERROR] "--package <SPEC>" requires a SPEC format value, which can be any package ID specifier in the dependency graph.
 Run `cargo help pkgid` for more information about SPEC format.

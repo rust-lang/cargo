@@ -53,7 +53,19 @@ binary and library targets of the selected package. The binary will be skipped
 if its name is the same as the lib target. Binaries are skipped if they have
 `required-features` that are missing.
 
-{{> options-targets }}
+{{#options}}
+{{> options-targets-lib-bin }}
+
+{{#option "`--example` _name_..." }}
+{{actionverb}} the specified example. This flag may be specified multiple times
+and supports common Unix glob patterns.
+{{/option}}
+
+{{#option "`--examples`" }}
+{{actionverb}} all example targets.
+{{/option}}
+
+{{/options}}
 
 {{> section-features }}
 

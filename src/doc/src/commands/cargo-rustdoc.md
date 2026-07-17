@@ -67,16 +67,7 @@ binary and library targets of the selected package. The binary will be skipped
 if its name is the same as the lib target. Binaries are skipped if they have
 `required-features` that are missing.
 
-Passing target selection flags will document only the specified
-targets. 
-
-Note that `--bin`, `--example`, `--test` and `--bench` flags also 
-support common Unix glob patterns like `*`, `?` and `[]`. However, to avoid your 
-shell accidentally expanding glob patterns before Cargo handles them, you must 
-use single quotes or double quotes around each glob pattern.
-
 <dl>
-
 <dt class="option-term" id="option-cargo-rustdoc---lib"><a class="option-anchor" href="#option-cargo-rustdoc---lib"><code>--lib</code></a></dt>
 <dd class="option-desc"><p>Document the package’s library.</p>
 </dd>
@@ -101,45 +92,6 @@ and supports common Unix glob patterns.</p>
 
 <dt class="option-term" id="option-cargo-rustdoc---examples"><a class="option-anchor" href="#option-cargo-rustdoc---examples"><code>--examples</code></a></dt>
 <dd class="option-desc"><p>Document all example targets.</p>
-</dd>
-
-
-<dt class="option-term" id="option-cargo-rustdoc---test"><a class="option-anchor" href="#option-cargo-rustdoc---test"><code>--test</code> <em>name</em>…</a></dt>
-<dd class="option-desc"><p>Document the specified integration test. This flag may be specified
-multiple times and supports common Unix glob patterns.</p>
-</dd>
-
-
-<dt class="option-term" id="option-cargo-rustdoc---tests"><a class="option-anchor" href="#option-cargo-rustdoc---tests"><code>--tests</code></a></dt>
-<dd class="option-desc"><p>Document all targets that have the <code>test = true</code> manifest
-flag set. By default this includes the library and binaries built as
-unittests, and integration tests. Be aware that this will also build any
-required dependencies, so the lib target may be built twice (once as a
-unittest, and once as a dependency for binaries, integration tests, etc.).
-Targets may be enabled or disabled by setting the <code>test</code> flag in the
-manifest settings for the target.</p>
-</dd>
-
-
-<dt class="option-term" id="option-cargo-rustdoc---bench"><a class="option-anchor" href="#option-cargo-rustdoc---bench"><code>--bench</code> <em>name</em>…</a></dt>
-<dd class="option-desc"><p>Document the specified benchmark. This flag may be specified multiple
-times and supports common Unix glob patterns.</p>
-</dd>
-
-
-<dt class="option-term" id="option-cargo-rustdoc---benches"><a class="option-anchor" href="#option-cargo-rustdoc---benches"><code>--benches</code></a></dt>
-<dd class="option-desc"><p>Document all targets that have the <code>bench = true</code>
-manifest flag set. By default this includes the library and binaries built
-as benchmarks, and bench targets. Be aware that this will also build any
-required dependencies, so the lib target may be built twice (once as a
-benchmark, and once as a dependency for binaries, benchmarks, etc.).
-Targets may be enabled or disabled by setting the <code>bench</code> flag in the
-manifest settings for the target.</p>
-</dd>
-
-
-<dt class="option-term" id="option-cargo-rustdoc---all-targets"><a class="option-anchor" href="#option-cargo-rustdoc---all-targets"><code>--all-targets</code></a></dt>
-<dd class="option-desc"><p>Document all targets. This is equivalent to specifying <code>--lib --bins --tests --benches --examples</code>.</p>
 </dd>
 
 

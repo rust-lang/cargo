@@ -52,14 +52,6 @@ binary and library targets of the selected package. The binary will be skipped
 if its name is the same as the lib target. Binaries are skipped if they have
 \fBrequired\-features\fR that are missing.
 .sp
-Passing target selection flags will document only the specified
-targets.
-.sp
-Note that \fB\-\-bin\fR, \fB\-\-example\fR, \fB\-\-test\fR and \fB\-\-bench\fR flags also
-support common Unix glob patterns like \fB*\fR, \fB?\fR and \fB[]\fR\&. However, to avoid your
-shell accidentally expanding glob patterns before Cargo handles them, you must
-use single quotes or double quotes around each glob pattern.
-.sp
 \fB\-\-lib\fR
 .RS 4
 Document the package\[cq]s library.
@@ -85,45 +77,6 @@ and supports common Unix glob patterns.
 \fB\-\-examples\fR
 .RS 4
 Document all example targets.
-.RE
-.sp
-\fB\-\-test\fR \fIname\fR\[u2026]
-.RS 4
-Document the specified integration test. This flag may be specified
-multiple times and supports common Unix glob patterns.
-.RE
-.sp
-\fB\-\-tests\fR
-.RS 4
-Document all targets that have the \fBtest = true\fR manifest
-flag set. By default this includes the library and binaries built as
-unittests, and integration tests. Be aware that this will also build any
-required dependencies, so the lib target may be built twice (once as a
-unittest, and once as a dependency for binaries, integration tests, etc.).
-Targets may be enabled or disabled by setting the \fBtest\fR flag in the
-manifest settings for the target.
-.RE
-.sp
-\fB\-\-bench\fR \fIname\fR\[u2026]
-.RS 4
-Document the specified benchmark. This flag may be specified multiple
-times and supports common Unix glob patterns.
-.RE
-.sp
-\fB\-\-benches\fR
-.RS 4
-Document all targets that have the \fBbench = true\fR
-manifest flag set. By default this includes the library and binaries built
-as benchmarks, and bench targets. Be aware that this will also build any
-required dependencies, so the lib target may be built twice (once as a
-benchmark, and once as a dependency for binaries, benchmarks, etc.).
-Targets may be enabled or disabled by setting the \fBbench\fR flag in the
-manifest settings for the target.
-.RE
-.sp
-\fB\-\-all\-targets\fR
-.RS 4
-Document all targets. This is equivalent to specifying \fB\-\-lib \-\-bins \-\-tests \-\-benches \-\-examples\fR\&.
 .RE
 .SS "Feature Selection"
 The feature flags allow you to control which features are enabled. When no
