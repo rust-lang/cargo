@@ -3,7 +3,7 @@
 use crate::core::compiler::UnitInterner;
 use crate::core::compiler::unit_dependencies::IsArtifact;
 use crate::core::compiler::{CompileKind, CompileMode, RustcTargetData, Unit};
-use crate::core::profiles::{Profiles, UnitFor};
+use crate::core::profiles::{PanicStrategy, Profiles, UnitFor};
 use crate::core::resolver::HasDevUnits;
 use crate::core::resolver::features::{CliFeatures, FeaturesFor, ResolvedFeatures};
 use crate::core::{PackageId, PackageSet, Resolve, Workspace};
@@ -15,7 +15,12 @@ use std::path::PathBuf;
 
 use super::BuildConfig;
 
-fn std_crates<'a>(crates: &'a [String], default: &'static str, units: &[Unit]) -> HashSet<&'a str> {
+fn std_crates<'a>(
+    crates: &'a [String],
+    default: &'static str,
+    units: &[Unit],
+    profiles: &Profiles,
+) -> HashSet<&'a str> {
     let mut crates = HashSet::from_iter(crates.iter().map(|s| s.as_str()));
     // This is a temporary hack until there is a more principled way to
     // declare dependencies in Cargo.toml.
@@ -26,7 +31,7 @@ fn std_crates<'a>(crates: &'a [String], default: &'static str, units: &[Unit]) -
         crates.insert("core");
         crates.insert("alloc");
         crates.insert("proc_macro");
-        crates.insert("panic_unwind");
+        crates.insert("panic_abort");
         crates.insert("compiler_builtins");
         // Only build libtest if it looks like it is needed (libtest depends on libstd)
         // If we know what units we're building, we can filter for libtest depending on the jobs.
@@ -35,6 +40,13 @@ fn std_crates<'a>(crates: &'a [String], default: &'static str, units: &[Unit]) -
             .any(|unit| unit.mode.is_rustc_test() && unit.target.harness())
         {
             crates.insert("test");
+        }
+        // Conditionally build `panic_unwind` based on the user's profile settings.
+        // NOTE: Base profile is enough here since `panic` profile cannot be
+        // overridden. See `validate_profile_override`.
+        let profile = profiles.base_profile();
+        if profile.panic == PanicStrategy::Unwind {
+            crates.insert("panic_unwind");
         }
     } else if crates.contains("core") {
         crates.insert("compiler_builtins");
@@ -63,29 +75,37 @@ pub fn resolve_std<'gctx>(
     // `[dev-dependencies]`. No need for us to generate a `Resolve` which has
     // those included because we'll never use them anyway.
     std_ws.set_require_optional_deps(false);
-    let specs = {
+    let profiles = Profiles::new(ws, build_config.requested_profile)?;
+    let (specs, build_panic_unwind) = {
         // If there is anything looks like needing std, resolve with it.
-        // If not, we assume only `core` maye be needed, as `core the most fundamental crate.
+        // If not, we assume only `core` may be needed, as `core` is the most fundamental crate.
         //
         // This may need a UI overhaul if `build-std` wants to fully support multi-targets.
         let maybe_std = kinds
             .iter()
             .any(|kind| target_data.info(*kind).maybe_support_std());
-        let mut crates = std_crates(crates, if maybe_std { "std" } else { "core" }, &[]);
+        let mut crates = std_crates(
+            crates,
+            if maybe_std { "std" } else { "core" },
+            &[],
+            &profiles,
+        );
+        let build_panic_unwind = crates.contains("panic_unwind");
         // `sysroot` is not in the default set because it is optional, but it needs
         // to be part of the resolve in case we do need it or `libtest`.
         crates.insert("sysroot");
         let specs = Packages::Packages(crates.into_iter().map(Into::into).collect());
-        specs.to_package_id_specs(&std_ws)?
+        (specs.to_package_id_specs(&std_ws)?, build_panic_unwind)
     };
-    let features = match &gctx.cli_unstable().build_std_features {
+    let mut features = match &gctx.cli_unstable().build_std_features {
         Some(list) => list.clone(),
-        None => vec![
-            "panic-unwind".to_string(),
-            "backtrace".to_string(),
-            "default".to_string(),
-        ],
+        None => vec!["backtrace".to_string(), "default".to_string()],
     };
+
+    if build_panic_unwind {
+        features.push("panic-unwind".to_string());
+    }
+
     let cli_features = CliFeatures::from_command_line(
         &features, /*all_features*/ false, /*uses_default_features*/ false,
     )?;
@@ -167,7 +187,7 @@ fn generate_roots(
     profiles: &Profiles,
     target_data: &RustcTargetData<'_>,
 ) -> CargoResult<()> {
-    let std_ids = std_crates(crates, default, units)
+    let std_ids = std_crates(crates, default, units, profiles)
         .iter()
         .map(|crate_name| std_resolve.query(crate_name))
         .collect::<CargoResult<Vec<PackageId>>>()?;

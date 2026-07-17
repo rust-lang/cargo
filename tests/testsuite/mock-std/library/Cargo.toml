@@ -1,9 +1,17 @@
+cargo-features = ["profile-rustflags"]
+
 [workspace]
 resolver = "1"
 members = [
   "std",
   "sysroot",
 ]
+
+[profile.dev.package.panic_abort]
+rustflags = ["-Cpanic=abort"]
+
+[profile.release.package.panic_abort]
+rustflags = ["-Cpanic=abort"]
 
 [patch.crates-io]
 rustc-std-workspace-core = { path = 'rustc-std-workspace-core' }

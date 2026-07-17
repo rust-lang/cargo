@@ -505,6 +505,28 @@ fn default_features_still_included_with_extra_build_std_features() {
         .run();
 }
 
+#[cargo_test(build_std_real)]
+fn duplicate_lang_item_with_panic_abort() {
+    // This is a regression test to ensure that rustc doesn't load `panic_abort`
+    // from the sysroot. See rust-lang/cargo#7359
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2021"
+
+                [profile.dev]
+                panic = 'abort'
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check").build_std_arg("std").run();
+}
+
 pub trait CargoProjectExt {
     /// Creates a `ProcessBuilder` to run cargo.
     ///
