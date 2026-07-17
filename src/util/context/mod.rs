@@ -134,7 +134,6 @@ mod environment;
 use environment::Env;
 
 mod schema;
-use super::auth::RegistryConfig;
 use crate::core::features::EmbedMetadata;
 pub use schema::*;
 

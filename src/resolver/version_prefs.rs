@@ -13,10 +13,10 @@ use crate::core::SourceId;
 use crate::core::Summary;
 use crate::util::CargoResult;
 use crate::util::GlobalContext;
-use crate::util::auth::GlobalRegistryConfig;
-use crate::util::auth::RegistryConfig;
 use crate::util::context::CargoResolverConfig;
+use crate::util::context::GlobalRegistryConfig;
 use crate::util::context::IncompatiblePublishAge;
+use crate::util::context::RegistryConfig;
 use crate::util::interning::InternedString;
 use crate::util::time_span::parse_time_span;
 

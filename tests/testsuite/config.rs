@@ -12,7 +12,7 @@ use crate::prelude::*;
 use cargo::CargoResult;
 use cargo::core::PackageIdSpec;
 use cargo::core::features::{GitFeatures, GitoxideFeatures};
-use cargo::util::auth::RegistryConfig;
+use cargo::util::context::RegistryConfig;
 use cargo::util::context::Value;
 use cargo::util::context::{
     self, Definition, GlobalContext, JobsConfig, SslVersionConfig, StringList,

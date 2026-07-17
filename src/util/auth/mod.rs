@@ -11,7 +11,6 @@ use cargo_credential::{
 };
 
 use core::fmt;
-use serde::Deserialize;
 use std::error::Error;
 use time::{Duration, OffsetDateTime};
 use url::Url;
@@ -22,63 +21,10 @@ use crate::util::credential::adaptor::BasicProcessCredential;
 use crate::util::credential::paseto::PasetoCredential;
 
 use super::{
-    context::{CredentialCacheValue, OptValue, PathAndArgs},
+    context::{CredentialCacheValue, GlobalRegistryConfig, PathAndArgs, RegistryConfig},
     credential::process::CredentialProcessCredential,
     credential::token::TokenCredential,
 };
-
-/// `[registries.NAME]` tables.
-///
-/// The values here should be kept in sync with `GlobalRegistryConfig`
-#[derive(Deserialize, Clone, Debug)]
-#[serde(rename_all = "kebab-case")]
-pub struct RegistryConfig {
-    pub index: Option<String>,
-    pub token: OptValue<Secret<String>>,
-    pub credential_provider: Option<PathAndArgs>,
-    pub secret_key: OptValue<Secret<String>>,
-    pub secret_key_subject: Option<String>,
-    /// Minimum publish age threshold for RFC 3923
-    pub min_publish_age: Option<String>,
-    #[serde(rename = "protocol")]
-    _protocol: Option<String>,
-}
-
-/// The `[registry]` table, which has more keys than the `[registries.NAME]` tables.
-///
-/// Note: nesting `RegistryConfig` inside this struct and using `serde(flatten)` *should* work
-/// but fails with "invalid type: sequence, expected a value" when attempting to deserialize.
-#[derive(Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub struct GlobalRegistryConfig {
-    pub index: Option<String>,
-    pub token: OptValue<Secret<String>>,
-    pub credential_provider: Option<PathAndArgs>,
-    pub secret_key: OptValue<Secret<String>>,
-    pub secret_key_subject: Option<String>,
-    /// Minimum publish age threshold for RFC 3923
-    pub min_publish_age: Option<String>,
-    /// Global default Minimum publish age threshold for RFC 3923
-    pub global_min_publish_age: Option<String>,
-    #[serde(rename = "default")]
-    _default: Option<String>,
-    #[serde(rename = "global-credential-providers")]
-    _global_credential_providers: Option<Vec<String>>,
-}
-
-impl GlobalRegistryConfig {
-    pub fn to_registry_config(self) -> RegistryConfig {
-        RegistryConfig {
-            index: self.index,
-            token: self.token,
-            credential_provider: self.credential_provider,
-            secret_key: self.secret_key,
-            secret_key_subject: self.secret_key_subject,
-            min_publish_age: self.min_publish_age,
-            _protocol: None,
-        }
-    }
-}
 
 /// Get the list of credential providers for a registry source.
 fn credential_provider(
