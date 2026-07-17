@@ -13,7 +13,7 @@ We're looking forward to making Cargo logging mechanism more structural!
 CARGO_LOG=debug cargo generate-lockfile
 
 # Don't forget that you can filter by module as well
-CARGO_LOG=cargo::core::resolver=trace cargo generate-lockfile
+CARGO_LOG=cargo::resolver=trace cargo generate-lockfile
 
 # This will print lots of info about the download process. `trace` prints even more.
 CARGO_HTTP_DEBUG=true CARGO_LOG=network=debug cargo fetch

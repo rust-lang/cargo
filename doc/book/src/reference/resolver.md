@@ -682,7 +682,7 @@ $ cargo update
 ```
 You can enable some extra logging to see why this happened:
 ```console
-$ env CARGO_LOG=cargo::core::resolver=trace cargo update
+$ env CARGO_LOG=cargo::resolver=trace cargo update
 ```
 **Note:** Cargo log targets and levels may change over time.
 

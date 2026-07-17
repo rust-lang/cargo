@@ -13,6 +13,7 @@ pub use self::workspace::{
     MaybePackage, Workspace, WorkspaceConfig, WorkspaceRootConfig, find_workspace_root,
     find_workspace_root_with_membership_check, resolve_relative_path,
 };
+pub use crate::resolver;
 pub use cargo_util_schemas::core::{GitReference, PackageIdSpec, SourceKind};
 
 pub mod compiler;
@@ -26,7 +27,6 @@ pub mod package_id;
 mod package_id_spec;
 pub mod profiles;
 pub mod registry;
-pub mod resolver;
 mod source_id;
 pub mod summary;
 mod workspace;

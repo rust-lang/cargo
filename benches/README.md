@@ -151,7 +151,7 @@ a lot that can be added. Some ideas:
   valuable, since we are mostly concerned with incremental builds which will
   always have a lock file.
 * Benchmark just
-  [`resolve::resolve`](https://github.com/rust-lang/cargo/blob/a821e2cb24d7b6013433f069ab3bad53d160e100/src/core/resolver/mod.rs#L122)
+  [`resolve::resolve`](https://github.com/rust-lang/cargo/blob/a821e2cb24d7b6013433f069ab3bad53d160e100/src/resolver/mod.rs#L122)
   without anything else. This can help focus on just the resolver.
 
 [Criterion]: https://bheisler.github.io/criterion.rs/book/

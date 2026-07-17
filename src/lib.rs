@@ -165,6 +165,7 @@ mod macros;
 pub mod core;
 pub mod diagnostics;
 pub mod ops;
+pub mod resolver;
 pub mod sources;
 pub mod util;
 mod version;

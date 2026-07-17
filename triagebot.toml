@@ -135,7 +135,7 @@ trigger_files = ["src/core/compiler/output_depinfo.rs"]
 trigger_files = [
   "benches/benchsuite/benches/resolve.rs",
   "crates/resolver-tests/",
-  "src/core/resolver/",
+  "src/resolver/",
 ]
 
 [autolabel."A-directory-source"]
@@ -151,7 +151,7 @@ trigger_files = [
 ]
 
 [autolabel."A-features2"]
-trigger_files = ["src/core/resolver/features.rs"]
+trigger_files = ["src/resolver/features.rs"]
 
 [autolabel."A-filesystem"]
 trigger_files = ["src/util/flock.rs", "src/util/important_paths.rs"]
@@ -197,7 +197,7 @@ trigger_files = ["src/core/compiler/links.rs"]
 trigger_files = ["src/sources/registry/local.rs"]
 
 [autolabel."A-lockfile"]
-trigger_files = ["src/ops/lockfile.rs", "src/core/resolver/encode.rs"]
+trigger_files = ["src/ops/lockfile.rs", "src/resolver/encode.rs"]
 
 [autolabel."A-lto"]
 trigger_files = ["src/core/compiler/lto.rs"]
