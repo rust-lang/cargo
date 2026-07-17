@@ -991,10 +991,6 @@ fn read_packages(
     source_id: SourceId,
     gctx: &GlobalContext,
 ) -> CargoResult<HashMap<PackageId, Vec<Package>>> {
-    // Normalize for consistency.
-    // See https://github.com/rust-lang/cargo/issues/15981
-    // Otherwise, a `CARGO_HOME` with `..` can collect a package twice and incorrectly warn about a duplicate.
-    let path = &paths::normalize_path(path);
     let mut all_packages = HashMap::default();
     let mut visited = HashSet::<PathBuf>::default();
     let mut errors = Vec::<anyhow::Error>::new();
