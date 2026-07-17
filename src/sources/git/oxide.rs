@@ -327,7 +327,7 @@ pub fn cargo_config_to_gitoxide_overrides(gctx: &GlobalContext) -> CargoResult<V
             }
         }
     } else if cfg!(windows) {
-        // This text is copied from https://github.com/rust-lang/cargo/blob/39c13e67a5962466cc7253d41bc1099bbcb224c3/src/cargo/ops/registry.rs#L658-L674 .
+        // This text is copied from https://github.com/rust-lang/cargo/blob/39c13e67a5962466cc7253d41bc1099bbcb224c3/src/ops/registry.rs#L658-L674 .
         // This is a temporary workaround for some bugs with libcurl and
         // schannel and TLS 1.3.
         //

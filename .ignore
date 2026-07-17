@@ -1,19 +1,19 @@
-# Output generated from src/doc/man
+# Output generated from doc/man
 #
 # The goal is to help people find the right file to edit
-src/doc/man/generated_txt
-src/doc/src/commands/*
-src/etc/man
-!src/doc/src/commands/build-commands.md
-!src/doc/src/commands/cargo-clippy.md
-!src/doc/src/commands/cargo-fmt.md
-!src/doc/src/commands/cargo-miri.md
-!src/doc/src/commands/general-commands.md
-!src/doc/src/commands/index.md
-!src/doc/src/commands/manifest-commands.md
-!src/doc/src/commands/package-commands.md
-!src/doc/src/commands/publishing-commands.md
-!src/doc/src/commands/report-commands.md
+doc/man/generated_txt
+doc/book/src/commands/*
+etc/man
+!doc/book/src/commands/build-commands.md
+!doc/book/src/commands/cargo-clippy.md
+!doc/book/src/commands/cargo-fmt.md
+!doc/book/src/commands/cargo-miri.md
+!doc/book/src/commands/general-commands.md
+!doc/book/src/commands/index.md
+!doc/book/src/commands/manifest-commands.md
+!doc/book/src/commands/package-commands.md
+!doc/book/src/commands/publishing-commands.md
+!doc/book/src/commands/report-commands.md
 
 # Snapshots of HTML reports and log files are just too large
 tests/testsuite/**/*.jsonl

@@ -3,8 +3,8 @@ title = "Cargo Contributor Guide"
 authors = ["Eric Huss"]
 
 [output.html]
-git-repository-url = "https://github.com/rust-lang/cargo/tree/master/src/doc/contrib/src"
-edit-url-template = "https://github.com/rust-lang/cargo/edit/master/src/doc/contrib/{path}"
+git-repository-url = "https://github.com/rust-lang/cargo/tree/master/doc/contrib/src"
+edit-url-template = "https://github.com/rust-lang/cargo/edit/master/doc/contrib/{path}"
 search.use-boolean-and = true
 
 [output.html.redirect]

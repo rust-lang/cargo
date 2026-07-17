@@ -4,7 +4,7 @@ Cargo has several types of documentation that contributors work with:
 
 * [The Cargo Book]
   * The primary user-facing Cargo documentation
-  * Source at <https://github.com/rust-lang/cargo/tree/master/src/doc>
+  * Source at <https://github.com/rust-lang/cargo/tree/master/doc/book>
   * Built with [mdbook]
   * Published through ["the doc publishing process"]
 * Man pages
@@ -13,7 +13,7 @@ Cargo has several types of documentation that contributors work with:
   * Published through ["the doc publishing process"]
 * [Contributor guide]
   * This guide itself
-  * Source at <https://github.com/rust-lang/cargo/tree/master/src/doc/contrib>
+  * Source at <https://github.com/rust-lang/cargo/tree/master/doc/contrib>
   * Published independently on GitHub Pages at
     <https://rust-lang.github.io/cargo/contrib>
     when committing to the master branch.
@@ -58,16 +58,16 @@ See <https://github.com/rust-lang/cargo/tree/master/crates/mdman/doc>
 for usage details and template syntax.
 
 The templates are located in
-<https://github.com/rust-lang/cargo/tree/master/src/doc/man>
+<https://github.com/rust-lang/cargo/tree/master/doc/man>
 and are converted into three formats:
 
 1. Troff man pages --- used by the `cargo help` command,
    and by distributions to provide man pages which people can install,
-   saved in <https://github.com/rust-lang/cargo/tree/master/src/etc/man>.
+   saved in <https://github.com/rust-lang/cargo/tree/master/etc/man>.
 2. Plain text --- used for embedded help on platforms without `man` (such as Windows),
-   saved in <https://github.com/rust-lang/cargo/tree/master/src/doc/man/generated_txt>.
+   saved in <https://github.com/rust-lang/cargo/tree/master/doc/man/generated_txt>.
 3. Markdown (with some HTML) --- used for the Cargo Book,
-   saved in <https://github.com/rust-lang/cargo/tree/master/src/doc/src/commands>.
+   saved in <https://github.com/rust-lang/cargo/tree/master/doc/book/src/commands>.
 
 To rebuild the man pages, run `cargo build-man` inside the workspace.
 

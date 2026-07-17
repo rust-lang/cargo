@@ -100,7 +100,7 @@
 //! - [`mdman`](https://github.com/rust-lang/cargo/tree/master/crates/mdman)
 //!   ([nightly docs](https://doc.rust-lang.org/nightly/nightly-rustc/mdman/index.html)):
 //!   This is a utility for generating cargo's man pages. See [Building the man
-//!   pages](https://github.com/rust-lang/cargo/tree/master/src/doc#building-the-man-pages)
+//!   pages](https://github.com/rust-lang/cargo/tree/master/doc#building-the-man-pages)
 //!   for more information.
 //! - [`resolver-tests`](https://github.com/rust-lang/cargo/tree/master/crates/resolver-tests)
 //!   This is a dedicated package that defines tests for the [dependency

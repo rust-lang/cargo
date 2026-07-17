@@ -157,10 +157,6 @@ description = """
 Cargo, a package manager for Rust.
 """
 
-[lib]
-name = "cargo"
-path = "src/cargo/lib.rs"
-
 [dependencies]
 anstream.workspace = true
 anstyle.workspace = true

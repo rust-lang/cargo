@@ -1294,7 +1294,7 @@ impl Package {
     ///
     /// The name of the alternative registry is called "alternative".
     ///
-    /// See `src/doc/src/reference/registries.md` for more details on
+    /// See `doc/book/src/reference/registries.md` for more details on
     /// alternative registries. See `alt_registry.rs` for the tests that use
     /// this.
     ///

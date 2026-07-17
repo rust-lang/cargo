@@ -14,7 +14,7 @@ If you are looking for the [`cargo fix`] implementation, the core of it is locat
 > crate may make major changes to its APIs or be deprecated without warning.
 
 [`cargo fix`]: https://doc.rust-lang.org/cargo/commands/cargo-fix.html
-[`cargo::ops::fix`]: https://github.com/rust-lang/cargo/blob/master/src/cargo/ops/fix.rs
+[`cargo::ops::fix`]: https://github.com/rust-lang/cargo/blob/master/src/ops/fix.rs
 
 ## License
 

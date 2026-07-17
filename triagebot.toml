@@ -74,93 +74,93 @@ add_labels = ["S-waiting-on-review"]
 
 [autolabel."A-build-execution"]
 trigger_files = [
-  "src/cargo/core/compiler/compilation.rs",
-  "src/cargo/core/compiler/job_queue/",
-  "src/cargo/core/compiler/mod.rs",
+  "src/core/compiler/compilation.rs",
+  "src/core/compiler/job_queue/",
+  "src/core/compiler/mod.rs",
 ]
 
 [autolabel."A-build-scripts"]
 trigger_files = [
   "crates/build-rs-test-lib/",
   "crates/build-rs/",
-  "src/cargo/core/compiler/custom_build.rs",
+  "src/core/compiler/custom_build.rs",
 ]
 
 [autolabel."A-cache-messages"]
-trigger_files = ["src/cargo/util/rustc.rs"]
+trigger_files = ["src/util/rustc.rs"]
 
 [autolabel."A-cargo-targets"]
 trigger_files = [
-  "src/cargo/ops/cargo_compile/compile_filter.rs",
-  "src/cargo/ops/cargo_compile/unit_generator.rs",
+  "src/ops/cargo_compile/compile_filter.rs",
+  "src/ops/cargo_compile/unit_generator.rs",
 ]
 
 [autolabel."A-cfg-expr"]
 trigger_files = [
   "crates/cargo-platform/",
-  "src/cargo/core/compiler/build_context/target_info.rs",
+  "src/core/compiler/build_context/target_info.rs",
 ]
 
 [autolabel."A-cli"]
-trigger_files = ["src/bin/", "src/cargo/util/command_prelude.rs"]
+trigger_files = ["src/bin/", "src/util/command_prelude.rs"]
 
 [autolabel."A-cli-help"]
-trigger_files = ["crates/mdman/", "src/etc/man/"]
+trigger_files = ["crates/mdman/", "etc/man/"]
 
 [autolabel."A-completions"]
-trigger_files = ["src/etc/_cargo", "src/etc/cargo.bashcomp.sh"]
+trigger_files = ["etc/_cargo", "etc/cargo.bashcomp.sh"]
 
 [autolabel."A-configuration"]
-trigger_files = ["src/cargo/util/context/mod.rs"]
+trigger_files = ["src/util/context/mod.rs"]
 
 [autolabel."A-console-output"]
 trigger_files = [
   "crates/cargo-util-terminal/",
-  "src/cargo/util/progress.rs",
+  "src/util/progress.rs",
 ]
 
 [autolabel."A-crate-dependencies"]
-trigger_files = ["src/cargo/core/dependency.rs"]
+trigger_files = ["src/core/dependency.rs"]
 
 [autolabel."A-crate-types"]
-trigger_files = ["src/cargo/core/compiler/crate_type.rs"]
+trigger_files = ["src/core/compiler/crate_type.rs"]
 
 [autolabel."A-credential-provider"]
 trigger_files = ["credential/"]
 
 [autolabel."A-dep-info"]
-trigger_files = ["src/cargo/core/compiler/output_depinfo.rs"]
+trigger_files = ["src/core/compiler/output_depinfo.rs"]
 
 [autolabel."A-dependency-resolution"]
 trigger_files = [
   "benches/benchsuite/benches/resolve.rs",
   "crates/resolver-tests/",
-  "src/cargo/core/resolver/",
+  "src/core/resolver/",
 ]
 
 [autolabel."A-directory-source"]
-trigger_files = ["src/cargo/sources/directory.rs"]
+trigger_files = ["src/sources/directory.rs"]
 
 [autolabel."A-documenting-cargo-itself"]
-trigger_files = ["src/doc/"]
+trigger_files = ["doc/"]
 
 [autolabel."A-environment-variables"]
 trigger_files = [
   "crates/home/",
-  "src/cargo/util/context/environment.rs",
+  "src/util/context/environment.rs",
 ]
 
 [autolabel."A-features2"]
-trigger_files = ["src/cargo/core/resolver/features.rs"]
+trigger_files = ["src/core/resolver/features.rs"]
 
 [autolabel."A-filesystem"]
-trigger_files = ["src/cargo/util/flock.rs", "src/cargo/util/important_paths.rs"]
+trigger_files = ["src/util/flock.rs", "src/util/important_paths.rs"]
 
 [autolabel."A-future-incompat"]
-trigger_files = ["src/cargo/core/compiler/future_incompat.rs"]
+trigger_files = ["src/core/compiler/future_incompat.rs"]
 
 [autolabel."A-git"]
-trigger_files = ["src/cargo/sources/git/", "src/cargo/ops/cargo_package/vcs.rs"]
+trigger_files = ["src/sources/git/", "src/ops/cargo_package/vcs.rs"]
 
 [autolabel."A-home"]
 trigger_files = ["crates/home/"]
@@ -179,66 +179,66 @@ trigger_files = [
 ]
 
 [autolabel."A-interacts-with-crates.io"]
-trigger_files = ["crates/crates-io/", "src/cargo/ops/registry/"]
+trigger_files = ["crates/crates-io/", "src/ops/registry/"]
 
 [autolabel."A-json-output"]
-trigger_files = ["src/cargo/util/machine_message.rs"]
+trigger_files = ["src/util/machine_message.rs"]
 
 [autolabel."A-layout"]
 trigger_files = [
-  "src/cargo/core/compiler/build_runner/compilation_files.rs",
-  "src/cargo/core/compiler/layout.rs",
+  "src/core/compiler/build_runner/compilation_files.rs",
+  "src/core/compiler/layout.rs",
 ]
 
 [autolabel."A-links"]
-trigger_files = ["src/cargo/core/compiler/links.rs"]
+trigger_files = ["src/core/compiler/links.rs"]
 
 [autolabel."A-local-registry-source"]
-trigger_files = ["src/cargo/sources/registry/local.rs"]
+trigger_files = ["src/sources/registry/local.rs"]
 
 [autolabel."A-lockfile"]
-trigger_files = ["src/cargo/ops/lockfile.rs", "src/cargo/core/resolver/encode.rs"]
+trigger_files = ["src/ops/lockfile.rs", "src/core/resolver/encode.rs"]
 
 [autolabel."A-lto"]
-trigger_files = ["src/cargo/core/compiler/lto.rs"]
+trigger_files = ["src/core/compiler/lto.rs"]
 
 [autolabel."A-manifest"]
 trigger_files = [
     "crates/cargo-util-schemas/src/manifest/",
-    "src/cargo/core/manifest.rs",
-    "src/cargo/util/toml/mod.rs",
-    "src/cargo/util/toml_mut/",
+    "src/core/manifest.rs",
+    "src/util/toml/mod.rs",
+    "src/util/toml_mut/",
 ]
 
 [autolabel."A-networking"]
-trigger_files = ["src/cargo/util/network/"]
+trigger_files = ["src/util/network/"]
 
 [autolabel."A-overrides"]
-trigger_files = ["src/cargo/sources/replaced.rs"]
+trigger_files = ["src/sources/replaced.rs"]
 
 [autolabel."A-profiles"]
-trigger_files = ["src/cargo/core/profiles.rs"]
+trigger_files = ["src/core/profiles.rs"]
 
 [autolabel."A-rebuild-detection"]
-trigger_files = ["src/cargo/core/compiler/fingerprint/"]
+trigger_files = ["src/core/compiler/fingerprint/"]
 
 [autolabel."A-registries"]
-trigger_files = ["src/cargo/sources/registry/", "src/cargo/core/registry.rs"]
+trigger_files = ["src/sources/registry/", "src/core/registry.rs"]
 
 [autolabel."A-registry-authentication"]
-trigger_files = ["src/cargo/util/auth/"]
+trigger_files = ["src/util/auth/"]
 
 [autolabel."A-semver"]
 trigger_files = [
   "crates/semver-check",
-  "src/cargo/util/semver_ext.rs",
+  "src/util/semver_ext.rs",
 ]
 
 [autolabel."A-source-replacement"]
-trigger_files = ["src/cargo/sources/replaced.rs"]
+trigger_files = ["src/sources/replaced.rs"]
 
 [autolabel."A-sparse-registry"]
-trigger_files = ["src/cargo/sources/registry/http_remote.rs"]
+trigger_files = ["src/sources/registry/http_remote.rs"]
 
 [autolabel."A-testing-cargo-itself"]
 trigger_files = [
@@ -249,25 +249,25 @@ trigger_files = [
 
 [autolabel."A-timings"]
 trigger_files = [
-    "src/cargo/core/compiler/timings/",
-    "src/cargo/util/cpu.rs",
+    "src/core/compiler/timings/",
+    "src/util/cpu.rs",
 ]
 
 [autolabel."A-unstable"]
-trigger_files = ["src/cargo/core/features.rs"]
+trigger_files = ["src/core/features.rs"]
 
 [autolabel."A-vcs"]
-trigger_files = ["src/cargo/util/vcs.rs"]
+trigger_files = ["src/util/vcs.rs"]
 
 [autolabel."A-workspaces"]
 trigger_files = [
   "benches/benchsuite/benches/workspace_initialization.rs",
-  "src/cargo/core/workspace.rs",
-  "src/cargo/util/workspace.rs"
+  "src/core/workspace.rs",
+  "src/util/workspace.rs"
 ]
 
 [autolabel."Command-add"]
-trigger_files = ["src/bin/cargo/commands/add.rs", "src/cargo/ops/cargo_add/"]
+trigger_files = ["src/bin/cargo/commands/add.rs", "src/ops/cargo_add/"]
 
 [autolabel."Command-bench"]
 trigger_files = ["src/bin/cargo/commands/bench.rs"]
@@ -279,21 +279,21 @@ trigger_files = ["src/bin/cargo/commands/build.rs"]
 trigger_files = ["src/bin/cargo/commands/check.rs"]
 
 [autolabel."Command-clean"]
-trigger_files = ["src/bin/cargo/commands/clean.rs", "src/cargo/ops/cargo_clean.rs"]
+trigger_files = ["src/bin/cargo/commands/clean.rs", "src/ops/cargo_clean.rs"]
 
 [autolabel."Command-doc"]
-trigger_files = ["src/bin/cargo/commands/doc.rs", "src/cargo/ops/cargo_doc.rs"]
+trigger_files = ["src/bin/cargo/commands/doc.rs", "src/ops/cargo_doc.rs"]
 
 [autolabel."Command-fetch"]
-trigger_files = ["src/bin/cargo/commands/fetch.rs", "src/cargo/ops/cargo_fetch.rs"]
+trigger_files = ["src/bin/cargo/commands/fetch.rs", "src/ops/cargo_fetch.rs"]
 
 [autolabel."Command-fix"]
 trigger_files = [
     "crates/rustfix/",
     "src/bin/cargo/commands/fix.rs",
-    "src/cargo/ops/fix/",
-    "src/cargo/util/diagnostic_server.rs",
-    "src/cargo/util/lockserver.rs",
+    "src/ops/fix/",
+    "src/util/diagnostic_server.rs",
+    "src/util/lockserver.rs",
 ]
 
 [autolabel."Command-generate-lockfile"]
@@ -303,52 +303,52 @@ trigger_files = ["src/bin/cargo/commands/generate_lockfile.rs"]
 trigger_files = ["src/bin/cargo/commands/git_checkout.rs"]
 
 [autolabel."Command-info"]
-trigger_files = ["src/bin/cargo/commands/info.rs", "src/cargo/ops/registry/info/"]
+trigger_files = ["src/bin/cargo/commands/info.rs", "src/ops/registry/info/"]
 
 [autolabel."Command-init"]
 trigger_files = ["src/bin/cargo/commands/init.rs"]
 
 [autolabel."Command-install"]
-trigger_files = ["src/bin/cargo/commands/install.rs", "src/cargo/ops/cargo_install.rs"]
+trigger_files = ["src/bin/cargo/commands/install.rs", "src/ops/cargo_install.rs"]
 
 [autolabel."Command-locate-project"]
 trigger_files = ["src/bin/cargo/commands/locate_project.rs"]
 
 [autolabel."Command-login"]
-trigger_files = ["src/bin/cargo/commands/login.rs", "src/cargo/ops/registry/login.rs"]
+trigger_files = ["src/bin/cargo/commands/login.rs", "src/ops/registry/login.rs"]
 
 [autolabel."Command-logout"]
-trigger_files = ["src/bin/cargo/commands/logout.rs", "src/cargo/ops/registry/logout.rs"]
+trigger_files = ["src/bin/cargo/commands/logout.rs", "src/ops/registry/logout.rs"]
 
 [autolabel."Command-metadata"]
-trigger_files = ["src/bin/cargo/commands/metadata.rs", "src/cargo/ops/cargo_output_metadata.rs"]
+trigger_files = ["src/bin/cargo/commands/metadata.rs", "src/ops/cargo_output_metadata.rs"]
 
 [autolabel."Command-new"]
-trigger_files = ["src/bin/cargo/commands/new.rs", "src/cargo/ops/cargo_new.rs"]
+trigger_files = ["src/bin/cargo/commands/new.rs", "src/ops/cargo_new.rs"]
 
 [autolabel."Command-owner"]
-trigger_files = ["src/bin/cargo/commands/owner.rs", "src/cargo/ops/registry/owner.rs"]
+trigger_files = ["src/bin/cargo/commands/owner.rs", "src/ops/registry/owner.rs"]
 
 [autolabel."Command-package"]
-trigger_files = ["src/bin/cargo/commands/package.rs", "src/cargo/ops/cargo_package/"]
+trigger_files = ["src/bin/cargo/commands/package.rs", "src/ops/cargo_package/"]
 
 [autolabel."Command-pkgid"]
-trigger_files = ["src/bin/cargo/commands/pkgid.rs", "src/cargo/ops/cargo_pkgid.rs"]
+trigger_files = ["src/bin/cargo/commands/pkgid.rs", "src/ops/cargo_pkgid.rs"]
 
 [autolabel."Command-publish"]
-trigger_files = ["src/bin/cargo/commands/publish.rs", "src/cargo/ops/registry/publish.rs"]
+trigger_files = ["src/bin/cargo/commands/publish.rs", "src/ops/registry/publish.rs"]
 
 [autolabel."Command-read-manifest"]
-trigger_files = ["src/bin/cargo/commands/read_manifest.rs", "src/cargo/ops/cargo_read_manifest.rs"]
+trigger_files = ["src/bin/cargo/commands/read_manifest.rs", "src/ops/cargo_read_manifest.rs"]
 
 [autolabel."Command-remove"]
-trigger_files = ["src/bin/cargo/commands/remove.rs", "src/cargo/ops/cargo_remove.rs"]
+trigger_files = ["src/bin/cargo/commands/remove.rs", "src/ops/cargo_remove.rs"]
 
 [autolabel."Command-report"]
-trigger_files = ["src/bin/cargo/commands/report.rs", "src/cargo/ops/cargo_report/"]
+trigger_files = ["src/bin/cargo/commands/report.rs", "src/ops/cargo_report/"]
 
 [autolabel."Command-run"]
-trigger_files = ["src/bin/cargo/commands/run.rs", "src/cargo/ops/cargo_run.rs"]
+trigger_files = ["src/bin/cargo/commands/run.rs", "src/ops/cargo_run.rs"]
 
 [autolabel."Command-rustc"]
 trigger_files = ["src/bin/cargo/commands/rustc.rs"]
@@ -357,22 +357,22 @@ trigger_files = ["src/bin/cargo/commands/rustc.rs"]
 trigger_files = ["src/bin/cargo/commands/rustdoc.rs"]
 
 [autolabel."Command-search"]
-trigger_files = ["src/bin/cargo/commands/search.rs", "src/cargo/ops/registry/search.rs"]
+trigger_files = ["src/bin/cargo/commands/search.rs", "src/ops/registry/search.rs"]
 
 [autolabel."Command-test"]
-trigger_files = ["src/bin/cargo/commands/test.rs", "src/cargo/ops/cargo_test.rs"]
+trigger_files = ["src/bin/cargo/commands/test.rs", "src/ops/cargo_test.rs"]
 
 [autolabel."Command-tree"]
-trigger_files = ["src/bin/cargo/commands/tree.rs", "src/cargo/ops/tree/"]
+trigger_files = ["src/bin/cargo/commands/tree.rs", "src/ops/tree/"]
 
 [autolabel."Command-uninstall"]
-trigger_files = ["src/bin/cargo/commands/uninstall.rs", "src/cargo/ops/cargo_uninstall.rs"]
+trigger_files = ["src/bin/cargo/commands/uninstall.rs", "src/ops/cargo_uninstall.rs"]
 
 [autolabel."Command-update"]
-trigger_files = ["src/bin/cargo/commands/update.rs", "src/cargo/ops/cargo_update.rs"]
+trigger_files = ["src/bin/cargo/commands/update.rs", "src/ops/cargo_update.rs"]
 
 [autolabel."Command-vendor"]
-trigger_files = ["src/bin/cargo/commands/vendor.rs", "src/cargo/ops/vendor.rs"]
+trigger_files = ["src/bin/cargo/commands/vendor.rs", "src/ops/vendor.rs"]
 
 [autolabel."Command-verify-project"]
 trigger_files = ["src/bin/cargo/commands/verify_project.rs"]
@@ -381,4 +381,4 @@ trigger_files = ["src/bin/cargo/commands/verify_project.rs"]
 trigger_files = ["src/bin/cargo/commands/version.rs"]
 
 [autolabel."Command-yank"]
-trigger_files = ["src/bin/cargo/commands/yank.rs", "src/cargo/ops/registry/yank.rs"]
+trigger_files = ["src/bin/cargo/commands/yank.rs", "src/ops/registry/yank.rs"]

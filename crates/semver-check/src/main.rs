@@ -32,7 +32,7 @@ const SEPARATOR: &str = "///////////////////////////////////////////////////////
 fn doit() -> Result<(), Box<dyn Error>> {
     let filename = std::env::args().nth(1).unwrap_or_else(|| {
         Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../src/doc/src/reference/semver.md")
+            .join("../../doc/book/src/reference/semver.md")
             .to_str()
             .unwrap()
             .to_string()

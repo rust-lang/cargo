@@ -3,9 +3,9 @@
 
 set -e
 
-cargo_man="src/doc"
+cargo_man="doc"
 mdman_man="crates/mdman/doc"
-man_out="src/etc/man"
+man_out="etc/man"
 
 changes=$(git status --porcelain -- $cargo_man $mdman_man $man_out)
 if [ -n "$changes" ]

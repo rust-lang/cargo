@@ -45,8 +45,8 @@ fn compress_man() {
         }
     };
 
-    add_files(Path::new("src/etc/man"), OsStr::new("1"));
-    add_files(Path::new("src/doc/man/generated_txt"), OsStr::new("txt"));
+    add_files(Path::new("etc/man"), OsStr::new("1"));
+    add_files(Path::new("doc/man/generated_txt"), OsStr::new("txt"));
     let encoder = ar.into_inner().unwrap();
     encoder.finish().unwrap();
 }

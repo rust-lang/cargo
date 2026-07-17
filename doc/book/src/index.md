@@ -45,4 +45,4 @@ The commands will let you interact with Cargo using its command-line interface.
 [def-package-registry]: ./appendix/glossary.md#package-registry '"package registry" (glossary entry)'
 [rust]: https://www.rust-lang.org/
 [crates.io]: https://crates.io/
-[GitHub]: https://github.com/rust-lang/cargo/tree/master/src/doc
+[GitHub]: https://github.com/rust-lang/cargo/tree/master/doc/book

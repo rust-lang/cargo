@@ -3,8 +3,8 @@
 /config.stamp
 /Makefile
 /config.mk
-/src/doc/build
-/src/etc/*.pyc
+/doc/build
+/etc/*.pyc
 /src/registry/target
 rustc
 __pycache__
