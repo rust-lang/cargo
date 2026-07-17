@@ -12,8 +12,8 @@ pub use self::cargo_fix::{
     EditionFixMode, FixOptions, fix, fix_edition, fix_exec_rustc, fix_get_proxy_lock_addr,
 };
 pub use self::cargo_install::{install, install_list};
+pub use self::cargo_metadata::{ExportInfo, OutputMetadataOptions, output_metadata};
 pub use self::cargo_new::{NewOptions, NewProjectKind, VersionControl, init, new};
-pub use self::cargo_output_metadata::{ExportInfo, OutputMetadataOptions, output_metadata};
 pub use self::cargo_package::PackageMessageFormat;
 pub use self::cargo_package::PackageOpts;
 pub use self::cargo_package::check_yanked;
@@ -62,8 +62,8 @@ mod cargo_doc;
 mod cargo_fetch;
 mod cargo_fix;
 mod cargo_install;
+mod cargo_metadata;
 mod cargo_new;
-mod cargo_output_metadata;
 mod cargo_package;
 mod cargo_pkgid;
 mod cargo_read_manifest;
