@@ -208,7 +208,7 @@ jobs:
       if: startsWith(matrix.rust, 'nightly')
     - run: rustup component add rustc-dev llvm-tools-preview rust-docs
       if: startsWith(matrix.rust, 'nightly')
-    - run: sudo apt update -y && sudo apt install lldb gcc-multilib libsecret-1-0 libsecret-1-dev -y
+    - run: sudo apt update -y && sudo apt install lldb gcc-multilib -y
       if: matrix.os == 'ubuntu-latest'
     - name: Install LLDB on Linux ARM
       run: sudo apt update -y && sudo apt install lldb -y
@@ -292,7 +292,7 @@ jobs:
       - run: rustup update --no-self-update stable && rustup default stable
       - run: rustup target add i686-unknown-linux-gnu
       - run: rustup target add wasm32-unknown-unknown
-      - run: sudo apt update -y && sudo apt install gcc-multilib libsecret-1-0 libsecret-1-dev -y
+      - run: sudo apt update -y && sudo apt install gcc-multilib -y
       - run: rustup component add rustfmt || echo "rustfmt not available"
       - run: cargo test -p cargo
         env:
