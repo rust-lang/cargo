@@ -4,7 +4,7 @@
 /Makefile
 /config.mk
 /src/doc/build
-/src/etc/*.pyc
+/etc/*.pyc
 /src/registry/target
 rustc
 __pycache__

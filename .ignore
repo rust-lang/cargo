@@ -3,7 +3,7 @@
 # The goal is to help people find the right file to edit
 src/doc/man/generated_txt
 src/doc/src/commands/*
-src/etc/man
+etc/man
 !src/doc/src/commands/build-commands.md
 !src/doc/src/commands/cargo-clippy.md
 !src/doc/src/commands/cargo-fmt.md

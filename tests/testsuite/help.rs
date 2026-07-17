@@ -75,7 +75,7 @@ fn help_with_man_and_path(
     path: &Path,
 ) {
     let contents = if display_command == "man" {
-        fs::read_to_string(format!("src/etc/man/cargo-{}.1", actual_subcommand)).unwrap()
+        fs::read_to_string(format!("etc/man/cargo-{}.1", actual_subcommand)).unwrap()
     } else {
         fs::read_to_string(format!(
             "src/doc/man/generated_txt/cargo-{}.txt",

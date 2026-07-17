@@ -40,7 +40,7 @@ fn build_mdman() -> io::Result<()> {
 /// The source for the man pages are located in src/doc/man/ in markdown format.
 /// These also are handlebars templates, see crates/mdman/README.md for details.
 ///
-/// The generated man pages are placed in the src/etc/man/ directory. The pages
+/// The generated man pages are placed in the etc/man/ directory. The pages
 /// are also expanded into markdown (after being expanded by handlebars) and
 /// saved in the src/doc/src/commands/ directory. These are included in the
 /// Cargo book, which is converted to HTML by mdbook.
@@ -61,7 +61,7 @@ fn build_cargo() -> io::Result<()> {
     let outs = [
         ("md", "src/doc/src/commands"),
         ("txt", "src/doc/man/generated_txt"),
-        ("man", "src/etc/man"),
+        ("man", "etc/man"),
     ];
     let args = [
         "--url",

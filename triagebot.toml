@@ -105,10 +105,10 @@ trigger_files = [
 trigger_files = ["src/bin/", "src/cargo/util/command_prelude.rs"]
 
 [autolabel."A-cli-help"]
-trigger_files = ["crates/mdman/", "src/etc/man/"]
+trigger_files = ["crates/mdman/", "etc/man/"]
 
 [autolabel."A-completions"]
-trigger_files = ["src/etc/_cargo", "src/etc/cargo.bashcomp.sh"]
+trigger_files = ["etc/_cargo", "etc/cargo.bashcomp.sh"]
 
 [autolabel."A-configuration"]
 trigger_files = ["src/cargo/util/context/mod.rs"]

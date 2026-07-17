@@ -63,7 +63,7 @@ and are converted into three formats:
 
 1. Troff man pages --- used by the `cargo help` command,
    and by distributions to provide man pages which people can install,
-   saved in <https://github.com/rust-lang/cargo/tree/master/src/etc/man>.
+   saved in <https://github.com/rust-lang/cargo/tree/master/etc/man>.
 2. Plain text --- used for embedded help on platforms without `man` (such as Windows),
    saved in <https://github.com/rust-lang/cargo/tree/master/src/doc/man/generated_txt>.
 3. Markdown (with some HTML) --- used for the Cargo Book,
