@@ -24,6 +24,7 @@ use pathdiff::diff_paths;
 use url::Url;
 
 use crate::compiler::{CompileKind, CompileTarget};
+use crate::context::{ConfigRelativePath, TOP_LEVEL_CONFIG_KEYS};
 use crate::core::dependency::{Artifact, ArtifactTarget, DepKind};
 use crate::core::manifest::{ManifestMetadata, TargetSourcePath};
 use crate::core::{
@@ -38,10 +39,7 @@ use crate::resolver::ResolveBehavior;
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
-use crate::util::{
-    self, GlobalContext, IntoUrl, OnceExt, OptVersionReq, context::ConfigRelativePath,
-    context::TOP_LEVEL_CONFIG_KEYS,
-};
+use crate::util::{self, GlobalContext, IntoUrl, OnceExt, OptVersionReq};
 
 mod embedded;
 mod targets;

@@ -18,12 +18,12 @@ use cargo_credential::{Operation, Secret};
 use crates_io::Registry;
 use url::Url;
 
+use crate::context::{GlobalContext, PathAndArgs};
 use crate::core::{Package, PackageId, SourceId};
 use crate::sources::source::Source;
 use crate::sources::{RegistrySource, SourceConfigMap};
 use crate::util::auth;
 use crate::util::cache_lock::CacheLockMode;
-use crate::util::context::{GlobalContext, PathAndArgs};
 use crate::util::errors::CargoResult;
 use crate::util::network::http_async;
 

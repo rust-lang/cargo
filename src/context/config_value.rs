@@ -1,6 +1,6 @@
 //! [`ConfigValue`] represents Cargo configuration values loaded from TOML.
 //!
-//! See [the module-level doc](crate::util::context)
+//! See [the module-level doc](crate::context)
 //! for how configuration is parsed and deserialized.
 
 use crate::util::data_structures::HashMap;

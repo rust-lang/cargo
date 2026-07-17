@@ -21,10 +21,10 @@
 //!
 //! [`ConfigValue`]: CV
 
-use crate::util::context::key::ArrayItemKeyPath;
-use crate::util::context::value;
-use crate::util::context::{ConfigError, ConfigKey, GlobalContext};
-use crate::util::context::{ConfigValue as CV, Definition, Value};
+use crate::context::key::ArrayItemKeyPath;
+use crate::context::value;
+use crate::context::{ConfigError, ConfigKey, GlobalContext};
+use crate::context::{ConfigValue as CV, Definition, Value};
 use crate::util::data_structures::HashSet;
 use serde::{de, de::IntoDeserializer};
 use std::vec;

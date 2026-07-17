@@ -13,6 +13,10 @@ use tracing::debug;
 use url::Url;
 
 use crate::compiler::Unit;
+use crate::context;
+use crate::context::{
+    CargoResolverConfig, ConfigRelativePath, FeatureUnification, IncompatibleRustVersions, Value,
+};
 use crate::core::features::Features;
 use crate::core::registry::PackageRegistry;
 use crate::core::{
@@ -25,16 +29,11 @@ use crate::ops::lockfile::LOCKFILE_NAME;
 use crate::resolver::ResolveBehavior;
 use crate::resolver::features::CliFeatures;
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY, PathSource, SourceConfigMap};
-use crate::util::context;
-use crate::util::context::{FeatureUnification, Value};
 use crate::util::edit_distance;
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
 use crate::util::toml::{InheritableFields, read_manifest};
-use crate::util::{
-    Filesystem, GlobalContext, IntoUrl, closest_msg, context::CargoResolverConfig,
-    context::ConfigRelativePath, context::IncompatibleRustVersions,
-};
+use crate::util::{Filesystem, GlobalContext, IntoUrl, closest_msg};
 
 use cargo_util::paths;
 use cargo_util::paths::normalize_path;

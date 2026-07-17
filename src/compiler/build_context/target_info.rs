@@ -12,8 +12,8 @@ use crate::compiler::CompileMode;
 use crate::compiler::CompileTarget;
 use crate::compiler::CrateType;
 use crate::compiler::apply_env_config;
+use crate::context::{GlobalContext, StringList, TargetConfig};
 use crate::core::{Dependency, Package, Target, TargetKind, Workspace};
-use crate::util::context::{GlobalContext, StringList, TargetConfig};
 use crate::util::interning::InternedString;
 use crate::util::{CargoResult, Rustc};
 

@@ -10,13 +10,11 @@ use std::path::{Path, PathBuf};
 
 use crate::prelude::*;
 use cargo::CargoResult;
+use cargo::context::RegistryConfig;
+use cargo::context::Value;
+use cargo::context::{self, Definition, GlobalContext, JobsConfig, SslVersionConfig, StringList};
 use cargo::core::PackageIdSpec;
 use cargo::core::features::{GitFeatures, GitoxideFeatures};
-use cargo::util::context::RegistryConfig;
-use cargo::util::context::Value;
-use cargo::util::context::{
-    self, Definition, GlobalContext, JobsConfig, SslVersionConfig, StringList,
-};
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::str;
 use cargo_test_support::{paths, project, project_in_home, symlink_supported, t};

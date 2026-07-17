@@ -6,6 +6,7 @@ use std::io::SeekFrom;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 
+use crate::context::JobsConfig;
 use crate::core::Dependency;
 use crate::core::PackageIdSpecQuery;
 use crate::core::Workspace;
@@ -27,7 +28,6 @@ use crate::util::Graph;
 use crate::util::HumanBytes;
 use crate::util::OptVersionReq;
 use crate::util::cache_lock::CacheLockMode;
-use crate::util::context::JobsConfig;
 use crate::util::errors::CargoResult;
 use crate::util::errors::ManifestError;
 use crate::util::restricted_names;

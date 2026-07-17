@@ -6,12 +6,12 @@ use std::sync::Arc;
 use std::{env, fmt, fs};
 
 use crate::compiler::{CompileKind, DefaultExecutor, Executor, UnitOutput};
+use crate::context::FeatureUnification;
 use crate::core::{Dependency, Edition, Package, PackageId, SourceId, Target, Workspace};
 use crate::ops::{CompileFilter, Packages};
 use crate::ops::{FilterRule, common_for_install_and_uninstall::*};
 use crate::sources::source::Source;
 use crate::sources::{GitSource, PathSource, SourceConfigMap};
-use crate::util::context::FeatureUnification;
 use crate::util::errors::CargoResult;
 use crate::util::{Filesystem, GlobalContext, Rustc};
 use crate::{drop_println, ops};

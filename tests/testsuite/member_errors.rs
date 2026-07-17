@@ -2,10 +2,11 @@
 
 use crate::prelude::*;
 use cargo::compiler::UserIntent;
+use cargo::context::GlobalContext;
 use cargo::core::Workspace;
 use cargo::ops::{self, CompileOptions};
 use cargo::resolver::ResolveError;
-use cargo::util::{context::GlobalContext, errors::ManifestError};
+use cargo::util::errors::ManifestError;
 use cargo_test_support::paths;
 use cargo_test_support::project;
 use cargo_test_support::registry;

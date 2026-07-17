@@ -1,8 +1,9 @@
 //! Registry authentication support.
 
 use crate::{
+    context::ConfigKey,
     core::features::cargo_docs_link,
-    util::{CanonicalUrl, CargoResult, GlobalContext, IntoUrl, context::ConfigKey},
+    util::{CanonicalUrl, CargoResult, GlobalContext, IntoUrl},
 };
 use anyhow::{Context as _, bail};
 use cargo_credential::{
@@ -15,16 +16,13 @@ use std::error::Error;
 use time::{Duration, OffsetDateTime};
 use url::Url;
 
+use crate::context::Value;
 use crate::core::SourceId;
-use crate::util::context::Value;
 use crate::util::credential::adaptor::BasicProcessCredential;
 use crate::util::credential::paseto::PasetoCredential;
 
-use super::{
-    context::{CredentialCacheValue, GlobalRegistryConfig, PathAndArgs, RegistryConfig},
-    credential::process::CredentialProcessCredential,
-    credential::token::TokenCredential,
-};
+use super::{credential::process::CredentialProcessCredential, credential::token::TokenCredential};
+use crate::context::{CredentialCacheValue, GlobalRegistryConfig, PathAndArgs, RegistryConfig};
 
 /// Get the list of credential providers for a registry source.
 fn credential_provider(

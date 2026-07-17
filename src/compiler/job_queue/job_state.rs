@@ -7,8 +7,8 @@ use cargo_util::ProcessBuilder;
 use crate::compiler::future_incompat::FutureBreakageItem;
 use crate::compiler::locking::LockKey;
 use crate::compiler::timings::SectionTiming;
+use crate::context::WarningHandling;
 use crate::util::Queue;
-use crate::util::context::WarningHandling;
 use crate::util::interning::InternedString;
 use crate::{CargoResult, compiler::locking::LockManager};
 

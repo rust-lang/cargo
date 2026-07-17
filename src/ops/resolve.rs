@@ -56,6 +56,7 @@
 //! [`Downloads`]: crate::core::package::Downloads
 
 use crate::compiler::{CompileKind, RustcTargetData};
+use crate::context::FeatureUnification;
 use crate::core::Dependency;
 use crate::core::GitReference;
 use crate::core::PackageId;
@@ -77,7 +78,6 @@ use crate::resolver::{
 use crate::sources::RecursivePathSource;
 use crate::util::CanonicalUrl;
 use crate::util::cache_lock::CacheLockMode;
-use crate::util::context::FeatureUnification;
 use crate::util::data_structures::{HashMap, HashSet};
 use crate::util::errors::CargoResult;
 use anyhow::Context as _;

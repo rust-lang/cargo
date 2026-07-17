@@ -6,12 +6,12 @@
 
 use crate::util::data_structures::HashMap;
 
+use crate::context::{self, ConfigRelativePath, OptValue};
 use crate::core::GitReference;
 use crate::core::SourceId;
 use crate::sources::overlay::DependencyConfusionThreatOverlaySource;
 use crate::sources::source::Source;
 use crate::sources::{CRATES_IO_REGISTRY, ReplacedSource};
-use crate::util::context::{self, ConfigRelativePath, OptValue};
 use crate::util::errors::CargoResult;
 use crate::util::{GlobalContext, IntoUrl};
 

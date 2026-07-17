@@ -65,9 +65,9 @@ use std::rc::Rc;
 use std::time::{Duration, Instant};
 use tracing::{debug, trace};
 
+use crate::context::GlobalContext;
 use crate::core::PackageIdSpec;
 use crate::core::{Dependency, PackageId, Registry, Summary};
-use crate::util::context::GlobalContext;
 use crate::util::errors::CargoResult;
 use crate::util::network::PollExt;
 

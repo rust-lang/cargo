@@ -39,7 +39,7 @@ pub use clap::{Arg, ArgAction, ArgMatches, value_parser};
 pub use clap::Command;
 
 use super::IntoUrl;
-use super::context::JobsConfig;
+use crate::context::JobsConfig;
 
 pub mod heading {
     pub const PACKAGE_SELECTION: &str = "Package Selection";

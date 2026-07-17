@@ -1,5 +1,5 @@
 use crate::compiler::CompileKind;
-use crate::util::context::JobsConfig;
+use crate::context::JobsConfig;
 use crate::util::interning::InternedString;
 use crate::util::{CargoResult, GlobalContext, RustfixDiagnosticServer};
 use anyhow::{Context as _, bail};

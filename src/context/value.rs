@@ -40,7 +40,7 @@
 //! the `Definition::deserialize` implementation here and the
 //! `MapAccess::next_value_seed` implementation in `ValueDeserializer`.
 //!
-//! [`de`]: crate::util::context::de
+//! [`de`]: crate::context::de
 
 use serde::de;
 use std::cmp::Ordering;

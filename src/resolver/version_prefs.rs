@@ -7,16 +7,16 @@ use std::time::Duration;
 
 use cargo_util_schemas::core::PartialVersion;
 
+use crate::context::CargoResolverConfig;
+use crate::context::GlobalRegistryConfig;
+use crate::context::IncompatiblePublishAge;
+use crate::context::RegistryConfig;
 use crate::core::Dependency;
 use crate::core::PackageId;
 use crate::core::SourceId;
 use crate::core::Summary;
 use crate::util::CargoResult;
 use crate::util::GlobalContext;
-use crate::util::context::CargoResolverConfig;
-use crate::util::context::GlobalRegistryConfig;
-use crate::util::context::IncompatiblePublishAge;
-use crate::util::context::RegistryConfig;
 use crate::util::interning::InternedString;
 use crate::util::time_span::parse_time_span;
 

@@ -1,3 +1,4 @@
+use crate::context;
 use crate::core::GitReference;
 use crate::core::SourceKind;
 use crate::sources::registry::CRATES_IO_HTTP_INDEX;
@@ -6,7 +7,7 @@ use crate::sources::{CRATES_IO_DOMAIN, CRATES_IO_INDEX, CRATES_IO_REGISTRY, Dire
 use crate::sources::{GitSource, PathSource, RegistrySource};
 use crate::util::data_structures::HashSet;
 use crate::util::interning::InternedString;
-use crate::util::{CanonicalUrl, CargoResult, GlobalContext, IntoUrl, context};
+use crate::util::{CanonicalUrl, CargoResult, GlobalContext, IntoUrl};
 use anyhow::Context as _;
 use serde::de;
 use serde::ser;

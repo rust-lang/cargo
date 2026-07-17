@@ -23,6 +23,7 @@ use itertools::Itertools;
 
 use crate::CargoResult;
 use crate::GlobalContext;
+use crate::context::JobsConfig;
 use crate::core::Dependency;
 use crate::core::Package;
 use crate::core::PackageId;
@@ -49,7 +50,6 @@ use crate::util::ProgressStyle;
 use crate::util::VersionExt as _;
 use crate::util::auth;
 use crate::util::cache_lock::CacheLockMode;
-use crate::util::context::JobsConfig;
 use crate::util::errors::ManifestError;
 use crate::util::toml::prepare_for_publish;
 

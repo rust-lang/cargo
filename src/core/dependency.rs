@@ -10,9 +10,9 @@ use std::sync::Arc;
 use tracing::trace;
 
 use crate::compiler::{CompileKind, CompileTarget};
+use crate::context::Definition;
 use crate::core::{CliUnstable, Feature, Features, PackageId, SourceId, Summary};
 use crate::util::OptVersionReq;
-use crate::util::context::Definition;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 
