@@ -1082,6 +1082,16 @@ For each kind of dependency, these variables are supplied to the same part of th
 
 [`env!`]: https://doc.rust-lang.org/std/macro.env.html
 
+### artifact-dependencies: `cargo tree`
+
+`cargo tree -Z bindeps` displays an artifact dependency as an artifact request
+node followed by the package that provides it. The request node shows the
+artifact kinds and `target`, when present, and remains in the dependency's
+normal, build, or development section. An artifact dependency with `lib = true`
+is shown as both a normal package dependency and an artifact request. Custom
+`--format` strings apply to package nodes, but not to artifact request nodes.
+Artifact request nodes count as a level when limiting the tree with `--depth`.
+
 ### artifact-dependencies: Examples
 
 #### Example: use a binary executable from a build script

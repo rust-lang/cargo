@@ -128,6 +128,24 @@ impl<'a> fmt::Display for Display<'a> {
                     _ => panic!("unexpected feature node {:?}", for_node),
                 }
             }
+            Node::Artifact {
+                package_id,
+                artifacts,
+                target,
+                ..
+            } => {
+                write!(fmt, "{} artifact \"", package_id.name())?;
+                for (index, artifact) in artifacts.iter().enumerate() {
+                    if index != 0 {
+                        fmt.write_str(", ")?;
+                    }
+                    write!(fmt, "{artifact}")?;
+                }
+                fmt.write_str("\"")?;
+                if let Some(target) = target {
+                    write!(fmt, " (target: {})", target.as_str())?;
+                }
+            }
         }
 
         Ok(())
