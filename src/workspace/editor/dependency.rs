@@ -1027,7 +1027,7 @@ impl Display for WorkspaceSource {
 
 #[cfg(test)]
 mod tests {
-    use crate::util::toml_mut::manifest::LocalManifest;
+    use crate::workspace::editor::manifest::LocalManifest;
     use cargo_util::paths;
 
     use super::*;

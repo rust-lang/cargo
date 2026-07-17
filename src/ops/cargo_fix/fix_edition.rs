@@ -2,7 +2,7 @@
 
 use super::{EditionFixMode, FixOptions};
 use crate::ops;
-use crate::util::toml_mut::manifest::LocalManifest;
+use crate::workspace::editor::manifest::LocalManifest;
 use crate::workspace::features::{Edition, FixEdition};
 use crate::workspace::{Package, Workspace};
 use crate::{CargoResult, GlobalContext};

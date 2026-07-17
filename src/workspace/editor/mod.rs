@@ -6,7 +6,7 @@
 //! [`Manifest`](crate::workspace::manifest::Manifest).
 //!
 //! In most cases, the entrypoint for editing is
-//! [`LocalManifest`](crate::util::toml_mut::manifest::LocalManifest),
+//! [`LocalManifest`](crate::workspace::editor::manifest::LocalManifest),
 //! which contains editing functionality for a given manifest's dependencies.
 
 pub mod dependency;

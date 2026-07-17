@@ -9,9 +9,9 @@ use cargo::ops::cargo_add::DepOp;
 use cargo::ops::cargo_add::add;
 use cargo::ops::resolve_ws;
 use cargo::util::command_prelude::*;
-use cargo::util::toml_mut::manifest::DepTable;
 use cargo::workspace::FeatureValue;
 use cargo::workspace::dependency::DepKind;
+use cargo::workspace::editor::manifest::DepTable;
 
 pub fn cli() -> Command {
     clap::Command::new("add")

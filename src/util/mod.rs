@@ -29,7 +29,6 @@ pub use self::workspace::{
     print_available_examples, print_available_packages, print_available_tests,
 };
 pub use crate::context::{ConfigValue, GlobalContext, homedir};
-pub use crate::workspace::editor as toml_mut;
 
 pub mod auth;
 pub mod cache_lock;

@@ -62,9 +62,9 @@ use crate::resolver::{HasDevUnits, Resolve, ResolveBehavior};
 use crate::util::GlobalContext;
 use crate::util::diagnostic_server::{Message, RustfixDiagnosticServer};
 use crate::util::errors::CargoResult;
-use crate::util::toml_mut::manifest::LocalManifest;
 use crate::util::{LockServer, LockServerClient, existing_vcs_repo};
 use crate::workspace::PackageIdSpecQuery as _;
+use crate::workspace::editor::manifest::LocalManifest;
 use crate::workspace::{Edition, MaybePackage, Package, PackageId, Workspace};
 use crate::{drop_eprint, drop_eprintln};
 

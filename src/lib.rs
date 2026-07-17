@@ -113,7 +113,7 @@
 //! - Package
 //!   - `Cargo.toml`: User-written project manifest, loaded with [`workspace::parser::read_manifest`] and then
 //!     translated to [`workspace::manifest::Manifest`] which maybe stored in a [`workspace::Package`].
-//!     - This is editable with [`util::toml_mut::manifest::LocalManifest`]
+//!     - This is editable with [`workspace::editor::manifest::LocalManifest`]
 //!   - `Cargo.lock`: Generally loaded with [`ops::resolve_ws`] or a variant of it into a [`resolver::Resolve`]
 //!     - At the lowest level, [`ops::load_pkg_lockfile`] and [`ops::write_pkg_lockfile`] are used
 //!     - See [`resolver::encode`] for versioning of `Cargo.lock`

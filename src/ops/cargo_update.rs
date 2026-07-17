@@ -6,13 +6,13 @@ use crate::resolver::features::{CliFeatures, HasDevUnits};
 use crate::sources::IndexSummary;
 use crate::sources::source::QueryKind;
 use crate::util::cache_lock::CacheLockMode;
-use crate::util::toml_mut::dependency::{MaybeWorkspace, Source};
-use crate::util::toml_mut::manifest::LocalManifest;
-use crate::util::toml_mut::upgrade::upgrade_requirement;
 use crate::util::{CargoResult, VersionExt};
 use crate::util::{OptVersionReq, style};
 use crate::workspace::Registry as _;
 use crate::workspace::dependency::Dependency;
+use crate::workspace::editor::dependency::{MaybeWorkspace, Source};
+use crate::workspace::editor::manifest::LocalManifest;
+use crate::workspace::editor::upgrade::upgrade_requirement;
 use crate::workspace::registry::PackageRegistry;
 use crate::workspace::{PackageId, PackageIdSpec, PackageIdSpecQuery};
 use crate::workspace::{SourceId, Workspace};
@@ -478,7 +478,7 @@ pub fn write_manifest_upgrades(
         for dep_table in local_manifest.get_dependency_tables_mut() {
             for (mut dep_key, dep_item) in dep_table.iter_mut() {
                 let dep_key_str = dep_key.get();
-                let dependency = crate::util::toml_mut::dependency::Dependency::from_toml(
+                let dependency = crate::workspace::editor::dependency::Dependency::from_toml(
                     ws.gctx(),
                     ws.root(),
                     &manifest_path,
