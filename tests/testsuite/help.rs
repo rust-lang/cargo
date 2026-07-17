@@ -78,7 +78,7 @@ fn help_with_man_and_path(
         fs::read_to_string(format!("etc/man/cargo-{}.1", actual_subcommand)).unwrap()
     } else {
         fs::read_to_string(format!(
-            "src/doc/man/generated_txt/cargo-{}.txt",
+            "doc/man/generated_txt/cargo-{}.txt",
             actual_subcommand
         ))
         .unwrap()

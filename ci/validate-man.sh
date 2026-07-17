@@ -3,7 +3,7 @@
 
 set -e
 
-cargo_man="src/doc"
+cargo_man="doc"
 mdman_man="crates/mdman/doc"
 man_out="etc/man"
 

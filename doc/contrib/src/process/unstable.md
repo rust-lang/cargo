@@ -67,7 +67,7 @@ Every unstable feature should have a section added to the [unstable chapter]
 describing how to use the feature.
 This can also serve as a place for the final documentation to live until its stabilized.
 
-[unstable chapter]: https://github.com/rust-lang/cargo/blob/master/src/doc/src/reference/unstable.md
+[unstable chapter]: https://github.com/rust-lang/cargo/blob/master/doc/book/src/reference/unstable.md
 
 ## Pre-Stabilization 
 
@@ -83,7 +83,7 @@ and give feedback begins:
   - Post on various Rust communities ([rust subreddit], [users], [internals], etc)
   - e.g. [reddit post], [users post], [internals post]
 
-[workspace inheritance testing notes]: https://github.com/rust-lang/cargo/blob/6d6dd9d9be9c91390da620adf43581619c2fa90e/src/doc/src/reference/unstable.md#testing-notes
+[workspace inheritance testing notes]: https://github.com/rust-lang/cargo/blob/6d6dd9d9be9c91390da620adf43581619c2fa90e/doc/book/src/reference/unstable.md#testing-notes
 [rust subreddit]: https://www.reddit.com/r/rust/
 [users]: https://users.rust-lang.org/
 [internals]: https://internals.rust-lang.org/

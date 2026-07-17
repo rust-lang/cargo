@@ -17,4 +17,4 @@ tests in the [`testsuite`] directory. There are several other tests:
 [`crates`]: https://github.com/rust-lang/cargo/tree/master/crates
 [`build-std`]: https://github.com/rust-lang/cargo/blob/master/tests/build-std/main.rs
 [build-std feature]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std
-[SemVer chapter validity checks]: https://github.com/rust-lang/cargo/tree/master/src/doc/semver-check
+[SemVer chapter validity checks]: https://github.com/rust-lang/cargo/tree/master/doc/book/semver-check

@@ -37,18 +37,18 @@ fn build_mdman() -> io::Result<()> {
 
 /// Builds the man pages for Cargo.
 ///
-/// The source for the man pages are located in src/doc/man/ in markdown format.
+/// The source for the man pages are located in doc/man/ in markdown format.
 /// These also are handlebars templates, see crates/mdman/README.md for details.
 ///
 /// The generated man pages are placed in the etc/man/ directory. The pages
 /// are also expanded into markdown (after being expanded by handlebars) and
-/// saved in the src/doc/src/commands/ directory. These are included in the
+/// saved in the doc/book/src/commands/ directory. These are included in the
 /// Cargo book, which is converted to HTML by mdbook.
 fn build_cargo() -> io::Result<()> {
-    // Find all `src/doc/man/cargo*.md`
+    // Find all `doc/man/cargo*.md`
     let src_paths = {
         let mut src_paths = Vec::new();
-        for entry in fs::read_dir("src/doc/man")? {
+        for entry in fs::read_dir("doc/man")? {
             let entry = entry?;
             let file_name = entry.file_name();
             let file_name = file_name.to_str().unwrap();
@@ -59,8 +59,8 @@ fn build_cargo() -> io::Result<()> {
         src_paths
     };
     let outs = [
-        ("md", "src/doc/src/commands"),
-        ("txt", "src/doc/man/generated_txt"),
+        ("md", "doc/book/src/commands"),
+        ("txt", "doc/man/generated_txt"),
         ("man", "etc/man"),
     ];
     let args = [

@@ -142,7 +142,7 @@ trigger_files = [
 trigger_files = ["src/cargo/sources/directory.rs"]
 
 [autolabel."A-documenting-cargo-itself"]
-trigger_files = ["src/doc/"]
+trigger_files = ["doc/"]
 
 [autolabel."A-environment-variables"]
 trigger_files = [

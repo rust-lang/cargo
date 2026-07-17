@@ -5,8 +5,8 @@ authors = ["Alex Crichton", "Steve Klabnik", "Carol Nichols", "with contribution
 [output.html]
 additional-css = ["theme/cargo.css"]
 smart-punctuation = true # Enable smart-punctuation feature for more than quotes.
-git-repository-url = "https://github.com/rust-lang/cargo/tree/master/src/doc/src"
-edit-url-template = "https://github.com/rust-lang/cargo/edit/master/src/doc/{path}"
+git-repository-url = "https://github.com/rust-lang/cargo/tree/master/doc/book/src"
+edit-url-template = "https://github.com/rust-lang/cargo/edit/master/doc/book/{path}"
 
 [output.html.search]
 use-boolean-and = true

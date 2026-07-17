@@ -159,7 +159,7 @@ fn lint_docs_path() -> PathBuf {
     let pkg_root = env!("CARGO_MANIFEST_DIR");
     let ws_root = PathBuf::from(format!("{pkg_root}/../.."));
     let path = {
-        let path = ws_root.join("src/doc/src/reference/lints.md");
+        let path = ws_root.join("doc/book/src/reference/lints.md");
         path.canonicalize().unwrap_or(path)
     };
     path

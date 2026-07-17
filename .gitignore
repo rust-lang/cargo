@@ -3,7 +3,7 @@
 /config.stamp
 /Makefile
 /config.mk
-/src/doc/build
+/doc/build
 /etc/*.pyc
 /src/registry/target
 rustc

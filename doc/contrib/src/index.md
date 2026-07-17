@@ -23,7 +23,7 @@ Please also read the [Rust Code of Conduct].
 [filing issues]: issues.md
 [rustup]: https://rust-lang.github.io/rustup/
 [git]: https://git-scm.com/
-[the documentation]: https://github.com/rust-lang/cargo/tree/master/src/doc
+[the documentation]: https://github.com/rust-lang/cargo/tree/master/doc/book
 [fixing bugs]: process/index.md#working-on-issues
 [small]: process/index.md#working-on-small-features
 [large features]: process/index.md#working-on-large-features

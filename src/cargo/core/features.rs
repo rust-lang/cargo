@@ -36,7 +36,7 @@
 //! section for testing unstable features. Be sure to test the feature gate itself.
 //!
 //! After you have added your feature, be sure to update the unstable
-//! documentation at `src/doc/src/reference/unstable.md` to include a short
+//! documentation at `doc/book/src/reference/unstable.md` to include a short
 //! description of how to use your new feature.
 //!
 //! And hopefully that's it!
