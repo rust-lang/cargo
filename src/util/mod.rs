@@ -29,12 +29,12 @@ pub use self::workspace::{
     add_path_args, path_args, print_available_benches, print_available_binaries,
     print_available_examples, print_available_packages, print_available_tests,
 };
+pub use crate::context;
 
 pub mod auth;
 pub mod cache_lock;
 mod canonical_url;
 pub mod command_prelude;
-pub mod context;
 mod counter;
 pub mod cpu;
 pub mod credential;

@@ -111,7 +111,7 @@ trigger_files = ["crates/mdman/", "etc/man/"]
 trigger_files = ["etc/_cargo", "etc/cargo.bashcomp.sh"]
 
 [autolabel."A-configuration"]
-trigger_files = ["src/util/context/mod.rs"]
+trigger_files = ["src/context/mod.rs"]
 
 [autolabel."A-console-output"]
 trigger_files = [
@@ -147,7 +147,7 @@ trigger_files = ["doc/"]
 [autolabel."A-environment-variables"]
 trigger_files = [
   "crates/home/",
-  "src/util/context/environment.rs",
+  "src/context/environment.rs",
 ]
 
 [autolabel."A-features2"]
