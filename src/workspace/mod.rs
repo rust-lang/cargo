@@ -15,6 +15,7 @@ pub use self::workspace::{
 pub use cargo_util_schemas::core::{GitReference, PackageIdSpec, SourceKind};
 
 pub mod dependency;
+pub mod editor;
 pub mod features;
 pub mod gc;
 pub mod global_cache_tracker;

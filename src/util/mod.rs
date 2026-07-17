@@ -29,6 +29,7 @@ pub use self::workspace::{
     print_available_examples, print_available_packages, print_available_tests,
 };
 pub use crate::context::{ConfigValue, GlobalContext, homedir};
+pub use crate::workspace::editor as toml_mut;
 
 pub mod auth;
 pub mod cache_lock;
@@ -70,7 +71,6 @@ mod semver_eval_ext;
 mod semver_ext;
 pub mod sqlite;
 pub mod time_span;
-pub mod toml_mut;
 mod unhashed;
 mod vcs;
 mod workspace;

@@ -207,7 +207,7 @@ trigger_files = [
     "crates/cargo-util-schemas/src/manifest/",
     "src/workspace/manifest.rs",
     "src/workspace/parser/mod.rs",
-    "src/util/toml_mut/",
+    "src/workspace/editor/",
 ]
 
 [autolabel."A-networking"]
