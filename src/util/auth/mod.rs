@@ -29,7 +29,7 @@ use super::{
 
 /// `[registries.NAME]` tables.
 ///
-/// The values here should be kept in sync with `RegistryConfigExtended`
+/// The values here should be kept in sync with `GlobalRegistryConfig`
 #[derive(Deserialize, Clone, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct RegistryConfig {
@@ -50,7 +50,7 @@ pub struct RegistryConfig {
 /// but fails with "invalid type: sequence, expected a value" when attempting to deserialize.
 #[derive(Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub struct RegistryConfigExtended {
+pub struct GlobalRegistryConfig {
     pub index: Option<String>,
     pub token: OptValue<Secret<String>>,
     pub credential_provider: Option<PathAndArgs>,
@@ -66,7 +66,7 @@ pub struct RegistryConfigExtended {
     _global_credential_providers: Option<Vec<String>>,
 }
 
-impl RegistryConfigExtended {
+impl GlobalRegistryConfig {
     pub fn to_registry_config(self) -> RegistryConfig {
         RegistryConfig {
             index: self.index,
@@ -268,7 +268,7 @@ fn registry_credential_config_raw_uncached(
     if sid.is_crates_io() {
         gctx.check_registry_index_not_set()?;
         return Ok(gctx
-            .get::<Option<RegistryConfigExtended>>("registry")?
+            .get::<Option<GlobalRegistryConfig>>("registry")?
             .map(|c| c.to_registry_config()));
     }
 

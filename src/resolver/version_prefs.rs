@@ -13,8 +13,8 @@ use crate::core::SourceId;
 use crate::core::Summary;
 use crate::util::CargoResult;
 use crate::util::GlobalContext;
+use crate::util::auth::GlobalRegistryConfig;
 use crate::util::auth::RegistryConfig;
-use crate::util::auth::RegistryConfigExtended;
 use crate::util::context::CargoResolverConfig;
 use crate::util::context::IncompatiblePublishAge;
 use crate::util::interning::InternedString;
@@ -207,7 +207,7 @@ impl PublishAgePolicy {
             Ok(MinPublishAge::Age(duration, config))
         };
 
-        let registry = gctx.get::<Option<RegistryConfigExtended>>("registry")?;
+        let registry = gctx.get::<Option<GlobalRegistryConfig>>("registry")?;
         let global = parse(
             "registry.global-min-publish-age",
             registry
