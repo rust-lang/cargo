@@ -35,6 +35,7 @@ pub fn builtin() -> Vec<Command> {
         search::cli(),
         test::cli(),
         tree::cli(),
+        trustpub::cli(),
         uninstall::cli(),
         update::cli(),
         vendor::cli(),
@@ -81,6 +82,7 @@ pub fn builtin_exec(cmd: &str) -> Option<Exec> {
         "search" => search::exec,
         "test" => test::exec,
         "tree" => tree::exec,
+        "trustpub" => trustpub::exec,
         "uninstall" => uninstall::exec,
         "update" => update::exec,
         "vendor" => vendor::exec,
@@ -125,6 +127,7 @@ pub mod rustdoc;
 pub mod search;
 pub mod test;
 pub mod tree;
+pub mod trustpub;
 pub mod uninstall;
 pub mod update;
 pub mod vendor;
