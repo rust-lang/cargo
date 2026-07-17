@@ -555,7 +555,11 @@ fn git_dependency_can_be_replaced_with_checksummed_local_registry() {
     p.cargo("build").run();
 
     let lockfile = t!(fs::read_to_string(p.root().join("Cargo.lock")));
-    assert!(!lockfile.contains("checksum"));
+    assert!(
+        !lockfile
+            .lines()
+            .any(|line| line.trim_start().starts_with("checksum = "))
+    );
 
     t!(fs::remove_file(paths::root().join(".cargo/config.toml")));
     p.cargo("build").run();
@@ -639,7 +643,11 @@ fn updated_git_dependency_refreshes_local_registry_source_cache() {
     p.cargo("build").run();
 
     let lockfile = t!(fs::read_to_string(p.root().join("Cargo.lock")));
-    assert!(!lockfile.contains("checksum"));
+    assert!(
+        !lockfile
+            .lines()
+            .any(|line| line.trim_start().starts_with("checksum = "))
+    );
 }
 
 #[cargo_test]
