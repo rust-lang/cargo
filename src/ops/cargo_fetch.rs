@@ -1,14 +1,15 @@
-use crate::core::compiler::BuildConfig;
-use crate::core::compiler::RustcTargetData;
-use crate::core::compiler::UserIntent;
-use crate::core::compiler::standard_lib;
-use crate::core::{PackageSet, Resolve, Workspace};
+use crate::compiler::BuildConfig;
+use crate::compiler::RustcTargetData;
+use crate::compiler::UserIntent;
+use crate::compiler::standard_lib;
+use crate::context::JobsConfig;
+use crate::context::WarningHandling;
 use crate::ops;
+use crate::resolver::Resolve;
 use crate::util::CargoResult;
 use crate::util::GlobalContext;
-use crate::util::context::JobsConfig;
-use crate::util::context::WarningHandling;
 use crate::util::data_structures::HashSet;
+use crate::workspace::{PackageSet, Workspace};
 
 pub struct FetchOptions<'a> {
     pub gctx: &'a GlobalContext,
@@ -82,7 +83,7 @@ pub fn fetch<'a>(
     }
 
     packages.get_many(to_download)?;
-    crate::core::gc::auto_gc(gctx);
+    crate::workspace::gc::auto_gc(gctx);
 
     if ws.gctx().warning_handling()? == WarningHandling::Deny
         && parse_pass_output.lint_warning_count > 0

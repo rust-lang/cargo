@@ -1,6 +1,6 @@
 //! Implementation of `cargo config` subcommand.
 
-use crate::util::context::{ConfigKey, ConfigValue as CV, Definition, GlobalContext};
+use crate::context::{ConfigKey, ConfigValue as CV, Definition, GlobalContext};
 use crate::util::errors::CargoResult;
 use crate::{drop_eprintln, drop_println};
 use anyhow::{Error, bail, format_err};

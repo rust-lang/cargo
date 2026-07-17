@@ -1,8 +1,9 @@
 //! Registry authentication support.
 
 use crate::{
-    core::features::cargo_docs_link,
-    util::{CanonicalUrl, CargoResult, GlobalContext, IntoUrl, context::ConfigKey},
+    context::ConfigKey,
+    util::{CanonicalUrl, CargoResult, GlobalContext, IntoUrl},
+    workspace::features::cargo_docs_link,
 };
 use anyhow::{Context as _, bail};
 use cargo_credential::{
@@ -11,74 +12,17 @@ use cargo_credential::{
 };
 
 use core::fmt;
-use serde::Deserialize;
 use std::error::Error;
 use time::{Duration, OffsetDateTime};
 use url::Url;
 
-use crate::core::SourceId;
-use crate::util::context::Value;
+use crate::context::Value;
 use crate::util::credential::adaptor::BasicProcessCredential;
 use crate::util::credential::paseto::PasetoCredential;
+use crate::workspace::SourceId;
 
-use super::{
-    context::{CredentialCacheValue, OptValue, PathAndArgs},
-    credential::process::CredentialProcessCredential,
-    credential::token::TokenCredential,
-};
-
-/// `[registries.NAME]` tables.
-///
-/// The values here should be kept in sync with `RegistryConfigExtended`
-#[derive(Deserialize, Clone, Debug)]
-#[serde(rename_all = "kebab-case")]
-pub struct RegistryConfig {
-    pub index: Option<String>,
-    pub token: OptValue<Secret<String>>,
-    pub credential_provider: Option<PathAndArgs>,
-    pub secret_key: OptValue<Secret<String>>,
-    pub secret_key_subject: Option<String>,
-    /// Minimum publish age threshold for RFC 3923
-    pub min_publish_age: Option<String>,
-    #[serde(rename = "protocol")]
-    _protocol: Option<String>,
-}
-
-/// The `[registry]` table, which has more keys than the `[registries.NAME]` tables.
-///
-/// Note: nesting `RegistryConfig` inside this struct and using `serde(flatten)` *should* work
-/// but fails with "invalid type: sequence, expected a value" when attempting to deserialize.
-#[derive(Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub struct RegistryConfigExtended {
-    pub index: Option<String>,
-    pub token: OptValue<Secret<String>>,
-    pub credential_provider: Option<PathAndArgs>,
-    pub secret_key: OptValue<Secret<String>>,
-    pub secret_key_subject: Option<String>,
-    /// Minimum publish age threshold for RFC 3923
-    pub min_publish_age: Option<String>,
-    /// Global default Minimum publish age threshold for RFC 3923
-    pub global_min_publish_age: Option<String>,
-    #[serde(rename = "default")]
-    _default: Option<String>,
-    #[serde(rename = "global-credential-providers")]
-    _global_credential_providers: Option<Vec<String>>,
-}
-
-impl RegistryConfigExtended {
-    pub fn to_registry_config(self) -> RegistryConfig {
-        RegistryConfig {
-            index: self.index,
-            token: self.token,
-            credential_provider: self.credential_provider,
-            secret_key: self.secret_key,
-            secret_key_subject: self.secret_key_subject,
-            min_publish_age: self.min_publish_age,
-            _protocol: None,
-        }
-    }
-}
+use super::{credential::process::CredentialProcessCredential, credential::token::TokenCredential};
+use crate::context::{CredentialCacheValue, GlobalRegistryConfig, PathAndArgs, RegistryConfig};
 
 /// Get the list of credential providers for a registry source.
 fn credential_provider(
@@ -268,7 +212,7 @@ fn registry_credential_config_raw_uncached(
     if sid.is_crates_io() {
         gctx.check_registry_index_not_set()?;
         return Ok(gctx
-            .get::<Option<RegistryConfigExtended>>("registry")?
+            .get::<Option<GlobalRegistryConfig>>("registry")?
             .map(|c| c.to_registry_config()));
     }
 

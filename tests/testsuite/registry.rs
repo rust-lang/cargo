@@ -8,7 +8,7 @@ use std::sync::Mutex;
 
 use crate::prelude::*;
 use crate::utils::cargo_process;
-use cargo::core::SourceId;
+use cargo::workspace::SourceId;
 use cargo_test_support::assert_deterministic_mtime;
 use cargo_test_support::paths;
 use cargo_test_support::registry::{
@@ -3572,7 +3572,7 @@ fn sparse_blocking_count() {
 
     // Ensure we have the expected number of resolver restarts and network requests.
     p.cargo("check")
-        .env("CARGO_LOG", "cargo::core::resolver::restarting=debug,network::fetch=debug")
+        .env("CARGO_LOG", "cargo::resolver::restarting=debug,network::fetch=debug")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
    [..] DEBUG network::fetch: url="[..]/index/config.json"
@@ -3581,11 +3581,11 @@ fn sparse_blocking_count() {
 body:
 internal server error
    [..] DEBUG network::fetch: url="[..]/index/3/b/bar"
-   [..] DEBUG cargo::core::resolver::restarting: pending=[..]
+   [..] DEBUG cargo::resolver::restarting: pending=[..]
    [..] DEBUG network::fetch: url="[..]/index/[..]"
    [..] DEBUG network::fetch: url="[..]/index/[..]"
-   [..] DEBUG cargo::core::resolver::restarting: pending=[..]
-   [..] DEBUG cargo::core::resolver::restarting: pending=0
+   [..] DEBUG cargo::resolver::restarting: pending=[..]
+   [..] DEBUG cargo::resolver::restarting: pending=0
 [LOCKING] 3 packages to latest compatible versions
 ...
 [DOWNLOADING] crates ...

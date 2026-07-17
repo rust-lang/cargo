@@ -17,15 +17,15 @@ use std::fmt::Write;
 use std::fs;
 
 use cargo::CargoResult;
-use cargo::core::Package;
-use cargo::core::Registry;
-use cargo::core::SourceId;
-use cargo::core::Workspace;
-use cargo::core::dependency::Dependency;
 use cargo::sources::IndexSummary;
 use cargo::sources::source::QueryKind;
 use cargo::util::cache_lock::CacheLockMode;
 use cargo::util::command_prelude::*;
+use cargo::workspace::Package;
+use cargo::workspace::Registry;
+use cargo::workspace::SourceId;
+use cargo::workspace::Workspace;
+use cargo::workspace::dependency::Dependency;
 use cargo_util::ProcessBuilder;
 
 const UPSTREAM_BRANCH: &str = "master";

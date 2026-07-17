@@ -23,7 +23,7 @@
 //! and revoked markers. See "FIXME" comments littered in this file.
 
 use crate::CargoResult;
-use crate::util::context::{Definition, GlobalContext, Value};
+use crate::context::{Definition, GlobalContext, Value};
 use crate::util::data_structures::HashSet;
 use crate::util::restricted_names::is_glob_pattern;
 use base64::Engine as _;

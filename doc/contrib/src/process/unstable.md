@@ -128,7 +128,7 @@ stabilization should prepare a PR to stabilize the feature. This PR should:
 * Tag the PR with [relnotes] label if it seems important enough to highlight
   in the [Rust release notes].
 
-[`features` module]: https://github.com/rust-lang/cargo/blob/master/src/core/features.rs
+[`features` module]: https://github.com/rust-lang/cargo/blob/master/src/workspace/features.rs
 [RFC process]: https://github.com/rust-lang/rfcs/
 [rfcbot]: https://github.com/rust-lang/rfcbot-rs
 [Rust release notes]: https://github.com/rust-lang/rust/blob/master/RELEASES.md

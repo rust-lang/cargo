@@ -1,7 +1,7 @@
 //! Tests for --offline flag.
 
 use crate::prelude::*;
-use cargo::core::SourceId;
+use cargo::workspace::SourceId;
 use cargo_test_support::{
     Execs, basic_manifest, git, main_file, paths, project,
     registry::{self, Package, RegistryBuilder},

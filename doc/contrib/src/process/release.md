@@ -185,6 +185,6 @@ The process here is similar to the beta-backporting process. The
 [rust-lang/cargo]: https://github.com/rust-lang/cargo/
 [CHANGELOG]: https://github.com/rust-lang/cargo/blob/master/doc/book/src/CHANGELOG.md
 [release process]: https://forge.rust-lang.org/release/process.html
-[`TargetInfo`]: https://github.com/rust-lang/cargo/blob/master/src/core/compiler/build_context/target_info.rs
+[`TargetInfo`]: https://github.com/rust-lang/cargo/blob/master/src/compiler/build_context/target_info.rs
 [crates.io]: https://crates.io/
 [release team]: https://www.rust-lang.org/governance/teams/operations#release

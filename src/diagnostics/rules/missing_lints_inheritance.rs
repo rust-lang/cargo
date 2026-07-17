@@ -10,12 +10,12 @@ use tracing::instrument;
 use super::SUSPICIOUS;
 use crate::CargoResult;
 use crate::GlobalContext;
-use crate::core::Package;
-use crate::core::Workspace;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevelProduct;
 use crate::diagnostics::ScopedDiagnosticStats;
 use crate::diagnostics::workspace_rel_path;
+use crate::workspace::Package;
+use crate::workspace::Workspace;
 
 pub static LINT: &Lint = &Lint {
     name: "missing_lints_inheritance",

@@ -8,6 +8,9 @@ pub use self::cargo_compile::{
 };
 pub use self::cargo_doc::{DocOptions, OutputFormat, doc};
 pub use self::cargo_fetch::{FetchOptions, fetch};
+pub use self::cargo_fix::{
+    EditionFixMode, FixOptions, fix, fix_edition, fix_exec_rustc, fix_get_proxy_lock_addr,
+};
 pub use self::cargo_install::{install, install_list};
 pub use self::cargo_new::{NewOptions, NewProjectKind, VersionControl, init, new};
 pub use self::cargo_output_metadata::{ExportInfo, OutputMetadataOptions, output_metadata};
@@ -32,10 +35,8 @@ pub use self::cargo_update::print_lockfile_changes;
 pub use self::cargo_update::update_lockfile;
 pub use self::cargo_update::upgrade_manifests;
 pub use self::cargo_update::write_manifest_upgrades;
+pub use self::cargo_vendor::{VendorOptions, vendor};
 pub use self::common_for_install_and_uninstall::{InstallTracker, resolve_root};
-pub use self::fix::{
-    EditionFixMode, FixOptions, fix, fix_edition, fix_exec_rustc, fix_get_proxy_lock_addr,
-};
 pub use self::lockfile::{load_pkg_lockfile, resolve_to_string, write_pkg_lockfile};
 pub use self::registry::OwnersOptions;
 pub use self::registry::PublishOpts;
@@ -52,7 +53,6 @@ pub use self::resolve::{
     WorkspaceResolve, add_overrides, get_resolved_packages, resolve_with_previous, resolve_ws,
     resolve_ws_with_opts,
 };
-pub use self::vendor::{VendorOptions, vendor};
 
 pub mod cargo_add;
 mod cargo_clean;
@@ -60,6 +60,7 @@ pub(crate) mod cargo_compile;
 pub mod cargo_config;
 mod cargo_doc;
 mod cargo_fetch;
+mod cargo_fix;
 mod cargo_install;
 mod cargo_new;
 mod cargo_output_metadata;
@@ -70,20 +71,22 @@ pub mod cargo_remove;
 pub(crate) mod cargo_report;
 mod cargo_run;
 mod cargo_test;
+pub mod cargo_tree;
 mod cargo_uninstall;
 mod cargo_update;
+mod cargo_vendor;
 mod common_for_install_and_uninstall;
-mod fix;
 pub(crate) mod lockfile;
 pub(crate) mod registry;
 pub(crate) mod resolve;
-pub mod tree;
-mod vendor;
 
 /// Returns true if the dependency is either git or path, false otherwise
 /// Error if a git/path dep is transitive, but has no version (registry source).
 /// This check is performed on dependencies before publishing or packaging
-fn check_dep_has_version(dep: &crate::core::Dependency, publish: bool) -> crate::CargoResult<bool> {
+fn check_dep_has_version(
+    dep: &crate::workspace::Dependency,
+    publish: bool,
+) -> crate::CargoResult<bool> {
     let which = if dep.source_id().is_path() {
         "path"
     } else if dep.source_id().is_git() {

@@ -9,14 +9,14 @@ use cargo_credential::Operation;
 use cargo_util::Sha256;
 use cargo_util::registry::crate_url;
 
-use crate::core::PackageId;
-use crate::core::global_cache_tracker;
 use crate::sources::registry::MaybeLock;
 use crate::sources::registry::RegistryConfig;
 use crate::util::auth;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
 use crate::util::{Filesystem, GlobalContext};
+use crate::workspace::PackageId;
+use crate::workspace::global_cache_tracker;
 use std::fs::{self, File, OpenOptions};
 use std::io::SeekFrom;
 use std::io::prelude::*;

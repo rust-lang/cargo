@@ -1,9 +1,9 @@
 //! Access to a registry on the local filesystem. See [`LocalRegistry`] for more.
 
-use crate::core::PackageId;
 use crate::sources::registry::{LoadResponse, MaybeLock, RegistryConfig, RegistryData};
 use crate::util::errors::CargoResult;
 use crate::util::{Filesystem, GlobalContext};
+use crate::workspace::PackageId;
 use cargo_util::{Sha256, paths};
 use std::cell::Cell;
 use std::fs::File;

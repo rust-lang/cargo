@@ -60,7 +60,7 @@
 //! details like invalidating caches and whatnot which are handled below, but
 //! hopefully those are more obvious inline in the code itself.
 //!
-//! [`Dependency`]: crate::core::Dependency
+//! [`Dependency`]: crate::workspace::Dependency
 //! [`IndexPackage`]: super::IndexPackage
 //! [`IndexSummary::parse`]: super::IndexSummary::parse
 //! [`RemoteRegistry`]: crate::sources::registry::remote::RemoteRegistry

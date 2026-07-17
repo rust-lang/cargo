@@ -4,9 +4,9 @@ use cargo_util_terminal::report::Level;
 
 use crate::CargoResult;
 use crate::GlobalContext;
-use crate::core::Workspace;
 use crate::ops::cargo_report::util::list_log_files;
 use crate::util::BuildLogger;
+use crate::workspace::Workspace;
 
 pub struct ReportSessionsOptions {
     pub limit: usize,

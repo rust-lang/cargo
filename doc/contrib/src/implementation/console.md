@@ -20,10 +20,10 @@ the [`JobQueue`] as it processes each message.
 Cargo is already fairly noisy,
 so try to keep the output as brief and clean as possible.
 
-[`Shell`]: https://github.com/rust-lang/cargo/blob/master/src/core/shell.rs
-[`GlobalContext`]: https://github.com/rust-lang/cargo/blob/master/src/util/context/mod.rs
-[`drop_print`]: https://github.com/rust-lang/cargo/blob/e4b65bdc80f2a293447f2f6a808fa7c84bf9a357/src/util/config/mod.rs#L1820-L1848
-[`JobQueue`]: https://github.com/rust-lang/cargo/blob/master/src/core/compiler/job_queue/mod.rs
+[`Shell`]: https://github.com/rust-lang/cargo/blob/master/src/workspace/shell.rs
+[`GlobalContext`]: https://github.com/rust-lang/cargo/blob/master/src/context/mod.rs
+[`drop_print`]: https://github.com/rust-lang/cargo/blob/e4b65bdc80f2a293447f2f6a808fa7c84bf9a357/src/context/mod.rs#L1820-L1848
+[`JobQueue`]: https://github.com/rust-lang/cargo/blob/master/src/compiler/job_queue/mod.rs
 
 ## Diagnostics
 

@@ -29,36 +29,36 @@
 //! which corresponds to artifact that will be built in a package. Not to be
 //! confused with target-triple or target architecture.
 //!
-//! [`unit_dependencies`]: crate::core::compiler::unit_dependencies
-//! [`Layout`]: crate::core::compiler::Layout
-//! [`JobQueue`]: crate::core::compiler::job_queue
-//! [`drain_the_queue`]: crate::core::compiler::job_queue
+//! [`unit_dependencies`]: crate::compiler::unit_dependencies
+//! [`Layout`]: crate::compiler::Layout
+//! [`JobQueue`]: crate::compiler::job_queue
+//! [`drain_the_queue`]: crate::compiler::job_queue
 //! ["Cargo Target"]: https://doc.rust-lang.org/nightly/cargo/reference/cargo-targets.html
 
 use crate::util::data_structures::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use crate::core::compiler::UserIntent;
-use crate::core::compiler::unit_dependencies::build_unit_dependencies;
-use crate::core::compiler::unit_graph::{self, UnitDep, UnitGraph};
-use crate::core::compiler::{BuildConfig, BuildContext, BuildRunner, Compilation};
-use crate::core::compiler::{CompileKind, CompileTarget, RustcTargetData, Unit};
-use crate::core::compiler::{CrateType, TargetInfo, apply_env_config, standard_lib};
-use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
-use crate::core::compiler::{DepKindSet, UnitIndex};
-use crate::core::profiles::Profiles;
-use crate::core::resolver::features::{self, CliFeatures, FeaturesFor};
-use crate::core::resolver::{ForceAllTargets, HasDevUnits, Resolve};
-use crate::core::{PackageId, PackageSet, SourceId, TargetKind, Workspace};
+use crate::compiler::UserIntent;
+use crate::compiler::unit_dependencies::build_unit_dependencies;
+use crate::compiler::unit_graph::{self, UnitDep, UnitGraph};
+use crate::compiler::{BuildConfig, BuildContext, BuildRunner, Compilation};
+use crate::compiler::{CompileKind, CompileTarget, RustcTargetData, Unit};
+use crate::compiler::{CrateType, TargetInfo, apply_env_config, standard_lib};
+use crate::compiler::{DefaultExecutor, Executor, UnitInterner};
+use crate::compiler::{DepKindSet, UnitIndex};
+use crate::context::{GlobalContext, WarningHandling};
 use crate::drop_println;
 use crate::ops;
 use crate::ops::resolve::{SpecsAndResolvedFeatures, WorkspaceResolve};
+use crate::resolver::features::{self, CliFeatures, FeaturesFor};
+use crate::resolver::{ForceAllTargets, HasDevUnits, Resolve};
 use crate::util::BuildLogger;
-use crate::util::context::{GlobalContext, WarningHandling};
 use crate::util::interning::InternedString;
 use crate::util::log_message::LogMessage;
 use crate::util::{CargoResult, StableHasher};
+use crate::workspace::profiles::Profiles;
+use crate::workspace::{PackageId, PackageSet, SourceId, TargetKind, Workspace};
 
 mod compile_filter;
 use cargo_util_terminal::report::{Group, Level, Origin};
@@ -193,7 +193,7 @@ fn compile_ws<'a>(
         unit_graph::emit_serialized_unit_graph(&bcx.roots, &bcx.unit_graph, ws.gctx())?;
         return Compilation::new(&bcx);
     }
-    crate::core::gc::auto_gc(bcx.gctx);
+    crate::workspace::gc::auto_gc(bcx.gctx);
     let build_runner = BuildRunner::new(&bcx)?;
     if options.build_config.dry_run {
         build_runner.dry_run()

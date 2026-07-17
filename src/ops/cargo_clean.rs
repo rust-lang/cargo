@@ -1,6 +1,4 @@
-use crate::core::compiler::{CompileKind, CompileMode, Layout, RustcTargetData};
-use crate::core::profiles::Profiles;
-use crate::core::{PackageIdSpec, PackageIdSpecQuery, TargetKind, Workspace};
+use crate::compiler::{CompileKind, CompileMode, Layout, RustcTargetData};
 use crate::ops;
 use crate::util::HumanBytes;
 use crate::util::data_structures::{IndexMap, IndexSet};
@@ -8,6 +6,8 @@ use crate::util::edit_distance;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::{GlobalContext, Progress, ProgressStyle};
+use crate::workspace::profiles::Profiles;
+use crate::workspace::{PackageIdSpec, PackageIdSpecQuery, TargetKind, Workspace};
 use anyhow::bail;
 use cargo_util::paths;
 use cargo_util_terminal::report::Level;

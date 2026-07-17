@@ -2,10 +2,10 @@
 
 use std::collections::BTreeSet;
 
-use crate::core::{Package, PackageIdSpecQuery};
-use crate::core::{PackageIdSpec, Workspace};
 use crate::util::CargoResult;
 use crate::util::restricted_names::is_glob_pattern;
+use crate::workspace::{Package, PackageIdSpecQuery};
+use crate::workspace::{PackageIdSpec, Workspace};
 
 use anyhow::{Context as _, bail};
 

@@ -58,9 +58,9 @@ use cargo_util_schemas::manifest::RustVersion;
 use cargo_util_schemas::manifest::TomlToolLints;
 
 use crate::CargoResult;
-use crate::core::Workspace;
-use crate::core::{Edition, Features, MaybePackage, Package};
 use crate::util::GlobalContext;
+use crate::workspace::Workspace;
+use crate::workspace::{Edition, Features, MaybePackage, Package};
 
 mod lint;
 mod report;

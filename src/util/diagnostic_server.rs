@@ -17,10 +17,10 @@ use cargo_util_terminal::report::Origin;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
-use crate::core::Edition;
 use crate::util::GlobalContext;
 use crate::util::errors::CargoResult;
 use crate::util::network::LOCALHOST;
+use crate::workspace::Edition;
 
 const DIAGNOSTICS_SERVER_VAR: &str = "__CARGO_FIX_DIAGNOSTICS_SERVER";
 

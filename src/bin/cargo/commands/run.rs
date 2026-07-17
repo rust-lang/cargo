@@ -4,9 +4,9 @@ use std::path::Path;
 
 use crate::command_prelude::*;
 use crate::util::restricted_names::is_glob_pattern;
-use cargo::core::Workspace;
 use cargo::ops::{self, CompileFilter, Packages};
 use cargo::util::closest;
+use cargo::workspace::Workspace;
 use cargo_util::ProcessError;
 use cargo_util_terminal::Verbosity;
 use itertools::Itertools as _;
@@ -190,7 +190,7 @@ pub fn exec_manifest_command(gctx: &mut GlobalContext, cmd: &str, args: &[OsStri
     }
 
     let mut compile_opts =
-        cargo::ops::CompileOptions::new(gctx, cargo::core::compiler::UserIntent::Build)?;
+        cargo::ops::CompileOptions::new(gctx, cargo::compiler::UserIntent::Build)?;
     compile_opts.spec = cargo::ops::Packages::Default;
 
     cargo::ops::run(&ws, &compile_opts, args).map_err(|err| to_run_error(gctx, err))

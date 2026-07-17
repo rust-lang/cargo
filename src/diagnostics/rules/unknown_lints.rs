@@ -14,14 +14,14 @@ use super::SUSPICIOUS;
 use super::find_lint_or_group;
 use crate::CargoResult;
 use crate::GlobalContext;
-use crate::core::MaybePackage;
-use crate::core::Workspace;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevelProduct;
 use crate::diagnostics::ManifestFor;
 use crate::diagnostics::ScopedDiagnosticStats;
 use crate::diagnostics::get_key_value_span;
 use crate::diagnostics::workspace_rel_path;
+use crate::workspace::MaybePackage;
+use crate::workspace::Workspace;
 
 pub static LINT: &Lint = &Lint {
     name: "unknown_lints",

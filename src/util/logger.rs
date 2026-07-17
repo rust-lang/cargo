@@ -12,10 +12,10 @@ use anyhow::Context as _;
 use cargo_util::paths;
 
 use crate::CargoResult;
-use crate::core::Workspace;
-use crate::core::compiler::BuildConfig;
+use crate::compiler::BuildConfig;
 use crate::util::log_message::LogMessage;
 use crate::util::short_hash;
+use crate::workspace::Workspace;
 
 // for newer `cargo report` commands
 struct FileLogger {

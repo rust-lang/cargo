@@ -10,13 +10,11 @@ use std::path::{Path, PathBuf};
 
 use crate::prelude::*;
 use cargo::CargoResult;
-use cargo::core::PackageIdSpec;
-use cargo::core::features::{GitFeatures, GitoxideFeatures};
-use cargo::util::auth::RegistryConfig;
-use cargo::util::context::Value;
-use cargo::util::context::{
-    self, Definition, GlobalContext, JobsConfig, SslVersionConfig, StringList,
-};
+use cargo::context::RegistryConfig;
+use cargo::context::Value;
+use cargo::context::{self, Definition, GlobalContext, JobsConfig, SslVersionConfig, StringList};
+use cargo::workspace::PackageIdSpec;
+use cargo::workspace::features::{GitFeatures, GitoxideFeatures};
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::str;
 use cargo_test_support::{paths, project, project_in_home, symlink_supported, t};
@@ -508,16 +506,18 @@ lto = false
     // TODO: don't use actual `tomlprofile`.
     let p: cargo_toml::TomlProfile = gctx.get("profile.dev").unwrap();
     let mut packages = BTreeMap::new();
-    let key =
-        cargo_toml::ProfilePackageSpec::Spec(::cargo::core::PackageIdSpec::parse("bar").unwrap());
+    let key = cargo_toml::ProfilePackageSpec::Spec(
+        ::cargo::workspace::PackageIdSpec::parse("bar").unwrap(),
+    );
     let o_profile = cargo_toml::TomlProfile {
         opt_level: Some(cargo_toml::TomlOptLevel("2".to_string())),
         codegen_units: Some(9),
         ..Default::default()
     };
     packages.insert(key, o_profile);
-    let key =
-        cargo_toml::ProfilePackageSpec::Spec(::cargo::core::PackageIdSpec::parse("env").unwrap());
+    let key = cargo_toml::ProfilePackageSpec::Spec(
+        ::cargo::workspace::PackageIdSpec::parse("env").unwrap(),
+    );
     let o_profile = cargo_toml::TomlProfile {
         codegen_units: Some(13),
         ..Default::default()
@@ -1989,7 +1989,7 @@ fn git_features() {
         .env("CARGO_UNSTABLE_GIT", "shallow-index,abc")
         .build();
     assert_error(
-        gctx.get::<Option<cargo::core::CliUnstable>>("unstable")
+        gctx.get::<Option<cargo::workspace::CliUnstable>>("unstable")
             .unwrap_err(),
         str![[r#"
 error in environment variable `CARGO_UNSTABLE_GIT`: could not load config key `unstable.git`
@@ -2081,7 +2081,7 @@ git = 'shallow-index'
 
     fn do_check(gctx: GlobalContext, expect: Option<GitFeatures>) -> bool {
         let unstable_flags = gctx
-            .get::<Option<cargo::core::CliUnstable>>("unstable")
+            .get::<Option<cargo::workspace::CliUnstable>>("unstable")
             .unwrap()
             .unwrap();
         unstable_flags.git == expect
@@ -2106,7 +2106,7 @@ fn gitoxide_features() {
         .build();
 
     assert_error(
-        gctx.get::<Option<cargo::core::CliUnstable>>("unstable")
+        gctx.get::<Option<cargo::workspace::CliUnstable>>("unstable")
             .unwrap_err(),
         str![[r#"
 error in environment variable `CARGO_UNSTABLE_GITOXIDE`: could not load config key `unstable.gitoxide`
@@ -2175,7 +2175,7 @@ gitoxide = \"fetch\"
 
     fn do_check(gctx: GlobalContext, expect: Option<GitoxideFeatures>) -> bool {
         let unstable_flags = gctx
-            .get::<Option<cargo::core::CliUnstable>>("unstable")
+            .get::<Option<cargo::workspace::CliUnstable>>("unstable")
             .unwrap()
             .unwrap();
         unstable_flags.gitoxide == expect
@@ -2264,7 +2264,7 @@ fn build_std() {
         .env("CARGO_UNSTABLE_BUILD_STD", "core,std,panic_abort")
         .build();
     let value = gctx
-        .get::<Option<cargo::core::CliUnstable>>("unstable")
+        .get::<Option<cargo::workspace::CliUnstable>>("unstable")
         .unwrap()
         .unwrap()
         .build_std
@@ -2282,7 +2282,7 @@ fn build_std() {
         .config_arg("unstable.build-std=['core', 'std,panic_abort']")
         .build();
     let value = gctx
-        .get::<Option<cargo::core::CliUnstable>>("unstable")
+        .get::<Option<cargo::workspace::CliUnstable>>("unstable")
         .unwrap()
         .unwrap()
         .build_std
@@ -2303,7 +2303,7 @@ fn build_std() {
         )
         .build();
     let value = gctx
-        .get::<Option<cargo::core::CliUnstable>>("unstable")
+        .get::<Option<cargo::workspace::CliUnstable>>("unstable")
         .unwrap()
         .unwrap()
         .build_std_features
@@ -2321,7 +2321,7 @@ fn build_std() {
         .config_arg("unstable.build-std-features=['backtrace', 'panic-unwind,windows_raw_dylib']")
         .build();
     let value = gctx
-        .get::<Option<cargo::core::CliUnstable>>("unstable")
+        .get::<Option<cargo::workspace::CliUnstable>>("unstable")
         .unwrap()
         .unwrap()
         .build_std_features

@@ -1,8 +1,8 @@
-use crate::core::{Edition, Workspace};
 use crate::util::errors::CargoResult;
 use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::{FossilRepo, GitRepo, HgRepo, PijulRepo, existing_vcs_repo};
 use crate::util::{GlobalContext, restricted_names};
+use crate::workspace::{Edition, Workspace};
 use anyhow::{Context as _, anyhow};
 use cargo_util::paths::{self, write_atomic};
 use cargo_util_schemas::manifest::PackageName;
@@ -166,7 +166,7 @@ fn get_name<'a>(path: &'a Path, opts: &'a NewOptions) -> CargoResult<&'a str> {
     })
 }
 
-/// See also `util::toml::embedded::sanitize_name`
+/// See also `workspace::parser::embedded::sanitize_name`
 fn check_name(
     name: &str,
     show_name_help: bool,

@@ -2,20 +2,20 @@ use crate::util::data_structures::{HashMap, HashSet};
 use std::cell::RefCell;
 use std::fmt::Write;
 
-use crate::core::Workspace;
-use crate::core::compiler::DepKindSet;
-use crate::core::compiler::UserIntent;
-use crate::core::compiler::rustdoc::RustdocScrapeExamples;
-use crate::core::compiler::unit_dependencies::IsArtifact;
-use crate::core::compiler::{CompileKind, CompileMode, Unit};
-use crate::core::compiler::{RustcTargetData, UnitInterner};
-use crate::core::dependency::DepKind;
-use crate::core::profiles::{Profiles, UnitFor};
-use crate::core::resolver::features::{self, FeaturesFor};
-use crate::core::resolver::{ForceAllTargets, HasDevUnits, Resolve};
-use crate::core::{FeatureValue, Package, PackageSet, Summary, Target};
+use crate::compiler::DepKindSet;
+use crate::compiler::UserIntent;
+use crate::compiler::rustdoc::RustdocScrapeExamples;
+use crate::compiler::unit_dependencies::IsArtifact;
+use crate::compiler::{CompileKind, CompileMode, Unit};
+use crate::compiler::{RustcTargetData, UnitInterner};
+use crate::resolver::features::{self, FeaturesFor};
+use crate::resolver::{ForceAllTargets, HasDevUnits, Resolve};
 use crate::util::restricted_names::is_glob_pattern;
 use crate::util::{CargoResult, closest_msg};
+use crate::workspace::Workspace;
+use crate::workspace::dependency::DepKind;
+use crate::workspace::profiles::{Profiles, UnitFor};
+use crate::workspace::{FeatureValue, Package, PackageSet, Summary, Target};
 
 use super::Packages;
 use super::compile_filter::{CompileFilter, FilterRule, LibRule};
@@ -45,8 +45,8 @@ struct Proposal<'a> {
 /// and then provide the output to [`build_unit_dependencies`].
 ///
 /// [`generate_root_units`]: UnitGenerator::generate_root_units
-/// [`build_unit_dependencies`]: crate::core::compiler::unit_dependencies::build_unit_dependencies
-/// [`UnitGraph`]: crate::core::compiler::unit_graph::UnitGraph
+/// [`build_unit_dependencies`]: crate::compiler::unit_dependencies::build_unit_dependencies
+/// [`UnitGraph`]: crate::compiler::unit_graph::UnitGraph
 pub struct UnitGenerator<'a, 'gctx> {
     pub ws: &'a Workspace<'gctx>,
     pub packages: &'a [&'a Package],
@@ -772,7 +772,7 @@ Rustdoc did not scrape the following examples because they require dev-dependenc
     /// Generates all the base units for the packages the user has requested to
     /// compile. Dependencies for these units are computed later in [`unit_dependencies`].
     ///
-    /// [`unit_dependencies`]: crate::core::compiler::unit_dependencies
+    /// [`unit_dependencies`]: crate::compiler::unit_dependencies
     pub fn generate_root_units(&self) -> CargoResult<(Vec<Unit>, DepKindSet)> {
         let (proposals, selected_dep_kinds) = self.create_proposals()?;
         let units = self.proposals_to_units(proposals)?;

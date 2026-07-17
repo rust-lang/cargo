@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use cargo::core::compiler::Lto;
+use cargo::compiler::Lto;
 use cargo_test_support::RawOutput;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{Project, basic_manifest, project, str};

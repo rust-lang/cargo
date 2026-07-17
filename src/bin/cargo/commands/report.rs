@@ -1,8 +1,8 @@
 use crate::command_prelude::*;
 
 use cargo::CargoResult;
-use cargo::core::compiler::future_incompat::OnDiskReports;
-use cargo::core::compiler::future_incompat::REPORT_PREAMBLE;
+use cargo::compiler::future_incompat::OnDiskReports;
+use cargo::compiler::future_incompat::REPORT_PREAMBLE;
 use cargo::drop_println;
 use cargo::ops;
 

@@ -1,9 +1,9 @@
 use std::path::Path;
 
-use crate::core::{EitherManifest, Package, SourceId};
 use crate::util::GlobalContext;
 use crate::util::errors::CargoResult;
-use crate::util::toml::read_manifest;
+use crate::workspace::parser::read_manifest;
+use crate::workspace::{EitherManifest, Package, SourceId};
 use tracing::trace;
 
 pub fn read_package(

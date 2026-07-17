@@ -1,11 +1,12 @@
 //! Tests for workspace member errors.
 
 use crate::prelude::*;
-use cargo::core::Workspace;
-use cargo::core::compiler::UserIntent;
-use cargo::core::resolver::ResolveError;
+use cargo::compiler::UserIntent;
+use cargo::context::GlobalContext;
 use cargo::ops::{self, CompileOptions};
-use cargo::util::{context::GlobalContext, errors::ManifestError};
+use cargo::resolver::ResolveError;
+use cargo::util::errors::ManifestError;
+use cargo::workspace::Workspace;
 use cargo_test_support::paths;
 use cargo_test_support::project;
 use cargo_test_support::registry;

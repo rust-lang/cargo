@@ -10,14 +10,14 @@ use tracing::instrument;
 use super::TEST_DUMMY_UNSTABLE;
 use crate::CargoResult;
 use crate::GlobalContext;
-use crate::core::Feature;
-use crate::core::Package;
-use crate::core::Workspace;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevelProduct;
 use crate::diagnostics::ScopedDiagnosticStats;
 use crate::diagnostics::get_key_value_span;
 use crate::diagnostics::workspace_rel_path;
+use crate::workspace::Feature;
+use crate::workspace::Package;
+use crate::workspace::Workspace;
 
 /// This lint is only to be used for testing purposes
 pub static LINT: &Lint = &Lint {

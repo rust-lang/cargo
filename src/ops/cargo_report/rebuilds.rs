@@ -14,12 +14,11 @@ use itertools::Itertools as _;
 use crate::AlreadyPrintedError;
 use crate::CargoResult;
 use crate::GlobalContext;
-use crate::core::Workspace;
-use crate::core::compiler::CompileMode;
-use crate::core::compiler::UnitIndex;
-use crate::core::compiler::fingerprint::DirtyReason;
-use crate::core::compiler::fingerprint::FsStatus;
-use crate::core::compiler::fingerprint::StaleItem;
+use crate::compiler::CompileMode;
+use crate::compiler::UnitIndex;
+use crate::compiler::fingerprint::DirtyReason;
+use crate::compiler::fingerprint::FsStatus;
+use crate::compiler::fingerprint::StaleItem;
 use crate::ops::cargo_report::util::find_log_file;
 use crate::ops::cargo_report::util::unit_target_description;
 use crate::util::log_message::FingerprintStatus;
@@ -27,6 +26,7 @@ use crate::util::log_message::LogMessage;
 use crate::util::log_message::Target;
 use crate::util::logger::RunId;
 use crate::util::style;
+use crate::workspace::Workspace;
 
 const DEFAULT_DISPLAY_LIMIT: usize = 5;
 

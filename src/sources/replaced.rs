@@ -1,9 +1,9 @@
-use crate::core::{Dependency, Package, PackageId, SourceId};
 use crate::sources::IndexSummary;
 use crate::sources::source::MaybePackage;
 use crate::sources::source::QueryKind;
 use crate::sources::source::Source;
 use crate::util::errors::CargoResult;
+use crate::workspace::{Dependency, Package, PackageId, SourceId};
 
 /// A source that replaces one source with the other. This manages the [source
 /// replacement] feature.

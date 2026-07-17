@@ -6,7 +6,7 @@ use std::process::Command;
 
 use crate::CargoResult;
 use crate::GlobalContext;
-use crate::util::context::PathAndArgs;
+use crate::context::PathAndArgs;
 
 /// Opens a file path using the preferred application.
 ///

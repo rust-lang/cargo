@@ -1,7 +1,7 @@
 //! Utilities for network proxies.
 
-use crate::util::context::CargoHttpConfig;
-use crate::util::context::GlobalContext;
+use crate::context::CargoHttpConfig;
+use crate::context::GlobalContext;
 
 /// Proxy environment variables that are picked up by libcurl.
 const LIBCURL_HTTP_PROXY_ENVS: [&str; 4] =

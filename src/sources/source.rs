@@ -5,10 +5,10 @@ use crate::util::data_structures::HashMap;
 use std::fmt;
 use std::rc::Rc;
 
-use crate::core::SourceId;
-use crate::core::{Dependency, Package, PackageId};
 use crate::sources::IndexSummary;
 use crate::util::CargoResult;
+use crate::workspace::SourceId;
+use crate::workspace::{Dependency, Package, PackageId};
 
 /// An abstraction of different sources of Cargo packages.
 ///

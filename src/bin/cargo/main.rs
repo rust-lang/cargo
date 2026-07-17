@@ -1,5 +1,5 @@
-use cargo::core::features;
 use cargo::util::{self, CargoResult, closest_msg, command_prelude};
+use cargo::workspace::features;
 use cargo_util::{ProcessBuilder, ProcessError};
 use cargo_util_schemas::manifest::StringOrVec;
 use cargo_util_terminal::Shell;

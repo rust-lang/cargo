@@ -20,14 +20,14 @@
 //!
 //! To learn the rationale behind this multi-layer index metadata loading,
 //! see [the documentation of the on-disk index cache](cache).
-use crate::core::dependency::{Artifact, DepKind};
-use crate::core::{CliUnstable, Dependency};
-use crate::core::{PackageId, SourceId, Summary};
 use crate::sources::registry::{LoadResponse, RegistryData};
 use crate::util::IntoUrl;
 use crate::util::data_structures::HashMap;
 use crate::util::interning::InternedString;
 use crate::util::{CargoResult, Filesystem, GlobalContext, OptVersionReq, internal};
+use crate::workspace::dependency::{Artifact, DepKind};
+use crate::workspace::{CliUnstable, Dependency};
+use crate::workspace::{PackageId, SourceId, Summary};
 use cargo_util::registry::make_dep_path;
 use cargo_util_schemas::index::{IndexPackage, RegistryDependency};
 use cargo_util_schemas::manifest::RustVersion;

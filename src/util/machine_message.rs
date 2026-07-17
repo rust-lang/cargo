@@ -5,7 +5,7 @@ use serde::Serialize;
 use serde::ser;
 use serde_json::value::RawValue;
 
-use crate::core::Target;
+use crate::workspace::Target;
 
 pub trait Message: ser::Serialize {
     fn reason(&self) -> &str;

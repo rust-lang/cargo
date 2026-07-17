@@ -20,34 +20,34 @@ use toml_edit::Item as TomlItem;
 
 use crate::CargoResult;
 use crate::GlobalContext;
-use crate::core::Feature;
-use crate::core::FeatureValue;
-use crate::core::Features;
-use crate::core::Package;
-use crate::core::PackageId;
-use crate::core::Registry;
-use crate::core::Summary;
-use crate::core::Workspace;
-use crate::core::dependency::DepKind;
-use crate::core::registry::PackageRegistry;
-use crate::core::resolver::PublishAgePolicy;
 use crate::ops::resolve_ws;
+use crate::resolver::PublishAgePolicy;
 use crate::sources::IndexSummary;
 use crate::sources::source::QueryKind;
 use crate::util::OptVersionReq;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::edit_distance;
 use crate::util::style;
-use crate::util::toml::lookup_path_base;
-use crate::util::toml_mut::dependency::Dependency;
-use crate::util::toml_mut::dependency::GitSource;
-use crate::util::toml_mut::dependency::MaybeWorkspace;
-use crate::util::toml_mut::dependency::PathSource;
-use crate::util::toml_mut::dependency::RegistrySource;
-use crate::util::toml_mut::dependency::Source;
-use crate::util::toml_mut::dependency::WorkspaceSource;
-use crate::util::toml_mut::manifest::DepTable;
-use crate::util::toml_mut::manifest::LocalManifest;
+use crate::workspace::Feature;
+use crate::workspace::FeatureValue;
+use crate::workspace::Features;
+use crate::workspace::Package;
+use crate::workspace::PackageId;
+use crate::workspace::Registry;
+use crate::workspace::Summary;
+use crate::workspace::Workspace;
+use crate::workspace::dependency::DepKind;
+use crate::workspace::editor::dependency::Dependency;
+use crate::workspace::editor::dependency::GitSource;
+use crate::workspace::editor::dependency::MaybeWorkspace;
+use crate::workspace::editor::dependency::PathSource;
+use crate::workspace::editor::dependency::RegistrySource;
+use crate::workspace::editor::dependency::Source;
+use crate::workspace::editor::dependency::WorkspaceSource;
+use crate::workspace::editor::manifest::DepTable;
+use crate::workspace::editor::manifest::LocalManifest;
+use crate::workspace::parser::lookup_path_base;
+use crate::workspace::registry::PackageRegistry;
 use crate_spec::CrateSpec;
 
 const MAX_FEATURE_PRINTS: usize = 30;
@@ -635,7 +635,7 @@ fn query_dependency(
     ws: &Workspace<'_>,
     gctx: &GlobalContext,
     dependency: &mut Dependency,
-) -> CargoResult<crate::core::Dependency> {
+) -> CargoResult<crate::workspace::Dependency> {
     let query = dependency.query(gctx)?;
     let query = match query {
         MaybeWorkspace::Workspace(_workspace) => {
@@ -1215,7 +1215,7 @@ impl std::ops::Deref for DependencyUI {
 /// Lookup available features
 fn populate_available_features(
     dependency: Dependency,
-    query: &crate::core::dependency::Dependency,
+    query: &crate::workspace::dependency::Dependency,
     registry: &mut PackageRegistry<'_>,
 ) -> CargoResult<DependencyUI> {
     let mut dependency = DependencyUI::new(dependency);

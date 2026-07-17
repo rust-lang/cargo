@@ -4,9 +4,9 @@ use std::fmt::Display;
 use cargo_util_schemas::manifest;
 use cargo_util_terminal::report::Level;
 
-use crate::core::{Feature, Features};
+use crate::context::WarningHandling;
 use crate::util::GlobalContext;
-use crate::util::context::WarningHandling;
+use crate::workspace::{Feature, Features};
 
 #[derive(Clone, Debug)]
 pub struct Lint {

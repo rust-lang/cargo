@@ -12,8 +12,6 @@ use tracing::instrument;
 use super::STYLE;
 use crate::CargoResult;
 use crate::GlobalContext;
-use crate::core::Package;
-use crate::core::Workspace;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevel;
 use crate::diagnostics::LintLevelProduct;
@@ -21,7 +19,9 @@ use crate::diagnostics::LintLevelSource;
 use crate::diagnostics::ScopedDiagnosticStats;
 use crate::diagnostics::get_key_value_span;
 use crate::diagnostics::workspace_rel_path;
-use crate::util::toml::DEFAULT_README_FILES;
+use crate::workspace::Package;
+use crate::workspace::Workspace;
+use crate::workspace::parser::DEFAULT_README_FILES;
 
 pub static LINT: &Lint = &Lint {
     name: "redundant_readme",

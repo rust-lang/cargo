@@ -1,6 +1,6 @@
-use cargo::core::Dependency;
-use cargo::core::dependency::DepKind;
 use cargo::util::GlobalContext;
+use cargo::workspace::Dependency;
+use cargo::workspace::dependency::DepKind;
 use snapbox::assert_data_eq;
 use snapbox::str;
 

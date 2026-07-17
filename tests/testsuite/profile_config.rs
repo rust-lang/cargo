@@ -371,9 +371,9 @@ fn named_config_profile() {
     // foo -> middle -> bar -> dev
     // middle exists in Cargo.toml, the others in .cargo/config.toml
     use super::config::GlobalContextBuilder;
-    use cargo::core::compiler::CompileKind;
-    use cargo::core::profiles::{Profiles, UnitFor};
-    use cargo::core::{PackageId, Workspace};
+    use cargo::compiler::CompileKind;
+    use cargo::workspace::profiles::{Profiles, UnitFor};
+    use cargo::workspace::{PackageId, Workspace};
     use std::fs;
     paths::root().join(".cargo").mkdir_p();
     fs::write(
@@ -423,7 +423,7 @@ fn named_config_profile() {
     let ws = Workspace::new(&paths::root().join("Cargo.toml"), &gctx).unwrap();
     let profiles = Profiles::new(&ws, profile_name).unwrap();
 
-    let crates_io = cargo::core::SourceId::crates_io(&gctx).unwrap();
+    let crates_io = cargo::workspace::SourceId::crates_io(&gctx).unwrap();
     let a_pkg = PackageId::try_new("a", "0.1.0", crates_io).unwrap();
     let dep_pkg = PackageId::try_new("dep", "0.1.0", crates_io).unwrap();
 

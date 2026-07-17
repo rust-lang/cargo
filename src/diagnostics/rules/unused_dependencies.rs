@@ -13,15 +13,11 @@ use tracing::{debug, instrument, trace};
 use super::STYLE;
 use crate::CargoResult;
 use crate::GlobalContext;
-use crate::core::Package;
-use crate::core::PackageId;
-use crate::core::Workspace;
-use crate::core::compiler::BuildContext;
-use crate::core::compiler::BuildRunner;
-use crate::core::compiler::Unit;
-use crate::core::compiler::unused_deps::DependenciesState;
-use crate::core::compiler::unused_deps::UnusedDepState;
-use crate::core::dependency::DepKind;
+use crate::compiler::BuildContext;
+use crate::compiler::BuildRunner;
+use crate::compiler::Unit;
+use crate::compiler::unused_deps::DependenciesState;
+use crate::compiler::unused_deps::UnusedDepState;
 use crate::diagnostics::GlobalDiagnosticStats;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevel;
@@ -29,6 +25,10 @@ use crate::diagnostics::LintLevelProduct;
 use crate::diagnostics::ScopedDiagnosticStats;
 use crate::diagnostics::get_key_value_span;
 use crate::diagnostics::workspace_rel_path;
+use crate::workspace::Package;
+use crate::workspace::PackageId;
+use crate::workspace::Workspace;
+use crate::workspace::dependency::DepKind;
 
 pub static LINT: &Lint = &Lint {
     name: "unused_dependencies",

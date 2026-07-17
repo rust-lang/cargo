@@ -1,10 +1,10 @@
-use crate::core::compiler::{Compilation, Doctest, Unit, UnitHash, UnitOutput};
-use crate::core::profiles::PanicStrategy;
-use crate::core::{TargetKind, Workspace};
+use crate::compiler::{Compilation, Doctest, Unit, UnitHash, UnitOutput};
 use crate::ops;
 use crate::util::data_structures::HashMap;
 use crate::util::errors::CargoResult;
 use crate::util::{CliError, CliResult, GlobalContext, add_path_args};
+use crate::workspace::profiles::PanicStrategy;
+use crate::workspace::{TargetKind, Workspace};
 use anyhow::format_err;
 use cargo_util::{ProcessBuilder, ProcessError};
 use cargo_util_terminal::{ColorChoice, Verbosity};

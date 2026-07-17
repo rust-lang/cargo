@@ -195,7 +195,7 @@ fn string_list_array() {
         .config_arg("build.rustflags = ['--cli']")
         .build();
     assert_eq!(
-        gctx.get::<cargo::util::context::StringList>("build.rustflags")
+        gctx.get::<cargo::context::StringList>("build.rustflags")
             .unwrap()
             .as_slice(),
         ["--file", "--cli"]
@@ -207,7 +207,7 @@ fn string_list_array() {
         .config_arg("build.rustflags = ['--cli']")
         .build();
     assert_eq!(
-        gctx.get::<cargo::util::context::StringList>("build.rustflags")
+        gctx.get::<cargo::context::StringList>("build.rustflags")
             .unwrap()
             .as_slice(),
         ["--file", "--env1", "--env2", "--cli"]
@@ -220,7 +220,7 @@ fn string_list_array() {
         .config_arg("build.rustflags = ['--cli']")
         .build();
     assert_eq!(
-        gctx.get::<cargo::util::context::StringList>("build.rustflags")
+        gctx.get::<cargo::context::StringList>("build.rustflags")
             .unwrap()
             .as_slice(),
         ["--file", "--env", "--cli"]

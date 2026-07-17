@@ -1,19 +1,19 @@
 use cargo::CargoResult;
-use cargo::core::PackageIdSpec;
-use cargo::core::PackageIdSpecQuery;
-use cargo::core::Resolve;
-use cargo::core::Workspace;
-use cargo::core::dependency::DepKind;
 use cargo::ops::cargo_remove::RemoveOptions;
 use cargo::ops::cargo_remove::remove;
 use cargo::ops::resolve_ws;
+use cargo::resolver::Resolve;
 use cargo::util::command_prelude::*;
 use cargo::util::print_available_packages;
-use cargo::util::toml_mut::dependency::Dependency;
-use cargo::util::toml_mut::dependency::MaybeWorkspace;
-use cargo::util::toml_mut::dependency::Source;
-use cargo::util::toml_mut::manifest::DepTable;
-use cargo::util::toml_mut::manifest::LocalManifest;
+use cargo::workspace::PackageIdSpec;
+use cargo::workspace::PackageIdSpecQuery;
+use cargo::workspace::Workspace;
+use cargo::workspace::dependency::DepKind;
+use cargo::workspace::editor::dependency::Dependency;
+use cargo::workspace::editor::dependency::MaybeWorkspace;
+use cargo::workspace::editor::dependency::Source;
+use cargo::workspace::editor::manifest::DepTable;
+use cargo::workspace::editor::manifest::LocalManifest;
 
 pub fn cli() -> clap::Command {
     clap::Command::new("remove")

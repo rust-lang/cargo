@@ -15,10 +15,6 @@ use tracing::instrument;
 use super::PEDANTIC;
 use crate::CargoResult;
 use crate::GlobalContext;
-use crate::core::Manifest;
-use crate::core::MaybePackage;
-use crate::core::Package;
-use crate::core::Workspace;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevel;
 use crate::diagnostics::LintLevelProduct;
@@ -27,6 +23,10 @@ use crate::diagnostics::ScopedDiagnosticStats;
 use crate::diagnostics::get_key_value;
 use crate::diagnostics::workspace_rel_path;
 use crate::util::OptVersionReq;
+use crate::workspace::Manifest;
+use crate::workspace::MaybePackage;
+use crate::workspace::Package;
+use crate::workspace::Workspace;
 
 pub static LINT: &Lint = &Lint {
     name: "implicit_minimum_version_req",

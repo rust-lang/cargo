@@ -12,18 +12,18 @@ use cargo_util_terminal::report::Level;
 use ops::FilterRule;
 use serde::{Deserialize, Serialize};
 
-use crate::core::compiler::{DirtyReason, Freshness};
-use crate::core::{Dependency, FeatureValue, Package, PackageId, SourceId};
-use crate::core::{PackageSet, Target};
+use crate::compiler::{DirtyReason, Freshness};
+use crate::context::{ConfigRelativePath, Definition};
 use crate::ops::{self, CompileFilter, CompileOptions};
 use crate::sources::IndexSummary;
 use crate::sources::PathSource;
 use crate::sources::source::{QueryKind, Source, SourceMap};
 use crate::util::GlobalContext;
 use crate::util::cache_lock::CacheLockMode;
-use crate::util::context::{ConfigRelativePath, Definition};
 use crate::util::errors::CargoResult;
 use crate::util::{FileLock, Filesystem};
+use crate::workspace::{Dependency, FeatureValue, Package, PackageId, SourceId};
+use crate::workspace::{PackageSet, Target};
 
 /// On-disk tracking for which package installed which binary.
 ///

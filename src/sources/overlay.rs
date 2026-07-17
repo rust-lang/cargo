@@ -32,7 +32,7 @@ impl<'gctx> DependencyConfusionThreatOverlaySource<'gctx> {
 
 #[async_trait::async_trait(?Send)]
 impl<'gctx> Source for DependencyConfusionThreatOverlaySource<'gctx> {
-    fn source_id(&self) -> crate::core::SourceId {
+    fn source_id(&self) -> crate::workspace::SourceId {
         self.remote.source_id()
     }
 
@@ -46,7 +46,7 @@ impl<'gctx> Source for DependencyConfusionThreatOverlaySource<'gctx> {
 
     async fn query(
         &self,
-        dep: &crate::core::Dependency,
+        dep: &crate::workspace::Dependency,
         kind: super::source::QueryKind,
         f: &mut dyn FnMut(IndexSummary),
     ) -> crate::CargoResult<()> {
@@ -88,7 +88,7 @@ impl<'gctx> Source for DependencyConfusionThreatOverlaySource<'gctx> {
 
     async fn download(
         &self,
-        package: crate::core::PackageId,
+        package: crate::workspace::PackageId,
     ) -> crate::CargoResult<super::source::MaybePackage> {
         let local_source = self.local.source_id();
         let remote_source = self.remote.source_id();
@@ -111,15 +111,15 @@ impl<'gctx> Source for DependencyConfusionThreatOverlaySource<'gctx> {
 
     async fn finish_download(
         &self,
-        pkg_id: crate::core::PackageId,
+        pkg_id: crate::workspace::PackageId,
         contents: Vec<u8>,
-    ) -> crate::CargoResult<crate::core::Package> {
+    ) -> crate::CargoResult<crate::workspace::Package> {
         // The local registry should never return MaybePackage::Download from `download`, so any
         // downloads that need to be finished come from the remote registry.
         self.remote.finish_download(pkg_id, contents).await
     }
 
-    fn fingerprint(&self, pkg: &crate::core::Package) -> crate::CargoResult<String> {
+    fn fingerprint(&self, pkg: &crate::workspace::Package) -> crate::CargoResult<String> {
         Ok(pkg.package_id().version().to_string())
     }
 

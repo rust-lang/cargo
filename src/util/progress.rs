@@ -3,7 +3,7 @@
 use std::cmp;
 use std::time::{Duration, Instant};
 
-use crate::util::context::ProgressWhen;
+use crate::context::ProgressWhen;
 use crate::util::{CargoResult, GlobalContext};
 use anstyle_progress::TermProgress;
 use cargo_util::is_ci;

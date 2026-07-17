@@ -21,7 +21,7 @@ mod unused_workspace_package_fields;
 use super::LintGroup;
 use super::LintLevel;
 use super::passes::ParsePassRule;
-use crate::core::Feature;
+use crate::workspace::Feature;
 
 pub const PARSE_PASS_RULES: &[ParsePassRule<'static>] = &[
     ParsePassRule::DiagnosticManifest {
@@ -223,7 +223,7 @@ const TEST_DUMMY_UNSTABLE: LintGroup = LintGroup {
     name: "test_dummy_unstable",
     desc: "test_dummy_unstable is meant to only be used in tests",
     default_level: LintLevel::Allow,
-    feature_gate: Some(crate::core::Feature::test_dummy_unstable()),
+    feature_gate: Some(crate::workspace::Feature::test_dummy_unstable()),
     hidden: true,
 };
 

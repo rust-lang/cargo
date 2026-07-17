@@ -2,7 +2,6 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 pub use self::canonical_url::CanonicalUrl;
-pub use self::context::{ConfigValue, GlobalContext, homedir};
 pub(crate) use self::counter::MetricsCounter;
 pub use self::dependency_queue::DependencyQueue;
 pub use self::diagnostic_server::RustfixDiagnosticServer;
@@ -29,12 +28,12 @@ pub use self::workspace::{
     add_path_args, path_args, print_available_benches, print_available_binaries,
     print_available_examples, print_available_packages, print_available_tests,
 };
+pub use crate::context::{ConfigValue, GlobalContext, homedir};
 
 pub mod auth;
 pub mod cache_lock;
 mod canonical_url;
 pub mod command_prelude;
-pub mod context;
 mod counter;
 pub mod cpu;
 pub mod credential;
@@ -71,8 +70,6 @@ mod semver_eval_ext;
 mod semver_ext;
 pub mod sqlite;
 pub mod time_span;
-pub mod toml;
-pub mod toml_mut;
 mod unhashed;
 mod vcs;
 mod workspace;

@@ -4,9 +4,6 @@ use cargo_util_schemas::manifest;
 
 use crate::CargoResult;
 use crate::GlobalContext;
-use crate::core::MaybePackage;
-use crate::core::Package;
-use crate::core::Workspace;
 use crate::diagnostics::GlobalDiagnosticStats;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevel;
@@ -14,6 +11,9 @@ use crate::diagnostics::LintLevelProduct;
 use crate::diagnostics::ManifestFor;
 use crate::diagnostics::PassOutput;
 use crate::diagnostics::ScopedDiagnosticStats;
+use crate::workspace::MaybePackage;
+use crate::workspace::Package;
+use crate::workspace::Workspace;
 
 #[derive(Clone)]
 pub enum ParsePassRule<'r> {

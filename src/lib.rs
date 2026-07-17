@@ -30,37 +30,37 @@
 //!     flows to completion.
 //! - [`ops::resolve`]:
 //!   Top-level API for dependency and feature resolver (e.g. [`ops::resolve_ws`])
-//!   - [`core::resolver`]: The core algorithm
-//! - [`core::compiler`]:
+//!   - [`resolver`]: The core algorithm
+//! - [`compiler`]:
 //!   This is the code responsible for running `rustc` and `rustdoc`.
-//!   - [`core::compiler::build_context`]:
-//!     The [`BuildContext`][core::compiler::BuildContext] is the result of the "front end" of the
+//!   - [`compiler::build_context`]:
+//!     The [`BuildContext`][compiler::BuildContext] is the result of the "front end" of the
 //!     build process. This contains the graph of work to perform and any settings necessary for
 //!     `rustc`. After this is built, the next stage of building is handled in
-//!     [`BuildRunner`][core::compiler::BuildRunner].
-//!   - [`core::compiler::build_runner`]:
+//!     [`BuildRunner`][compiler::BuildRunner].
+//!   - [`compiler::build_runner`]:
 //!     The `Context` is the mutable state used during the build process. This
 //!     is the core of the build process, and everything is coordinated through
 //!     this.
-//!   - [`core::compiler::fingerprint`]:
+//!   - [`compiler::fingerprint`]:
 //!     The `fingerprint` module contains all the code that handles detecting
 //!     if a crate needs to be recompiled.
 //! - [`sources::source`]:
 //!   The [`sources::source::Source`] trait is an abstraction over different sources of packages.
-//!   Sources are uniquely identified by a [`core::SourceId`]. Sources are implemented in the [`sources`]
+//!   Sources are uniquely identified by a [`workspace::SourceId`]. Sources are implemented in the [`sources`]
 //!   directory.
 //! - [`diagnostics`]: Home of diagnostic [passes][diagnostics::passes] and their
 //!   [rules][diagnostics::rules].
 //! - [`util`]:
 //!   This directory contains generally-useful utility modules.
-//! - [`util::context`]:
+//! - [`context`]:
 //!   This directory contains the global application context.
 //!   This includes the config parser which makes heavy use of
 //!   [serde](https://serde.rs/) to merge and translate config values.
 //!   The [`util::GlobalContext`] is usually accessed from the
-//!   [`core::Workspace`]
+//!   [`workspace::Workspace`]
 //!   though references to it are scattered around for more convenient access.
-//! - [`util::toml`]:
+//! - [`workspace::parser`]:
 //!   This directory contains the code for parsing `Cargo.toml` files.
 //!   - [`ops::lockfile`]:
 //!     This is where `Cargo.lock` files are loaded and saved.
@@ -104,21 +104,21 @@
 //!   for more information.
 //! - [`resolver-tests`](https://github.com/rust-lang/cargo/tree/master/crates/resolver-tests)
 //!   This is a dedicated package that defines tests for the [dependency
-//!   resolver][core::resolver].
+//!   resolver][resolver].
 //!
 //! ### File Overview
 //!
 //! Files that interact with cargo include
 //!
 //! - Package
-//!   - `Cargo.toml`: User-written project manifest, loaded with [`util::toml::read_manifest`] and then
-//!     translated to [`core::manifest::Manifest`] which maybe stored in a [`core::Package`].
-//!     - This is editable with [`util::toml_mut::manifest::LocalManifest`]
-//!   - `Cargo.lock`: Generally loaded with [`ops::resolve_ws`] or a variant of it into a [`core::resolver::Resolve`]
+//!   - `Cargo.toml`: User-written project manifest, loaded with [`workspace::parser::read_manifest`] and then
+//!     translated to [`workspace::manifest::Manifest`] which maybe stored in a [`workspace::Package`].
+//!     - This is editable with [`workspace::editor::manifest::LocalManifest`]
+//!   - `Cargo.lock`: Generally loaded with [`ops::resolve_ws`] or a variant of it into a [`resolver::Resolve`]
 //!     - At the lowest level, [`ops::load_pkg_lockfile`] and [`ops::write_pkg_lockfile`] are used
-//!     - See [`core::resolver::encode`] for versioning of `Cargo.lock`
-//!   - `target/`: Used for build artifacts and abstracted with [`core::compiler::layout`]. `Layout` handles locking the target directory and providing paths to parts inside. There is a separate `Layout` for each build `target`.
-//!     - `target/debug/.fingerprint`: Tracker whether nor not a crate needs to be rebuilt.  See [`core::compiler::fingerprint`]
+//!     - See [`resolver::encode`] for versioning of `Cargo.lock`
+//!   - `target/`: Used for build artifacts and abstracted with [`compiler::layout`]. `Layout` handles locking the target directory and providing paths to parts inside. There is a separate `Layout` for each build `target`.
+//!     - `target/debug/.fingerprint`: Tracker whether nor not a crate needs to be rebuilt.  See [`compiler::fingerprint`]
 //! - `$CARGO_HOME/`:
 //!   - `registry/`: Package registry cache which is managed in [`sources::registry`].  Be careful
 //!     as the lock [`util::GlobalContext::acquire_package_cache_lock`] must be manually acquired.
@@ -127,7 +127,7 @@
 //!     - `src/*/*`: Extracted from `*.crate` by [`sources::registry::RegistrySource`]
 //!   - `git/`: Git source cache.  See [`sources::git`].
 //! - `**/.cargo/config.toml`: Environment dependent (env variables, files) configuration.  See
-//!   [`util::context`]
+//!   [`context`]
 //!
 //! ## Contribute to Cargo documentations
 //!
@@ -162,12 +162,15 @@ pub const CARGO_ENV: &str = "CARGO";
 #[macro_use]
 mod macros;
 
-pub mod core;
+pub mod compiler;
+pub mod context;
 pub mod diagnostics;
 pub mod ops;
+pub mod resolver;
 pub mod sources;
 pub mod util;
 mod version;
+pub mod workspace;
 
 pub fn exit_with_error(err: CliError, shell: &mut Shell) -> ! {
     debug!("exit_with_error; err={:?}", err);
