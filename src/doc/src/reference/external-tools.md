@@ -127,7 +127,12 @@ structure:
         "doctest": true
         /* Whether or not this target should be built and run with `--test`
         */
-        "test": true
+        "test": true,
+        /* Whether or not the target uses the libtest harness.
+           Corresponds to the `harness` field in `Cargo.toml`.
+           This property is not included if `harness` is true (the default).
+        */
+        "harness": false
     },
     /* The message emitted by the compiler.
 
@@ -167,7 +172,8 @@ following structure:
         "edition": "2018",
         "doc": true,
         "doctest": true,
-        "test": true
+        "test": true,
+        "harness": false
     },
     /* The profile indicates which compiler settings were used. */
     "profile": {

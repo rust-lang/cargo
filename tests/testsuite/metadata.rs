@@ -113,6 +113,129 @@ fn cargo_metadata_warns_on_implicit_version() {
 }
 
 #[cargo_test]
+fn cargo_metadata_no_harness() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [[test]]
+                name = "no_harness_test"
+                path = "tests/no_harness_test.rs"
+                harness = false
+
+                [[bench]]
+                name = "no_harness_bench"
+                path = "benches/no_harness_bench.rs"
+                harness = false
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("tests/no_harness_test.rs", "fn main() {}")
+        .file("benches/no_harness_bench.rs", "fn main() {}")
+        .build();
+
+    p.cargo("metadata --no-deps --format-version 1")
+        .with_stdout_data(
+            str![[r#"
+{
+  "metadata": null,
+  "packages": [
+    {
+      "authors": [],
+      "categories": [],
+      "default_run": null,
+      "dependencies": [],
+      "description": null,
+      "documentation": null,
+      "edition": "2015",
+      "features": {},
+      "homepage": null,
+      "id": "path+[ROOTURL]/foo#0.1.0",
+      "keywords": [],
+      "license": null,
+      "license_file": null,
+      "links": null,
+      "manifest_path": "[ROOT]/foo/Cargo.toml",
+      "metadata": null,
+      "name": "foo",
+      "publish": null,
+      "readme": null,
+      "repository": null,
+      "rust_version": null,
+      "source": null,
+      "targets": [
+        {
+          "crate_types": [
+            "lib"
+          ],
+          "doc": true,
+          "doctest": true,
+          "edition": "2015",
+          "kind": [
+            "lib"
+          ],
+          "name": "foo",
+          "src_path": "[ROOT]/foo/src/lib.rs",
+          "test": true
+        },
+        {
+          "crate_types": [
+            "bin"
+          ],
+          "doc": false,
+          "doctest": false,
+          "edition": "2015",
+          "harness": false,
+          "kind": [
+            "test"
+          ],
+          "name": "no_harness_test",
+          "src_path": "[ROOT]/foo/tests/no_harness_test.rs",
+          "test": true
+        },
+        {
+          "crate_types": [
+            "bin"
+          ],
+          "doc": false,
+          "doctest": false,
+          "edition": "2015",
+          "harness": false,
+          "kind": [
+            "bench"
+          ],
+          "name": "no_harness_bench",
+          "src_path": "[ROOT]/foo/benches/no_harness_bench.rs",
+          "test": false
+        }
+      ],
+      "version": "0.1.0"
+    }
+  ],
+  "resolve": null,
+  "target_directory": "[ROOT]/foo/target",
+  "build_directory": "[ROOT]/foo/target",
+  "version": 1,
+  "workspace_default_members": [
+    "path+[ROOTURL]/foo#0.1.0"
+  ],
+  "workspace_members": [
+    "path+[ROOTURL]/foo#0.1.0"
+  ],
+  "workspace_root": "[ROOT]/foo"
+}
+"#]]
+            .is_json(),
+        )
+        .run();
+}
+
+#[cargo_test]
 fn library_with_several_crate_types() {
     let p = project()
         .file("src/lib.rs", "")
