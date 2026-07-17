@@ -5,7 +5,7 @@ use std::fs;
 use crate::prelude::*;
 use cargo_test_support::paths;
 use cargo_test_support::registry::{Package, registry_path};
-use cargo_test_support::{basic_manifest, project, str, t};
+use cargo_test_support::{basic_manifest, git, project, str, t};
 
 fn setup() {
     let root = paths::root();
@@ -498,6 +498,148 @@ unable to verify that `bar v0.0.1` is the same as when the lockfile was generate
 
 "#]])
         .run();
+}
+
+#[cargo_test]
+fn git_dependency_can_be_replaced_with_checksummed_local_registry() {
+    let git_project = git::new("dep", |project| {
+        project
+            .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
+            .file("src/lib.rs", "pub fn bar() {}")
+    });
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+                    edition = "2015"
+                    authors = []
+
+                    [dependencies]
+                    bar = {{ git = '{}' }}
+                "#,
+                git_project.url()
+            ),
+        )
+        .file(
+            "src/lib.rs",
+            "extern crate bar; pub fn foo() { bar::bar(); }",
+        )
+        .build();
+
+    p.cargo("generate-lockfile").run();
+
+    Package::new("bar", "0.0.1")
+        .local(true)
+        .file("src/lib.rs", "pub fn bar() {}")
+        .publish();
+    t!(fs::create_dir_all(paths::root().join(".cargo")));
+    t!(fs::write(
+        paths::root().join(".cargo/config.toml"),
+        format!(
+            r#"
+                [source.git]
+                git = '{}'
+                replace-with = 'local'
+
+                [source.local]
+                local-registry = 'registry'
+            "#,
+            git_project.url()
+        )
+    ));
+
+    p.cargo("build").run();
+
+    let lockfile = t!(fs::read_to_string(p.root().join("Cargo.lock")));
+    assert!(!lockfile.contains("checksum"));
+
+    t!(fs::remove_file(paths::root().join(".cargo/config.toml")));
+    p.cargo("build").run();
+}
+
+#[cargo_test]
+fn updated_git_dependency_refreshes_local_registry_source_cache() {
+    let (git_project, repo) = git::new_repo("dep", |project| {
+        project
+            .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
+            .file("src/lib.rs", "pub fn bar() {}")
+    });
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+                    edition = "2015"
+                    authors = []
+
+                    [dependencies]
+                    bar = {{ git = '{}' }}
+                "#,
+                git_project.url()
+            ),
+        )
+        .file(
+            "src/lib.rs",
+            "extern crate bar; pub fn foo() { bar::bar(); }",
+        )
+        .build();
+    let config = format!(
+        r#"
+            [source.git]
+            git = '{}'
+            replace-with = 'local'
+
+            [source.local]
+            local-registry = 'registry'
+        "#,
+        git_project.url()
+    );
+    let config_path = paths::root().join(".cargo/config.toml");
+
+    p.cargo("generate-lockfile").run();
+    Package::new("bar", "0.0.1")
+        .local(true)
+        .file("src/lib.rs", "pub fn bar() {}")
+        .publish();
+    t!(fs::create_dir_all(config_path.parent().unwrap()));
+    t!(fs::write(&config_path, &config));
+    p.cargo("build").run();
+
+    git_project.change_file(
+        "src/lib.rs",
+        "pub fn bar() {} pub fn from_updated_commit() {}",
+    );
+    git::add(&repo);
+    git::commit(&repo);
+    p.change_file(
+        "src/lib.rs",
+        "extern crate bar; pub fn foo() { bar::from_updated_commit(); }",
+    );
+
+    t!(fs::remove_file(&config_path));
+    p.cargo("update -p bar").run();
+
+    registry_path().join("index").join("3").rm_rf();
+    Package::new("bar", "0.0.1")
+        .local(true)
+        .file(
+            "src/lib.rs",
+            "pub fn bar() {} pub fn from_updated_commit() {}",
+        )
+        .publish();
+    t!(fs::write(&config_path, &config));
+
+    p.cargo("build").run();
+
+    let lockfile = t!(fs::read_to_string(p.root().join("Cargo.lock")));
+    assert!(!lockfile.contains("checksum"));
 }
 
 #[cargo_test]

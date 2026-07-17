@@ -195,7 +195,6 @@ use anyhow::Context as _;
 use cargo_util::paths;
 use cargo_util_terminal::report::Level;
 use flate2::read::GzDecoder;
-use futures::FutureExt as _;
 use serde::Deserialize;
 use serde::Serialize;
 use tar::{Archive, EntryType};
@@ -211,7 +210,7 @@ use crate::util::{CargoResult, Filesystem, GlobalContext, LimitErrorReader, rest
 use crate::util::{VersionExt, hex};
 use crate::workspace::dependency::Dependency;
 use crate::workspace::global_cache_tracker;
-use crate::workspace::{Package, PackageId, SourceId};
+use crate::workspace::{Package, PackageId, SourceId, SourceKind};
 
 pub use cargo_util_schemas::index::RegistryConfig;
 
@@ -233,6 +232,19 @@ pub const CRATES_IO_DOMAIN: &str = "crates.io";
 struct LockMetadata {
     /// The version of `.cargo-ok` file
     v: u32,
+    /// The checksum of the archive that was unpacked.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    checksum: Option<String>,
+}
+
+impl LockMetadata {
+    fn is_valid_for_checksum(&self, checksum: &str, checksum_required: bool) -> bool {
+        self.v == 1
+            && match self.checksum.as_deref() {
+                Some(unpacked_checksum) => unpacked_checksum == checksum,
+                None => !checksum_required,
+            }
+    }
 }
 
 /// A [`Source`] implementation for a local or a remote registry.
@@ -551,7 +563,12 @@ impl<'gctx> RegistrySource<'gctx> {
     /// `.cargo-ok` file is found.
     ///
     /// [CVE-2022-36113]: https://blog.rust-lang.org/2022/09/14/cargo-cves.html#arbitrary-file-corruption-cve-2022-36113
-    fn unpack_package(&self, pkg: PackageId, tarball: &File) -> CargoResult<PathBuf> {
+    fn unpack_package(
+        &self,
+        pkg: PackageId,
+        tarball: &File,
+        checksum: &str,
+    ) -> CargoResult<PathBuf> {
         let package_dir = format!("{}-{}", pkg.name(), pkg.version());
         let dst = self.src_path.join(&package_dir);
         let path = dst.join(PACKAGE_SOURCE_LOCK);
@@ -559,9 +576,10 @@ impl<'gctx> RegistrySource<'gctx> {
             .gctx
             .assert_package_cache_locked(CacheLockMode::DownloadExclusive, &path);
         let unpack_dir = path.parent().unwrap();
+        let checksum_required = matches!(self.source_id.kind(), SourceKind::LocalRegistry);
         match fs::read_to_string(path) {
             Ok(ok) => match serde_json::from_str::<LockMetadata>(&ok) {
-                Ok(lock_meta) if lock_meta.v == 1 => {
+                Ok(lock_meta) if lock_meta.is_valid_for_checksum(checksum, checksum_required) => {
                     self.gctx
                         .deferred_global_last_use()?
                         .mark_registry_src_used(global_cache_tracker::RegistrySrc {
@@ -570,6 +588,10 @@ impl<'gctx> RegistrySource<'gctx> {
                             size: None,
                         });
                     return Ok(unpack_dir.to_path_buf());
+                }
+                Ok(lock_meta) if lock_meta.v == 1 => {
+                    tracing::debug!("archive checksum metadata missing or changed, clearing cache");
+                    paths::remove_dir_all(dst.as_path_unlocked())?;
                 }
                 _ => {
                     if ok == "ok" {
@@ -598,7 +620,10 @@ impl<'gctx> RegistrySource<'gctx> {
             .open(&path)
             .with_context(|| format!("failed to open `{}`", path.display()))?;
 
-        let lock_meta = LockMetadata { v: 1 };
+        let lock_meta = LockMetadata {
+            v: 1,
+            checksum: checksum_required.then(|| checksum.to_owned()),
+        };
         write!(ok, "{}", serde_json::to_string(&lock_meta).unwrap())?;
 
         self.gctx
@@ -645,9 +670,14 @@ impl<'gctx> RegistrySource<'gctx> {
     /// should only be called after doing integrity check. That is to say,
     /// you need to call either [`RegistryData::download`] or
     /// [`RegistryData::finish_download`] before calling this method.
-    async fn get_pkg(&self, package: PackageId, path: &File) -> CargoResult<Package> {
+    async fn get_pkg(
+        &self,
+        package: PackageId,
+        path: &File,
+        checksum: &str,
+    ) -> CargoResult<Package> {
         let path = self
-            .unpack_package(package, path)
+            .unpack_package(package, path, checksum)
             .with_context(|| format!("failed to unpack package `{}`", package))?;
         let src = PathSource::new(&path, self.source_id, self.gctx);
         src.load()?;
@@ -658,15 +688,9 @@ impl<'gctx> RegistrySource<'gctx> {
 
         // After we've loaded the package configure its summary's `checksum`
         // field with the checksum we know for this `PackageId`.
-        let cksum = self
-            .index
-            .hash(package, &*self.ops)
-            .now_or_never()
-            .expect("a downloaded dep now pending!?")
-            .expect("summary not found");
         pkg.manifest_mut()
             .summary_mut()
-            .set_checksum(cksum.to_string());
+            .set_checksum(checksum.to_owned());
 
         Ok(pkg)
     }
@@ -862,7 +886,10 @@ impl<'gctx> Source for RegistrySource<'gctx> {
     async fn download(&self, package: PackageId) -> CargoResult<MaybePackage> {
         let hash = self.index.hash(package, &*self.ops).await?;
         match self.ops.download(package, &hash).await? {
-            MaybeLock::Ready(file) => self.get_pkg(package, &file).await.map(MaybePackage::Ready),
+            MaybeLock::Ready(file) => self
+                .get_pkg(package, &file, &hash)
+                .await
+                .map(MaybePackage::Ready),
             MaybeLock::Download {
                 url,
                 descriptor,
@@ -878,7 +905,7 @@ impl<'gctx> Source for RegistrySource<'gctx> {
     async fn finish_download(&self, package: PackageId, data: Vec<u8>) -> CargoResult<Package> {
         let hash = self.index.hash(package, &*self.ops).await?;
         let file = self.ops.finish_download(package, &hash, &data).await?;
-        self.get_pkg(package, &file).await
+        self.get_pkg(package, &file, &hash).await
     }
 
     fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {
