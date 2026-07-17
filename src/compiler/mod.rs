@@ -103,15 +103,15 @@ use crate::compiler::timings::SectionTiming;
 pub use crate::compiler::unit::Unit;
 pub use crate::compiler::unit::UnitIndex;
 pub use crate::compiler::unit::UnitInterner;
-use crate::core::manifest::TargetSourcePath;
-use crate::core::profiles::{PanicStrategy, Profile, StripInner};
-use crate::core::{Feature, PackageId, Target};
 use crate::diagnostics::get_key_value;
 use crate::util::OnceExt;
 use crate::util::errors::{CargoResult, VerboseError};
 use crate::util::interning::InternedString;
 use crate::util::machine_message::{self, Message};
 use crate::util::{add_path_args, internal, path_args};
+use crate::workspace::manifest::TargetSourcePath;
+use crate::workspace::profiles::{PanicStrategy, Profile, StripInner};
+use crate::workspace::{Feature, PackageId, Target};
 
 use cargo_util::{ProcessBuilder, ProcessError, paths};
 use cargo_util_schemas::manifest::TomlDebugInfo;

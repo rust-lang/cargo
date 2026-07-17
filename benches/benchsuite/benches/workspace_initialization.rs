@@ -1,5 +1,5 @@
 use benchsuite::fixtures;
-use cargo::core::Workspace;
+use cargo::workspace::Workspace;
 use criterion::{Criterion, criterion_group, criterion_main};
 
 fn workspace_initialization(c: &mut Criterion) {

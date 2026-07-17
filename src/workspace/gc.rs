@@ -15,14 +15,14 @@
 //! implemented by calling the [`Gc::gc`] method.
 //!
 //! Garbage collection for the global cache is guided by the last-use tracking
-//! implemented in the [`crate::core::global_cache_tracker`] module. See that
+//! implemented in the [`crate::workspace::global_cache_tracker`] module. See that
 //! module documentation for an in-depth explanation of how global cache
 //! tracking works.
 
-use crate::core::global_cache_tracker::{self, GlobalCacheTracker};
 use crate::ops::CleanContext;
 use crate::util::cache_lock::{CacheLock, CacheLockMode};
 use crate::util::time_span::maybe_parse_time_span;
+use crate::workspace::global_cache_tracker::{self, GlobalCacheTracker};
 use crate::{CargoResult, GlobalContext};
 use anyhow::{Context as _, format_err};
 use serde::Deserialize;
@@ -247,7 +247,7 @@ impl GcOpts {
 
 /// Garbage collector.
 ///
-/// See the module docs at [`crate::core::gc`] for more information on GC.
+/// See the module docs at [`crate::workspace::gc`] for more information on GC.
 pub struct Gc<'a, 'gctx> {
     gctx: &'gctx GlobalContext,
     global_cache_tracker: &'a mut GlobalCacheTracker,

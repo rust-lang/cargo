@@ -100,7 +100,7 @@
 //! [^5]: Config settings that are not otherwise captured anywhere else.
 //!       Currently, this is only `doc.extern-map`.
 //!
-//! [^6]: Via [`Manifest::lint_rustflags`][crate::core::Manifest::lint_rustflags]
+//! [^6]: Via [`Manifest::lint_rustflags`][crate::workspace::Manifest::lint_rustflags]
 //!
 //! [^7]: extra-flags and RUSTFLAGS are conditionally excluded when `--remap-path-prefix` is
 //!       present to avoid breaking build reproducibility while we wait for trim-paths
@@ -192,7 +192,7 @@
 //! Cargo then later uses this to trigger a recompile if a referenced env var
 //! changes (even if the source didn't change).
 //! This also includes env vars generated from Cargo metadata like `CARGO_PKG_DESCRIPTION`.
-//! (See [`crate::core::manifest::ManifestMetadata`]
+//! (See [`crate::workspace::manifest::ManifestMetadata`]
 //!
 //! #### dep-info files for build system integration.
 //!
@@ -361,7 +361,7 @@
 //! [`Metadata::c_metadata`]: crate::compiler::Metadata::c_metadata
 //! [`Metadata::c_extra_filename`]: crate::compiler::Metadata::c_extra_filename
 //! [`UnitHash`]: crate::compiler::UnitHash
-//! [`Profile`]: crate::core::profiles::Profile
+//! [`Profile`]: crate::workspace::profiles::Profile
 //! [`CompileMode`]: crate::compiler::CompileMode
 //! [`Lto`]: crate::compiler::Lto
 //! [`CompileKind`]: crate::compiler::CompileKind
@@ -399,12 +399,12 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, info};
 
 use crate::compiler::unit_graph::UnitDep;
-use crate::core::Package;
 use crate::util;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::log_message::LogMessage;
 use crate::util::{StableHasher, internal, path_args};
+use crate::workspace::Package;
 use crate::{CARGO_ENV, GlobalContext};
 
 use super::BuildContext;
@@ -644,7 +644,7 @@ pub struct Fingerprint {
     /// Hash of the [`Profile`], [`CompileMode`], and any extra flags passed via
     /// `cargo rustc` or `cargo rustdoc`.
     ///
-    /// [`Profile`]: crate::core::profiles::Profile
+    /// [`Profile`]: crate::workspace::profiles::Profile
     /// [`CompileMode`]: crate::compiler::CompileMode
     profile: u64,
     /// Hash of the path to the base source file. This is relative to the

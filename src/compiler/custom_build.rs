@@ -26,7 +26,7 @@
 //! The entire execution work is constructed by [`build_work`].
 //!
 //! [build script]: https://doc.rust-lang.org/nightly/cargo/reference/build-scripts.html
-//! [`TargetKind::CustomBuild`]: crate::core::manifest::TargetKind::CustomBuild
+//! [`TargetKind::CustomBuild`]: crate::workspace::manifest::TargetKind::CustomBuild
 //! [`UnitGraph`]: super::unit_graph::UnitGraph
 //! [`CompileMode::RunCustomBuild`]: crate::compiler::CompileMode::RunCustomBuild
 //! [instructions]: https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script
@@ -36,12 +36,12 @@ use crate::compiler::CompileMode;
 use crate::compiler::artifact;
 use crate::compiler::build_runner::UnitHash;
 use crate::compiler::job_queue::JobState;
-use crate::core::{PackageId, Target, profiles::ProfileRoot};
 use crate::util::data_structures::HashMap;
 use crate::util::data_structures::HashSet;
 use crate::util::errors::CargoResult;
 use crate::util::internal;
 use crate::util::machine_message::{self, Message};
+use crate::workspace::{PackageId, Target, profiles::ProfileRoot};
 use anyhow::{Context as _, bail};
 use cargo_platform::Cfg;
 use cargo_util::paths;

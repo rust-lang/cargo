@@ -17,7 +17,7 @@ mod utils;
 /// For `-Zgitoxide` integration.
 pub mod fetch {
     use crate::GlobalContext;
-    use crate::core::features::GitFeatures;
+    use crate::workspace::features::GitFeatures;
 
     /// The kind remote repository to fetch.
     #[derive(Debug, Copy, Clone)]

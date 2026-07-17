@@ -19,13 +19,13 @@ use crates_io::Registry;
 use url::Url;
 
 use crate::context::{GlobalContext, PathAndArgs};
-use crate::core::{Package, PackageId, SourceId};
 use crate::sources::source::Source;
 use crate::sources::{RegistrySource, SourceConfigMap};
 use crate::util::auth;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
 use crate::util::network::http_async;
+use crate::workspace::{Package, PackageId, SourceId};
 
 pub use self::cargo_info::info;
 pub use self::cargo_login::registry_login;

@@ -14,9 +14,6 @@ use std::collections::{BTreeMap, HashSet};
 use std::fmt;
 use std::time::Instant;
 
-use cargo::core::SourceId;
-use cargo::core::dependency::DepKind;
-use cargo::core::{Dependency, PackageId, Registry, Summary};
 use cargo::resolver::Resolve;
 use cargo::resolver::ResolveVersion;
 use cargo::resolver::{self, ResolveOpts, VersionOrdering, VersionPreferences};
@@ -24,6 +21,9 @@ use cargo::sources::IndexSummary;
 use cargo::sources::source::QueryKind;
 use cargo::util::interning::InternedString;
 use cargo::util::{CargoResult, GlobalContext};
+use cargo::workspace::SourceId;
+use cargo::workspace::dependency::DepKind;
+use cargo::workspace::{Dependency, PackageId, Registry, Summary};
 
 use crate::helpers::{ToPkgId, dep_req, dep_req_kind, pkg_dep, pkg_id};
 use crate::sat::SatResolver;

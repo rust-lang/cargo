@@ -1,5 +1,3 @@
-use crate::core::SourceId;
-use crate::core::{GitReference, Package, Workspace};
 use crate::ops;
 use crate::sources::CRATES_IO_REGISTRY;
 use crate::sources::RegistrySource;
@@ -7,6 +5,8 @@ use crate::sources::SourceConfigMap;
 use crate::sources::path::PathSource;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::{CargoResult, GlobalContext, try_canonicalize};
+use crate::workspace::SourceId;
+use crate::workspace::{GitReference, Package, Workspace};
 
 use anyhow::{Context as _, bail};
 use cargo_util::{Sha256, paths};

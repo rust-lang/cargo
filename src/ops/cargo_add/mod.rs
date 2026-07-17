@@ -20,16 +20,6 @@ use toml_edit::Item as TomlItem;
 
 use crate::CargoResult;
 use crate::GlobalContext;
-use crate::core::Feature;
-use crate::core::FeatureValue;
-use crate::core::Features;
-use crate::core::Package;
-use crate::core::PackageId;
-use crate::core::Registry;
-use crate::core::Summary;
-use crate::core::Workspace;
-use crate::core::dependency::DepKind;
-use crate::core::registry::PackageRegistry;
 use crate::ops::resolve_ws;
 use crate::resolver::PublishAgePolicy;
 use crate::sources::IndexSummary;
@@ -48,6 +38,16 @@ use crate::util::toml_mut::dependency::Source;
 use crate::util::toml_mut::dependency::WorkspaceSource;
 use crate::util::toml_mut::manifest::DepTable;
 use crate::util::toml_mut::manifest::LocalManifest;
+use crate::workspace::Feature;
+use crate::workspace::FeatureValue;
+use crate::workspace::Features;
+use crate::workspace::Package;
+use crate::workspace::PackageId;
+use crate::workspace::Registry;
+use crate::workspace::Summary;
+use crate::workspace::Workspace;
+use crate::workspace::dependency::DepKind;
+use crate::workspace::registry::PackageRegistry;
 use crate_spec::CrateSpec;
 
 const MAX_FEATURE_PRINTS: usize = 30;
@@ -635,7 +635,7 @@ fn query_dependency(
     ws: &Workspace<'_>,
     gctx: &GlobalContext,
     dependency: &mut Dependency,
-) -> CargoResult<crate::core::Dependency> {
+) -> CargoResult<crate::workspace::Dependency> {
     let query = dependency.query(gctx)?;
     let query = match query {
         MaybeWorkspace::Workspace(_workspace) => {
@@ -1215,7 +1215,7 @@ impl std::ops::Deref for DependencyUI {
 /// Lookup available features
 fn populate_available_features(
     dependency: Dependency,
-    query: &crate::core::dependency::Dependency,
+    query: &crate::workspace::dependency::Dependency,
     registry: &mut PackageRegistry<'_>,
 ) -> CargoResult<DependencyUI> {
     let mut dependency = DependencyUI::new(dependency);

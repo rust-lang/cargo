@@ -11,8 +11,6 @@ use tracing::instrument;
 use super::STYLE;
 use crate::CargoResult;
 use crate::GlobalContext;
-use crate::core::Package;
-use crate::core::Workspace;
 use crate::diagnostics::AsIndex;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevel;
@@ -21,6 +19,8 @@ use crate::diagnostics::LintLevelSource;
 use crate::diagnostics::ScopedDiagnosticStats;
 use crate::diagnostics::get_key_value_span;
 use crate::diagnostics::workspace_rel_path;
+use crate::workspace::Package;
+use crate::workspace::Workspace;
 
 pub static LINT: &Lint = &Lint {
     name: "non_kebab_case_bins",

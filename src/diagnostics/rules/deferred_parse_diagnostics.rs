@@ -4,11 +4,11 @@ use tracing::instrument;
 
 use crate::CargoResult;
 use crate::GlobalContext;
-use crate::core::MaybePackage;
-use crate::core::Workspace;
 use crate::diagnostics::ManifestFor;
 use crate::diagnostics::ScopedDiagnosticStats;
 use crate::diagnostics::workspace_rel_path;
+use crate::workspace::MaybePackage;
+use crate::workspace::Workspace;
 
 #[instrument(skip_all)]
 pub(crate) fn diagnose_manifest(

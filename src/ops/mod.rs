@@ -83,7 +83,10 @@ pub(crate) mod resolve;
 /// Returns true if the dependency is either git or path, false otherwise
 /// Error if a git/path dep is transitive, but has no version (registry source).
 /// This check is performed on dependencies before publishing or packaging
-fn check_dep_has_version(dep: &crate::core::Dependency, publish: bool) -> crate::CargoResult<bool> {
+fn check_dep_has_version(
+    dep: &crate::workspace::Dependency,
+    publish: bool,
+) -> crate::CargoResult<bool> {
     let which = if dep.source_id().is_path() {
         "path"
     } else if dep.source_id().is_git() {

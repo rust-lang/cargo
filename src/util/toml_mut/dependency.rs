@@ -12,10 +12,10 @@ use toml_edit::KeyMut;
 use super::manifest::str_or_1_len_table;
 use crate::CargoResult;
 use crate::GlobalContext;
-use crate::core::SourceId;
-use crate::core::Summary;
-use crate::core::{Features, GitReference};
 use crate::util::toml::lookup_path_base;
+use crate::workspace::SourceId;
+use crate::workspace::Summary;
+use crate::workspace::{Features, GitReference};
 
 /// A dependency handled by Cargo.
 ///
@@ -198,12 +198,12 @@ impl Dependency {
     pub fn query(
         &self,
         gctx: &GlobalContext,
-    ) -> CargoResult<MaybeWorkspace<crate::core::dependency::Dependency>> {
+    ) -> CargoResult<MaybeWorkspace<crate::workspace::dependency::Dependency>> {
         let source_id = self.source_id(gctx)?;
         match source_id {
             MaybeWorkspace::Workspace(workspace) => Ok(MaybeWorkspace::Workspace(workspace)),
             MaybeWorkspace::Other(source_id) => Ok(MaybeWorkspace::Other(
-                crate::core::dependency::Dependency::parse(
+                crate::workspace::dependency::Dependency::parse(
                     self.name.as_str(),
                     self.version(),
                     source_id,

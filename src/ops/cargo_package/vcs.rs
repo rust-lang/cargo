@@ -1,8 +1,8 @@
 //! Helpers to gather the VCS information for `cargo package`.
 
-use crate::core::{Package, Workspace};
 use crate::ops::PackageOpts;
 use crate::sources::PathEntry;
+use crate::workspace::{Package, Workspace};
 use crate::{CargoResult, GlobalContext};
 
 use anyhow::Context;

@@ -6,7 +6,7 @@ use cargo_util::paths::normalize_path;
 use pathdiff::diff_paths;
 
 use crate::GlobalContext;
-use crate::core::Workspace;
+use crate::workspace::Workspace;
 
 /// Display path, generally relative to the workspace
 ///

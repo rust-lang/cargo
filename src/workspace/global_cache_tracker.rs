@@ -21,7 +21,7 @@
 //! [`DeferredGlobalLastUse`] stored in [`GlobalContext`].
 //!
 //! The high-level interface for performing garbage collection is defined in
-//! the [`crate::core::gc`] module. The functions there are responsible for
+//! the [`crate::workspace::gc`] module. The functions there are responsible for
 //! interacting with the [`GlobalCacheTracker`] to handle cleaning of global
 //! cache data.
 //!
@@ -29,7 +29,7 @@
 //!
 //! Some commands (primarily the build commands) will trigger an automatic
 //! deletion of files that haven't been used in a while. The high-level
-//! interface for this is the [`crate::core::gc::auto_gc`] function.
+//! interface for this is the [`crate::workspace::gc::auto_gc`] function.
 //!
 //! The [`GlobalCacheTracker`] database tracks the last time an automatic gc
 //! was performed so that it is only done once per day for performance
@@ -40,7 +40,7 @@
 //! The user can perform a manual garbage collection with the `cargo clean`
 //! command. That command has a variety of options to specify what to delete.
 //! Manual gc supports deleting based on age or size or both. From a
-//! high-level, this is done by the [`crate::core::gc::Gc::gc`] method, which
+//! high-level, this is done by the [`crate::workspace::gc::Gc::gc`] method, which
 //! calls into [`GlobalCacheTracker`] to handle all the cleaning.
 //!
 //! ## Locking
@@ -56,7 +56,7 @@
 //! in [`CacheLockMode::MutateExclusive`] to ensure no other cargo process is
 //! running. See [`crate::util::cache_lock`] for more detail on locking.
 //!
-//! When performing automatic gc, [`crate::core::gc::auto_gc`] will skip the
+//! When performing automatic gc, [`crate::workspace::gc::auto_gc`] will skip the
 //! GC if the package cache lock is already held by anything else. Automatic
 //! GC is intended to be opportunistic, and should impose as little disruption
 //! to the user as possible.
@@ -114,13 +114,13 @@
 //!
 //! There are checks for read-only filesystems, which is generally ignored.
 
-use crate::core::gc::GcOpts;
 use crate::ops::CleanContext;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::data_structures::HashMap;
 use crate::util::interning::InternedString;
 use crate::util::sqlite::{self, Migration, basic_migration};
 use crate::util::{Filesystem, Progress, ProgressStyle};
+use crate::workspace::gc::GcOpts;
 use crate::{CargoResult, GlobalContext};
 use anyhow::{Context as _, bail};
 use cargo_util::paths;
@@ -329,7 +329,7 @@ impl rusqlite::types::ToSql for ParentId {
 /// Tracking for the global shared cache (registry files, etc.).
 ///
 /// This is the interface to the global cache database, used for tracking and
-/// cleaning. See the [`crate::core::global_cache_tracker`] module docs for
+/// cleaning. See the [`crate::workspace::global_cache_tracker`] module docs for
 /// details.
 #[derive(Debug)]
 pub struct GlobalCacheTracker {

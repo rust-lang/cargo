@@ -1,9 +1,4 @@
 use crate::context::GlobalContext;
-use crate::core::Registry as _;
-use crate::core::dependency::Dependency;
-use crate::core::registry::PackageRegistry;
-use crate::core::{PackageId, PackageIdSpec, PackageIdSpecQuery};
-use crate::core::{SourceId, Workspace};
 use crate::ops;
 use crate::resolver::PublishAgePolicy;
 use crate::resolver::Resolve;
@@ -16,6 +11,11 @@ use crate::util::toml_mut::manifest::LocalManifest;
 use crate::util::toml_mut::upgrade::upgrade_requirement;
 use crate::util::{CargoResult, VersionExt};
 use crate::util::{OptVersionReq, style};
+use crate::workspace::Registry as _;
+use crate::workspace::dependency::Dependency;
+use crate::workspace::registry::PackageRegistry;
+use crate::workspace::{PackageId, PackageIdSpec, PackageIdSpecQuery};
+use crate::workspace::{SourceId, Workspace};
 
 use crate::util::data_structures::{HashMap, HashSet};
 use crate::util::data_structures::{IndexMap, IndexSet};
@@ -376,8 +376,11 @@ fn upgrade_dependency(
         return Ok(dependency);
     }
 
-    let query =
-        crate::core::dependency::Dependency::parse(name, None, dependency.source_id().clone())?;
+    let query = crate::workspace::dependency::Dependency::parse(
+        name,
+        None,
+        dependency.source_id().clone(),
+    )?;
 
     let possibilities = crate::util::block_on(registry.query_vec(&query, QueryKind::Exact))?;
 
@@ -1095,12 +1098,12 @@ impl PackageChange {
     }
 
     /// For querying [`PackageRegistry`] for alternative versions to report to the user
-    fn alternatives_query(&self) -> Option<crate::core::dependency::Dependency> {
+    fn alternatives_query(&self) -> Option<crate::workspace::dependency::Dependency> {
         if !self.package_id.source_id().is_registry() {
             return None;
         }
 
-        let query = crate::core::dependency::Dependency::parse(
+        let query = crate::workspace::dependency::Dependency::parse(
             self.package_id.name(),
             None,
             self.package_id.source_id(),

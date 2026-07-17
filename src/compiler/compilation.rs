@@ -14,8 +14,8 @@ use crate::compiler::CompileTarget;
 use crate::compiler::RustdocFingerprint;
 use crate::compiler::apply_env_config;
 use crate::compiler::{CompileKind, Unit, UnitHash};
-use crate::core::Package;
 use crate::util::{CargoResult, GlobalContext};
+use crate::workspace::Package;
 
 /// Represents the kind of process we are creating.
 #[derive(Debug)]

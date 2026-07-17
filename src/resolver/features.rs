@@ -39,13 +39,13 @@
 //! [`resolve_ws_with_opts`]: crate::ops::resolve_ws_with_opts
 
 use crate::compiler::{CompileKind, CompileTarget, RustcTargetData};
-use crate::core::dependency::{ArtifactTarget, DepKind, Dependency};
-use crate::core::{FeatureValue, PackageId, PackageIdSpec, PackageSet, Workspace};
 use crate::resolver::types::FeaturesSet;
 use crate::resolver::{Resolve, ResolveBehavior};
 use crate::util::CargoResult;
 use crate::util::data_structures::{HashMap, HashSet};
 use crate::util::interning::{INTERNED_DEFAULT, InternedString};
+use crate::workspace::dependency::{ArtifactTarget, DepKind, Dependency};
+use crate::workspace::{FeatureValue, PackageId, PackageIdSpec, PackageSet, Workspace};
 use anyhow::{Context, bail};
 use itertools::Itertools;
 use std::collections::{BTreeMap, BTreeSet};

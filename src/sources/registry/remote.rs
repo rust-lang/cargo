@@ -1,7 +1,5 @@
 //! Access to a Git index based registry. See [`RemoteRegistry`] for details.
 
-use crate::core::global_cache_tracker;
-use crate::core::{GitReference, PackageId, SourceId};
 use crate::sources::git;
 use crate::sources::git::fetch::RemoteKind;
 use crate::sources::git::resolve_ref;
@@ -12,6 +10,8 @@ use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::{Filesystem, GlobalContext};
+use crate::workspace::global_cache_tracker;
+use crate::workspace::{GitReference, PackageId, SourceId};
 use anyhow::Context as _;
 use cargo_util::paths;
 use std::cell::{Cell, Ref, RefCell};

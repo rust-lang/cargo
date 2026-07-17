@@ -1,6 +1,6 @@
-use crate::core::{PackageIdSpec, PackageIdSpecQuery, Workspace};
 use crate::ops;
 use crate::util::CargoResult;
+use crate::workspace::{PackageIdSpec, PackageIdSpecQuery, Workspace};
 
 pub fn pkgid(ws: &Workspace<'_>, spec: Option<&str>) -> CargoResult<PackageIdSpec> {
     let Some(resolve) = ops::load_pkg_lockfile(ws)? else {

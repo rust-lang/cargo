@@ -3,13 +3,13 @@ use crate::util::cache_lock::CacheLockMode;
 use crate::util::time_span::parse_time_span;
 
 use crate::util::data_structures::IndexSet;
-use cargo::core::gc::Gc;
-use cargo::core::gc::GcOpts;
-use cargo::core::gc::parse_human_size;
-use cargo::core::global_cache_tracker::GlobalCacheTracker;
 use cargo::ops::CleanContext;
 use cargo::ops::{self, CleanOptions};
 use cargo::util::print_available_packages;
+use cargo::workspace::gc::Gc;
+use cargo::workspace::gc::GcOpts;
+use cargo::workspace::gc::parse_human_size;
+use cargo::workspace::global_cache_tracker::GlobalCacheTracker;
 use clap_complete::ArgValueCandidates;
 use std::time::Duration;
 

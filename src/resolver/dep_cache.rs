@@ -9,9 +9,6 @@
 //!
 //! This module impl that cache in all the gory details
 
-use crate::core::{
-    Dependency, FeatureValue, PackageId, PackageIdSpec, PackageIdSpecQuery, Registry, Summary,
-};
 use crate::resolver::context::ResolverContext;
 use crate::resolver::errors::describe_path_in_context;
 use crate::resolver::types::{ConflictReason, DepInfo, FeaturesSet};
@@ -25,6 +22,9 @@ use crate::util::LocalPollAdapter;
 use crate::util::closest_msg;
 use crate::util::errors::CargoResult;
 use crate::util::interning::{INTERNED_DEFAULT, InternedString};
+use crate::workspace::{
+    Dependency, FeatureValue, PackageId, PackageIdSpec, PackageIdSpecQuery, Registry, Summary,
+};
 
 use crate::util::data_structures::{HashMap, HashSet};
 use anyhow::Context as _;

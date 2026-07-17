@@ -9,7 +9,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use crate::prelude::*;
 use crate::utils::cargo_process;
 use crate::utils::cross_compile::disabled as cross_compile_disabled;
-use cargo::core::PackageId;
+use cargo::workspace::PackageId;
 use cargo_test_support::install::exe;
 use cargo_test_support::paths;
 use cargo_test_support::registry::{self, Package};

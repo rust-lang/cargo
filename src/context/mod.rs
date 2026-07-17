@@ -77,8 +77,6 @@ use std::time::Instant;
 
 use self::ConfigValue as CV;
 use crate::compiler::rustdoc::RustdocExternMap;
-use crate::core::global_cache_tracker::{DeferredGlobalLastUse, GlobalCacheTracker};
-use crate::core::{CliUnstable, SourceId, Workspace, WorkspaceRootConfig, features};
 use crate::ops::RegistryCredentialConfig;
 use crate::sources::CRATES_IO_INDEX;
 use crate::sources::CRATES_IO_REGISTRY;
@@ -90,6 +88,8 @@ use crate::util::network::http_async;
 use crate::util::restricted_names::is_glob_pattern;
 use crate::util::{CanonicalUrl, closest_msg, internal};
 use crate::util::{Filesystem, IntoUrl, IntoUrlWithBase, Rustc};
+use crate::workspace::global_cache_tracker::{DeferredGlobalLastUse, GlobalCacheTracker};
+use crate::workspace::{CliUnstable, SourceId, Workspace, WorkspaceRootConfig, features};
 
 use anyhow::{Context as _, anyhow, bail, format_err};
 use cargo_credential::Secret;
@@ -134,7 +134,7 @@ mod environment;
 use environment::Env;
 
 mod schema;
-use crate::core::features::EmbedMetadata;
+use crate::workspace::features::EmbedMetadata;
 pub use schema::*;
 
 /// Helper macro for creating typed access methods.

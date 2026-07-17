@@ -1,9 +1,5 @@
 //! See [`GitSource`].
 
-use crate::core::GitReference;
-use crate::core::SourceId;
-use crate::core::global_cache_tracker;
-use crate::core::{Dependency, Package, PackageId};
 use crate::sources::IndexSummary;
 use crate::sources::RecursivePathSource;
 use crate::sources::git::utils::GitDatabase;
@@ -17,6 +13,10 @@ use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
 use crate::util::hex::short_hash;
 use crate::util::interning::InternedString;
+use crate::workspace::GitReference;
+use crate::workspace::SourceId;
+use crate::workspace::global_cache_tracker;
+use crate::workspace::{Dependency, Package, PackageId};
 use anyhow::Context as _;
 use cargo_util::paths::exclude_from_backups_and_indexing;
 use std::cell::RefCell;
@@ -452,8 +452,8 @@ impl<'gctx> Source for GitSource<'gctx> {
 #[cfg(test)]
 mod test {
     use super::ident;
-    use crate::core::{GitReference, SourceId};
     use crate::util::IntoUrl;
+    use crate::workspace::{GitReference, SourceId};
 
     #[test]
     pub fn test_url_to_path_ident_with_path() {

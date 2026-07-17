@@ -1,10 +1,10 @@
 use benchsuite::fixtures;
 use cargo::GlobalContext;
 use cargo::compiler::{CompileKind, RustcTargetData};
-use cargo::core::{PackageIdSpec, Workspace};
 use cargo::ops::WorkspaceResolve;
 use cargo::resolver::features::{FeatureOpts, FeatureResolver};
 use cargo::resolver::{CliFeatures, ForceAllTargets, HasDevUnits, ResolveBehavior};
+use cargo::workspace::{PackageIdSpec, Workspace};
 use criterion::{Criterion, criterion_group, criterion_main};
 use std::path::Path;
 

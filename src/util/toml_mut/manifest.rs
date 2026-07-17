@@ -7,11 +7,11 @@ use std::str;
 use anyhow::Context as _;
 
 use super::dependency::Dependency;
-use crate::core::dependency::DepKind;
-use crate::core::{FeatureValue, Features, Workspace};
 use crate::util::closest;
 use crate::util::frontmatter::ScriptSource;
 use crate::util::toml::is_embedded;
+use crate::workspace::dependency::DepKind;
+use crate::workspace::{FeatureValue, Features, Workspace};
 use crate::{CargoResult, GlobalContext};
 
 /// Dependency table to add deps to.
@@ -371,7 +371,7 @@ impl LocalManifest {
         let mut changed = false;
         package.entry("edition").or_insert_with(|| {
             changed = true;
-            crate::core::features::Edition::LATEST_STABLE
+            crate::workspace::features::Edition::LATEST_STABLE
                 .to_string()
                 .into()
         });

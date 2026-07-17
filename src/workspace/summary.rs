@@ -1,8 +1,8 @@
-use crate::core::{Dependency, PackageId, SourceId};
 use crate::util::CargoResult;
 use crate::util::closest_msg;
 use crate::util::data_structures::{HashMap, HashSet};
 use crate::util::interning::InternedString;
+use crate::workspace::{Dependency, PackageId, SourceId};
 use anyhow::bail;
 use cargo_util_schemas::manifest::FeatureName;
 use cargo_util_schemas::manifest::RustVersion;

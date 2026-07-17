@@ -22,7 +22,7 @@ use serde::Serialize;
 
 use crate::CARGO_ENV;
 use crate::CargoResult;
-use crate::core::manifest::ManifestMetadata;
+use crate::workspace::manifest::ManifestMetadata;
 
 /// The current format version of [`EncodedDepInfo`].
 const CURRENT_ENCODED_DEP_INFO_VERSION: u8 = 1;

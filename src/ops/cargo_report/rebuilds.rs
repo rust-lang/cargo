@@ -19,7 +19,6 @@ use crate::compiler::UnitIndex;
 use crate::compiler::fingerprint::DirtyReason;
 use crate::compiler::fingerprint::FsStatus;
 use crate::compiler::fingerprint::StaleItem;
-use crate::core::Workspace;
 use crate::ops::cargo_report::util::find_log_file;
 use crate::ops::cargo_report::util::unit_target_description;
 use crate::util::log_message::FingerprintStatus;
@@ -27,6 +26,7 @@ use crate::util::log_message::LogMessage;
 use crate::util::log_message::Target;
 use crate::util::logger::RunId;
 use crate::util::style;
+use crate::workspace::Workspace;
 
 const DEFAULT_DISPLAY_LIMIT: usize = 5;
 

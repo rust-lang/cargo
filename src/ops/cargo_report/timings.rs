@@ -24,7 +24,6 @@ use crate::compiler::timings::report::aggregate_sections;
 use crate::compiler::timings::report::compute_concurrency;
 use crate::compiler::timings::report::round_to_centisecond;
 use crate::compiler::timings::report::write_html;
-use crate::core::Workspace;
 use crate::ops::cargo_report::util::find_log_file;
 use crate::ops::cargo_report::util::unit_target_description;
 use crate::util::log_message::FingerprintStatus;
@@ -32,6 +31,7 @@ use crate::util::log_message::LogMessage;
 use crate::util::log_message::Target;
 use crate::util::logger::RunId;
 use crate::util::style;
+use crate::workspace::Workspace;
 
 pub struct ReportTimingsOptions<'gctx> {
     /// Whether to attempt to open the browser after the report is generated
@@ -335,7 +335,7 @@ where
         let mut root_map: IndexMap<_, Vec<_>> = IndexMap::default();
         for index in requested_units {
             let unit = &units[&index];
-            // Pretty much like `core::Target::description_named`
+            // Pretty much like `workspace::Target::description_named`
             let target_desc = if unit.target.kind == "lib" {
                 "lib".to_owned()
             } else if unit.target.kind == "build-script" {

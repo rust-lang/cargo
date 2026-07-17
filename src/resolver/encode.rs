@@ -112,11 +112,11 @@
 //!   format.
 
 use super::{Resolve, ResolveVersion};
-use crate::core::{Dependency, GitReference, Package, PackageId, Patch, SourceId, Workspace};
 use crate::util::data_structures::{HashMap, HashSet};
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::{Graph, internal};
+use crate::workspace::{Dependency, GitReference, Package, PackageId, Patch, SourceId, Workspace};
 use anyhow::{Context as _, bail};
 use cargo_util_schemas::lockfile::{
     TomlLockfile, TomlLockfileDependency, TomlLockfilePackageId, TomlLockfilePatch,

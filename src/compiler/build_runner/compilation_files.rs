@@ -11,8 +11,8 @@ use tracing::debug;
 
 use super::{BuildContext, BuildRunner, CompileKind, FileFlavor, Layout};
 use crate::compiler::{CompileMode, CompileTarget, CrateType, FileType, Unit};
-use crate::core::{Target, TargetKind, Workspace};
 use crate::util::{self, CargoResult, OnceExt, StableHasher};
+use crate::workspace::{Target, TargetKind, Workspace};
 
 /// This is a generic version number that can be changed to make
 /// backwards-incompatible changes to any file structures in the output

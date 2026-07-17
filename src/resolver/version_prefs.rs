@@ -11,14 +11,14 @@ use crate::context::CargoResolverConfig;
 use crate::context::GlobalRegistryConfig;
 use crate::context::IncompatiblePublishAge;
 use crate::context::RegistryConfig;
-use crate::core::Dependency;
-use crate::core::PackageId;
-use crate::core::SourceId;
-use crate::core::Summary;
 use crate::util::CargoResult;
 use crate::util::GlobalContext;
 use crate::util::interning::InternedString;
 use crate::util::time_span::parse_time_span;
+use crate::workspace::Dependency;
+use crate::workspace::PackageId;
+use crate::workspace::SourceId;
+use crate::workspace::Summary;
 
 /// A collection of preferences for particular package versions.
 ///
@@ -389,10 +389,10 @@ fn format_age_as_single_unit(age: jiff::SignedDuration) -> String {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::core::SourceId;
     use crate::sources::CRATES_IO_INDEX;
     use crate::sources::CRATES_IO_REGISTRY;
     use crate::util::IntoUrl as _;
+    use crate::workspace::SourceId;
 
     use std::collections::BTreeMap;
 

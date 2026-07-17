@@ -1,9 +1,9 @@
 use super::unit_graph::UnitGraph;
-use crate::core::PackageId;
 use crate::resolver::Resolve;
 use crate::resolver::errors::describe_path;
 use crate::util::data_structures::{HashMap, HashSet};
 use crate::util::errors::CargoResult;
+use crate::workspace::PackageId;
 
 /// Validates [`package.links`] field in the manifest file does not conflict
 /// between packages.

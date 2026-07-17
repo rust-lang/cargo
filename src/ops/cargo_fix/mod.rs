@@ -55,8 +55,6 @@ use tracing::{debug, trace, warn};
 pub use self::fix_edition::fix_edition;
 use crate::compiler::CompileKind;
 use crate::compiler::RustcTargetData;
-use crate::core::PackageIdSpecQuery as _;
-use crate::core::{Edition, MaybePackage, Package, PackageId, Workspace};
 use crate::ops::resolve::WorkspaceResolve;
 use crate::ops::{self, CompileOptions};
 use crate::resolver::features::{DiffMap, FeatureOpts, FeatureResolver, FeaturesFor};
@@ -66,6 +64,8 @@ use crate::util::diagnostic_server::{Message, RustfixDiagnosticServer};
 use crate::util::errors::CargoResult;
 use crate::util::toml_mut::manifest::LocalManifest;
 use crate::util::{LockServer, LockServerClient, existing_vcs_repo};
+use crate::workspace::PackageIdSpecQuery as _;
+use crate::workspace::{Edition, MaybePackage, Package, PackageId, Workspace};
 use crate::{drop_eprint, drop_eprintln};
 
 mod fix_edition;

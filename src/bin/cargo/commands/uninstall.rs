@@ -1,6 +1,6 @@
 use crate::command_prelude::*;
 
-use cargo::{CargoResult, core::PackageId, ops};
+use cargo::{CargoResult, ops, workspace::PackageId};
 use clap_complete::ArgValueCandidates;
 
 use std::collections::BTreeSet;

@@ -23,15 +23,15 @@
 
 use crate::compiler::{CompileKind, CompileTarget, Unit};
 use crate::context;
-use crate::core::Feature;
-use crate::core::dependency::Artifact;
-use crate::core::{PackageId, PackageIdSpec, PackageIdSpecQuery, Target, Workspace};
 use crate::resolver::Resolve;
 use crate::resolver::features::FeaturesFor;
 use crate::util::data_structures::{HashMap, HashSet};
 use crate::util::interning::InternedString;
 use crate::util::toml::validate_profile;
 use crate::util::{CargoResult, GlobalContext, closest_msg};
+use crate::workspace::Feature;
+use crate::workspace::dependency::Artifact;
+use crate::workspace::{PackageId, PackageIdSpec, PackageIdSpecQuery, Target, Workspace};
 use anyhow::{Context as _, bail};
 use cargo_util::is_ci;
 use cargo_util_schemas::manifest::TomlTrimPaths;

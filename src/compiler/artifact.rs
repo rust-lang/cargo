@@ -3,9 +3,9 @@
 use crate::CargoResult;
 use crate::compiler::unit_graph::UnitDep;
 use crate::compiler::{BuildRunner, CrateType, FileFlavor, Unit};
-use crate::core::dependency::ArtifactKind;
-use crate::core::{Dependency, Target, TargetKind};
 use crate::util::data_structures::{HashMap, HashSet};
+use crate::workspace::dependency::ArtifactKind;
+use crate::workspace::{Dependency, Target, TargetKind};
 use std::ffi::OsString;
 
 /// Return all environment variables for the given unit-dependencies

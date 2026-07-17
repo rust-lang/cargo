@@ -24,17 +24,17 @@ use crate::compiler::UserIntent;
 use crate::compiler::artifact::match_artifacts_kind_with_targets;
 use crate::compiler::unit_graph::{UnitDep, UnitGraph};
 use crate::compiler::{CompileKind, CompileMode, CrateType, RustcTargetData, Unit, UnitInterner};
-use crate::core::dependency::{Artifact, ArtifactKind, ArtifactTarget, DepKind};
-use crate::core::profiles::{Profile, Profiles, UnitFor};
-use crate::core::{
-    Dependency, Feature, Package, PackageId, PackageSet, Target, TargetKind, Workspace,
-};
 use crate::ops::resolve_all_features;
 use crate::resolver::features::{FeaturesFor, ResolvedFeatures};
 use crate::resolver::{ForceAllTargets, HasDevUnits, Resolve};
 use crate::util::GlobalContext;
 use crate::util::Unhashed;
 use crate::util::interning::InternedString;
+use crate::workspace::dependency::{Artifact, ArtifactKind, ArtifactTarget, DepKind};
+use crate::workspace::profiles::{Profile, Profiles, UnitFor};
+use crate::workspace::{
+    Dependency, Feature, Package, PackageId, PackageSet, Target, TargetKind, Workspace,
+};
 
 const IS_NO_ARTIFACT_DEP: Option<&'static Artifact> = None;
 

@@ -1,9 +1,9 @@
 //! Type definitions for cross-compilation.
 
-use crate::core::Target;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::{GlobalContext, StableHasher, try_canonicalize};
+use crate::workspace::Target;
 use anyhow::Context as _;
 use anyhow::bail;
 use cargo_util::ProcessBuilder;

@@ -17,13 +17,6 @@ use crate::context;
 use crate::context::{
     CargoResolverConfig, ConfigRelativePath, FeatureUnification, IncompatibleRustVersions, Value,
 };
-use crate::core::features::Features;
-use crate::core::registry::PackageRegistry;
-use crate::core::{
-    Dependency, Edition, FeatureValue, PackageId, PackageIdSpec, PackageIdSpecQuery, Patch,
-    PatchLocation,
-};
-use crate::core::{EitherManifest, Package, SourceId, VirtualManifest};
 use crate::ops;
 use crate::ops::lockfile::LOCKFILE_NAME;
 use crate::resolver::ResolveBehavior;
@@ -34,6 +27,13 @@ use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
 use crate::util::toml::{InheritableFields, read_manifest};
 use crate::util::{Filesystem, GlobalContext, IntoUrl, closest_msg};
+use crate::workspace::features::Features;
+use crate::workspace::registry::PackageRegistry;
+use crate::workspace::{
+    Dependency, Edition, FeatureValue, PackageId, PackageIdSpec, PackageIdSpecQuery, Patch,
+    PatchLocation,
+};
+use crate::workspace::{EitherManifest, Package, SourceId, VirtualManifest};
 
 use cargo_util::paths;
 use cargo_util::paths::normalize_path;

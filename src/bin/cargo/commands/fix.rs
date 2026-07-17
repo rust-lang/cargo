@@ -1,5 +1,5 @@
 use crate::command_prelude::*;
-use cargo::core::Workspace;
+use cargo::workspace::Workspace;
 
 use cargo::ops;
 

@@ -10,10 +10,10 @@ use std::sync::OnceLock;
 use serde::de;
 use serde::ser;
 
-use crate::core::PackageIdSpec;
-use crate::core::SourceId;
 use crate::util::CargoResult;
 use crate::util::interning::InternedString;
+use crate::workspace::PackageIdSpec;
+use crate::workspace::SourceId;
 
 static PACKAGE_ID_CACHE: OnceLock<Mutex<HashSet<&'static PackageIdInner>>> = OnceLock::new();
 
@@ -243,9 +243,9 @@ impl fmt::Debug for PackageIdInner {
 #[cfg(test)]
 mod tests {
     use super::PackageId;
-    use crate::core::SourceId;
     use crate::sources::CRATES_IO_INDEX;
     use crate::util::IntoUrl;
+    use crate::workspace::SourceId;
 
     #[test]
     fn invalid_version_handled_nicely() {

@@ -1,12 +1,12 @@
 use crate::compiler::artifact::match_artifacts_kind_with_targets;
 use crate::compiler::{CompileKind, CompileKindFallback, RustcTargetData};
-use crate::core::dependency::DepKind;
-use crate::core::package::SerializedPackage;
-use crate::core::{Package, PackageId, PackageIdSpec, Workspace};
 use crate::ops::{self, Packages};
 use crate::resolver::{HasDevUnits, Resolve, features::CliFeatures};
 use crate::util::CargoResult;
 use crate::util::interning::InternedString;
+use crate::workspace::dependency::DepKind;
+use crate::workspace::package::SerializedPackage;
+use crate::workspace::{Package, PackageId, PackageIdSpec, Workspace};
 use cargo_platform::Platform;
 use serde::Serialize;
 use std::collections::BTreeMap;

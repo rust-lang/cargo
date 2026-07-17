@@ -6,10 +6,10 @@ use std::path::PathBuf;
 use crate::CargoResult;
 use crate::GlobalContext;
 use crate::compiler::CompileMode;
-use crate::core::Workspace;
 use crate::util::BuildLogger;
 use crate::util::log_message::Target;
 use crate::util::logger::RunId;
+use crate::workspace::Workspace;
 
 /// Lists log files by calling a callback for each valid log file.
 ///
@@ -80,7 +80,7 @@ pub fn find_log_file(
 
 pub fn unit_target_description(target: &Target, mode: CompileMode) -> String {
     // This is pretty similar to how the current `compiler::timings`
-    // renders `core::manifest::Target`. However, our target is
+    // renders `workspace::manifest::Target`. However, our target is
     // a simplified type so we cannot reuse the same logic here.
     let mut target_str =
         if target.kind == "lib" && matches!(mode, CompileMode::Build | CompileMode::Check { .. }) {

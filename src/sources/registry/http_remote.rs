@@ -1,8 +1,5 @@
 //! Access to a HTTP-based crate registry. See [`HttpRegistry`] for details.
 
-use crate::core::PackageId;
-use crate::core::SourceId;
-use crate::core::global_cache_tracker;
 use crate::sources::registry::LoadResponse;
 use crate::sources::registry::MaybeLock;
 use crate::sources::registry::RegistryConfig;
@@ -21,6 +18,9 @@ use crate::util::errors::HttpNotSuccessful;
 use crate::util::interning::InternedString;
 use crate::util::network::retry::Retry;
 use crate::util::network::retry::RetryResult;
+use crate::workspace::PackageId;
+use crate::workspace::SourceId;
+use crate::workspace::global_cache_tracker;
 use anyhow::Context as _;
 use cargo_credential::Operation;
 use cargo_util::paths;

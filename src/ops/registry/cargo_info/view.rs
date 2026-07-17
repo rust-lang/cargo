@@ -1,12 +1,12 @@
 use crate::util::data_structures::HashMap;
 use std::io::Write;
 
-use crate::core::Summary;
 use crate::util::style::{CONTEXT, ERROR, HEADER, LITERAL, NOP, WARN};
+use crate::workspace::Summary;
 use crate::{
     CargoResult, GlobalContext,
-    core::{Dependency, FeatureMap, Package, PackageId, SourceId, dependency::DepKind},
     util::interning::InternedString,
+    workspace::{Dependency, FeatureMap, Package, PackageId, SourceId, dependency::DepKind},
 };
 
 use cargo_util_terminal::{Shell, Verbosity};
@@ -235,12 +235,12 @@ fn print_deps(
                 .filter_map(|(n, _)| features.get(n))
                 .flatten()
                 .filter_map(|f| match f {
-                    crate::core::FeatureValue::Feature(_) => None,
-                    crate::core::FeatureValue::Dep { dep_name } => Some(dep_name),
-                    crate::core::FeatureValue::DepFeature { dep_name, weak, .. } if *weak => {
+                    crate::workspace::FeatureValue::Feature(_) => None,
+                    crate::workspace::FeatureValue::Dep { dep_name } => Some(dep_name),
+                    crate::workspace::FeatureValue::DepFeature { dep_name, weak, .. } if *weak => {
                         Some(dep_name)
                     }
-                    crate::core::FeatureValue::DepFeature { .. } => None,
+                    crate::workspace::FeatureValue::DepFeature { .. } => None,
                 })
                 .any(|dep_name| *dep_name == dependency.name_in_toml())
             {
@@ -438,9 +438,9 @@ fn resolve_features(
             continue;
         };
         for activated in current_activated.iter().rev().filter_map(|f| match f {
-            crate::core::FeatureValue::Feature(name) => Some(name),
-            crate::core::FeatureValue::Dep { .. }
-            | crate::core::FeatureValue::DepFeature { .. } => None,
+            crate::workspace::FeatureValue::Feature(name) => Some(name),
+            crate::workspace::FeatureValue::Dep { .. }
+            | crate::workspace::FeatureValue::DepFeature { .. } => None,
         }) {
             let Some(status) = resolved.get_mut(activated) else {
                 continue;

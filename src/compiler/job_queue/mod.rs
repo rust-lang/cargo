@@ -141,7 +141,6 @@ use super::timings::Timings;
 use crate::compiler::descriptive_pkg_name;
 use crate::compiler::future_incompat::{self, FutureBreakageItem, FutureIncompatReportPackage};
 use crate::context::WarningHandling;
-use crate::core::{PackageId, TargetKind};
 use crate::diagnostics::GlobalDiagnosticStats;
 use crate::diagnostics::rules::unused_dependencies;
 use crate::resolver::ResolveBehavior;
@@ -152,6 +151,7 @@ use crate::util::interning::InternedString;
 use crate::util::machine_message::{self, Message as _};
 use crate::util::{self, internal};
 use crate::util::{DependencyQueue, GlobalContext, Progress, ProgressStyle, Queue};
+use crate::workspace::{PackageId, TargetKind};
 use cargo_util_terminal::Shell;
 
 /// This structure is backed by the `DependencyQueue` type and manages the

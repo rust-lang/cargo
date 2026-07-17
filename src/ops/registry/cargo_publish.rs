@@ -24,14 +24,6 @@ use itertools::Itertools;
 use crate::CargoResult;
 use crate::GlobalContext;
 use crate::context::JobsConfig;
-use crate::core::Dependency;
-use crate::core::Package;
-use crate::core::PackageId;
-use crate::core::PackageIdSpecQuery;
-use crate::core::SourceId;
-use crate::core::Workspace;
-use crate::core::dependency::DepKind;
-use crate::core::manifest::ManifestMetadata;
 use crate::ops;
 use crate::ops::PackageOpts;
 use crate::ops::Packages;
@@ -52,6 +44,14 @@ use crate::util::auth;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::ManifestError;
 use crate::util::toml::prepare_for_publish;
+use crate::workspace::Dependency;
+use crate::workspace::Package;
+use crate::workspace::PackageId;
+use crate::workspace::PackageIdSpecQuery;
+use crate::workspace::SourceId;
+use crate::workspace::Workspace;
+use crate::workspace::dependency::DepKind;
+use crate::workspace::manifest::ManifestMetadata;
 
 use super::super::check_dep_has_version;
 
@@ -902,9 +902,9 @@ fn validate_registry(pkgs: &[&Package], reg_or_index: Option<&RegistryOrIndex>) 
 #[cfg(test)]
 mod tests {
     use crate::{
-        core::{PackageId, SourceId},
         sources::CRATES_IO_INDEX,
         util::{Graph, IntoUrl},
+        workspace::{PackageId, SourceId},
     };
 
     use super::PublishPlan;

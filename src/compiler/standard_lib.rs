@@ -3,13 +3,13 @@
 use crate::compiler::UnitInterner;
 use crate::compiler::unit_dependencies::IsArtifact;
 use crate::compiler::{CompileKind, CompileMode, RustcTargetData, Unit};
-use crate::core::profiles::{Profiles, UnitFor};
-use crate::core::{PackageId, PackageSet, Workspace};
 use crate::ops::{self, Packages};
 use crate::resolver::HasDevUnits;
 use crate::resolver::Resolve;
 use crate::resolver::features::{CliFeatures, FeaturesFor, ResolvedFeatures};
 use crate::util::errors::CargoResult;
+use crate::workspace::profiles::{Profiles, UnitFor};
+use crate::workspace::{PackageId, PackageSet, Workspace};
 
 use crate::util::data_structures::{HashMap, HashSet};
 use std::path::PathBuf;

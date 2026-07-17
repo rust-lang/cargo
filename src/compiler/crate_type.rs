@@ -66,7 +66,7 @@ impl CrateType {
     ///
     /// See also [`TargetKind::requires_upstream_objects`].
     ///
-    /// [`TargetKind::requires_upstream_objects`]: crate::core::manifest::TargetKind::requires_upstream_objects
+    /// [`TargetKind::requires_upstream_objects`]: crate::workspace::manifest::TargetKind::requires_upstream_objects
     pub fn requires_upstream_objects(&self) -> bool {
         // "lib" == "rlib" and is a compilation that doesn't actually
         // require upstream object files to exist, only upstream metadata
@@ -82,7 +82,7 @@ impl CrateType {
     ///
     /// See also [`TargetKind::benefits_from_no_embed_metadata`].
     ///
-    /// [`TargetKind::benefits_from_no_embed_metadata`]: crate::core::manifest::TargetKind::benefits_from_no_embed_metadata
+    /// [`TargetKind::benefits_from_no_embed_metadata`]: crate::workspace::manifest::TargetKind::benefits_from_no_embed_metadata
     pub fn benefits_from_no_embed_metadata(&self) -> bool {
         match self {
             // rlib/libs generate .rmeta files for pipelined compilation.

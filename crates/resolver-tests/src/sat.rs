@@ -2,9 +2,9 @@ use std::collections::hash_map::Entry;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt::Write;
 
-use cargo::core::dependency::DepKind;
-use cargo::core::{Dependency, FeatureMap, FeatureValue, PackageId, Summary};
 use cargo::util::interning::{INTERNED_DEFAULT, InternedString};
+use cargo::workspace::dependency::DepKind;
+use cargo::workspace::{Dependency, FeatureMap, FeatureValue, PackageId, Summary};
 use cargo_platform::Platform;
 use varisat::ExtendFormula;
 

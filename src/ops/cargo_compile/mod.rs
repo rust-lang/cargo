@@ -48,8 +48,6 @@ use crate::compiler::{CrateType, TargetInfo, apply_env_config, standard_lib};
 use crate::compiler::{DefaultExecutor, Executor, UnitInterner};
 use crate::compiler::{DepKindSet, UnitIndex};
 use crate::context::{GlobalContext, WarningHandling};
-use crate::core::profiles::Profiles;
-use crate::core::{PackageId, PackageSet, SourceId, TargetKind, Workspace};
 use crate::drop_println;
 use crate::ops;
 use crate::ops::resolve::{SpecsAndResolvedFeatures, WorkspaceResolve};
@@ -59,6 +57,8 @@ use crate::util::BuildLogger;
 use crate::util::interning::InternedString;
 use crate::util::log_message::LogMessage;
 use crate::util::{CargoResult, StableHasher};
+use crate::workspace::profiles::Profiles;
+use crate::workspace::{PackageId, PackageSet, SourceId, TargetKind, Workspace};
 
 mod compile_filter;
 use cargo_util_terminal::report::{Group, Level, Origin};
@@ -193,7 +193,7 @@ fn compile_ws<'a>(
         unit_graph::emit_serialized_unit_graph(&bcx.roots, &bcx.unit_graph, ws.gctx())?;
         return Compilation::new(&bcx);
     }
-    crate::core::gc::auto_gc(bcx.gctx);
+    crate::workspace::gc::auto_gc(bcx.gctx);
     let build_runner = BuildRunner::new(&bcx)?;
     if options.build_config.dry_run {
         build_runner.dry_run()

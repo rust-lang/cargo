@@ -7,11 +7,11 @@ use tracing::{instrument, trace};
 use super::BuildContext;
 use super::unit::Unit;
 use crate::compiler::build_config::CompileMode;
-use crate::core::Dependency;
-use crate::core::PackageId;
-use crate::core::dependency::DepKind;
-use crate::core::manifest::TargetKind;
 use crate::util::interning::InternedString;
+use crate::workspace::Dependency;
+use crate::workspace::PackageId;
+use crate::workspace::dependency::DepKind;
+use crate::workspace::manifest::TargetKind;
 
 /// Track and translate `unused_externs` to `unused_dependencies`
 pub struct UnusedDepState {

@@ -1,10 +1,10 @@
 use std::io::prelude::*;
 
-use crate::core::Workspace;
 use crate::resolver::encode::into_resolve;
 use crate::resolver::{Resolve, ResolveVersion};
 use crate::util::Filesystem;
 use crate::util::errors::CargoResult;
+use crate::workspace::Workspace;
 
 use anyhow::Context as _;
 use cargo_util_schemas::lockfile::TomlLockfile;

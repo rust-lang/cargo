@@ -5,8 +5,8 @@ use cargo_util_schemas::manifest;
 use cargo_util_terminal::report::Level;
 
 use crate::context::WarningHandling;
-use crate::core::{Feature, Features};
 use crate::util::GlobalContext;
+use crate::workspace::{Feature, Features};
 
 #[derive(Clone, Debug)]
 pub struct Lint {

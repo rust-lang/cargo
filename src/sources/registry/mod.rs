@@ -201,9 +201,6 @@ use serde::Serialize;
 use tar::{Archive, EntryType};
 use tracing::debug;
 
-use crate::core::dependency::Dependency;
-use crate::core::global_cache_tracker;
-use crate::core::{Package, PackageId, SourceId};
 use crate::sources::PathSource;
 use crate::sources::source::MaybePackage;
 use crate::sources::source::QueryKind;
@@ -212,6 +209,9 @@ use crate::util::cache_lock::CacheLockMode;
 use crate::util::interning::InternedString;
 use crate::util::{CargoResult, Filesystem, GlobalContext, LimitErrorReader, restricted_names};
 use crate::util::{VersionExt, hex};
+use crate::workspace::dependency::Dependency;
+use crate::workspace::global_cache_tracker;
+use crate::workspace::{Package, PackageId, SourceId};
 
 pub use cargo_util_schemas::index::RegistryConfig;
 
@@ -338,7 +338,7 @@ pub trait RegistryData {
     /// Despite the name, this doesn't actually download anything. If the
     /// `.crate` is already downloaded, then it returns [`MaybeLock::Ready`].
     /// If it hasn't been downloaded, then it returns [`MaybeLock::Download`]
-    /// which contains the URL to download. The [`crate::core::package::Downloads`]
+    /// which contains the URL to download. The [`crate::workspace::package::Downloads`]
     /// system handles the actual download process. After downloading, it
     /// calls [`Self::finish_download`] to save the downloaded file.
     ///
@@ -352,7 +352,7 @@ pub trait RegistryData {
 
     /// Finish a download by saving a `.crate` file to disk.
     ///
-    /// After [`crate::core::package::Downloads`] has finished a download,
+    /// After [`crate::workspace::package::Downloads`] has finished a download,
     /// it will call this to save the `.crate` file. This is only relevant
     /// for remote registries. This should validate the checksum and save
     /// the given data to the on-disk cache.

@@ -3,7 +3,6 @@ use std::cell::{Cell, RefCell};
 use std::fmt::{self, Debug, Formatter};
 use std::path::{Path, PathBuf};
 
-use crate::core::{Dependency, Package, PackageId, SourceId};
 use crate::sources::IndexSummary;
 use crate::sources::PathSource;
 use crate::sources::source::MaybePackage;
@@ -11,6 +10,7 @@ use crate::sources::source::QueryKind;
 use crate::sources::source::Source;
 use crate::util::GlobalContext;
 use crate::util::errors::CargoResult;
+use crate::workspace::{Dependency, Package, PackageId, SourceId};
 
 use anyhow::Context as _;
 use cargo_util::{Sha256, paths};

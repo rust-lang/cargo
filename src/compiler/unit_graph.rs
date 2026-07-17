@@ -7,13 +7,13 @@ use cargo_util_schemas::core::PackageIdSpec;
 use crate::GlobalContext;
 use crate::compiler::Unit;
 use crate::compiler::{CompileKind, CompileMode};
-use crate::core::Target;
-use crate::core::dependency::Dependency;
-use crate::core::profiles::{Profile, UnitFor};
 use crate::util::CargoResult;
 use crate::util::Unhashed;
 use crate::util::data_structures::HashMap;
 use crate::util::interning::InternedString;
+use crate::workspace::Target;
+use crate::workspace::dependency::Dependency;
+use crate::workspace::profiles::{Profile, UnitFor};
 
 /// The dependency graph of Units.
 pub type UnitGraph = HashMap<Unit, Vec<UnitDep>>;

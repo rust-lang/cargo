@@ -1,6 +1,4 @@
 use crate::context;
-use crate::core::GitReference;
-use crate::core::SourceKind;
 use crate::sources::registry::CRATES_IO_HTTP_INDEX;
 use crate::sources::source::Source;
 use crate::sources::{CRATES_IO_DOMAIN, CRATES_IO_INDEX, CRATES_IO_REGISTRY, DirectorySource};
@@ -8,6 +6,8 @@ use crate::sources::{GitSource, PathSource, RegistrySource};
 use crate::util::data_structures::HashSet;
 use crate::util::interning::InternedString;
 use crate::util::{CanonicalUrl, CargoResult, GlobalContext, IntoUrl};
+use crate::workspace::GitReference;
+use crate::workspace::SourceKind;
 use anyhow::Context as _;
 use serde::de;
 use serde::ser;
@@ -145,7 +145,7 @@ impl SourceId {
     /// ## Example
     ///
     /// ```
-    /// use cargo::core::SourceId;
+    /// use cargo::workspace::SourceId;
     /// SourceId::from_url("git+https://github.com/alexcrichton/\
     ///                     libssh2-static-sys#80e71a3021618eb05\
     ///                     656c58fb7c5ef5f12bc747f");

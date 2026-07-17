@@ -66,10 +66,10 @@ use std::time::{Duration, Instant};
 use tracing::{debug, trace};
 
 use crate::context::GlobalContext;
-use crate::core::PackageIdSpec;
-use crate::core::{Dependency, PackageId, Registry, Summary};
 use crate::util::errors::CargoResult;
 use crate::util::network::PollExt;
+use crate::workspace::PackageIdSpec;
+use crate::workspace::{Dependency, PackageId, Registry, Summary};
 
 use self::context::ResolverContext;
 use self::dep_cache::RegistryQueryer;

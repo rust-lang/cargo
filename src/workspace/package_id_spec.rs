@@ -2,10 +2,10 @@ use crate::util::data_structures::HashMap;
 
 use anyhow::{Context as _, bail};
 
-use crate::core::PackageId;
-use crate::core::PackageIdSpec;
 use crate::util::edit_distance;
 use crate::util::errors::CargoResult;
+use crate::workspace::PackageId;
+use crate::workspace::PackageIdSpec;
 
 pub trait PackageIdSpecQuery {
     /// Roughly equivalent to `PackageIdSpec::parse(spec)?.query(i)`
@@ -143,7 +143,7 @@ help: re-run this command with one of the following specifications",
 mod tests {
     use super::PackageIdSpec;
     use super::PackageIdSpecQuery;
-    use crate::core::{PackageId, SourceId};
+    use crate::workspace::{PackageId, SourceId};
     use url::Url;
 
     #[test]

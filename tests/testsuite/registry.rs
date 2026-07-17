@@ -8,7 +8,7 @@ use std::sync::Mutex;
 
 use crate::prelude::*;
 use crate::utils::cargo_process;
-use cargo::core::SourceId;
+use cargo::workspace::SourceId;
 use cargo_test_support::assert_deterministic_mtime;
 use cargo_test_support::paths;
 use cargo_test_support::registry::{

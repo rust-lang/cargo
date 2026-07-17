@@ -11,10 +11,10 @@ use tracing::trace;
 
 use crate::compiler::{CompileKind, CompileTarget};
 use crate::context::Definition;
-use crate::core::{CliUnstable, Feature, Features, PackageId, SourceId, Summary};
 use crate::util::OptVersionReq;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
+use crate::workspace::{CliUnstable, Feature, Features, PackageId, SourceId, Summary};
 
 /// Information about a dependency requested by a Cargo manifest.
 /// Cheap to copy.

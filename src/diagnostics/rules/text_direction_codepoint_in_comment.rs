@@ -15,13 +15,13 @@ use tracing::instrument;
 use super::CORRECTNESS;
 use crate::CargoResult;
 use crate::GlobalContext;
-use crate::core::MaybePackage;
-use crate::core::Workspace;
 use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevelProduct;
 use crate::diagnostics::ManifestFor;
 use crate::diagnostics::ScopedDiagnosticStats;
 use crate::diagnostics::workspace_rel_path;
+use crate::workspace::MaybePackage;
+use crate::workspace::Workspace;
 
 pub static LINT: &Lint = &Lint {
     name: "text_direction_codepoint_in_comment",

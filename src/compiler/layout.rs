@@ -208,9 +208,9 @@
 //! `target/$TRIPLE`.
 
 use crate::compiler::CompileTarget;
-use crate::core::Workspace;
 use crate::util::flock::is_on_nfs_mount;
 use crate::util::{CargoResult, FileLock};
+use crate::workspace::Workspace;
 use cargo_util::paths;
 use std::path::{Path, PathBuf};
 

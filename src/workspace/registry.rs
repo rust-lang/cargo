@@ -12,7 +12,6 @@
 use crate::util::data_structures::{HashMap, HashSet};
 use std::cell::RefCell;
 
-use crate::core::{Dependency, PackageId, PackageSet, Patch, SourceId, Summary};
 use crate::sources::IndexSummary;
 use crate::sources::config::SourceConfigMap;
 use crate::sources::source::QueryKind;
@@ -21,6 +20,7 @@ use crate::sources::source::SourceMap;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::{CanonicalUrl, GlobalContext};
+use crate::workspace::{Dependency, PackageId, PackageSet, Patch, SourceId, Summary};
 use anyhow::Context as _;
 use cargo_util_terminal::report::Level;
 use futures::stream::FuturesUnordered;
@@ -77,7 +77,7 @@ pub trait Registry {
 /// to a [`Source`]. Each [`Source`] in the map has been updated (using network
 /// operations if necessary) and is ready to be queried for packages.
 ///
-/// [`Package`]: crate::core::Package
+/// [`Package`]: crate::workspace::Package
 pub struct PackageRegistry<'gctx> {
     gctx: &'gctx GlobalContext,
     sources: RefCell<SourceMap<'gctx>>,

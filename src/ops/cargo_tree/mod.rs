@@ -2,14 +2,14 @@
 
 use self::format::Pattern;
 use crate::compiler::{CompileKind, RustcTargetData};
-use crate::core::dependency::DepKind;
-use crate::core::{Package, PackageId, PackageIdSpec, PackageIdSpecQuery, Workspace};
 use crate::ops::resolve::SpecsAndResolvedFeatures;
 use crate::ops::{self, Packages};
 use crate::resolver::{ForceAllTargets, HasDevUnits, features::CliFeatures};
 use crate::util::CargoResult;
 use crate::util::data_structures::{HashMap, HashSet};
 use crate::util::style;
+use crate::workspace::dependency::DepKind;
+use crate::workspace::{Package, PackageId, PackageIdSpec, PackageIdSpecQuery, Workspace};
 use crate::{drop_print, drop_println};
 use anyhow::Context as _;
 use graph::Graph;

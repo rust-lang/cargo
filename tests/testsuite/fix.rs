@@ -2,7 +2,7 @@
 
 use crate::prelude::*;
 use crate::utils::tools;
-use cargo::core::Edition;
+use cargo::workspace::Edition;
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::git::{self, init};
 use cargo_test_support::paths;

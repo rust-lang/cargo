@@ -10,9 +10,9 @@ use itertools::Itertools;
 use serde::Serialize;
 
 use crate::CargoResult;
-use crate::core::TargetKind;
 use crate::util::Rustc;
 use crate::util::interning::InternedString;
+use crate::workspace::TargetKind;
 
 use super::{BuildRunner, CompileMode, Unit};
 

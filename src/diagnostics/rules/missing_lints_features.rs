@@ -10,13 +10,13 @@ use tracing::instrument;
 use super::find_lint_or_group;
 use crate::CargoResult;
 use crate::GlobalContext;
-use crate::core::Feature;
-use crate::core::MaybePackage;
-use crate::core::Workspace;
 use crate::diagnostics::ManifestFor;
 use crate::diagnostics::ScopedDiagnosticStats;
 use crate::diagnostics::get_key_value_span;
 use crate::diagnostics::workspace_rel_path;
+use crate::workspace::Feature;
+use crate::workspace::MaybePackage;
+use crate::workspace::Workspace;
 
 #[instrument(skip_all)]
 pub(crate) fn diagnose_manifest(

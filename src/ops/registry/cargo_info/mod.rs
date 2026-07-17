@@ -3,9 +3,6 @@
 use anyhow::bail;
 use cargo_util_schemas::core::{PackageIdSpec, PartialVersion};
 
-use crate::core::Summary;
-use crate::core::registry::PackageRegistry;
-use crate::core::{Dependency, Package, PackageId, PackageIdSpecQuery, Registry, Workspace};
 use crate::ops::registry::{RegistryOrIndex, RegistrySourceIds, get_source_id_with_package_id};
 use crate::ops::resolve_ws;
 use crate::sources::IndexSummary;
@@ -13,6 +10,9 @@ use crate::sources::SourceConfigMap;
 use crate::sources::source::QueryKind;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::command_prelude::root_manifest;
+use crate::workspace::Summary;
+use crate::workspace::registry::PackageRegistry;
+use crate::workspace::{Dependency, Package, PackageId, PackageIdSpecQuery, Registry, Workspace};
 use crate::{CargoResult, GlobalContext};
 use view::pretty_view;
 

@@ -2,8 +2,8 @@
 
 use crate::{
     context::ConfigKey,
-    core::features::cargo_docs_link,
     util::{CanonicalUrl, CargoResult, GlobalContext, IntoUrl},
+    workspace::features::cargo_docs_link,
 };
 use anyhow::{Context as _, bail};
 use cargo_credential::{
@@ -17,9 +17,9 @@ use time::{Duration, OffsetDateTime};
 use url::Url;
 
 use crate::context::Value;
-use crate::core::SourceId;
 use crate::util::credential::adaptor::BasicProcessCredential;
 use crate::util::credential::paseto::PasetoCredential;
+use crate::workspace::SourceId;
 
 use super::{credential::process::CredentialProcessCredential, credential::token::TokenCredential};
 use crate::context::{CredentialCacheValue, GlobalRegistryConfig, PathAndArgs, RegistryConfig};

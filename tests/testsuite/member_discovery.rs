@@ -2,7 +2,7 @@
 
 use crate::prelude::*;
 use cargo::context::GlobalContext;
-use cargo::core::Workspace;
+use cargo::workspace::Workspace;
 use cargo_test_support::paths;
 use cargo_test_support::project;
 use cargo_test_support::registry;

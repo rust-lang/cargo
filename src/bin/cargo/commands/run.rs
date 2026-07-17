@@ -4,9 +4,9 @@ use std::path::Path;
 
 use crate::command_prelude::*;
 use crate::util::restricted_names::is_glob_pattern;
-use cargo::core::Workspace;
 use cargo::ops::{self, CompileFilter, Packages};
 use cargo::util::closest;
+use cargo::workspace::Workspace;
 use cargo_util::ProcessError;
 use cargo_util_terminal::Verbosity;
 use itertools::Itertools as _;

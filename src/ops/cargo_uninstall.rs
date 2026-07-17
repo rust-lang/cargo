@@ -1,10 +1,10 @@
-use crate::core::PackageId;
-use crate::core::{PackageIdSpec, PackageIdSpecQuery, SourceId};
 use crate::ops::common_for_install_and_uninstall::*;
 use crate::sources::PathSource;
 use crate::util::Filesystem;
 use crate::util::GlobalContext;
 use crate::util::errors::CargoResult;
+use crate::workspace::PackageId;
+use crate::workspace::{PackageIdSpec, PackageIdSpecQuery, SourceId};
 use anyhow::bail;
 use std::collections::BTreeSet;
 use std::env;

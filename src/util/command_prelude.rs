@@ -1,7 +1,5 @@
 use crate::CargoResult;
 use crate::compiler::{BuildConfig, CompileKind, MessageFormat, RustcTargetData};
-use crate::core::Dependency;
-use crate::core::{Edition, Package, TargetKind, Workspace, profiles::Profiles};
 use crate::ops::registry::RegistryOrIndex;
 use crate::ops::{self, CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
 use crate::resolver::{CliFeatures, ForceAllTargets, HasDevUnits};
@@ -16,6 +14,8 @@ use crate::util::{
     print_available_benches, print_available_binaries, print_available_examples,
     print_available_packages, print_available_tests,
 };
+use crate::workspace::Dependency;
+use crate::workspace::{Edition, Package, TargetKind, Workspace, profiles::Profiles};
 use anyhow::bail;
 use cargo_util::paths;
 use cargo_util_schemas::manifest::ProfileName;

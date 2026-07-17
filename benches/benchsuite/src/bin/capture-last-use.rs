@@ -14,8 +14,8 @@
 #![allow(clippy::disallowed_types)]
 
 use cargo::GlobalContext;
-use cargo::core::global_cache_tracker::{self, DeferredGlobalLastUse, GlobalCacheTracker};
 use cargo::util::cache_lock::CacheLockMode;
+use cargo::workspace::global_cache_tracker::{self, DeferredGlobalLastUse, GlobalCacheTracker};
 use rand::prelude::*;
 use std::collections::HashMap;
 use std::fs;

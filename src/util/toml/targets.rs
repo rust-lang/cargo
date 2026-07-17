@@ -23,10 +23,10 @@ use cargo_util_schemas::manifest::{
 };
 
 use crate::compiler::{CrateType, rustdoc::RustdocScrapeExamples};
-use crate::core::{Edition, Feature, Features, Target};
 use crate::util::{
     closest_msg, errors::CargoResult, restricted_names, toml::deprecated_underscore,
 };
+use crate::workspace::{Edition, Feature, Features, Target};
 
 const DEFAULT_TEST_DIR_NAME: &'static str = "tests";
 const DEFAULT_BENCH_DIR_NAME: &'static str = "benches";

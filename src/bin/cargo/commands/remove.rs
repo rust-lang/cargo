@@ -1,8 +1,4 @@
 use cargo::CargoResult;
-use cargo::core::PackageIdSpec;
-use cargo::core::PackageIdSpecQuery;
-use cargo::core::Workspace;
-use cargo::core::dependency::DepKind;
 use cargo::ops::cargo_remove::RemoveOptions;
 use cargo::ops::cargo_remove::remove;
 use cargo::ops::resolve_ws;
@@ -14,6 +10,10 @@ use cargo::util::toml_mut::dependency::MaybeWorkspace;
 use cargo::util::toml_mut::dependency::Source;
 use cargo::util::toml_mut::manifest::DepTable;
 use cargo::util::toml_mut::manifest::LocalManifest;
+use cargo::workspace::PackageIdSpec;
+use cargo::workspace::PackageIdSpecQuery;
+use cargo::workspace::Workspace;
+use cargo::workspace::dependency::DepKind;
 
 pub fn cli() -> clap::Command {
     clap::Command::new("remove")

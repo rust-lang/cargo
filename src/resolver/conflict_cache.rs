@@ -4,8 +4,8 @@ use std::collections::BTreeMap;
 use tracing::trace;
 
 use super::types::ConflictMap;
-use crate::core::{Dependency, PackageId};
 use crate::resolver::ResolverContext;
+use crate::workspace::{Dependency, PackageId};
 
 /// This is a trie for storing a large number of sets designed to
 /// efficiently see if any of the stored sets are a subset of a search set.

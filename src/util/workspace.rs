@@ -1,8 +1,8 @@
 use crate::compiler::Unit;
-use crate::core::manifest::TargetSourcePath;
-use crate::core::{Target, Workspace};
 use crate::ops::CompileOptions;
 use crate::util::CargoResult;
+use crate::workspace::manifest::TargetSourcePath;
+use crate::workspace::{Target, Workspace};
 use anyhow::bail;
 use cargo_util::ProcessBuilder;
 use cargo_util::paths::normalize_path;

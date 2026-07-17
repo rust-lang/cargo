@@ -1,10 +1,10 @@
 //! Support for the permanently unstable `-Zfix-edition` flag.
 
 use super::{EditionFixMode, FixOptions};
-use crate::core::features::{Edition, FixEdition};
-use crate::core::{Package, Workspace};
 use crate::ops;
 use crate::util::toml_mut::manifest::LocalManifest;
+use crate::workspace::features::{Edition, FixEdition};
+use crate::workspace::{Package, Workspace};
 use crate::{CargoResult, GlobalContext};
 use toml_edit::{Formatted, Item, Value};
 

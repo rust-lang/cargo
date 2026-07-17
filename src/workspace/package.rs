@@ -20,12 +20,6 @@ use serde::Serialize;
 use tracing::debug;
 
 use crate::compiler::{CompileKind, RustcTargetData};
-use crate::core::dependency::DepKind;
-use crate::core::{
-    CliUnstable, Dependency, Features, Manifest, PackageId, PackageIdSpec, SerializedDependency,
-    SourceId, Target,
-};
-use crate::core::{Summary, Workspace};
 use crate::resolver::features::ForceAllTargets;
 use crate::resolver::{HasDevUnits, Resolve};
 use crate::sources::source::{MaybePackage, SourceMap};
@@ -35,6 +29,12 @@ use crate::util::errors::{CargoResult, HttpNotSuccessful};
 use crate::util::interning::InternedString;
 use crate::util::network::retry::{Retry, RetryResult};
 use crate::util::{self, GlobalContext, Progress, ProgressStyle, internal};
+use crate::workspace::dependency::DepKind;
+use crate::workspace::{
+    CliUnstable, Dependency, Features, Manifest, PackageId, PackageIdSpec, SerializedDependency,
+    SourceId, Target,
+};
+use crate::workspace::{Summary, Workspace};
 
 /// Information about a package that is available somewhere in the file system.
 ///

@@ -10,7 +10,7 @@ use std::str::{self, FromStr};
 use std::sync::Arc;
 
 use crate::AlreadyPrintedError;
-use crate::core::summary::MissingDependencyError;
+use crate::workspace::summary::MissingDependencyError;
 use anyhow::{Context as _, anyhow, bail};
 use cargo_platform::Platform;
 use cargo_util::paths;
@@ -25,14 +25,6 @@ use url::Url;
 
 use crate::compiler::{CompileKind, CompileTarget};
 use crate::context::{ConfigRelativePath, TOP_LEVEL_CONFIG_KEYS};
-use crate::core::dependency::{Artifact, ArtifactTarget, DepKind};
-use crate::core::manifest::{ManifestMetadata, TargetSourcePath};
-use crate::core::{
-    CliUnstable, FeatureValue, Patch, PatchLocation, find_workspace_root, resolve_relative_path,
-};
-use crate::core::{Dependency, Manifest, Package, PackageId, Summary, Target};
-use crate::core::{Edition, EitherManifest, Feature, Features, VirtualManifest, Workspace};
-use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRootConfig};
 use crate::diagnostics::cwd_rel_path;
 use crate::diagnostics::get_key_value_span;
 use crate::resolver::ResolveBehavior;
@@ -40,6 +32,16 @@ use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
 use crate::util::{self, GlobalContext, IntoUrl, OnceExt, OptVersionReq};
+use crate::workspace::dependency::{Artifact, ArtifactTarget, DepKind};
+use crate::workspace::manifest::{ManifestMetadata, TargetSourcePath};
+use crate::workspace::{
+    CliUnstable, FeatureValue, Patch, PatchLocation, find_workspace_root, resolve_relative_path,
+};
+use crate::workspace::{Dependency, Manifest, Package, PackageId, Summary, Target};
+use crate::workspace::{Edition, EitherManifest, Feature, Features, VirtualManifest, Workspace};
+use crate::workspace::{
+    GitReference, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRootConfig,
+};
 
 mod embedded;
 mod targets;
@@ -637,8 +639,8 @@ fn normalize_package_toml<'a>(
         .map(manifest::InheritableField::Value)
         .or_else(|| {
             if is_embedded {
-                const DEFAULT_EDITION: crate::core::features::Edition =
-                    crate::core::features::Edition::LATEST_STABLE;
+                const DEFAULT_EDITION: crate::workspace::features::Edition =
+                    crate::workspace::features::Edition::LATEST_STABLE;
                 let mut report = vec![Group::with_title(Level::WARNING.secondary_title(format!(
                     "`package.edition` is unspecified, defaulting to the latest edition (currently `{DEFAULT_EDITION}`)"
                 )))];

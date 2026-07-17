@@ -2,10 +2,10 @@
 
 use crate::CargoResult;
 use crate::GlobalContext;
-use crate::core::Package;
 use crate::util::toml_mut::manifest::DepTable;
 use crate::util::toml_mut::manifest::LocalManifest;
 use crate::util::toml_mut::manifest::MissingDependencyError;
+use crate::workspace::Package;
 
 /// Remove a dependency from a Cargo.toml manifest file.
 #[derive(Debug)]

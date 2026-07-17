@@ -178,9 +178,9 @@ pub enum FingerprintStatus {
     Fresh,
 }
 
-impl From<&crate::core::Target> for Target {
-    fn from(target: &crate::core::Target) -> Self {
-        use crate::core::TargetKind;
+impl From<&crate::workspace::Target> for Target {
+    fn from(target: &crate::workspace::Target) -> Self {
+        use crate::workspace::TargetKind;
         Self {
             name: target.name().to_string(),
             kind: match target.kind() {

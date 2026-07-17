@@ -46,27 +46,17 @@
 //!   to the `SourceMap` to get the `Source` objects which tell the `Downloads`
 //!   struct which URLs to fetch.
 //!
-//! [`Package`]: crate::core::package
-//! [`Target`]: crate::core::Target
-//! [`Manifest`]: crate::core::Manifest
+//! [`Package`]: crate::workspace::package
+//! [`Target`]: crate::workspace::Target
+//! [`Manifest`]: crate::workspace::Manifest
 //! [`Source`]: crate::sources::source::Source
 //! [`SourceMap`]: crate::sources::source::SourceMap
-//! [`PackageRegistry`]: crate::core::registry::PackageRegistry
+//! [`PackageRegistry`]: crate::workspace::registry::PackageRegistry
 //! [source implementations]: crate::sources
-//! [`Downloads`]: crate::core::package::Downloads
+//! [`Downloads`]: crate::workspace::package::Downloads
 
 use crate::compiler::{CompileKind, RustcTargetData};
 use crate::context::FeatureUnification;
-use crate::core::Dependency;
-use crate::core::GitReference;
-use crate::core::PackageId;
-use crate::core::PackageIdSpec;
-use crate::core::PackageIdSpecQuery;
-use crate::core::PackageSet;
-use crate::core::SourceId;
-use crate::core::Workspace;
-use crate::core::registry::{LockedPatchDependency, PackageRegistry};
-use crate::core::summary::Summary;
 use crate::ops;
 use crate::resolver::PublishAgePolicy;
 use crate::resolver::features::{
@@ -80,6 +70,16 @@ use crate::util::CanonicalUrl;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::data_structures::{HashMap, HashSet};
 use crate::util::errors::CargoResult;
+use crate::workspace::Dependency;
+use crate::workspace::GitReference;
+use crate::workspace::PackageId;
+use crate::workspace::PackageIdSpec;
+use crate::workspace::PackageIdSpecQuery;
+use crate::workspace::PackageSet;
+use crate::workspace::SourceId;
+use crate::workspace::Workspace;
+use crate::workspace::registry::{LockedPatchDependency, PackageRegistry};
+use crate::workspace::summary::Summary;
 use anyhow::Context as _;
 use cargo_util::paths;
 use cargo_util_schemas::core::PartialVersion;

@@ -47,7 +47,7 @@
 //!     if a crate needs to be recompiled.
 //! - [`sources::source`]:
 //!   The [`sources::source::Source`] trait is an abstraction over different sources of packages.
-//!   Sources are uniquely identified by a [`core::SourceId`]. Sources are implemented in the [`sources`]
+//!   Sources are uniquely identified by a [`workspace::SourceId`]. Sources are implemented in the [`sources`]
 //!   directory.
 //! - [`diagnostics`]: Home of diagnostic [passes][diagnostics::passes] and their
 //!   [rules][diagnostics::rules].
@@ -58,7 +58,7 @@
 //!   This includes the config parser which makes heavy use of
 //!   [serde](https://serde.rs/) to merge and translate config values.
 //!   The [`util::GlobalContext`] is usually accessed from the
-//!   [`core::Workspace`]
+//!   [`workspace::Workspace`]
 //!   though references to it are scattered around for more convenient access.
 //! - [`util::toml`]:
 //!   This directory contains the code for parsing `Cargo.toml` files.
@@ -112,7 +112,7 @@
 //!
 //! - Package
 //!   - `Cargo.toml`: User-written project manifest, loaded with [`util::toml::read_manifest`] and then
-//!     translated to [`core::manifest::Manifest`] which maybe stored in a [`core::Package`].
+//!     translated to [`workspace::manifest::Manifest`] which maybe stored in a [`workspace::Package`].
 //!     - This is editable with [`util::toml_mut::manifest::LocalManifest`]
 //!   - `Cargo.lock`: Generally loaded with [`ops::resolve_ws`] or a variant of it into a [`resolver::Resolve`]
 //!     - At the lowest level, [`ops::load_pkg_lockfile`] and [`ops::write_pkg_lockfile`] are used
@@ -171,8 +171,6 @@ pub mod sources;
 pub mod util;
 mod version;
 pub mod workspace;
-
-pub use workspace as core;
 
 pub fn exit_with_error(err: CliError, shell: &mut Shell) -> ! {
     debug!("exit_with_error; err={:?}", err);

@@ -1,12 +1,12 @@
 use std::fmt;
 use std::fmt::Write as _;
 
-use crate::core::{Dependency, PackageId, Registry, Summary};
 use crate::sources::IndexSummary;
 use crate::sources::source::QueryKind;
 use crate::util::edit_distance::{closest, edit_distance};
 use crate::util::errors::CargoResult;
 use crate::util::{GlobalContext, OptVersionReq, VersionExt};
+use crate::workspace::{Dependency, PackageId, Registry, Summary};
 use anyhow::Error;
 
 use super::VersionPreferences;
