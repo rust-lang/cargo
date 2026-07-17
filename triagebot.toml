@@ -120,7 +120,7 @@ trigger_files = [
 ]
 
 [autolabel."A-crate-dependencies"]
-trigger_files = ["src/core/dependency.rs"]
+trigger_files = ["src/workspace/dependency.rs"]
 
 [autolabel."A-crate-types"]
 trigger_files = ["src/compiler/crate_type.rs"]
@@ -205,7 +205,7 @@ trigger_files = ["src/compiler/lto.rs"]
 [autolabel."A-manifest"]
 trigger_files = [
     "crates/cargo-util-schemas/src/manifest/",
-    "src/core/manifest.rs",
+    "src/workspace/manifest.rs",
     "src/util/toml/mod.rs",
     "src/util/toml_mut/",
 ]
@@ -217,13 +217,13 @@ trigger_files = ["src/util/network/"]
 trigger_files = ["src/sources/replaced.rs"]
 
 [autolabel."A-profiles"]
-trigger_files = ["src/core/profiles.rs"]
+trigger_files = ["src/workspace/profiles.rs"]
 
 [autolabel."A-rebuild-detection"]
 trigger_files = ["src/compiler/fingerprint/"]
 
 [autolabel."A-registries"]
-trigger_files = ["src/sources/registry/", "src/core/registry.rs"]
+trigger_files = ["src/sources/registry/", "src/workspace/registry.rs"]
 
 [autolabel."A-registry-authentication"]
 trigger_files = ["src/util/auth/"]
@@ -254,7 +254,7 @@ trigger_files = [
 ]
 
 [autolabel."A-unstable"]
-trigger_files = ["src/core/features.rs"]
+trigger_files = ["src/workspace/features.rs"]
 
 [autolabel."A-vcs"]
 trigger_files = ["src/util/vcs.rs"]
@@ -262,7 +262,7 @@ trigger_files = ["src/util/vcs.rs"]
 [autolabel."A-workspaces"]
 trigger_files = [
   "benches/benchsuite/benches/workspace_initialization.rs",
-  "src/core/workspace.rs",
+  "src/workspace/workspace.rs",
   "src/util/workspace.rs"
 ]
 

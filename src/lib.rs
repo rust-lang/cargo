@@ -164,13 +164,15 @@ mod macros;
 
 pub mod compiler;
 pub mod context;
-pub mod core;
 pub mod diagnostics;
 pub mod ops;
 pub mod resolver;
 pub mod sources;
 pub mod util;
 mod version;
+pub mod workspace;
+
+pub use workspace as core;
 
 pub fn exit_with_error(err: CliError, shell: &mut Shell) -> ! {
     debug!("exit_with_error; err={:?}", err);
