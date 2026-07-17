@@ -915,8 +915,7 @@ fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResu
     if build_runner.bcx.gctx.cli_unstable().rustdoc_mergeable_info {
         // write out mergeable data to be imported
         rustdoc.arg("-Zunstable-options");
-        rustdoc.arg("--merge=none");
-        let mut arg = OsString::from("--parts-out-dir=");
+        let mut arg = OsString::from("--write-doc-meta-dir=");
         // `-Zrustdoc-mergeable-info` always uses the new layout.
         arg.push(build_runner.files().out_dir_new_layout(unit));
         rustdoc.arg(arg);

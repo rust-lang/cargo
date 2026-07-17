@@ -103,10 +103,10 @@ impl RustdocFingerprint {
     ///
     /// The closure will run before persisting the fingerprint,
     /// and will be given a list of doc parts directories for passing to
-    /// `rustdoc --include-parts-dir`.
+    /// `rustdoc --read-doc-meta-dir`.
     pub fn persist<F>(&self, exec: F) -> CargoResult<()>
     where
-        // 1. paths for `--include-parts-dir`
+        // 1. paths for `--read-doc-meta-dir`
         F: Fn(&[&Path]) -> CargoResult<()>,
     {
         // Dedupe crate with the same name by file stem (which is effectively crate name),
@@ -139,7 +139,7 @@ impl RustdocFingerprint {
         let mut doc_parts: Vec<_> = dedup_map.into_values().collect();
         doc_parts.sort_unstable();
 
-        // Prepare args for `rustdoc --include-parts-dir`
+        // Prepare args for `rustdoc --read-doc-meta-dir`
         let doc_parts_dirs: Vec<_> = doc_parts.iter().map(|p| p.parent().unwrap()).collect();
         exec(&doc_parts_dirs)?;
 
