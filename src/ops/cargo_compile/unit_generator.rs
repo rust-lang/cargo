@@ -11,9 +11,9 @@ use crate::core::compiler::{CompileKind, CompileMode, Unit};
 use crate::core::compiler::{RustcTargetData, UnitInterner};
 use crate::core::dependency::DepKind;
 use crate::core::profiles::{Profiles, UnitFor};
-use crate::core::resolver::features::{self, FeaturesFor};
-use crate::core::resolver::{ForceAllTargets, HasDevUnits, Resolve};
 use crate::core::{FeatureValue, Package, PackageSet, Summary, Target};
+use crate::resolver::features::{self, FeaturesFor};
+use crate::resolver::{ForceAllTargets, HasDevUnits, Resolve};
 use crate::util::restricted_names::is_glob_pattern;
 use crate::util::{CargoResult, closest_msg};
 

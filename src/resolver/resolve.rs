@@ -44,7 +44,7 @@ pub struct Resolve {
     /// A map from packages to a set of their public dependencies
     public_dependencies: HashMap<PackageId, HashSet<PackageId>>,
     /// Version of the `Cargo.lock` format, see
-    /// `cargo::core::resolver::encode` for more.
+    /// `cargo::resolver::encode` for more.
     version: ResolveVersion,
     summaries: HashMap<PackageId, Summary>,
 }

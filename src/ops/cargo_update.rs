@@ -1,11 +1,12 @@
 use crate::core::Registry as _;
 use crate::core::dependency::Dependency;
 use crate::core::registry::PackageRegistry;
-use crate::core::resolver::PublishAgePolicy;
-use crate::core::resolver::features::{CliFeatures, HasDevUnits};
 use crate::core::{PackageId, PackageIdSpec, PackageIdSpecQuery};
-use crate::core::{Resolve, SourceId, Workspace};
+use crate::core::{SourceId, Workspace};
 use crate::ops;
+use crate::resolver::PublishAgePolicy;
+use crate::resolver::Resolve;
+use crate::resolver::features::{CliFeatures, HasDevUnits};
 use crate::sources::IndexSummary;
 use crate::sources::source::QueryKind;
 use crate::util::cache_lock::CacheLockMode;

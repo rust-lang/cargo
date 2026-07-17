@@ -3,8 +3,8 @@
 use crate::prelude::*;
 use cargo::core::Workspace;
 use cargo::core::compiler::UserIntent;
-use cargo::core::resolver::ResolveError;
 use cargo::ops::{self, CompileOptions};
+use cargo::resolver::ResolveError;
 use cargo::util::{context::GlobalContext, errors::ManifestError};
 use cargo_test_support::paths;
 use cargo_test_support::project;

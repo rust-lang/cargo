@@ -1,6 +1,7 @@
 use super::unit_graph::UnitGraph;
-use crate::core::resolver::errors::describe_path;
-use crate::core::{PackageId, Resolve};
+use crate::core::PackageId;
+use crate::resolver::Resolve;
+use crate::resolver::errors::describe_path;
 use crate::util::data_structures::{HashMap, HashSet};
 use crate::util::errors::CargoResult;
 

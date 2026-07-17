@@ -128,7 +128,7 @@ pub struct UnitInner {
     /// This is used for target-dependent feature resolution and is copied from
     /// [`FeaturesFor::ArtifactDep`], if the enum matches the variant.
     ///
-    /// [`FeaturesFor::ArtifactDep`]: crate::core::resolver::features::FeaturesFor::ArtifactDep
+    /// [`FeaturesFor::ArtifactDep`]: crate::resolver::features::FeaturesFor::ArtifactDep
     pub artifact_target_for_features: Option<CompileTarget>,
 
     /// Skip compiling this unit because `--compile-time-deps` flag is set and

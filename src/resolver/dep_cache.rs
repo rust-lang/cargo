@@ -9,15 +9,15 @@
 //!
 //! This module impl that cache in all the gory details
 
-use crate::core::resolver::context::ResolverContext;
-use crate::core::resolver::errors::describe_path_in_context;
-use crate::core::resolver::types::{ConflictReason, DepInfo, FeaturesSet};
-use crate::core::resolver::{
-    ActivateError, ActivateResult, CliFeatures, RequestedFeatures, ResolveOpts, VersionOrdering,
-    VersionPreferences,
-};
 use crate::core::{
     Dependency, FeatureValue, PackageId, PackageIdSpec, PackageIdSpecQuery, Registry, Summary,
+};
+use crate::resolver::context::ResolverContext;
+use crate::resolver::errors::describe_path_in_context;
+use crate::resolver::types::{ConflictReason, DepInfo, FeaturesSet};
+use crate::resolver::{
+    ActivateError, ActivateResult, CliFeatures, RequestedFeatures, ResolveOpts, VersionOrdering,
+    VersionPreferences,
 };
 use crate::sources::IndexSummary;
 use crate::sources::source::QueryKind;
@@ -260,7 +260,7 @@ impl<'a, T: Registry> RegistryQueryer<'a, T> {
         let pending = self.poller.pending_count();
         // Have all outstanding registry requests been completed?
         let mut all_ready = self.poller.wait();
-        debug!(target: "cargo::core::resolver::restarting", pending);
+        debug!(target: "cargo::resolver::restarting", pending);
 
         // Remove cached summaries that we produced with incomplete information.
         self.summary_cache.retain(|_, (_, r)| {

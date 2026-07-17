@@ -1,7 +1,8 @@
 use std::io::prelude::*;
 
-use crate::core::resolver::encode::into_resolve;
-use crate::core::{Resolve, ResolveVersion, Workspace};
+use crate::core::Workspace;
+use crate::resolver::encode::into_resolve;
+use crate::resolver::{Resolve, ResolveVersion};
 use crate::util::Filesystem;
 use crate::util::errors::CargoResult;
 

@@ -65,15 +65,15 @@ use crate::core::SourceId;
 use crate::core::Workspace;
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::registry::{LockedPatchDependency, PackageRegistry};
-use crate::core::resolver::PublishAgePolicy;
-use crate::core::resolver::features::{
-    CliFeatures, FeatureOpts, FeatureResolver, ForceAllTargets, RequestedFeatures, ResolvedFeatures,
-};
-use crate::core::resolver::{
-    self, HasDevUnits, Resolve, ResolveOpts, ResolveVersion, VersionOrdering, VersionPreferences,
-};
 use crate::core::summary::Summary;
 use crate::ops;
+use crate::resolver::PublishAgePolicy;
+use crate::resolver::features::{
+    CliFeatures, FeatureOpts, FeatureResolver, ForceAllTargets, RequestedFeatures, ResolvedFeatures,
+};
+use crate::resolver::{
+    self, HasDevUnits, Resolve, ResolveOpts, ResolveVersion, VersionOrdering, VersionPreferences,
+};
 use crate::sources::RecursivePathSource;
 use crate::util::CanonicalUrl;
 use crate::util::cache_lock::CacheLockMode;

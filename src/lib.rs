@@ -30,7 +30,7 @@
 //!     flows to completion.
 //! - [`ops::resolve`]:
 //!   Top-level API for dependency and feature resolver (e.g. [`ops::resolve_ws`])
-//!   - [`core::resolver`]: The core algorithm
+//!   - [`resolver`]: The core algorithm
 //! - [`core::compiler`]:
 //!   This is the code responsible for running `rustc` and `rustdoc`.
 //!   - [`core::compiler::build_context`]:
@@ -104,7 +104,7 @@
 //!   for more information.
 //! - [`resolver-tests`](https://github.com/rust-lang/cargo/tree/master/crates/resolver-tests)
 //!   This is a dedicated package that defines tests for the [dependency
-//!   resolver][core::resolver].
+//!   resolver][resolver].
 //!
 //! ### File Overview
 //!
@@ -114,9 +114,9 @@
 //!   - `Cargo.toml`: User-written project manifest, loaded with [`util::toml::read_manifest`] and then
 //!     translated to [`core::manifest::Manifest`] which maybe stored in a [`core::Package`].
 //!     - This is editable with [`util::toml_mut::manifest::LocalManifest`]
-//!   - `Cargo.lock`: Generally loaded with [`ops::resolve_ws`] or a variant of it into a [`core::resolver::Resolve`]
+//!   - `Cargo.lock`: Generally loaded with [`ops::resolve_ws`] or a variant of it into a [`resolver::Resolve`]
 //!     - At the lowest level, [`ops::load_pkg_lockfile`] and [`ops::write_pkg_lockfile`] are used
-//!     - See [`core::resolver::encode`] for versioning of `Cargo.lock`
+//!     - See [`resolver::encode`] for versioning of `Cargo.lock`
 //!   - `target/`: Used for build artifacts and abstracted with [`core::compiler::layout`]. `Layout` handles locking the target directory and providing paths to parts inside. There is a separate `Layout` for each build `target`.
 //!     - `target/debug/.fingerprint`: Tracker whether nor not a crate needs to be rebuilt.  See [`core::compiler::fingerprint`]
 //! - `$CARGO_HOME/`:

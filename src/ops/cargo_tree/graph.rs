@@ -3,9 +3,9 @@
 use super::TreeOptions;
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::DepKind;
-use crate::core::resolver::Resolve;
-use crate::core::resolver::features::{CliFeatures, FeaturesFor, ResolvedFeatures};
 use crate::core::{FeatureMap, FeatureValue, Package, PackageId, PackageIdSpec, Workspace};
+use crate::resolver::Resolve;
+use crate::resolver::features::{CliFeatures, FeaturesFor, ResolvedFeatures};
 use crate::util::CargoResult;
 use crate::util::data_structures::{HashMap, HashSet};
 use crate::util::interning::{INTERNED_DEFAULT, InternedString};

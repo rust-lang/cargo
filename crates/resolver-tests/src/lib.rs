@@ -14,12 +14,12 @@ use std::collections::{BTreeMap, HashSet};
 use std::fmt;
 use std::time::Instant;
 
-use cargo::core::Resolve;
-use cargo::core::ResolveVersion;
 use cargo::core::SourceId;
 use cargo::core::dependency::DepKind;
-use cargo::core::resolver::{self, ResolveOpts, VersionOrdering, VersionPreferences};
 use cargo::core::{Dependency, PackageId, Registry, Summary};
+use cargo::resolver::Resolve;
+use cargo::resolver::ResolveVersion;
+use cargo::resolver::{self, ResolveOpts, VersionOrdering, VersionPreferences};
 use cargo::sources::IndexSummary;
 use cargo::sources::source::QueryKind;
 use cargo::util::interning::InternedString;

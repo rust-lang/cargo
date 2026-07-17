@@ -15,8 +15,6 @@ use url::Url;
 use crate::core::compiler::Unit;
 use crate::core::features::Features;
 use crate::core::registry::PackageRegistry;
-use crate::core::resolver::ResolveBehavior;
-use crate::core::resolver::features::CliFeatures;
 use crate::core::{
     Dependency, Edition, FeatureValue, PackageId, PackageIdSpec, PackageIdSpecQuery, Patch,
     PatchLocation,
@@ -24,6 +22,8 @@ use crate::core::{
 use crate::core::{EitherManifest, Package, SourceId, VirtualManifest};
 use crate::ops;
 use crate::ops::lockfile::LOCKFILE_NAME;
+use crate::resolver::ResolveBehavior;
+use crate::resolver::features::CliFeatures;
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY, PathSource, SourceConfigMap};
 use crate::util::context;
 use crate::util::context::{FeatureUnification, Value};

@@ -142,10 +142,10 @@ use crate::core::compiler::descriptive_pkg_name;
 use crate::core::compiler::future_incompat::{
     self, FutureBreakageItem, FutureIncompatReportPackage,
 };
-use crate::core::resolver::ResolveBehavior;
 use crate::core::{PackageId, TargetKind};
 use crate::diagnostics::GlobalDiagnosticStats;
 use crate::diagnostics::rules::unused_dependencies;
+use crate::resolver::ResolveBehavior;
 use crate::util::CargoResult;
 use crate::util::context::WarningHandling;
 use crate::util::diagnostic_server::{self, DiagnosticPrinter};

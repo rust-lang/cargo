@@ -17,9 +17,9 @@ use url::Url;
 
 use crate::core::compiler::rustdoc::RustdocScrapeExamples;
 use crate::core::compiler::{CompileKind, CrateType};
-use crate::core::resolver::ResolveBehavior;
 use crate::core::{Dependency, PackageId, PackageIdSpec, Patch, SourceId, Summary};
 use crate::core::{Edition, Feature, Features, WorkspaceConfig};
+use crate::resolver::ResolveBehavior;
 use crate::util::errors::*;
 use crate::util::interning::InternedString;
 use crate::util::{Filesystem, GlobalContext, short_hash};

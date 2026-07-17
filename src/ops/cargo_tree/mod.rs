@@ -3,10 +3,10 @@
 use self::format::Pattern;
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::DepKind;
-use crate::core::resolver::{ForceAllTargets, HasDevUnits, features::CliFeatures};
 use crate::core::{Package, PackageId, PackageIdSpec, PackageIdSpecQuery, Workspace};
 use crate::ops::resolve::SpecsAndResolvedFeatures;
 use crate::ops::{self, Packages};
+use crate::resolver::{ForceAllTargets, HasDevUnits, features::CliFeatures};
 use crate::util::CargoResult;
 use crate::util::data_structures::{HashMap, HashSet};
 use crate::util::style;

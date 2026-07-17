@@ -56,11 +56,11 @@ pub use self::fix_edition::fix_edition;
 use crate::core::PackageIdSpecQuery as _;
 use crate::core::compiler::CompileKind;
 use crate::core::compiler::RustcTargetData;
-use crate::core::resolver::features::{DiffMap, FeatureOpts, FeatureResolver, FeaturesFor};
-use crate::core::resolver::{HasDevUnits, Resolve, ResolveBehavior};
 use crate::core::{Edition, MaybePackage, Package, PackageId, Workspace};
 use crate::ops::resolve::WorkspaceResolve;
 use crate::ops::{self, CompileOptions};
+use crate::resolver::features::{DiffMap, FeatureOpts, FeatureResolver, FeaturesFor};
+use crate::resolver::{HasDevUnits, Resolve, ResolveBehavior};
 use crate::util::GlobalContext;
 use crate::util::diagnostic_server::{Message, RustfixDiagnosticServer};
 use crate::util::errors::CargoResult;
@@ -603,7 +603,7 @@ fn check_resolver_change<'gctx>(
             &opts.compile_opts.cli_features,
             &specs,
             has_dev_units,
-            crate::core::resolver::features::ForceAllTargets::No,
+            crate::resolver::features::ForceAllTargets::No,
             dry_run,
         )?;
 

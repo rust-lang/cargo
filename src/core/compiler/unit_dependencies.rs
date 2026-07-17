@@ -28,12 +28,12 @@ use crate::core::compiler::{
 };
 use crate::core::dependency::{Artifact, ArtifactKind, ArtifactTarget, DepKind};
 use crate::core::profiles::{Profile, Profiles, UnitFor};
-use crate::core::resolver::features::{FeaturesFor, ResolvedFeatures};
-use crate::core::resolver::{ForceAllTargets, HasDevUnits, Resolve};
 use crate::core::{
     Dependency, Feature, Package, PackageId, PackageSet, Target, TargetKind, Workspace,
 };
 use crate::ops::resolve_all_features;
+use crate::resolver::features::{FeaturesFor, ResolvedFeatures};
+use crate::resolver::{ForceAllTargets, HasDevUnits, Resolve};
 use crate::util::GlobalContext;
 use crate::util::Unhashed;
 use crate::util::interning::InternedString;

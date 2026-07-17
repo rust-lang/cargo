@@ -130,7 +130,7 @@ use serde::{Deserialize, Serialize};
 use tracing::debug;
 
 use crate::GlobalContext;
-use crate::core::resolver::ResolveBehavior;
+use crate::resolver::ResolveBehavior;
 use crate::util::errors::CargoResult;
 use crate::util::indented_lines;
 

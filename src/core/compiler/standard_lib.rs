@@ -4,10 +4,11 @@ use crate::core::compiler::UnitInterner;
 use crate::core::compiler::unit_dependencies::IsArtifact;
 use crate::core::compiler::{CompileKind, CompileMode, RustcTargetData, Unit};
 use crate::core::profiles::{Profiles, UnitFor};
-use crate::core::resolver::HasDevUnits;
-use crate::core::resolver::features::{CliFeatures, FeaturesFor, ResolvedFeatures};
-use crate::core::{PackageId, PackageSet, Resolve, Workspace};
+use crate::core::{PackageId, PackageSet, Workspace};
 use crate::ops::{self, Packages};
+use crate::resolver::HasDevUnits;
+use crate::resolver::Resolve;
+use crate::resolver::features::{CliFeatures, FeaturesFor, ResolvedFeatures};
 use crate::util::errors::CargoResult;
 
 use crate::util::data_structures::{HashMap, HashSet};
@@ -97,7 +98,7 @@ pub fn resolve_std<'gctx>(
         &cli_features,
         &specs,
         HasDevUnits::No,
-        crate::core::resolver::features::ForceAllTargets::No,
+        crate::resolver::features::ForceAllTargets::No,
         dry_run,
     )?;
     debug_assert_eq!(resolve.specs_and_features.len(), 1);

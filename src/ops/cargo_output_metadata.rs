@@ -2,9 +2,9 @@ use crate::core::compiler::artifact::match_artifacts_kind_with_targets;
 use crate::core::compiler::{CompileKind, CompileKindFallback, RustcTargetData};
 use crate::core::dependency::DepKind;
 use crate::core::package::SerializedPackage;
-use crate::core::resolver::{HasDevUnits, Resolve, features::CliFeatures};
 use crate::core::{Package, PackageId, PackageIdSpec, Workspace};
 use crate::ops::{self, Packages};
+use crate::resolver::{HasDevUnits, Resolve, features::CliFeatures};
 use crate::util::CargoResult;
 use crate::util::interning::InternedString;
 use cargo_platform::Platform;
@@ -148,9 +148,9 @@ fn build_resolve_graph(
     // Resolve entire workspace.
     let specs = Packages::All(Vec::new()).to_package_id_specs(ws)?;
     let force_all = if metadata_opts.filter_platforms.is_empty() {
-        crate::core::resolver::features::ForceAllTargets::Yes
+        crate::resolver::features::ForceAllTargets::Yes
     } else {
-        crate::core::resolver::features::ForceAllTargets::No
+        crate::resolver::features::ForceAllTargets::No
     };
 
     // Note that even with --filter-platform we end up downloading host dependencies as well,

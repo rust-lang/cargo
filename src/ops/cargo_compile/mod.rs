@@ -48,12 +48,12 @@ use crate::core::compiler::{CrateType, TargetInfo, apply_env_config, standard_li
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
 use crate::core::compiler::{DepKindSet, UnitIndex};
 use crate::core::profiles::Profiles;
-use crate::core::resolver::features::{self, CliFeatures, FeaturesFor};
-use crate::core::resolver::{ForceAllTargets, HasDevUnits, Resolve};
 use crate::core::{PackageId, PackageSet, SourceId, TargetKind, Workspace};
 use crate::drop_println;
 use crate::ops;
 use crate::ops::resolve::{SpecsAndResolvedFeatures, WorkspaceResolve};
+use crate::resolver::features::{self, CliFeatures, FeaturesFor};
+use crate::resolver::{ForceAllTargets, HasDevUnits, Resolve};
 use crate::util::BuildLogger;
 use crate::util::context::{GlobalContext, WarningHandling};
 use crate::util::interning::InternedString;

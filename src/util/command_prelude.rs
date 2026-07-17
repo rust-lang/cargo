@@ -1,10 +1,10 @@
 use crate::CargoResult;
 use crate::core::Dependency;
 use crate::core::compiler::{BuildConfig, CompileKind, MessageFormat, RustcTargetData};
-use crate::core::resolver::{CliFeatures, ForceAllTargets, HasDevUnits};
 use crate::core::{Edition, Package, TargetKind, Workspace, profiles::Profiles};
 use crate::ops::registry::RegistryOrIndex;
 use crate::ops::{self, CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
+use crate::resolver::{CliFeatures, ForceAllTargets, HasDevUnits};
 use crate::util::data_structures::IndexSet;
 use crate::util::data_structures::{HashMap, HashSet};
 use crate::util::important_paths::find_root_manifest_for_wd;

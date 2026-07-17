@@ -26,7 +26,6 @@ use url::Url;
 use crate::core::compiler::{CompileKind, CompileTarget};
 use crate::core::dependency::{Artifact, ArtifactTarget, DepKind};
 use crate::core::manifest::{ManifestMetadata, TargetSourcePath};
-use crate::core::resolver::ResolveBehavior;
 use crate::core::{
     CliUnstable, FeatureValue, Patch, PatchLocation, find_workspace_root, resolve_relative_path,
 };
@@ -35,6 +34,7 @@ use crate::core::{Edition, EitherManifest, Feature, Features, VirtualManifest, W
 use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRootConfig};
 use crate::diagnostics::cwd_rel_path;
 use crate::diagnostics::get_key_value_span;
+use crate::resolver::ResolveBehavior;
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;

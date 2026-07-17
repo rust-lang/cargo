@@ -1,12 +1,12 @@
 use cargo::CargoResult;
 use cargo::core::PackageIdSpec;
 use cargo::core::PackageIdSpecQuery;
-use cargo::core::Resolve;
 use cargo::core::Workspace;
 use cargo::core::dependency::DepKind;
 use cargo::ops::cargo_remove::RemoveOptions;
 use cargo::ops::cargo_remove::remove;
 use cargo::ops::resolve_ws;
+use cargo::resolver::Resolve;
 use cargo::util::command_prelude::*;
 use cargo::util::print_available_packages;
 use cargo::util::toml_mut::dependency::Dependency;

@@ -40,9 +40,9 @@
 
 use crate::core::compiler::{CompileKind, CompileTarget, RustcTargetData};
 use crate::core::dependency::{ArtifactTarget, DepKind, Dependency};
-use crate::core::resolver::types::FeaturesSet;
-use crate::core::resolver::{Resolve, ResolveBehavior};
 use crate::core::{FeatureValue, PackageId, PackageIdSpec, PackageSet, Workspace};
+use crate::resolver::types::FeaturesSet;
+use crate::resolver::{Resolve, ResolveBehavior};
 use crate::util::CargoResult;
 use crate::util::data_structures::{HashMap, HashSet};
 use crate::util::interning::{INTERNED_DEFAULT, InternedString};
@@ -405,7 +405,7 @@ pub type DiffMap = BTreeMap<PackageFeaturesKey, BTreeSet<InternedString>>;
 /// For more information, please see the [module-level documentation].
 ///
 /// [`resolve`]: Self::resolve
-/// [module-level documentation]: crate::core::resolver::features
+/// [module-level documentation]: crate::resolver::features
 pub struct FeatureResolver<'a, 'gctx> {
     ws: &'a Workspace<'gctx>,
     target_data: &'a mut RustcTargetData<'gctx>,
