@@ -125,7 +125,7 @@
 //!   quick loading and comparison.
 //! - A `.json` file that contains details about the Fingerprint. This is only
 //!   used to log details about *why* a fingerprint is considered dirty.
-//!   `CARGO_LOG=cargo::core::compiler::fingerprint=trace cargo build` can be
+//!   `CARGO_LOG=cargo::compiler::fingerprint=trace cargo build` can be
 //!   used to display this log information.
 //! - A "dep-info" file which is a translation of rustc's `*.d` dep-info files
 //!   to a Cargo-specific format that tweaks file names and is optimized for

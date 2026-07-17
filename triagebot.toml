@@ -74,16 +74,16 @@ add_labels = ["S-waiting-on-review"]
 
 [autolabel."A-build-execution"]
 trigger_files = [
-  "src/core/compiler/compilation.rs",
-  "src/core/compiler/job_queue/",
-  "src/core/compiler/mod.rs",
+  "src/compiler/compilation.rs",
+  "src/compiler/job_queue/",
+  "src/compiler/mod.rs",
 ]
 
 [autolabel."A-build-scripts"]
 trigger_files = [
   "crates/build-rs-test-lib/",
   "crates/build-rs/",
-  "src/core/compiler/custom_build.rs",
+  "src/compiler/custom_build.rs",
 ]
 
 [autolabel."A-cache-messages"]
@@ -98,7 +98,7 @@ trigger_files = [
 [autolabel."A-cfg-expr"]
 trigger_files = [
   "crates/cargo-platform/",
-  "src/core/compiler/build_context/target_info.rs",
+  "src/compiler/build_context/target_info.rs",
 ]
 
 [autolabel."A-cli"]
@@ -123,13 +123,13 @@ trigger_files = [
 trigger_files = ["src/core/dependency.rs"]
 
 [autolabel."A-crate-types"]
-trigger_files = ["src/core/compiler/crate_type.rs"]
+trigger_files = ["src/compiler/crate_type.rs"]
 
 [autolabel."A-credential-provider"]
 trigger_files = ["credential/"]
 
 [autolabel."A-dep-info"]
-trigger_files = ["src/core/compiler/output_depinfo.rs"]
+trigger_files = ["src/compiler/output_depinfo.rs"]
 
 [autolabel."A-dependency-resolution"]
 trigger_files = [
@@ -157,7 +157,7 @@ trigger_files = ["src/resolver/features.rs"]
 trigger_files = ["src/util/flock.rs", "src/util/important_paths.rs"]
 
 [autolabel."A-future-incompat"]
-trigger_files = ["src/core/compiler/future_incompat.rs"]
+trigger_files = ["src/compiler/future_incompat.rs"]
 
 [autolabel."A-git"]
 trigger_files = ["src/sources/git/", "src/ops/cargo_package/vcs.rs"]
@@ -186,12 +186,12 @@ trigger_files = ["src/util/machine_message.rs"]
 
 [autolabel."A-layout"]
 trigger_files = [
-  "src/core/compiler/build_runner/compilation_files.rs",
-  "src/core/compiler/layout.rs",
+  "src/compiler/build_runner/compilation_files.rs",
+  "src/compiler/layout.rs",
 ]
 
 [autolabel."A-links"]
-trigger_files = ["src/core/compiler/links.rs"]
+trigger_files = ["src/compiler/links.rs"]
 
 [autolabel."A-local-registry-source"]
 trigger_files = ["src/sources/registry/local.rs"]
@@ -200,7 +200,7 @@ trigger_files = ["src/sources/registry/local.rs"]
 trigger_files = ["src/ops/lockfile.rs", "src/resolver/encode.rs"]
 
 [autolabel."A-lto"]
-trigger_files = ["src/core/compiler/lto.rs"]
+trigger_files = ["src/compiler/lto.rs"]
 
 [autolabel."A-manifest"]
 trigger_files = [
@@ -220,7 +220,7 @@ trigger_files = ["src/sources/replaced.rs"]
 trigger_files = ["src/core/profiles.rs"]
 
 [autolabel."A-rebuild-detection"]
-trigger_files = ["src/core/compiler/fingerprint/"]
+trigger_files = ["src/compiler/fingerprint/"]
 
 [autolabel."A-registries"]
 trigger_files = ["src/sources/registry/", "src/core/registry.rs"]
@@ -249,7 +249,7 @@ trigger_files = [
 
 [autolabel."A-timings"]
 trigger_files = [
-    "src/core/compiler/timings/",
+    "src/compiler/timings/",
     "src/util/cpu.rs",
 ]
 

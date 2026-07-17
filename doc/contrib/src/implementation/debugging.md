@@ -19,7 +19,7 @@ CARGO_LOG=cargo::resolver=trace cargo generate-lockfile
 CARGO_HTTP_DEBUG=true CARGO_LOG=network=debug cargo fetch
 
 # This is an important command for diagnosing fingerprint issues.
-CARGO_LOG=cargo::core::compiler::fingerprint=trace cargo build
+CARGO_LOG=cargo::compiler::fingerprint=trace cargo build
 ```
 
 [`tracing`]: https://docs.rs/tracing
