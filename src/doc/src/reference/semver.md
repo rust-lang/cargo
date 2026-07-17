@@ -88,6 +88,7 @@ considered incompatible.
         * [Minor: generalizing a function to use generics (supporting original type)](#fn-generalize-compatible)
         * [Major: generalizing a function to use generics with type mismatch](#fn-generalize-mismatch)
         * [Minor: making an `unsafe` function safe](#fn-unsafe-safe)
+        * [Major: adding a potentially shadowing method](#fn-add-potentially-shadowing-method)
     * Attributes
         * [Major: switching from `no_std` support to requiring `std`](#attr-no-std-to-std)
         * [Major: adding `non_exhaustive` to an existing enum, variant, or struct with no private fields](#attr-adding-non-exhaustive)
@@ -1883,6 +1884,136 @@ Making a previously `unsafe` associated function or method on structs / enums
 safe is also a minor change, while the same is not true for associated
 function on traits (see [any change to trait item signatures](#trait-item-signature)).
 
+### Major: add a potentially shadowing method {#fn-add-potentially-shadowing-method}
+
+If you have a type which implements `Deref<Target=T>`, you must not add methods
+which may "shadow" methods in `T`. This can lead to unexpected changes in
+program behavior.
+
+```rust,ignore,run-fail
+// MAJOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+#[derive(Clone, Copy)]
+pub struct MySmartPtr<T>(pub T);
+
+impl<T> core::ops::Deref for MySmartPtr<T> {
+    type Target = T;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+///////////////////////////////////////////////////////////
+// After
+#[derive(Clone, Copy)]
+pub struct MySmartPtr<T>(pub T);
+
+impl<T> core::ops::Deref for MySmartPtr<T> {
+    type Target = T;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<T> MySmartPtr<T> {
+    pub fn method(self) -> usize {
+        2
+    }
+}
+
+///////////////////////////////////////////////////////////
+// Example usage that will break.
+use updated_crate::MySmartPtr;
+
+struct SomeStruct;
+
+impl SomeStruct {
+    fn method(&self) -> usize {
+        1
+    }
+}
+
+fn main() {
+    let mut ptr = MySmartPtr(SomeStruct);
+    assert_eq!(ptr.method(), 1);
+}
+```
+
+Note that the shadowing and shadowed methods receive `self`
+slightly differently: `self` and `&self`.
+That's because Rust [searches for methods] first by value, then by `&`, then
+by `&mut T`. Rust stops the search when it encounters a valid method, and
+so methods later in this order may be shadowed by methods encountered earlier.
+
+This is only a compatibility risk if the `Deref` target is
+beyond your control. If your type implements `Deref` to another type where
+you can fix the available methods, you can ensure no shadowing
+occurs. An example is that `PathBuf` implements
+`Deref<Target=Path>`.
+
+For types which do implement `Deref` with an arbitrary target,
+it's bad practice to add methods: add associated functions instead. This is
+the pattern used by Rust's standard library smart pointer types, such as
+`Box`, `Rc` and `Arc`.
+
+Similar shadowing risks occur for a type implementing
+`Receiver<Target=T>`. If you have a type which implements either
+`Receiver<Target=T>` or `Deref<Target=T>` it may be used as a method receiver
+by `T`'s methods. If your type then adds a method, you may shadow methods in
+`T`. For instance:
+
+```rust,ignore,skip
+// MAJOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+#![feature(arbitrary_self_types)]
+pub struct MySmartPtr<T>(pub T);
+
+impl<T> core::ops::Receiver for MySmartPtr<T> {
+    // or Deref
+    type Target = T;
+}
+
+///////////////////////////////////////////////////////////
+// After
+#![feature(arbitrary_self_types)]
+pub struct MySmartPtr<T>(pub T);
+
+impl<T> core::ops::Receiver for MySmartPtr<T> {
+    // or Deref
+    type Target = T;
+}
+
+impl<T> MySmartPtr<T> {
+    pub fn method(self) {}
+}
+
+///////////////////////////////////////////////////////////
+// Example usage that will break.
+#![feature(arbitrary_self_types)]
+use updated_crate::MySmartPtr;
+
+struct SomeStruct;
+
+impl SomeStruct {
+    fn method(self: &MySmartPtr<Self>) {}
+}
+
+fn main() {
+    let ptr = MySmartPtr(SomeStruct);
+    ptr.method(); // Error: multiple applicable items in scope
+}
+```
+
+When types like this are being used as method receivers, Rust endeavours to
+do additional searches and present errors in simple cases, e.g. shadowing of
+`&self` by `self` with inherent methods. This is better than invisible
+behavior changes - but either way it's a compatibility break. Avoid adding
+methods if you implement `Deref` or `Receiver` to an arbitrary target.
+
 ### Major: switching from `no_std` support to requiring `std` {#attr-no-std-to-std}
 
 If your library specifically supports a [`no_std`] environment, it is a
@@ -2325,3 +2456,4 @@ document what your commitments are.
 [wildcard patterns]: ../../reference/patterns.html#wildcard-pattern
 [unused_unsafe]: ../../rustc/lints/listing/warn-by-default.html#unused-unsafe
 [msrv-is-minor]: https://github.com/rust-lang/api-guidelines/discussions/231
+[searches for methods]: ../../reference/expressions/method-call-expr.html#method-call-expressions
