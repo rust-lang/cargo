@@ -1680,7 +1680,7 @@ fn build_dir_remap(build_runner: &BuildRunner<'_, '_>) -> OsString {
 }
 
 /// Generates the `--check-cfg` arguments for the `unit`.
-fn check_cfg_args(unit: &Unit) -> Vec<OsString> {
+pub(crate) fn check_cfg_args(unit: &Unit) -> Vec<OsString> {
     // The routine below generates the --check-cfg arguments. Our goals here are to
     // enable the checking of conditionals and pass the list of declared features.
     //

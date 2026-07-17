@@ -4,6 +4,7 @@ use crate::prelude::*;
 use cargo_test_support::project;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
+use serde_json::Value;
 
 #[cargo_test]
 fn gated() {
@@ -56,6 +57,12 @@ fn simple() {
   ],
   "units": [
     {
+      "check_cfg_args": [
+        "--check-cfg",
+        "cfg(docsrs,test)",
+        "--check-cfg",
+        "cfg(feature, values(\"feata\"))"
+      ],
       "dependencies": [
         {
           "extern_crate_name": "b",
@@ -102,6 +109,12 @@ fn simple() {
       }
     },
     {
+      "check_cfg_args": [
+        "--check-cfg",
+        "cfg(docsrs,test)",
+        "--check-cfg",
+        "cfg(feature, values(\"featb\"))"
+      ],
       "dependencies": [
         {
           "extern_crate_name": "c",
@@ -148,6 +161,12 @@ fn simple() {
       }
     },
     {
+      "check_cfg_args": [
+        "--check-cfg",
+        "cfg(docsrs,test)",
+        "--check-cfg",
+        "cfg(feature, values(\"featc\"))"
+      ],
       "dependencies": [],
       "features": [
         "featc"
@@ -186,6 +205,12 @@ fn simple() {
       }
     },
     {
+      "check_cfg_args": [
+        "--check-cfg",
+        "cfg(docsrs,test)",
+        "--check-cfg",
+        "cfg(feature, values())"
+      ],
       "dependencies": [
         {
           "extern_crate_name": "a",
@@ -236,4 +261,76 @@ fn simple() {
             .is_json(),
         )
         .run();
+}
+
+#[cargo_test]
+fn includes_resolved_lint_rustflags() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["app"]
+
+            [workspace.lints.rust]
+            unsafe_code = "forbid"
+            unexpected_cfgs = { level = "warn", check-cfg = ["cfg(ix_test)"] }
+
+            [workspace.lints.clippy]
+            all = { level = "deny", priority = -1 }
+            pedantic = "warn"
+            "#,
+        )
+        .file(
+            "app/Cargo.toml",
+            r#"
+            [package]
+            name = "app"
+            version = "0.1.0"
+            edition = "2024"
+
+            [features]
+            alpha = []
+            beta = []
+
+            [lints]
+            workspace = true
+            "#,
+        )
+        .file("app/src/lib.rs", "")
+        .build();
+
+    let output = p
+        .cargo("build --unit-graph -Zunstable-options")
+        .masquerade_as_nightly_cargo(&["unit-graph"])
+        .exec_with_output()
+        .unwrap();
+    let graph: Value = serde_json::from_slice(&output.stdout).unwrap();
+    let app = graph["units"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|unit| unit["target"]["name"] == "app")
+        .unwrap();
+
+    assert_eq!(
+        app["lint_rustflags"],
+        serde_json::json!([
+            "--deny=clippy::all",
+            "--forbid=unsafe_code",
+            "--warn=unexpected_cfgs",
+            "--warn=clippy::pedantic",
+            "--check-cfg",
+            "cfg(ix_test)"
+        ])
+    );
+    assert_eq!(
+        app["check_cfg_args"],
+        serde_json::json!([
+            "--check-cfg",
+            "cfg(docsrs,test)",
+            "--check-cfg",
+            "cfg(feature, values(\"alpha\", \"beta\"))"
+        ])
+    );
 }
