@@ -8,7 +8,7 @@
 //! located in [`cargo::ops::fix`].
 //!
 //! [`cargo fix`]: https://doc.rust-lang.org/cargo/commands/cargo-fix.html
-//! [`cargo::ops::fix`]: https://github.com/rust-lang/cargo/blob/master/src/cargo/ops/fix.rs
+//! [`cargo::ops::fix`]: https://github.com/rust-lang/cargo/blob/master/src/ops/fix.rs
 //! [JSON output]: diagnostics
 //!
 //! The general outline of how to use this library is:

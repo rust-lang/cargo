@@ -107,7 +107,7 @@
 //!   really recommended to use this.
 //!
 //! * The actual literal on-disk serialization is found in
-//!   `src/cargo/ops/lockfile.rs` which basically renders a `toml::Value` in a
+//!   `src/ops/lockfile.rs` which basically renders a `toml::Value` in a
 //!   special fashion to make sure we have strict control over the on-disk
 //!   format.
 

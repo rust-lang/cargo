@@ -133,7 +133,7 @@ a lot that can be added. Some ideas:
 
 * Fix the benchmarks so that the resolver setup doesn't run every iteration.
 * Benchmark [this section of
-  code](https://github.com/rust-lang/cargo/blob/a821e2cb24d7b6013433f069ab3bad53d160e100/src/cargo/ops/cargo_compile.rs#L470-L549)
+  code](https://github.com/rust-lang/cargo/blob/a821e2cb24d7b6013433f069ab3bad53d160e100/src/ops/cargo_compile.rs#L470-L549)
   which builds the unit graph. The performance there isn't great, and it would
   be good to keep an eye on it. Unfortunately that would mean doing a bit of
   work to make `generate_targets` publicly visible, and there is a bunch of
@@ -151,7 +151,7 @@ a lot that can be added. Some ideas:
   valuable, since we are mostly concerned with incremental builds which will
   always have a lock file.
 * Benchmark just
-  [`resolve::resolve`](https://github.com/rust-lang/cargo/blob/a821e2cb24d7b6013433f069ab3bad53d160e100/src/cargo/core/resolver/mod.rs#L122)
+  [`resolve::resolve`](https://github.com/rust-lang/cargo/blob/a821e2cb24d7b6013433f069ab3bad53d160e100/src/core/resolver/mod.rs#L122)
   without anything else. This can help focus on just the resolver.
 
 [Criterion]: https://bheisler.github.io/criterion.rs/book/
