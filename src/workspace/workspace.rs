@@ -25,9 +25,9 @@ use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY, PathSource, SourceConf
 use crate::util::edit_distance;
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
-use crate::util::toml::{InheritableFields, read_manifest};
 use crate::util::{Filesystem, GlobalContext, IntoUrl, closest_msg};
 use crate::workspace::features::Features;
+use crate::workspace::parser::{InheritableFields, read_manifest};
 use crate::workspace::registry::PackageRegistry;
 use crate::workspace::{
     Dependency, Edition, FeatureValue, PackageId, PackageIdSpec, PackageIdSpecQuery, Patch,
@@ -559,7 +559,7 @@ impl<'gctx> Workspace<'gctx> {
                 url,
                 deps.iter()
                     .map(|(name, dependency_cv)| {
-                        crate::util::toml::config_patch_to_dependency(
+                        crate::workspace::parser::config_patch_to_dependency(
                             &dependency_cv.val,
                             name,
                             source,

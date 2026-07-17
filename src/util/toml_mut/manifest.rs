@@ -9,8 +9,8 @@ use anyhow::Context as _;
 use super::dependency::Dependency;
 use crate::util::closest;
 use crate::util::frontmatter::ScriptSource;
-use crate::util::toml::is_embedded;
 use crate::workspace::dependency::DepKind;
+use crate::workspace::parser::is_embedded;
 use crate::workspace::{FeatureValue, Features, Workspace};
 use crate::{CargoResult, GlobalContext};
 

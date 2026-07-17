@@ -512,7 +512,7 @@ fn prepare_for_vendor(
     let source_id = me.package_id().source_id();
     let mut warnings = Default::default();
     let mut errors = Default::default();
-    let manifest = crate::util::toml::to_real_manifest(
+    let manifest = crate::workspace::parser::to_real_manifest(
         contents.map(|c| c.to_owned()),
         document.cloned(),
         original_toml,
@@ -550,7 +550,7 @@ fn prepare_toml_for_vendor(
                     .into_os_string()
                     .into_string()
                     .map_err(|_err| anyhow::format_err!("non-UTF8 `package.build`"))?;
-                let path = crate::util::toml::normalize_path_string_sep(path);
+                let path = crate::workspace::parser::normalize_path_string_sep(path);
                 included_scripts.push(path);
             } else {
                 gctx.shell().warn(format!(
@@ -567,7 +567,7 @@ fn prepare_toml_for_vendor(
     }
 
     let lib = if let Some(target) = &me.lib {
-        crate::util::toml::prepare_target_for_publish(
+        crate::workspace::parser::prepare_target_for_publish(
             target,
             Some(packaged_files),
             "library",
@@ -576,25 +576,25 @@ fn prepare_toml_for_vendor(
     } else {
         None
     };
-    let bin = crate::util::toml::prepare_targets_for_publish(
+    let bin = crate::workspace::parser::prepare_targets_for_publish(
         me.bin.as_ref(),
         Some(packaged_files),
         "binary",
         gctx,
     )?;
-    let example = crate::util::toml::prepare_targets_for_publish(
+    let example = crate::workspace::parser::prepare_targets_for_publish(
         me.example.as_ref(),
         Some(packaged_files),
         "example",
         gctx,
     )?;
-    let test = crate::util::toml::prepare_targets_for_publish(
+    let test = crate::workspace::parser::prepare_targets_for_publish(
         me.test.as_ref(),
         Some(packaged_files),
         "test",
         gctx,
     )?;
-    let bench = crate::util::toml::prepare_targets_for_publish(
+    let bench = crate::workspace::parser::prepare_targets_for_publish(
         me.bench.as_ref(),
         Some(packaged_files),
         "benchmark",

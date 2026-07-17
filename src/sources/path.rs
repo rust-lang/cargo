@@ -14,7 +14,7 @@ use crate::util::GlobalContext;
 use crate::util::errors::CargoResult;
 use crate::util::important_paths::find_project_manifest_exact;
 use crate::util::internal;
-use crate::util::toml::read_manifest;
+use crate::workspace::parser::read_manifest;
 use crate::workspace::{Dependency, EitherManifest, Manifest, Package, PackageId, SourceId};
 use anyhow::Context as _;
 use cargo_util::paths;

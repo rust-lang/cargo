@@ -43,7 +43,6 @@ use crate::util::VersionExt as _;
 use crate::util::auth;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::ManifestError;
-use crate::util::toml::prepare_for_publish;
 use crate::workspace::Dependency;
 use crate::workspace::Package;
 use crate::workspace::PackageId;
@@ -52,6 +51,7 @@ use crate::workspace::SourceId;
 use crate::workspace::Workspace;
 use crate::workspace::dependency::DepKind;
 use crate::workspace::manifest::ManifestMetadata;
+use crate::workspace::parser::prepare_for_publish;
 
 use super::super::check_dep_has_version;
 

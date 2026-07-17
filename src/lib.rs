@@ -60,7 +60,7 @@
 //!   The [`util::GlobalContext`] is usually accessed from the
 //!   [`workspace::Workspace`]
 //!   though references to it are scattered around for more convenient access.
-//! - [`util::toml`]:
+//! - [`workspace::parser`]:
 //!   This directory contains the code for parsing `Cargo.toml` files.
 //!   - [`ops::lockfile`]:
 //!     This is where `Cargo.lock` files are loaded and saved.
@@ -111,7 +111,7 @@
 //! Files that interact with cargo include
 //!
 //! - Package
-//!   - `Cargo.toml`: User-written project manifest, loaded with [`util::toml::read_manifest`] and then
+//!   - `Cargo.toml`: User-written project manifest, loaded with [`workspace::parser::read_manifest`] and then
 //!     translated to [`workspace::manifest::Manifest`] which maybe stored in a [`workspace::Package`].
 //!     - This is editable with [`util::toml_mut::manifest::LocalManifest`]
 //!   - `Cargo.lock`: Generally loaded with [`ops::resolve_ws`] or a variant of it into a [`resolver::Resolve`]

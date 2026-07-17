@@ -9,12 +9,12 @@ use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::interning::InternedString;
 use crate::util::is_rustup;
 use crate::util::restricted_names;
-use crate::util::toml::is_embedded;
 use crate::util::{
     print_available_benches, print_available_binaries, print_available_examples,
     print_available_packages, print_available_tests,
 };
 use crate::workspace::Dependency;
+use crate::workspace::parser::is_embedded;
 use crate::workspace::{Edition, Package, TargetKind, Workspace, profiles::Profiles};
 use anyhow::bail;
 use cargo_util::paths;
@@ -1065,7 +1065,7 @@ pub fn root_manifest(manifest_path: Option<&Path>, gctx: &GlobalContext) -> Carg
                 "manifest path `{}` is a directory but expected a file{suggested_path}",
                 manifest_path.display()
             )
-        } else if !path.ends_with("Cargo.toml") && !crate::util::toml::is_embedded(&path) {
+        } else if !path.ends_with("Cargo.toml") && !crate::workspace::parser::is_embedded(&path) {
             if gctx.cli_unstable().script {
                 anyhow::bail!(
                     "the manifest-path must be a path to a Cargo.toml or script file: `{}`",
@@ -1078,7 +1078,7 @@ pub fn root_manifest(manifest_path: Option<&Path>, gctx: &GlobalContext) -> Carg
                 )
             }
         }
-        if crate::util::toml::is_embedded(&path) && !gctx.cli_unstable().script {
+        if crate::workspace::parser::is_embedded(&path) && !gctx.cli_unstable().script {
             anyhow::bail!("embedded manifest `{}` requires `-Zscript`", path.display())
         }
         Ok(path)

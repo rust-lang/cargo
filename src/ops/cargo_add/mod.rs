@@ -28,7 +28,6 @@ use crate::util::OptVersionReq;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::edit_distance;
 use crate::util::style;
-use crate::util::toml::lookup_path_base;
 use crate::util::toml_mut::dependency::Dependency;
 use crate::util::toml_mut::dependency::GitSource;
 use crate::util::toml_mut::dependency::MaybeWorkspace;
@@ -47,6 +46,7 @@ use crate::workspace::Registry;
 use crate::workspace::Summary;
 use crate::workspace::Workspace;
 use crate::workspace::dependency::DepKind;
+use crate::workspace::parser::lookup_path_base;
 use crate::workspace::registry::PackageRegistry;
 use crate_spec::CrateSpec;
 

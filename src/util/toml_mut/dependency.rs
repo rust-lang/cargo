@@ -12,9 +12,9 @@ use toml_edit::KeyMut;
 use super::manifest::str_or_1_len_table;
 use crate::CargoResult;
 use crate::GlobalContext;
-use crate::util::toml::lookup_path_base;
 use crate::workspace::SourceId;
 use crate::workspace::Summary;
+use crate::workspace::parser::lookup_path_base;
 use crate::workspace::{Features, GitReference};
 
 /// A dependency handled by Cargo.

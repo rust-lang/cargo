@@ -116,7 +116,7 @@
 //! [`fail_if_stable_opt`]: CliUnstable::fail_if_stable_opt
 //! [`features!`]: macro.features.html
 //! [`unstable_cli_options!`]: macro.unstable_cli_options.html
-//! [`prepare_for_publish`]: crate::util::toml::prepare_for_publish
+//! [`prepare_for_publish`]: crate::workspace::parser::prepare_for_publish
 
 use std::collections::BTreeSet;
 use std::env;
@@ -175,7 +175,7 @@ pub type AllowFeatures = BTreeSet<String>;
 /// [`LATEST_STABLE`]: Edition::LATEST_STABLE
 /// [`first_version`]: Edition::first_version
 /// [`is_stable`]: Edition::is_stable
-/// [`toml`]: crate::util::toml
+/// [`toml`]: crate::workspace::parser
 /// [`features!`]: macro.features.html
 #[derive(
     Default, Clone, Copy, Debug, Hash, PartialOrd, Ord, Eq, PartialEq, Serialize, Deserialize,

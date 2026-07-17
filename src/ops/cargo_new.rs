@@ -166,7 +166,7 @@ fn get_name<'a>(path: &'a Path, opts: &'a NewOptions) -> CargoResult<&'a str> {
     })
 }
 
-/// See also `util::toml::embedded::sanitize_name`
+/// See also `workspace::parser::embedded::sanitize_name`
 fn check_name(
     name: &str,
     show_name_help: bool,
