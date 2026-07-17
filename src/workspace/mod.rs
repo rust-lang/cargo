@@ -22,6 +22,7 @@ pub mod manifest;
 pub mod package;
 pub mod package_id;
 mod package_id_spec;
+pub mod parser;
 pub mod profiles;
 pub mod registry;
 mod source_id;

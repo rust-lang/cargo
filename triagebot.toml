@@ -206,7 +206,7 @@ trigger_files = ["src/compiler/lto.rs"]
 trigger_files = [
     "crates/cargo-util-schemas/src/manifest/",
     "src/workspace/manifest.rs",
-    "src/util/toml/mod.rs",
+    "src/workspace/parser/mod.rs",
     "src/util/toml_mut/",
 ]
 
