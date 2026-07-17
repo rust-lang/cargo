@@ -9,9 +9,9 @@ use jiff::Timestamp;
 use serde::Deserialize;
 use serde::Serialize;
 
-use crate::core::compiler::CompileMode;
-use crate::core::compiler::UnitIndex;
-use crate::core::compiler::fingerprint::DirtyReason;
+use crate::compiler::CompileMode;
+use crate::compiler::UnitIndex;
+use crate::compiler::fingerprint::DirtyReason;
 
 /// A log message.
 ///

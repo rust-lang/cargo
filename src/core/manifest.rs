@@ -15,8 +15,8 @@ use serde::Serialize;
 use serde::ser;
 use url::Url;
 
-use crate::core::compiler::rustdoc::RustdocScrapeExamples;
-use crate::core::compiler::{CompileKind, CrateType};
+use crate::compiler::rustdoc::RustdocScrapeExamples;
+use crate::compiler::{CompileKind, CrateType};
 use crate::core::{Dependency, PackageId, PackageIdSpec, Patch, SourceId, Summary};
 use crate::core::{Edition, Feature, Features, WorkspaceConfig};
 use crate::resolver::ResolveBehavior;

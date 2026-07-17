@@ -138,10 +138,8 @@ use super::UnitIndex;
 use super::custom_build::Severity;
 use super::timings::SectionTiming;
 use super::timings::Timings;
-use crate::core::compiler::descriptive_pkg_name;
-use crate::core::compiler::future_incompat::{
-    self, FutureBreakageItem, FutureIncompatReportPackage,
-};
+use crate::compiler::descriptive_pkg_name;
+use crate::compiler::future_incompat::{self, FutureBreakageItem, FutureIncompatReportPackage};
 use crate::core::{PackageId, TargetKind};
 use crate::diagnostics::GlobalDiagnosticStats;
 use crate::diagnostics::rules::unused_dependencies;

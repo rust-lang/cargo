@@ -4,9 +4,9 @@ use serde::Deserialize;
 use serde::Serialize;
 
 use super::BuildOutput;
+use crate::compiler::unit_dependencies::IsArtifact;
+use crate::compiler::{CompileKind, CompileMode, CompileTarget, CrateType};
 use crate::core::Package;
-use crate::core::compiler::unit_dependencies::IsArtifact;
-use crate::core::compiler::{CompileKind, CompileMode, CompileTarget, CrateType};
 use crate::core::manifest::{Target, TargetKind};
 use crate::core::profiles::Profile;
 use crate::util::GlobalContext;
@@ -87,8 +87,8 @@ pub struct UnitInner {
     /// As of now, these flags come from environment variables and configurations.
     /// See [`TargetInfo.rustflags`] for more on how Cargo collects them.
     ///
-    /// [`BuildContext::extra_args_for`]: crate::core::compiler::build_context::BuildContext::extra_args_for
-    /// [`TargetInfo.rustflags`]: crate::core::compiler::build_context::TargetInfo::rustflags
+    /// [`BuildContext::extra_args_for`]: crate::compiler::build_context::BuildContext::extra_args_for
+    /// [`TargetInfo.rustflags`]: crate::compiler::build_context::TargetInfo::rustflags
     pub rustflags: Rc<[String]>,
     /// Extra compiler flags to pass to `rustdoc` for a given unit.
     ///
@@ -98,8 +98,8 @@ pub struct UnitInner {
     /// As of now, these flags come from environment variables and configurations.
     /// See [`TargetInfo.rustdocflags`] for more on how Cargo collects them.
     ///
-    /// [`BuildContext::extra_args_for`]: crate::core::compiler::build_context::BuildContext::extra_args_for
-    /// [`TargetInfo.rustdocflags`]: crate::core::compiler::build_context::TargetInfo::rustdocflags
+    /// [`BuildContext::extra_args_for`]: crate::compiler::build_context::BuildContext::extra_args_for
+    /// [`TargetInfo.rustdocflags`]: crate::compiler::build_context::TargetInfo::rustdocflags
     pub rustdocflags: Rc<[String]>,
     /// Build script override for the given library name.
     ///

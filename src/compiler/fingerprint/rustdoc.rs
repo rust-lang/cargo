@@ -8,8 +8,8 @@ use serde::Deserialize;
 use serde::Serialize;
 
 use crate::CargoResult;
-use crate::core::compiler::BuildRunner;
-use crate::core::compiler::CompileKind;
+use crate::compiler::BuildRunner;
+use crate::compiler::CompileKind;
 
 /// JSON Schema of the [`RustdocFingerprint`] file.
 #[derive(Debug, Serialize, Deserialize)]

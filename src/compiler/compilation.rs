@@ -9,12 +9,12 @@ use std::path::PathBuf;
 use cargo_platform::CfgExpr;
 use cargo_util::{ProcessBuilder, paths};
 
+use crate::compiler::BuildContext;
+use crate::compiler::CompileTarget;
+use crate::compiler::RustdocFingerprint;
+use crate::compiler::apply_env_config;
+use crate::compiler::{CompileKind, Unit, UnitHash};
 use crate::core::Package;
-use crate::core::compiler::BuildContext;
-use crate::core::compiler::CompileTarget;
-use crate::core::compiler::RustdocFingerprint;
-use crate::core::compiler::apply_env_config;
-use crate::core::compiler::{CompileKind, Unit, UnitHash};
 use crate::util::{CargoResult, GlobalContext};
 
 /// Represents the kind of process we are creating.
@@ -206,7 +206,7 @@ impl<'gctx> Compilation<'gctx> {
     ///
     /// `is_primary` is true if this is a "primary package", which means it
     /// was selected by the user on the command-line (such as with a `-p`
-    /// flag), see [`crate::core::compiler::BuildRunner::primary_packages`].
+    /// flag), see [`crate::compiler::BuildRunner::primary_packages`].
     ///
     /// `is_workspace` is true if this is a workspace member.
     pub fn rustc_process(

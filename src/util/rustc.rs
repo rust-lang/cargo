@@ -10,7 +10,7 @@ use filetime::FileTime;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info, warn};
 
-use crate::core::compiler::apply_env_config;
+use crate::compiler::apply_env_config;
 use crate::util::interning::InternedString;
 use crate::util::{CargoResult, GlobalContext, StableHasher};
 

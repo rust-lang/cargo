@@ -1,8 +1,8 @@
 //! Utilities for building with rustdoc.
 
-use crate::core::compiler::build_runner::BuildRunner;
-use crate::core::compiler::unit::Unit;
-use crate::core::compiler::{BuildContext, CompileKind};
+use crate::compiler::build_runner::BuildRunner;
+use crate::compiler::unit::Unit;
+use crate::compiler::{BuildContext, CompileKind};
 use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::data_structures::HashMap;
 use crate::util::data_structures::HashSet;
@@ -288,8 +288,8 @@ impl BuildContext<'_, '_> {
     /// A plain old `cargo doc` would just die if a build script execution fails,
     /// there is no reason for `-Zrustdoc-scrape-examples` to keep going.
     ///
-    /// [`Docscrape`]: crate::core::compiler::CompileMode::Docscrape
-    /// [`RunCustomBuild`]: crate::core::compiler::CompileMode::Docscrape
+    /// [`Docscrape`]: crate::compiler::CompileMode::Docscrape
+    /// [`RunCustomBuild`]: crate::compiler::CompileMode::Docscrape
     pub fn scrape_units_have_dep_on<'a>(&'a self, unit: &'a Unit) -> Vec<&'a Unit> {
         self.scrape_units
             .iter()

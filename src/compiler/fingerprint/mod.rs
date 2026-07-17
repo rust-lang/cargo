@@ -356,20 +356,20 @@
 //! See the [`A-rebuild-detection`] label on the issue tracker for more.
 //!
 //! [`check_filesystem`]: Fingerprint::check_filesystem
-//! [`Metadata`]: crate::core::compiler::Metadata
-//! [`Metadata::unit_id`]: crate::core::compiler::Metadata::unit_id
-//! [`Metadata::c_metadata`]: crate::core::compiler::Metadata::c_metadata
-//! [`Metadata::c_extra_filename`]: crate::core::compiler::Metadata::c_extra_filename
-//! [`UnitHash`]: crate::core::compiler::UnitHash
+//! [`Metadata`]: crate::compiler::Metadata
+//! [`Metadata::unit_id`]: crate::compiler::Metadata::unit_id
+//! [`Metadata::c_metadata`]: crate::compiler::Metadata::c_metadata
+//! [`Metadata::c_extra_filename`]: crate::compiler::Metadata::c_extra_filename
+//! [`UnitHash`]: crate::compiler::UnitHash
 //! [`Profile`]: crate::core::profiles::Profile
-//! [`CompileMode`]: crate::core::compiler::CompileMode
-//! [`Lto`]: crate::core::compiler::Lto
-//! [`CompileKind`]: crate::core::compiler::CompileKind
+//! [`CompileMode`]: crate::compiler::CompileMode
+//! [`Lto`]: crate::compiler::Lto
+//! [`CompileKind`]: crate::compiler::CompileKind
 //! [`JobQueue`]: super::job_queue::JobQueue
 //! [`output_depinfo`]: super::output_depinfo()
 //! [`CheckDepInfo`]: LocalFingerprint::CheckDepInfo
 //! [`RerunIfChanged`]: LocalFingerprint::RerunIfChanged
-//! [`CompileMode::RunCustomBuild`]: crate::core::compiler::CompileMode::RunCustomBuild
+//! [`CompileMode::RunCustomBuild`]: crate::compiler::CompileMode::RunCustomBuild
 //! [`A-rebuild-detection`]: https://github.com/rust-lang/cargo/issues?q=is%3Aissue+is%3Aopen+label%3AA-rebuild-detection
 
 mod dep_info;
@@ -398,8 +398,8 @@ use serde::ser;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info};
 
+use crate::compiler::unit_graph::UnitDep;
 use crate::core::Package;
-use crate::core::compiler::unit_graph::UnitDep;
 use crate::util;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
@@ -628,7 +628,7 @@ struct DepFingerprint {
 /// be interrupted while executing, losing the state of the [`DependencyQueue`]
 /// graph.
 ///
-/// [`hash_u64()`]: crate::core::compiler::fingerprint::Fingerprint::hash_u64
+/// [`hash_u64()`]: crate::compiler::fingerprint::Fingerprint::hash_u64
 /// [`DependencyQueue`]: crate::util::DependencyQueue
 #[derive(Serialize, Deserialize)]
 pub struct Fingerprint {
@@ -645,7 +645,7 @@ pub struct Fingerprint {
     /// `cargo rustc` or `cargo rustdoc`.
     ///
     /// [`Profile`]: crate::core::profiles::Profile
-    /// [`CompileMode`]: crate::core::compiler::CompileMode
+    /// [`CompileMode`]: crate::compiler::CompileMode
     profile: u64,
     /// Hash of the path to the base source file. This is relative to the
     /// workspace root for path members, or absolute for other sources.
@@ -1793,7 +1793,7 @@ See https://doc.rust-lang.org/cargo/reference/build-scripts.html#rerun-if-change
 ///
 /// FIXME(#6779) - see all the words above
 ///
-/// [`RunCustomBuild`]: crate::core::compiler::CompileMode::RunCustomBuild
+/// [`RunCustomBuild`]: crate::compiler::CompileMode::RunCustomBuild
 fn build_script_local_fingerprints(
     build_runner: &mut BuildRunner<'_, '_>,
     unit: &Unit,
@@ -1896,7 +1896,7 @@ fn build_script_override_fingerprint(
 /// non-overridden new-style build scripts only. This is only used when `deps`
 /// is already known to have a nonempty `rerun-if-*` somewhere.
 ///
-/// [`RunCustomBuild`]: crate::core::compiler::CompileMode::RunCustomBuild
+/// [`RunCustomBuild`]: crate::compiler::CompileMode::RunCustomBuild
 fn local_fingerprints_deps(
     deps: &BuildDeps,
     build_root: &Path,

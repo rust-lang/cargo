@@ -97,12 +97,12 @@ use self::output_depinfo::output_depinfo;
 use self::output_sbom::build_sbom;
 use self::unit_graph::UnitDep;
 
-use crate::core::compiler::future_incompat::FutureIncompatReport;
-use crate::core::compiler::locking::LockKey;
-use crate::core::compiler::timings::SectionTiming;
-pub use crate::core::compiler::unit::Unit;
-pub use crate::core::compiler::unit::UnitIndex;
-pub use crate::core::compiler::unit::UnitInterner;
+use crate::compiler::future_incompat::FutureIncompatReport;
+use crate::compiler::locking::LockKey;
+use crate::compiler::timings::SectionTiming;
+pub use crate::compiler::unit::Unit;
+pub use crate::compiler::unit::UnitIndex;
+pub use crate::compiler::unit::UnitInterner;
 use crate::core::manifest::TargetSourcePath;
 use crate::core::profiles::{PanicStrategy, Profile, StripInner};
 use crate::core::{Feature, PackageId, Target};

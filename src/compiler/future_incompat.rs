@@ -33,7 +33,7 @@
 //! [1]: https://doc.rust-lang.org/nightly/cargo/reference/future-incompat-report.html
 //! [2]: https://github.com/rust-lang/rust/blob/9bb6e60d1f1360234aae90c97964c0fa5524f141/compiler/rustc_errors/src/json.rs#L312-L315
 
-use crate::core::compiler::BuildContext;
+use crate::compiler::BuildContext;
 use crate::core::{Dependency, PackageId, Workspace};
 use crate::sources::IndexSummary;
 use crate::sources::SourceConfigMap;

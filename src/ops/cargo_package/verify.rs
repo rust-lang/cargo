@@ -15,14 +15,14 @@ use flate2::read::GzDecoder;
 use tar::Archive;
 
 use crate::CargoResult;
+use crate::compiler::BuildConfig;
+use crate::compiler::DefaultExecutor;
+use crate::compiler::Executor;
+use crate::compiler::UserIntent;
 use crate::core::Feature;
 use crate::core::Package;
 use crate::core::SourceId;
 use crate::core::Workspace;
-use crate::core::compiler::BuildConfig;
-use crate::core::compiler::DefaultExecutor;
-use crate::core::compiler::Executor;
-use crate::core::compiler::UserIntent;
 use crate::ops;
 use crate::sources::PathSource;
 use crate::util;

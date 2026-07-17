@@ -31,18 +31,18 @@
 //! - [`ops::resolve`]:
 //!   Top-level API for dependency and feature resolver (e.g. [`ops::resolve_ws`])
 //!   - [`resolver`]: The core algorithm
-//! - [`core::compiler`]:
+//! - [`compiler`]:
 //!   This is the code responsible for running `rustc` and `rustdoc`.
-//!   - [`core::compiler::build_context`]:
-//!     The [`BuildContext`][core::compiler::BuildContext] is the result of the "front end" of the
+//!   - [`compiler::build_context`]:
+//!     The [`BuildContext`][compiler::BuildContext] is the result of the "front end" of the
 //!     build process. This contains the graph of work to perform and any settings necessary for
 //!     `rustc`. After this is built, the next stage of building is handled in
-//!     [`BuildRunner`][core::compiler::BuildRunner].
-//!   - [`core::compiler::build_runner`]:
+//!     [`BuildRunner`][compiler::BuildRunner].
+//!   - [`compiler::build_runner`]:
 //!     The `Context` is the mutable state used during the build process. This
 //!     is the core of the build process, and everything is coordinated through
 //!     this.
-//!   - [`core::compiler::fingerprint`]:
+//!   - [`compiler::fingerprint`]:
 //!     The `fingerprint` module contains all the code that handles detecting
 //!     if a crate needs to be recompiled.
 //! - [`sources::source`]:
@@ -117,8 +117,8 @@
 //!   - `Cargo.lock`: Generally loaded with [`ops::resolve_ws`] or a variant of it into a [`resolver::Resolve`]
 //!     - At the lowest level, [`ops::load_pkg_lockfile`] and [`ops::write_pkg_lockfile`] are used
 //!     - See [`resolver::encode`] for versioning of `Cargo.lock`
-//!   - `target/`: Used for build artifacts and abstracted with [`core::compiler::layout`]. `Layout` handles locking the target directory and providing paths to parts inside. There is a separate `Layout` for each build `target`.
-//!     - `target/debug/.fingerprint`: Tracker whether nor not a crate needs to be rebuilt.  See [`core::compiler::fingerprint`]
+//!   - `target/`: Used for build artifacts and abstracted with [`compiler::layout`]. `Layout` handles locking the target directory and providing paths to parts inside. There is a separate `Layout` for each build `target`.
+//!     - `target/debug/.fingerprint`: Tracker whether nor not a crate needs to be rebuilt.  See [`compiler::fingerprint`]
 //! - `$CARGO_HOME/`:
 //!   - `registry/`: Package registry cache which is managed in [`sources::registry`].  Be careful
 //!     as the lock [`util::GlobalContext::acquire_package_cache_lock`] must be manually acquired.

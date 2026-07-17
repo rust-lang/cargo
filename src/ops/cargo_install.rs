@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::{env, fmt, fs};
 
-use crate::core::compiler::{CompileKind, DefaultExecutor, Executor, UnitOutput};
+use crate::compiler::{CompileKind, DefaultExecutor, Executor, UnitOutput};
 use crate::core::{Dependency, Edition, Package, PackageId, SourceId, Target, Workspace};
 use crate::ops::{CompileFilter, Packages};
 use crate::ops::{FilterRule, common_for_install_and_uninstall::*};

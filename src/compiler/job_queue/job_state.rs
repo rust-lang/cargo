@@ -4,13 +4,13 @@ use std::{cell::Cell, marker, sync::Arc};
 
 use cargo_util::ProcessBuilder;
 
-use crate::core::compiler::future_incompat::FutureBreakageItem;
-use crate::core::compiler::locking::LockKey;
-use crate::core::compiler::timings::SectionTiming;
+use crate::compiler::future_incompat::FutureBreakageItem;
+use crate::compiler::locking::LockKey;
+use crate::compiler::timings::SectionTiming;
 use crate::util::Queue;
 use crate::util::context::WarningHandling;
 use crate::util::interning::InternedString;
-use crate::{CargoResult, core::compiler::locking::LockManager};
+use crate::{CargoResult, compiler::locking::LockManager};
 
 use super::{Artifact, DiagDedupe, Job, JobId, Message};
 

@@ -1,6 +1,6 @@
 use benchsuite::fixtures;
 use cargo::GlobalContext;
-use cargo::core::compiler::{CompileKind, RustcTargetData};
+use cargo::compiler::{CompileKind, RustcTargetData};
 use cargo::core::{PackageIdSpec, Workspace};
 use cargo::ops::WorkspaceResolve;
 use cargo::resolver::features::{FeatureOpts, FeatureResolver};

@@ -3,7 +3,7 @@
 use crate::util::flock;
 use crate::{
     CargoResult,
-    core::compiler::{BuildRunner, Unit},
+    compiler::{BuildRunner, Unit},
     util::{FileLock, Filesystem},
 };
 

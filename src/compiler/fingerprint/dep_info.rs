@@ -1,7 +1,7 @@
 //! Types and functions managing dep-info files.
 //! For more, see [the documentation] in the `fingerprint` module.
 //!
-//! [the documentation]: crate::core::compiler::fingerprint#dep-info-files
+//! [the documentation]: crate::compiler::fingerprint#dep-info-files
 
 use crate::util::data_structures::HashMap;
 use std::ffi::OsString;

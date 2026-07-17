@@ -9,7 +9,7 @@ use crate::util::data_structures::IndexMap;
 use itertools::Itertools as _;
 
 use crate::CargoResult;
-use crate::core::compiler::UnitIndex;
+use crate::compiler::UnitIndex;
 
 use super::CompilationSection;
 use super::UnitData;

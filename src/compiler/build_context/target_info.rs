@@ -7,11 +7,11 @@
 //! * [`RustcTargetData::info`] to get a [`TargetInfo`] for an in-depth query.
 //! * [`TargetInfo::rustc_outputs`] to get a list of supported file types.
 
-use crate::core::compiler::CompileKind;
-use crate::core::compiler::CompileMode;
-use crate::core::compiler::CompileTarget;
-use crate::core::compiler::CrateType;
-use crate::core::compiler::apply_env_config;
+use crate::compiler::CompileKind;
+use crate::compiler::CompileMode;
+use crate::compiler::CompileTarget;
+use crate::compiler::CrateType;
+use crate::compiler::apply_env_config;
 use crate::core::{Dependency, Package, Target, TargetKind, Workspace};
 use crate::util::context::{GlobalContext, StringList, TargetConfig};
 use crate::util::interning::InternedString;

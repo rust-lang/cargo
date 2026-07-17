@@ -29,24 +29,24 @@
 //! which corresponds to artifact that will be built in a package. Not to be
 //! confused with target-triple or target architecture.
 //!
-//! [`unit_dependencies`]: crate::core::compiler::unit_dependencies
-//! [`Layout`]: crate::core::compiler::Layout
-//! [`JobQueue`]: crate::core::compiler::job_queue
-//! [`drain_the_queue`]: crate::core::compiler::job_queue
+//! [`unit_dependencies`]: crate::compiler::unit_dependencies
+//! [`Layout`]: crate::compiler::Layout
+//! [`JobQueue`]: crate::compiler::job_queue
+//! [`drain_the_queue`]: crate::compiler::job_queue
 //! ["Cargo Target"]: https://doc.rust-lang.org/nightly/cargo/reference/cargo-targets.html
 
 use crate::util::data_structures::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use crate::core::compiler::UserIntent;
-use crate::core::compiler::unit_dependencies::build_unit_dependencies;
-use crate::core::compiler::unit_graph::{self, UnitDep, UnitGraph};
-use crate::core::compiler::{BuildConfig, BuildContext, BuildRunner, Compilation};
-use crate::core::compiler::{CompileKind, CompileTarget, RustcTargetData, Unit};
-use crate::core::compiler::{CrateType, TargetInfo, apply_env_config, standard_lib};
-use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
-use crate::core::compiler::{DepKindSet, UnitIndex};
+use crate::compiler::UserIntent;
+use crate::compiler::unit_dependencies::build_unit_dependencies;
+use crate::compiler::unit_graph::{self, UnitDep, UnitGraph};
+use crate::compiler::{BuildConfig, BuildContext, BuildRunner, Compilation};
+use crate::compiler::{CompileKind, CompileTarget, RustcTargetData, Unit};
+use crate::compiler::{CrateType, TargetInfo, apply_env_config, standard_lib};
+use crate::compiler::{DefaultExecutor, Executor, UnitInterner};
+use crate::compiler::{DepKindSet, UnitIndex};
 use crate::core::profiles::Profiles;
 use crate::core::{PackageId, PackageSet, SourceId, TargetKind, Workspace};
 use crate::drop_println;

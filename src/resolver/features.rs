@@ -38,7 +38,7 @@
 //! [new feature resolver]: https://doc.rust-lang.org/nightly/cargo/reference/resolver.html#feature-resolver-version-2
 //! [`resolve_ws_with_opts`]: crate::ops::resolve_ws_with_opts
 
-use crate::core::compiler::{CompileKind, CompileTarget, RustcTargetData};
+use crate::compiler::{CompileKind, CompileTarget, RustcTargetData};
 use crate::core::dependency::{ArtifactTarget, DepKind, Dependency};
 use crate::core::{FeatureValue, PackageId, PackageIdSpec, PackageSet, Workspace};
 use crate::resolver::types::FeaturesSet;

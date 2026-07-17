@@ -1,4 +1,4 @@
-use crate::core::compiler::{Compilation, Doctest, Unit, UnitHash, UnitOutput};
+use crate::compiler::{Compilation, Doctest, Unit, UnitHash, UnitOutput};
 use crate::core::profiles::PanicStrategy;
 use crate::core::{TargetKind, Workspace};
 use crate::ops;

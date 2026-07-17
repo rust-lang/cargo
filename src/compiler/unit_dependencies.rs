@@ -20,12 +20,10 @@ use crate::util::data_structures::{HashMap, HashSet};
 use tracing::trace;
 
 use crate::CargoResult;
-use crate::core::compiler::UserIntent;
-use crate::core::compiler::artifact::match_artifacts_kind_with_targets;
-use crate::core::compiler::unit_graph::{UnitDep, UnitGraph};
-use crate::core::compiler::{
-    CompileKind, CompileMode, CrateType, RustcTargetData, Unit, UnitInterner,
-};
+use crate::compiler::UserIntent;
+use crate::compiler::artifact::match_artifacts_kind_with_targets;
+use crate::compiler::unit_graph::{UnitDep, UnitGraph};
+use crate::compiler::{CompileKind, CompileMode, CrateType, RustcTargetData, Unit, UnitInterner};
 use crate::core::dependency::{Artifact, ArtifactKind, ArtifactTarget, DepKind};
 use crate::core::profiles::{Profile, Profiles, UnitFor};
 use crate::core::{

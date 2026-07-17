@@ -4,10 +4,10 @@ use crate::util::data_structures::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
+use crate::compiler::compilation::{self, UnitOutput};
+use crate::compiler::locking::LockManager;
+use crate::compiler::{self, Unit, UserIntent, artifact};
 use crate::core::PackageId;
-use crate::core::compiler::compilation::{self, UnitOutput};
-use crate::core::compiler::locking::LockManager;
-use crate::core::compiler::{self, Unit, UserIntent, artifact};
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
 use anyhow::{Context as _, bail};
@@ -36,7 +36,7 @@ pub use self::compilation_files::{Metadata, OutputFile, UnitHash};
 /// Different from the [`BuildContext`], `Context` is a _mutable_ state used
 /// throughout the entire build process. Everything is coordinated through this.
 ///
-/// [`BuildContext`]: crate::core::compiler::BuildContext
+/// [`BuildContext`]: crate::compiler::BuildContext
 pub struct BuildRunner<'a, 'gctx> {
     /// Mostly static information about the build task.
     pub bcx: &'a BuildContext<'a, 'gctx>,

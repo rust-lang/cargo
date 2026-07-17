@@ -371,7 +371,7 @@ fn named_config_profile() {
     // foo -> middle -> bar -> dev
     // middle exists in Cargo.toml, the others in .cargo/config.toml
     use super::config::GlobalContextBuilder;
-    use cargo::core::compiler::CompileKind;
+    use cargo::compiler::CompileKind;
     use cargo::core::profiles::{Profiles, UnitFor};
     use cargo::core::{PackageId, Workspace};
     use std::fs;

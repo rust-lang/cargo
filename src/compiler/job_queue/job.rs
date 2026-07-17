@@ -4,7 +4,7 @@ use std::fmt;
 use std::mem;
 
 use super::JobState;
-use crate::core::compiler::fingerprint::DirtyReason;
+use crate::compiler::fingerprint::DirtyReason;
 use crate::util::CargoResult;
 
 /// Represents a unit of [`Work`] with a [`Freshness`] for caller

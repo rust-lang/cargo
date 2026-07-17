@@ -21,8 +21,8 @@
 //! The precedence is explained in [`ProfileMaker`].
 //! The algorithm happens within [`ProfileMaker::get_profile`].
 
+use crate::compiler::{CompileKind, CompileTarget, Unit};
 use crate::core::Feature;
-use crate::core::compiler::{CompileKind, CompileTarget, Unit};
 use crate::core::dependency::Artifact;
 use crate::core::{PackageId, PackageIdSpec, PackageIdSpecQuery, Target, Workspace};
 use crate::resolver::Resolve;

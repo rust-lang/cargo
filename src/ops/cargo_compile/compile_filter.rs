@@ -1,6 +1,6 @@
 //! Filters and their rules to select which Cargo targets will be built.
 
-use crate::core::compiler::UserIntent;
+use crate::compiler::UserIntent;
 use crate::core::{Target, TargetKind};
 use crate::util::restricted_names::is_glob_pattern;
 

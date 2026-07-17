@@ -1,5 +1,5 @@
 use super::{CV, ConfigKey, ConfigRelativePath, GlobalContext, OptValue, PathAndArgs, StringList};
-use crate::core::compiler::{BuildOutput, LibraryPath, LinkArgTarget};
+use crate::compiler::{BuildOutput, LibraryPath, LinkArgTarget};
 use crate::util::CargoResult;
 use crate::util::data_structures::HashMap;
 use serde::Deserialize;

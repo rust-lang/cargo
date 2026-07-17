@@ -1,5 +1,5 @@
+use crate::compiler::{Compilation, CompileKind};
 use crate::core::Workspace;
-use crate::core::compiler::{Compilation, CompileKind};
 use crate::ops;
 use crate::util;
 use crate::util::CargoResult;

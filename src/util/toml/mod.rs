@@ -23,7 +23,7 @@ use itertools::Itertools;
 use pathdiff::diff_paths;
 use url::Url;
 
-use crate::core::compiler::{CompileKind, CompileTarget};
+use crate::compiler::{CompileKind, CompileTarget};
 use crate::core::dependency::{Artifact, ArtifactTarget, DepKind};
 use crate::core::manifest::{ManifestMetadata, TargetSourcePath};
 use crate::core::{

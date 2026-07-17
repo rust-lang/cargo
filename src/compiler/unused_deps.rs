@@ -6,9 +6,9 @@ use tracing::{instrument, trace};
 
 use super::BuildContext;
 use super::unit::Unit;
+use crate::compiler::build_config::CompileMode;
 use crate::core::Dependency;
 use crate::core::PackageId;
-use crate::core::compiler::build_config::CompileMode;
 use crate::core::dependency::DepKind;
 use crate::core::manifest::TargetKind;
 use crate::util::interning::InternedString;

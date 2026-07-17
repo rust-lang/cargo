@@ -10,7 +10,7 @@ use std::sync::Arc;
 use tracing::debug;
 
 use super::{BuildContext, BuildRunner, CompileKind, FileFlavor, Layout};
-use crate::core::compiler::{CompileMode, CompileTarget, CrateType, FileType, Unit};
+use crate::compiler::{CompileMode, CompileTarget, CrateType, FileType, Unit};
 use crate::core::{Target, TargetKind, Workspace};
 use crate::util::{self, CargoResult, OnceExt, StableHasher};
 

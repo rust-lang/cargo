@@ -5,9 +5,9 @@
 use cargo_util_schemas::core::PackageIdSpec;
 
 use crate::GlobalContext;
+use crate::compiler::Unit;
+use crate::compiler::{CompileKind, CompileMode};
 use crate::core::Target;
-use crate::core::compiler::Unit;
-use crate::core::compiler::{CompileKind, CompileMode};
 use crate::core::dependency::Dependency;
 use crate::core::profiles::{Profile, UnitFor};
 use crate::util::CargoResult;

@@ -53,9 +53,9 @@ use semver::Version;
 use tracing::{debug, trace, warn};
 
 pub use self::fix_edition::fix_edition;
+use crate::compiler::CompileKind;
+use crate::compiler::RustcTargetData;
 use crate::core::PackageIdSpecQuery as _;
-use crate::core::compiler::CompileKind;
-use crate::core::compiler::RustcTargetData;
 use crate::core::{Edition, MaybePackage, Package, PackageId, Workspace};
 use crate::ops::resolve::WorkspaceResolve;
 use crate::ops::{self, CompileOptions};

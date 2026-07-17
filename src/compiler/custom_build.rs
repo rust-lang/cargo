@@ -28,14 +28,14 @@
 //! [build script]: https://doc.rust-lang.org/nightly/cargo/reference/build-scripts.html
 //! [`TargetKind::CustomBuild`]: crate::core::manifest::TargetKind::CustomBuild
 //! [`UnitGraph`]: super::unit_graph::UnitGraph
-//! [`CompileMode::RunCustomBuild`]: crate::core::compiler::CompileMode::RunCustomBuild
+//! [`CompileMode::RunCustomBuild`]: crate::compiler::CompileMode::RunCustomBuild
 //! [instructions]: https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script
 
 use super::{BuildRunner, Job, Unit, Work, fingerprint, get_dynamic_search_path};
-use crate::core::compiler::CompileMode;
-use crate::core::compiler::artifact;
-use crate::core::compiler::build_runner::UnitHash;
-use crate::core::compiler::job_queue::JobState;
+use crate::compiler::CompileMode;
+use crate::compiler::artifact;
+use crate::compiler::build_runner::UnitHash;
+use crate::compiler::job_queue::JobState;
 use crate::core::{PackageId, Target, profiles::ProfileRoot};
 use crate::util::data_structures::HashMap;
 use crate::util::data_structures::HashSet;

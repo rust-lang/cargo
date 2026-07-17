@@ -207,8 +207,8 @@
 //! When cross-compiling, the layout is the same, except it appears in
 //! `target/$TRIPLE`.
 
+use crate::compiler::CompileTarget;
 use crate::core::Workspace;
-use crate::core::compiler::CompileTarget;
 use crate::util::flock::is_on_nfs_mount;
 use crate::util::{CargoResult, FileLock};
 use cargo_util::paths;

@@ -12,7 +12,7 @@ use itertools::Itertools;
 use tracing::debug;
 use url::Url;
 
-use crate::core::compiler::Unit;
+use crate::compiler::Unit;
 use crate::core::features::Features;
 use crate::core::registry::PackageRegistry;
 use crate::core::{

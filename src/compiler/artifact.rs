@@ -1,8 +1,8 @@
 //! Generate artifact information from unit dependencies for configuring the compiler environment.
 
 use crate::CargoResult;
-use crate::core::compiler::unit_graph::UnitDep;
-use crate::core::compiler::{BuildRunner, CrateType, FileFlavor, Unit};
+use crate::compiler::unit_graph::UnitDep;
+use crate::compiler::{BuildRunner, CrateType, FileFlavor, Unit};
 use crate::core::dependency::ArtifactKind;
 use crate::core::{Dependency, Target, TargetKind};
 use crate::util::data_structures::{HashMap, HashSet};

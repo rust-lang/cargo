@@ -12,7 +12,7 @@ use cargo_util_terminal::report::Level;
 use ops::FilterRule;
 use serde::{Deserialize, Serialize};
 
-use crate::core::compiler::{DirtyReason, Freshness};
+use crate::compiler::{DirtyReason, Freshness};
 use crate::core::{Dependency, FeatureValue, Package, PackageId, SourceId};
 use crate::core::{PackageSet, Target};
 use crate::ops::{self, CompileFilter, CompileOptions};

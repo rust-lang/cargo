@@ -1,7 +1,7 @@
 //! Implementation of `cargo tree`.
 
 use self::format::Pattern;
-use crate::core::compiler::{CompileKind, RustcTargetData};
+use crate::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::DepKind;
 use crate::core::{Package, PackageId, PackageIdSpec, PackageIdSpecQuery, Workspace};
 use crate::ops::resolve::SpecsAndResolvedFeatures;

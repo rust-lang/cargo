@@ -19,7 +19,7 @@ use semver::Version;
 use serde::Serialize;
 use tracing::debug;
 
-use crate::core::compiler::{CompileKind, RustcTargetData};
+use crate::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::DepKind;
 use crate::core::{
     CliUnstable, Dependency, Features, Manifest, PackageId, PackageIdSpec, SerializedDependency,

@@ -1,5 +1,5 @@
-use crate::core::compiler::artifact::match_artifacts_kind_with_targets;
-use crate::core::compiler::{CompileKind, CompileKindFallback, RustcTargetData};
+use crate::compiler::artifact::match_artifacts_kind_with_targets;
+use crate::compiler::{CompileKind, CompileKindFallback, RustcTargetData};
 use crate::core::dependency::DepKind;
 use crate::core::package::SerializedPackage;
 use crate::core::{Package, PackageId, PackageIdSpec, Workspace};

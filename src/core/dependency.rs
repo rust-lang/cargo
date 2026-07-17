@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tracing::trace;
 
-use crate::core::compiler::{CompileKind, CompileTarget};
+use crate::compiler::{CompileKind, CompileTarget};
 use crate::core::{CliUnstable, Feature, Features, PackageId, SourceId, Summary};
 use crate::util::OptVersionReq;
 use crate::util::context::Definition;

@@ -1,4 +1,4 @@
-use crate::core::compiler::Unit;
+use crate::compiler::Unit;
 use crate::core::manifest::TargetSourcePath;
 use crate::core::{Target, Workspace};
 use crate::ops::CompileOptions;

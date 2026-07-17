@@ -1,7 +1,7 @@
 //! Code for building the graph used by `cargo tree`.
 
 use super::TreeOptions;
-use crate::core::compiler::{CompileKind, RustcTargetData};
+use crate::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::DepKind;
 use crate::core::{FeatureMap, FeatureValue, Package, PackageId, PackageIdSpec, Workspace};
 use crate::resolver::Resolve;

@@ -1,12 +1,12 @@
 //! [`BuildContext`] is a (mostly) static information about a build task.
 
+use crate::compiler::BuildConfig;
+use crate::compiler::CompileKind;
+use crate::compiler::Unit;
+use crate::compiler::UnitIndex;
+use crate::compiler::unit_graph::UnitGraph;
 use crate::core::PackageSet;
 use crate::core::Workspace;
-use crate::core::compiler::BuildConfig;
-use crate::core::compiler::CompileKind;
-use crate::core::compiler::Unit;
-use crate::core::compiler::UnitIndex;
-use crate::core::compiler::unit_graph::UnitGraph;
 use crate::core::dependency::DepKind;
 use crate::core::profiles::Profiles;
 use crate::util::Rustc;
@@ -47,7 +47,7 @@ pub use self::target_info::TargetInfo;
 ///
 /// After a `BuildContext` is built, the next stage of building is handled in [`BuildRunner`].
 ///
-/// [`BuildRunner`]: crate::core::compiler::BuildRunner
+/// [`BuildRunner`]: crate::compiler::BuildRunner
 /// [`ops::create_bcx`]: crate::ops::create_bcx
 pub struct BuildContext<'a, 'gctx> {
     /// The workspace the build is for.

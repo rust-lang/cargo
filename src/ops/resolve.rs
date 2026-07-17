@@ -55,6 +55,7 @@
 //! [source implementations]: crate::sources
 //! [`Downloads`]: crate::core::package::Downloads
 
+use crate::compiler::{CompileKind, RustcTargetData};
 use crate::core::Dependency;
 use crate::core::GitReference;
 use crate::core::PackageId;
@@ -63,7 +64,6 @@ use crate::core::PackageIdSpecQuery;
 use crate::core::PackageSet;
 use crate::core::SourceId;
 use crate::core::Workspace;
-use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::registry::{LockedPatchDependency, PackageRegistry};
 use crate::core::summary::Summary;
 use crate::ops;

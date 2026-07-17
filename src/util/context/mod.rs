@@ -76,7 +76,7 @@ use std::sync::{Arc, LazyLock, Mutex, MutexGuard, OnceLock};
 use std::time::Instant;
 
 use self::ConfigValue as CV;
-use crate::core::compiler::rustdoc::RustdocExternMap;
+use crate::compiler::rustdoc::RustdocExternMap;
 use crate::core::global_cache_tracker::{DeferredGlobalLastUse, GlobalCacheTracker};
 use crate::core::{CliUnstable, SourceId, Workspace, WorkspaceRootConfig, features};
 use crate::ops::RegistryCredentialConfig;

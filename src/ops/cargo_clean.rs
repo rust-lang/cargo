@@ -1,4 +1,4 @@
-use crate::core::compiler::{CompileKind, CompileMode, Layout, RustcTargetData};
+use crate::compiler::{CompileKind, CompileMode, Layout, RustcTargetData};
 use crate::core::profiles::Profiles;
 use crate::core::{PackageIdSpec, PackageIdSpecQuery, TargetKind, Workspace};
 use crate::ops;

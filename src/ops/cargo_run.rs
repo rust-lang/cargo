@@ -3,8 +3,8 @@ use std::fmt::Write as _;
 use std::iter;
 use std::path::Path;
 
+use crate::compiler::UnitOutput;
 use crate::core::MaybePackage;
-use crate::core::compiler::UnitOutput;
 use crate::core::{TargetKind, Workspace};
 use crate::ops;
 use crate::util::CargoResult;

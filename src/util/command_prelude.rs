@@ -1,6 +1,6 @@
 use crate::CargoResult;
+use crate::compiler::{BuildConfig, CompileKind, MessageFormat, RustcTargetData};
 use crate::core::Dependency;
-use crate::core::compiler::{BuildConfig, CompileKind, MessageFormat, RustcTargetData};
 use crate::core::{Edition, Package, TargetKind, Workspace, profiles::Profiles};
 use crate::ops::registry::RegistryOrIndex;
 use crate::ops::{self, CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
@@ -32,7 +32,7 @@ use std::ffi::{OsStr, OsString};
 use std::path::Path;
 use std::path::PathBuf;
 
-pub use crate::core::compiler::UserIntent;
+pub use crate::compiler::UserIntent;
 pub use crate::{CliError, CliResult, GlobalContext};
 pub use clap::{Arg, ArgAction, ArgMatches, value_parser};
 
