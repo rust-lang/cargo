@@ -2185,7 +2185,12 @@ impl GlobalContext {
 }
 
 pub fn homedir(cwd: &Path) -> Option<PathBuf> {
-    ::home::cargo_home_with_cwd(cwd).ok()
+    ::home::cargo_home_with_cwd(cwd)
+        .ok()
+        // https://github.com/rust-lang/cargo/issues/15981
+        // This is so everything shares one spelling and
+        // isn't incorrectly seen as distinct.
+        .map(|home| paths::normalize_path(&home))
 }
 
 pub fn save_credentials(
