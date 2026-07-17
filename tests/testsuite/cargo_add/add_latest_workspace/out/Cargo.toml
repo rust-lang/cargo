@@ -1,0 +1,5 @@
+[workspace]
+members = ["bar"]
+
+[workspace.dependencies]
+my-package = "0.4"

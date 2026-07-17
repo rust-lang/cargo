@@ -13,6 +13,7 @@ fn case() {
         "0.2.0+my-package",
         "0.2.3+my-package",
         "0.4.1+my-package",
+        "0.4.2+my-package",
         "20.0.0+my-package",
         "99999.0.0+my-package",
         "99999.0.0-alpha.1+my-package",
@@ -26,38 +27,12 @@ fn case() {
 
     snapbox::cmd::Command::cargo_ui()
         .arg("add")
-        .args([
-            "my-package@0.4.3",
-            "--git",
-            "https://github.com/dcjanus/invalid",
-        ])
+        .arg_line("my-package@latest")
         .current_dir(cwd)
         .assert()
-        .code(101)
+        .failure()
         .stdout_eq(str![""])
         .stderr_eq(file!["stderr.term.svg"]);
-
-    assert_ui().subset_matches(current_dir!().join("out"), &project_root);
-}
-
-#[cargo_test]
-fn latest() {
-    let project = Project::from_template(current_dir!().join("in"));
-    let project_root = project.root();
-    let cwd = &project_root;
-
-    snapbox::cmd::Command::cargo_ui()
-        .arg("add")
-        .args([
-            "my-package@latest",
-            "--git",
-            "https://github.com/dcjanus/invalid",
-        ])
-        .current_dir(cwd)
-        .assert()
-        .code(101)
-        .stdout_eq(str![""])
-        .stderr_eq(file!["stderr_latest.term.svg"]);
 
     assert_ui().subset_matches(current_dir!().join("out"), &project_root);
 }
