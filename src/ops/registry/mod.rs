@@ -2,13 +2,13 @@
 //!
 //! [1]: https://doc.rust-lang.org/nightly/cargo/reference/registry-web-api.html
 
-mod info;
-mod login;
-mod logout;
-mod owner;
-mod publish;
-mod search;
-mod yank;
+mod cargo_info;
+mod cargo_login;
+mod cargo_logout;
+mod cargo_owner;
+mod cargo_publish;
+mod cargo_search;
+mod cargo_yank;
 
 use crate::util::data_structures::HashSet;
 use std::str;
@@ -27,17 +27,17 @@ use crate::util::context::{GlobalContext, PathAndArgs};
 use crate::util::errors::CargoResult;
 use crate::util::network::http_async;
 
-pub use self::info::info;
-pub use self::login::registry_login;
-pub use self::logout::registry_logout;
-pub use self::owner::OwnersOptions;
-pub use self::owner::modify_owners;
-pub use self::publish::PublishOpts;
-pub use self::publish::publish;
-pub use self::search::search;
-pub use self::yank::yank;
+pub use self::cargo_info::info;
+pub use self::cargo_login::registry_login;
+pub use self::cargo_logout::registry_logout;
+pub use self::cargo_owner::OwnersOptions;
+pub use self::cargo_owner::modify_owners;
+pub use self::cargo_publish::PublishOpts;
+pub use self::cargo_publish::publish;
+pub use self::cargo_search::search;
+pub use self::cargo_yank::yank;
 
-pub(crate) use self::publish::prepare_transmit;
+pub(crate) use self::cargo_publish::prepare_transmit;
 
 /// Represents either `--registry` or `--index` argument, which is mutually exclusive.
 #[derive(Debug, Clone)]

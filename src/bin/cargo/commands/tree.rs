@@ -4,7 +4,7 @@ use crate::util::data_structures::HashSet;
 use anyhow::{bail, format_err};
 use cargo::core::dependency::DepKind;
 use cargo::ops::Packages;
-use cargo::ops::tree::{self, DisplayDepth, EdgeKind};
+use cargo::ops::cargo_tree::{self, DisplayDepth, EdgeKind};
 use cargo::util::CargoResult;
 use cargo::util::print_available_packages;
 use cargo_util_terminal::report::Level;
@@ -155,7 +155,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     } else {
         args.get_one::<String>("prefix").unwrap().as_str()
     };
-    let prefix = tree::Prefix::from_str(prefix).map_err(|e| anyhow::anyhow!("{}", e))?;
+    let prefix = cargo_tree::Prefix::from_str(prefix).map_err(|e| anyhow::anyhow!("{}", e))?;
 
     let no_dedupe = args.flag("no-dedupe") || args.flag("all");
     if args.flag("all") {
@@ -179,7 +179,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     } else {
         args.targets()?
     };
-    let target = tree::Target::from_cli(targets);
+    let target = cargo_tree::Target::from_cli(targets);
 
     let (edge_kinds, no_proc_macro, public) = parse_edge_kinds(gctx, args)?;
     let graph_features = edge_kinds.contains(&EdgeKind::Feature);
@@ -239,7 +239,7 @@ help: if you are in a workspace and want to search across all members, use:
             Charset::Ascii => gctx.shell().set_unicode(false)?,
         }
     }
-    let opts = tree::TreeOptions {
+    let opts = cargo_tree::TreeOptions {
         cli_features: args.cli_features()?,
         packages,
         target,
@@ -260,7 +260,7 @@ help: if you are in a workspace and want to search across all members, use:
         return Err(format_err!("the `-e features` flag does not support `--duplicates`").into());
     }
 
-    tree::build_and_print(&ws, &opts)?;
+    cargo_tree::build_and_print(&ws, &opts)?;
     Ok(())
 }
 

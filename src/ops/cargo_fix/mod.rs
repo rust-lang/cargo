@@ -73,7 +73,7 @@ mod fix_edition;
 /// **Internal only.**
 /// Indicates Cargo is in fix-proxy-mode if presents.
 /// The value of it is the socket address of the [`LockServer`] being used.
-/// See the [module-level documentation](mod@super::fix) for more.
+/// See the [module-level documentation](mod@super::cargo_fix) for more.
 const FIX_ENV_INTERNAL: &str = "__CARGO_FIX_PLZ";
 /// **Internal only.**
 /// For passing [`FixOptions::broken_code`] through to cargo running in proxy mode.

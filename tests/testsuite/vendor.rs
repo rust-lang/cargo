@@ -2109,7 +2109,7 @@ fn vendor_rename_fallback() {
     Package::new("log", "0.3.5").publish();
 
     p.cargo("vendor --respect-source-config --no-delete")
-        .env("CARGO_LOG", "cargo::ops::vendor=warn")
+        .env("CARGO_LOG", "cargo::ops::cargo_vendor=warn")
         .env("__CARGO_TEST_VENDOR_FALLBACK_CP_SOURCES", "true")
         .with_status(0)
         .with_stderr_data(str![[r#"
