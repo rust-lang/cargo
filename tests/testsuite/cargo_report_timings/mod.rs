@@ -152,6 +152,84 @@ Caused by:
 }
 
 #[cargo_test]
+fn idle_session() {
+    // A session that builds nothing, like `cargo test` with `test = false`
+    // and `doctest = false`, has no timing data to report.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.0"
+            edition = "2015"
+
+            [lib]
+            test = false
+            doctest = false
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("test -Zbuild-analysis")
+        .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .run();
+
+    p.cargo("report timings -Zbuild-analysis")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to analyze log at `[ROOT]/home/.cargo/log/[..]T[..]Z-[..].jsonl`
+
+Caused by:
+  no timing data found in log
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn all_fresh_session() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Zbuild-analysis")
+        .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .run();
+
+    // The second session has nothing to build; every unit is fresh.
+    p.cargo("check -Zbuild-analysis")
+        .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .run();
+
+    // The second session's log got generated, and it is the one picked.
+    let _ = paths::log_file(1);
+
+    p.cargo("report timings -Zbuild-analysis")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .with_stderr_data(str![[r#"
+      Timing report saved to [ROOT]/foo/target/cargo-timings/cargo-timing-[..]T[..]Z-[..].html
+
+"#]])
+        .run();
+
+    let timing_files: Vec<_> = p.glob("**/cargo-timing-*.html").collect();
+    assert_eq!(timing_files.len(), 1);
+    let html = std::fs::read_to_string(timing_files[0].as_ref().unwrap()).unwrap();
+
+    // FIXME: nothing was built in this session, but every fresh unit is
+    // reported as a zero-duration row anyway.
+    // See https://github.com/rust-lang/cargo/issues/17212.
+    assert!(html.contains(r#""name": "foo""#));
+}
+
+#[cargo_test]
 fn prefer_latest() {
     let p = project()
         .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
