@@ -157,10 +157,9 @@ fn merge_cross_crate_info(ws: &Workspace<'_>, compilation: &Compilation<'_>) -> 
             cmd.retry_with_argfile(true);
             cmd.arg("-o")
                 .arg(rustdoc_artifact_dir.as_path_unlocked())
-                .arg("-Zunstable-options")
-                .arg("--merge=finalize");
+                .arg("-Zunstable-options");
             for parts_dir in doc_parts_dirs {
-                let mut include_arg = OsString::from("--include-parts-dir=");
+                let mut include_arg = OsString::from("--read-doc-meta-dir=");
                 include_arg.push(parts_dir);
                 cmd.arg(include_arg);
             }

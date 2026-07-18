@@ -112,7 +112,7 @@ pub struct Compilation<'gctx> {
     /// Libraries to test with rustdoc.
     pub to_doc_test: Vec<Doctest>,
 
-    /// Rustdoc fingerprint files to determine whether we need to run `rustdoc --merge=finalize`.
+    /// Rustdoc fingerprint files to determine whether we need to run `rustdoc --read-doc-meta-dir`.
     ///
     /// See `-Zrustdoc-mergeable-info` for more.
     pub rustdoc_fingerprints: Option<HashMap<CompileKind, RustdocFingerprint>>,
