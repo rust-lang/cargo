@@ -6825,6 +6825,8 @@ fn should_not_include_proc_macro_deps_paths_in_rustc_args() {
     p.cargo("-Zbuild-dir-new-layout -v build")
         .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .enable_mac_dsym()
+        // Verify that the proc-macro dependencies (my-rlib and my-dylib) are not added to the rustc
+        // invocation for the `foo` crate as `-L` args.
         .with_stderr_data(str![[r#"
 [LOCKING] 3 packages to latest compatible versions
 [COMPILING] my-dylib v0.1.0 ([ROOT]/foo/my-dylib)
@@ -6834,7 +6836,7 @@ fn should_not_include_proc_macro_deps_paths_in_rustc_args() {
 [COMPILING] my-proc-macro v0.1.0 ([ROOT]/foo/my-proc-macro)
 [RUNNING] `rustc --crate-name my_proc_macro [..]`
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo [..] --out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out -L dependency=[ROOT]/foo/target/debug/build/my-dylib/[HASH]/out -L dependency=[ROOT]/foo/target/debug/build/my-proc-macro/[HASH]/out -L dependency=[ROOT]/foo/target/debug/build/my-rlib/[HASH]/out --extern my_proc_macro=[ROOT]/foo/target/debug/build/my-proc-macro/[HASH]/out/[..] --verbose`
+[RUNNING] `rustc --crate-name foo [..] --out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out -L dependency=[ROOT]/foo/target/debug/build/my-proc-macro/[HASH]/out --extern my_proc_macro=[ROOT]/foo/target/debug/build/my-proc-macro/[HASH]/out/[..] --verbose`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]].unordered())
