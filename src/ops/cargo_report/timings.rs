@@ -46,6 +46,8 @@ struct UnitEntry {
     data: UnitData,
     sections: IndexMap<String, CompilationSection>,
     rmeta_time: Option<f64>,
+    /// Whether the job queue actually ran this unit.
+    started: bool,
 }
 
 pub fn report_timings(
@@ -88,7 +90,7 @@ pub fn report_timings(
                 None
             }
         });
-    let ctx = prepare_context(iter, &run_id)
+    let ctx = prepare_context(iter, &run_id, true)
         .with_context(|| format!("failed to analyze log at `{}`", log.display()))?;
 
     // If we are in a workspace,
@@ -130,7 +132,11 @@ pub fn report_timings(
     Ok(())
 }
 
-pub(crate) fn prepare_context<I>(log: I, run_id: &RunId) -> CargoResult<RenderContext<'_>>
+pub(crate) fn prepare_context<I>(
+    log: I,
+    run_id: &RunId,
+    error_if_no_units: bool,
+) -> CargoResult<RenderContext<'_>>
 where
     I: Iterator<Item = LogMessage>,
 {
@@ -230,6 +236,7 @@ where
                         data,
                         sections: IndexMap::default(),
                         rmeta_time: None,
+                        started: false,
                     },
                 );
             }
@@ -241,7 +248,10 @@ where
             LogMessage::UnitStarted { index, elapsed } => {
                 units
                     .entry(index)
-                    .and_modify(|unit| unit.data.start = elapsed)
+                    .and_modify(|unit| {
+                        unit.data.start = elapsed;
+                        unit.started = true;
+                    })
                     .or_insert_with(|| {
                         unreachable!("unit {index} must have been registered first")
                     });
@@ -331,6 +341,16 @@ where
         }
     }
 
+    // A build can legitimately have no units at all, such as an idle
+    // `cargo test` with `test = false` and `doctest = false`,
+    // so `--timings` always renders its report.
+    // `cargo report timings` instead treats a unit-less
+    // log as corrupted or truncated and errors out.
+    // See https://github.com/rust-lang/cargo/issues/17212.
+    if error_if_no_units && units.is_empty() {
+        anyhow::bail!("no timing data found in log");
+    }
+
     ctx.root_units = {
         let mut root_map: IndexMap<_, Vec<_>> = IndexMap::default();
         for index in requested_units {
@@ -356,15 +376,34 @@ where
             .collect()
     };
 
+    let started: HashSet<UnitIndex> = units
+        .iter()
+        .filter(|(_, entry)| entry.started)
+        .map(|(index, _)| *index)
+        .collect();
+
+    // Units that never started, like fresh units, and
+    // units that were run outside the job queue are
+    // excluded so they don't show up as zero-duration rows.
+    // See https://github.com/rust-lang/cargo/issues/17212.
     let unit_data: Vec<_> = units
         .into_values()
+        .filter(|entry| entry.started)
         .map(
             |UnitEntry {
                  target: _,
                  mut data,
                  sections,
                  rmeta_time,
+                 started: _,
              }| {
+                // A finished unit can unblock units that never started, like
+                // fresh units. Drop them so rows never reference units absent
+                // from the report.
+                data.unblocked_units.retain(|index| started.contains(index));
+                data.unblocked_rmeta_units
+                    .retain(|index| started.contains(index));
+
                 // Post-processing for compilation sections we've collected so far.
                 data.sections = aggregate_sections(sections, data.duration, rmeta_time);
                 data.start = round_to_centisecond(data.start);
@@ -374,10 +413,6 @@ where
         )
         .sorted_unstable_by(|a, b| a.start.partial_cmp(&b.start).unwrap())
         .collect();
-
-    if unit_data.is_empty() {
-        anyhow::bail!("no timing data found in log");
-    }
 
     ctx.unit_data = unit_data;
     ctx.concurrency = compute_concurrency(&ctx.unit_data);
