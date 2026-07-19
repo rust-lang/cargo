@@ -3273,7 +3273,7 @@ authors = []
 im-a-teapot = true
 
 [lints.cargo]
-im-a-teapot = "deny"
+im_a_teapot = "deny"
             "#,
         )
         .file("src/main.rs", "fn main() { let unused = 10; }")
