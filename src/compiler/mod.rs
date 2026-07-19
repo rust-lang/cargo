@@ -1858,6 +1858,13 @@ fn add_dep_arg<'a, 'b: 'a>(
             continue;
         }
         map.insert(&dep.unit, build_runner.files().deps_dir(&dep.unit));
+
+        // Proc macros are statically linked, so when including a proc-macro dependency we can skip
+        // adding it's dependencies. Note that we still do add them when we are compiling the
+        // proc-macro itself.
+        if dep.unit.target.proc_macro() {
+            continue;
+        }
         add_dep_arg(map, build_runner, &dep.unit);
     }
 }
