@@ -80,10 +80,7 @@ fn doc_test_units_not_reported() {
     let html = p.read_file("target/cargo-timings/cargo-timing.html");
 
     assert!(html.contains(r#"\"lib\" (test)"#));
-
-    // FIXME: the doctest unit never ran, but is reported anyway.
-    // See https://github.com/rust-lang/cargo/issues/17212.
-    assert!(html.contains("(doc test)"));
+    assert!(!html.contains("(doc test)"));
 }
 
 #[cargo_test]
@@ -102,10 +99,7 @@ fn fresh_units_not_reported() {
 
     p.cargo("build --timings").run();
     let html = p.read_file("target/cargo-timings/cargo-timing.html");
-
-    // FIXME: everything is fresh, but every unit is reported anyway.
-    // See https://github.com/rust-lang/cargo/issues/17212.
-    assert!(html.contains(r#""name": "foo""#));
+    assert!(html.contains("const UNIT_DATA = [];"));
 }
 
 #[cargo_test]
@@ -130,16 +124,14 @@ fn report_generated_without_any_units() {
         .file("src/lib.rs", "")
         .build();
 
-    // This should generate an empty report instead of failing.
-    // See https://github.com/rust-lang/cargo/issues/17212.
     p.cargo("test --timings")
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to render timing report
-
-Caused by:
-  no timing data found in log
+      Timing report saved to [ROOT]/foo/target/cargo-timings/cargo-timing-[..].html
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
+
+    let html = p.read_file("target/cargo-timings/cargo-timing.html");
+    assert!(html.contains("const UNIT_DATA = [];"));
 }

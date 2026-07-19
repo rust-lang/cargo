@@ -223,10 +223,9 @@ fn all_fresh_session() {
     assert_eq!(timing_files.len(), 1);
     let html = std::fs::read_to_string(timing_files[0].as_ref().unwrap()).unwrap();
 
-    // FIXME: nothing was built in this session, but every fresh unit is
-    // reported as a zero-duration row anyway.
-    // See https://github.com/rust-lang/cargo/issues/17212.
-    assert!(html.contains(r#""name": "foo""#));
+    // Nothing was built in this session, so no units are reported.
+    assert!(html.contains("const UNIT_DATA = [];"));
+    assert!(!html.contains(r#""name": "foo""#));
 }
 
 #[cargo_test]

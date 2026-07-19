@@ -274,7 +274,7 @@ impl<'gctx> Timings<'gctx> {
             let filename = timings_path.join(format!("cargo-timing-{run_id}.html"));
             let mut f = BufWriter::new(paths::create(&filename)?);
 
-            let mut ctx = prepare_context(logs.into_iter(), run_id)?;
+            let mut ctx = prepare_context(logs.into_iter(), run_id, false)?;
             ctx.error = error;
             ctx.cpu_usage = &self.cpu_usage;
             report::write_html(ctx, &mut f)?;
