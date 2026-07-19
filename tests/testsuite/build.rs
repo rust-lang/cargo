@@ -6736,3 +6736,107 @@ qux (cdylib) on search path: true
 "#]])
         .run();
 }
+
+#[cargo_test(
+    nightly,
+    reason = "Depends on https://github.com/rust-lang/rust/pull/155439/changes/61f3e086acc1c187bb262ab43cac71f44018c397"
+)]
+fn should_not_include_proc_macro_deps_paths_in_rustc_args() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                edition = "2021"
+                authors = []
+                resolver = "2"
+
+                [dependencies]
+                my-proc-macro = { path = "my-proc-macro" }
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "my-dylib/Cargo.toml",
+            r#"
+                [package]
+                name = "my-dylib"
+                version = "0.1.0"
+                edition = "2021"
+                authors = []
+
+                [lib]
+                crate-type = ["dylib"]
+            "#,
+        )
+        .file(
+            "my-dylib/src/lib.rs",
+            r#"pub fn value_from_dylib() -> i32 { 100 }"#,
+        )
+        .file(
+            "my-rlib/Cargo.toml",
+            r#"
+                [package]
+                name = "my-rlib"
+                version = "0.1.0"
+                edition = "2021"
+                authors = []
+            "#,
+        )
+        .file(
+            "my-rlib/src/lib.rs",
+            r#"pub fn value_from_rlib() -> i32 { 200 }"#,
+        )
+        .file(
+            "my-proc-macro/Cargo.toml",
+            r#"
+                [package]
+                name = "my-proc-macro"
+                version = "0.1.0"
+                edition = "2021"
+                authors = []
+
+                [lib]
+                proc-macro = true
+
+                [dependencies]
+                my-dylib = { path = "../my-dylib" }
+                my-rlib = { path = "../my-rlib" }
+            "#,
+        )
+        .file(
+            "my-proc-macro/src/lib.rs",
+            r#"
+                use proc_macro::TokenStream;
+                use my_dylib::value_from_dylib;
+                use my_rlib::value_from_rlib;
+
+                #[proc_macro]
+                pub fn make_bar(_item: TokenStream) -> TokenStream {
+                    let val = value_from_dylib() + value_from_rlib();
+                    format!("fn bar() -> u32 {{ {val} }}").parse().unwrap()
+                }
+        "#,
+        )
+        .build();
+
+    p.cargo("-Zbuild-dir-new-layout -v build")
+        .masquerade_as_nightly_cargo(&["new build-dir layout"])
+        .enable_mac_dsym()
+        .with_stderr_data(str![[r#"
+[LOCKING] 3 packages to latest compatible versions
+[COMPILING] my-dylib v0.1.0 ([ROOT]/foo/my-dylib)
+[RUNNING] `rustc --crate-name my_dylib [..]`
+[COMPILING] my-rlib v0.1.0 ([ROOT]/foo/my-rlib)
+[RUNNING] `rustc --crate-name my_rlib [..]`
+[COMPILING] my-proc-macro v0.1.0 ([ROOT]/foo/my-proc-macro)
+[RUNNING] `rustc --crate-name my_proc_macro [..]`
+[COMPILING] foo v0.0.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..] --out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out -L dependency=[ROOT]/foo/target/debug/build/my-dylib/[HASH]/out -L dependency=[ROOT]/foo/target/debug/build/my-proc-macro/[HASH]/out -L dependency=[ROOT]/foo/target/debug/build/my-rlib/[HASH]/out --extern my_proc_macro=[ROOT]/foo/target/debug/build/my-proc-macro/[HASH]/out/[..] --verbose`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]].unordered())
+        .run();
+}
