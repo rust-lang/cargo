@@ -74,11 +74,10 @@ impl<'gctx> Progress<'gctx> {
         // or if running on Continuous Integration service like Travis where the
         // output logs get mangled.
         #[allow(clippy::disallowed_methods, reason = "not a cargo env")]
-        let dumb = match std::env::var("TERM") {
-            Ok(term) => term == "dumb",
-            Err(_) => false,
-        };
-        if gctx.shell().verbosity() == Verbosity::Quiet || dumb || is_ci() {
+        if gctx.shell().verbosity() == Verbosity::Quiet
+            || std::env::var("TERM").as_deref() == Ok("dumb")
+            || is_ci()
+        {
             false
         } else {
             true
