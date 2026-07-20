@@ -674,7 +674,7 @@ fn _link_or_copy(src: &Path, dst: &Path) -> Result<()> {
     link_result
         .or_else(|err| {
             tracing::debug!("link failed {}. falling back to fs::copy", err);
-            fs::copy(src, dst).map(|_| ())
+            copy_via_tempfile_and_rename(src, dst)
         })
         .with_context(|| {
             format!(
@@ -683,6 +683,34 @@ fn _link_or_copy(src: &Path, dst: &Path) -> Result<()> {
                 dst.display()
             )
         })?;
+    Ok(())
+}
+
+/// Copies `src` to `dst` via a temporary file in `dst`'s own directory,
+/// followed by an atomic rename into place.
+///
+/// On platforms where hard-linking always fails (e.g. Haiku's BFS, which
+/// unconditionally rejects `link()`), every call to [`_link_or_copy`] falls
+/// back to a plain copy. Copying straight into `dst` leaves a window, for
+/// as long as the copy takes, during which a concurrent reader (for example
+/// another `rustc`/`cargo` process compiling a dependent crate) can open
+/// `dst` and observe a partially-written file. For large artifacts that
+/// window is easily hit under normal parallel builds, and it silently
+/// produces a corrupt `.rlib`/metadata file instead of a clean error.
+/// Writing to a temp file first and renaming atomically closes that window:
+/// concurrent readers only ever see the old (absent) or new (complete) file.
+fn copy_via_tempfile_and_rename(src: &Path, dst: &Path) -> io::Result<()> {
+    let dst_dir = dst.parent().ok_or_else(|| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("destination `{}` has no parent directory", dst.display()),
+        )
+    })?;
+    let mut tmp = TempFileBuilder::new()
+        .prefix(dst.file_name().unwrap_or_default())
+        .tempfile_in(dst_dir)?;
+    io::copy(&mut File::open(src)?, tmp.as_file_mut())?;
+    tmp.persist(dst).map_err(|e| e.error)?;
     Ok(())
 }
 
