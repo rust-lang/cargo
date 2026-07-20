@@ -417,6 +417,9 @@ fn multiple_providers() {
         .replace_crates_io(server.index_url())
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
+[RUNNING] `git [..] fetch [..]`
+From [ROOTURL]/registry
+ * [new ref]         HEAD       -> origin/HEAD
 [CREDENTIAL] [..]url_not_supported[..] login crates-io
 {"v":1,"registry":{"index-url":"https://github.com/rust-lang/crates.io-index","name":"crates-io"},"kind":"login","token":"abcdefg","login-url":"[ROOTURL]/api/me"}
 [CREDENTIAL] [..]success_provider[..] login crates-io
@@ -465,6 +468,9 @@ fn registry_provider_overrides_global() {
         .replace_crates_io(server.index_url())
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
+[RUNNING] `git [..] fetch [..]`
+From [ROOTURL]/registry
+ * [new ref]         HEAD       -> origin/HEAD
 [CREDENTIAL] cargo:token login crates-io
 [LOGIN] token for `crates-io` saved
 
@@ -496,6 +502,9 @@ fn both_asymmetric_and_token() {
         .replace_crates_io(server.index_url())
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
+[RUNNING] `git [..] fetch [..]`
+From [ROOTURL]/registry
+ * [new ref]         HEAD       -> origin/HEAD
 [WARNING] registry `crates-io` has a `secret_key` configured in [..]config.toml that will be ignored because a `token` is also configured, and the `cargo:token` provider is configured with higher precedence
 [CREDENTIAL] cargo:token login crates-io
 [LOGIN] token for `crates-io` saved

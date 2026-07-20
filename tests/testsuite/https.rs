@@ -32,21 +32,12 @@ fn self_signed_should_fail() {
         )
         .file("src/lib.rs", "")
         .build();
-    // I think the text here depends on the curl backend.
-    let err_msg = if cfg!(target_os = "macos") {
-        "untrusted connection error; class=Ssl (16)[..]"
-    } else if cfg!(unix) {
-        "the SSL certificate is invalid; class=Ssl (16)[..]"
-    } else if cfg!(windows) {
-        "user cancelled certificate check; class=Http (34); code=Certificate (-17)"
-    } else {
-        panic!("target not supported");
-    };
     p.cargo("fetch")
         .with_status(101)
         .with_stderr_data(&format!(
             "\
 [UPDATING] git repository `https://127.0.0.1:[..]/repos/bar.git`
+fatal: unable to access 'https://127.0.0.1:[..]/repos/bar.git/': server certificate verification failed. CAfile: none CRLfile: none
 [ERROR] failed to get `bar` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
 
 Caused by:
@@ -59,12 +50,10 @@ Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bar-[HASH]
 
 Caused by:
-  network failure seems to have happened
-  if a proxy or similar is necessary `net.git-fetch-with-cli` may help here
-  https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
+  `git fetch` failed for https://127.0.0.1:[..]/repos/bar.git
 
-Caused by:
-  {err_msg}
+  [HELP] re-try with `net.git-fetch-with-cli = false` to see if it resolves the problem
+  https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
 "
         ))
         .run();
