@@ -76,6 +76,9 @@ fn unknown_hints_warn() {
 [WARNING] Cargo.toml: unused manifest key: hints.this-is-an-unknown-hint
 [WARNING] `foo` (manifest) generated 1 warning
 [UPDATING] `dummy-registry` index
+[RUNNING] `git [..] fetch [..]`
+From [ROOTURL]/registry
+ * [new ref]         HEAD       -> origin/HEAD
 [LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
@@ -133,6 +136,9 @@ fn hint_unknown_type_warn() {
     p.cargo("check -v")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
+[RUNNING] `git [..] fetch [..]`
+From [ROOTURL]/registry
+ * [new ref]         HEAD       -> origin/HEAD
 [LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
@@ -192,6 +198,9 @@ fn hints_mostly_unused_warn_without_gate() {
     p.cargo("check -v")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
+[RUNNING] `git [..] fetch [..]`
+From [ROOTURL]/registry
+ * [new ref]         HEAD       -> origin/HEAD
 [LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
@@ -250,6 +259,9 @@ fn hints_mostly_unused_nightly() {
         .masquerade_as_nightly_cargo(&["profile-hint-mostly-unused"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
+[RUNNING] `git[..] fetch[..]`
+From [ROOTURL]/registry
+ * [new ref]         HEAD       -> origin/HEAD
 [LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
@@ -312,6 +324,9 @@ fn mostly_unused_profile_overrides_hints_nightly() {
         .masquerade_as_nightly_cargo(&["profile-hint-mostly-unused"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
+[RUNNING] `git[..] fetch[..]`
+From [ROOTURL]/registry
+ * [new ref]         HEAD       -> origin/HEAD
 [LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
