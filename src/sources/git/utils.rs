@@ -1,6 +1,7 @@
 //! Utilities for handling git repositories, mainly around
 //! authentication/cloning.
 
+use crate::context::ProgressWhen;
 use crate::sources::git::fetch::RemoteKind;
 use crate::sources::git::oxide;
 use crate::sources::git::oxide::cargo_config_to_gitoxide_overrides;
@@ -1156,15 +1157,25 @@ fn fetch_with_cli(
         let depth = 0i32.saturating_add_unsigned(depth.get());
         cmd.arg(format!("--depth={depth}"));
     }
-    match gctx.shell().verbosity() {
-        Verbosity::Normal => {}
-        Verbosity::Verbose => {
-            cmd.arg("--verbose");
+
+    let progress_config = gctx.progress_config();
+    let progress = match progress_config.when {
+        ProgressWhen::Always => true,
+        ProgressWhen::Never => false,
+        ProgressWhen::Auto => {
+            // Recreate the same conditions used with `Progress`
+            let width = progress_config
+                .width
+                .or_else(|| gctx.shell().err_width().progress_max_width());
+            gctx.shell().progress_supported() && width.is_some()
         }
-        Verbosity::Quiet => {
-            cmd.arg("--quiet");
-        }
+    };
+    if gctx.shell().verbosity() == Verbosity::Verbose {
+        cmd.arg("--verbose");
+    } else if !progress {
+        cmd.arg("--quiet");
     }
+
     cmd.arg("--force") // handle force pushes
         .arg("--update-head-ok") // see discussion in #2078
         .arg(url)
