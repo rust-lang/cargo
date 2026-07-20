@@ -60,25 +60,27 @@ impl<'gctx> Progress<'gctx> {
         let progress = match progress_config.when {
             ProgressWhen::Always => true,
             ProgressWhen::Never => false,
-            ProgressWhen::Auto => {
-                // report no progress when -q (for quiet) or TERM=dumb are set
-                // or if running on Continuous Integration service like Travis where the
-                // output logs get mangled.
-                let dumb = match gctx.get_env("TERM") {
-                    Ok(term) => term == "dumb",
-                    Err(_) => false,
-                };
-                if gctx.shell().verbosity() == Verbosity::Quiet || dumb || is_ci() {
-                    false
-                } else {
-                    true
-                }
-            }
+            ProgressWhen::Auto => Self::progress_supported(gctx),
         };
         if progress {
             Progress::new_priv(name, style, gctx)
         } else {
             return Progress { gctx, state: None };
+        }
+    }
+
+    fn progress_supported(gctx: &'gctx GlobalContext) -> bool {
+        // report no progress when -q (for quiet) or TERM=dumb are set
+        // or if running on Continuous Integration service like Travis where the
+        // output logs get mangled.
+        let dumb = match gctx.get_env("TERM") {
+            Ok(term) => term == "dumb",
+            Err(_) => false,
+        };
+        if gctx.shell().verbosity() == Verbosity::Quiet || dumb || is_ci() {
+            false
+        } else {
+            true
         }
     }
 
