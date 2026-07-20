@@ -26,7 +26,7 @@
 //! of trying to parse as little as possible.
 //!
 //! > Note that as a small aside even *loading* the JSON from the registry is
-//! > actually pretty slow. For crates.io and [`RemoteRegistry`] we don't
+//! > actually pretty slow. For crates.io and [`GitRegistry`] we don't
 //! > actually check out the git index on disk because that takes quite some
 //! > time and is quite large. Instead we use `libgit2` to read the JSON from
 //! > the raw git objects. This in turn can be slow (aka show up high in
@@ -63,7 +63,7 @@
 //! [`Dependency`]: crate::workspace::Dependency
 //! [`IndexPackage`]: super::IndexPackage
 //! [`IndexSummary::parse`]: super::IndexSummary::parse
-//! [`RemoteRegistry`]: crate::sources::registry::remote::RemoteRegistry
+//! [`GitRegistry`]: crate::sources::registry::git_remote::GitRegistry
 
 use std::cell::RefCell;
 use std::fs;

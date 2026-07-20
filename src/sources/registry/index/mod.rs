@@ -55,7 +55,7 @@ const INDEX_V_MAX: u32 = 2;
 /// Different kinds of registries store the index differently:
 ///
 /// * [`LocalRegistry`] is a simple on-disk tree of files of the raw index.
-/// * [`RemoteRegistry`] is stored as a raw git repository.
+/// * [`GitRegistry`] is stored as a raw git repository.
 /// * [`HttpRegistry`] fills the on-disk index cache directly without keeping
 ///   any raw index.
 ///
@@ -63,7 +63,7 @@ const INDEX_V_MAX: u32 = 2;
 /// This transparently handles caching of the index in a more efficient format.
 ///
 /// [`LocalRegistry`]: super::local::LocalRegistry
-/// [`RemoteRegistry`]: super::remote::RemoteRegistry
+/// [`GitRegistry`]: super::git_remote::GitRegistry
 /// [`HttpRegistry`]: super::http_remote::HttpRegistry
 pub struct RegistryIndex<'gctx> {
     source_id: SourceId,
@@ -349,12 +349,12 @@ impl<'gctx> RegistryIndex<'gctx> {
     ///
     ///    The actual kind index file being parsed depends on which kind of
     ///    [`RegistryData`] the `load` argument is given. For example, a
-    ///    Git-based [`RemoteRegistry`] will first try a on-disk index cache
+    ///    Git-based [`GitRegistry`] will first try a on-disk index cache
     ///    file, and then try parsing registry raw index from Git repository.
     ///
     /// In effect, this is intended to be a quite cheap operation.
     ///
-    /// [`RemoteRegistry`]: super::remote::RemoteRegistry
+    /// [`GitRegistry`]: super::git_remote::GitRegistry
     async fn load_summaries(
         &self,
         name: InternedString,
