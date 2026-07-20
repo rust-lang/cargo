@@ -73,7 +73,8 @@ impl<'gctx> Progress<'gctx> {
         // report no progress when -q (for quiet) or TERM=dumb are set
         // or if running on Continuous Integration service like Travis where the
         // output logs get mangled.
-        let dumb = match gctx.get_env("TERM") {
+        #[allow(clippy::disallowed_methods, reason = "not a cargo env")]
+        let dumb = match std::env::var("TERM") {
             Ok(term) => term == "dumb",
             Err(_) => false,
         };
