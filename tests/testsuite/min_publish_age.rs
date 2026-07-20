@@ -306,6 +306,9 @@ fn report_unchanged_too_new_version() {
         .env("__CARGO_TEST_INVOCATION_TIME", NOW)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
+[RUNNING] `git [..] fetch [..]`
+From [ROOTURL]/registry
+ = [up to date]      HEAD       -> origin/HEAD
 [LOCKING] 0 packages to highest compatible versions
 [UNCHANGED] bar v1.1.0 (published 2 days ago, minimum age 7 days)
 [NOTE] to see how you depend on a package, run `cargo tree --invert <dep>@<ver>`

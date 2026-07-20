@@ -244,6 +244,9 @@ fn registry_dependency() {
 "#]]) // Omit the hash of Source URL
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
+[RUNNING] `git [..] fetch [..]`
+From [ROOTURL]/registry
+ * [new ref]         HEAD       -> origin/HEAD
 [LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
@@ -351,6 +354,9 @@ fn registry_dependency_with_build_script_codegen() {
 "#]]) // Omit the hash of Source URL
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
+[RUNNING] `git [..] fetch [..]`
+From [ROOTURL]/registry
+ * [new ref]         HEAD       -> origin/HEAD
 [LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
@@ -411,6 +417,9 @@ fn git_dependency() {
 "#]]) // Omit the hash of Source URL and commit
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `[ROOTURL]/bar`
+[RUNNING] `git [..] fetch [..]`
+From [ROOTURL]/bar
+ * [new ref]         HEAD       -> origin/HEAD
 [LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.0.1 ([ROOTURL]/bar#[..])
 [RUNNING] `rustc [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/home/.cargo/git/checkouts/bar-[..]=/cargo/git/[..] --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
