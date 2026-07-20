@@ -6,9 +6,7 @@ use std::time::{Duration, Instant};
 use crate::context::ProgressWhen;
 use crate::util::{CargoResult, GlobalContext};
 use anstyle_progress::TermProgress;
-use cargo_util::is_ci;
 use cargo_util_terminal::Shell;
-use cargo_util_terminal::Verbosity;
 use unicode_width::UnicodeWidthChar;
 
 /// CLI progress bar.
@@ -60,27 +58,12 @@ impl<'gctx> Progress<'gctx> {
         let progress = match progress_config.when {
             ProgressWhen::Always => true,
             ProgressWhen::Never => false,
-            ProgressWhen::Auto => Self::progress_supported(gctx),
+            ProgressWhen::Auto => gctx.shell().progress_supported(),
         };
         if progress {
             Progress::new_priv(name, style, gctx)
         } else {
             return Progress { gctx, state: None };
-        }
-    }
-
-    fn progress_supported(gctx: &'gctx GlobalContext) -> bool {
-        // report no progress when -q (for quiet) or TERM=dumb are set
-        // or if running on Continuous Integration service like Travis where the
-        // output logs get mangled.
-        #[allow(clippy::disallowed_methods, reason = "not a cargo env")]
-        if gctx.shell().verbosity() == Verbosity::Quiet
-            || std::env::var("TERM").as_deref() == Ok("dumb")
-            || is_ci()
-        {
-            false
-        } else {
-            true
         }
     }
 
