@@ -1989,6 +1989,9 @@ fn report_behind() {
     p.cargo("update --dry-run --verbose")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
+[RUNNING] `git [..] fetch [..]`
+From [ROOTURL]/registry
+ = [up to date]      HEAD       -> origin/HEAD
 [LOCKING] 1 package to highest compatible version
 [UPDATING] breaking v0.1.0 -> v0.1.1 (available: v0.2.0)
 [UNCHANGED] pre v1.0.0-alpha.0 (available: v1.0.0-alpha.1)
@@ -2014,6 +2017,9 @@ fn report_behind() {
     p.cargo("update --dry-run --verbose")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
+[RUNNING] `git [..] fetch [..]`
+From [ROOTURL]/registry
+ = [up to date]      HEAD       -> origin/HEAD
 [LOCKING] 0 packages to highest compatible versions
 [UNCHANGED] breaking v0.1.1 (available: v0.2.0)
 [UNCHANGED] pre v1.0.0-alpha.0 (available: v1.0.0-alpha.1)
