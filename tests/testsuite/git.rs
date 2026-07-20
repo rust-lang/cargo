@@ -3275,6 +3275,68 @@ fn git_fetch_cli_env_clean() {
         .run();
 }
 
+#[cargo_test(requires = "git")]
+fn git_fetch_cli_error_suggests_libgit2() {
+    let git_dep = git::new("dep1", |project| {
+        project
+            .file("Cargo.toml", &basic_manifest("dep1", "0.5.0"))
+            .file("src/lib.rs", "")
+    });
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+                    edition = "2015"
+
+                    [dependencies]
+                    dep1 = {{ git = '{}/missing' }}
+                "#,
+                git_dep.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [net]
+                git-fetch-with-cli = true
+                retry = 0
+            "#,
+        )
+        .build();
+
+    p.cargo("fetch")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] git repository `[ROOTURL]/dep1/missing`
+fatal: '[ROOT]/dep1/missing' does not appear to be a git repository
+fatal: Could not read from remote repository.
+
+Please make sure you have the correct access rights
+and the repository exists.
+[ERROR] failed to get `dep1` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
+
+Caused by:
+  failed to load source for dependency `dep1`
+
+Caused by:
+  unable to update [ROOTURL]/dep1/missing
+
+Caused by:
+  failed to clone into: [ROOT]/home/.cargo/git/db/missing-[HASH]
+
+Caused by:
+  process didn't exit successfully: `git fetch [..]` ([EXIT_STATUS]: 128)
+
+"#]])
+        .run();
+}
+
 #[cargo_test]
 fn dirty_submodule() {
     // `cargo package` warns for dirty file in submodule.
