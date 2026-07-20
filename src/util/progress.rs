@@ -56,6 +56,12 @@ impl<'gctx> Progress<'gctx> {
         style: ProgressStyle,
         gctx: &'gctx GlobalContext,
     ) -> Progress<'gctx> {
+        let progress_config = gctx.progress_config();
+        match progress_config.when {
+            ProgressWhen::Always => return Progress::new_priv(name, style, gctx),
+            ProgressWhen::Never => return Progress { gctx, state: None },
+            ProgressWhen::Auto => {}
+        }
         // report no progress when -q (for quiet) or TERM=dumb are set
         // or if running on Continuous Integration service like Travis where the
         // output logs get mangled.
@@ -63,12 +69,6 @@ impl<'gctx> Progress<'gctx> {
             Ok(term) => term == "dumb",
             Err(_) => false,
         };
-        let progress_config = gctx.progress_config();
-        match progress_config.when {
-            ProgressWhen::Always => return Progress::new_priv(name, style, gctx),
-            ProgressWhen::Never => return Progress { gctx, state: None },
-            ProgressWhen::Auto => {}
-        }
         if gctx.shell().verbosity() == Verbosity::Quiet || dumb || is_ci() {
             return Progress { gctx, state: None };
         }
