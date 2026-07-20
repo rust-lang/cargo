@@ -1102,7 +1102,11 @@ pub fn fetch(
     }
 
     debug!("doing a fetch for {remote_url}");
-    let result = if let Some(true) = gctx.net_config()?.git_fetch_with_cli {
+    let result = if gctx
+        .net_config()?
+        .git_fetch_with_cli
+        .unwrap_or_else(is_git_cli_present)
+    {
         fetch_with_cli(repo, remote_url, &refspecs, tags, shallow, gctx)
     } else if gctx.cli_unstable().gitoxide.map_or(false, |git| git.fetch) {
         fetch_with_gitoxide(repo, remote_url, refspecs, tags, shallow, gctx)
@@ -1116,6 +1120,24 @@ pub fn fetch(
         }
     }
     result
+}
+
+fn is_git_cli_present() -> bool {
+    #[tracing::instrument(skip_all)]
+    fn is_git_cli_present() -> bool {
+        use std::process::Stdio;
+
+        std::process::Command::new("git")
+            .arg("--version")
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .status()
+            .is_ok()
+    }
+
+    static CACHE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *CACHE.get_or_init(is_git_cli_present)
 }
 
 /// `gitoxide` uses shallow locks to assure consistency when fetching to and to avoid races, and to write
