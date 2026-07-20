@@ -1194,8 +1194,15 @@ fn fetch_with_cli(
     gctx.shell()
         .verbose(|s| s.status("Running", &cmd.to_string()))?;
     network::retry::with_retry(gctx, || {
-        cmd.exec()
-            .map_err(|error| GitCliError::new(error).spurious(true).into())
+        cmd.exec().map_err(|error| {
+            GitCliError::new(error)
+                .spurious(true)
+                .workaround(
+                    "help: re-try with `net.git-fetch-with-cli = false` to see if it resolves the problem
+https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli",
+                )
+                .into()
+        })
     })?;
 
     Ok(())

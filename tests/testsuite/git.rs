@@ -3333,6 +3333,9 @@ Caused by:
 Caused by:
   process didn't exit successfully: `git fetch [..]` ([EXIT_STATUS]: 128)
 
+  [HELP] re-try with `net.git-fetch-with-cli = false` to see if it resolves the problem
+  https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
+
 "#]])
         .run();
 }
@@ -4300,10 +4303,19 @@ fn github_fastpath_error_message() {
 [UPDATING] git repository `https://github.com/rust-lang/bitflags.git`
 fatal: remote [ERROR] upload-pack: not our ref 11111b376b93484341c68fbca3ca110ae5cd2790
 [WARNING] spurious network error (3 tries remaining): process didn't exit successfully: `git fetch --no-tags --quiet --force --update-head-ok [..]
+
+[HELP] re-try with `net.git-fetch-with-cli = false` to see if it resolves the problem
+https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
 fatal: remote [ERROR] upload-pack: not our ref 11111b376b93484341c68fbca3ca110ae5cd2790
 [WARNING] spurious network error (2 tries remaining): process didn't exit successfully: `git fetch --no-tags --quiet --force --update-head-ok [..]
+
+[HELP] re-try with `net.git-fetch-with-cli = false` to see if it resolves the problem
+https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
 fatal: remote [ERROR] upload-pack: not our ref 11111b376b93484341c68fbca3ca110ae5cd2790
 [WARNING] spurious network error (1 try remaining): process didn't exit successfully: `git fetch --no-tags --quiet --force --update-head-ok [..]
+
+[HELP] re-try with `net.git-fetch-with-cli = false` to see if it resolves the problem
+https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
 fatal: remote [ERROR] upload-pack: not our ref 11111b376b93484341c68fbca3ca110ae5cd2790
 [ERROR] failed to get `bitflags` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
 
@@ -4321,6 +4333,9 @@ Caused by:
 
 Caused by:
   process didn't exit successfully: `git fetch --no-tags --quiet --force --update-head-ok [..]
+
+  [HELP] re-try with `net.git-fetch-with-cli = false` to see if it resolves the problem
+  https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
 
 "#]])
         .run();

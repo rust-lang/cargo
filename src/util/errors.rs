@@ -375,6 +375,7 @@ pub type GitCliResult = Result<(), GitCliError>;
 pub struct GitCliError {
     inner: Error,
     is_spurious: bool,
+    workaround: Option<&'static str>,
 }
 
 impl GitCliError {
@@ -382,7 +383,13 @@ impl GitCliError {
         GitCliError {
             inner,
             is_spurious: false,
+            workaround: None,
         }
+    }
+
+    pub fn workaround(mut self, workaround: &'static str) -> Self {
+        self.workaround = Some(workaround);
+        self
     }
 
     pub fn spurious(mut self, yes: bool) -> Self {
@@ -403,7 +410,13 @@ impl std::error::Error for GitCliError {
 
 impl fmt::Display for GitCliError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.inner.fmt(f)
+        self.inner.fmt(f)?;
+        if let Some(workaround) = self.workaround {
+            writeln!(f)?;
+            writeln!(f)?;
+            write!(f, "{workaround}")?;
+        }
+        Ok(())
     }
 }
 
