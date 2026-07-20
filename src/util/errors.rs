@@ -378,8 +378,16 @@ pub struct GitCliError {
 }
 
 impl GitCliError {
-    pub fn new(inner: Error, is_spurious: bool) -> GitCliError {
-        GitCliError { inner, is_spurious }
+    pub fn new(inner: Error) -> GitCliError {
+        GitCliError {
+            inner,
+            is_spurious: false,
+        }
+    }
+
+    pub fn spurious(mut self, yes: bool) -> Self {
+        self.is_spurious = yes;
+        self
     }
 
     pub fn is_spurious(&self) -> bool {

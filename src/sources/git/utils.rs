@@ -1195,7 +1195,7 @@ fn fetch_with_cli(
         .verbose(|s| s.status("Running", &cmd.to_string()))?;
     network::retry::with_retry(gctx, || {
         cmd.exec()
-            .map_err(|error| GitCliError::new(error, true).into())
+            .map_err(|error| GitCliError::new(error).spurious(true).into())
     })?;
 
     Ok(())
