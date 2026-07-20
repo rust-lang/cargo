@@ -4908,6 +4908,12 @@ fn dep_with_scp_like_submodule_url() {
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `[ROOTURL]/dep1`
 [UPDATING] git submodule `git@github.com:foo/bar.git`
+git@github.com: Permission denied (publickey).
+fatal: Could not read from remote repository.
+
+Please make sure you have the correct access rights
+and the repository exists.
+...
 [ERROR] failed to get `dep1` as a dependency of package `foo v0.5.0 ([ROOT]/foo)`
 
 Caused by:
@@ -4921,7 +4927,16 @@ Caused by:
 
 Caused by:
   failed to fetch submodule `submod` from git@github.com:foo/bar.git
-...
+
+Caused by:
+  failed to clone into: [ROOT]/home/.cargo/git/db/bar-[HASH]
+
+Caused by:
+  `git fetch` failed for git@github.com:foo/bar.git
+
+  [HELP] re-try with `net.git-fetch-with-cli = false` to see if it resolves the problem
+  https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
+
 "#]])
         .run();
 }

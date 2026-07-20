@@ -429,6 +429,9 @@ Caused by:
 fn bad_cksum_git() {
     bad_cksum(str![[r#"
 [UPDATING] `dummy-registry` index
+[RUNNING] `git [..] fetch [..]`
+From [ROOTURL]/registry
+ * [new ref]         HEAD       -> origin/HEAD
 [LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bad-cksum v0.0.1 (registry `dummy-registry`)
@@ -2823,6 +2826,9 @@ Caused by:
 fn bad_and_or_malicious_packages_rejected_git() {
     bad_and_or_malicious_packages_rejected(str![[r#"
 [UPDATING] `dummy-registry` index
+[RUNNING] `git [..] fetch [..]`
+From [ROOTURL]/registry
+ * [new ref]         HEAD       -> origin/HEAD
 [LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.2.0 (registry `dummy-registry`)
@@ -4735,6 +4741,9 @@ fn builtin_source_replacement() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
+[RUNNING] `git [..] fetch [..]`
+From [ROOTURL]/registry
+ * [new ref]         HEAD       -> origin/HEAD
 [LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bad-cksum v0.0.1
@@ -4774,6 +4783,9 @@ fn builtin_source_replacement_no_vendor_error() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
+[RUNNING] `git [..] fetch [..]`
+From [ROOTURL]/registry
+ * [new ref]         HEAD       -> origin/HEAD
 [ERROR] failed to select a version for the requirement `dep = "^0.2.0"`
 candidate versions found which didn't match: 0.1.0
 location searched: crates.io index

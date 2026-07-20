@@ -1102,7 +1102,11 @@ pub fn fetch(
     }
 
     debug!("doing a fetch for {remote_url}");
-    let result = if let Some(true) = gctx.net_config()?.git_fetch_with_cli {
+    let result = if gctx
+        .net_config()?
+        .git_fetch_with_cli
+        .unwrap_or_else(|| git_version().is_some())
+    {
         fetch_with_cli(repo, remote_url, &refspecs, tags, shallow, gctx)
     } else if gctx.cli_unstable().gitoxide.map_or(false, |git| git.fetch) {
         fetch_with_gitoxide(repo, remote_url, refspecs, tags, shallow, gctx)

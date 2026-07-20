@@ -440,6 +440,9 @@ fn bad_git_dependency() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `file:///`
+[RUNNING] `git [..] fetch [..]`
+fatal: [..] does not appear to be a git repository
+...
 [ERROR] failed to get `foo` as a dependency of package `foo v0.0.0 ([ROOT]/foo)`
 
 Caused by:
@@ -452,7 +455,10 @@ Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/_empty-[HASH]
 
 Caused by:
-  'file:///' is not a valid local file URI; class=Config (7)
+  `git fetch` failed for file:///
+
+  [HELP] re-try with `net.git-fetch-with-cli = false` to see if it resolves the problem
+  https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
 
 "#]])
         .run();
