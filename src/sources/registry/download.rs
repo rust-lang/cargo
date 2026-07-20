@@ -1,7 +1,7 @@
-//! Shared download logic between [`HttpRegistry`] and [`RemoteRegistry`].
+//! Shared download logic between [`HttpRegistry`] and [`GitRegistry`].
 //!
 //! [`HttpRegistry`]: super::http_remote::HttpRegistry
-//! [`RemoteRegistry`]: super::remote::RemoteRegistry
+//! [`GitRegistry`]: super::git_remote::GitRegistry
 
 use crate::util::interning::InternedString;
 use anyhow::Context as _;

@@ -32,7 +32,7 @@
 //!
 //! * [`LocalRegistry`] --- Serves the index and package contents entirely on
 //!   a local filesystem.
-//! * [`RemoteRegistry`] --- Serves the index ahead of time from a Git
+//! * [`GitRegistry`] --- Serves the index ahead of time from a Git
 //!   repository, and package contents are downloaded as needed.
 //! * [`HttpRegistry`] --- Serves both the index and package contents on demand
 //!   over a HTTP-based registry API. This is the default starting from 1.70.0.
@@ -41,7 +41,7 @@
 //! created from either [`RegistrySource::local`] or [`RegistrySource::remote`].
 //!
 //! [`LocalRegistry`]: local::LocalRegistry
-//! [`RemoteRegistry`]: remote::RemoteRegistry
+//! [`GitRegistry`]: git_remote::GitRegistry
 //! [`HttpRegistry`]: http_remote::HttpRegistry
 //!
 //! # The Index of a Registry
@@ -401,8 +401,8 @@ mod download;
 mod http_remote;
 pub(crate) mod index;
 pub use index::IndexSummary;
+mod git_remote;
 mod local;
-mod remote;
 
 /// Generates a unique name for [`SourceId`] to have a unique path to put their
 /// index files.
@@ -424,7 +424,7 @@ fn short_name(id: SourceId, is_shallow: bool) -> String {
 impl<'gctx> RegistrySource<'gctx> {
     /// Creates a [`Source`] of a "remote" registry.
     /// It could be either an HTTP-based [`http_remote::HttpRegistry`] or
-    /// a Git-based [`remote::RemoteRegistry`].
+    /// a Git-based [`git_remote::GitRegistry`].
     pub fn remote(
         source_id: SourceId,
         gctx: &'gctx GlobalContext,
@@ -440,7 +440,7 @@ impl<'gctx> RegistrySource<'gctx> {
         let ops = if source_id.is_sparse() {
             Box::new(http_remote::HttpRegistry::new(source_id, gctx, &name)?) as Box<_>
         } else {
-            Box::new(remote::RemoteRegistry::new(source_id, gctx, &name)) as Box<_>
+            Box::new(git_remote::GitRegistry::new(source_id, gctx, &name)) as Box<_>
         };
 
         Ok(RegistrySource::new(source_id, gctx, &name, ops))

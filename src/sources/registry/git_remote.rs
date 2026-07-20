@@ -1,4 +1,4 @@
-//! Access to a Git index based registry. See [`RemoteRegistry`] for details.
+//! Access to a Git index based registry. See [`GitRegistry`] for details.
 
 use crate::sources::git;
 use crate::sources::git::fetch::RemoteKind;
@@ -46,7 +46,7 @@ use tracing::{debug, trace};
 /// supporting Git-based index for a pretty long while.
 ///
 /// [`HttpRegistry`]: super::http_remote::HttpRegistry
-pub struct RemoteRegistry<'gctx> {
+pub struct GitRegistry<'gctx> {
     /// The name of this source, a unique string (across all sources) used as
     /// the directory name where its cached content is stored.
     name: InternedString,
@@ -76,24 +76,20 @@ pub struct RemoteRegistry<'gctx> {
     current_sha: Cell<Option<InternedString>>,
     /// Whether this registry needs to update package information.
     ///
-    /// See [`RemoteRegistry::mark_updated`] on how to make sure a registry
+    /// See [`GitRegistry::mark_updated`] on how to make sure a registry
     /// index is updated only once per session.
     needs_update: Cell<bool>,
     /// Disables status messages.
     quiet: bool,
 }
 
-impl<'gctx> RemoteRegistry<'gctx> {
+impl<'gctx> GitRegistry<'gctx> {
     /// Creates a Git-rebased remote registry for `source_id`.
     ///
     /// * `name` --- Name of a path segment where `.crate` tarballs and the
     ///   registry index are stored. Expect to be unique.
-    pub fn new(
-        source_id: SourceId,
-        gctx: &'gctx GlobalContext,
-        name: &str,
-    ) -> RemoteRegistry<'gctx> {
-        RemoteRegistry {
+    pub fn new(source_id: SourceId, gctx: &'gctx GlobalContext, name: &str) -> GitRegistry<'gctx> {
+        GitRegistry {
             name: name.into(),
             index_path: gctx.registry_index_path().join(name),
             cache_path: gctx.registry_cache_path().join(name),
@@ -185,9 +181,9 @@ impl<'gctx> RemoteRegistry<'gctx> {
         // Note that we don't actually hand out the static lifetime, instead we
         // only return a scoped one from this function. Additionally the repo
         // we loaded from (above) lives as long as this object
-        // (`RemoteRegistry`) so we then just need to ensure that the tree is
+        // (`GitRegistry`) so we then just need to ensure that the tree is
         // destroyed first in the destructor, hence the destructor on
-        // `RemoteRegistry` below.
+        // `GitRegistry` below.
         let tree = unsafe { mem::transmute::<git2::Tree<'_>, git2::Tree<'static>>(tree) };
         *self.tree.borrow_mut() = Some(tree);
         Ok(Ref::map(self.tree.borrow(), |s| s.as_ref().unwrap()))
@@ -281,7 +277,7 @@ impl<'gctx> RemoteRegistry<'gctx> {
 }
 
 #[async_trait::async_trait(?Send)]
-impl<'gctx> RegistryData for RemoteRegistry<'gctx> {
+impl<'gctx> RegistryData for GitRegistry<'gctx> {
     fn prepare(&self) -> CargoResult<()> {
         self.repo()?;
         self.gctx
@@ -339,7 +335,7 @@ impl<'gctx> RegistryData for RemoteRegistry<'gctx> {
         // in the index, so we don't need to worry about an `update_index`
         // happening in a different process.
         fn load_helper(
-            registry: &RemoteRegistry<'_>,
+            registry: &GitRegistry<'_>,
             path: &Path,
             index_version: Option<&str>,
         ) -> CargoResult<LoadResponse> {
@@ -410,7 +406,7 @@ impl<'gctx> RegistryData for RemoteRegistry<'gctx> {
     /// Read the general concept for `invalidate_cache()` on
     /// [`RegistryData::invalidate_cache`].
     ///
-    /// To fully invalidate, undo [`RemoteRegistry::mark_updated`]'s work.
+    /// To fully invalidate, undo [`GitRegistry::mark_updated`]'s work.
     fn invalidate_cache(&self) {
         self.needs_update.set(true);
     }
@@ -458,8 +454,8 @@ impl<'gctx> RegistryData for RemoteRegistry<'gctx> {
 }
 
 /// Implemented to just be sure to drop `tree` field before our other fields.
-/// See SAFETY inside [`RemoteRegistry::tree()`] for more.
-impl<'gctx> Drop for RemoteRegistry<'gctx> {
+/// See SAFETY inside [`GitRegistry::tree()`] for more.
+impl<'gctx> Drop for GitRegistry<'gctx> {
     fn drop(&mut self) {
         self.tree.borrow_mut().take();
     }
