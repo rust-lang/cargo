@@ -1004,6 +1004,50 @@ mod tests {
     }
 
     #[test]
+    fn copy_via_tempfile_and_rename_copies_contents() {
+        let tmpdir = tempfile::tempdir().unwrap();
+        let src = tmpdir.path().join("src");
+        let dst = tmpdir.path().join("dst");
+        std::fs::write(&src, b"hello from copy_via_tempfile_and_rename").unwrap();
+
+        super::copy_via_tempfile_and_rename(&src, &dst).unwrap();
+
+        assert_eq!(
+            std::fs::read(&dst).unwrap(),
+            b"hello from copy_via_tempfile_and_rename"
+        );
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn copy_via_tempfile_and_rename_preserves_permissions() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let tmpdir = tempfile::tempdir().unwrap();
+        let src = tmpdir.path().join("src");
+        let dst = tmpdir.path().join("dst");
+        std::fs::write(&src, b"#!/bin/sh\necho hi\n").unwrap();
+
+        // A NamedTempFile defaults to a restrictive mode (no execute bit);
+        // this is exactly the executable-build-script-output scenario the
+        // permission-preserving copy needs to get right.
+        let executable_mode = u32::from(
+            libc::S_IRWXU | libc::S_IRGRP | libc::S_IXGRP | libc::S_IROTH | libc::S_IXOTH,
+        );
+        std::fs::set_permissions(&src, std::fs::Permissions::from_mode(executable_mode)).unwrap();
+
+        super::copy_via_tempfile_and_rename(&src, &dst).unwrap();
+
+        let dst_mode = std::fs::metadata(&dst).unwrap().permissions().mode();
+        let mask = u32::from(libc::S_IRWXU | libc::S_IRWXG | libc::S_IRWXO);
+        assert_eq!(
+            executable_mode,
+            dst_mode & mask,
+            "copy_via_tempfile_and_rename must preserve the source's execute bit"
+        );
+    }
+
+    #[test]
     fn join_paths_lists_paths_on_error() {
         let valid_paths = vec!["/testing/one", "/testing/two"];
         // does not fail on valid input
