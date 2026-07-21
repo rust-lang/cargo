@@ -89,6 +89,7 @@ _cargo() {
                         '--branch=[branch to use when adding from git]:branch' \
                         '--git=[specify URL from which to add the crate]:url:_urls' \
                         '--path=[local filesystem path to crate to add]: :_directories' \
+                        '(-p --package)'{-p+,--package=}'[specify package to add dependencies to]:package:_cargo_package_names' \
                         '--rev=[specific commit to use when adding from git]:commit' \
                         '--tag=[tag to use when adding from git]:tag' \
                         '--ignore-rust-version[Ignore rust-version specification in packages]' \
