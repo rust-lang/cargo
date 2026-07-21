@@ -1,7 +1,6 @@
 mod blanket_hint_mostly_unused;
 mod deferred_parse_diagnostics;
 mod im_a_teapot;
-mod implicit_minimum_version_req;
 mod missing_lints_features;
 mod missing_lints_inheritance;
 mod non_kebab_case_bins;
@@ -54,10 +53,6 @@ pub const PARSE_PASS_RULES: &[ParsePassRule<'static>] = &[
         rule: unused_workspace_package_fields::lint_workspace,
         lint: unused_workspace_package_fields::LINT,
     },
-    ParsePassRule::LintWorkspace {
-        rule: implicit_minimum_version_req::lint_workspace,
-        lint: implicit_minimum_version_req::LINT,
-    },
     // `warn`
     ParsePassRule::LintPackage {
         rule: missing_lints_inheritance::lint_package,
@@ -85,10 +80,6 @@ pub const PARSE_PASS_RULES: &[ParsePassRule<'static>] = &[
     },
     // `allow`
     ParsePassRule::LintPackage {
-        rule: implicit_minimum_version_req::lint_package,
-        lint: implicit_minimum_version_req::LINT,
-    },
-    ParsePassRule::LintPackage {
         rule: non_kebab_case_features::lint_package,
         lint: non_kebab_case_features::LINT,
     },
@@ -108,7 +99,6 @@ pub const PARSE_PASS_RULES: &[ParsePassRule<'static>] = &[
 
 pub static LINTS: &[&crate::diagnostics::Lint] = &[
     blanket_hint_mostly_unused::LINT,
-    implicit_minimum_version_req::LINT,
     im_a_teapot::LINT,
     missing_lints_inheritance::LINT,
     non_kebab_case_bins::LINT,
