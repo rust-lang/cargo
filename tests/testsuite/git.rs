@@ -3340,6 +3340,190 @@ Caused by:
         .run();
 }
 
+/// See https://nesbitt.io/2026/07/21/end-of-options.html
+#[cargo_test(requires = "git")]
+fn git_cli_arg_injection_via_dep() {
+    let project = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+                    edition = "2015"
+                    [dependencies]
+                    dep1 = { git = '-u./payload' }
+                    "#,
+        )
+        .file(
+            "src/main.rs",
+            &main_file(r#""{}", dep1::hello()"#, &["dep1"]),
+        )
+        .file(
+            ".cargo/config.toml",
+            "
+                [net]
+                git-fetch-with-cli = true
+                ",
+        )
+        .build();
+
+    project
+        .cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  invalid url `-u./payload`: relative URL without a base
+
+"#]])
+        .run();
+}
+
+/// See https://nesbitt.io/2026/07/21/end-of-options.html
+#[cargo_test(requires = "git")]
+fn git_cli_arg_injection_via_rev() {
+    let git_dep = git::new("dep1", |project| {
+        project
+            .file("Cargo.toml", &basic_manifest("dep1", "0.5.0"))
+            .file("src/lib.rs", "")
+    });
+
+    let project = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+
+                    name = "foo"
+                    version = "0.5.0"
+                    edition = "2015"
+                    authors = ["wycats@example.com"]
+
+                    [dependencies]
+                    dep1 = {{ git = '{}', rev = '-u./payload' }}
+                "#,
+                git_dep.url()
+            ),
+        )
+        .file(
+            "src/main.rs",
+            &main_file(r#""{}", dep1::hello()"#, &["dep1"]),
+        )
+        .file(
+            ".cargo/config.toml",
+            "
+                [net]
+                git-fetch-with-cli = true
+                ",
+        )
+        .build();
+
+    // Getting a libgit2 error because with a generic rev, we fetch everything and then look up later
+    project
+        .cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] git repository `[ROOTURL]/dep1`
+[ERROR] failed to get `dep1` as a dependency of package `foo v0.5.0 ([ROOT]/foo)`
+
+Caused by:
+  failed to load source for dependency `dep1`
+
+Caused by:
+  unable to update [ROOTURL]/dep1?rev=-u.%2Fpayload
+
+Caused by:
+  revspec '-u./payload' not found; class=Reference (4); code=NotFound (-3)
+
+"#]])
+        .run();
+}
+
+/// See https://nesbitt.io/2026/07/21/end-of-options.html
+#[cargo_test(requires = "git")]
+fn git_cli_arg_injection_via_branch() {
+    let git_dep = git::new("dep1", |project| {
+        project
+            .file("Cargo.toml", &basic_manifest("dep1", "0.5.0"))
+            .file("src/lib.rs", "")
+    });
+
+    let project = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+
+                    name = "foo"
+                    version = "0.5.0"
+                    edition = "2015"
+                    authors = ["wycats@example.com"]
+
+                    [dependencies]
+                    dep1 = {{ git = '{}', branch = '-u./payload' }}
+                "#,
+                git_dep.url()
+            ),
+        )
+        .file(
+            "src/main.rs",
+            &main_file(r#""{}", dep1::hello()"#, &["dep1"]),
+        )
+        .file(
+            ".cargo/config.toml",
+            "
+                [net]
+                git-fetch-with-cli = true
+                ",
+        )
+        .build();
+
+    project
+        .cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] git repository `[ROOTURL]/dep1`
+fatal: couldn't find remote ref refs/heads/-u./payload
+[WARNING] spurious network error (3 tries remaining): process didn't exit successfully: `git fetch [..]` ([EXIT_STATUS]: 128)
+
+[HELP] re-try with `net.git-fetch-with-cli = false` to see if it resolves the problem
+https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
+fatal: couldn't find remote ref refs/heads/-u./payload
+[WARNING] spurious network error (2 tries remaining): process didn't exit successfully: `git fetch [..]` ([EXIT_STATUS]: 128)
+
+[HELP] re-try with `net.git-fetch-with-cli = false` to see if it resolves the problem
+https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
+fatal: couldn't find remote ref refs/heads/-u./payload
+[WARNING] spurious network error (1 try remaining): process didn't exit successfully: `git fetch [..]` ([EXIT_STATUS]: 128)
+
+[HELP] re-try with `net.git-fetch-with-cli = false` to see if it resolves the problem
+https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
+fatal: couldn't find remote ref refs/heads/-u./payload
+[ERROR] failed to get `dep1` as a dependency of package `foo v0.5.0 ([ROOT]/foo)`
+
+Caused by:
+  failed to load source for dependency `dep1`
+
+Caused by:
+  unable to update [ROOTURL]/dep1?branch=-u.%2Fpayload
+
+Caused by:
+  failed to clone into: [ROOT]/home/.cargo/git/db/dep1-[HASH]
+
+Caused by:
+  process didn't exit successfully: `git fetch [..]` ([EXIT_STATUS]: 128)
+
+  [HELP] re-try with `net.git-fetch-with-cli = false` to see if it resolves the problem
+  https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
+
+"#]])
+        .run();
+}
+
 #[cargo_test]
 fn dirty_submodule() {
     // `cargo package` warns for dirty file in submodule.
