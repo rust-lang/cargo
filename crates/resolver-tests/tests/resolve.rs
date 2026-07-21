@@ -1036,3 +1036,12 @@ failed to select a version for `F` which could resolve this conflict
 "#]]
     );
 }
+
+#[test]
+fn test_builtin_dependency() {
+    // No way to specify builtin deps or packages to satisfy them
+    let reg = registry(vec![pkg!("core")]);
+    let res = resolve(vec![dep("core")], &reg).unwrap();
+
+    assert_same(&res, &names(&["root", "core"]));
+}
