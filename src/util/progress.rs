@@ -6,9 +6,7 @@ use std::time::{Duration, Instant};
 use crate::context::ProgressWhen;
 use crate::util::{CargoResult, GlobalContext};
 use anstyle_progress::TermProgress;
-use cargo_util::is_ci;
 use cargo_util_terminal::Shell;
-use cargo_util_terminal::Verbosity;
 use unicode_width::UnicodeWidthChar;
 
 /// CLI progress bar.
@@ -56,23 +54,17 @@ impl<'gctx> Progress<'gctx> {
         style: ProgressStyle,
         gctx: &'gctx GlobalContext,
     ) -> Progress<'gctx> {
-        // report no progress when -q (for quiet) or TERM=dumb are set
-        // or if running on Continuous Integration service like Travis where the
-        // output logs get mangled.
-        let dumb = match gctx.get_env("TERM") {
-            Ok(term) => term == "dumb",
-            Err(_) => false,
-        };
         let progress_config = gctx.progress_config();
-        match progress_config.when {
-            ProgressWhen::Always => return Progress::new_priv(name, style, gctx),
-            ProgressWhen::Never => return Progress { gctx, state: None },
-            ProgressWhen::Auto => {}
-        }
-        if gctx.shell().verbosity() == Verbosity::Quiet || dumb || is_ci() {
+        let progress = match progress_config.when {
+            ProgressWhen::Always => true,
+            ProgressWhen::Never => false,
+            ProgressWhen::Auto => gctx.shell().progress_supported(),
+        };
+        if progress {
+            Progress::new_priv(name, style, gctx)
+        } else {
             return Progress { gctx, state: None };
         }
-        Progress::new_priv(name, style, gctx)
     }
 
     fn new_priv(name: &str, style: ProgressStyle, gctx: &'gctx GlobalContext) -> Progress<'gctx> {

@@ -14,6 +14,7 @@ anstyle.workspace = true
 anstyle-hyperlink = { workspace = true, features = ["file"] }
 anstyle-progress.workspace = true
 anyhow.workspace = true
+cargo-util.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true, features = ["raw_value"] }
 supports-hyperlinks.workspace = true

@@ -363,6 +363,21 @@ impl Shell {
         url.map(|u| self.err_hyperlink(u)).unwrap_or_default()
     }
 
+    /// Query terminal capability, independent of user configuration
+    pub fn progress_supported(&self) -> bool {
+        // report no progress when -q (for quiet) or TERM=dumb are set
+        // or if running on Continuous Integration service like Travis where the
+        // output logs get mangled.
+        if self.verbosity == Verbosity::Quiet
+            || std::env::var("TERM").as_deref() == Ok("dumb")
+            || cargo_util::is_ci()
+        {
+            false
+        } else {
+            true
+        }
+    }
+
     fn unstable_flags_rustc_unicode(&self) -> bool {
         match &self.output {
             ShellOut::Write(_) => false,

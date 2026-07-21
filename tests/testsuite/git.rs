@@ -4237,11 +4237,11 @@ fn github_fastpath_error_message() {
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `https://github.com/rust-lang/bitflags.git`
 fatal: remote [ERROR] upload-pack: not our ref 11111b376b93484341c68fbca3ca110ae5cd2790
-[WARNING] spurious network error (3 tries remaining): process didn't exit successfully: `git fetch --no-tags --force --update-head-ok [..]
+[WARNING] spurious network error (3 tries remaining): process didn't exit successfully: `git fetch --no-tags --quiet --force --update-head-ok [..]
 fatal: remote [ERROR] upload-pack: not our ref 11111b376b93484341c68fbca3ca110ae5cd2790
-[WARNING] spurious network error (2 tries remaining): process didn't exit successfully: `git fetch --no-tags --force --update-head-ok [..]
+[WARNING] spurious network error (2 tries remaining): process didn't exit successfully: `git fetch --no-tags --quiet --force --update-head-ok [..]
 fatal: remote [ERROR] upload-pack: not our ref 11111b376b93484341c68fbca3ca110ae5cd2790
-[WARNING] spurious network error (1 try remaining): process didn't exit successfully: `git fetch --no-tags --force --update-head-ok [..]
+[WARNING] spurious network error (1 try remaining): process didn't exit successfully: `git fetch --no-tags --quiet --force --update-head-ok [..]
 fatal: remote [ERROR] upload-pack: not our ref 11111b376b93484341c68fbca3ca110ae5cd2790
 [ERROR] failed to get `bitflags` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
 
@@ -4258,7 +4258,7 @@ Caused by:
   revision 11111b376b93484341c68fbca3ca110ae5cd2790 not found
 
 Caused by:
-  process didn't exit successfully: `git fetch --no-tags --force --update-head-ok [..]
+  process didn't exit successfully: `git fetch --no-tags --quiet --force --update-head-ok [..]
 
 "#]])
         .run();

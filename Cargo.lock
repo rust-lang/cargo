@@ -607,6 +607,7 @@ dependencies = [
  "anstyle-hyperlink",
  "anstyle-progress",
  "anyhow",
+ "cargo-util",
  "libc",
  "serde",
  "serde_json",
