@@ -20,6 +20,15 @@ fn test_dependency_with_empty_name() {
 }
 
 #[test]
+fn test_builtin_dependency() {
+    // No way to specify builtin deps or packages to satisfy them
+    let reg = registry(vec![pkg!("core")]);
+    let res = resolve(vec![dep("core")], &reg).unwrap();
+
+    assert_same(&res, &names(&["root", "core"]));
+}
+
+#[test]
 fn test_resolving_empty_dependency_list() {
     let res = resolve(Vec::new(), &registry(vec![])).unwrap();
 
