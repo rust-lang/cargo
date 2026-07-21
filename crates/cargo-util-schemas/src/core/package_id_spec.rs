@@ -233,6 +233,11 @@ fn strip_url_protocol(url: &Url) -> Url {
 
 impl fmt::Display for PackageIdSpec {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.kind() == Some(&SourceKind::Builtin) {
+            // Builtins have a very specific pkgid output
+            write!(f, "builtin://.#{}", self.name)?;
+            return Ok(());
+        }
         let mut printed_name = false;
         match self.url {
             Some(ref url) => {
