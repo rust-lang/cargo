@@ -975,6 +975,11 @@ impl GlobalCacheTracker {
             let index_path = base_path.join(id_name);
             let names = Self::list_dir_names(&index_path)?;
             let max = names.len();
+
+            // Gather the untracked directories before sizing them,
+            // so that they can all be walked together.
+            let mut untracked_directories = Vec::new();
+
             for (i, name) in names.iter().enumerate() {
                 if select_stmt.exists(params![id, name])? {
                     continue;
@@ -984,11 +989,26 @@ impl GlobalCacheTracker {
                     continue;
                 }
                 progress.tick(i, max, "")?;
-                let size = if populate_size {
-                    Some(du(&dir_path, table_name)?)
-                } else {
-                    None
-                };
+                untracked_directories.push((name, dir_path));
+            }
+
+            let sizes = if populate_size {
+                let paths: Vec<_> = untracked_directories
+                    .iter()
+                    .map(|(_, path)| path.as_path())
+                    .collect();
+
+                // Size each untracked directory all at once.
+                du_each(&index_path, &paths, table_name)?
+                    .into_iter()
+                    .map(Some)
+                    .collect()
+            } else {
+                // Skip walking entirely.
+                vec![None; untracked_directories.len()]
+            };
+
+            for ((name, _), size) in untracked_directories.iter().zip(sizes) {
                 insert_stmt.execute(params![id, name, size, now])?;
             }
         }
@@ -1027,13 +1047,20 @@ impl GlobalCacheTracker {
             })?
             .collect();
         let max = rows.len();
+        let mut row_ids = Vec::with_capacity(max);
+        let mut paths = Vec::with_capacity(max);
+
         for (i, row) in rows.into_iter().enumerate() {
             let (rowid, name, id_name): (i64, String, String) = row?;
-            let path = base_path.join(id_name).join(name);
             progress.tick(i, max, "")?;
-            // Missing files should have already been taken care of by
-            // update_db_for_removed.
-            let size = du(&path, table_name)?;
+            row_ids.push(rowid);
+            paths.push(base_path.join(id_name).join(name));
+        }
+
+        // Missing files should have already been taken care of by update_db_for_removed.
+        let paths: Vec<_> = paths.iter().map(|path| path.as_path()).collect();
+
+        for (rowid, size) in row_ids.iter().zip(du_each(base_path, &paths, table_name)?) {
             update_stmt.execute(params![size, rowid])?;
         }
         Ok(())
@@ -1822,19 +1849,18 @@ pub fn is_silent_error(e: &anyhow::Error) -> bool {
     false
 }
 
-/// Returns the disk usage for a git checkout directory.
-#[tracing::instrument]
-fn du_git_checkout(path: &Path) -> CargoResult<u64> {
-    // !.git is used because clones typically use hardlinks for the git
-    // contents. TODO: Verify behavior on Windows.
-    // TODO: Or even better, switch to worktrees, and remove this.
-    cargo_util::du(&path, &["!.git"])
-}
-
-fn du(path: &Path, table_name: &str) -> CargoResult<u64> {
-    if table_name == GIT_CO_TABLE {
-        du_git_checkout(path)
+/// Returns the disk usage of each of `paths`, which must all be within `root`.
+// skip(paths) to keep a potentially large slice out of tracing.
+#[tracing::instrument(skip(paths))]
+fn du_each(root: &Path, paths: &[&Path], table_name: &str) -> CargoResult<Vec<u64>> {
+    let patterns: &[&str] = if table_name == GIT_CO_TABLE {
+        // !.git is used because clones typically use hardlinks for the git
+        // contents. TODO: Verify behavior on Windows.
+        // TODO: Or even better, switch to worktrees, and remove this.
+        &["!.git"]
     } else {
-        cargo_util::du(&path, &[])
-    }
+        &[]
+    };
+
+    cargo_util::du_each(root, paths, patterns)
 }
