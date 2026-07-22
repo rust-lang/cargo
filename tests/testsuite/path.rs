@@ -571,19 +571,9 @@ fn error_message_for_missing_manifest() {
     p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to get `bar` as a dependency of package `foo v0.5.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `bar`
-
-Caused by:
-  unable to update [ROOT]/foo/src/bar
-
-Caused by:
-  failed to read `[ROOT]/foo/src/bar/Cargo.toml`
-
-Caused by:
-  [NOT_FOUND]
+[ERROR] no matching package named `bar` found
+location searched: [ROOT]/foo/src/bar
+required by package `foo v0.5.0 ([ROOT]/foo)`
 
 "#]])
         .run();
@@ -1140,19 +1130,9 @@ fn invalid_path_with_base() {
         .masquerade_as_nightly_cargo(&["path-bases"])
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to get `bar` as a dependency of package `foo v0.5.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `bar`
-
-Caused by:
-  unable to update [ROOT]/foo/shared_proj/"
-
-Caused by:
-  failed to read `[ROOT]/foo/shared_proj/"/Cargo.toml`
-
-Caused by:
-  [NOT_FOUND]
+[ERROR] no matching package named `bar` found
+location searched: [ROOT]/foo/shared_proj/"
+required by package `foo v0.5.0 ([ROOT]/foo)`
 
 "#]])
         .run();
@@ -1672,8 +1652,7 @@ fn invalid_path_dep_in_workspace_with_lockfile() {
 [ERROR] no matching package named `bar` found
 location searched: [ROOT]/foo/foo
 required by package `foo v0.5.0 ([ROOT]/foo/foo)`
-[HELP] packages with similar names: foo
-
+[HELP] package `foo` exists at `[ROOT]/foo/foo`
 
 "#]])
         .run();
@@ -1753,21 +1732,11 @@ fn deep_path_error() {
     p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to get `c` as a dependency of package `b v0.1.0 ([ROOT]/foo/b)`
+[ERROR] no matching package named `c` found
+location searched: [ROOT]/foo/c
+required by package `b v0.1.0 ([ROOT]/foo/b)`
     ... which satisfies path dependency `b` of package `a v0.1.0 ([ROOT]/foo/a)`
     ... which satisfies path dependency `a` of package `foo v0.1.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `c`
-
-Caused by:
-  unable to update [ROOT]/foo/c
-
-Caused by:
-  failed to read `[ROOT]/foo/c/Cargo.toml`
-
-Caused by:
-  [NOT_FOUND]
 
 "#]])
         .run();
@@ -1916,5 +1885,136 @@ foo v1.0.0 ([ROOT]/foo)
 └── foo v2.0.1 ([ROOT]/foo/foo2)
 
 "#]])
+        .run();
+}
+
+#[cargo_test]
+fn path_dep_wrong_package_name() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2024"
+            [dependencies]
+            definitely_not_bar = { path = "bar" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.1.0"
+            edition = "2024"
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(
+            "\
+[ERROR] no matching package named `definitely_not_bar` found
+location searched: [ROOT]/foo/bar
+required by package `foo v0.1.0 ([ROOT]/foo)`
+[HELP] package `bar` exists at `[ROOT]/foo/bar`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn path_dep_package_in_subdirectory() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2024"
+            [dependencies]
+            definitely_not_bar = { path = "bar" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/definitely_not_bar/Cargo.toml",
+            r#"
+            [package]
+            name = "definitely_not_bar"
+            version = "0.1.0"
+            edition = "2024"
+            "#,
+        )
+        .file("bar/definitely_not_bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(
+            "\
+[ERROR] no matching package named `definitely_not_bar` found
+location searched: [ROOT]/foo/bar
+required by package `foo v0.1.0 ([ROOT]/foo)`
+[HELP] package `definitely_not_bar` exists at `[ROOT]/foo/bar/definitely_not_bar`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn path_dep_other_packages_nearby() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2024"
+            [dependencies]
+            definitely_not_bar = { path = "bar" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/alice/Cargo.toml",
+            r#"
+            [package]
+            name = "alice"
+            version = "0.1.0"
+            edition = "2024"
+            "#,
+        )
+        .file("bar/alice/src/lib.rs", "")
+        .file(
+            "bar/bob/Cargo.toml",
+            r#"
+            [package]
+            name = "bob"
+            version = "0.1.0"
+            edition = "2024"
+            "#,
+        )
+        .file("bar/bob/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(
+            "\
+[ERROR] no matching package named `definitely_not_bar` found
+location searched: [ROOT]/foo/bar
+required by package `foo v0.1.0 ([ROOT]/foo)`
+[HELP] package `alice` exists at `[ROOT]/foo/bar/alice`
+[HELP] package `bob` exists at `[ROOT]/foo/bar/bob`
+",
+        )
         .run();
 }
