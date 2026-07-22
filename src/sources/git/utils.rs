@@ -882,6 +882,7 @@ where
 /// `git reset --hard` to the given `obj` for the `repo`.
 ///
 /// The `obj` is a commit-ish to which the head should be moved.
+#[tracing::instrument(skip_all)]
 fn reset(repo: &git2::Repository, obj: &git2::Object<'_>, gctx: &GlobalContext) -> CargoResult<()> {
     let mut pb = Progress::new("Checkout", gctx);
     let mut opts = git2::build::CheckoutBuilder::new();
@@ -1006,6 +1007,7 @@ pub fn with_fetch_options(
 /// at this time. It could be extended when libgit2 supports shallow clones.
 ///
 /// [`-Zgitoxide`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#gitoxide
+#[tracing::instrument(skip_all)]
 pub fn fetch(
     repo: &mut git2::Repository,
     remote_url: &str,
@@ -1136,6 +1138,7 @@ fn has_shallow_lock_file(err: &crate::sources::git::fetch::Error) -> bool {
 /// speed and portability of using `libgit2`.
 ///
 /// [1]: https://doc.rust-lang.org/nightly/cargo/reference/config.html#netgit-fetch-with-cli
+#[tracing::instrument(skip(repo, gctx))]
 fn fetch_with_cli(
     repo: &mut git2::Repository,
     url: &str,
@@ -1194,13 +1197,21 @@ fn fetch_with_cli(
     gctx.shell()
         .verbose(|s| s.status("Running", &cmd.to_string()))?;
     network::retry::with_retry(gctx, || {
-        cmd.exec()
-            .map_err(|error| GitCliError::new(error, true).into())
+        cmd.exec().map_err(|error| {
+            GitCliError::new(error)
+                .spurious(true)
+                .workaround(
+                    "help: re-try with `net.git-fetch-with-cli = false` to see if it resolves the problem
+https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli",
+                )
+                .into()
+        })
     })?;
 
     Ok(())
 }
 
+#[tracing::instrument(skip(repo, gctx))]
 fn fetch_with_gitoxide(
     repo: &mut git2::Repository,
     remote_url: &str,
@@ -1312,6 +1323,7 @@ fn fetch_with_gitoxide(
     res
 }
 
+#[tracing::instrument(skip(repo, gctx))]
 fn fetch_with_libgit2(
     repo: &mut git2::Repository,
     remote_url: &str,
@@ -1563,6 +1575,7 @@ enum FastPathRev {
 /// this function and move forward on the normal path.
 ///
 /// [^1]: <https://developer.github.com/v3/repos/commits/#get-the-sha-1-of-a-commit-reference>
+#[tracing::instrument(skip(repo, gctx))]
 fn github_fast_path(
     repo: &mut git2::Repository,
     url: &str,

@@ -422,9 +422,9 @@ fn retry_after_parsing() {
 
 #[test]
 fn git_cli_error_spurious() {
-    let error = GitCliError::new(Error::msg("test-git-cli-error"), false);
+    let error = GitCliError::new(Error::msg("test-git-cli-error")).spurious(false);
     assert!(!maybe_spurious(&error.into()));
 
-    let error = GitCliError::new(Error::msg("test-git-cli-error"), true);
+    let error = GitCliError::new(Error::msg("test-git-cli-error")).spurious(true);
     assert!(maybe_spurious(&error.into()));
 }
