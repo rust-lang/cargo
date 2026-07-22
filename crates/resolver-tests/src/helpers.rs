@@ -88,6 +88,7 @@ impl<T: AsRef<str>, U: AsRef<str>> ToPkgId for (T, U) {
     }
 }
 
+#[derive(Copy, Clone)]
 pub struct BuiltinPid {
     pub name: &'static str,
 }
@@ -234,6 +235,10 @@ pub fn dep_loc(name: &str, location: &str) -> Dependency {
     Dependency::parse(name, Some("1.0.0"), source_id).unwrap()
 }
 
+pub fn dep_builtin(name: &str) -> Dependency {
+    Dependency::parse(name, None, builtin_loc()).unwrap()
+}
+
 pub fn dep_kind(name: &str, kind: DepKind) -> Dependency {
     let mut dep = dep(name);
     dep.set_kind(kind);
@@ -252,6 +257,12 @@ pub fn registry(pkgs: Vec<Summary>) -> Vec<Summary> {
 
 pub fn names<P: ToPkgId>(names: &[P]) -> Vec<PackageId> {
     names.iter().map(|name| name.to_pkgid()).collect()
+}
+
+/// For a set of name specifiers of varying types
+#[macro_export]
+macro_rules! names {
+    ($($name:expr),* $(,)?) => {&vec![$($name.to_pkgid()),*]};
 }
 
 pub fn loc_names(names: &[(&'static str, &'static str)]) -> Vec<PackageId> {
