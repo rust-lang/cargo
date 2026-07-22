@@ -4818,3 +4818,144 @@ Caused by:
 "#]])
         .run();
 }
+
+/// A lockfile can pin packages from one git URL at different revisions.
+/// Each package is expected be downloaded from the revision it is pinned to.
+///
+/// See rust-lang/cargo#13641.
+#[cargo_test]
+fn lockfile_with_multiple_revisions_bump_pkg_version() {
+    // #1: the upstream workspace at rev1
+    let (upstream, upstream_repo) = git::new_repo("upstream", |p| {
+        p.file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["a"]
+            "#,
+        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.1.0"))
+        .file("a/src/lib.rs", "")
+    });
+    let rev1 = upstream_repo.head().unwrap().target().unwrap();
+
+    // #2: `foo` locks a@rev1
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+                    edition = "2015"
+
+                    [dependencies]
+                    a = {{ git = "{}" }}
+                "#,
+                upstream.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("fetch").run();
+    assert!(p.read_file("Cargo.lock").contains(&rev1.to_string()));
+
+    // #3: upstream add a new member `b` and moves to rev2
+    upstream.change_file(
+        "Cargo.toml",
+        r#"
+            [workspace]
+            members = ["a", "b"]
+        "#,
+    );
+    upstream.change_file("a/Cargo.toml", &basic_manifest("a", "0.2.0"));
+    upstream.change_file("b/Cargo.toml", &basic_manifest("b", "0.1.0"));
+    upstream.change_file("b/src/lib.rs", "");
+    git::add(&upstream_repo);
+    let rev2 = git::commit(&upstream_repo);
+
+    // #4: `foo` gains `b` through the new `m2`
+    let m2 = git::new("m2", |p| {
+        p.file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "m2"
+                    version = "0.1.0"
+                    edition = "2015"
+
+                    [dependencies]
+                    b = {{ git = "{}" }}
+                "#,
+                upstream.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+    });
+    p.change_file(
+        "Cargo.toml",
+        &format!(
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                a = {{ git = "{}" }}
+                m2 = {{ git = "{}" }}
+            "#,
+            upstream.url(),
+            m2.url()
+        ),
+    );
+
+    // #5: `a@rev1` should remains locked
+    //      and `m2` is at `rev2`
+    p.cargo("fetch")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] git repository `[ROOTURL]/m2`
+[UPDATING] git repository `[ROOTURL]/upstream`
+[LOCKING] 2 packages to latest compatible versions
+[ADDING] b v0.1.0 ([ROOTURL]/upstream#[..])
+[ADDING] m2 v0.1.0 ([ROOTURL]/m2#[..])
+[ERROR] failed to download `a v0.1.0 ([ROOTURL]/upstream#[..])`
+
+Caused by:
+  unable to get packages from source
+
+Caused by:
+  failed to find a v0.1.0 ([ROOTURL]/upstream#[..]) in path source
+[NOTE] this is an unexpected cargo internal error
+[NOTE] we would appreciate a bug report: https://github.com/rust-lang/cargo/issues/
+[NOTE] cargo [..]
+"#]])
+        .run();
+
+    // #6: multi-rev lockfile was written out
+    let lock = p.read_file("Cargo.lock");
+    assert!(lock.contains(&rev1.to_string()));
+    assert!(lock.contains(&rev2.to_string()));
+
+    // #7: a fresh checkout should succeed
+    paths::cargo_home().join("git").rm_rf();
+    p.cargo("fetch")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+...
+[ERROR] failed to download `a v0.1.0 ([ROOTURL]/upstream#[..])`
+
+Caused by:
+  unable to get packages from source
+
+Caused by:
+  failed to find a v0.1.0 ([ROOTURL]/upstream#[..]) in path source
+[NOTE] this is an unexpected cargo internal error
+[NOTE] we would appreciate a bug report: https://github.com/rust-lang/cargo/issues/
+[NOTE] cargo [..]
+"#]])
+        .run();
+}
