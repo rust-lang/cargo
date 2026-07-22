@@ -548,12 +548,14 @@ mod object_works {
         object_works_helper("off", inspect_debuginfo);
     }
 
-    #[cargo_test(requires = "readelf")]
+    // Some Linux targets, such as RISC-V, only support `off`.
+    // See https://github.com/rust-lang/cargo/issues/17255.
+    #[cargo_test(requires = "readelf", requires_host_split_debuginfo = "packed")]
     fn with_split_debuginfo_packed() {
         object_works_helper("packed", inspect_debuginfo);
     }
 
-    #[cargo_test(requires = "readelf")]
+    #[cargo_test(requires = "readelf", requires_host_split_debuginfo = "unpacked")]
     fn with_split_debuginfo_unpacked() {
         object_works_helper("unpacked", inspect_debuginfo);
     }
