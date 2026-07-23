@@ -4915,23 +4915,13 @@ fn lockfile_with_multiple_revisions_bump_pkg_version() {
     // #5: `a@rev1` should remains locked
     //      and `m2` is at `rev2`
     p.cargo("fetch")
-        .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `[ROOTURL]/m2`
 [UPDATING] git repository `[ROOTURL]/upstream`
 [LOCKING] 2 packages to latest compatible versions
 [ADDING] b v0.1.0 ([ROOTURL]/upstream#[..])
 [ADDING] m2 v0.1.0 ([ROOTURL]/m2#[..])
-[ERROR] failed to download `a v0.1.0 ([ROOTURL]/upstream#[..])`
 
-Caused by:
-  unable to get packages from source
-
-Caused by:
-  failed to find a v0.1.0 ([ROOTURL]/upstream#[..]) in path source
-[NOTE] this is an unexpected cargo internal error
-[NOTE] we would appreciate a bug report: https://github.com/rust-lang/cargo/issues/
-[NOTE] cargo [..]
 "#]])
         .run();
 
@@ -4942,22 +4932,7 @@ Caused by:
 
     // #7: a fresh checkout should succeed
     paths::cargo_home().join("git").rm_rf();
-    p.cargo("fetch")
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-...
-[ERROR] failed to download `a v0.1.0 ([ROOTURL]/upstream#[..])`
-
-Caused by:
-  unable to get packages from source
-
-Caused by:
-  failed to find a v0.1.0 ([ROOTURL]/upstream#[..]) in path source
-[NOTE] this is an unexpected cargo internal error
-[NOTE] we would appreciate a bug report: https://github.com/rust-lang/cargo/issues/
-[NOTE] cargo [..]
-"#]])
-        .run();
+    p.cargo("fetch").run();
 }
 
 /// Like [`lockfile_with_multiple_revisions_bump_pkg_version`]
@@ -5082,7 +5057,6 @@ rev1
 [LOCKING] 2 packages to latest compatible versions
 [ADDING] b v0.1.0 ([ROOTURL]/upstream#[..])
 [ADDING] m2 v0.1.0 ([ROOTURL]/m2#[..])
-[COMPILING] a v0.1.0 ([ROOTURL]/upstream#[..])
 [COMPILING] b v0.1.0 ([ROOTURL]/upstream#[..])
 [COMPILING] m2 v0.1.0 ([ROOTURL]/m2#[..])
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
@@ -5093,7 +5067,7 @@ rev1
             .unordered(),
         )
         .with_stdout_data(str![[r#"
-rev2
+rev1
 
 "#]])
         .run();
@@ -5220,7 +5194,7 @@ rev1
     //      `m2` should be at `rev2`
     p.cargo("run")
         .with_stdout_data(str![[r#"
-rev2
+rev1
 
 "#]])
         .run();

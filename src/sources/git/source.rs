@@ -314,6 +314,19 @@ impl<'gctx> GitSource<'gctx> {
         Ok(())
     }
 
+    /// Ensures a path source exists and is fetched for `rev`.
+    fn ensure_checkout(&self, rev: git2::Oid, source_id: SourceId) -> CargoResult<()> {
+        if self.path_sources.borrow().contains_key(&rev) {
+            return Ok(());
+        }
+
+        let git_fs = self.gctx.git_path();
+        self.gctx
+            .assert_package_cache_locked(CacheLockMode::DownloadExclusive, &git_fs);
+        let (db, _) = self.fetch_db_with_rev(false, &Revision::Locked(rev))?;
+        self.checkout(&db, rev, source_id)
+    }
+
     /// Checks `rev` out of the Git database
     fn checkout(&self, db: &GitDatabase, rev: git2::Oid, source_id: SourceId) -> CargoResult<()> {
         // Don’t use the full hash, in order to contribute less to reaching the
@@ -454,9 +467,19 @@ impl<'gctx> Source for GitSource<'gctx> {
             "getting packages for package ID `{}` from `{:?}`",
             id, self.remote
         );
-        let rev = self
-            .checked_out_rev()
-            .expect("BUG: `update()` must be called before `get()`");
+        // In a multi-rev lockfile,
+        // a package may be served from a revision other than `locked_rev`,
+        // so here we check SourceId precise field
+        // See rust-lang/cargo#13641
+        let rev = match id.source_id().precise_git_fragment().and_then(rev_to_oid) {
+            Some(requested) => {
+                self.ensure_checkout(requested, id.source_id())?;
+                requested
+            }
+            None => self
+                .checked_out_rev()
+                .expect("BUG: `update()` must be called before `get()`"),
+        };
         self.mark_used(rev)?;
         self.path_sources
             .borrow()
@@ -471,7 +494,20 @@ impl<'gctx> Source for GitSource<'gctx> {
         panic!("no download should have started")
     }
 
-    fn fingerprint(&self, _pkg: &Package) -> CargoResult<String> {
+    fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {
+        // In a multi-rev lockfile,
+        // a package may be served from a revision other than `locked_rev`,
+        // so here we check SourceId precise field
+        // See rust-lang/cargo#13641
+        if let Some(rev) = pkg
+            .package_id()
+            .source_id()
+            .precise_git_fragment()
+            .and_then(rev_to_oid)
+        {
+            return Ok(rev.to_string());
+        }
+
         match &*self.locked_rev.borrow() {
             Revision::Locked(oid) => Ok(oid.to_string()),
             _ => unreachable!("locked_rev must be resolved when computing fingerprint"),
