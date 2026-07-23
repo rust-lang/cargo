@@ -4960,3 +4960,146 @@ Caused by:
 "#]])
         .run();
 }
+
+/// Like [`lockfile_with_multiple_revisions_bump_pkg_version`]
+/// but instead of bump package version, the code content changes.
+///
+/// See rust-lang/cargo#13641.
+/// See also <https://github.com/rust-lang/cargo/pull/17275#issuecomment-5132821482>.
+#[cargo_test]
+fn lockfile_with_multiple_revisions_change_code_content() {
+    // #1: the upstream workspace at rev1
+    let (upstream, upstream_repo) = git::new_repo("upstream", |p| {
+        p.file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["a"]
+            "#,
+        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.1.0"))
+        .file(
+            "a/src/lib.rs",
+            r#"pub fn which() -> &'static str { "rev1" }"#,
+        )
+    });
+    let rev1 = upstream_repo.head().unwrap().target().unwrap();
+
+    // #2: `foo` locks a@rev1 and prints "rev1"
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+                    edition = "2015"
+
+                    [dependencies]
+                    a = {{ git = "{}" }}
+                "#,
+                upstream.url()
+            ),
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                extern crate a;
+                fn main() {
+                    println!("{}", a::which());
+                }
+            "#,
+        )
+        .build();
+    p.cargo("run")
+        .with_stdout_data(str![[r#"
+rev1
+
+"#]])
+        .run();
+    assert!(p.read_file("Cargo.lock").contains(&rev1.to_string()));
+
+    // #3: upstream add a new member `b` and moves to rev2
+    upstream.change_file(
+        "Cargo.toml",
+        r#"
+            [workspace]
+            members = ["a", "b"]
+        "#,
+    );
+    upstream.change_file(
+        "a/src/lib.rs",
+        r#"pub fn which() -> &'static str { "rev2" }"#,
+    );
+    upstream.change_file("b/Cargo.toml", &basic_manifest("b", "0.1.0"));
+    upstream.change_file("b/src/lib.rs", "");
+    git::add(&upstream_repo);
+    let rev2 = git::commit(&upstream_repo);
+
+    // #4: `foo` gains `b` through the new `m2`
+    let m2 = git::new("m2", |p| {
+        p.file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "m2"
+                    version = "0.1.0"
+                    edition = "2015"
+
+                    [dependencies]
+                    b = {{ git = "{}" }}
+                "#,
+                upstream.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+    });
+    p.change_file(
+        "Cargo.toml",
+        &format!(
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                a = {{ git = "{}" }}
+                m2 = {{ git = "{}" }}
+            "#,
+            upstream.url(),
+            m2.url()
+        ),
+    );
+
+    // #5: `a@rev1` should remain locked, no recompile, and print "rev1"
+    //      `m2` should be at `rev2`
+    p.cargo("run")
+        .with_stderr_data(
+            str![[r#"
+[UPDATING] git repository `[ROOTURL]/m2`
+[UPDATING] git repository `[ROOTURL]/upstream`
+[LOCKING] 2 packages to latest compatible versions
+[ADDING] b v0.1.0 ([ROOTURL]/upstream#[..])
+[ADDING] m2 v0.1.0 ([ROOTURL]/m2#[..])
+[COMPILING] a v0.1.0 ([ROOTURL]/upstream#[..])
+[COMPILING] b v0.1.0 ([ROOTURL]/upstream#[..])
+[COMPILING] m2 v0.1.0 ([ROOTURL]/m2#[..])
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo[EXE]`
+
+"#]]
+            .unordered(),
+        )
+        .with_stdout_data(str![[r#"
+rev2
+
+"#]])
+        .run();
+    let lock = p.read_file("Cargo.lock");
+    assert!(lock.contains(&rev1.to_string()));
+    assert!(lock.contains(&rev2.to_string()));
+}
