@@ -826,7 +826,7 @@ macro_rules! unstable_cli_options {
         /// Cargo, like `rustc`, accepts a suite of `-Z` flags which are intended for
         /// gating unstable functionality to Cargo. These flags are only available on
         /// the nightly channel of Cargo.
-        #[derive(Default, Debug, Deserialize)]
+        #[derive(Debug, Deserialize)]
         #[serde(default, rename_all = "kebab-case")]
         pub struct CliUnstable {
             $(
@@ -840,6 +840,15 @@ macro_rules! unstable_cli_options {
             pub fn help() -> Vec<(&'static str, Option<&'static str>)> {
                 let fields = vec![$((stringify!($element), None$(.or(Some($help)))?)),*];
                 fields
+            }
+        }
+        impl Default for CliUnstable {
+            fn default() -> Self {
+                Self {
+                    $(
+                        $element: Default::default()
+                    ),*
+                }
             }
         }
 
