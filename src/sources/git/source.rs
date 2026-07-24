@@ -278,12 +278,25 @@ impl<'gctx> GitSource<'gctx> {
 
         let (db, actual_rev) = self.fetch_db(false)?;
 
+        let source_id = self
+            .source_id
+            .borrow()
+            .with_git_precise(Some(actual_rev.to_string()));
+        self.checkout(&db, actual_rev, source_id)?;
+        self.locked_rev.replace(Revision::Locked(actual_rev));
+
+        self.mark_used()?;
+        Ok(())
+    }
+
+    /// Checks `rev` out of the Git database
+    fn checkout(&self, db: &GitDatabase, rev: git2::Oid, source_id: SourceId) -> CargoResult<()> {
         // Don’t use the full hash, in order to contribute less to reaching the
         // path length limit on Windows. See
         // <https://github.com/servo/servo/pull/14397>.
-        let short_id = db.to_short_id(actual_rev)?;
+        let short_id = db.to_short_id(rev)?;
 
-        // Check out `actual_rev` from the database to a scoped location on the
+        // Check out `rev` from the database to a scoped location on the
         // filesystem. This will use hard links and such to ideally make the
         // checkout operation here pretty fast.
         let checkout_path = self
@@ -292,19 +305,11 @@ impl<'gctx> GitSource<'gctx> {
             .join(&self.ident)
             .join(short_id.as_str());
         let checkout_path = checkout_path.into_path_unlocked();
-        db.copy_to(actual_rev, &checkout_path, self.gctx, self.quiet)?;
+        db.copy_to(rev, &checkout_path, self.gctx, self.quiet)?;
 
-        let source_id = self
-            .source_id
-            .borrow()
-            .with_git_precise(Some(actual_rev.to_string()));
         let path_source = RecursivePathSource::new(&checkout_path, source_id, self.gctx);
-
+        path_source.load()?;
         self.path_source.replace(Some((path_source, short_id)));
-        self.locked_rev.replace(Revision::Locked(actual_rev));
-        self.path_source.borrow().as_ref().unwrap().0.load()?;
-
-        self.mark_used()?;
         Ok(())
     }
 }
