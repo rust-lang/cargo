@@ -125,26 +125,32 @@ fn print_zhelp(gctx: &GlobalContext) {
     drop_println!(
         gctx,
         "\
-{header}Available unstable (nightly-only) flags:{header:#}
+{header}Available unstable (nightly-only) cargo flags:{header:#}
 
 {z_flags}
 
 Run with `{literal}cargo -Z{literal:#} {placeholder}[FLAG] [COMMAND]{placeholder:#}`",
     );
     if !gctx.nightly_features_allowed {
-        drop_println!(
-            gctx,
-            "\nUnstable flags are only available on the nightly channel \
-                 of Cargo, but this is the `{}` channel.\n\
-                 {}",
-            features::channel(),
-            features::SEE_CHANNELS
+        let _ = gctx.shell().print_report(
+            &[Level::WARNING
+                .secondary_title(format!(
+                    "unstable flags are unavailable on the current (`{}`) channel",
+                    features::channel()
+                ))
+                .element(Level::HELP.message("run on the nightly channel to use them"))
+                .element(Level::HELP.message(format!(
+                    "see {} for more information about Rust release channels",
+                    features::SEE_CHANNELS
+                )))],
+            false,
         );
     }
     drop_println!(
         gctx,
         "\nSee https://doc.rust-lang.org/nightly/cargo/reference/unstable.html \
-             for more information about these flags."
+             for more information about these flags.\n\n\
+             note: to see rustc unstable features, run `rustc -Zhelp`"
     );
 }
 
