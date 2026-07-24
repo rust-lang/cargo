@@ -844,11 +844,17 @@ macro_rules! unstable_cli_options {
         }
         impl Default for CliUnstable {
             fn default() -> Self {
-                Self {
+                let mut unstable = Self {
                     $(
                         $element: Default::default()
                     ),*
-                }
+                };
+
+                // Defaults to enabled on nightly unless explicitly opted out.
+                unstable.build_dir_new_layout =
+                    matches!(crate::version().release_channel.as_deref(), Some("nightly" | "dev"));
+
+                return unstable;
             }
         }
 
