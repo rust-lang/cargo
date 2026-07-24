@@ -1024,6 +1024,15 @@ Artifact-dependencies adds the following keys to a dependency declaration in `Ca
   zoo = { version = "1.0", artifact = ["bin:cat", "bin:dog"]}
   ```
 
+  To build artifacts from the same package for multiple target platforms,
+  declare each alias separately:
+
+  ```toml
+  [build-dependencies]
+  firmware-x86 = { package = "firmware", version = "1.0", artifact = "bin", target = "x86_64-unknown-none" }
+  firmware-arm = { package = "firmware", version = "1.0", artifact = "bin", target = "thumbv7em-none-eabihf" }
+  ```
+
 - `lib` --- This is a Boolean value which indicates whether or not to also build the dependency's library as a normal Rust `lib` dependency.
   This field can only be specified when `artifact` is specified.
 
@@ -1037,6 +1046,10 @@ Artifact-dependencies adds the following keys to a dependency declaration in `Ca
   [dependencies]
   bar = { version = "1.0", artifact = "bin", lib = true }
   ```
+
+  If multiple aliases to the same package set `lib = true`, Cargo must be
+  able to refer to the package's library with a single Rust extern crate name.
+  Aliases that would give that library different names are rejected.
 
 - `target` --- The platform target to build the dependency for.
   This field can only be specified when `artifact` is specified.
