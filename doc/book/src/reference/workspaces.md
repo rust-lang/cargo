@@ -105,6 +105,11 @@ should be an array of strings containing directories with `Cargo.toml` files.
 The `members` list also supports [globs] to match multiple paths, using
 typical filename glob patterns like `*` and `?`.
 
+**Recommendation:** Keep all member packages in a flat directory (commonly `crates/`)
+and use a glob pattern for the `members` field, e.g.
+`members = ["crates/*"]`. This makes it easy to add new members with
+`cargo new` / `cargo init` without editing the root manifest.
+
 The `exclude` key can be used to prevent paths from being included in a
 workspace. This can be useful if some path dependencies aren't desired to be
 in the workspace at all, or using a glob pattern and you want to remove a
