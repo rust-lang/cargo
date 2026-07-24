@@ -205,12 +205,23 @@ impl<'gctx> GitSource<'gctx> {
     /// This won't fetch anything if the required revision is
     /// already available locally.
     pub(crate) fn fetch_db(&self, is_submodule: bool) -> CargoResult<(GitDatabase, git2::Oid)> {
+        let rev = self.locked_rev.borrow().clone();
+        self.fetch_db_with_rev(is_submodule, &rev)
+    }
+
+    /// Like [`GitSource::fetch_db`], but resolving the given revision
+    /// rather than [`GitSource::locked_rev`].
+    fn fetch_db_with_rev(
+        &self,
+        is_submodule: bool,
+        rev: &Revision,
+    ) -> CargoResult<(GitDatabase, git2::Oid)> {
         let db_path = self.gctx.git_db_path().join(&self.ident);
         let db_path = db_path.into_path_unlocked();
 
         let db = self.remote.db_at(&db_path).ok();
 
-        let (db, actual_rev) = match (&*self.locked_rev.borrow(), db) {
+        let (db, actual_rev) = match (rev, db) {
             // If we have a locked revision, and we have a preexisting database
             // which has that revision, then no update needs to happen.
             (Revision::Locked(oid), Some(db)) if db.contains(*oid) => (db, *oid),
