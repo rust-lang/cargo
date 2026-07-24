@@ -4,6 +4,7 @@ use crate::sources::IndexSummary;
 use crate::sources::RecursivePathSource;
 use crate::sources::git::utils::GitDatabase;
 use crate::sources::git::utils::GitRemote;
+use crate::sources::git::utils::GitShortID;
 use crate::sources::git::utils::rev_to_oid;
 use crate::sources::source::MaybePackage;
 use crate::sources::source::QueryKind;
@@ -88,7 +89,7 @@ pub struct GitSource<'gctx> {
     ///
     /// This is set to `Some` after the git repo has been checked out
     /// (automatically handled via [`GitSource::update`]).
-    short_id: RefCell<Option<InternedString>>,
+    short_id: RefCell<Option<GitShortID>>,
     /// The identifier of this source for Cargo's Git cache directory.
     /// See [`ident`] for more.
     ident: InternedString,
@@ -171,11 +172,18 @@ impl<'gctx> GitSource<'gctx> {
     }
 
     fn mark_used(&self) -> CargoResult<()> {
+        let short_name = self
+            .short_id
+            .borrow()
+            .as_ref()
+            .expect("update before download")
+            .as_str()
+            .into();
         self.gctx
             .deferred_global_last_use()?
             .mark_git_checkout_used(global_cache_tracker::GitCheckout {
                 encoded_git_name: self.ident,
-                short_name: self.short_id.borrow().expect("update before download"),
+                short_name,
                 size: None,
             });
         Ok(())
@@ -297,7 +305,7 @@ impl<'gctx> GitSource<'gctx> {
         let path_source = RecursivePathSource::new(&checkout_path, source_id, self.gctx);
 
         self.path_source.replace(Some(path_source));
-        self.short_id.replace(Some(short_id.as_str().into()));
+        self.short_id.replace(Some(short_id));
         self.locked_rev.replace(Revision::Locked(actual_rev));
         self.path_source.borrow().as_ref().unwrap().load()?;
 
