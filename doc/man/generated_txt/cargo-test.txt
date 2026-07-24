@@ -38,7 +38,10 @@ DESCRIPTION
 
        By default, cargo test uses the test profile
        <https://doc.rust-lang.org/cargo/reference/profiles.html#test>, which
-       enables debugging.
+       enables some optimizations and disables debugging information for fast
+       feedback. If you need to debug a benchmark, you can use the
+       --profile=debug command-line option to switch to the debug profile. You
+       can then run the debug-enabled test within a debugger.
 
    Documentation tests
        Documentation tests are also run by default, which is handled by

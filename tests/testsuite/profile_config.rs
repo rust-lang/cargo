@@ -483,3 +483,159 @@ fn named_env_profile() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn check_uses_build_profile() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2015"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+    p.cargo("check")
+        .env("CARGO_BUILD_PROFILE", "release")
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn check_ignores_install_profile() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2015"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+    p.cargo("check")
+        .env("CARGO_INSTALL_PROFILE", "release")
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn test_uses_build_profile() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2015"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+    p.cargo("test --no-run")
+        .env("CARGO_BUILD_PROFILE", "release")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[EXECUTABLE] unittests src/main.rs (target/release/deps/foo-[HASH][EXE])
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn test_ignores_install_profile() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2015"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+    p.cargo("test --no-run")
+        .env("CARGO_INSTALL_PROFILE", "release")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[EXECUTABLE] unittests src/main.rs (target/debug/deps/foo-[HASH][EXE])
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn install_uses_install_profile() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2015"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+    p.cargo("install")
+        .env("CARGO_INSTALL_PROFILE", "debug")
+        .with_stderr_data(str![[r#"
+[WARNING] using `cargo install` to install the binaries from the package in current working directory is deprecated, use `cargo install --path .` instead. [NOTE] use `cargo build` if you want to simply build the package.
+[INSTALLING] foo v0.1.0 ([ROOT]/foo)
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `debug` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.1.0 ([ROOT]/foo)` (executable `foo[EXE]`)
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn install_ignores_build_profile() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2015"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+    p.cargo("install")
+        .env("CARGO_BUILD_PROFILE", "dev")
+        .with_stderr_data(str![[r#"
+[WARNING] using `cargo install` to install the binaries from the package in current working directory is deprecated, use `cargo install --path .` instead. [NOTE] use `cargo build` if you want to simply build the package.
+[INSTALLING] foo v0.1.0 ([ROOT]/foo)
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.1.0 ([ROOT]/foo)` (executable `foo[EXE]`)
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
+        .run();
+}

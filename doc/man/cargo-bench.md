@@ -51,8 +51,8 @@ function to handle running benchmarks.
 
 By default, `cargo bench` uses the [`bench` profile], which enables
 optimizations and disables debugging information. If you need to debug a
-benchmark, you can use the `--profile=dev` command-line option to switch to
-the dev profile. You can then run the debug-enabled benchmark within a
+benchmark, you can use the `--profile=debug` command-line option to switch to
+the debug profile. You can then run the debug-enabled benchmark within a
 debugger.
 
 [`bench` profile]: ../reference/profiles.html#bench
