@@ -5101,3 +5101,130 @@ rev2
     assert!(lock.contains(&rev1.to_string()));
     assert!(lock.contains(&rev2.to_string()));
 }
+
+/// Like [`lockfile_with_multiple_revisions_change_code_content`]
+/// but instead of changing code content,
+/// specify on the same branch ref that moves forward
+///
+/// See rust-lang/cargo#14230
+#[cargo_test]
+fn lockfile_with_multiple_revisions_of_same_git_branch() {
+    // #1: the upstream workspace at rev1
+    let (upstream, upstream_repo) = git::new_repo("upstream", |p| {
+        p.file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["a"]
+            "#,
+        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.1.0"))
+        .file(
+            "a/src/lib.rs",
+            r#"pub fn which() -> &'static str { "rev1" }"#,
+        )
+    });
+    let rev1 = upstream_repo.head().unwrap().target().unwrap();
+
+    // #2: `foo` locks a@rev1 and prints "rev1"
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+                    edition = "2015"
+
+                    [dependencies]
+                    a = {{ git = "{}", branch = "master" }}
+                "#,
+                upstream.url()
+            ),
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                extern crate a;
+                fn main() {
+                    println!("{}", a::which());
+                }
+            "#,
+        )
+        .build();
+    p.cargo("run")
+        .with_stdout_data(str![[r#"
+rev1
+
+"#]])
+        .run();
+    let lock = p.read_file("Cargo.lock");
+    assert!(lock.contains(&format!("?branch=master#{rev1}")));
+
+    // #3: upstream add a new member `b` and moves to rev2
+    upstream.change_file(
+        "Cargo.toml",
+        r#"
+            [workspace]
+            members = ["a", "b"]
+        "#,
+    );
+    upstream.change_file(
+        "a/src/lib.rs",
+        r#"pub fn which() -> &'static str { "rev2" }"#,
+    );
+    upstream.change_file("b/Cargo.toml", &basic_manifest("b", "0.1.0"));
+    upstream.change_file("b/src/lib.rs", "");
+    git::add(&upstream_repo);
+    let rev2 = git::commit(&upstream_repo);
+
+    // #4: `foo` gains `b` through the new `m2`
+    let m2 = git::new("m2", |p| {
+        p.file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "m2"
+                    version = "0.1.0"
+                    edition = "2015"
+
+                    [dependencies]
+                    b = {{ git = "{}", branch = "master" }}
+                "#,
+                upstream.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+    });
+    p.change_file(
+        "Cargo.toml",
+        &format!(
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                a = {{ git = "{}", branch = "master" }}
+                m2 = {{ git = "{}" }}
+            "#,
+            upstream.url(),
+            m2.url()
+        ),
+    );
+
+    // #5: `a@rev1` should remain locked, no recompile, and print "rev1"
+    //      `m2` should be at `rev2`
+    p.cargo("run")
+        .with_stdout_data(str![[r#"
+rev2
+
+"#]])
+        .run();
+    let lock = p.read_file("Cargo.lock");
+    assert!(lock.contains(&format!("?branch=master#{rev1}")));
+    assert!(lock.contains(&format!("?branch=master#{rev2}")));
+}
