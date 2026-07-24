@@ -77,19 +77,14 @@ pub struct GitSource<'gctx> {
     locked_rev: RefCell<Revision>,
     /// The unique identifier of this source.
     source_id: RefCell<SourceId>,
-    /// The underlying path source to discover packages inside the Git repository.
+    /// The underlying path source to discover packages inside the Git repository
     ///
-    /// This gets set to `Some` after the git repo has been checked out
-    /// (automatically handled via [`GitSource::update`]).
-    path_source: RefCell<Option<RecursivePathSource<'gctx>>>,
-    /// A short string that uniquely identifies the version of the checkout.
-    ///
-    /// This is typically a 7-character string of the OID hash, automatically
-    /// increasing in size if it is ambiguous.
+    /// The short id is typically a 7-character string of the OID hash,
+    /// automatically increasing in size if it is ambiguous.
     ///
     /// This is set to `Some` after the git repo has been checked out
     /// (automatically handled via [`GitSource::update`]).
-    short_id: RefCell<Option<GitShortID>>,
+    path_source: RefCell<Option<(RecursivePathSource<'gctx>, GitShortID)>>,
     /// The identifier of this source for Cargo's Git cache directory.
     /// See [`ident`] for more.
     ident: InternedString,
@@ -142,7 +137,6 @@ impl<'gctx> GitSource<'gctx> {
             locked_rev: RefCell::new(locked_rev),
             source_id: RefCell::new(source_id),
             path_source: RefCell::new(None),
-            short_id: RefCell::new(None),
             ident: ident.into(),
             gctx,
             quiet: false,
@@ -168,15 +162,17 @@ impl<'gctx> GitSource<'gctx> {
             .borrow_mut()
             .as_mut()
             .unwrap()
+            .0
             .read_packages()
     }
 
     fn mark_used(&self) -> CargoResult<()> {
         let short_name = self
-            .short_id
+            .path_source
             .borrow()
             .as_ref()
             .expect("update before download")
+            .1
             .as_str()
             .into();
         self.gctx
@@ -304,10 +300,9 @@ impl<'gctx> GitSource<'gctx> {
             .with_git_precise(Some(actual_rev.to_string()));
         let path_source = RecursivePathSource::new(&checkout_path, source_id, self.gctx);
 
-        self.path_source.replace(Some(path_source));
-        self.short_id.replace(Some(short_id));
+        self.path_source.replace(Some((path_source, short_id)));
         self.locked_rev.replace(Revision::Locked(actual_rev));
-        self.path_source.borrow().as_ref().unwrap().load()?;
+        self.path_source.borrow().as_ref().unwrap().0.load()?;
 
         self.mark_used()?;
         Ok(())
@@ -405,7 +400,7 @@ impl<'gctx> Source for GitSource<'gctx> {
             self.update()?;
         }
         let src = self.path_source.borrow();
-        let src = src.as_ref().unwrap();
+        let (src, _) = src.as_ref().unwrap();
         src.query(dep, kind, f).await
     }
 
@@ -431,6 +426,7 @@ impl<'gctx> Source for GitSource<'gctx> {
             .borrow_mut()
             .as_mut()
             .expect("BUG: `update()` must be called before `get()`")
+            .0
             .download(id)
             .await
     }
