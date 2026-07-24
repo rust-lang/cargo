@@ -676,7 +676,7 @@ fn _link_or_copy(src: &Path, dst: &Path) -> Result<()> {
     link_result
         .or_else(|err| {
             tracing::debug!("link failed {}. falling back to fs::copy", err);
-            fs::copy(src, dst).map(|_| ())
+            copy_via_tempfile_and_rename(src, dst)
         })
         .with_context(|| {
             format!(
@@ -685,6 +685,41 @@ fn _link_or_copy(src: &Path, dst: &Path) -> Result<()> {
                 dst.display()
             )
         })?;
+    Ok(())
+}
+
+/// Copies `src` to `dst` via a temporary file in `dst`'s own directory,
+/// followed by an atomic rename into place.
+///
+/// On platforms where hard-linking always fails (e.g. Haiku's BFS, which
+/// unconditionally rejects `link()`), every call to [`_link_or_copy`] falls
+/// back to a plain copy. Copying straight into `dst` leaves a window, for
+/// as long as the copy takes, during which a concurrent reader (for example
+/// another `rustc`/`cargo` process compiling a dependent crate) can open
+/// `dst` and observe a partially-written file. For large artifacts that
+/// window is easily hit under normal parallel builds, and it silently
+/// produces a corrupt `.rlib`/metadata file instead of a clean error.
+/// Writing to a temp file first and renaming atomically closes that window:
+/// concurrent readers only ever see the old (absent) or new (complete) file.
+fn copy_via_tempfile_and_rename(src: &Path, dst: &Path) -> io::Result<()> {
+    let dst_dir = dst.parent().ok_or_else(|| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("destination `{}` has no parent directory", dst.display()),
+        )
+    })?;
+    let mut tmp = TempFileBuilder::new()
+        .prefix(dst.file_name().unwrap_or_default())
+        .tempfile_in(dst_dir)?;
+    let mut src_file = File::open(src)?;
+    io::copy(&mut src_file, tmp.as_file_mut())?;
+    // `fs::copy` (what this function replaces) also copies the source's
+    // permissions, which matters for executable build-script/tool outputs;
+    // a freshly created NamedTempFile does not inherit them, so set them
+    // explicitly before persisting.
+    tmp.as_file()
+        .set_permissions(src_file.metadata()?.permissions())?;
+    tmp.persist(dst).map_err(|e| e.error)?;
     Ok(())
 }
 
@@ -968,6 +1003,50 @@ mod tests {
 
         let mask = (libc::S_IRWXU | libc::S_IRWXG | libc::S_IRWXO) as u32;
         assert_eq!(original_perms.mode(), new_perms.mode() & mask);
+    }
+
+    #[test]
+    fn copy_via_tempfile_and_rename_copies_contents() {
+        let tmpdir = tempfile::tempdir().unwrap();
+        let src = tmpdir.path().join("src");
+        let dst = tmpdir.path().join("dst");
+        std::fs::write(&src, b"hello from copy_via_tempfile_and_rename").unwrap();
+
+        super::copy_via_tempfile_and_rename(&src, &dst).unwrap();
+
+        assert_eq!(
+            std::fs::read(&dst).unwrap(),
+            b"hello from copy_via_tempfile_and_rename"
+        );
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn copy_via_tempfile_and_rename_preserves_permissions() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let tmpdir = tempfile::tempdir().unwrap();
+        let src = tmpdir.path().join("src");
+        let dst = tmpdir.path().join("dst");
+        std::fs::write(&src, b"#!/bin/sh\necho hi\n").unwrap();
+
+        // A NamedTempFile defaults to a restrictive mode (no execute bit);
+        // this is exactly the executable-build-script-output scenario the
+        // permission-preserving copy needs to get right.
+        let executable_mode = u32::from(
+            libc::S_IRWXU | libc::S_IRGRP | libc::S_IXGRP | libc::S_IROTH | libc::S_IXOTH,
+        );
+        std::fs::set_permissions(&src, std::fs::Permissions::from_mode(executable_mode)).unwrap();
+
+        super::copy_via_tempfile_and_rename(&src, &dst).unwrap();
+
+        let dst_mode = std::fs::metadata(&dst).unwrap().permissions().mode();
+        let mask = u32::from(libc::S_IRWXU | libc::S_IRWXG | libc::S_IRWXO);
+        assert_eq!(
+            executable_mode,
+            dst_mode & mask,
+            "copy_via_tempfile_and_rename must preserve the source's execute bit"
+        );
     }
 
     #[test]
