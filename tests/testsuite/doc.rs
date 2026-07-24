@@ -2910,24 +2910,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test(nightly, reason = "`rustdoc --emit` is unstable")]
-fn rustdoc_depinfo_gated() {
-    let p = project()
-        .file("Cargo.toml", &basic_lib_manifest("foo"))
-        .file("src/lib.rs", "")
-        .build();
-
-    p.cargo("doc -Zrustdoc-depinfo")
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[ERROR] the `-Z` flag is only accepted on the nightly channel of Cargo, but this is the `stable` channel
-See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
-
-"#]])
-        .run();
-}
-
-#[cargo_test(nightly, reason = "`rustdoc --emit` is unstable")]
+#[cargo_test]
 fn rebuild_tracks_target_src_outside_package_root() {
     let p = cargo_test_support::project_in("parent")
         .file(
@@ -2943,8 +2926,7 @@ fn rebuild_tracks_target_src_outside_package_root() {
         .file("../lib.rs", "//! # depinfo-before")
         .build();
 
-    p.cargo("doc -Zrustdoc-depinfo")
-        .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
+    p.cargo("doc")
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.0.0 ([ROOT]/parent/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -2958,8 +2940,7 @@ fn rebuild_tracks_target_src_outside_package_root() {
 
     p.change_file("../lib.rs", "//! # depinfo-after");
 
-    p.cargo("doc --verbose -Zrustdoc-depinfo")
-        .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
+    p.cargo("doc --verbose")
         .with_stderr_data(str![[r#"
 [DIRTY] foo v0.0.0 ([ROOT]/parent/foo): the file `../lib.rs` has changed ([TIME_DIFF_AFTER_LAST_BUILD])
 [DOCUMENTING] foo v0.0.0 ([ROOT]/parent/foo)
@@ -2974,7 +2955,7 @@ fn rebuild_tracks_target_src_outside_package_root() {
     assert!(doc_html.contains("depinfo-after"));
 }
 
-#[cargo_test(nightly, reason = "`rustdoc --emit` is unstable")]
+#[cargo_test]
 fn rebuild_tracks_include_str() {
     let p = cargo_test_support::project_in("parent")
         .file("Cargo.toml", &basic_lib_manifest("foo"))
@@ -2982,8 +2963,7 @@ fn rebuild_tracks_include_str() {
         .file("../README", "# depinfo-before")
         .build();
 
-    p.cargo("doc -Zrustdoc-depinfo")
-        .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
+    p.cargo("doc")
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.5.0 ([ROOT]/parent/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -2997,8 +2977,7 @@ fn rebuild_tracks_include_str() {
 
     p.change_file("../README", "# depinfo-after");
 
-    p.cargo("doc --verbose -Zrustdoc-depinfo")
-        .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
+    p.cargo("doc --verbose")
         .with_stderr_data(str![[r#"
 [DIRTY] foo v0.5.0 ([ROOT]/parent/foo): the file `src/../../README` has changed ([TIME_DIFF_AFTER_LAST_BUILD])
 [DOCUMENTING] foo v0.5.0 ([ROOT]/parent/foo)
@@ -3013,7 +2992,7 @@ fn rebuild_tracks_include_str() {
     assert!(doc_html.contains("depinfo-after"));
 }
 
-#[cargo_test(nightly, reason = "`rustdoc --emit` is unstable")]
+#[cargo_test]
 fn rebuild_tracks_path_attr() {
     let p = cargo_test_support::project_in("parent")
         .file("Cargo.toml", &basic_lib_manifest("foo"))
@@ -3021,8 +3000,7 @@ fn rebuild_tracks_path_attr() {
         .file("../bar.rs", "//! # depinfo-before")
         .build();
 
-    p.cargo("doc -Zrustdoc-depinfo")
-        .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
+    p.cargo("doc")
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.5.0 ([ROOT]/parent/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -3036,8 +3014,7 @@ fn rebuild_tracks_path_attr() {
 
     p.change_file("../bar.rs", "//! # depinfo-after");
 
-    p.cargo("doc --verbose -Zrustdoc-depinfo")
-        .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
+    p.cargo("doc --verbose")
         .with_stderr_data(str![[r#"
 [DIRTY] foo v0.5.0 ([ROOT]/parent/foo): the file `src/../../bar.rs` has changed ([TIME_DIFF_AFTER_LAST_BUILD])
 [DOCUMENTING] foo v0.5.0 ([ROOT]/parent/foo)
@@ -3052,7 +3029,7 @@ fn rebuild_tracks_path_attr() {
     assert!(doc_html.contains("depinfo-after"));
 }
 
-#[cargo_test(nightly, reason = "`rustdoc --emit` is unstable")]
+#[cargo_test]
 fn rebuild_tracks_env() {
     let env = "__RUSTDOC_INJECTED";
     let p = project()
@@ -3060,9 +3037,8 @@ fn rebuild_tracks_env() {
         .file("src/lib.rs", &format!(r#"#![doc = env!("{env}")]"#))
         .build();
 
-    p.cargo("doc -Zrustdoc-depinfo")
+    p.cargo("doc")
         .env(env, "# depinfo-before")
-        .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -3074,9 +3050,8 @@ fn rebuild_tracks_env() {
     let doc_html = p.read_file("target/doc/foo/index.html");
     assert!(doc_html.contains("depinfo-before"));
 
-    p.cargo("doc --verbose -Zrustdoc-depinfo")
+    p.cargo("doc --verbose")
         .env(env, "# depinfo-after")
-        .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
         .with_stderr_data(str![[r#"
 [DIRTY] foo v0.5.0 ([ROOT]/foo): the environment variable __RUSTDOC_INJECTED changed
 [DOCUMENTING] foo v0.5.0 ([ROOT]/foo)
@@ -3091,7 +3066,7 @@ fn rebuild_tracks_env() {
     assert!(doc_html.contains("depinfo-after"));
 }
 
-#[cargo_test(nightly, reason = "`rustdoc --emit` is unstable")]
+#[cargo_test]
 fn rebuild_tracks_env_in_dep() {
     let env = "__RUSTDOC_INJECTED";
     Package::new("bar", "0.1.0")
@@ -3113,9 +3088,8 @@ fn rebuild_tracks_env_in_dep() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("doc -Zrustdoc-depinfo")
+    p.cargo("doc")
         .env(env, "# depinfo-before")
-        .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
         .with_stderr_data(
             str![[r#"
 [UPDATING] `dummy-registry` index
@@ -3136,9 +3110,8 @@ fn rebuild_tracks_env_in_dep() {
     let doc_html = p.read_file("target/doc/bar/index.html");
     assert!(doc_html.contains("depinfo-before"));
 
-    p.cargo("doc --verbose -Zrustdoc-depinfo")
+    p.cargo("doc --verbose")
         .env(env, "# depinfo-after")
-        .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
         .with_stderr_data(
             str![[r#"
 [DIRTY] bar v0.1.0: the environment variable __RUSTDOC_INJECTED changed
@@ -3164,7 +3137,7 @@ fn rebuild_tracks_env_in_dep() {
 
 #[cargo_test(
     nightly,
-    reason = "`rustdoc --emit` is unstable; requires -Zchecksum-hash-algorithm"
+    reason = "``rustdoc --emit` is stabilized in 1.97; requires -Zchecksum-hash-algorithm"
 )]
 fn rebuild_tracks_checksum() {
     let p = cargo_test_support::project_in("parent")
@@ -3173,8 +3146,8 @@ fn rebuild_tracks_checksum() {
         .file("../README", "# depinfo-before")
         .build();
 
-    p.cargo("doc -Zrustdoc-depinfo -Zchecksum-freshness")
-        .masquerade_as_nightly_cargo(&["rustdoc-depinfo", "checksum-freshness"])
+    p.cargo("doc -Zchecksum-freshness")
+        .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.5.0 ([ROOT]/parent/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -3190,8 +3163,8 @@ fn rebuild_tracks_checksum() {
     // Change mtime into the future
     p.root().move_into_the_future();
 
-    p.cargo("doc --verbose -Zrustdoc-depinfo -Zchecksum-freshness")
-        .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
+    p.cargo("doc --verbose -Zchecksum-freshness")
+        .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stderr_data(str![[r#"
 [DIRTY] foo v0.5.0 ([ROOT]/parent/foo): file size changed (16 != 15) for `src/../../README`
 [DOCUMENTING] foo v0.5.0 ([ROOT]/parent/foo)
@@ -3515,7 +3488,7 @@ fn mergeable_info_rebuild_detection() {
         .with_stderr_data(
             str![[r#"
 [DOCUMENTING] foo v0.0.0 ([ROOT]/foo)
-[RUNNING] `rustdoc [..]--crate-name foo [..]--write-doc-meta-dir=[ROOT]/foo/target/debug/build/foo-[HASH]/out [..]`
+[RUNNING] `rustdoc [..]--crate-name foo [..]--emit=html-non-static-files,dep-info=[..] --write-doc-meta-dir=[ROOT]/foo/target/debug/build/foo-[HASH]/out [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [MERGING] 1 doc for host
 [RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --read-doc-meta-dir=[ROOT]/foo/target/debug/build/foo-[HASH]/out`
@@ -3577,9 +3550,9 @@ fn mergeable_info_rebuild_detection() {
         .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
         .with_stderr_data(
             str![[r#"
-[DIRTY] foo v0.0.0 ([ROOT]/foo): the precalculated components changed
+[DIRTY] foo v0.0.0 ([ROOT]/foo): the file `src/lib.rs` has changed ([TIME_DIFF_AFTER_LAST_BUILD])
 [DOCUMENTING] foo v0.0.0 ([ROOT]/foo)
-[RUNNING] `rustdoc [..]--crate-name foo [..]--write-doc-meta-dir=[ROOT]/foo/target/debug/build/foo-[HASH]/out [..]`
+[RUNNING] `rustdoc [..]--crate-name foo [..]--emit=html-non-static-files,dep-info=[..] --write-doc-meta-dir=[ROOT]/foo/target/debug/build/foo-[HASH]/out [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [MERGING] 1 doc for host
 [RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --read-doc-meta-dir=[ROOT]/foo/target/debug/build/foo-[HASH]/out`
@@ -3617,144 +3590,6 @@ fn mergeable_info_rebuild_detection() {
         .run();
 
     // Stay the same
-    assert_e2e().eq(
-        fs::read_to_string(p.build_dir().join(".rustdoc_fingerprint.json")).unwrap(),
-        str![[r#"
-{
-  "doc_parts": [
-    "debug/build/foo-[HASH]/out/foo.json"
-  ],
-  "rustc_vv": "{...}"
-}
-"#]]
-        .is_json(),
-    );
-}
-
-#[cargo_test(
-    nightly,
-    reason = "rustdoc mergeable crate info is unstable; `rustdoc --emit` is unstable"
-)]
-fn mergeable_info_rebuild_with_depinfo() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                edition = "2015"
-            "#,
-        )
-        .file("src/lib.rs", "pub fn foo() {}")
-        .build();
-
-    p.cargo("doc -v -Zrustdoc-mergeable-info -Zrustdoc-depinfo")
-        .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info", "-Zrustdoc-depinfo"])
-        .with_stderr_data(
-            str![[r#"
-[DOCUMENTING] foo v0.0.0 ([ROOT]/foo)
-[RUNNING] `rustdoc [..]--crate-name foo [..]--emit=html-non-static-files,dep-info=[..] --write-doc-meta-dir=[ROOT]/foo/target/debug/build/foo-[HASH]/out [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[MERGING] 1 doc for host
-[RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --read-doc-meta-dir=[ROOT]/foo/target/debug/build/foo-[HASH]/out`
-[FINISHED] documentation merge in [ELAPSED]s
-[GENERATED] [ROOT]/foo/target/doc/foo/index.html
-
-"#]]
-        )
-        .run();
-
-    assert!(p.root().join("target/doc/foo/index.html").is_file());
-    assert_eq!(p.glob("target/debug/build/foo-*/out/foo.json").count(), 1);
-
-    assert_e2e().eq(
-        fs::read_to_string(p.build_dir().join(".rustdoc_fingerprint.json")).unwrap(),
-        str![[r#"
-{
-  "doc_parts": [
-    "debug/build/foo-[HASH]/out/foo.json"
-  ],
-  "rustc_vv": "{...}"
-}
-"#]]
-        .is_json(),
-    );
-
-    // Make sure it doesn't recompile.
-    p.cargo("doc -v -Zrustdoc-mergeable-info -Zrustdoc-depinfo")
-        .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info", "-Zrustdoc-depinfo"])
-        .with_stderr_data(str![[r#"
-[FRESH] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[FRESH] doc-merge for host
-[FINISHED] documentation merge in [ELAPSED]s
-[GENERATED] [ROOT]/foo/target/doc/foo/index.html
-
-"#]])
-        .run();
-
-    // Still there
-    assert_e2e().eq(
-        fs::read_to_string(p.build_dir().join(".rustdoc_fingerprint.json")).unwrap(),
-        str![[r#"
-{
-  "doc_parts": [
-    "debug/build/foo-[HASH]/out/foo.json"
-  ],
-  "rustc_vv": "{...}"
-}
-"#]]
-        .is_json(),
-    );
-
-    // Changing source code trigger re-merge
-    p.change_file("src/lib.rs", "pub fn foo2() {}");
-
-    // Make sure it recompiles
-    p.cargo("doc -v -Zrustdoc-mergeable-info -Zrustdoc-depinfo")
-        .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info", "-Zrustdoc-depinfo"])
-        .with_stderr_data(
-            str![[r#"
-[DIRTY] foo v0.0.0 ([ROOT]/foo): the file `src/lib.rs` has changed ([TIME_DIFF_AFTER_LAST_BUILD])
-[DOCUMENTING] foo v0.0.0 ([ROOT]/foo)
-[RUNNING] `rustdoc [..]--crate-name foo [..]--emit=html-non-static-files,dep-info=[..] --write-doc-meta-dir=[ROOT]/foo/target/debug/build/foo-[HASH]/out [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[MERGING] 1 doc for host
-[RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --read-doc-meta-dir=[ROOT]/foo/target/debug/build/foo-[HASH]/out`
-[FINISHED] documentation merge in [ELAPSED]s
-[GENERATED] [ROOT]/foo/target/doc/foo/index.html
-
-"#]]
-        )
-        .run();
-
-    // Make sure it doesn't recompile.
-    p.cargo("doc -v -Zrustdoc-mergeable-info -Zrustdoc-depinfo")
-        .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info", "-Zrustdoc-depinfo"])
-        .with_stderr_data(str![[r#"
-[FRESH] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[FRESH] doc-merge for host
-[FINISHED] documentation merge in [ELAPSED]s
-[GENERATED] [ROOT]/foo/target/doc/foo/index.html
-
-"#]])
-        .run();
-
-    // Make sure it doesn't recompile after previous no-op build
-    p.cargo("doc -v -Zrustdoc-mergeable-info -Zrustdoc-depinfo")
-        .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info", "-Zrustdoc-depinfo"])
-        .with_stderr_data(str![[r#"
-[FRESH] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[FRESH] doc-merge for host
-[FINISHED] documentation merge in [ELAPSED]s
-[GENERATED] [ROOT]/foo/target/doc/foo/index.html
-
-"#]])
-        .run();
-
-    // Still there
     assert_e2e().eq(
         fs::read_to_string(p.build_dir().join(".rustdoc_fingerprint.json")).unwrap(),
         str![[r#"
