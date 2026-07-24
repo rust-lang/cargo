@@ -859,7 +859,7 @@ pub const DEFAULT_README_FILES: [&str; 3] = ["README.md", "README.txt", "README"
 
 /// Checks if a file with any of the default README file names exists in the package root.
 /// If so, returns a `String` representing that name.
-fn default_readme_from_package_root(package_root: &Path) -> Option<String> {
+pub(crate) fn default_readme_from_package_root(package_root: &Path) -> Option<String> {
     for &readme_filename in DEFAULT_README_FILES.iter() {
         if package_root.join(readme_filename).is_file() {
             return Some(readme_filename.to_string());
