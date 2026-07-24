@@ -38,7 +38,10 @@ manifest settings, in which case your code will need to provide its own `main`
 function to handle running tests.
 
 By default, `cargo test` uses the [`test` profile], which enables
-debugging.
+some optimizations and disables debugging information for fast feedback. If you need to debug a
+benchmark, you can use the `--profile=debug` command-line option to switch to
+the debug profile. You can then run the debug-enabled test within a
+debugger.
 
 [`test` profile]: ../reference/profiles.html#test
 

@@ -260,7 +260,7 @@ is specified.</p>
 
 
 <dt class="option-term" id="option-cargo-install---debug"><a class="option-anchor" href="#option-cargo-install---debug"><code>--debug</code></a></dt>
-<dd class="option-desc"><p>Build with the <code>dev</code> profile instead of the <code>release</code> profile.
+<dd class="option-desc"><p>Build with the <code>debug</code> profile instead of the <code>release</code> profile.
 See also the <code>--profile</code> option for choosing a specific profile by name.</p>
 </dd>
 

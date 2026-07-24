@@ -262,8 +262,8 @@ whether or not [`rpath`] is enabled.
 
 ### dev
 
-The `dev` profile is used for normal development and debugging. It is the
-default for build commands like [`cargo build`], and is used for `cargo install --debug`.
+The `dev` profile is used for normal development. It is the
+default for build commands like [`cargo build`], and is used for `cargo install --profile dev`.
 
 The default settings for the `dev` profile are:
 
@@ -280,6 +280,17 @@ panic = 'unwind'
 incremental = true
 codegen-units = 256
 rpath = false
+```
+
+### debug
+
+The `debug` profile is used for creating binaries to run with a debugger. It is used with `cargo build --profile debug` and `cargo install --debug`.
+
+The default settings for the `debug` profile are:
+
+```toml
+[profile.debug]
+inherits = "dev"
 ```
 
 ### release
