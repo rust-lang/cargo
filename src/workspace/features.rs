@@ -1058,6 +1058,8 @@ pub struct GitFeatures {
     pub shallow_index: bool,
     /// When cloning git dependencies, perform a shallow clone and maintain shallowness on subsequent fetches.
     pub shallow_deps: bool,
+    /// Allow SHA256 git repositories.
+    pub sha256: bool,
 }
 
 impl GitFeatures {
@@ -1065,11 +1067,12 @@ impl GitFeatures {
         GitFeatures {
             shallow_index: true,
             shallow_deps: true,
+            sha256: true,
         }
     }
 
     fn expecting() -> String {
-        let fields = ["`shallow-index`", "`shallow-deps`"];
+        let fields = ["`shallow-index`", "`shallow-deps`", "`sha256`"];
         format!(
             "unstable 'git' only takes {} as valid inputs",
             fields.join(" and ")
@@ -1133,12 +1136,14 @@ fn parse_git(it: impl Iterator<Item = impl AsRef<str>>) -> CargoResult<Option<Gi
     let GitFeatures {
         shallow_index,
         shallow_deps,
+        sha256,
     } = &mut out;
 
     for e in it {
         match e.as_ref() {
             "shallow-index" => *shallow_index = true,
             "shallow-deps" => *shallow_deps = true,
+            "sha256" => *sha256 = true,
             _ => {
                 bail!(GitFeatures::expecting())
             }

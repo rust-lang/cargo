@@ -4,6 +4,7 @@ use crate::sources::IndexSummary;
 use crate::sources::RecursivePathSource;
 use crate::sources::git::utils::GitDatabase;
 use crate::sources::git::utils::GitRemote;
+use crate::sources::git::utils::probe_remote_object_format;
 use crate::sources::git::utils::rev_to_oid;
 use crate::sources::source::MaybePackage;
 use crate::sources::source::QueryKind;
@@ -47,14 +48,17 @@ use url::Url;
 /// │  │  └── e33d1ac/
 /// │  ├── log-c58e1db3de7c154d-shallow/
 /// │  │  └── 11eda98/
+/// │  └── foo-9f1e8cfc50c5ba7d-sha256/
+/// │     └── cfc50c5/
 /// └── db/
 ///    ├── gimli-a0d193bd15a5ed96/
-///    └── log-c58e1db3de7c154d-shallow/
+///    ├── log-c58e1db3de7c154d-shallow/
+///    └── foo-9f1e8cfc50c5ba7d-sha256/
 /// ```
 ///
 /// For more on Git cache directory, see ["Cargo Home"] in The Cargo Book.
 ///
-/// For more on the directory format `<pkg>-<hash>[-shallow]`, see [`ident`]
+/// For more on the directory format `<pkg>-<hash>[-shallow][-sha256]`, see [`ident`]
 /// and [`ident_shallow`].
 ///
 /// ## Locked to a revision
@@ -171,14 +175,52 @@ impl<'gctx> GitSource<'gctx> {
     }
 
     fn mark_used(&self) -> CargoResult<()> {
+        let format = match &*self.locked_rev.borrow() {
+            Revision::Locked(oid) => oid.object_format(),
+            _ => unreachable!("locked_rev must be resolved before mark_used"),
+        };
+        let ident = self.ident_for_format(format);
         self.gctx
             .deferred_global_last_use()?
             .mark_git_checkout_used(global_cache_tracker::GitCheckout {
-                encoded_git_name: self.ident,
+                encoded_git_name: ident,
                 short_name: self.short_id.borrow().expect("update before download"),
                 size: None,
             });
         Ok(())
+    }
+
+    fn ident_for_format(&self, format: git2::ObjectFormat) -> InternedString {
+        match format {
+            git2::ObjectFormat::Sha1 => self.ident,
+            git2::ObjectFormat::Sha256 => format!("{}-sha256", self.ident).into(),
+        }
+    }
+
+    /// Determines the Git object format for this remote.
+    ///
+    /// This may probe the remote repository if needed.
+    fn object_format_hint(&self) -> CargoResult<Option<git2::ObjectFormat>> {
+        if let Revision::Locked(oid) = &*self.locked_rev.borrow() {
+            return Ok(Some(oid.object_format()));
+        }
+
+        let git_db_path = self.gctx.git_db_path();
+        self.gctx
+            .assert_package_cache_locked(CacheLockMode::DownloadExclusive, &git_db_path);
+        let git_db_path = git_db_path.as_path_unlocked();
+
+        for format in [git2::ObjectFormat::Sha1, git2::ObjectFormat::Sha256] {
+            let ident = self.ident_for_format(format);
+            let path = git_db_path.join(ident);
+            if path.exists()
+                && let Ok(db) = self.remote.db_at(&path)
+            {
+                return Ok(Some(db.object_format()));
+            }
+        }
+
+        Ok(None)
     }
 
     /// Fetch and return a [`GitDatabase`] with the resolved revision
@@ -187,7 +229,27 @@ impl<'gctx> GitSource<'gctx> {
     /// This won't fetch anything if the required revision is
     /// already available locally.
     pub(crate) fn fetch_db(&self, is_submodule: bool) -> CargoResult<(GitDatabase, git2::Oid)> {
-        let db_path = self.gctx.git_db_path().join(&self.ident);
+        let mut is_update_status_shown = false;
+
+        let format = if let Some(format) = self.object_format_hint()? {
+            format
+        } else {
+            if !is_update_status_shown {
+                is_update_status_shown = true;
+                self.show_update_status(is_submodule)?;
+            }
+            if let Some(offline_flag) = self.gctx.offline_flag() {
+                anyhow::bail!(
+                    "can't checkout from '{}': you are in the offline mode ({offline_flag})",
+                    self.remote.url()
+                );
+            }
+
+            trace!("probing git source `{:?}`", self.remote);
+            probe_remote_object_format(self.source_id.borrow().url(), self.gctx)?
+        };
+
+        let db_path = self.gctx.git_db_path().join(self.ident_for_format(format));
         let db_path = db_path.into_path_unlocked();
 
         let db = self.remote.db_at(&db_path).ok();
@@ -226,26 +288,39 @@ impl<'gctx> GitSource<'gctx> {
                     );
                 }
 
-                if !self.quiet {
-                    let scope = if is_submodule {
-                        "submodule"
-                    } else {
-                        "repository"
-                    };
-                    self.gctx
-                        .shell()
-                        .status("Updating", format!("git {scope} `{}`", self.remote.url()))?;
+                if !is_update_status_shown {
+                    self.show_update_status(is_submodule)?;
                 }
 
                 trace!("updating git source `{:?}`", self.remote);
 
                 let locked_rev = locked_rev.clone().into();
                 let manifest_reference = self.source_id.borrow().git_reference().unwrap();
-                self.remote
-                    .checkout(&db_path, db, manifest_reference, &locked_rev, self.gctx)?
+                self.remote.checkout(
+                    &db_path,
+                    db,
+                    manifest_reference,
+                    &locked_rev,
+                    format,
+                    self.gctx,
+                )?
             }
         };
         Ok((db, actual_rev))
+    }
+
+    fn show_update_status(&self, is_submodule: bool) -> CargoResult<()> {
+        if self.quiet {
+            return Ok(());
+        }
+        let scope = if is_submodule {
+            "submodule"
+        } else {
+            "repository"
+        };
+        self.gctx
+            .shell()
+            .status("Updating", format!("git {scope} `{}`", self.remote.url()))
     }
 
     fn update(&self) -> CargoResult<()> {
@@ -282,10 +357,11 @@ impl<'gctx> GitSource<'gctx> {
         // Check out `actual_rev` from the database to a scoped location on the
         // filesystem. This will use hard links and such to ideally make the
         // checkout operation here pretty fast.
+        let ident = self.ident_for_format(actual_rev.object_format());
         let checkout_path = self
             .gctx
             .git_checkouts_path()
-            .join(&self.ident)
+            .join(ident)
             .join(short_id.as_str());
         let checkout_path = checkout_path.into_path_unlocked();
         db.copy_to(actual_rev, &checkout_path, self.gctx, self.quiet)?;
@@ -360,6 +436,7 @@ fn ident(id: &SourceId) -> String {
 
 /// Like [`ident()`], but appends `-shallow` to it, turning
 /// `proto://host/path/repo` into `repo-<hash-of-url>-shallow`.
+/// SHA256 repositories add the `-sha256` suffix on top of this identifier.
 ///
 /// It's important to separate shallow from non-shallow clones for reasons of
 /// backwards compatibility --- older cargo's aren't necessarily handling

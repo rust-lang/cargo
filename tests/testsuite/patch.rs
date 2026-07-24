@@ -395,9 +395,6 @@ Caused by:
   unable to update https://github.com/rust-lang/does-not-exist/pull/123
 
 Caused by:
-  failed to clone into: [ROOT]/home/.cargo/git/db/123-[HASH]
-
-Caused by:
   network failure seems to have happened
   if a proxy or similar is necessary `net.git-fetch-with-cli` may help here
   https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
