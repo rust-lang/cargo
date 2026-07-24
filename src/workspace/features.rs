@@ -826,7 +826,7 @@ macro_rules! unstable_cli_options {
         /// Cargo, like `rustc`, accepts a suite of `-Z` flags which are intended for
         /// gating unstable functionality to Cargo. These flags are only available on
         /// the nightly channel of Cargo.
-        #[derive(Default, Debug, Deserialize)]
+        #[derive(Debug, Deserialize)]
         #[serde(default, rename_all = "kebab-case")]
         pub struct CliUnstable {
             $(
@@ -840,6 +840,21 @@ macro_rules! unstable_cli_options {
             pub fn help() -> Vec<(&'static str, Option<&'static str>)> {
                 let fields = vec![$((stringify!($element), None$(.or(Some($help)))?)),*];
                 fields
+            }
+        }
+        impl Default for CliUnstable {
+            fn default() -> Self {
+                let mut unstable = Self {
+                    $(
+                        $element: Default::default()
+                    ),*
+                };
+
+                // Defaults to enabled on nightly unless explicitly opted out.
+                unstable.build_dir_new_layout =
+                    matches!(crate::version().release_channel.as_deref(), Some("nightly" | "dev"));
+
+                return unstable;
             }
         }
 
