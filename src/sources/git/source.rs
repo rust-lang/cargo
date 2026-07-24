@@ -11,6 +11,7 @@ use crate::sources::source::QueryKind;
 use crate::sources::source::Source;
 use crate::util::GlobalContext;
 use crate::util::cache_lock::CacheLockMode;
+use crate::util::data_structures::HashMap;
 use crate::util::errors::CargoResult;
 use crate::util::hex::short_hash;
 use crate::util::interning::InternedString;
@@ -77,14 +78,16 @@ pub struct GitSource<'gctx> {
     locked_rev: RefCell<Revision>,
     /// The unique identifier of this source.
     source_id: RefCell<SourceId>,
-    /// The underlying path source to discover packages inside the Git repository
+    /// The underlying path sources to discover packages inside the Git repository.
+    /// This map is keyed by the revision of their checkout.
     ///
     /// The short id is typically a 7-character string of the OID hash,
     /// automatically increasing in size if it is ambiguous.
     ///
-    /// This is set to `Some` after the git repo has been checked out
-    /// (automatically handled via [`GitSource::update`]).
-    path_source: RefCell<Option<(RecursivePathSource<'gctx>, GitShortID)>>,
+    /// An new entry would be added after a revision has been checked out
+    /// (automatically handled via [`GitSource::update`]),
+    /// and [`GitSource::checked_out_rev`] would select the entry in use.
+    path_sources: RefCell<HashMap<git2::Oid, (RecursivePathSource<'gctx>, GitShortID)>>,
     /// The identifier of this source for Cargo's Git cache directory.
     /// See [`ident`] for more.
     ident: InternedString,
@@ -136,7 +139,7 @@ impl<'gctx> GitSource<'gctx> {
             remote,
             locked_rev: RefCell::new(locked_rev),
             source_id: RefCell::new(source_id),
-            path_source: RefCell::new(None),
+            path_sources: RefCell::new(HashMap::default()),
             ident: ident.into(),
             gctx,
             quiet: false,
@@ -154,23 +157,24 @@ impl<'gctx> GitSource<'gctx> {
     /// repository as well as walk the filesystem if package information
     /// haven't yet updated.
     pub fn read_packages(&mut self) -> CargoResult<Vec<Package>> {
-        if self.path_source.borrow().is_none() {
+        if self.checked_out_rev().is_none() {
             self.invalidate_cache();
             self.update()?;
         }
-        self.path_source
+        let rev = self.checked_out_rev().unwrap();
+        self.path_sources
             .borrow_mut()
-            .as_mut()
-            .unwrap()
+            .get_mut(&rev)
+            .expect("rev is already fetched")
             .0
             .read_packages()
     }
 
-    fn mark_used(&self) -> CargoResult<()> {
+    fn mark_used(&self, rev: git2::Oid) -> CargoResult<()> {
         let short_name = self
-            .path_source
+            .path_sources
             .borrow()
-            .as_ref()
+            .get(&rev)
             .expect("update before download")
             .1
             .as_str()
@@ -183,6 +187,16 @@ impl<'gctx> GitSource<'gctx> {
                 size: None,
             });
         Ok(())
+    }
+
+    /// The revision this source is checked out at, if any.
+    ///
+    /// Returns `None` if nothing has yet fetched.
+    fn checked_out_rev(&self) -> Option<git2::Oid> {
+        match &*self.locked_rev.borrow() {
+            Revision::Locked(rev) if self.path_sources.borrow().contains_key(rev) => Some(*rev),
+            _ => None,
+        }
     }
 
     /// Fetch and return a [`GitDatabase`] with the resolved revision
@@ -253,8 +267,8 @@ impl<'gctx> GitSource<'gctx> {
     }
 
     fn update(&self) -> CargoResult<()> {
-        if self.path_source.borrow().is_some() {
-            self.mark_used()?;
+        if let Some(rev) = self.checked_out_rev() {
+            self.mark_used(rev)?;
             return Ok(());
         }
 
@@ -285,7 +299,7 @@ impl<'gctx> GitSource<'gctx> {
         self.checkout(&db, actual_rev, source_id)?;
         self.locked_rev.replace(Revision::Locked(actual_rev));
 
-        self.mark_used()?;
+        self.mark_used(actual_rev)?;
         Ok(())
     }
 
@@ -309,7 +323,9 @@ impl<'gctx> GitSource<'gctx> {
 
         let path_source = RecursivePathSource::new(&checkout_path, source_id, self.gctx);
         path_source.load()?;
-        self.path_source.replace(Some((path_source, short_id)));
+        self.path_sources
+            .borrow_mut()
+            .insert(rev, (path_source, short_id));
         Ok(())
     }
 }
@@ -401,11 +417,12 @@ impl<'gctx> Source for GitSource<'gctx> {
         kind: QueryKind,
         f: &mut dyn FnMut(IndexSummary),
     ) -> CargoResult<()> {
-        if self.path_source.borrow().is_none() {
+        if self.checked_out_rev().is_none() {
             self.update()?;
         }
-        let src = self.path_source.borrow();
-        let (src, _) = src.as_ref().unwrap();
+        let rev = self.checked_out_rev().unwrap();
+        let sources = self.path_sources.borrow();
+        let (src, _) = sources.get(&rev).expect("rev is already fetched");
         src.query(dep, kind, f).await
     }
 
@@ -426,11 +443,14 @@ impl<'gctx> Source for GitSource<'gctx> {
             "getting packages for package ID `{}` from `{:?}`",
             id, self.remote
         );
-        self.mark_used()?;
-        self.path_source
-            .borrow_mut()
-            .as_mut()
-            .expect("BUG: `update()` must be called before `get()`")
+        let rev = self
+            .checked_out_rev()
+            .expect("BUG: `update()` must be called before `get()`");
+        self.mark_used(rev)?;
+        self.path_sources
+            .borrow()
+            .get(&rev)
+            .expect("rev is already fetched")
             .0
             .download(id)
             .await
