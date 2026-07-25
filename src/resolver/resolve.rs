@@ -419,12 +419,10 @@ unable to verify that `{0}` is the same as when the lockfile was generated
             self.dependencies_listed(from, to)
         };
 
-        let target_crate_name = || (to_target.crate_name(), None);
-        let mut name_pairs = deps.iter().map(|d| {
-            d.explicit_name_in_toml()
-                .map(|s| (s.as_str().replace("-", "_"), Some(s)))
-                .unwrap_or_else(target_crate_name)
-        });
+        let target_crate_name = || (to_target.crate_name().into(), None);
+        let mut name_pairs = deps
+            .iter()
+            .map(|d| Self::dep_extern_crate_name_and_dep_name(d, to_target));
         let (extern_crate_name, dep_name) = name_pairs.next().unwrap_or_else(target_crate_name);
         for (n, _) in name_pairs {
             anyhow::ensure!(
@@ -434,7 +432,16 @@ unable to verify that `{0}` is the same as when the lockfile was generated
                 to,
             );
         }
-        Ok((extern_crate_name.into(), dep_name))
+        Ok((extern_crate_name, dep_name))
+    }
+
+    fn dep_extern_crate_name_and_dep_name(
+        dep: &Dependency,
+        to_target: &Target,
+    ) -> (InternedString, Option<InternedString>) {
+        dep.explicit_name_in_toml()
+            .map(|name| (name.as_str().replace('-', "_").into(), Some(name)))
+            .unwrap_or_else(|| (to_target.crate_name().into(), None))
     }
 
     fn dependencies_listed(&self, from: PackageId, to: PackageId) -> &HashSet<Dependency> {
