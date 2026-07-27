@@ -124,15 +124,14 @@ use std::fmt::{self, Write};
 use std::path::PathBuf;
 use std::str::FromStr;
 
-use anyhow::{Error, bail};
-use cargo_util::ProcessBuilder;
-use serde::{Deserialize, Serialize};
-use tracing::debug;
-
 use crate::GlobalContext;
 use crate::resolver::ResolveBehavior;
 use crate::util::errors::CargoResult;
 use crate::util::indented_lines;
+use anyhow::{Error, bail};
+use cargo_util::ProcessBuilder;
+use serde::{Deserialize, Serialize};
+use tracing::debug;
 
 pub const SEE_CHANNELS: &str = "See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information \
      about Rust release channels.";
@@ -409,7 +408,7 @@ enum Status {
 }
 
 /// Config for the `-Zembed-metadata` option.
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default)]
 pub enum EmbedMetadata {
     /// Embed metadata in .rlib files, the original rustc behavior.
     Embed,
@@ -883,6 +882,7 @@ macro_rules! unstable_cli_options {
 unstable_cli_options!(
     // Permanently unstable features:
     allow_features: Option<AllowFeatures> = ("Allow *only* the listed unstable features"),
+    #[serde(deserialize_with = "deserialize_embed_metadata")]
     embed_metadata: EmbedMetadata = ("Avoid embedding metadata in library artifacts"),
     print_im_a_teapot: bool,
 
@@ -1049,6 +1049,18 @@ where
         .map(String::from)
         .collect();
     Ok(Some(v))
+}
+
+fn deserialize_embed_metadata<'de, D>(deserializer: D) -> Result<EmbedMetadata, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let data = Option::<bool>::deserialize(deserializer)?;
+    match data {
+        Some(true) => Ok(EmbedMetadata::Embed),
+        Some(false) => Ok(EmbedMetadata::DoNotEmbed),
+        None => Ok(EmbedMetadata::Unset),
+    }
 }
 
 #[derive(Debug, Copy, Clone, Default, Deserialize, Ord, PartialOrd, Eq, PartialEq)]
