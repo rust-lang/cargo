@@ -161,6 +161,7 @@ mod target;
 mod target_cfg;
 mod unknown_inherited_feature;
 mod vers;
+mod warn_binary_only_package;
 mod workspace_name;
 mod workspace_path;
 mod workspace_path_dev;
