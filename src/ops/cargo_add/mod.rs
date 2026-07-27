@@ -115,6 +115,30 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
             .collect::<CargoResult<Vec<_>>>()?
     };
 
+    let mut package_ids = Vec::new();
+    let deps: Vec<_> = deps
+        .into_iter()
+        .map(|(dep, pkg_id)| {
+            if let Some(pkg_id) = pkg_id {
+                package_ids.push(pkg_id);
+            }
+            dep
+        })
+        .collect();
+
+    if options.gctx.network_allowed() && !package_ids.is_empty() {
+        let package_set = registry.get(&package_ids)?;
+        for pkg_id in package_ids {
+            let pkg = package_set.get_one(pkg_id)?;
+            if !pkg.targets().iter().any(|t| t.is_lib()) {
+                options.gctx.shell().warn(format!(
+                    "package `{}` does not contain a library target and is unlikely to work as a dependency",
+                    pkg.name()
+                ))?;
+            }
+        }
+    }
+
     let was_sorted = manifest
         .get_table(&dep_table)
         .map(TomlItem::as_table)
@@ -348,7 +372,7 @@ fn resolve_dependency(
     honor_rust_version: Option<bool>,
     gctx: &GlobalContext,
     registry: &mut PackageRegistry<'_>,
-) -> CargoResult<DependencyUI> {
+) -> CargoResult<(DependencyUI, Option<PackageId>)> {
     let crate_spec = arg
         .crate_spec
         .as_deref()
@@ -444,6 +468,7 @@ fn resolve_dependency(
         )
     };
     let old_dep = fuzzy_lookup(&mut selected_dep, lookup, gctx)?;
+    let mut resolved_pkg_id = None;
     let mut dependency = if let Some(mut old_dep) = old_dep.clone() {
         if old_dep.name != selected_dep.name {
             // Assuming most existing keys are not relevant when the package changes
@@ -489,8 +514,9 @@ fn resolve_dependency(
             }
             dependency = dependency.set_source(public_source);
         } else {
-            let latest =
+            let (latest, pkg_id) =
                 get_latest_dependency(spec, &dependency, honor_rust_version, gctx, registry)?;
+            resolved_pkg_id = Some(pkg_id);
 
             if dependency.name != latest.name {
                 gctx.shell().warn(format!(
@@ -534,7 +560,7 @@ fn resolve_dependency(
     let query = query_dependency(ws, gctx, &mut dependency)?;
     let dependency = populate_available_features(dependency, &query, registry)?;
 
-    Ok(dependency)
+    Ok((dependency, resolved_pkg_id))
 }
 
 fn get_public_dependency(
@@ -844,7 +870,7 @@ fn get_latest_dependency(
     honor_rust_version: Option<bool>,
     gctx: &GlobalContext,
     registry: &mut PackageRegistry<'_>,
-) -> CargoResult<Dependency> {
+) -> CargoResult<(Dependency, PackageId)> {
     let query = dependency.query(gctx)?;
     match query {
         MaybeWorkspace::Workspace(_) => {
@@ -974,7 +1000,7 @@ ignoring {dependency}@{latest_version} (which requires rustc {latest_rust_versio
             if let Some(reg_name) = dependency.registry.as_deref() {
                 dep = dep.set_registry(reg_name);
             }
-            Ok(dep)
+            Ok((dep, latest.package_id()))
         }
     }
 }
