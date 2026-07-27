@@ -408,18 +408,6 @@ enum Status {
     Removed,
 }
 
-/// Config for the `-Zembed-metadata` option.
-#[derive(Debug, Default, Deserialize)]
-pub enum EmbedMetadata {
-    /// Embed metadata in .rlib files, the original rustc behavior.
-    Embed,
-    /// Do not embed metadata in .rlib files.
-    DoNotEmbed,
-    /// The `-Zembed-metadata` flag wasn't set.
-    #[default]
-    Unset,
-}
-
 /// A listing of stable and unstable new syntax in Cargo.toml.
 ///
 /// This generates definitions and impls for [`Features`] and [`Feature`]
@@ -883,7 +871,7 @@ macro_rules! unstable_cli_options {
 unstable_cli_options!(
     // Permanently unstable features:
     allow_features: Option<AllowFeatures> = ("Allow *only* the listed unstable features"),
-    embed_metadata: EmbedMetadata = ("Avoid embedding metadata in library artifacts"),
+    embed_metadata: Option<bool> = ("Avoid embedding metadata in library artifacts"),
     print_im_a_teapot: bool,
 
     // All other unstable features.
@@ -1322,11 +1310,11 @@ impl CliUnstable {
             }
         }
 
-        fn parse_embed_metadata(key: &str, value: Option<&str>) -> CargoResult<EmbedMetadata> {
+        fn parse_option_bool(key: &str, value: Option<&str>) -> CargoResult<Option<bool>> {
             match value {
-                None => Ok(EmbedMetadata::Unset),
-                Some("yes") => Ok(EmbedMetadata::Embed),
-                Some("no") => Ok(EmbedMetadata::DoNotEmbed),
+                None => Ok(None),
+                Some("yes") => Ok(Some(true)),
+                Some("no") => Ok(Some(false)),
                 Some(s) => bail!("flag -Z{key} expected `no` or `yes`, found: `{s}`"),
             }
         }
@@ -1382,7 +1370,7 @@ impl CliUnstable {
             // Permanently unstable features
             // Sorted alphabetically:
             "allow-features" => self.allow_features = Some(parse_list(v).into_iter().collect()),
-            "embed-metadata" => self.embed_metadata = parse_embed_metadata(k, v)?,
+            "embed-metadata" => self.embed_metadata = parse_option_bool(k, v)?,
             "print-im-a-teapot" => self.print_im_a_teapot = parse_bool(k, v)?,
 
             // Stabilized features
