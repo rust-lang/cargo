@@ -2651,3 +2651,21 @@ rustdocflags = ["--default-theme=dark"]
         .env("CARGO_HOME", &cargo_home)
         .run();
 }
+
+#[cargo_test]
+fn unstable_embed_metadata() {
+    write_config_toml(
+        "\
+[unstable]
+embed-metadata = false
+",
+    );
+
+    let gctx = new_gctx();
+
+    let value = gctx
+        .get::<Option<bool>>("unstable.embed-metadata")
+        .unwrap()
+        .unwrap();
+    assert!(!value);
+}

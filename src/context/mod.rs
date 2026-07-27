@@ -134,7 +134,6 @@ mod environment;
 use environment::Env;
 
 mod schema;
-use crate::workspace::features::EmbedMetadata;
 pub use schema::*;
 
 /// Helper macro for creating typed access methods.
@@ -1261,11 +1260,7 @@ impl GlobalContext {
     }
 
     pub fn should_embed_metadata(&self) -> bool {
-        match self.cli_unstable().embed_metadata {
-            EmbedMetadata::Embed => true,
-            EmbedMetadata::DoNotEmbed => false,
-            EmbedMetadata::Unset => true,
-        }
+        self.cli_unstable().embed_metadata.unwrap_or(true)
     }
 
     pub fn network_allowed(&self) -> bool {
