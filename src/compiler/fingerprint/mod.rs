@@ -1660,7 +1660,7 @@ fn calculate_normal(
     build_runner
         .bcx
         .gctx
-        .should_embed_metadata()
+        .should_embed_metadata(build_runner.bcx.rustc())
         .not()
         .hash(&mut config);
 

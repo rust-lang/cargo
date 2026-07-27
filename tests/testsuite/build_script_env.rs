@@ -142,6 +142,7 @@ fn rustc_bootstrap() {
         // NOTE: uses RUSTC_BOOTSTRAP so it will be propagated to rustc
         // (this matters when tests are being run with a beta or stable cargo)
         .env("RUSTC_BOOTSTRAP", "1")
+        .arg("-Zembed-metadata=yes")
         .with_stderr_data(str![[r#"
 [COMPILING] has-dashes v0.0.1 ([ROOT]/foo)
 [WARNING] has-dashes@0.0.1: cannot set `RUSTC_BOOTSTRAP=1` from build script of `has-dashes v0.0.1 ([ROOT]/foo)`.
@@ -187,6 +188,7 @@ fn rustc_bootstrap() {
         // NOTE: uses RUSTC_BOOTSTRAP so it will be propagated to rustc
         // (this matters when tests are being run with a beta or stable cargo)
         .env("RUSTC_BOOTSTRAP", "1")
+        .arg("-Zembed-metadata=yes")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] foo@0.0.1: cannot set `RUSTC_BOOTSTRAP=1` from build script of `foo v0.0.1 ([ROOT]/foo)`.
