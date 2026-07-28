@@ -145,6 +145,7 @@ impl<'gctx> Compilation<'gctx> {
         let primary_rustc_process = bcx.build_config.primary_unit_rustc.clone();
         let rustc_workspace_wrapper_process = bcx.rustc().workspace_process();
         let host = bcx.host_triple().to_string();
+        let sysroot_target_libdir = get_sysroot_target_libdir(bcx)?;
 
         // When `target-applies-to-host=false`, and without `--target`,
         // there will be only `CompileKind::Host` in requested_kinds.
@@ -183,7 +184,7 @@ impl<'gctx> Compilation<'gctx> {
             native_dirs: BTreeSet::new(),
             root_output: HashMap::default(),
             deps_output: HashMap::default(),
-            sysroot_target_libdir: get_sysroot_target_libdir(bcx)?,
+            sysroot_target_libdir,
             tests: Vec::new(),
             binaries: Vec::new(),
             cdylibs: Vec::new(),
