@@ -2183,7 +2183,7 @@ fn cargo_metadata_with_one_artifact_only_alias_to_lib_package() {
                 "target": null
               }
             ],
-            "name": "bar_alias",
+            "name": "",
             "pkg": "path+[ROOTURL]/foo/bar#0.5.0"
           }
         ],
@@ -2251,7 +2251,7 @@ fn cargo_metadata_rejects_artifact_lib_aliases_across_dependency_kinds() {
 }
 
 #[cargo_test]
-fn cargo_metadata_rejects_one_artifact_lib_alias_to_same_package() {
+fn cargo_metadata_with_one_artifact_lib_alias_to_same_package() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -2284,20 +2284,59 @@ fn cargo_metadata_rejects_one_artifact_lib_alias_to_same_package() {
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("metadata -Z bindeps")
+    p.cargo("metadata --format-version 1 -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
-[LOCKING] 1 package to highest compatible version
-[ERROR] the crate `foo v0.5.0 ([ROOT]/foo)` depends on crate `bar v0.5.0 ([ROOT]/foo/bar)` multiple times with different names
-
-"#]])
+        .with_stdout_data(
+            str![[r#"
+{
+  "packages": "{...}",
+  "resolve": {
+    "nodes": [
+      "{...}",
+      {
+        "deps": [
+          {
+            "dep_kinds": [
+              {
+                "artifact": "bin",
+                "bin_name": "bar",
+                "extern_name": "bar_bin",
+                "kind": null,
+                "target": null
+              },
+              {
+                "extern_name": "bar_lib",
+                "kind": null,
+                "target": null
+              },
+              {
+                "artifact": "bin",
+                "bin_name": "bar",
+                "extern_name": "bar_lib",
+                "kind": null,
+                "target": null
+              }
+            ],
+            "name": "bar_lib",
+            "pkg": "path+[ROOTURL]/foo/bar#0.5.0"
+          }
+        ],
+        "id": "path+[ROOTURL]/foo#0.5.0",
+        "...": "{...}"
+      }
+    ],
+    "root": "path+[ROOTURL]/foo#0.5.0"
+  },
+  "...": "{...}"
+}
+"#]]
+            .is_json(),
+        )
         .run();
 }
 
 #[cargo_test]
-fn cargo_metadata_rejects_multiple_bin_only_artifact_aliases_to_lib_package() {
+fn cargo_metadata_with_multiple_bin_only_artifact_aliases_to_lib_package() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -2330,20 +2369,54 @@ fn cargo_metadata_rejects_multiple_bin_only_artifact_aliases_to_lib_package() {
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("metadata -Z bindeps")
+    p.cargo("metadata --format-version 1 -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
-[LOCKING] 1 package to highest compatible version
-[ERROR] the crate `foo v0.5.0 ([ROOT]/foo)` depends on crate `bar v0.5.0 ([ROOT]/foo/bar)` multiple times with different names
-
-"#]])
+        .with_stdout_data(
+            str![[r#"
+{
+  "packages": "{...}",
+  "resolve": {
+    "nodes": [
+      "{...}",
+      {
+        "deps": [
+          {
+            "dep_kinds": [
+              {
+                "artifact": "bin",
+                "bin_name": "bar",
+                "extern_name": "bar_a",
+                "kind": null,
+                "target": null
+              },
+              {
+                "artifact": "bin",
+                "bin_name": "bar",
+                "extern_name": "bar_b",
+                "kind": null,
+                "target": null
+              }
+            ],
+            "name": "",
+            "pkg": "path+[ROOTURL]/foo/bar#0.5.0"
+          }
+        ],
+        "id": "path+[ROOTURL]/foo#0.5.0",
+        "...": "{...}"
+      }
+    ],
+    "root": "path+[ROOTURL]/foo#0.5.0"
+  },
+  "...": "{...}"
+}
+"#]]
+            .is_json(),
+        )
         .run();
 }
 
 #[cargo_test]
-fn cargo_metadata_rejects_mixed_artifact_and_no_artifact_dep_to_same_package() {
+fn cargo_metadata_allows_mixed_artifact_and_no_artifact_dep_to_same_package() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -2376,15 +2449,46 @@ fn cargo_metadata_rejects_mixed_artifact_and_no_artifact_dep_to_same_package() {
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("metadata -Z bindeps")
+    p.cargo("metadata --format-version 1 -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
-[LOCKING] 1 package to highest compatible version
-[ERROR] the crate `foo v0.5.0 ([ROOT]/foo)` depends on crate `bar v0.5.0 ([ROOT]/foo/bar)` multiple times with different names
-
-"#]])
+        .with_stdout_data(
+            str![[r#"
+{
+  "packages": "{...}",
+  "resolve": {
+    "nodes": [
+      "{...}",
+      {
+        "deps": [
+          {
+            "dep_kinds": [
+              {
+                "kind": null,
+                "target": null
+              },
+              {
+                "artifact": "bin",
+                "bin_name": "bar",
+                "extern_name": "bar",
+                "kind": null,
+                "target": null
+              }
+            ],
+            "name": "bar_stable",
+            "pkg": "path+[ROOTURL]/foo/bar#0.5.0"
+          }
+        ],
+        "id": "path+[ROOTURL]/foo#0.5.0",
+        "...": "{...}"
+      }
+    ],
+    "root": "path+[ROOTURL]/foo#0.5.0"
+  },
+  "...": "{...}"
+}
+"#]]
+            .is_json(),
+        )
         .run();
 }
 
@@ -2424,6 +2528,7 @@ fn cargo_metadata_allows_mixed_artifact_and_no_artifact_dep_to_bin_only_package(
               {
                 "artifact": "bin",
                 "bin_name": "bar",
+                "extern_name": "bar",
                 "kind": null,
                 "target": null
               }
