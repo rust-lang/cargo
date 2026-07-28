@@ -380,7 +380,7 @@ fn resolve_dependency(
             }
             selected
         } else {
-            let mut source = crate::sources::GitSource::new(src.source_id()?, gctx)?;
+            let source = crate::sources::GitSource::new(src.source_id()?, gctx)?;
             let packages = source.read_packages()?;
             let package = infer_package_for_git_source(packages, &src)?;
             Dependency::from(package.summary())
@@ -417,7 +417,7 @@ fn resolve_dependency(
             }
             selected
         } else {
-            let mut source = crate::sources::PathSource::new(&src.path, src.source_id()?, gctx);
+            let source = crate::sources::PathSource::new(&src.path, src.source_id()?, gctx);
             let package = source.root_package()?;
             let mut selected = Dependency::from(package.summary());
             if let Some(Source::Path(selected_src)) = &mut selected.source {

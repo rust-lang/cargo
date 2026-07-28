@@ -1144,7 +1144,7 @@ fn has_shallow_lock_file(err: &crate::sources::git::fetch::Error) -> bool {
 /// [1]: https://doc.rust-lang.org/nightly/cargo/reference/config.html#netgit-fetch-with-cli
 #[tracing::instrument(skip(repo, gctx))]
 fn fetch_with_cli(
-    repo: &mut git2::Repository,
+    repo: &git2::Repository,
     url: &str,
     refspecs: &[String],
     tags: bool,
@@ -1581,7 +1581,7 @@ enum FastPathRev {
 /// [^1]: <https://developer.github.com/v3/repos/commits/#get-the-sha-1-of-a-commit-reference>
 #[tracing::instrument(skip(repo, gctx))]
 fn github_fast_path(
-    repo: &mut git2::Repository,
+    repo: &git2::Repository,
     url: &str,
     reference: &GitReference,
     gctx: &GlobalContext,
@@ -1744,14 +1744,14 @@ mod tests {
     #[test]
     fn github_fast_path_full_hash_returns_needs_fetch() {
         let temp_dir = tempfile::TempDir::new().unwrap();
-        let mut repo = git2::Repository::init_bare(temp_dir.path()).unwrap();
+        let repo = git2::Repository::init_bare(temp_dir.path()).unwrap();
         let full_hash = "c9040898c9183ddbb9402dcbf749ed06d6ea90ad";
         let reference = GitReference::Rev(full_hash.to_string());
         let gctx = GlobalContext::default().unwrap();
         let expected_oid = rev_to_oid(full_hash).unwrap();
 
         let result =
-            github_fast_path(&mut repo, "https://github.com/user/repo", &reference, &gctx).unwrap();
+            github_fast_path(&repo, "https://github.com/user/repo", &reference, &gctx).unwrap();
 
         assert!(matches!(result, FastPathRev::NeedsFetch(oid) if oid == expected_oid));
     }

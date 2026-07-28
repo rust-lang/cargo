@@ -158,16 +158,12 @@ impl<'gctx> GitSource<'gctx> {
     /// Returns the packages discovered by this source. It may fetch the Git
     /// repository as well as walk the filesystem if package information
     /// haven't yet updated.
-    pub fn read_packages(&mut self) -> CargoResult<Vec<Package>> {
+    pub fn read_packages(&self) -> CargoResult<Vec<Package>> {
         if self.path_source.borrow().is_none() {
             self.invalidate_cache();
             self.update()?;
         }
-        self.path_source
-            .borrow_mut()
-            .as_mut()
-            .unwrap()
-            .read_packages()
+        self.path_source.borrow().as_ref().unwrap().read_packages()
     }
 
     fn mark_used(&self) -> CargoResult<()> {
