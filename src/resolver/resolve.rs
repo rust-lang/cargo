@@ -406,15 +406,6 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         &self.metadata
     }
 
-    pub fn extern_crate_name_and_dep_name(
-        &self,
-        from: PackageId,
-        to: PackageId,
-        to_target: &Target,
-    ) -> CargoResult<(InternedString, Option<InternedString>)> {
-        self.dependency_name_matching(from, to, to_target, |_| true)
-    }
-
     /// Returns the library name after ignoring artifact-only declarations.
     pub(crate) fn lib_dependency_name(
         &self,

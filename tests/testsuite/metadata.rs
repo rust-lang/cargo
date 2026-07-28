@@ -2387,7 +2387,7 @@ fn cargo_metadata_rejects_artifact_lib_aliases_across_dependency_kinds() {
 }
 
 #[cargo_test]
-fn cargo_metadata_rejects_one_artifact_lib_alias_to_same_package() {
+fn cargo_metadata_with_one_artifact_lib_alias_to_same_package() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -2420,20 +2420,215 @@ fn cargo_metadata_rejects_one_artifact_lib_alias_to_same_package() {
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("metadata -Z bindeps")
+    p.cargo("metadata --format-version 1 -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
-[LOCKING] 1 package to highest compatible version
-[ERROR] the crate `foo v0.5.0 ([ROOT]/foo)` depends on crate `bar v0.5.0 ([ROOT]/foo/bar)` multiple times with different names
-
-"#]])
+        .with_stdout_data(
+            str![[r#"
+{
+  "build_directory": "[ROOT]/foo/target",
+  "metadata": null,
+  "packages": [
+    {
+      "authors": [],
+      "categories": [],
+      "default_run": null,
+      "dependencies": [],
+      "description": null,
+      "documentation": null,
+      "edition": "2015",
+      "features": {},
+      "homepage": null,
+      "id": "path+[ROOTURL]/foo/bar#0.5.0",
+      "keywords": [],
+      "license": null,
+      "license_file": null,
+      "links": null,
+      "manifest_path": "[ROOT]/foo/bar/Cargo.toml",
+      "metadata": null,
+      "name": "bar",
+      "publish": null,
+      "readme": null,
+      "repository": null,
+      "rust_version": null,
+      "source": null,
+      "targets": [
+        {
+          "crate_types": [
+            "lib"
+          ],
+          "doc": true,
+          "doctest": true,
+          "edition": "2015",
+          "kind": [
+            "lib"
+          ],
+          "name": "bar",
+          "src_path": "[ROOT]/foo/bar/src/lib.rs",
+          "test": true
+        },
+        {
+          "crate_types": [
+            "bin"
+          ],
+          "doc": true,
+          "doctest": false,
+          "edition": "2015",
+          "kind": [
+            "bin"
+          ],
+          "name": "bar",
+          "src_path": "[ROOT]/foo/bar/src/main.rs",
+          "test": true
+        }
+      ],
+      "version": "0.5.0"
+    },
+    {
+      "authors": [],
+      "categories": [],
+      "default_run": null,
+      "dependencies": [
+        {
+          "artifact": {
+            "kinds": [
+              "bin"
+            ],
+            "lib": false,
+            "target": null
+          },
+          "features": [],
+          "kind": null,
+          "name": "bar",
+          "optional": false,
+          "path": "[ROOT]/foo/bar",
+          "registry": null,
+          "rename": "bar-bin",
+          "req": "*",
+          "source": null,
+          "target": null,
+          "uses_default_features": true
+        },
+        {
+          "artifact": {
+            "kinds": [
+              "bin"
+            ],
+            "lib": true,
+            "target": null
+          },
+          "features": [],
+          "kind": null,
+          "name": "bar",
+          "optional": false,
+          "path": "[ROOT]/foo/bar",
+          "registry": null,
+          "rename": "bar-lib",
+          "req": "*",
+          "source": null,
+          "target": null,
+          "uses_default_features": true
+        }
+      ],
+      "description": null,
+      "documentation": null,
+      "edition": "2015",
+      "features": {},
+      "homepage": null,
+      "id": "path+[ROOTURL]/foo#0.5.0",
+      "keywords": [],
+      "license": null,
+      "license_file": null,
+      "links": null,
+      "manifest_path": "[ROOT]/foo/Cargo.toml",
+      "metadata": null,
+      "name": "foo",
+      "publish": null,
+      "readme": null,
+      "repository": null,
+      "rust_version": null,
+      "source": null,
+      "targets": [
+        {
+          "crate_types": [
+            "lib"
+          ],
+          "doc": true,
+          "doctest": true,
+          "edition": "2015",
+          "kind": [
+            "lib"
+          ],
+          "name": "foo",
+          "src_path": "[ROOT]/foo/src/lib.rs",
+          "test": true
+        }
+      ],
+      "version": "0.5.0"
+    }
+  ],
+  "resolve": {
+    "nodes": [
+      {
+        "dependencies": [],
+        "deps": [],
+        "features": [],
+        "id": "path+[ROOTURL]/foo/bar#0.5.0"
+      },
+      {
+        "dependencies": [
+          "path+[ROOTURL]/foo/bar#0.5.0"
+        ],
+        "deps": [
+          {
+            "dep_kinds": [
+              {
+                "artifact": "bin",
+                "bin_name": "bar",
+                "extern_name": "bar_bin",
+                "kind": null,
+                "target": null
+              },
+              {
+                "extern_name": "bar_lib",
+                "kind": null,
+                "target": null
+              },
+              {
+                "artifact": "bin",
+                "bin_name": "bar",
+                "extern_name": "bar_lib",
+                "kind": null,
+                "target": null
+              }
+            ],
+            "name": "bar_lib",
+            "pkg": "path+[ROOTURL]/foo/bar#0.5.0"
+          }
+        ],
+        "features": [],
+        "id": "path+[ROOTURL]/foo#0.5.0"
+      }
+    ],
+    "root": "path+[ROOTURL]/foo#0.5.0"
+  },
+  "target_directory": "[ROOT]/foo/target",
+  "version": 1,
+  "workspace_default_members": [
+    "path+[ROOTURL]/foo#0.5.0"
+  ],
+  "workspace_members": [
+    "path+[ROOTURL]/foo#0.5.0"
+  ],
+  "workspace_root": "[ROOT]/foo"
+}
+"#]]
+            .is_json(),
+        )
         .run();
 }
 
 #[cargo_test]
-fn cargo_metadata_rejects_multiple_bin_only_artifact_aliases_to_lib_package() {
+fn cargo_metadata_with_multiple_bin_only_artifact_aliases_to_lib_package() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -2466,20 +2661,210 @@ fn cargo_metadata_rejects_multiple_bin_only_artifact_aliases_to_lib_package() {
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("metadata -Z bindeps")
+    p.cargo("metadata --format-version 1 -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
-[LOCKING] 1 package to highest compatible version
-[ERROR] the crate `foo v0.5.0 ([ROOT]/foo)` depends on crate `bar v0.5.0 ([ROOT]/foo/bar)` multiple times with different names
-
-"#]])
+        .with_stdout_data(
+            str![[r#"
+{
+  "build_directory": "[ROOT]/foo/target",
+  "metadata": null,
+  "packages": [
+    {
+      "authors": [],
+      "categories": [],
+      "default_run": null,
+      "dependencies": [],
+      "description": null,
+      "documentation": null,
+      "edition": "2015",
+      "features": {},
+      "homepage": null,
+      "id": "path+[ROOTURL]/foo/bar#0.5.0",
+      "keywords": [],
+      "license": null,
+      "license_file": null,
+      "links": null,
+      "manifest_path": "[ROOT]/foo/bar/Cargo.toml",
+      "metadata": null,
+      "name": "bar",
+      "publish": null,
+      "readme": null,
+      "repository": null,
+      "rust_version": null,
+      "source": null,
+      "targets": [
+        {
+          "crate_types": [
+            "lib"
+          ],
+          "doc": true,
+          "doctest": true,
+          "edition": "2015",
+          "kind": [
+            "lib"
+          ],
+          "name": "bar",
+          "src_path": "[ROOT]/foo/bar/src/lib.rs",
+          "test": true
+        },
+        {
+          "crate_types": [
+            "bin"
+          ],
+          "doc": true,
+          "doctest": false,
+          "edition": "2015",
+          "kind": [
+            "bin"
+          ],
+          "name": "bar",
+          "src_path": "[ROOT]/foo/bar/src/main.rs",
+          "test": true
+        }
+      ],
+      "version": "0.5.0"
+    },
+    {
+      "authors": [],
+      "categories": [],
+      "default_run": null,
+      "dependencies": [
+        {
+          "artifact": {
+            "kinds": [
+              "bin"
+            ],
+            "lib": false,
+            "target": null
+          },
+          "features": [],
+          "kind": null,
+          "name": "bar",
+          "optional": false,
+          "path": "[ROOT]/foo/bar",
+          "registry": null,
+          "rename": "bar-a",
+          "req": "*",
+          "source": null,
+          "target": null,
+          "uses_default_features": true
+        },
+        {
+          "artifact": {
+            "kinds": [
+              "bin"
+            ],
+            "lib": false,
+            "target": null
+          },
+          "features": [],
+          "kind": null,
+          "name": "bar",
+          "optional": false,
+          "path": "[ROOT]/foo/bar",
+          "registry": null,
+          "rename": "bar-b",
+          "req": "*",
+          "source": null,
+          "target": null,
+          "uses_default_features": true
+        }
+      ],
+      "description": null,
+      "documentation": null,
+      "edition": "2015",
+      "features": {},
+      "homepage": null,
+      "id": "path+[ROOTURL]/foo#0.5.0",
+      "keywords": [],
+      "license": null,
+      "license_file": null,
+      "links": null,
+      "manifest_path": "[ROOT]/foo/Cargo.toml",
+      "metadata": null,
+      "name": "foo",
+      "publish": null,
+      "readme": null,
+      "repository": null,
+      "rust_version": null,
+      "source": null,
+      "targets": [
+        {
+          "crate_types": [
+            "lib"
+          ],
+          "doc": true,
+          "doctest": true,
+          "edition": "2015",
+          "kind": [
+            "lib"
+          ],
+          "name": "foo",
+          "src_path": "[ROOT]/foo/src/lib.rs",
+          "test": true
+        }
+      ],
+      "version": "0.5.0"
+    }
+  ],
+  "resolve": {
+    "nodes": [
+      {
+        "dependencies": [],
+        "deps": [],
+        "features": [],
+        "id": "path+[ROOTURL]/foo/bar#0.5.0"
+      },
+      {
+        "dependencies": [
+          "path+[ROOTURL]/foo/bar#0.5.0"
+        ],
+        "deps": [
+          {
+            "dep_kinds": [
+              {
+                "artifact": "bin",
+                "bin_name": "bar",
+                "extern_name": "bar_a",
+                "kind": null,
+                "target": null
+              },
+              {
+                "artifact": "bin",
+                "bin_name": "bar",
+                "extern_name": "bar_b",
+                "kind": null,
+                "target": null
+              }
+            ],
+            "name": "",
+            "pkg": "path+[ROOTURL]/foo/bar#0.5.0"
+          }
+        ],
+        "features": [],
+        "id": "path+[ROOTURL]/foo#0.5.0"
+      }
+    ],
+    "root": "path+[ROOTURL]/foo#0.5.0"
+  },
+  "target_directory": "[ROOT]/foo/target",
+  "version": 1,
+  "workspace_default_members": [
+    "path+[ROOTURL]/foo#0.5.0"
+  ],
+  "workspace_members": [
+    "path+[ROOTURL]/foo#0.5.0"
+  ],
+  "workspace_root": "[ROOT]/foo"
+}
+"#]]
+            .is_json(),
+        )
         .run();
 }
 
 #[cargo_test]
-fn cargo_metadata_rejects_mixed_artifact_and_no_artifact_dep_to_same_package() {
+fn cargo_metadata_allows_mixed_artifact_and_no_artifact_dep_to_same_package() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -2512,15 +2897,195 @@ fn cargo_metadata_rejects_mixed_artifact_and_no_artifact_dep_to_same_package() {
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("metadata -Z bindeps")
+    p.cargo("metadata --format-version 1 -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
-[LOCKING] 1 package to highest compatible version
-[ERROR] the crate `foo v0.5.0 ([ROOT]/foo)` depends on crate `bar v0.5.0 ([ROOT]/foo/bar)` multiple times with different names
-
-"#]])
+        .with_stdout_data(
+            str![[r#"
+{
+  "build_directory": "[ROOT]/foo/target",
+  "metadata": null,
+  "packages": [
+    {
+      "authors": [],
+      "categories": [],
+      "default_run": null,
+      "dependencies": [],
+      "description": null,
+      "documentation": null,
+      "edition": "2015",
+      "features": {},
+      "homepage": null,
+      "id": "path+[ROOTURL]/foo/bar#0.5.0",
+      "keywords": [],
+      "license": null,
+      "license_file": null,
+      "links": null,
+      "manifest_path": "[ROOT]/foo/bar/Cargo.toml",
+      "metadata": null,
+      "name": "bar",
+      "publish": null,
+      "readme": null,
+      "repository": null,
+      "rust_version": null,
+      "source": null,
+      "targets": [
+        {
+          "crate_types": [
+            "lib"
+          ],
+          "doc": true,
+          "doctest": true,
+          "edition": "2015",
+          "kind": [
+            "lib"
+          ],
+          "name": "bar",
+          "src_path": "[ROOT]/foo/bar/src/lib.rs",
+          "test": true
+        },
+        {
+          "crate_types": [
+            "bin"
+          ],
+          "doc": true,
+          "doctest": false,
+          "edition": "2015",
+          "kind": [
+            "bin"
+          ],
+          "name": "bar",
+          "src_path": "[ROOT]/foo/bar/src/main.rs",
+          "test": true
+        }
+      ],
+      "version": "0.5.0"
+    },
+    {
+      "authors": [],
+      "categories": [],
+      "default_run": null,
+      "dependencies": [
+        {
+          "artifact": {
+            "kinds": [
+              "bin"
+            ],
+            "lib": false,
+            "target": null
+          },
+          "features": [],
+          "kind": null,
+          "name": "bar",
+          "optional": false,
+          "path": "[ROOT]/foo/bar",
+          "registry": null,
+          "rename": null,
+          "req": "*",
+          "source": null,
+          "target": null,
+          "uses_default_features": true
+        },
+        {
+          "features": [],
+          "kind": null,
+          "name": "bar",
+          "optional": false,
+          "path": "[ROOT]/foo/bar",
+          "registry": null,
+          "rename": "bar_stable",
+          "req": "*",
+          "source": null,
+          "target": null,
+          "uses_default_features": true
+        }
+      ],
+      "description": null,
+      "documentation": null,
+      "edition": "2015",
+      "features": {},
+      "homepage": null,
+      "id": "path+[ROOTURL]/foo#0.5.0",
+      "keywords": [],
+      "license": null,
+      "license_file": null,
+      "links": null,
+      "manifest_path": "[ROOT]/foo/Cargo.toml",
+      "metadata": null,
+      "name": "foo",
+      "publish": null,
+      "readme": null,
+      "repository": null,
+      "rust_version": null,
+      "source": null,
+      "targets": [
+        {
+          "crate_types": [
+            "lib"
+          ],
+          "doc": true,
+          "doctest": true,
+          "edition": "2015",
+          "kind": [
+            "lib"
+          ],
+          "name": "foo",
+          "src_path": "[ROOT]/foo/src/lib.rs",
+          "test": true
+        }
+      ],
+      "version": "0.5.0"
+    }
+  ],
+  "resolve": {
+    "nodes": [
+      {
+        "dependencies": [],
+        "deps": [],
+        "features": [],
+        "id": "path+[ROOTURL]/foo/bar#0.5.0"
+      },
+      {
+        "dependencies": [
+          "path+[ROOTURL]/foo/bar#0.5.0"
+        ],
+        "deps": [
+          {
+            "dep_kinds": [
+              {
+                "kind": null,
+                "target": null
+              },
+              {
+                "artifact": "bin",
+                "bin_name": "bar",
+                "extern_name": "bar",
+                "kind": null,
+                "target": null
+              }
+            ],
+            "name": "bar_stable",
+            "pkg": "path+[ROOTURL]/foo/bar#0.5.0"
+          }
+        ],
+        "features": [],
+        "id": "path+[ROOTURL]/foo#0.5.0"
+      }
+    ],
+    "root": "path+[ROOTURL]/foo#0.5.0"
+  },
+  "target_directory": "[ROOT]/foo/target",
+  "version": 1,
+  "workspace_default_members": [
+    "path+[ROOTURL]/foo#0.5.0"
+  ],
+  "workspace_members": [
+    "path+[ROOTURL]/foo#0.5.0"
+  ],
+  "workspace_root": "[ROOT]/foo"
+}
+"#]]
+            .is_json(),
+        )
         .run();
 }
 
@@ -2689,6 +3254,7 @@ fn cargo_metadata_allows_mixed_artifact_and_no_artifact_dep_to_bin_only_package(
               {
                 "artifact": "bin",
                 "bin_name": "bar",
+                "extern_name": "bar",
                 "kind": null,
                 "target": null
               }

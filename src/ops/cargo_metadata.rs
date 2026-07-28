@@ -246,14 +246,21 @@ fn build_resolve_graph_r(
 
             let targets = package_map[&dep_id].targets();
 
-            // Try to get the extern name for lib, or crate name for bins.
-            let extern_name = |target| {
-                resolve
-                    .extern_crate_name_and_dep_name(pkg_id, dep_id, target)
-                    .map(|(ext_crate_name, _)| ext_crate_name)
-            };
-
             let lib_target = targets.iter().find(|t| t.is_lib());
+            let lib_dep_name = lib_target
+                .filter(|_| deps.iter().any(|dep| dep.maybe_lib()))
+                .map(|target| resolve.lib_dependency_name(pkg_id, dep_id, target))
+                .transpose()?
+                .map(|(name, _)| name);
+            // Preserve the package-edge name when artifact-only declarations agree.
+            let package_dep_name = lib_dep_name.or_else(|| {
+                let target = lib_target?;
+                let mut names = deps
+                    .iter()
+                    .map(|dep| Resolve::artifact_dependency_name(dep, target));
+                let name = names.next()?.0;
+                names.all(|candidate| candidate.0 == name).then_some(name)
+            });
 
             for dep in deps.iter() {
                 if let Some(target) = lib_target {
@@ -269,7 +276,7 @@ fn build_resolve_graph_r(
                     // if the user is not using -Zbindeps.
                     // Remove this condition ` after -Zbindeps gets stabilized.
                     let extern_name = if dep.artifact().is_some() {
-                        Some(extern_name(target)?)
+                        Some(Resolve::artifact_dependency_name(dep, target).0)
                     } else {
                         None
                     };
@@ -308,7 +315,7 @@ fn build_resolve_graph_r(
                     dep_kinds.push(DepKindInfo {
                         kind: dep.kind(),
                         target: dep.platform().cloned(),
-                        extern_name: extern_name(target).ok(),
+                        extern_name: Some(Resolve::artifact_dependency_name(dep, target).0),
                         artifact: Some(kind.crate_type()),
                         compile_target,
                         bin_name: target.is_bin().then(|| target.name().to_string()),
@@ -320,15 +327,24 @@ fn build_resolve_graph_r(
 
             let pkg_id = normalize_id(dep_id);
 
-            let dep = match (lib_target, dep_kinds.len()) {
-                (Some(target), _) => Dep {
-                    name: extern_name(target)?,
+            let dep = match (lib_target, dep_kinds.len(), package_dep_name) {
+                (Some(_), _, Some(name)) => Dep {
+                    name,
                     pkg: pkg_id.to_spec(),
                     pkg_id,
                     dep_kinds,
                 },
+                (Some(_), 1.., None) => Dep {
+                    name: "".into(),
+                    pkg: pkg_id.to_spec(),
+                    pkg_id,
+                    dep_kinds,
+                },
+                // All active artifact deps emit at least one dep_kind or error while
+                // matching targets, but keep this arm explicit for exhaustiveness.
+                (Some(_), 0, None) => continue,
                 // No lib target exists but contains artifact deps.
-                (None, 1..) => Dep {
+                (None, 1.., _) => Dep {
                     name: "".into(),
                     pkg: pkg_id.to_spec(),
                     pkg_id,
@@ -336,7 +352,7 @@ fn build_resolve_graph_r(
                 },
                 // No lib or artifact dep exists.
                 // Usually this mean parent depending on non-lib bin crate.
-                (None, _) => continue,
+                (None, _, _) => continue,
             };
 
             dep_metadatas.push(dep)
