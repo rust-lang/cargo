@@ -1,7 +1,9 @@
 use crate::context;
 use crate::sources::registry::CRATES_IO_HTTP_INDEX;
 use crate::sources::source::Source;
-use crate::sources::{CRATES_IO_DOMAIN, CRATES_IO_INDEX, CRATES_IO_REGISTRY, DirectorySource};
+use crate::sources::{
+    BuiltinSource, CRATES_IO_DOMAIN, CRATES_IO_INDEX, CRATES_IO_REGISTRY, DirectorySource,
+};
 use crate::sources::{GitSource, PathSource, RegistrySource};
 use crate::util::data_structures::HashSet;
 use crate::util::interning::InternedString;
@@ -416,7 +418,14 @@ impl SourceId {
                 }
                 Ok(Box::new(PathSource::new(&path, self, gctx)))
             }
-            SourceKind::Builtin => todo!("builtin source"),
+            SourceKind::Builtin => {
+                let path = self
+                    .inner
+                    .url
+                    .to_file_path()
+                    .expect("builtin sources cannot be remote");
+                Ok(Box::new(BuiltinSource::new(&path, self, gctx)))
+            }
             SourceKind::Registry | SourceKind::SparseRegistry => {
                 Ok(Box::new(RegistrySource::remote(self, gctx)?))
             }
