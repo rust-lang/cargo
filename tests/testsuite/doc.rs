@@ -3301,7 +3301,7 @@ fn mergeable_info_with_rustdocflags() {
 [RUNNING] `rustdoc [..]--crate-name foo [..]-o [ROOT]/foo/target/doc [..]-Zunstable-options --write-doc-meta-dir=[ROOT]/foo/target/debug/build/foo-[HASH]/out [..]--markdown-playground-url=example.com --crate-version 0.5.0`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [MERGING] 1 doc for host
-[RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --read-doc-meta-dir=[ROOT]/foo/target/debug/build/foo-[HASH]/out`
+[RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --markdown-playground-url=example.com --read-doc-meta-dir=[ROOT]/foo/target/debug/build/foo-[HASH]/out`
 [FINISHED] documentation merge in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
