@@ -412,6 +412,26 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         to: PackageId,
         to_target: &Target,
     ) -> CargoResult<(InternedString, Option<InternedString>)> {
+        self.dependency_name_matching(from, to, to_target, |_| true)
+    }
+
+    /// Returns the library name after ignoring artifact-only declarations.
+    pub(crate) fn lib_dependency_name(
+        &self,
+        from: PackageId,
+        to: PackageId,
+        to_target: &Target,
+    ) -> CargoResult<(InternedString, Option<InternedString>)> {
+        self.dependency_name_matching(from, to, to_target, Dependency::maybe_lib)
+    }
+
+    fn dependency_name_matching(
+        &self,
+        from: PackageId,
+        to: PackageId,
+        to_target: &Target,
+        include: impl Fn(&Dependency) -> bool,
+    ) -> CargoResult<(InternedString, Option<InternedString>)> {
         let empty_set: HashSet<Dependency> = HashSet::default();
         let deps = if from == to {
             &empty_set
@@ -422,7 +442,8 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         let target_crate_name = || (to_target.crate_name().into(), None);
         let mut name_pairs = deps
             .iter()
-            .map(|d| Self::dep_extern_crate_name_and_dep_name(d, to_target));
+            .filter(|dep| include(dep))
+            .map(|dep| Self::dep_extern_crate_name_and_dep_name(dep, to_target));
         let (extern_crate_name, dep_name) = name_pairs.next().unwrap_or_else(target_crate_name);
         for (n, _) in name_pairs {
             anyhow::ensure!(
@@ -433,6 +454,14 @@ unable to verify that `{0}` is the same as when the lockfile was generated
             );
         }
         Ok((extern_crate_name, dep_name))
+    }
+
+    /// Returns the artifact name contributed by one dependency declaration.
+    pub(crate) fn artifact_dependency_name(
+        dep: &Dependency,
+        to_target: &Target,
+    ) -> (InternedString, Option<InternedString>) {
+        Self::dep_extern_crate_name_and_dep_name(dep, to_target)
     }
 
     fn dep_extern_crate_name_and_dep_name(

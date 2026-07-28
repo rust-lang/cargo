@@ -239,7 +239,7 @@ fn simple() {
 }
 
 #[cargo_test]
-fn unit_graph_rejects_artifact_alias_edges_to_same_package() {
+fn artifact_alias_edges() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -262,11 +262,105 @@ fn unit_graph_rejects_artifact_alias_edges_to_same_package() {
 
     p.cargo("build --unit-graph -Zunstable-options -Z bindeps")
         .masquerade_as_nightly_cargo(&["unit-graph", "bindeps"])
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[LOCKING] 1 package to highest compatible version
-[ERROR] the crate `foo v0.1.0 ([ROOT]/foo)` depends on crate `bar v0.5.0 ([ROOT]/foo/bar)` multiple times with different names
-
-"#]])
+        .with_stdout_data(
+            str![[r#"
+{
+  "roots": [
+    1
+  ],
+  "units": [
+    {
+      "dependencies": [],
+      "features": [],
+      "mode": "build",
+      "pkg_id": "path+[ROOTURL]/foo/bar#0.5.0",
+      "platform": null,
+      "profile": {
+        "codegen_backend": null,
+        "codegen_units": null,
+        "debug_assertions": true,
+        "debuginfo": 2,
+        "incremental": false,
+        "lto": "false",
+        "name": "dev",
+        "opt_level": "0",
+        "overflow_checks": true,
+        "panic": "unwind",
+        "rpath": false,
+        "split_debuginfo": "{...}",
+        "strip": "{...}"
+      },
+      "target": {
+        "crate_types": [
+          "bin"
+        ],
+        "doc": true,
+        "doctest": false,
+        "edition": "2015",
+        "kind": [
+          "bin"
+        ],
+        "name": "bar",
+        "src_path": "[ROOT]/foo/bar/src/main.rs",
+        "test": true
+      }
+    },
+    {
+      "dependencies": [
+        {
+          "extern_crate_name": "bar",
+          "index": 0,
+          "noprelude": false,
+          "nounused": false,
+          "public": false
+        },
+        {
+          "extern_crate_name": "bar_alt",
+          "index": 0,
+          "noprelude": false,
+          "nounused": false,
+          "public": false
+        }
+      ],
+      "features": [],
+      "mode": "build",
+      "pkg_id": "path+[ROOTURL]/foo#0.1.0",
+      "platform": null,
+      "profile": {
+        "codegen_backend": null,
+        "codegen_units": null,
+        "debug_assertions": true,
+        "debuginfo": 2,
+        "incremental": false,
+        "lto": "false",
+        "name": "dev",
+        "opt_level": "0",
+        "overflow_checks": true,
+        "panic": "unwind",
+        "rpath": false,
+        "split_debuginfo": "{...}",
+        "strip": "{...}"
+      },
+      "target": {
+        "crate_types": [
+          "lib"
+        ],
+        "doc": true,
+        "doctest": true,
+        "edition": "2015",
+        "kind": [
+          "lib"
+        ],
+        "name": "foo",
+        "src_path": "[ROOT]/foo/src/lib.rs",
+        "test": true
+      }
+    }
+  ],
+  "version": 1
+}
+"#]]
+            .is_json(),
+        )
         .run();
 }
