@@ -1441,10 +1441,10 @@ fn build_script_empty() {
     p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
-thread 'main'[..]panicked at src/workspace/parser/targets.rs:[..]
-called `Option::unwrap()` on a `None` value
-[NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+Caused by:
+  invalid `package.build` file name
 
 "#]])
         .run();

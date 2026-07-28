@@ -112,7 +112,7 @@ pub(super) fn to_targets(
                 script_path
                     .file_stem()
                     .and_then(|s| s.to_str())
-                    .unwrap_or("")
+                    .expect("previously normalized")
             );
             targets.push(Target::custom_build_target(
                 &name,
@@ -906,7 +906,10 @@ fn validate_unique_names(targets: &[TomlTarget], target_kind: &str) -> CargoResu
 fn validate_unique_build_scripts(scripts: &[String]) -> CargoResult<()> {
     let mut seen = HashMap::default();
     for script in scripts {
-        let stem = Path::new(script).file_stem().unwrap().to_str().unwrap();
+        let stem = Path::new(script)
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .expect("previously normalized");
         seen.entry(stem)
             .or_insert_with(Vec::new)
             .push(script.as_str());
@@ -1109,6 +1112,7 @@ pub fn normalize_build(
         // Explicitly no build script.
         Some(TomlPackageBuild::Auto(false)) => Ok(build.cloned()),
         Some(TomlPackageBuild::SingleScript(build_file)) => {
+            validate_build_name(build_file)?;
             let build_file = paths::normalize_path(Path::new(build_file));
             let build = build_file.into_os_string().into_string().expect(
                 "`build_file` started as a String and `normalize_path` shouldn't have changed that",
@@ -1118,8 +1122,20 @@ pub fn normalize_build(
         Some(TomlPackageBuild::Auto(true)) => {
             Ok(Some(TomlPackageBuild::SingleScript(BUILD_RS.to_owned())))
         }
-        Some(TomlPackageBuild::MultipleScript(_scripts)) => Ok(build.cloned()),
+        Some(TomlPackageBuild::MultipleScript(scripts)) => {
+            for script in scripts {
+                validate_build_name(script)?;
+            }
+            Ok(build.cloned())
+        }
     }
+}
+
+fn validate_build_name(build: &str) -> CargoResult<()> {
+    if Path::new(build).file_stem().is_none() {
+        anyhow::bail!("invalid `package.build` file name");
+    }
+    Ok(())
 }
 
 fn name_or_panic(target: &TomlTarget) -> &str {
