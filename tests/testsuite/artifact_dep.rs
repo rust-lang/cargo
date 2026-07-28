@@ -196,7 +196,7 @@ Caused by:
 }
 
 #[cargo_test]
-fn disallow_artifact_and_no_artifact_dep_to_same_package_within_the_same_dep_category() {
+fn allow_artifact_and_no_artifact_dep_to_same_package_within_the_same_dep_category() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -243,12 +243,14 @@ fn disallow_artifact_and_no_artifact_dep_to_same_package_within_the_same_dep_cat
         .file("bar/src/lib.rs", "pub fn f() {}")
         .file("bar/src/main.rs", "fn main() {}")
         .build();
+
     p.cargo("check -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_status(101)
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to highest compatible version
-[ERROR] the crate `foo v0.0.0 ([ROOT]/foo)` depends on crate `bar v0.5.0 ([ROOT]/foo/bar)` multiple times with different names
+[COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1025,7 +1027,7 @@ fn allow_artifact_and_no_artifact_dep_to_same_package_within_different_dep_categ
 }
 
 #[cargo_test]
-fn artifact_only_alias_and_ordinary_alias_across_dependency_kinds_rejected() {
+fn artifact_only_alias_and_ordinary_alias_across_dependency_kinds_allowed() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -1057,12 +1059,6 @@ fn artifact_only_alias_and_ordinary_alias_across_dependency_kinds_rejected() {
 
     p.cargo("check -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[LOCKING] 1 package to highest compatible version
-[ERROR] the crate `foo v0.0.0 ([ROOT]/foo)` depends on crate `bar v0.5.0 ([ROOT]/foo/bar)` multiple times with different names
-
-"#]])
         .run();
 }
 
@@ -1250,7 +1246,7 @@ fn build_script_deps_adopt_specified_target_unconditionally() {
 }
 
 #[cargo_test]
-fn build_script_deps_adopt_do_not_allow_multiple_targets_under_different_name_and_same_version() {
+fn build_script_deps_allow_multiple_targets_under_different_names() {
     if cross_compile_disabled() {
         return;
     }
@@ -1299,17 +1295,26 @@ fn build_script_deps_adopt_do_not_allow_multiple_targets_under_different_name_an
 
     p.cargo("check -v -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_status(101)
-        .with_stderr_data(str![[r#"
+        .with_stderr_data(
+            str![[r#"
 [LOCKING] 1 package to highest compatible version
-[ERROR] the crate `foo v0.0.0 ([ROOT]/foo)` depends on crate `bar v0.5.0 ([ROOT]/foo/bar)` multiple times with different names
+[COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
+[COMPILING] foo v0.0.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name build_script_build [..]`
+[RUNNING] `rustc --crate-name bar [..]--out-dir [ROOT]/foo/target/[ALT_TARGET]/debug/deps/artifact/bar-[HASH]/bin --target [ALT_TARGET] [..]`
+[RUNNING] `rustc --crate-name bar [..]--out-dir [ROOT]/foo/target/debug/deps/artifact/bar-[HASH]/bin [..]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-"#]])
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
 #[cargo_test]
-fn non_build_deps_do_not_allow_multiple_targets_under_different_names() {
+fn non_build_deps_allow_multiple_targets_under_different_names() {
     if cross_compile_disabled() {
         return;
     }
@@ -1347,19 +1352,26 @@ fn non_build_deps_do_not_allow_multiple_targets_under_different_names() {
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("check -Z bindeps")
+    p.cargo("check -v -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_status(101)
-        .with_stderr_data(str![[r#"
+        .with_stderr_data(
+            str![[r#"
 [LOCKING] 1 package to highest compatible version
-[ERROR] the crate `foo v0.0.0 ([ROOT]/foo)` depends on crate `bar v0.5.0 ([ROOT]/foo/bar)` multiple times with different names
+[COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
+[RUNNING] `rustc --crate-name bar [..]--out-dir [ROOT]/foo/target/debug/deps/artifact/bar-[HASH]/bin [..]`
+[RUNNING] `rustc --crate-name bar [..]--out-dir [ROOT]/foo/target/[ALT_TARGET]/debug/deps/artifact/bar-[HASH]/bin --target [ALT_TARGET] [..]`
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-"#]])
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
 #[cargo_test]
-fn build_script_deps_do_not_allow_same_target_under_different_names() {
+fn build_script_deps_allow_same_target_under_different_names() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -1395,17 +1407,21 @@ fn build_script_deps_do_not_allow_same_target_under_different_names() {
 
     p.cargo("check -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_status(101)
-        .with_stderr_data(str![[r#"
+        .with_stderr_data(
+            str![[r#"
 [LOCKING] 1 package to highest compatible version
-[ERROR] the crate `foo v0.0.0 ([ROOT]/foo)` depends on crate `bar v0.5.0 ([ROOT]/foo/bar)` multiple times with different names
+[COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
+[COMPILING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-"#]])
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
 #[cargo_test]
-fn build_script_deps_do_not_allow_staticlib_aliases() {
+fn build_script_deps_allow_staticlib_aliases() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -1453,17 +1469,11 @@ fn build_script_deps_do_not_allow_staticlib_aliases() {
 
     p.cargo("check -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[LOCKING] 1 package to highest compatible version
-[ERROR] the crate `foo v0.0.0 ([ROOT]/foo)` depends on crate `bar v0.5.0 ([ROOT]/foo/bar)` multiple times with different names
-
-"#]])
         .run();
 }
 
 #[cargo_test]
-fn artifact_output_only_dep_cannot_coexist_with_one_artifact_lib_dep() {
+fn artifact_output_only_dep_can_coexist_with_one_artifact_lib_dep() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -1516,12 +1526,6 @@ fn artifact_output_only_dep_cannot_coexist_with_one_artifact_lib_dep() {
 
     p.cargo("check -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[LOCKING] 1 package to highest compatible version
-[ERROR] the crate `foo v0.0.0 ([ROOT]/foo)` depends on crate `bar v0.5.0 ([ROOT]/foo/bar)` multiple times with different names
-
-"#]])
         .run();
 }
 
@@ -1721,10 +1725,11 @@ fn multiple_artifact_aliases_no_op_rebuild() {
 
     p.cargo("check -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_status(101)
+        .run();
+    p.cargo("check -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to highest compatible version
-[ERROR] the crate `foo v0.0.0 ([ROOT]/foo)` depends on crate `bar v0.5.0 ([ROOT]/foo/bar)` multiple times with different names
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
