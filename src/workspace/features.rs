@@ -839,8 +839,10 @@ macro_rules! unstable_cli_options {
                 };
 
                 // Defaults to enabled on nightly unless explicitly opted out.
-                unstable.build_dir_new_layout =
-                    matches!(crate::version().release_channel.as_deref(), Some("nightly" | "dev"));
+                if !is_new_build_dir_layout_opt_out() {
+                    unstable.build_dir_new_layout =
+                        matches!(crate::version().release_channel.as_deref(), Some("nightly" | "dev"));
+                }
 
                 return unstable;
             }
@@ -1284,12 +1286,6 @@ impl CliUnstable {
 
         if self.gitoxide.is_none() && cargo_use_gitoxide_instead_of_git2() {
             self.gitoxide = GitoxideFeatures::safe().into();
-        }
-
-        // NOTE: We set this before `implicitly_enable_features_if_needed` as `-Zfine-grain-locking`
-        //       must use the new layout so that takes priority.
-        if is_new_build_dir_layout_opt_out() {
-            self.build_dir_new_layout = false;
         }
 
         self.implicitly_enable_features_if_needed();
