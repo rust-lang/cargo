@@ -40,7 +40,16 @@ fn main() -> anyhow::Result<()> {
     writeln!(buf, "# Lints\n")?;
     writeln!(
         buf,
-        "Note: [Cargo's linting system is unstable](unstable.md#lintscargo) and can only be used on nightly toolchains"
+        "> [!NOTE]
+> This chapter is about lints emitted by `cargo` itself.
+>
+> See [the lints section in the Manifest Format
+> chapter](manifest.md#the-lints-section) to configure lint levels for tools
+> such as `rustc` or `clippy`.
+
+> [!WARNING]
+> [Cargo's linting system is unstable](unstable.md#lintscargo) and can only be used on nightly
+> toolchains."
     )?;
     writeln!(buf)?;
 
