@@ -5,6 +5,7 @@ use std::collections::BTreeSet;
 use std::ffi::{OsStr, OsString};
 use std::path::Path;
 use std::path::PathBuf;
+use std::rc::Rc;
 
 use cargo_platform::CfgExpr;
 use cargo_util::{ProcessBuilder, paths};
@@ -117,6 +118,9 @@ pub struct Compilation<'gctx> {
     /// See `-Zrustdoc-mergeable-info` for more.
     pub rustdoc_fingerprints: Option<HashMap<CompileKind, RustdocFingerprint>>,
 
+    /// Extra flags to pass to rustdoc for each host or target.
+    pub rustdocflags: HashMap<CompileKind, Rc<[String]>>,
+
     /// The target host triple.
     pub host: String,
 
@@ -145,6 +149,12 @@ impl<'gctx> Compilation<'gctx> {
         let primary_rustc_process = bcx.build_config.primary_unit_rustc.clone();
         let rustc_workspace_wrapper_process = bcx.rustc().workspace_process();
         let host = bcx.host_triple().to_string();
+        let sysroot_target_libdir = get_sysroot_target_libdir(bcx)?;
+        let rustdocflags = bcx
+            .all_kinds
+            .iter()
+            .map(|&kind| (kind, bcx.target_data.info(kind).rustdocflags.clone()))
+            .collect();
 
         // When `target-applies-to-host=false`, and without `--target`,
         // there will be only `CompileKind::Host` in requested_kinds.
@@ -183,7 +193,7 @@ impl<'gctx> Compilation<'gctx> {
             native_dirs: BTreeSet::new(),
             root_output: HashMap::default(),
             deps_output: HashMap::default(),
-            sysroot_target_libdir: get_sysroot_target_libdir(bcx)?,
+            sysroot_target_libdir,
             tests: Vec::new(),
             binaries: Vec::new(),
             cdylibs: Vec::new(),
@@ -191,6 +201,7 @@ impl<'gctx> Compilation<'gctx> {
             extra_env: HashMap::default(),
             to_doc_test: Vec::new(),
             rustdoc_fingerprints: None,
+            rustdocflags,
             gctx: bcx.gctx,
             host,
             rustc_process,
