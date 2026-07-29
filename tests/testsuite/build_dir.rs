@@ -1430,9 +1430,9 @@ fn new_layout_opt_out_nightly() {
         )
         .build();
 
-    p.cargo("-Zbuild-dir-new-layout build")
+    p.cargo("build")
         .env("__CARGO_TEMPORARY_BUILD_DIR_NEW_LAYOUT_OPT_OUT", "1")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
+        .masquerade_as_nightly_cargo(&["new build-dir layout enabled by default on nightly"])
         .enable_mac_dsym()
         .run();
 
