@@ -258,6 +258,26 @@ whether or not [`rpath`] is enabled.
 [`-C rpath` flag]: ../../rustc/codegen-options/index.html#rpath
 [`rpath`]: https://en.wikipedia.org/wiki/Rpath
 
+### frame-pointers
+
+The `frame-pointers` setting controls the [`-C force-frame-pointers` flag]
+which controls whether frame pointers are forced in generated code. Frame
+pointers are useful for profiling as they enable reliable stack unwinding.
+
+```toml
+[profile.release]
+frame-pointers = "force-on"
+```
+
+The valid options are:
+- `"force-on"`: Force frame pointers to be enabled.
+- `"force-off"`: Don't force frame pointers (the compiler may still emit them based on target defaults).
+- `"default"`: Use the compiler's target-specific default.
+
+When not specified, the compiler's target-specific default is used.
+
+[`-C force-frame-pointers` flag]: ../../rustc/codegen-options/index.html#force-frame-pointers
+
 ## Default profiles
 
 ### dev
