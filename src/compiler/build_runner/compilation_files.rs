@@ -735,7 +735,7 @@ fn compute_metadata(
         // SourceId for stdlib crates is an absolute path inside the sysroot.
         // Pass the sysroot as workspace root so that we hash a relative path.
         // This avoids the metadata hash changing depending on where the user installed rustc.
-        &bcx.target_data.get_info(unit.kind).unwrap().sysroot
+        &bcx.get_sysroot()
     } else {
         bcx.ws.root()
     };
