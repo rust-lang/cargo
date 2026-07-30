@@ -266,11 +266,11 @@ pointers are useful for profiling as they enable reliable stack unwinding.
 
 ```toml
 [profile.release]
-frame-pointers = "force-on"
+frame-pointers = "on"
 ```
 
 The valid options are:
-- `"force-on"`: Force frame pointers to be enabled.
+- `"on"`: Force frame pointers to be enabled.
 - `"default"`: Use the compiler's target-specific default.
 
 When not specified, the compiler's target-specific default is used.

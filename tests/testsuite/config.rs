@@ -1677,7 +1677,7 @@ fn all_profile_options() {
         rustflags: None,
         trim_paths: None,
         hint_mostly_unused: None,
-        frame_pointers: Some("force-on".to_string()),
+        frame_pointers: Some("on".to_string()),
     };
     let mut overrides = BTreeMap::new();
     let key = cargo_toml::ProfilePackageSpec::Spec(PackageIdSpec::parse("foo").unwrap());

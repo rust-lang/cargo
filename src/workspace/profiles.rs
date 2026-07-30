@@ -589,7 +589,7 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
     }
     if let Some(ref frame_pointers) = toml.frame_pointers {
         profile.frame_pointers = match frame_pointers.as_str() {
-            "force-on" => Some(FramePointers::ForceOn),
+            "on" => Some(FramePointers::On),
             "default" => None,
             // This should be validated in TomlProfile::validate
             _ => panic!("invalid frame-pointers value `{}`", frame_pointers),
@@ -1001,13 +1001,13 @@ impl Ord for Strip {
 )]
 #[serde(rename_all = "kebab-case")]
 pub enum FramePointers {
-    ForceOn,
+    On,
 }
 
 impl fmt::Display for FramePointers {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
-            FramePointers::ForceOn => "force-on",
+            FramePointers::On => "on",
         }
         .fmt(f)
     }

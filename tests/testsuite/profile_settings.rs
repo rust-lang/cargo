@@ -959,7 +959,7 @@ fn profile_hint_mostly_unused_nightly() {
 }
 
 #[cargo_test]
-fn frame_pointers_force_on() {
+fn frame_pointers_on() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -970,7 +970,7 @@ fn frame_pointers_force_on() {
                 edition = "2015"
 
                 [profile.release]
-                frame-pointers = "force-on"
+                frame-pointers = "on"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -1018,7 +1018,7 @@ fn frame_pointers_default_overrides_parent() {
                 edition = "2015"
 
                 [profile.release]
-                frame-pointers = "force-on"
+                frame-pointers = "on"
 
                 [profile.myprofile]
                 inherits = "release"
@@ -1057,7 +1057,7 @@ fn frame_pointers_invalid_value() {
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
-  `frame-pointers` setting of `invalid` is not a valid setting, must be `"force-on"` or `"default"`.
+  `frame-pointers` setting of `invalid` is not a valid setting, must be `"on"` or `"default"`.
 
 "#]])
         .run();
