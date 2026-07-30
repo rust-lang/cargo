@@ -987,34 +987,6 @@ fn frame_pointers_force_on() {
 }
 
 #[cargo_test]
-fn frame_pointers_force_off() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.1.0"
-                edition = "2015"
-
-                [profile.release]
-                frame-pointers = "force-off"
-            "#,
-        )
-        .file("src/main.rs", "fn main() {}")
-        .build();
-
-    p.cargo("build --release -v")
-        .with_stderr_data(str![[r#"
-[COMPILING] foo v0.1.0 ([ROOT]/foo)
-[RUNNING] `rustc [..] -C force-frame-pointers=off [..]`
-[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-
-"#]])
-        .run();
-}
-
-#[cargo_test]
 fn frame_pointers_unspecified() {
     let p = project()
         .file(
@@ -1085,7 +1057,7 @@ fn frame_pointers_invalid_value() {
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
-  `frame-pointers` setting of `invalid` is not a valid setting, must be `"force-on"`, `"force-off"`, or `"default"`.
+  `frame-pointers` setting of `invalid` is not a valid setting, must be `"force-on"` or `"default"`.
 
 "#]])
         .run();

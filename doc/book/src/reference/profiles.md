@@ -271,7 +271,6 @@ frame-pointers = "force-on"
 
 The valid options are:
 - `"force-on"`: Force frame pointers to be enabled.
-- `"force-off"`: Don't force frame pointers (the compiler may still emit them based on target defaults).
 - `"default"`: Use the compiler's target-specific default.
 
 When not specified, the compiler's target-specific default is used.

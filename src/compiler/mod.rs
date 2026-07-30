@@ -1497,7 +1497,6 @@ fn build_base_args(
     if let Some(frame_pointers) = frame_pointers {
         let val = match frame_pointers {
             FramePointers::ForceOn => "on",
-            FramePointers::ForceOff => "off",
         };
         cmd.arg("-C").arg(format!("force-frame-pointers={}", val));
     }
