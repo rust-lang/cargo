@@ -53,8 +53,6 @@ pub struct TargetInfo {
     pub supports_std: Option<bool>,
     /// Supported values for `-Csplit-debuginfo=` flag, queried from rustc
     support_split_debuginfo: Vec<String>,
-    /// Path to the sysroot.
-    pub sysroot: PathBuf,
     /// Path to the "lib" directory in the sysroot which rustc uses for linking
     /// target libraries.
     pub sysroot_target_libdir: PathBuf,
@@ -352,7 +350,6 @@ impl TargetInfo {
             return Ok(TargetInfo {
                 crate_type_process,
                 crate_types: RefCell::new(map),
-                sysroot,
                 sysroot_target_libdir,
                 rustflags: rustflags.into(),
                 rustdocflags: extra_args(
