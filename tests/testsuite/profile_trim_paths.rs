@@ -227,7 +227,7 @@ fn registry_dependency() {
     p.cargo("run --verbose -Ztrim-paths")
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
         .with_stdout_data(str![[r#"
--[..]/bar-0.0.1/src/lib.rs
+/cargo/registry/[..]/bar-0.0.1/src/lib.rs
 
 "#]]) // Omit the hash of Source URL
         .with_stderr_data(str![[r#"
@@ -236,7 +236,7 @@ fn registry_dependency() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
 [COMPILING] bar v0.0.1
-[RUNNING] `rustc [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/home/.cargo/registry/src= --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `rustc [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/home/.cargo/registry/src/[..]=/cargo/registry/[..] --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -306,9 +306,9 @@ fn registry_dependency_with_build_script_codegen() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
 [COMPILING] bar v0.0.1
-[RUNNING] `rustc --crate-name build_script_build [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/home/.cargo/registry/src= --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `rustc --crate-name build_script_build [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/home/.cargo/registry/src/[..]=/cargo/registry/[..] --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [RUNNING] `[ROOT]/foo/target/debug/build/bar-[HASH]/build-script-build`
-[RUNNING] `rustc --crate-name bar [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/home/.cargo/registry/src= --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
+[RUNNING] `rustc --crate-name bar [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/home/.cargo/registry/src/[..]=/cargo/registry/[..] --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -351,14 +351,14 @@ fn git_dependency() {
     p.cargo("run --verbose -Ztrim-paths")
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
         .with_stdout_data(str![[r#"
-bar-[..]/[..]/src/lib.rs
+/cargo/git/[..]/src/lib.rs
 
 "#]]) // Omit the hash of Source URL and commit
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `[ROOTURL]/bar`
 [LOCKING] 1 package to latest compatible version
 [COMPILING] bar v0.0.1 ([ROOTURL]/bar#[..])
-[RUNNING] `rustc [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/home/.cargo/git/checkouts= --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `rustc [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/home/.cargo/git/checkouts/bar-[..]=/cargo/git/[..] --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -443,13 +443,13 @@ fn path_dependency_outside_workspace() {
     p.cargo("run --verbose -Ztrim-paths")
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
         .with_stdout_data(str![[r#"
-bar-0.0.1/src/lib.rs
+/cargo/path/bar-0.0.1/src/lib.rs
 
 "#]])
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to latest compatible version
 [COMPILING] bar v0.0.1 ([ROOT]/bar)
-[RUNNING] `rustc [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/bar=bar-0.0.1 --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `rustc [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/bar=/cargo/path/bar-0.0.1 --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -521,8 +521,8 @@ fn vendored_dependencies() {
             str![[r#"
 [COMPILING] bar v0.0.1
 [COMPILING] baz v0.0.1 ([ROOTURL]/baz#[..])
-[RUNNING] `rustc --crate-name bar [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/home/.cargo/registry/src= --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
-[RUNNING] `rustc --crate-name baz [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/home/.cargo/git/checkouts= --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `rustc --crate-name bar [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `rustc --crate-name baz [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -532,8 +532,8 @@ fn vendored_dependencies() {
             .unordered(),
         )
         .with_stdout_data(str![[r#"
-[ROOT]/foo/vendor/bar/src/lib.rs
-[ROOT]/foo/vendor/baz/src/lib.rs
+./vendor/bar/src/lib.rs
+./vendor/baz/src/lib.rs
 
 "#]])
         .run();
@@ -602,8 +602,8 @@ fn vendored_dependencies_outside_workspace() {
             str![[r#"
 [COMPILING] bar v0.0.1
 [COMPILING] baz v0.0.1 ([ROOTURL]/baz#[..])
-[RUNNING] `rustc --crate-name bar [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/home/.cargo/registry/src= --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
-[RUNNING] `rustc --crate-name baz [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/home/.cargo/git/checkouts= --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `rustc --crate-name bar [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/shared-vendor/bar=/cargo/path/bar-0.0.1 --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `rustc --crate-name baz [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/shared-vendor/baz=/cargo/path/baz-0.0.1 --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -613,8 +613,8 @@ fn vendored_dependencies_outside_workspace() {
             .unordered(),
         )
         .with_stdout_data(str![[r#"
-[ROOT]/shared-vendor/bar/src/lib.rs
-[ROOT]/shared-vendor/baz/src/lib.rs
+/cargo/path/bar-0.0.1/src/lib.rs
+/cargo/path/baz-0.0.1/src/lib.rs
 
 "#]])
         .run();
@@ -714,7 +714,7 @@ fn diagnostics_works() {
         )
         .with_stderr_data(str![[r#"
 ...
-[RUNNING] `[..] rustc [..]--remap-path-scope=diagnostics --remap-path-prefix=[ROOT]/home/.cargo/registry/src= --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `[..] rustc [..]--remap-path-scope=diagnostics --remap-path-prefix=[ROOT]/home/.cargo/registry/src/[..]=/cargo/registry/[..] --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [WARNING] unused variable: `unused`
 ...
 [RUNNING] `[..] rustc [..]--remap-path-scope=diagnostics --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
@@ -889,7 +889,7 @@ fn object_works_helper(split_debuginfo: &str, run: impl Fn(&std::path::Path) -> 
 [COMPILING] bar v0.0.1
 [RUNNING] `rustc [..]-C split-debuginfo={split_debuginfo} [..]\
     --remap-path-scope=object \
-    --remap-path-prefix=[ROOT]/home/.cargo/registry/src= \
+    --remap-path-prefix=[ROOT]/home/.cargo/registry/src/[..]=/cargo/registry/[..] \
     --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..]-C split-debuginfo={split_debuginfo} [..]\
@@ -1310,10 +1310,10 @@ fn rustdoc_diagnostics_works() {
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
         .with_stderr_data(str![[r#"
 ...
-[RUNNING] `[..]rustc [..]--remap-path-scope=diagnostics --remap-path-prefix=[ROOT]/home/.cargo/registry/src= --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `[..]rustc [..]--remap-path-scope=diagnostics --remap-path-prefix=[ROOT]/home/.cargo/registry/src/[..]=/cargo/registry/[..] --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 ...
 [WARNING] unopened HTML tag `script`
- --> -[..]/bar-0.0.1/src/lib.rs:2:17
+ --> /cargo/registry/[HASH]/bar-0.0.1/src/lib.rs:2:17
 ...
 "#]])
         .run();
