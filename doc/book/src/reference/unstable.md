@@ -1585,6 +1585,44 @@ Paths to all other source files will not be affected.
 
 This will not affect any hard-coded paths in the source code, such as in strings.
 
+##### Unremap files
+
+When the `object` scope is active and debuginfo is enabled,
+Cargo writes an unremap file beside each final artifact.
+The file is aimed at helping debuggers substitute sanitized paths back to local ones,
+e.g., via GDB's `set substitute-path` or LLDB's `target.source-map`.
+
+The unremap file name ends with `.trim-paths.jsonl`.
+For example,
+your `my-app` executable would come with an unremap file named
+`my-app.trim-paths.jsonl` beside it.
+
+The unremap file is in JSONL format:
+
+* The first record carries the format version.
+* The second record is file-level metadata,
+  such as the toolchain version and the workspace root.
+* Each following record maps a sanitized path prefix in the artifact
+  (`from`) back to the local path it replaced (`to`),
+  ordered by the `from` prefix.
+  Note that this follows the debugger substitution direction,
+  which is the inverse of `--remap-path-prefix`.
+
+An example of the unremap file:
+
+```json
+{"v":1}
+{"rust_version":"1.96.0-nightly","workspace_root":"/home/me/app"}
+{"from":"/cargo/build-dir","to":"/home/me/app/target"}
+{"from":"/cargo/registry/6f17d22d3f0a95d1","to":"/home/me/.cargo/registry/src/index.crates.io-6f17d22d3f0a95d1"}
+{"from":"/rustc/abc123","to":"/home/me/.rustup/toolchains/nightly/lib/rustlib/src/rust"}
+```
+
+Since it is meant to be a debugging aid,
+it includes absolute paths of your system,
+so there is no artifact privacy guarantee.
+You might want to exclude `*.trim-paths.jsonl` files when distributing artifacts.
+
 #### Environment variable
 
 *as a new entry of ["Environment variables Cargo sets for build scripts"](./environment-variables.md#environment-variables-cargo-sets-for-crates)*
