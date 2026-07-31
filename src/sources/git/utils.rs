@@ -34,18 +34,6 @@ use std::time::{Duration, Instant};
 /// checkout is ready to go. See [`GitCheckout::reset`] for why we need this.
 const CHECKOUT_READY_LOCK: &str = ".cargo-ok";
 
-/// A short abbreviated OID.
-///
-/// Exists for avoiding extra allocations in [`GitDatabase::to_short_id`].
-pub struct GitShortID(git2::Buf);
-
-impl GitShortID {
-    /// Views the short ID as a `str`.
-    pub fn as_str(&self) -> &str {
-        self.0.as_str().unwrap()
-    }
-}
-
 /// A remote repository. It gets cloned into a local [`GitDatabase`].
 #[derive(PartialEq, Clone, Debug)]
 pub struct GitRemote {
@@ -205,10 +193,26 @@ impl GitDatabase {
         Ok(checkout)
     }
 
-    /// Get a short OID for a `revision`, usually 7 chars or more if ambiguous.
-    pub fn to_short_id(&self, revision: git2::Oid) -> CargoResult<GitShortID> {
-        let obj = self.repo.find_object(revision, None)?;
-        Ok(GitShortID(obj.short_id()?))
+    /// Get a short OID for a `revision`, 7 chars or more if ambiguous.
+    ///
+    /// Like [`git2::Object::short_id`]
+    /// but ignores the user's `core.abbrev` git config.
+    pub fn to_short_id(&self, rev: git2::Oid) -> CargoResult<String> {
+        const MIN_ABBREV_LEN: usize = 7; // this is git/libgit2's default
+        let odb = self.repo.odb()?;
+        let mut len = MIN_ABBREV_LEN;
+        let mut hex = rev.to_string();
+        // quasi- re-implementation of
+        // https://github.com/libgit2/libgit2/blob/26055f5af74ab/src/libgit2/object.c#L523-L573
+        while len < hex.len() {
+            match odb.exists_prefix(rev, len) {
+                Ok(_) => break,
+                Err(err) if err.code() == git2::ErrorCode::Ambiguous => len += 1,
+                Err(err) => return Err(err.into()),
+            }
+        }
+        hex.truncate(len);
+        Ok(hex)
     }
 
     /// Checks if the database contains the object of this `oid`..
