@@ -21,6 +21,7 @@ pub fn cli() -> Command {
                 .value_name("ARGS")
                 .help("Arguments for the binary or example to run")
                 .value_parser(value_parser!(OsString))
+                .value_hint(clap::ValueHint::AnyPath)
                 .num_args(0..)
                 .trailing_var_arg(true),
         )
