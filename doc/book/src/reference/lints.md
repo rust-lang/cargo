@@ -38,10 +38,10 @@ These lints are all set to the 'allow' level by default.
 
 These lints are all set to the 'warn' level by default.
 - [`blanket_hint_mostly_unused`](#blanket_hint_mostly_unused)
+- [`manual_readme`](#manual_readme)
 - [`missing_lints_inheritance`](#missing_lints_inheritance)
 - [`non_kebab_case_bins`](#non_kebab_case_bins)
 - [`redundant_homepage`](#redundant_homepage)
-- [`redundant_readme`](#redundant_readme)
 - [`unknown_lints`](#unknown_lints)
 - [`unused_dependencies`](#unused_dependencies)
 - [`unused_workspace_dependencies`](#unused_workspace_dependencies)
@@ -82,6 +82,43 @@ Should instead be:
 ```toml
 [profile.dev.package.huge-mostly-unused-dependency]
 hint-mostly-unused = true
+```
+
+
+## `manual_readme`
+
+- Group: `style`
+- Level: `warn`
+- Minimal [`package.rust-version`]: `1.79.0`
+
+
+### What it does
+
+Checks for `package.readme` fields that can be inferred.
+
+See also [`package.readme` reference documentation](manifest.md#the-readme-field).
+
+### Why is this bad?
+
+Adds boilerplate.
+
+### Drawbacks
+
+It might not be obvious if they named their file correctly.
+
+### Example
+
+```toml
+[package]
+name = "foo"
+readme = "README.md"
+```
+
+Should be written as:
+
+```toml
+[package]
+name = "foo"
 ```
 
 
@@ -330,43 +367,6 @@ Should be written as:
 [package]
 name = "foo"
 repository = "https://github.com/rust-lang/cargo/"
-```
-
-
-## `redundant_readme`
-
-- Group: `style`
-- Level: `warn`
-- Minimal [`package.rust-version`]: `1.79.0`
-
-
-### What it does
-
-Checks for `package.readme` fields that can be inferred.
-
-See also [`package.readme` reference documentation](manifest.md#the-readme-field).
-
-### Why is this bad?
-
-Adds boilerplate.
-
-### Drawbacks
-
-It might not be obvious if they named their file correctly.
-
-### Example
-
-```toml
-[package]
-name = "foo"
-readme = "README.md"
-```
-
-Should be written as:
-
-```toml
-[package]
-name = "foo"
 ```
 
 
