@@ -460,6 +460,64 @@ bar-0.0.1/src/lib.rs
 }
 
 #[cargo_test]
+fn local_package_with_build_script_codegen() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+
+                [profile.dev]
+                trim-paths = "object"
+           "#,
+        )
+        .file(
+            "build.rs",
+            r#"
+            fn main() {
+                let out_dir = std::env::var("OUT_DIR").unwrap();
+                let dest = std::path::PathBuf::from(out_dir);
+                std::fs::write(
+                    dest.join("bindings.rs"),
+                    "pub fn my_file() -> &'static str { file!() }",
+                )
+                .unwrap();
+            }
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+            include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+            fn main() { println!("{}", my_file()); }
+            "#,
+        )
+        .build();
+
+    // The build-dir rule is passed last
+    // so paths should be remapped to `/cargo/build-dir`
+    p.cargo("run --verbose -Ztrim-paths")
+        .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
+        .with_stdout_data(str![[r#"
+/cargo/build-dir/debug/build/foo-[HASH]/out/bindings.rs
+
+"#]])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name build_script_build [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `rustc --crate-name foo [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo[EXE]`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn diagnostics_works() {
     Package::new("bar", "0.0.1")
         .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
