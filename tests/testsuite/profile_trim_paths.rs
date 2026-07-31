@@ -460,6 +460,167 @@ bar-0.0.1/src/lib.rs
 }
 
 #[cargo_test]
+fn vendored_dependencies() {
+    Package::new("bar", "0.0.1")
+        .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("src/lib.rs", r#"pub fn f() { println!("{}", file!()); }"#)
+        .publish();
+    let git_project = git::new("baz", |project| {
+        project
+            .file("Cargo.toml", &basic_manifest("baz", "0.0.1"))
+            .file("src/lib.rs", r#"pub fn f() { println!("{}", file!()); }"#)
+    });
+    let url = git_project.url();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+
+                [dependencies]
+                bar = "0.0.1"
+                baz = {{ git = "{url}" }}
+
+                [profile.dev]
+                trim-paths = "object"
+           "#
+            ),
+        )
+        .file("src/main.rs", "fn main() { bar::f(); baz::f(); }")
+        .build();
+
+    p.cargo("vendor --respect-source-config -Ztrim-paths")
+        .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
+        .run();
+    p.change_file(
+        ".cargo/config.toml",
+        &format!(
+            r#"
+            [source."git+{url}"]
+            git = "{url}"
+            replace-with = "vendored-sources"
+
+            [source.crates-io]
+            replace-with = "vendored-sources"
+
+            [source.vendored-sources]
+            directory = "vendor"
+            "#
+        ),
+    );
+
+    // Vendored deps within the workspace are remapped as local packages
+    p.cargo("run --verbose -Ztrim-paths")
+        .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
+        .with_stderr_data(
+            str![[r#"
+[COMPILING] bar v0.0.1
+[COMPILING] baz v0.0.1 ([ROOTURL]/baz#[..])
+[RUNNING] `rustc --crate-name bar [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/home/.cargo/registry/src= --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `rustc --crate-name baz [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/home/.cargo/git/checkouts= --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo[EXE]`
+
+"#]]
+            .unordered(),
+        )
+        .with_stdout_data(str![[r#"
+[ROOT]/foo/vendor/bar/src/lib.rs
+[ROOT]/foo/vendor/baz/src/lib.rs
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn vendored_dependencies_outside_workspace() {
+    Package::new("bar", "0.0.1")
+        .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("src/lib.rs", r#"pub fn f() { println!("{}", file!()); }"#)
+        .publish();
+    let git_project = git::new("baz", |project| {
+        project
+            .file("Cargo.toml", &basic_manifest("baz", "0.0.1"))
+            .file("src/lib.rs", r#"pub fn f() { println!("{}", file!()); }"#)
+    });
+    let url = git_project.url();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+
+                [dependencies]
+                bar = "0.0.1"
+                baz = {{ git = "{url}" }}
+
+                [profile.dev]
+                trim-paths = "object"
+           "#
+            ),
+        )
+        .file("src/main.rs", "fn main() { bar::f(); baz::f(); }")
+        .build();
+
+    p.cargo("vendor --respect-source-config -Ztrim-paths ../shared-vendor")
+        .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
+        .run();
+    p.change_file(
+        ".cargo/config.toml",
+        &format!(
+            r#"
+            [source."git+{url}"]
+            git = "{url}"
+            replace-with = "vendored-sources"
+
+            [source.crates-io]
+            replace-with = "vendored-sources"
+
+            [source.vendored-sources]
+            directory = '{}'
+            "#,
+            paths::root().join("shared-vendor").display()
+        ),
+    );
+
+    // Vendored deps outside the workspace are remapped as path dependencies
+    p.cargo("run --verbose -Ztrim-paths")
+        .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
+        .with_stderr_data(
+            str![[r#"
+[COMPILING] bar v0.0.1
+[COMPILING] baz v0.0.1 ([ROOTURL]/baz#[..])
+[RUNNING] `rustc --crate-name bar [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/home/.cargo/registry/src= --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `rustc --crate-name baz [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/home/.cargo/git/checkouts= --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo[EXE]`
+
+"#]]
+            .unordered(),
+        )
+        .with_stdout_data(str![[r#"
+[ROOT]/shared-vendor/bar/src/lib.rs
+[ROOT]/shared-vendor/baz/src/lib.rs
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn local_package_with_build_script_codegen() {
     let p = project()
         .file(
