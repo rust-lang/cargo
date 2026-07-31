@@ -709,8 +709,9 @@ fn test_inherits_dev() {
 [EXECUTABLE] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
 
 "#]])
-        .with_stdout_does_not_contain("[..] -C debuginfo=0[..]")
-        .with_stdout_does_not_contain("[..] -C opt-level=0[..]")
+        .with_stderr_does_not_contain("[..] -C debuginfo=0[..]")
+        .with_stderr_does_not_contain("[..] -C opt-level=0[..]")
+        .with_stderr_contains("[..] -C opt-level=3[..]")
         .run();
 }
 
