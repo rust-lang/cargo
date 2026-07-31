@@ -156,7 +156,7 @@ pub fn output_depinfo(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> Ca
     for output in build_runner.outputs(unit)?.iter().filter(|o| {
         !matches!(
             o.flavor,
-            FileFlavor::DebugInfo | FileFlavor::Auxiliary | FileFlavor::Sbom
+            FileFlavor::DebugInfo | FileFlavor::Auxiliary | FileFlavor::Sbom | FileFlavor::Unremap
         )
     }) {
         if let Some(ref link_dst) = output.hardlink {

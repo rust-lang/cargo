@@ -48,7 +48,7 @@ mod output_sbom;
 pub mod rustdoc;
 pub mod standard_lib;
 pub mod timings;
-mod trim_paths;
+pub(crate) mod trim_paths;
 mod unit;
 pub mod unit_dependencies;
 pub mod unit_graph;
@@ -342,6 +342,15 @@ fn rustc(
     let sbom_files = build_runner.sbom_output_files(unit)?;
     let sbom = build_sbom(build_runner, unit)?;
 
+    let unremap_files = build_runner.unremap_output_files(unit)?;
+    let unremap_content = if unremap_files.is_empty() {
+        None
+    } else {
+        let mut buf = Vec::new();
+        trim_paths::write_unremap_file(&mut buf, build_runner, unit)?;
+        Some(buf)
+    };
+
     let hide_diagnostics_for_scrape_unit = build_runner.bcx.unit_can_fail_for_docscraping(unit)
         && !matches!(
             build_runner.bcx.gctx.shell().verbosity(),
@@ -428,6 +437,13 @@ fn rustc(
             tracing::debug!("writing sbom to {}", file.display());
             let outfile = BufWriter::new(paths::create(&file)?);
             serde_json::to_writer(outfile, &sbom)?;
+        }
+
+        if let Some(content) = &unremap_content {
+            for file in &unremap_files {
+                tracing::debug!("writing unremap file to {}", file.display());
+                paths::write_atomic(file, content)?;
+            }
         }
 
         let result = exec
