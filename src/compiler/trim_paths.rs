@@ -4,6 +4,7 @@
 
 use std::ffi::OsString;
 use std::path::Path;
+use std::path::PathBuf;
 
 use cargo_util::ProcessBuilder;
 use cargo_util_schemas::manifest::TomlTrimPaths;
@@ -83,78 +84,74 @@ pub(crate) fn trim_paths_args(
 /// [RFC 3127]: https://rust-lang.github.io/rfcs/3127-trim-paths.html
 pub(crate) fn trim_paths_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> [OsString; 3] {
     [
-        package_remap(build_runner, unit),
-        build_dir_remap(build_runner),
-        sysroot_remap(build_runner),
+        join_remap(package_remap(build_runner, unit)),
+        join_remap(build_dir_remap(build_runner)),
+        join_remap(sysroot_remap(build_runner)),
     ]
+}
+
+fn join_remap((from, to): (PathBuf, String)) -> OsString {
+    let mut remap = OsString::with_capacity(from.as_os_str().len() + 1 + to.len());
+    remap.push(from);
+    remap.push("=");
+    remap.push(to);
+    remap
 }
 
 /// Path prefix remap rules for sysroot.
 ///
 /// This remap logic aligns with rustc:
 /// <https://github.com/rust-lang/rust/blob/c2ef3516/src/bootstrap/src/lib.rs#L1113-L1116>
-fn sysroot_remap(build_runner: &BuildRunner<'_, '_>) -> OsString {
-    let mut remap = OsString::new();
-    remap.push({
-        build_runner
-            .bcx
-            .get_sysroot()
-            .join("lib")
-            .join("rustlib")
-            .join("src")
-            .join("rust")
-    });
-    remap.push("=");
-    remap.push("/rustc/");
-    if let Some(commit_hash) = build_runner.bcx.rustc().commit_hash.as_ref() {
-        remap.push(commit_hash);
-    } else {
-        remap.push(build_runner.bcx.rustc().version.to_string());
-    }
-    remap
+fn sysroot_remap(build_runner: &BuildRunner<'_, '_>) -> (PathBuf, String) {
+    // See also `detect_sysroot_src_path()`.
+    let sysroot = build_runner
+        .bcx
+        .get_sysroot()
+        .join("lib")
+        .join("rustlib")
+        .join("src")
+        .join("rust");
+
+    let rustc = build_runner.bcx.rustc();
+    let to = match rustc.commit_hash.as_ref() {
+        Some(commit_hash) => format!("/rustc/{commit_hash}"),
+        None => format!("/rustc/{}", rustc.version),
+    };
+    (sysroot, to)
 }
 
 /// Path prefix remap rules for dependencies.
-fn package_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> OsString {
+fn package_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> (PathBuf, String) {
     let pkg_root = unit.pkg.root();
     let ws_root = build_runner.bcx.ws.root();
-    let mut remap = OsString::new();
     let source_id = unit.pkg.package_id().source_id();
 
     if source_id.is_git() {
         if let Some((from, rev)) = git_checkout(build_runner, pkg_root) {
             const GIT_OID_LEN: usize = 7; // This matches MIN_ABBREV_LEN in git source
-            remap.push(from);
-            remap.push("=/cargo/git/");
-            remap.push(hex::short_hash(source_id.canonical_url()));
-            remap.push("/");
-            remap.push(&rev[..rev.len().min(GIT_OID_LEN)]);
-            return remap;
+            let repo = hex::short_hash(source_id.canonical_url());
+            let rev = &rev[..rev.len().min(GIT_OID_LEN)];
+            return (from.to_path_buf(), format!("/cargo/git/{repo}/{rev}"));
         }
     } else if source_id.is_registry() {
         let registry_src = build_runner.bcx.gctx.registry_source_path();
         let registry_src = registry_src.as_path_unlocked();
         let from = pkg_root.parent().unwrap();
         if from.starts_with(registry_src) {
-            remap.push(from);
-            remap.push("=/cargo/registry/");
-            remap.push(hex::short_hash(&source_id));
-            return remap;
+            let registry = hex::short_hash(&source_id);
+            return (from.to_path_buf(), format!("/cargo/registry/{registry}"));
         }
     }
 
     // Handle path local dependencies and abnormal reg/git deps source location.
     if pkg_root.strip_prefix(ws_root).is_ok() {
-        remap.push(ws_root);
-        remap.push("=."); // remap to relative rustc work dir explicitly
+        // remap to relative rustc work dir explicitly
+        (ws_root.to_path_buf(), ".".to_owned())
     } else {
-        remap.push(pkg_root);
-        remap.push("=/cargo/path/");
-        remap.push(unit.pkg.name());
-        remap.push("-");
-        remap.push(unit.pkg.version().to_string());
+        let from = pkg_root.to_path_buf();
+        let to = format!("/cargo/path/{}-{}", unit.pkg.name(), unit.pkg.version());
+        (from, to)
     }
-    remap
 }
 
 /// Finds the checkout root and revision directory name of a git dependency.
@@ -189,10 +186,8 @@ fn git_checkout<'a>(
 ///   [`file!`] macro in-place via the `OUT_DIR` environment.
 /// * On Linux, `DW_AT_GNU_dwo_name` that contains paths to split debuginfo
 ///   files (dwp and dwo).
-fn build_dir_remap(build_runner: &BuildRunner<'_, '_>) -> OsString {
-    let build_dir = build_runner.bcx.ws.build_dir();
-    let mut remap = OsString::new();
-    remap.push(build_dir.as_path_unlocked());
-    remap.push("=/cargo/build-dir");
-    remap
+fn build_dir_remap(build_runner: &BuildRunner<'_, '_>) -> (PathBuf, String) {
+    let from = build_runner.bcx.ws.build_dir().into_path_unlocked();
+    let to = "/cargo/build-dir".to_owned();
+    (from, to)
 }
