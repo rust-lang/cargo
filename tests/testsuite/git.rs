@@ -3163,6 +3163,49 @@ fn templatedir_doesnt_cause_problems() {
     p.cargo("check").run();
 }
 
+#[cargo_test]
+fn checkout_name_with_core_abbrev_config() {
+    let git_project = git::new("dep1", |project| {
+        project
+            .file("Cargo.toml", &basic_manifest("dep1", "0.5.0"))
+            .file("src/lib.rs", "")
+    });
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+                    edition = "2015"
+
+                    [dependencies]
+                    dep1 = {{ git = "{}" }}
+                "#,
+                git_project.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    fs::write(paths::home().join(".gitconfig"), "[core]\n\tabbrev = 4\n").unwrap();
+
+    p.cargo("fetch").run();
+
+    let mut co_paths = t!(glob::glob(
+        paths::home()
+            .join(".cargo/git/checkouts/dep1-*/*")
+            .to_str()
+            .unwrap()
+    ));
+    let co_path = co_paths.next().unwrap().unwrap();
+    let rev = co_path.file_name().unwrap().to_str().unwrap();
+    // The checkout directory name follows the user's `core.abbrev`.
+    assert_eq!(rev.len(), 4);
+}
+
 #[cargo_test(requires = "git")]
 fn git_with_cli_force() {
     // Supports a force-pushed repo.
