@@ -244,6 +244,10 @@ fn registry_dependency() {
 
 "#]])
         .run();
+
+    assert_eq!(p.glob("target/**/*.trim-paths.jsonl").count(), 0);
+    let unremap_file = unremap_file_path(&p.bin("foo"));
+    assert!(!unremap_file.exists());
 }
 
 #[cargo_test]
@@ -316,6 +320,10 @@ fn registry_dependency_with_build_script_codegen() {
 
 "#]])
         .run();
+
+    assert_eq!(p.glob("target/**/*.trim-paths.jsonl").count(), 0);
+    let unremap_file = unremap_file_path(&p.bin("foo"));
+    assert!(!unremap_file.exists());
 }
 
 #[cargo_test]
@@ -366,6 +374,10 @@ fn git_dependency() {
 
 "#]])
         .run();
+
+    assert_eq!(p.glob("target/**/*.trim-paths.jsonl").count(), 0);
+    let unremap_file = unremap_file_path(&p.bin("foo"));
+    assert!(!unremap_file.exists());
 }
 
 #[cargo_test]
@@ -411,6 +423,10 @@ cocktail-bar/src/lib.rs
 
 "#]])
         .run();
+
+    assert_eq!(p.glob("target/**/*.trim-paths.jsonl").count(), 0);
+    let unremap_file = unremap_file_path(&p.bin("foo"));
+    assert!(!unremap_file.exists());
 }
 
 #[cargo_test]
@@ -457,6 +473,10 @@ fn path_dependency_outside_workspace() {
 
 "#]])
         .run();
+
+    assert_eq!(p.glob("target/**/*.trim-paths.jsonl").count(), 0);
+    let unremap_file = unremap_file_path(&p.bin("foo"));
+    assert!(!unremap_file.exists());
 }
 
 #[cargo_test]
@@ -537,6 +557,10 @@ fn vendored_dependencies() {
 
 "#]])
         .run();
+
+    assert_eq!(p.glob("target/**/*.trim-paths.jsonl").count(), 0);
+    let unremap_file = unremap_file_path(&p.bin("foo"));
+    assert!(!unremap_file.exists());
 }
 
 #[cargo_test]
@@ -618,6 +642,10 @@ fn vendored_dependencies_outside_workspace() {
 
 "#]])
         .run();
+
+    assert_eq!(p.glob("target/**/*.trim-paths.jsonl").count(), 0);
+    let unremap_file = unremap_file_path(&p.bin("foo"));
+    assert!(!unremap_file.exists());
 }
 
 #[cargo_test]
@@ -676,6 +704,10 @@ fn local_package_with_build_script_codegen() {
 
 "#]])
         .run();
+
+    assert_eq!(p.glob("target/**/*.trim-paths.jsonl").count(), 0);
+    let unremap_file = unremap_file_path(&p.bin("foo"));
+    assert!(!unremap_file.exists());
 }
 
 #[cargo_test]
@@ -721,6 +753,9 @@ fn diagnostics_works() {
 ...
 "#]])
         .run();
+
+    // Non `object` scope never emits unremap files.
+    assert_eq!(p.glob("target/**/*.trim-paths.jsonl").count(), 0);
 }
 
 #[cfg(target_os = "macos")]
@@ -1331,4 +1366,255 @@ fn command_output(command: &mut std::process::Command, name: &str) -> std::proce
         String::from_utf8_lossy(&output.stderr),
     );
     output
+}
+
+#[cargo_test]
+fn unremap_file_rebuild() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+
+                [profile.dev]
+                trim-paths = "object"
+           "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build -Ztrim-paths")
+        .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
+        .run();
+    assert!(p.bin("foo").is_file());
+    assert!(!unremap_file_path(&p.bin("foo")).exists());
+
+    p.cargo("build --verbose -Ztrim-paths")
+        .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
+        .with_stderr_data(str![[r#"
+[FRESH] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+    assert!(!unremap_file_path(&p.bin("foo")).exists());
+
+    p.cargo("build --verbose -Ztrim-paths")
+        .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
+        .with_stderr_data(str![[r#"
+[FRESH] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+    assert!(!unremap_file_path(&p.bin("foo")).exists());
+}
+
+#[cargo_test]
+fn unremap_file_without_debuginfo() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+
+                [profile.dev]
+                trim-paths = "object"
+                debug = 0
+           "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build -Ztrim-paths")
+        .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
+        .run();
+
+    // No debuginfo. No unremap file.
+    assert!(p.bin("foo").is_file());
+    assert!(!unremap_file_path(&p.bin("foo")).exists());
+}
+
+#[cargo_test]
+fn unremap_file_with_cargo_clean() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+
+                [profile.dev]
+                trim-paths = "object"
+           "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build -Ztrim-paths")
+        .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
+        .run();
+    assert!(!unremap_file_path(&p.bin("foo")).exists());
+    assert_eq!(p.glob("target/**/*.trim-paths.jsonl").count(), 0);
+
+    p.cargo("clean -p foo -Ztrim-paths")
+        .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
+        .run();
+
+    assert!(!unremap_file_path(&p.bin("foo")).exists());
+    assert_eq!(p.glob("target/**/*.trim-paths.jsonl").count(), 0);
+}
+
+// MSVC always emits a PDB when debuginfo is on (which the unremap file requires),
+// It adds a third `filenames` entry in JSON message.
+// Skip to make snapshot's life easier.
+#[cfg(not(target_env = "msvc"))]
+#[cargo_test]
+fn unremap_file_in_json_messages() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+
+                [profile.dev]
+                trim-paths = "object"
+                # Suppress the platform-default dSYM on macOS so that `filenames`
+                # in JSON message is identical on all non-MSVC platforms.
+                split-debuginfo = "off"
+           "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build -Ztrim-paths --message-format=json")
+        .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
+        .with_stdout_data(
+            str![[r#"
+[
+  {
+    "executable": "[ROOT]/foo/target/debug/foo[EXE]",
+    "features": [],
+    "filenames": [
+      "[ROOT]/foo/target/debug/foo[EXE]"
+    ],
+    "fresh": false,
+    "manifest_path": "[ROOT]/foo/Cargo.toml",
+    "package_id": "path+[ROOTURL]/foo#0.0.1",
+    "profile": "{...}",
+    "reason": "compiler-artifact",
+    "target": "{...}"
+  },
+  {
+    "reason": "build-finished",
+    "success": true
+  }
+]
+"#]]
+            .is_json()
+            .against_jsonlines(),
+        )
+        .run();
+}
+
+#[cargo_test]
+fn unremap_file_with_artifact_dir() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+
+                [profile.dev]
+                trim-paths = "object"
+           "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build -Ztrim-paths -Zunstable-options --artifact-dir out")
+        .masquerade_as_nightly_cargo(&["-Ztrim-paths", "unstable-options"])
+        .run();
+
+    let exported = p
+        .root()
+        .join("out")
+        .join(format!("foo{}", std::env::consts::EXE_SUFFIX));
+    assert!(exported.is_file());
+    assert!(!unremap_file_path(&exported).exists());
+}
+
+#[cargo_test]
+fn unremap_file_for_all_bin_types() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+
+                [profile.dev]
+                trim-paths = "object"
+           "#,
+        )
+        .file("src/lib.rs", "#[test] fn t() {}")
+        .file("tests/it.rs", "#[test] fn t() {}")
+        .file("examples/ex.rs", "fn main() {}")
+        .build();
+
+    p.cargo("test --no-run -Ztrim-paths")
+        .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
+        .run();
+
+    assert_eq!(p.glob("target/**/*.trim-paths.jsonl").count(), 0);
+}
+
+#[cargo_test]
+fn unremap_file_with_multiple_crate_types() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+
+                [lib]
+                crate-type = ["cdylib", "staticlib"]
+
+                [profile.dev]
+                trim-paths = "object"
+           "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build -Ztrim-paths")
+        .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
+        .run();
+
+    assert_eq!(p.glob("target/**/*.trim-paths.jsonl").count(), 0);
+}
+
+fn unremap_file_path(artifact: &std::path::Path) -> std::path::PathBuf {
+    let mut path = artifact.as_os_str().to_owned();
+    path.push(".trim-paths.jsonl");
+    path.into()
 }
