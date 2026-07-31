@@ -34,16 +34,6 @@ use std::time::{Duration, Instant};
 /// checkout is ready to go. See [`GitCheckout::reset`] for why we need this.
 const CHECKOUT_READY_LOCK: &str = ".cargo-ok";
 
-/// A short abbreviated OID.
-pub struct GitShortID(String);
-
-impl GitShortID {
-    /// Views the short ID as a `str`.
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
-
 /// A remote repository. It gets cloned into a local [`GitDatabase`].
 #[derive(PartialEq, Clone, Debug)]
 pub struct GitRemote {
@@ -207,7 +197,7 @@ impl GitDatabase {
     ///
     /// Like [`git2::Object::short_id`]
     /// but ignores the user's `core.abbrev` git config.
-    pub fn to_short_id(&self, rev: git2::Oid) -> CargoResult<GitShortID> {
+    pub fn to_short_id(&self, rev: git2::Oid) -> CargoResult<String> {
         const MIN_ABBREV_LEN: usize = 7; // this is git/libgit2's default
         let odb = self.repo.odb()?;
         let mut len = MIN_ABBREV_LEN;
@@ -222,7 +212,7 @@ impl GitDatabase {
             }
         }
         hex.truncate(len);
-        Ok(GitShortID(hex))
+        Ok(hex)
     }
 
     /// Checks if the database contains the object of this `oid`..
