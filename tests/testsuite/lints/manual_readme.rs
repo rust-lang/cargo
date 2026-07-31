@@ -17,7 +17,7 @@ readme = "README.md"
 
 [lints.cargo]
 default = { level = "allow", priority = -1 }
-redundant_readme = "warn"
+manual_readme = "warn"
 "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -33,7 +33,7 @@ redundant_readme = "warn"
 7 | readme = "README.md"
   | ^^^^^^^^^^^^^^^^^^^^
   |
-  = [NOTE] `cargo::redundant_readme` is set to `warn` in `[lints]`
+  = [NOTE] `cargo::manual_readme` is set to `warn` in `[lints]`
 [HELP] consider removing `package.readme`
 [WARNING] `foo` (manifest) generated 1 warning
 
@@ -55,7 +55,7 @@ authors = []
 
 [lints.cargo]
 default = { level = "allow", priority = -1 }
-redundant_readme = "warn"
+manual_readme = "warn"
 "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -83,7 +83,7 @@ readme = "FOO.md"
 
 [lints.cargo]
 default = { level = "allow", priority = -1 }
-redundant_readme = "warn"
+manual_readme = "warn"
 "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -111,7 +111,7 @@ readme = "src/README.md"
 
 [lints.cargo]
 default = { level = "allow", priority = -1 }
-redundant_readme = "warn"
+manual_readme = "warn"
 "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -142,7 +142,7 @@ readme.workspace = true
 
 [lints.cargo]
 default = { level = "allow", priority = -1 }
-redundant_readme = "warn"
+manual_readme = "warn"
 "#,
         )
         .file("src/main.rs", "fn main() {}")

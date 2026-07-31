@@ -1,6 +1,7 @@
 mod blanket_hint_mostly_unused;
 mod deferred_parse_diagnostics;
 mod im_a_teapot;
+mod manual_readme;
 mod missing_lints_features;
 mod missing_lints_inheritance;
 mod non_kebab_case_bins;
@@ -9,7 +10,6 @@ mod non_kebab_case_packages;
 mod non_snake_case_features;
 mod non_snake_case_packages;
 mod redundant_homepage;
-mod redundant_readme;
 mod text_direction_codepoint_in_comment;
 mod text_direction_codepoint_in_literal;
 mod unknown_lints;
@@ -55,6 +55,10 @@ pub const PARSE_PASS_RULES: &[ParsePassRule<'static>] = &[
     },
     // `warn`
     ParsePassRule::LintPackage {
+        rule: manual_readme::lint_package,
+        lint: manual_readme::LINT,
+    },
+    ParsePassRule::LintPackage {
         rule: missing_lints_inheritance::lint_package,
         lint: missing_lints_inheritance::LINT,
     },
@@ -65,10 +69,6 @@ pub const PARSE_PASS_RULES: &[ParsePassRule<'static>] = &[
     ParsePassRule::LintPackage {
         rule: redundant_homepage::lint_package,
         lint: redundant_homepage::LINT,
-    },
-    ParsePassRule::LintPackage {
-        rule: redundant_readme::lint_package,
-        lint: redundant_readme::LINT,
     },
     ParsePassRule::LintPackage {
         rule: unused_dependencies::lint_package,
@@ -100,6 +100,7 @@ pub const PARSE_PASS_RULES: &[ParsePassRule<'static>] = &[
 pub static LINTS: &[&crate::diagnostics::Lint] = &[
     blanket_hint_mostly_unused::LINT,
     im_a_teapot::LINT,
+    manual_readme::LINT,
     missing_lints_inheritance::LINT,
     non_kebab_case_bins::LINT,
     non_kebab_case_features::LINT,
@@ -107,7 +108,6 @@ pub static LINTS: &[&crate::diagnostics::Lint] = &[
     non_snake_case_features::LINT,
     non_snake_case_packages::LINT,
     redundant_homepage::LINT,
-    redundant_readme::LINT,
     text_direction_codepoint_in_comment::LINT,
     text_direction_codepoint_in_literal::LINT,
     unknown_lints::LINT,

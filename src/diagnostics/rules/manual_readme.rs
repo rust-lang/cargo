@@ -24,7 +24,7 @@ use crate::workspace::Workspace;
 use crate::workspace::parser::DEFAULT_README_FILES;
 
 pub static LINT: &Lint = &Lint {
-    name: "redundant_readme",
+    name: "manual_readme",
     desc: "explicit `package.readme` can be inferred",
     primary_group: &STYLE,
     msrv: Some(super::CARGO_LINTS_MSRV),
