@@ -1041,7 +1041,7 @@ fn update_manifest_with_new_member(
 
     write_atomic(
         &root_manifest_path,
-        workspace_document.to_string().to_string().as_bytes(),
+        workspace_document.to_string().as_bytes(),
     )?;
     Ok(true)
 }
