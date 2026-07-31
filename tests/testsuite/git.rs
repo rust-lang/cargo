@@ -3202,8 +3202,8 @@ fn checkout_name_with_core_abbrev_config() {
     ));
     let co_path = co_paths.next().unwrap().unwrap();
     let rev = co_path.file_name().unwrap().to_str().unwrap();
-    // The checkout directory name follows the user's `core.abbrev`.
-    assert_eq!(rev.len(), 4);
+    // The checkout directory name ignores the user's `core.abbrev`.
+    assert_eq!(rev.len(), 7);
 }
 
 #[cargo_test(requires = "git")]
