@@ -908,7 +908,7 @@ fn emit_warnings_of_unused_patches(
         ws.gctx().shell().print_report(&warnings, false)?;
     }
 
-    return Ok(());
+    Ok(())
 }
 
 /// Informs `registry` and `version_pref` that `[patch]` entries are available
