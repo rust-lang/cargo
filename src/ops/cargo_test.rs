@@ -306,7 +306,7 @@ fn display_no_run_information(
             .verbose(|shell| shell.status("Executable", &cmd))?;
     }
 
-    return Ok(());
+    Ok(())
 }
 
 /// Creates a [`ProcessBuilder`] for executing a single test.
