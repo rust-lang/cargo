@@ -1084,6 +1084,9 @@ fn build_dependencies2() {
 
                 [build_dependencies]
                 a = {path = "a"}
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1094,6 +1097,9 @@ fn build_dependencies2() {
                 name = "a"
                 version = "0.0.1"
                 edition = "2015"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("a/src/lib.rs", "")
@@ -1164,6 +1170,9 @@ fn build_dependencies2_conflict() {
                 a = {path = "a"}
                 [build_dependencies]
                 a = {path = "a"}
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1174,6 +1183,9 @@ fn build_dependencies2_conflict() {
                 name = "a"
                 version = "0.0.1"
                 edition = "2015"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("a/src/lib.rs", "")
@@ -1797,6 +1809,9 @@ fn default_features2() {
 
                 [dependencies]
                 a = { path = "a", features = ["f1"], default_features = false }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1812,6 +1827,9 @@ fn default_features2() {
                 [features]
                 default = ["f1"]
                 f1 = []
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("a/src/lib.rs", "")
@@ -1890,6 +1908,9 @@ fn default_features2_conflict() {
 
                 [dependencies]
                 a = { path = "a", features = ["f1"], default-features = false, default_features = false }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1905,6 +1926,9 @@ fn default_features2_conflict() {
                 [features]
                 default = ["f1"]
                 f1 = []
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("a/src/lib.rs", "")
@@ -1946,6 +1970,9 @@ fn workspace_default_features2() {
 
                 [dependencies]
                 dep_workspace_only.workspace = true
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("workspace_only/src/lib.rs", "")
@@ -1957,6 +1984,9 @@ fn workspace_default_features2() {
                 version = "0.1.0"
                 edition = "2015"
                 authors = []
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("dep_workspace_only/src/lib.rs", "")
@@ -1971,6 +2001,9 @@ fn workspace_default_features2() {
 
                 [dependencies]
                 dep_package_only = { workspace = true, default_features = true }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("package_only/src/lib.rs", "")
@@ -1982,6 +2015,9 @@ fn workspace_default_features2() {
                 version = "0.1.0"
                 edition = "2015"
                 authors = []
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("dep_package_only/src/lib.rs", "")
@@ -2987,6 +3023,9 @@ fn warn_semver_metadata() {
 
             [dependencies]
             bar = "1.0.0+1234"
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file("src/lib.rs", "")

@@ -1319,6 +1319,9 @@ fn only_warn_for_relevant_crates() {
 
                 [dependencies]
                 a = { path = 'a' }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1329,6 +1332,9 @@ fn only_warn_for_relevant_crates() {
                 name = "a"
                 version = "0.1.0"
                 edition = "2015"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file(
@@ -1562,6 +1568,9 @@ fn edition_v2_resolver_report() {
 
                 [dev-dependencies]
                 common = { version="1.0", features=["dev-feat"] }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -2668,6 +2677,12 @@ a = {path = "a", default_features = false}
 # After build_dependencies line
 a = {path = "a", default_features = false}
 # After build_dependencies table
+
+[lints.cargo]
+default = "allow"
+
+[workspace.lints.cargo]
+default = "allow"
 "#,
         )
         .file("src/lib.rs", "")
@@ -2684,6 +2699,9 @@ a = {path = "a", default_features = false}
                 name = "a"
                 version = "0.0.1"
                 edition = "2015"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("a/src/lib.rs", "")
@@ -2751,6 +2769,12 @@ a = {path = "a", default-features = false}
 a = {path = "a", default-features = false}
 # After build_dependencies table
 
+[lints.cargo]
+default = "allow"
+
+[workspace.lints.cargo]
+default = "allow"
+
 "#]],
     );
 }
@@ -2769,6 +2793,9 @@ resolver = "2"
 # Before default_features
 a = {path = "a", default_features = false}  # After default_features value
 # After default_features line
+
+[workspace.lints.cargo]
+default = "allow"
 "#,
         )
         .file(
@@ -2777,6 +2804,9 @@ a = {path = "a", default_features = false}  # After default_features value
 [package]
 name = "foo"
 edition = "2021"
+
+[lints.cargo]
+default = "allow"
 "#,
         )
         .file("foo/src/lib.rs", "")
@@ -2787,6 +2817,9 @@ edition = "2021"
                 name = "a"
                 version = "0.0.1"
                 edition = "2015"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("a/src/lib.rs", "")
@@ -2816,6 +2849,9 @@ resolver = "2"
 a = {path = "a", default-features = false}  # After default_features value
 # After default_features line
 
+[workspace.lints.cargo]
+default = "allow"
+
 "#]],
     );
     assert_e2e().eq(
@@ -2825,6 +2861,9 @@ a = {path = "a", default-features = false}  # After default_features value
 [package]
 name = "foo"
 edition = "2021"
+
+[lints.cargo]
+default = "allow"
 
 "#]],
     );
@@ -2856,6 +2895,9 @@ dep_df_false = { workspace = true }
 dep_simple = { workspace = true }
 dep_df_true = { workspace = true }
 dep_df_false = { workspace = true }
+
+[lints.cargo]
+default = "allow"
 "#;
     let pkg_df_true = r#"
 [package]
@@ -2877,6 +2919,9 @@ dep_df_false = { workspace = true, default-features = true }
 dep_simple = { workspace = true, default-features = true }
 dep_df_true = { workspace = true, default-features = true }
 dep_df_false = { workspace = true, default-features = true }
+
+[lints.cargo]
+default = "allow"
 "#;
     let pkg_df_false = r#"
 [package]
@@ -2898,6 +2943,9 @@ dep_df_false = { workspace = true, default-features = false }
 dep_simple = { workspace = true, default-features = false }
 dep_df_true = { workspace = true, default-features = false }
 dep_df_false = { workspace = true, default-features = false }
+
+[lints.cargo]
+default = "allow"
 "#;
     let p = project()
         .file(
@@ -2975,6 +3023,9 @@ dep_df_false = { workspace = true, default-features = false }
 dep_simple = { workspace = true}
 dep_df_true = { workspace = true}
 dep_df_false = { workspace = true, default-features = false }
+
+[lints.cargo]
+default = "allow"
 
 "#]],
     );

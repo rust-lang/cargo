@@ -38,6 +38,9 @@ fn dependency_project() -> Project {
                 version = "1.0.0"
                 edition = "2015"
                 repository = "https://example.com/"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", FUTURE_EXAMPLE)
@@ -53,6 +56,9 @@ fn dependency_project() -> Project {
 
                 [dependencies]
                 bar = "1.0"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -545,6 +551,9 @@ fn suggestions_for_updates() {
                 with_updates = "1"
                 big_update = "1"
                 without_updates = "1"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")

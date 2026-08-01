@@ -537,6 +537,9 @@ fn locked_versions_preserved() {
 
                 [dependencies]
                 bar = "1"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file(

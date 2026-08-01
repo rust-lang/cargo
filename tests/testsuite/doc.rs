@@ -290,6 +290,9 @@ fn doc_multiple_targets_same_name() {
                 [[bin]]
                 name = "foo_lib"
                 path = "src/foo_lib.rs"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("foo/src/foo_lib.rs", "")
@@ -302,6 +305,9 @@ fn doc_multiple_targets_same_name() {
                 edition = "2015"
                 [lib]
                 name = "foo_lib"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("bar/src/lib.rs", "")

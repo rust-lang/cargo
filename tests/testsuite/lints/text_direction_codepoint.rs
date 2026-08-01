@@ -30,8 +30,7 @@ text_direction_codepoint_in_literal = \"allow\"
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("fetch")
         .with_stderr_data(str![[r#"
 [WARNING] unicode codepoint changing visible direction of text present in comment
  --> Cargo.toml:7:51
@@ -86,8 +85,7 @@ text_direction_codepoint_in_literal = \"warn\"
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("fetch")
         .with_stderr_data(str![[r#"
 [WARNING] unicode codepoint changing visible direction of text present in literal
  --> Cargo.toml:7:18
@@ -173,8 +171,7 @@ edition = \"2015\"
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("fetch")
         .with_stderr_data(str![[r#"
 [WARNING] unicode codepoint changing visible direction of text present in comment
   --> Cargo.toml:10:51
@@ -298,8 +295,7 @@ workspace = true
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("fetch")
         .with_stderr_data(str![[r#"
 [WARNING] unicode codepoint changing visible direction of text present in comment
  --> Cargo.toml:6:51

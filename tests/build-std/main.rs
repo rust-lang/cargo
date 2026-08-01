@@ -467,24 +467,16 @@ fn build_std_does_not_warn_about_implicit_std_deps() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    let output = p
-        .cargo("build")
-        .build_std()
-        .target_host()
-        .env("RUSTFLAGS", "-W unused-crate-dependencies")
-        .run();
+    let output = p.cargo("build").build_std().target_host().run();
     let stderr = String::from_utf8(output.stderr).unwrap();
     println!("{stderr}");
     let mut unused_warnings = stderr
         .lines()
-        .filter(|l| l.contains("is unused in crate"))
+        .filter(|l| l.contains("unused dependency"))
         .collect::<Vec<_>>();
     unused_warnings.sort();
     let unused_warnings = unused_warnings.join("\n");
-    assert_data_eq!(
-        unused_warnings,
-        str!["warning: extern crate `bar` is unused in crate `buildstd_test`"]
-    );
+    assert_data_eq!(unused_warnings, str!["warning: unused dependency `bar`"]);
 }
 
 #[cargo_test(build_std_real)]
