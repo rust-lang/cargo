@@ -151,16 +151,11 @@ Trade-offs:
 
 ### Removing unused dependencies
 
-Recommendation: periodically review unused dependencies for removal using:
-```console
-$ cargo +nightly check -Zcargo-lints --workspace --all-targets
-```
-This may have false positives from:
-- when a dependency's use is dynamically controlled by a `build.rs` or `RUSTFLAGS`
+The [`cargo::unused_dependencies`](../reference/lints.md#unused_dependencies) will identify most unused dependencies with few false positives.
 
-Also, periodically review hidden [`cargo::unused_dependencies`] results:
+For everything else, periodically review hidden [`cargo::unused_dependencies`] results:
 ```console
-$ CARGO_LOG=cargo::diagnostics::rules::unused_dependencies=debug cargo +nightly check -Zcargo-lints --workspace --all-targets
+$ CARGO_LOG=cargo::diagnostics::rules::unused_dependencies=debug cargo check --workspace --all-targets
 ```
 This will show potential unused dependencies for
 - registry and git dependencies
@@ -174,10 +169,8 @@ it can be easy to miss that a dependency is no longer used and can be removed.
 
 Trade-offs:
 - ✅ Faster full build and link times
-- ❌ **Requires using nightly Rust and an [unstable Cargo feature][cargo-lints] when reviewing unused dependencies**
 - ❌ It takes effort to identify unused dependencies from among the false positives
 
-[cargo-lints]: ../reference/unstable.md#lintscargo
 [`cargo::unused_dependencies`]: ../reference/lints.md#unused_dependencies
 [`package.rust-version`]: ../reference/rust-version.md
 

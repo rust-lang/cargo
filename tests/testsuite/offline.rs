@@ -122,6 +122,9 @@ fn cargo_compile_with_downloaded_dependency_with_offline() {
 
             [dependencies]
             present_dep = "1.2.3"
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -140,6 +143,9 @@ fn cargo_compile_with_downloaded_dependency_with_offline() {
 
             [dependencies]
             present_dep = "1.2.3"
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file("src/lib.rs", "")

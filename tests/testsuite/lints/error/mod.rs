@@ -25,10 +25,9 @@ im_a_teapot = "deny"
         .build();
 
     snapbox::cmd::Command::cargo_ui()
-        .masquerade_as_nightly_cargo(&["cargo-lints", "test-dummy-unstable"])
+        .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
         .current_dir(p.root())
         .arg("check")
-        .arg("-Zcargo-lints")
         .assert()
         .code(101)
         .stdout_eq(str![""])

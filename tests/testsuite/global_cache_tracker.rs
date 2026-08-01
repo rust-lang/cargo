@@ -45,6 +45,9 @@ fn basic_foo_bar_project() -> Project {
 
                 [dependencies]
                 bar = "1.0"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1217,6 +1220,9 @@ fn package_cache_lock_during_build() {
 
                 [dependencies]
                 bar = "1.0"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1249,6 +1255,9 @@ fn package_cache_lock_during_build() {
 
                 [dependencies]
                 bar = "1.0"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")

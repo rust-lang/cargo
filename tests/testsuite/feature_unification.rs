@@ -39,6 +39,9 @@ fn workspace_feature_unification() {
                 [features]
                 a = []
                 b = []
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file(
@@ -58,6 +61,9 @@ fn workspace_feature_unification() {
 
                 [dependencies]
                 common = { path = "../common", features = ["a"] }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("a/src/lib.rs", "")
@@ -71,6 +77,9 @@ fn workspace_feature_unification() {
 
                 [dependencies]
                 common = { path = "../common", features = ["b"] }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("b/src/lib.rs", "")
@@ -158,6 +167,9 @@ fn package_feature_unification() {
                 [features]
                 a = []
                 b = []
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file(
@@ -182,6 +194,9 @@ fn package_feature_unification() {
                 [dependencies]
                 common = { path = "../common", features = ["a"] }
                 outside = { version = "0.1.0", features = ["a"] }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("a/src/lib.rs", "pub use common::a;")
@@ -196,6 +211,9 @@ fn package_feature_unification() {
                 [dependencies]
                 common = { path = "../common", features = ["b"] }
                 outside = { version = "0.1.0", features = ["b"] }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("b/src/lib.rs", "pub use common::b;")
@@ -428,6 +446,9 @@ fn package_feature_unification_cli_features() {
                 [features]
                 a = []
                 b = []
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file(
@@ -455,6 +476,9 @@ fn package_feature_unification_cli_features() {
 
                 [features]
                 a = ["common/a", "outside/a"]
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("a/src/lib.rs", "pub use common::a;")
@@ -472,6 +496,9 @@ fn package_feature_unification_cli_features() {
 
                 [features]
                 b = ["common/b", "outside/b"]
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("b/src/lib.rs", "pub use common::b;")
@@ -855,6 +882,9 @@ fn cargo_install_ignores_config() {
 
                 [workspace]
                 members = ["common", "b"]
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -869,6 +899,9 @@ fn cargo_install_ignores_config() {
                 [features]
                 a = []
                 b = []
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file(
@@ -888,6 +921,9 @@ fn cargo_install_ignores_config() {
 
                 [dependencies]
                 common = { path = "../common", features = ["b"] }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("b/src/lib.rs", "")

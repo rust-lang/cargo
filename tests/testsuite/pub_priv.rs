@@ -133,6 +133,9 @@ fn requires_feature() {
 
                 [dependencies]
                 pub_dep = { version = "0.1.0", public = true }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")

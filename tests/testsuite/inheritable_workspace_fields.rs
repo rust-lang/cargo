@@ -34,6 +34,9 @@ fn permit_additional_workspace_fields() {
 
             [workspace.dependencies]
             dep = "0.1"
+
+            [workspace.lints.cargo]
+            default = "allow"
         "#,
         )
         .file(
@@ -45,6 +48,9 @@ fn permit_additional_workspace_fields() {
               edition = "2015"
               authors = []
               workspace = ".."
+
+              [lints.cargo]
+              default = "allow"
               "#,
         )
         .file("bar/src/main.rs", "fn main() {}")
@@ -286,6 +292,9 @@ fn inherit_own_dependencies() {
             dep = "0.1"
             dep-build = "0.8"
             dep-dev = "0.5.2"
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -435,6 +444,9 @@ version = "0.5.2"
 [build-dependencies.dep-build]
 version = "0.8"
 
+[lints.cargo]
+default = "allow"
+
 "##]],
         )],
     );
@@ -461,6 +473,9 @@ fn inherit_own_detailed_dependencies() {
 
             [workspace.dependencies]
             dep = { version = "0.1.2", features = ["testing"] }
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -580,6 +595,9 @@ path = "src/main.rs"
 version = "0.1.2"
 features = ["testing"]
 
+[lints.cargo]
+default = "allow"
+
 "##]],
         )],
     );
@@ -653,6 +671,9 @@ fn inherited_dependencies_union_features() {
             members = []
             [workspace.dependencies]
             dep = { version = "0.1", features = ["fancy"] }
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -890,6 +911,9 @@ fn inherit_dependencies() {
             dep-build.workspace = true
             [dev-dependencies]
             dep-dev.workspace = true
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("bar/src/main.rs", "fn main() {}")
@@ -1040,6 +1064,9 @@ version = "0.5.2"
 [build-dependencies.dep-build]
 version = "0.8"
 
+[lints.cargo]
+default = "allow"
+
 "##]],
         )],
     );
@@ -1070,6 +1097,9 @@ fn inherit_target_dependencies() {
             dep.workspace = true
             [target.'cfg(windows)'.dependencies]
             dep.workspace = true
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("bar/src/main.rs", "fn main() {}")
@@ -1162,6 +1192,9 @@ fn inherit_dependency_features() {
             members = []
             [workspace.dependencies]
             dep = "0.1"
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -1235,6 +1268,9 @@ fn inherit_detailed_dependencies() {
             authors = []
             [dependencies]
             detailed.workspace = true
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("bar/src/main.rs", "fn main() {}")
@@ -1275,6 +1311,9 @@ fn inherit_path_dependencies() {
             authors = []
             [dependencies]
             dep.workspace = true
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("bar/src/main.rs", "fn main() {}")
@@ -1533,6 +1572,9 @@ fn warn_inherit_def_feat_true_member_def_feat_false() {
             members = []
             [workspace.dependencies]
             dep = { version = "0.1.0", default-features = true }
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -1626,6 +1668,9 @@ fn warn_inherit_simple_member_def_feat_false() {
             members = []
             [workspace.dependencies]
             dep = "0.1.0"
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -1719,6 +1764,9 @@ fn inherit_def_feat_false_member_def_feat_true() {
             members = []
             [workspace.dependencies]
             dep = { version = "0.1.0", default-features = false }
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -1806,6 +1854,9 @@ fn warn_inherit_unused_manifest_key_dep() {
 
             [dependencies]
             dep = { workspace = true, wxz = "wxz" }
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -1844,6 +1895,12 @@ fn warn_unused_workspace_package_field() {
             [package]
             name = "foo"
             edition = "2015"
+
+            [workspace.lints.cargo]
+            default = "allow"
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("src/main.rs", "fn main() {}")

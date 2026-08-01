@@ -674,6 +674,9 @@ fn share_dependencies() {
 
                 [workspace]
                 members = ["bar"]
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -688,6 +691,9 @@ fn share_dependencies() {
 
                 [dependencies]
                 dep1 = "< 0.1.5"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("bar/src/main.rs", "fn main() {}");
@@ -774,6 +780,9 @@ fn lock_works_for_everyone() {
 
                 [workspace]
                 members = ["bar"]
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -788,6 +797,9 @@ fn lock_works_for_everyone() {
 
                 [dependencies]
                 dep1 = "0.1"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("bar/src/main.rs", "fn main() {}");
@@ -2020,6 +2032,9 @@ fn dep_used_with_separate_features() {
 
                 [features]
                 myfeature = []
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("feat_lib/src/lib.rs", "")
@@ -2034,6 +2049,9 @@ fn dep_used_with_separate_features() {
 
                 [dependencies]
                 feat_lib = { path = "../feat_lib" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("caller1/src/main.rs", "fn main() {}")
@@ -2050,6 +2068,9 @@ fn dep_used_with_separate_features() {
                 [dependencies]
                 feat_lib = { path = "../feat_lib", features = ["myfeature"] }
                 caller1 = { path = "../caller1" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("caller2/src/main.rs", "fn main() {}")

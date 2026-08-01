@@ -229,6 +229,9 @@ fn very_verbose() {
 
             [dependencies]
             bar = "1.0"
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file("src/lib.rs", "")

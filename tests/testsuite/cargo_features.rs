@@ -528,6 +528,9 @@ fn nightly_feature_requires_nightly_in_dep() {
 
                 [dependencies]
                 a = { path = "a" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -542,6 +545,9 @@ fn nightly_feature_requires_nightly_in_dep() {
                 edition = "2015"
                 authors = []
                 im-a-teapot = true
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("a/src/lib.rs", "")

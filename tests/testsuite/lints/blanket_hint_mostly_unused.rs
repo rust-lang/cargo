@@ -19,8 +19,8 @@ hint-mostly-unused = true
         )
         .file("src/main.rs", "fn main() {}")
         .build();
-    p.cargo("check -Zprofile-hint-mostly-unused -Zcargo-lints -Zcargo-lints -v")
-        .masquerade_as_nightly_cargo(&["profile-hint-mostly-unused", "cargo-lints"])
+    p.cargo("check -Zprofile-hint-mostly-unused -v")
+        .masquerade_as_nightly_cargo(&["profile-hint-mostly-unused"])
         .with_stderr_data(str![[r#"
 [WARNING] `hint-mostly-unused` is being blanket applied to all dependencies
  --> Cargo.toml:7:10
@@ -61,8 +61,8 @@ hint-mostly-unused = true
         )
         .file("src/main.rs", "fn main() {}")
         .build();
-    p.cargo("check -Zprofile-hint-mostly-unused -Zcargo-lints -v")
-        .masquerade_as_nightly_cargo(&["profile-hint-mostly-unused", "cargo-lints"])
+    p.cargo("check -Zprofile-hint-mostly-unused -v")
+        .masquerade_as_nightly_cargo(&["profile-hint-mostly-unused"])
         .with_stderr_data(str![[r#"
 [WARNING] `hint-mostly-unused` is being blanket applied to all dependencies
  --> Cargo.toml:7:22
@@ -100,8 +100,8 @@ hint-mostly-unused = true
         )
         .file("src/main.rs", "fn main() {}")
         .build();
-    p.cargo("check -Zprofile-hint-mostly-unused -Zcargo-lints -v")
-        .masquerade_as_nightly_cargo(&["profile-hint-mostly-unused", "cargo-lints"])
+    p.cargo("check -Zprofile-hint-mostly-unused -v")
+        .masquerade_as_nightly_cargo(&["profile-hint-mostly-unused"])
         .with_stderr_data(str![[r#"
 [WARNING] `hint-mostly-unused` is being blanket applied to all dependencies
  --> Cargo.toml:7:14
@@ -148,8 +148,8 @@ authors = []
         .file("foo/src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zprofile-hint-mostly-unused -Zcargo-lints -v")
-        .masquerade_as_nightly_cargo(&["profile-hint-mostly-unused", "cargo-lints"])
+    p.cargo("check -Zprofile-hint-mostly-unused -v")
+        .masquerade_as_nightly_cargo(&["profile-hint-mostly-unused"])
         .with_stderr_data(str![[r#"
 [WARNING] `hint-mostly-unused` is being blanket applied to all dependencies
  --> Cargo.toml:5:22
@@ -191,8 +191,8 @@ blanket_hint_mostly_unused = "deny"
         )
         .file("src/main.rs", "fn main() {}")
         .build();
-    p.cargo("check -Zprofile-hint-mostly-unused -v -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["profile-hint-mostly-unused", "cargo-lints"])
+    p.cargo("check -Zprofile-hint-mostly-unused -v")
+        .masquerade_as_nightly_cargo(&["profile-hint-mostly-unused"])
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] `hint-mostly-unused` is being blanket applied to all dependencies

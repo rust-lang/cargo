@@ -1051,6 +1051,9 @@ fn many_features_no_rebuilds() {
                 [dependencies.a]
                 path = "a"
                 features = ["fall"]
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -1067,6 +1070,9 @@ fn many_features_no_rebuilds() {
                 ftest  = []
                 ftest2 = []
                 fall   = ["ftest", "ftest2"]
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("a/src/lib.rs", "")
@@ -1237,6 +1243,9 @@ fn no_rebuild_when_frobbing_default_feature() {
                 [dependencies]
                 a = { path = "a" }
                 b = { path = "b" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1251,6 +1260,9 @@ fn no_rebuild_when_frobbing_default_feature() {
 
                 [dependencies]
                 a = { path = "../a", features = ["f1"], default-features = false }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("b/src/lib.rs", "")
@@ -1266,6 +1278,9 @@ fn no_rebuild_when_frobbing_default_feature() {
                 [features]
                 default = ["f1"]
                 f1 = []
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("a/src/lib.rs", "")
@@ -1301,6 +1316,9 @@ fn unions_work_with_no_default_features() {
                 [dependencies]
                 a = { path = "a" }
                 b = { path = "b" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "extern crate a; pub fn foo() { a::a(); }")
@@ -1315,6 +1333,9 @@ fn unions_work_with_no_default_features() {
 
                 [dependencies]
                 a = { path = "../a", features = [], default-features = false }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("b/src/lib.rs", "")
@@ -1330,6 +1351,9 @@ fn unions_work_with_no_default_features() {
                 [features]
                 default = ["f1"]
                 f1 = []
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("a/src/lib.rs", r#"#[cfg(feature = "f1")] pub fn a() {}"#)

@@ -1183,6 +1183,9 @@ fn proc_macro_ws() {
 
             [features]
             feat1 = []
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file("foo/src/lib.rs", "")
@@ -1199,6 +1202,9 @@ fn proc_macro_ws() {
 
             [dependencies]
             foo = { path = "../foo", features=["feat1"] }
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file("pm/src/lib.rs", "")
@@ -1649,6 +1655,9 @@ fn resolver_enables_new_features() {
 
             [target.'cfg(whatever)'.dependencies]
             common = {version = "1.0", features=["itarget"]}
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file(
@@ -1679,6 +1688,9 @@ fn resolver_enables_new_features() {
 
             [features]
             ping = []
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file(
@@ -2210,6 +2222,9 @@ fn minimal_download() {
                 [target.'cfg(whatever)'.build-dependencies]
                 itarget_build_dep = "1.0"
                 itarget_build_dep_pm = "1.0"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -2403,6 +2418,9 @@ fn pm_with_int_shared() {
                 [dependencies]
                 pm = { path = "../pm" }
                 shared = { path = "../shared", features = ["norm-feat"] }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file(
@@ -2425,6 +2443,9 @@ fn pm_with_int_shared() {
 
                 [dependencies]
                 shared = { path = "../shared", features = ["host-feat"] }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file(
@@ -2452,6 +2473,9 @@ fn pm_with_int_shared() {
                 [features]
                 norm-feat = []
                 host-feat = []
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file(
@@ -2722,6 +2746,9 @@ fn dep_with_optional_host_deps_activated() {
 
                 [dependencies]
                 serde = { path = "serde", features = ["derive", "build"] }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -2742,6 +2769,9 @@ fn dep_with_optional_host_deps_activated() {
                 [features]
                 derive = ["dep:serde_derive"]
                 build = ["dep:serde_build"]
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("serde/src/lib.rs", "")
@@ -2756,6 +2786,9 @@ fn dep_with_optional_host_deps_activated() {
 
                 [lib]
                 proc-macro = true
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("serde_derive/src/lib.rs", "")
@@ -2792,6 +2825,9 @@ fn dont_unify_proc_macro_example_from_dependency() {
 
                 [dependencies]
                 pm_helper = { path = "pm_helper" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -2805,6 +2841,9 @@ fn dont_unify_proc_macro_example_from_dependency() {
                 name = "pm"
                 proc-macro = true
                 crate-type = ["proc-macro"]
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("pm_helper/src/lib.rs", "")

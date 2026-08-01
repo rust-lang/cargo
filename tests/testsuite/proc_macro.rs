@@ -519,6 +519,9 @@ fn proc_macro_built_once() {
 
                 [build-dependencies]
                 the-macro = { path = '../the-macro' }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("a/build.rs", "fn main() {}")
@@ -533,6 +536,9 @@ fn proc_macro_built_once() {
 
                 [dependencies]
                 the-macro = { path = '../the-macro', features = ['a'] }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("b/src/main.rs", "fn main() {}")
@@ -549,6 +555,9 @@ fn proc_macro_built_once() {
 
                 [features]
                 a = []
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("the-macro/src/lib.rs", "")

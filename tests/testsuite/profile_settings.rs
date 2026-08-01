@@ -160,6 +160,9 @@ fn top_level_overrides_deps() {
 
                 [dependencies.foo]
                 path = "foo"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -180,6 +183,9 @@ fn top_level_overrides_deps() {
                 [lib]
                 name = "foo"
                 crate-type = ["dylib", "rlib"]
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("foo/src/lib.rs", "")
@@ -895,6 +901,9 @@ fn profile_hint_mostly_unused_warn_without_gate() {
 
             [profile.dev.package.bar]
             hint-mostly-unused = true
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -934,6 +943,9 @@ fn profile_hint_mostly_unused_nightly() {
 
             [profile.dev.package.bar]
             hint-mostly-unused = true
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")

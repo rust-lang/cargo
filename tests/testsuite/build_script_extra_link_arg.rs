@@ -266,6 +266,9 @@ fn link_arg_transitive_not_allowed() {
 
                 [dependencies]
                 bar = "1.0"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")

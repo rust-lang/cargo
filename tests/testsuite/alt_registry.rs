@@ -26,6 +26,9 @@ fn depend_on_alt_registry() {
                 [dependencies.bar]
                 version = "0.0.1"
                 registry = "alternative"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -75,6 +78,9 @@ fn depend_on_alt_registry_depends_on_same_registry_no_index() {
                 [dependencies.bar]
                 version = "0.0.1"
                 registry = "alternative"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -121,6 +127,9 @@ fn depend_on_alt_registry_depends_on_same_registry() {
                 [dependencies.bar]
                 version = "0.0.1"
                 registry = "alternative"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -167,6 +176,9 @@ fn depend_on_alt_registry_depends_on_crates_io() {
                 [dependencies.bar]
                 version = "0.0.1"
                 registry = "alternative"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -215,6 +227,9 @@ fn registry_and_path_dep_works() {
                 [dependencies.bar]
                 path = "bar"
                 registry = "alternative"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -250,6 +265,9 @@ fn registry_and_git_dep_works() {
                 version = "0.0.1"
                 edition = "2015"
                 authors = []
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -270,6 +288,9 @@ fn registry_and_git_dep_works() {
                 version = "0.0.1"
                 registry = "alternative"
                 git="{}"
+
+                [lints.cargo]
+                default = "allow"
             "#,
                 bar.url(),
             ),
@@ -371,6 +392,9 @@ fn publish_with_registry_dependency() {
                 [dependencies.bar]
                 version = "0.0.1"
                 registry = "alternative"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -456,6 +480,9 @@ fn alt_registry_and_crates_io_deps() {
                 [dependencies.alt_reg_dep]
                 version = "0.1.0"
                 registry = "alternative"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -612,6 +639,9 @@ fn publish_with_crates_io_dep() {
 
                 [dependencies.bar]
                 version = "0.0.1"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -696,6 +726,9 @@ fn publish_with_git_and_registry_dep() {
                 version = "0.0.1"
                 edition = "2015"
                 authors = []
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -716,6 +749,9 @@ fn publish_with_git_and_registry_dep() {
                 version = "0.0.1"
                 registry = "alternative"
                 git="{}"
+
+                [lints.cargo]
+                default = "allow"
             "#,
                 bar.url(),
             ),
@@ -929,6 +965,9 @@ fn no_api() {
                 [dependencies.bar]
                 version = "0.0.1"
                 registry = "alternative"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1784,6 +1823,9 @@ fn registries_index_relative_url() {
                 [dependencies.bar]
                 version = "0.0.1"
                 registry = "relative"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")

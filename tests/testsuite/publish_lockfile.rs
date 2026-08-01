@@ -24,6 +24,9 @@ fn pl_manifest(name: &str, version: &str, extra: &str) -> String {
         repository = "foo"
 
         {}
+
+        [lints.cargo]
+        default = "allow"
         "#,
         name, version, extra
     )
@@ -562,6 +565,9 @@ fn use_workspace_root_lockfile() {
 
                 [workspace]
                 members = ["bar"]
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -579,6 +585,9 @@ fn use_workspace_root_lockfile() {
 
                 [dependencies]
                 serde = "0.2"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("bar/src/main.rs", "fn main() {}")

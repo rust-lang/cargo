@@ -257,6 +257,9 @@ fn clean_release() {
 
                 [dependencies]
                 a = { path = "a" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -923,6 +926,9 @@ fn clean_spec_reserved() {
 
                 [dependencies]
                 bar = "1.0"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")

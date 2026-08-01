@@ -516,6 +516,9 @@ fn nested_deps_recompile() {
 
                 version = "0.5.0"
                 path = "src/bar"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", &main_file(r#""{}", bar::gimme()"#, &["bar"]))
@@ -1474,6 +1477,9 @@ fn custom_target_no_rebuild() {
                 a = { path = "a" }
                 [workspace]
                 members = ["a", "b"]
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1489,6 +1495,9 @@ fn custom_target_no_rebuild() {
                 authors = []
                 [dependencies]
                 a = { path = "../a" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("b/src/lib.rs", "")
@@ -1530,6 +1539,9 @@ fn override_and_depend() {
                 authors = []
                 [dependencies]
                 a2 = { path = "../a2" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("a/a1/src/lib.rs", "")
@@ -1546,6 +1558,9 @@ fn override_and_depend() {
                 [dependencies]
                 a1 = { path = "../a/a1" }
                 a2 = { path = "../a/a2" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("b/src/lib.rs", "")

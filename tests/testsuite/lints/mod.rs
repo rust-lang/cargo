@@ -43,8 +43,8 @@ im_a_teapot = "warn"
         .file("src/lib.rs", "")
         .build();
 
-    foo.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints", "test-dummy-unstable"])
+    foo.cargo("fetch")
+        .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
         .with_stderr_data(str![[r#"
 [WARNING] `im_a_teapot` is specified
  --> Cargo.toml:9:1
@@ -82,8 +82,8 @@ test_dummy_unstable = { level = "forbid", priority = -1 }
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints", "test-dummy-unstable"])
+    p.cargo("fetch")
+        .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] `im_a_teapot` is specified
@@ -125,8 +125,8 @@ workspace = true
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints", "test-dummy-unstable"])
+    p.cargo("fetch")
+        .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] `im_a_teapot` is specified
@@ -173,8 +173,8 @@ im-a-teapot = true
         .file("foo/src/lib.rs", "")
         .build();
 
-    p.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("fetch")
+        .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
         .with_stderr_data(str![[r#"
 [WARNING] missing `[lints]` to inherit `[workspace.lints]`
   --> foo/Cargo.toml
@@ -236,8 +236,8 @@ bar = "0.1.0"
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("fetch")
+        .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
@@ -267,8 +267,7 @@ im_a_teapot = "warn"
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("fetch")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] use of unstable lint `im_a_teapot`
@@ -314,8 +313,7 @@ workspace = true
         .file("foo/src/lib.rs", "")
         .build();
 
-    p.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("fetch")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] use of unstable lint `im_a_teapot`
@@ -365,8 +363,7 @@ authors = []
         .file("foo/src/lib.rs", "")
         .build();
 
-    p.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("fetch")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] use of unstable lint `im_a_teapot`
@@ -426,8 +423,8 @@ im_a_teapot = { level = "warn", priority = 10 }
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("fetch -Zcargo-lints -Zrustc-unicode")
-        .masquerade_as_nightly_cargo(&["cargo-lints", "rustc-unicode", "test-dummy-unstable"])
+    p.cargo("fetch -Zrustc-unicode")
+        .masquerade_as_nightly_cargo(&["rustc-unicode", "test-dummy-unstable"])
         .with_stderr_data(str![[r#"
 [WARNING] `im_a_teapot` is specified
   ╭▸ Cargo.toml:9:1
@@ -468,8 +465,7 @@ fn explicit_lint_level_overrides_default() {
         )
         .build();
 
-    p.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("fetch")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] `package.homepage` is redundant with `package.repository`

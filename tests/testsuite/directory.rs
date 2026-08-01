@@ -580,6 +580,9 @@ fn git_lock_file_doesnt_change() {
 
                     [dependencies]
                     git = {{ git = '{0}' }}
+
+                    [lints.cargo]
+                    default = "allow"
                 "#,
                 git.url()
             ),
@@ -696,6 +699,9 @@ fn workspace_different_locations() {
 
                 [dependencies]
                 baz = "*"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("foo/src/lib.rs", "")
@@ -712,6 +718,9 @@ fn workspace_different_locations() {
 
                 [dependencies]
                 baz = "*"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("bar/src/lib.rs", "")

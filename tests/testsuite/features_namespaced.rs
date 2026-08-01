@@ -26,6 +26,9 @@ fn dependency_with_crate_syntax() {
 
                 [dependencies]
                 bar = {version="1.0", features=["feat"]}
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -169,6 +172,9 @@ fn namespaced_implicit_feature() {
 
                 [dependencies]
                 baz = { version = "0.1", optional = true }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -311,6 +317,9 @@ fn namespaced_same_name() {
 
                 [dependencies]
                 baz = { version = "0.1", optional = true }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file(
@@ -373,6 +382,9 @@ fn no_implicit_feature() {
 
                 [features]
                 regex = ["dep:regex", "dep:lazy_static"]
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file(
@@ -684,6 +696,9 @@ fn crate_feature_with_explicit() {
                 f1 = ["bar/bar_feat"]
                 bar = ["dep:bar", "f2"]
                 f2 = []
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file(

@@ -45,11 +45,7 @@ fn main() -> anyhow::Result<()> {
 >
 > See [the lints section in the Manifest Format
 > chapter](manifest.md#the-lints-section) to configure lint levels for tools
-> such as `rustc` or `clippy`.
-
-> [!WARNING]
-> [Cargo's linting system is unstable](unstable.md#lintscargo) and can only be used on nightly
-> toolchains."
+> such as `rustc` or `clippy`."
     )?;
     writeln!(buf)?;
 

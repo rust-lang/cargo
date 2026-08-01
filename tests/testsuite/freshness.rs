@@ -639,6 +639,9 @@ fn no_rebuild_transitive_target_deps() {
                 a = { path = "a" }
                 [dev-dependencies]
                 b = { path = "b" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -654,6 +657,9 @@ fn no_rebuild_transitive_target_deps() {
 
                 [target.foo.dependencies]
                 c = { path = "../c" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("a/src/lib.rs", "")
@@ -668,6 +674,9 @@ fn no_rebuild_transitive_target_deps() {
 
                 [dependencies]
                 c = { path = "../c" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("b/src/lib.rs", "")
@@ -703,6 +712,9 @@ fn rerun_if_changed_in_dep() {
 
                 [dependencies]
                 a = { path = "a" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -715,6 +727,9 @@ fn rerun_if_changed_in_dep() {
                 edition = "2015"
                 authors = []
                 build = "build.rs"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file(
@@ -751,6 +766,9 @@ fn same_build_dir_cached_packages() {
                 authors = []
                 [dependencies]
                 b = { path = "../b" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("a1/src/lib.rs", "")
@@ -764,6 +782,9 @@ fn same_build_dir_cached_packages() {
                 authors = []
                 [dependencies]
                 b = { path = "../b" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("a2/src/lib.rs", "")
@@ -777,6 +798,9 @@ fn same_build_dir_cached_packages() {
                 authors = []
                 [dependencies]
                 c = { path = "../c" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("b/src/lib.rs", "")
@@ -790,6 +814,9 @@ fn same_build_dir_cached_packages() {
                 authors = []
                 [dependencies]
                 d = { path = "../d" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("c/src/lib.rs", "")
@@ -841,6 +868,9 @@ fn no_rebuild_if_build_artifacts_move_backwards_in_time() {
 
                 [dependencies]
                 a = { path = "a" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -875,6 +905,9 @@ fn rebuild_if_build_artifacts_move_forward_in_time() {
 
                 [dependencies]
                 a = { path = "a" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -979,6 +1012,9 @@ fn no_rebuild_when_rename_dir() {
 
                 [dependencies]
                 foo = { path = "foo" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/_unused.rs", "")
@@ -1029,6 +1065,9 @@ fn unused_optional_dep() {
                 bar = { path = "bar" }
                 baz = { path = "baz" }
                 registry1 = "*"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1043,6 +1082,9 @@ fn unused_optional_dep() {
 
                 [dev-dependencies]
                 registry2 = "*"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("bar/src/lib.rs", "")
@@ -1057,6 +1099,9 @@ fn unused_optional_dep() {
 
                 [dependencies]
                 registry3 = { version = "*", optional = true }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("baz/src/lib.rs", "")
@@ -1088,6 +1133,9 @@ fn path_dev_dep_registry_updates() {
 
                 [dependencies]
                 bar = { path = "bar" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1105,6 +1153,9 @@ fn path_dev_dep_registry_updates() {
 
                 [dev-dependencies]
                 baz = { path = "../baz"}
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("bar/src/lib.rs", "")
@@ -1119,6 +1170,9 @@ fn path_dev_dep_registry_updates() {
 
                 [dependencies]
                 registry2 = "*"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("baz/src/lib.rs", "")
@@ -1187,6 +1241,9 @@ fn dont_rebuild_based_on_plugins() {
 
                 [dependencies]
                 proc-macro-thing = { path = 'proc-macro-thing' }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1203,6 +1260,9 @@ fn dont_rebuild_based_on_plugins() {
 
                 [dependencies]
                 qux = { path = '../qux' }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("proc-macro-thing/src/lib.rs", "")
@@ -1216,6 +1276,9 @@ fn dont_rebuild_based_on_plugins() {
 
                 [dependencies]
                 qux = { path = '../qux' }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("baz/src/main.rs", "fn main() {}")
@@ -1289,6 +1352,9 @@ fn reuse_shared_build_dep() {
 
                 [workspace]
                 members = ["shared", "bar"]
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -1304,6 +1370,9 @@ fn reuse_shared_build_dep() {
 
                 [build-dependencies]
                 shared = { path = "../shared" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("bar/src/lib.rs", "")
@@ -1411,6 +1480,9 @@ fn update_dependency_mtime_does_not_rebuild() {
 
                 [dependencies]
                 bar = { path = "bar" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1497,6 +1569,9 @@ fn fingerprint_cleaner_does_not_rebuild() {
 
                 [features]
                 a = []
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1569,6 +1644,9 @@ fn reuse_panic_build_dep_test() {
 
                 [profile.dev]
                 panic = "abort"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1613,6 +1691,9 @@ fn reuse_panic_pm() {
 
                 [profile.dev]
                 panic = "abort"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "extern crate bar;")
@@ -1631,6 +1712,9 @@ fn reuse_panic_pm() {
 
                 [dependencies]
                 bar = { path = "../bar" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("somepm/src/lib.rs", "extern crate bar;")
@@ -1678,6 +1762,9 @@ fn bust_patched_dep() {
 
                 [patch.crates-io]
                 registry1 = { path = "reg1new" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -3065,6 +3152,9 @@ fn verify_source_before_recompile() {
 
                 [dependencies]
                 bar = "0.1.0"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")

@@ -529,6 +529,9 @@ fn cfg_raw_idents() {
 
                 [target.'cfg(any(r#true, r#all, r#target_os = "<>"))'.dependencies]
                 b = { path = "b/" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -618,6 +621,9 @@ fn cfg_keywords() {
 
                 [target.'cfg(any(async, fn, const, return, true))'.dependencies]
                 b = { path = "b/" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file(
@@ -659,6 +665,9 @@ fn cfg_booleans() {
 
                 [target.'cfg(false)'.dependencies]
                 c = { path = 'c' }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -724,6 +733,9 @@ fn cfg_booleans_not() {
 
                 [target.'cfg(not(false))'.dependencies]
                 b = { path = 'b' }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -756,6 +768,9 @@ fn cfg_booleans_combinators() {
 
                 [target.'cfg(all(any(true), not(false), true))'.dependencies]
                 b = { path = 'b' }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -791,6 +806,9 @@ fn cfg_booleans_rustflags_no_effect() {
 
                 [target.'cfg(false)'.dependencies]
                 c = { path = 'c' }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")

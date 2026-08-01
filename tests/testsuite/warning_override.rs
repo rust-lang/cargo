@@ -255,8 +255,7 @@ fn lint_parse_pass() {
         .build();
 
     // Verify the lints fire
-    p.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("fetch")
         .with_stderr_data(str![[r#"
 [WARNING] `package.homepage` is redundant with `package.repository`
  --> Cargo.toml:8:24
@@ -272,8 +271,7 @@ fn lint_parse_pass() {
 
 "#]])
         .run();
-    p.cargo("check -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("check")
         .with_stderr_data(str![[r#"
 [WARNING] `package.homepage` is redundant with `package.repository`
  --> Cargo.toml:8:24
@@ -292,14 +290,12 @@ fn lint_parse_pass() {
 "#]])
         .run();
 
-    p.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("fetch")
         .arg("--config")
         .arg("build.warnings='allow'")
         .with_stderr_data(str![""])
         .run();
-    p.cargo("check -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("check")
         .arg("--config")
         .arg("build.warnings='allow'")
         .with_stderr_data(str![[r#"
@@ -308,8 +304,7 @@ fn lint_parse_pass() {
 "#]])
         .run();
 
-    p.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("fetch")
         .arg("--config")
         .arg("build.warnings='deny'")
         .with_status(101)
@@ -329,8 +324,7 @@ fn lint_parse_pass() {
 
 "#]])
         .run();
-    p.cargo("check -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("check")
         .arg("--config")
         .arg("build.warnings='deny'")
         .with_status(101)
@@ -384,8 +378,7 @@ fn lint_build_result_pass() {
         .build();
 
     // Verify the lints fire
-    p.cargo("check --all-targets -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("check --all-targets")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
@@ -407,8 +400,7 @@ fn lint_build_result_pass() {
 "#]])
         .run();
 
-    p.cargo("check --all-targets -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("check --all-targets")
         .arg("--config")
         .arg("build.warnings='allow'")
         .with_stderr_data(str![[r#"
@@ -417,8 +409,7 @@ fn lint_build_result_pass() {
 "#]])
         .run();
 
-    p.cargo("check --all-targets -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("check --all-targets")
         .arg("--config")
         .arg("build.warnings='deny'")
         .with_status(101)
@@ -620,6 +611,9 @@ fn cap_lints_deny() {
 
                 [dependencies]
                 has_warning = "1"
+
+                [lints.cargo]
+                default = "allow"
             "#
             ),
         )
@@ -695,6 +689,9 @@ fn cap_lints_allow() {
 
                 [dependencies]
                 has_warning = "1"
+
+                [lints.cargo]
+                default = "allow"
             "#
             ),
         )

@@ -852,11 +852,9 @@ fn prepare_rustc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResult
         base.env("CARGO_TARGET_TMPDIR", tmp.display().to_string());
     }
 
-    if build_runner.bcx.gctx.cli_unstable().cargo_lints {
-        // Added last to reduce the risk of RUSTFLAGS or `[lints]` from interfering with
-        // `unused_dependencies` tracking
-        base.arg("--force-warn=unused_crate_dependencies");
-    }
+    // Added last to reduce the risk of RUSTFLAGS or `[lints]` from interfering with
+    // `unused_dependencies` tracking
+    base.arg("--force-warn=unused_crate_dependencies");
 
     Ok(base)
 }
@@ -1230,10 +1228,9 @@ fn add_error_format_and_color(build_runner: &BuildRunner<'_, '_>, cmd: &mut Proc
 
     cmd.arg("--error-format=json");
 
-    let mut json = String::from("--json=diagnostic-rendered-ansi,artifacts,future-incompat");
-    if build_runner.bcx.gctx.cli_unstable().cargo_lints {
-        json.push_str(",unused-externs-silent");
-    }
+    let mut json = String::from(
+        "--json=diagnostic-rendered-ansi,artifacts,future-incompat,unused-externs-silent",
+    );
     if let MessageFormat::Short | MessageFormat::Json { short: true, .. } =
         build_runner.bcx.build_config.message_format
     {

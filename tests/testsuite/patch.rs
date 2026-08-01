@@ -90,6 +90,9 @@ fn from_config() {
 
                 [dependencies]
                 bar = "0.1.0"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file(
@@ -132,6 +135,9 @@ fn from_config_relative() {
 
                 [dependencies]
                 bar = "0.1.0"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file(
@@ -177,6 +183,9 @@ fn from_config_precedence() {
 
                 [patch.crates-io]
                 bar = { path = 'no-such-path' }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file(
@@ -433,6 +442,9 @@ fn unused() {
 
                 [patch.crates-io]
                 bar = { path = "bar" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -504,6 +516,9 @@ fn unused_with_mismatch_source_being_patched() {
 
                 [patch.crates-io]
                 bar = { path = "baz" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -556,6 +571,9 @@ fn prefer_patch_version() {
 
                 [patch.crates-io]
                 bar = { path = "bar" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -602,6 +620,9 @@ fn unused_from_config() {
 
                 [dependencies]
                 bar = "0.1.0"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file(
@@ -682,6 +703,9 @@ fn unused_git() {
 
                     [patch.crates-io]
                     bar = {{ git = '{}' }}
+
+                    [lints.cargo]
+                    default = "allow"
                 "#,
                 foo.url()
             ),
@@ -737,6 +761,9 @@ fn add_patch() {
 
                 [dependencies]
                 bar = "0.1.0"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -777,6 +804,9 @@ fn add_patch() {
 
             [patch.crates-io]
             bar = { path = 'bar' }
+
+            [lints.cargo]
+            default = "allow"
         "#,
     );
 
@@ -814,6 +844,9 @@ fn add_patch_from_config() {
 
                 [dependencies]
                 bar = "0.1.0"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -882,6 +915,9 @@ fn add_ignored_patch() {
 
                 [dependencies]
                 bar = "0.1.0"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -922,6 +958,9 @@ fn add_ignored_patch() {
 
             [patch.crates-io]
             bar = { path = 'bar' }
+
+            [lints.cargo]
+            default = "allow"
         "#,
     );
 
@@ -978,6 +1017,9 @@ fn add_patch_with_features() {
 
             [patch.crates-io]
             bar = { path = 'bar', features = ["some_feature"] }
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("src/lib.rs", "")
@@ -1028,6 +1070,9 @@ fn add_patch_with_setting_default_features() {
 
             [patch.crates-io]
             bar = { path = 'bar', default-features = false, features = ["none_default_feature"] }
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("src/lib.rs", "")
@@ -1123,6 +1168,9 @@ fn new_minor() {
 
                 [patch.crates-io]
                 bar = { path = 'bar' }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1161,6 +1209,9 @@ fn transitive_new_minor() {
 
                 [patch.crates-io]
                 baz = { path = 'baz' }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1175,6 +1226,9 @@ fn transitive_new_minor() {
 
                 [dependencies]
                 baz = '0.1.0'
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("bar/src/lib.rs", r#""#)
@@ -1214,6 +1268,9 @@ fn new_major() {
 
                 [patch.crates-io]
                 bar = { path = 'bar' }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1252,6 +1309,9 @@ fn new_major() {
 
             [dependencies]
             bar = "0.2.0"
+
+            [lints.cargo]
+            default = "allow"
         "#,
     );
     p.cargo("check")
@@ -1288,6 +1348,9 @@ fn transitive_new_major() {
 
                 [patch.crates-io]
                 baz = { path = 'baz' }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1302,6 +1365,9 @@ fn transitive_new_major() {
 
                 [dependencies]
                 baz = '0.2.0'
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("bar/src/lib.rs", r#""#)
@@ -1347,6 +1413,9 @@ fn shared_by_transitive() {
 
                     [patch.crates-io]
                     baz = {{ git = "{}", version = "0.1" }}
+
+                    [lints.cargo]
+                    default = "allow"
                 "#,
                 baz.url(),
             ),
@@ -1362,6 +1431,9 @@ fn shared_by_transitive() {
 
                 [dependencies]
                 baz = "0.1.1"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("bar/src/lib.rs", "")
@@ -1545,6 +1617,9 @@ fn patch_in_virtual() {
 
                 [dependencies]
                 bar = "0.1"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("foo/src/lib.rs", r#""#)
@@ -1596,6 +1671,9 @@ fn patch_depends_on_another_patch() {
                 [patch.crates-io]
                 bar = { path = "bar" }
                 baz = { path = "baz" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1612,6 +1690,9 @@ fn patch_depends_on_another_patch() {
 
                 [dependencies]
                 bar = "0.1"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("baz/src/lib.rs", r#""#)
@@ -1695,6 +1776,9 @@ fn patch_older() {
 
                 [patch.crates-io]
                 baz = { path = "./baz" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1709,6 +1793,9 @@ fn patch_older() {
 
                 [dependencies]
                 baz = "1.0.0"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("bar/src/lib.rs", "")
@@ -1720,6 +1807,9 @@ fn patch_older() {
                 version = "1.0.1"
                 edition = "2015"
                 authors = []
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("baz/src/lib.rs", "")
@@ -2162,6 +2252,9 @@ fn update_unused_new_version() {
 
                 [patch.crates-io]
                 bar = { path = "../bar" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -2507,6 +2600,9 @@ fn patch_from_env_config_is_ignored() {
 
                  [dependencies]
                  bar = "1.0.0"
+
+                 [lints.cargo]
+                 default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -2550,6 +2646,9 @@ fn patch_walks_backwards() {
 
             [patch.crates-io]
             bar = {path="bar"}
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -2604,6 +2703,9 @@ fn patch_walks_backwards_restricted() {
 
             [patch.crates-io]
             bar = {path="bar", version="0.1.1"}
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -2659,6 +2761,9 @@ fn patched_dep_new_version() {
 
             [patch.crates-io]
             bar = {path="bar"}
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -2672,6 +2777,9 @@ fn patched_dep_new_version() {
 
             [dependencies]
             baz = "0.1"
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file("bar/src/lib.rs", "")
@@ -2713,6 +2821,9 @@ fn patched_dep_new_version() {
 
             [dependencies]
             baz = "0.1.1"
+
+            [lints.cargo]
+            default = "allow"
         "#,
     );
 
@@ -2756,6 +2867,9 @@ fn patch_update_doesnt_update_other_sources() {
 
             [patch.crates-io]
             bar = { path = "bar" }
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -2832,6 +2946,9 @@ fn can_update_with_alt_reg() {
 
                 [patch.crates-io]
                 bar = { version = "=0.1.1", registry = "alternative" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -2886,6 +3003,9 @@ fn can_update_with_alt_reg() {
 
             [patch.crates-io]
             bar = { version = "=0.1.2", registry = "alternative" }
+
+            [lints.cargo]
+            default = "allow"
         "#,
     );
 
