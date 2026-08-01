@@ -208,15 +208,22 @@ fn serialize_resolve(resolve: &Resolve, orig: Option<&str>) -> String {
 
 #[tracing::instrument(skip_all)]
 fn are_equal_lockfiles(orig: &str, current: &str, ws: &Workspace<'_>) -> bool {
-    // Byte-identical is common on warm --locked/--frozen paths; skip the
-    // expensive TOML parse + into_resolve work below.
+    // Cheapest first: common warm --locked/--frozen path is byte-identical.
     if orig == current {
         return true;
     }
 
-    // If we want to try and avoid updating the lock file, parse both and
-    // compare them; since this is somewhat expensive, don't do it in the
-    // common case where we can update lock files.
+    // Newline-insensitive equality is still much cheaper than TOML parse +
+    // into_resolve. Prefer it over the locked semantic path (see review on
+    // #17294): trailing-newline / CRLF-only differences should not pay for
+    // a full resolve comparison.
+    if orig.lines().eq(current.lines()) {
+        return true;
+    }
+
+    // Under --locked/--frozen, allow semantic equality when serialization
+    // differs beyond line endings (e.g. key order / formatting) but the
+    // resolve is unchanged — avoids rewriting a locked lockfile needlessly.
     if !ws.gctx().lock_update_allowed() {
         let res: CargoResult<bool> = (|| {
             let old: TomlLockfile = toml::from_str(orig)?;
@@ -228,7 +235,7 @@ fn are_equal_lockfiles(orig: &str, current: &str, ws: &Workspace<'_>) -> bool {
         }
     }
 
-    orig.lines().eq(current.lines())
+    false
 }
 
 fn emit_package(dep: &toml::Table, out: &mut String) {
