@@ -183,6 +183,9 @@ fn rename_twice() {
                 bar = { version = "0.1", package = "foo" }
                 [build-dependencies]
                 foo = { version = "0.1" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")

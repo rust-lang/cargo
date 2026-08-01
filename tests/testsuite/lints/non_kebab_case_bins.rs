@@ -26,8 +26,7 @@ non_kebab_case_bins = "warn"
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("fetch")
         .with_stderr_data(str![[r#"
 [WARNING] binary `foo_bar` should have a kebab-case name
   |
@@ -67,8 +66,7 @@ non_kebab_case_bins = "warn"
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("fetch")
         .with_stderr_data(str![[r#"
 [WARNING] binary `foo_bar` should have a kebab-case name
    |
@@ -116,8 +114,7 @@ non_kebab_case_bins = "warn"
         .file("src/bin/foo_bar.rs", "fn main() {}")
         .build();
 
-    p.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("fetch")
         .with_stderr_data(str![[r#"
 [WARNING] binary `foo_bar` should have a kebab-case name
   |
@@ -151,8 +148,8 @@ fn main() {}"#,
         )
         .build();
 
-    p.cargo("fetch -Zcargo-lints -Zscript --manifest-path foo_bar")
-        .masquerade_as_nightly_cargo(&["cargo-lints", "script"])
+    p.cargo("fetch -Zscript --manifest-path foo_bar")
+        .masquerade_as_nightly_cargo(&["script"])
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/foo_bar`

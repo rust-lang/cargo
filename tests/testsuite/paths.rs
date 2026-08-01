@@ -22,6 +22,9 @@ fn broken_path_override_warns() {
 
                 [dependencies]
                 a = { path = "a1" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -36,6 +39,9 @@ fn broken_path_override_warns() {
 
                 [dependencies]
                 bar = "0.1"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("a1/src/lib.rs", "")
@@ -50,6 +56,9 @@ fn broken_path_override_warns() {
 
                 [dependencies]
                 bar = "0.2"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("a2/src/lib.rs", "")
@@ -142,6 +151,9 @@ fn paths_ok_with_optional() {
 
                 [dependencies]
                 bar = { path = "bar" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -156,6 +168,9 @@ fn paths_ok_with_optional() {
 
                 [dependencies]
                 baz = { version = "0.1", optional = true }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("bar/src/lib.rs", "")
@@ -170,6 +185,9 @@ fn paths_ok_with_optional() {
 
                 [dependencies]
                 baz = { version = "0.1", optional = true }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("bar2/src/lib.rs", "")
@@ -203,6 +221,9 @@ fn paths_add_optional_bad() {
 
                 [dependencies]
                 bar = { path = "bar" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -219,6 +240,9 @@ fn paths_add_optional_bad() {
 
                 [dependencies]
                 baz = { version = "0.1", optional = true }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("bar2/src/lib.rs", "")
@@ -269,6 +293,9 @@ fn env_paths_overrides_not_supported() {
                 file = "0.1.0"
                 cli = "0.1.0"
                 env = "0.1.0"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")

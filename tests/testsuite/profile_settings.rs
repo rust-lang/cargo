@@ -159,6 +159,9 @@ fn top_level_overrides_deps() {
 
                 [dependencies.foo]
                 path = "foo"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -179,6 +182,9 @@ fn top_level_overrides_deps() {
                 [lib]
                 name = "foo"
                 crate-type = ["dylib", "rlib"]
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("foo/src/lib.rs", "")
@@ -195,7 +201,7 @@ fn top_level_overrides_deps() {
         -C opt-level=1[..]\
         -C debuginfo=2 [..]\
         -C metadata=[..] \
-        --out-dir [ROOT]/foo/target/release/build/foo/[HASH]/out`
+        --out-dir [ROOT]/foo/target/release/build/foo/[HASH]/out[..]`
 [COMPILING] test v0.0.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name test --edition=2015 src/lib.rs [..]--crate-type lib \
         --emit=[..]link[..] \
@@ -892,6 +898,9 @@ fn profile_hint_mostly_unused_warn_without_gate() {
 
             [profile.dev.package.bar]
             hint-mostly-unused = true
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -931,6 +940,9 @@ fn profile_hint_mostly_unused_nightly() {
 
             [profile.dev.package.bar]
             hint-mostly-unused = true
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")

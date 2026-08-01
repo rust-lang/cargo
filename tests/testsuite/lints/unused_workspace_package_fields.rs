@@ -48,8 +48,7 @@ workspace = true
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("fetch")
         .with_stderr_data(str![[r#"
 [WARNING] unused field `rust-version` in `workspace.package`
  --> Cargo.toml:8:1

@@ -24,8 +24,7 @@ manual_readme = "warn"
         .file("README.md", "")
         .build();
 
-    p.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("fetch")
         .with_stderr_data(str![[r#"
 [WARNING] explicit `package.readme` can be inferred
  --> Cargo.toml:7:1
@@ -64,10 +63,7 @@ manual_readme = "warn"
         .file("README.txt", "")
         .build();
 
-    p.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
-        .with_stderr_data(str![""])
-        .run();
+    p.cargo("fetch").with_stderr_data(str![""]).run();
 }
 
 #[cargo_test]
@@ -92,8 +88,7 @@ manual_readme = "warn"
         .file("README.txt", "")
         .build();
 
-    p.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("fetch")
         .with_stderr_data(str![[r#"
 [WARNING] explicit `package.readme` can be inferred
  --> Cargo.toml:7:1
@@ -130,10 +125,7 @@ manual_readme = "warn"
         .file("README.md", "")
         .build();
 
-    p.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
-        .with_stderr_data(str![""])
-        .run();
+    p.cargo("fetch").with_stderr_data(str![""]).run();
 }
 
 #[cargo_test]
@@ -158,10 +150,7 @@ manual_readme = "warn"
         .file("FOO.md", "")
         .build();
 
-    p.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
-        .with_stderr_data(str![""])
-        .run();
+    p.cargo("fetch").with_stderr_data(str![""]).run();
 }
 
 #[cargo_test]
@@ -186,10 +175,7 @@ manual_readme = "warn"
         .file("src/README.md", "")
         .build();
 
-    p.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
-        .with_stderr_data(str![""])
-        .run();
+    p.cargo("fetch").with_stderr_data(str![""]).run();
 }
 
 #[cargo_test]
@@ -217,8 +203,5 @@ manual_readme = "warn"
         .file("README.md", "")
         .build();
 
-    p.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
-        .with_stderr_data(str![""])
-        .run();
+    p.cargo("fetch").with_stderr_data(str![""]).run();
 }

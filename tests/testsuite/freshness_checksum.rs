@@ -450,6 +450,9 @@ fn no_rebuild_if_build_artifacts_move_backwards_in_time() {
 
                 [dependencies]
                 a = { path = "a" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -491,6 +494,9 @@ fn no_rebuild_if_build_artifacts_move_forward_in_time() {
 
                 [dependencies]
                 a = { path = "a" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -535,6 +541,9 @@ fn no_rebuild_when_rename_dir() {
 
                 [dependencies]
                 foo = { path = "foo" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/_unused.rs", "")
@@ -584,6 +593,9 @@ fn update_dependency_mtime_does_not_rebuild() {
 
                 [dependencies]
                 bar = { path = "bar" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -678,6 +690,9 @@ fn fingerprint_cleaner_does_not_rebuild() {
 
                 [features]
                 a = []
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -762,6 +777,9 @@ fn bust_patched_dep() {
 
                 [patch.crates-io]
                 registry1 = { path = "reg1new" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1401,6 +1419,9 @@ fn verify_source_before_recompile() {
 
                 [dependencies]
                 bar = "0.1.0"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")

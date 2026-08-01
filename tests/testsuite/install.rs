@@ -2785,6 +2785,9 @@ fn ambiguous_registry_vs_local_package() {
 
         [dependencies]
         foo = "0.0.1"
+
+        [lints.cargo]
+        default = "allow"
     "#,
         )
         .build();
@@ -3228,8 +3231,8 @@ im_a_teapot = "warn"
         )
         .file("src/main.rs", "fn main() { let unused = 10; }")
         .build();
-    p.cargo("install --path . -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints", "test-dummy-unstable"])
+    p.cargo("install --path .")
+        .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
         .with_stdout_data(str![])
         .with_stderr_data(str![[r#"
 [INSTALLING] foo v0.0.1 ([ROOT]/foo)
@@ -3276,8 +3279,8 @@ im_a_teapot = "deny"
         .file("src/main.rs", "fn main() { let unused = 10; }")
         .publish();
 
-    cargo_process("install foo -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints", "test-dummy-unstable"])
+    cargo_process("install foo")
+        .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
         .with_stdout_data(str![])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index

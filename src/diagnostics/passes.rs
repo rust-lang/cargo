@@ -153,19 +153,17 @@ fn emit_parse_pkg_diagnostics(
                 rule(workspace, manifest, &path, &mut pkg_stats, workspace.gctx())?;
             }
             ParsePassRule::LintManifest { rule, lint } => {
-                if workspace.gctx().cli_unstable().cargo_lints {
-                    let manifest: ManifestFor<'_> = pkg.into();
-                    let level = manifest.lint_level(&cargo_lints, lint, workspace.gctx());
-                    if level.level != LintLevel::Allow {
-                        rule(
-                            workspace,
-                            manifest,
-                            &path,
-                            level,
-                            &mut pkg_stats,
-                            workspace.gctx(),
-                        )?;
-                    }
+                let manifest: ManifestFor<'_> = pkg.into();
+                let level = manifest.lint_level(&cargo_lints, lint, workspace.gctx());
+                if level.level != LintLevel::Allow {
+                    rule(
+                        workspace,
+                        manifest,
+                        &path,
+                        level,
+                        &mut pkg_stats,
+                        workspace.gctx(),
+                    )?;
                 }
             }
             ParsePassRule::DiagnosticWorkspace { .. } | ParsePassRule::LintWorkspace { .. } => {}
@@ -173,24 +171,22 @@ fn emit_parse_pkg_diagnostics(
                 rule(workspace, pkg, &path, &mut pkg_stats, workspace.gctx())?;
             }
             ParsePassRule::LintPackage { rule, lint } => {
-                if workspace.gctx().cli_unstable().cargo_lints {
-                    let level = lint.level(
-                        &cargo_lints,
-                        pkg.rust_version(),
-                        pkg.manifest().unstable_features(),
-                        workspace.gctx(),
-                    );
+                let level = lint.level(
+                    &cargo_lints,
+                    pkg.rust_version(),
+                    pkg.manifest().unstable_features(),
+                    workspace.gctx(),
+                );
 
-                    if level.level != LintLevel::Allow {
-                        rule(
-                            workspace,
-                            pkg,
-                            &path,
-                            level,
-                            &mut pkg_stats,
-                            workspace.gctx(),
-                        )?;
-                    }
+                if level.level != LintLevel::Allow {
+                    rule(
+                        workspace,
+                        pkg,
+                        &path,
+                        level,
+                        &mut pkg_stats,
+                        workspace.gctx(),
+                    )?;
                 }
             }
         }
@@ -242,19 +238,17 @@ fn emit_parse_ws_diagnostics(
                 )?;
             }
             ParsePassRule::LintManifest { rule, lint } => {
-                if workspace.gctx().cli_unstable().cargo_lints {
-                    let manifest: ManifestFor<'_> = (workspace, workspace.root_maybe()).into();
-                    let level = manifest.lint_level(&cargo_lints, lint, workspace.gctx());
-                    if level.level != LintLevel::Allow {
-                        rule(
-                            workspace,
-                            manifest,
-                            workspace.root_manifest(),
-                            level,
-                            &mut pkg_stats,
-                            workspace.gctx(),
-                        )?;
-                    }
+                let manifest: ManifestFor<'_> = (workspace, workspace.root_maybe()).into();
+                let level = manifest.lint_level(&cargo_lints, lint, workspace.gctx());
+                if level.level != LintLevel::Allow {
+                    rule(
+                        workspace,
+                        manifest,
+                        workspace.root_manifest(),
+                        level,
+                        &mut pkg_stats,
+                        workspace.gctx(),
+                    )?;
                 }
             }
             ParsePassRule::DiagnosticWorkspace { rule } => {
@@ -267,23 +261,21 @@ fn emit_parse_ws_diagnostics(
                 )?;
             }
             ParsePassRule::LintWorkspace { rule, lint } => {
-                if workspace.gctx().cli_unstable().cargo_lints {
-                    let level = lint.level(
-                        &cargo_lints,
-                        workspace.lowest_rust_version(),
-                        workspace.root_maybe().unstable_features(),
+                let level = lint.level(
+                    &cargo_lints,
+                    workspace.lowest_rust_version(),
+                    workspace.root_maybe().unstable_features(),
+                    workspace.gctx(),
+                );
+                if level.level != LintLevel::Allow {
+                    rule(
+                        workspace,
+                        workspace.root_maybe(),
+                        workspace.root_manifest(),
+                        level,
+                        &mut pkg_stats,
                         workspace.gctx(),
-                    );
-                    if level.level != LintLevel::Allow {
-                        rule(
-                            workspace,
-                            workspace.root_maybe(),
-                            workspace.root_manifest(),
-                            level,
-                            &mut pkg_stats,
-                            workspace.gctx(),
-                        )?;
-                    }
+                    )?;
                 }
             }
             ParsePassRule::DiagnosticPackage { .. } | ParsePassRule::LintPackage { .. } => {}

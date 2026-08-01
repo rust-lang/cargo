@@ -888,6 +888,9 @@ fn non_member_feature() {
                 edition = "2015"
                 resolver = "{}"
 
+                [lints.cargo]
+                default = "allow"
+
                 [dependencies]
             "#,
             resolver

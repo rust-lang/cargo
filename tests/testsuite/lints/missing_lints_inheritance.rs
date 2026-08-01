@@ -25,10 +25,7 @@ edition = "2015"
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
-        .with_stderr_data(str![""])
-        .run();
+    p.cargo("fetch").with_stderr_data(str![""]).run();
 }
 
 #[cargo_test]
@@ -58,8 +55,7 @@ edition = "2015"
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("fetch")
         .with_stderr_data(str![[r#"
 [WARNING] missing `[lints]` to inherit `[workspace.lints]`
  --> bar/Cargo.toml
@@ -110,10 +106,7 @@ edition = "2015"
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
-        .with_stderr_data(str![""])
-        .run();
+    p.cargo("fetch").with_stderr_data(str![""]).run();
 }
 
 #[cargo_test]
@@ -146,8 +139,5 @@ workspace = true
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
-        .with_stderr_data(str![""])
-        .run();
+    p.cargo("fetch").with_stderr_data(str![""]).run();
 }

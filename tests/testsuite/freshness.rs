@@ -459,6 +459,9 @@ fn no_rebuild_transitive_target_deps() {
                 a = { path = "a" }
                 [dev-dependencies]
                 b = { path = "b" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -523,6 +526,9 @@ fn rerun_if_changed_in_dep() {
 
                 [dependencies]
                 a = { path = "a" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -571,6 +577,9 @@ fn same_build_dir_cached_packages() {
                 authors = []
                 [dependencies]
                 b = { path = "../b" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("a1/src/lib.rs", "")
@@ -584,6 +593,9 @@ fn same_build_dir_cached_packages() {
                 authors = []
                 [dependencies]
                 b = { path = "../b" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("a2/src/lib.rs", "")
@@ -732,6 +744,9 @@ fn unused_optional_dep() {
                 bar = { path = "bar" }
                 baz = { path = "baz" }
                 registry1 = "*"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -791,6 +806,9 @@ fn path_dev_dep_registry_updates() {
 
                 [dependencies]
                 bar = { path = "bar" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -890,6 +908,9 @@ fn dont_rebuild_based_on_plugins() {
 
                 [dependencies]
                 proc-macro-thing = { path = 'proc-macro-thing' }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -992,6 +1013,9 @@ fn reuse_shared_build_dep() {
 
                 [workspace]
                 members = ["shared", "bar"]
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -1120,6 +1144,9 @@ fn reuse_panic_build_dep_test() {
 
                 [profile.dev]
                 panic = "abort"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1164,6 +1191,9 @@ fn reuse_panic_pm() {
 
                 [profile.dev]
                 panic = "abort"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "extern crate bar;")
