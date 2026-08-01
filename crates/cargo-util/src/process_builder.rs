@@ -561,7 +561,7 @@ impl ProcessBuilder {
 ///
 /// You should set `__CARGO_TEST_FORCE_ARGFILE` to enable this.
 fn debug_force_argfile(retry_enabled: bool) -> bool {
-    cfg!(debug_assertions) && env::var("__CARGO_TEST_FORCE_ARGFILE").is_ok() && retry_enabled
+    retry_enabled && env::var("__CARGO_TEST_FORCE_ARGFILE").is_ok()
 }
 
 /// Creates new pipes for stderr, stdout, and optionally stdin.
