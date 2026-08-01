@@ -208,6 +208,12 @@ fn serialize_resolve(resolve: &Resolve, orig: Option<&str>) -> String {
 
 #[tracing::instrument(skip_all)]
 fn are_equal_lockfiles(orig: &str, current: &str, ws: &Workspace<'_>) -> bool {
+    // Byte-identical is common on warm --locked/--frozen paths; skip the
+    // expensive TOML parse + into_resolve work below.
+    if orig == current {
+        return true;
+    }
+
     // If we want to try and avoid updating the lock file, parse both and
     // compare them; since this is somewhat expensive, don't do it in the
     // common case where we can update lock files.
