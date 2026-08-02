@@ -134,9 +134,8 @@ impl OptVersionReq {
     pub fn matches_prerelease(&self, version: &Version) -> bool {
         if let OptVersionReq::Req(req) = self {
             return req.matches_prerelease(version);
-        } else {
-            return self.matches(version);
         }
+        self.matches(version)
     }
 
     pub fn matches(&self, version: &Version) -> bool {
