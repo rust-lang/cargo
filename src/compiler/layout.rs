@@ -466,7 +466,7 @@ impl BuildDirLayout {
         if self.is_new_layout {
             self.build_unit(pkg_dir).join("fingerprint")
         } else {
-            self.legacy_fingerprint().to_path_buf().join(pkg_dir)
+            self.legacy_fingerprint().join(pkg_dir)
         }
     }
     /// Fetch the fingerprint path. (old layout)
