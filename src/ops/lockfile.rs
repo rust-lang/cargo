@@ -208,12 +208,9 @@ fn serialize_resolve(resolve: &Resolve, orig: Option<&str>) -> String {
 
 #[tracing::instrument(skip_all)]
 fn are_equal_lockfiles(orig: &str, current: &str, ws: &Workspace<'_>) -> bool {
-    if orig == current {
-        return true;
-    }
-
-    // Prefer newline-insensitive equality over TOML parse + into_resolve.
-    if orig.lines().eq(current.lines()) {
+    // Textual equality is conclusive regardless of whether lockfile updates are
+    // allowed, so avoid TOML parse + into_resolve whenever possible.
+    if are_textually_equal_lockfiles(orig, current) {
         return true;
     }
 
@@ -231,6 +228,50 @@ fn are_equal_lockfiles(orig: &str, current: &str, ws: &Workspace<'_>) -> bool {
     }
 
     false
+}
+
+fn are_textually_equal_lockfiles(orig: &str, current: &str) -> bool {
+    orig == current || orig.lines().eq(current.lines())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::are_textually_equal_lockfiles;
+
+    #[test]
+    fn lockfile_text_equality_matrix() {
+        let cases = [
+            ("byte-identical", "version = 4\n", "version = 4\n", true),
+            ("final newline", "version = 4\n", "version = 4", true),
+            (
+                "crlf",
+                "version = 4\r\n\r\n[[package]]\r\nname = \"foo\"\r\n",
+                "version = 4\n\n[[package]]\nname = \"foo\"\n",
+                true,
+            ),
+            (
+                "extra blank line",
+                "version = 4\n\n",
+                "version = 4\n",
+                false,
+            ),
+            (
+                "semantic-only equality",
+                "version=4\n",
+                "version = 4\n",
+                false,
+            ),
+            ("unequal", "version = 3\n", "version = 4\n", false),
+        ];
+
+        for (name, orig, current, expected) in cases {
+            assert_eq!(
+                are_textually_equal_lockfiles(orig, current),
+                expected,
+                "{name}"
+            );
+        }
+    }
 }
 
 fn emit_package(dep: &toml::Table, out: &mut String) {
