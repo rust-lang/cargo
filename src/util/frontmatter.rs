@@ -105,7 +105,7 @@ impl<'s> ScriptSource<'s> {
         // Ends with a line that starts with a matching number of `-` only followed by whitespace
         let nl_fence_pattern = format!("\n{fence_pattern}");
         let Some(frontmatter_nl) = input.find_slice(nl_fence_pattern.as_str()) else {
-            for prefix_len in (2..(nl_fence_pattern.len() - 1)).rev() {
+            for prefix_len in (2..=(nl_fence_pattern.len() - 1)).rev() {
                 let Some(frontmatter_nl) = input.find_slice(&nl_fence_pattern[0..prefix_len])
                 else {
                     continue;
@@ -771,13 +771,13 @@ error: closing code fence has 2 less `-` than the opening fence
 fn main() {}
 "#,
             str![[r#"
-error: closing code fence has 2 less `-` than the opening fence
+error: closing code fence has 1 less `-` than the opening fence
   |
 1 | ----
   | ----
 2 | [dependencies]
 3 | ---
-  | ^^
+  | ^^^
 "#]],
         );
     }
