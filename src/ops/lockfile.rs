@@ -208,6 +208,11 @@ fn serialize_resolve(resolve: &Resolve, orig: Option<&str>) -> String {
 
 #[tracing::instrument(skip_all)]
 fn are_equal_lockfiles(orig: &str, current: &str, ws: &Workspace<'_>) -> bool {
+    // Avoid deserializing lockfiles when their contents already match.
+    if orig.lines().eq(current.lines()) {
+        return true;
+    }
+
     // If we want to try and avoid updating the lock file, parse both and
     // compare them; since this is somewhat expensive, don't do it in the
     // common case where we can update lock files.
@@ -222,7 +227,7 @@ fn are_equal_lockfiles(orig: &str, current: &str, ws: &Workspace<'_>) -> bool {
         }
     }
 
-    orig.lines().eq(current.lines())
+    false
 }
 
 fn emit_package(dep: &toml::Table, out: &mut String) {
