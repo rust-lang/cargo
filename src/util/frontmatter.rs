@@ -111,7 +111,7 @@ impl<'s> ScriptSource<'s> {
                     continue;
                 };
                 let nl_len = "\n".len();
-                let close_len = prefix_len;
+                let close_len = prefix_len - nl_len;
 
                 let _ = input.next_slice(frontmatter_nl.start + nl_len);
                 let close_start = input.current_token_start();
@@ -751,14 +751,13 @@ error: unclosed frontmatter; expected `---`
 fn main() {}
 "#,
             str![[r#"
-error: closing code fence has 1 less `-` than the opening fence
+error: closing code fence has 2 less `-` than the opening fence
   |
-1 |   ----
-  |   ----
-2 |   [dependencies]
-3 | / --
-4 | | fn main() {}
-  | |_^
+1 | ----
+  | ----
+2 | [dependencies]
+3 | --
+  | ^^
 "#]],
         );
     }
@@ -772,26 +771,32 @@ error: closing code fence has 1 less `-` than the opening fence
 fn main() {}
 "#,
             str![[r#"
-error: closing code fence has 1 less `-` than the opening fence
+error: closing code fence has 2 less `-` than the opening fence
   |
 1 | ----
   | ----
 2 | [dependencies]
 3 | ---
-  | ^^^
+  | ^^
 "#]],
         );
     }
 
     #[test]
-    #[should_panic = "is not a char boundary"]
     fn split_fewer_dashes_before_non_ascii() {
         // The byte after the short closing fence starts a multi-byte char.
         assert_source_err(
             "---
 -\u{2502}
 ",
-            str![""],
+            str![[r#"
+error: closing code fence has 2 less `-` than the opening fence
+  |
+1 | ---
+  | ---
+2 | -│
+  | ^
+"#]],
         );
     }
 }
