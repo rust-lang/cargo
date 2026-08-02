@@ -702,4 +702,41 @@ fn main() {}
             str!["unclosed frontmatter; expected `---`"],
         );
     }
+    #[test]
+    fn split_fewer_dashes() {
+        assert_err(
+            ScriptSource::parse(
+                r#"----
+[dependencies]
+--
+fn main() {}
+"#,
+            ),
+            str!["closing code fence has 1 less `-` than the opening fence"],
+        );
+    }
+
+    #[test]
+    fn split_fewer_dashes_by_one() {
+        assert_err(
+            ScriptSource::parse(
+                r#"----
+[dependencies]
+---
+fn main() {}
+"#,
+            ),
+            str!["closing code fence has 1 less `-` than the opening fence"],
+        );
+    }
+
+    #[test]
+    #[should_panic = "is not a char boundary"]
+    fn split_fewer_dashes_before_non_ascii() {
+        // The byte after the short closing fence starts a multi-byte char.
+        assert_err(
+            ScriptSource::parse("---  \n-\u{2502}\n"),
+            str!["closing code fence has 2 less `-` than the opening fence"],
+        );
+    }
 }
