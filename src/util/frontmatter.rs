@@ -105,15 +105,16 @@ impl<'s> ScriptSource<'s> {
         // Ends with a line that starts with a matching number of `-` only followed by whitespace
         let nl_fence_pattern = format!("\n{fence_pattern}");
         let Some(frontmatter_nl) = input.find_slice(nl_fence_pattern.as_str()) else {
-            for len in (2..(nl_fence_pattern.len() - 1)).rev() {
-                let Some(frontmatter_nl) = input.find_slice(&nl_fence_pattern[0..len]) else {
+            for close_len in (1..fence_length).rev() {
+                // `nl_fence_pattern[..=close_len]` is the newline plus `close_len` dashes.
+                let Some(frontmatter_nl) = input.find_slice(&nl_fence_pattern[..=close_len]) else {
                     continue;
                 };
                 let _ = input.next_slice(frontmatter_nl.start + 1);
                 let close_start = input.current_token_start();
-                let _ = input.next_slice(len);
+                let _ = input.next_slice(close_len);
                 let close_end = input.current_token_start();
-                let fewer_dashes = fence_length - len;
+                let fewer_dashes = fence_length - close_len;
                 return Err(FrontmatterError::new(
                     format!(
                         "closing code fence has {fewer_dashes} less `-` than the opening fence"
@@ -712,7 +713,7 @@ fn main() {}
 fn main() {}
 "#,
             ),
-            str!["closing code fence has 1 less `-` than the opening fence"],
+            str!["closing code fence has 2 less `-` than the opening fence"],
         );
     }
 
@@ -731,7 +732,6 @@ fn main() {}
     }
 
     #[test]
-    #[should_panic = "is not a char boundary"]
     fn split_fewer_dashes_before_non_ascii() {
         // The byte after the short closing fence starts a multi-byte char.
         assert_err(
