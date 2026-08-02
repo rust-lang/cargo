@@ -73,6 +73,37 @@ fn simple_git() {
     );
 }
 
+#[cargo_test]
+fn remote_registry_manifest_without_document() {
+    Package::new("bar", "0.0.1")
+        .file("src/lib.rs", "pub fn f() {}")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+
+                [dependencies]
+                bar = "0.0.1"
+            "#,
+        )
+        .file("src/lib.rs", "pub fn g() { bar::f(); }")
+        .build();
+
+    p.cargo("check").run();
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
 fn simple(pre_clean_expected: impl IntoData, post_clean_expected: impl IntoData) {
     let p = project()
         .file(
