@@ -10,7 +10,38 @@
 //! whole node is finished.
 
 use crate::util::data_structures::{HashMap, HashSet};
+use std::cmp::Ordering;
+use std::collections::BinaryHeap;
 use std::hash::Hash;
+
+#[derive(Debug)]
+struct Ready<N> {
+    key: N,
+    priority: usize,
+    order: usize,
+}
+
+impl<N> PartialEq for Ready<N> {
+    fn eq(&self, other: &Self) -> bool {
+        self.priority == other.priority && self.order == other.order
+    }
+}
+
+impl<N> Eq for Ready<N> {}
+
+impl<N> PartialOrd for Ready<N> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<N> Ord for Ready<N> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.priority
+            .cmp(&other.priority)
+            .then_with(|| self.order.cmp(&other.order))
+    }
+}
 
 #[derive(Debug)]
 pub struct DependencyQueue<N: Hash + Eq, E: Hash + Eq, V> {
@@ -31,11 +62,14 @@ pub struct DependencyQueue<N: Hash + Eq, E: Hash + Eq, V> {
     /// easily indexable with just an `N`
     reverse_dep_map: HashMap<N, HashMap<E, HashSet<N>>>,
 
-    /// The relative priority of this package. Higher values should be scheduled sooner.
-    priority: HashMap<N, usize>,
+    /// The relative priority and original map order of this package.
+    priority: HashMap<N, (usize, usize)>,
 
     /// An expected cost for building this package. Used to determine priority.
     cost: HashMap<N, usize>,
+
+    /// Nodes with no remaining dependencies.
+    ready: BinaryHeap<Ready<N>>,
 }
 
 impl<N: Hash + Eq, E: Hash + Eq, V> Default for DependencyQueue<N, E, V> {
@@ -52,6 +86,7 @@ impl<N: Hash + Eq, E: Hash + Eq, V> DependencyQueue<N, E, V> {
             reverse_dep_map: HashMap::default(),
             priority: HashMap::default(),
             cost: HashMap::default(),
+            ready: BinaryHeap::new(),
         }
     }
 }
@@ -102,14 +137,32 @@ impl<N: Hash + Eq + Clone, E: Eq + Hash + Clone, V> DependencyQueue<N, E, V> {
         for key in self.dep_map.keys() {
             depth(key, &self.reverse_dep_map, &mut out);
         }
-        self.priority = out
-            .into_iter()
-            .map(|(n, set)| {
-                let total_cost =
-                    self.cost[&n] + set.iter().map(|key| self.cost[key]).sum::<usize>();
-                (n, total_cost)
+
+        self.priority = self
+            .dep_map
+            .keys()
+            .enumerate()
+            .map(|(order, n)| {
+                let set = out.remove(n).unwrap();
+                let total_cost = self.cost[n] + set.iter().map(|key| self.cost[key]).sum::<usize>();
+                (n.clone(), (total_cost, order))
             })
             .collect();
+
+        self.ready.clear();
+        self.ready.extend(
+            self.dep_map
+                .iter()
+                .filter(|(_, (deps, _))| deps.is_empty())
+                .map(|(key, _)| {
+                    let &(priority, order) = &self.priority[key];
+                    Ready {
+                        key: key.clone(),
+                        priority,
+                        order,
+                    }
+                }),
+        );
 
         /// Creates a flattened reverse dependency list. For a given key, finds the
         /// set of nodes which depend on it, including transitively. This is different
@@ -150,12 +203,7 @@ impl<N: Hash + Eq + Clone, E: Eq + Hash + Clone, V> DependencyQueue<N, E, V> {
     /// A package is ready to be built when it has 0 un-built dependencies. If
     /// `None` is returned then no packages are ready to be built.
     pub fn dequeue(&mut self) -> Option<(N, V, usize)> {
-        let (key, priority) = self
-            .dep_map
-            .iter()
-            .filter(|(_, (deps, _))| deps.is_empty())
-            .map(|(key, _)| (key.clone(), self.priority[key]))
-            .max_by_key(|(_, priority)| *priority)?;
+        let Ready { key, priority, .. } = self.ready.pop()?;
         let (_, data) = self.dep_map.remove(&key).unwrap();
         Some((key, data, priority))
     }
@@ -179,7 +227,6 @@ impl<N: Hash + Eq + Clone, E: Eq + Hash + Clone, V> DependencyQueue<N, E, V> {
     /// Returns the nodes that are now allowed to be dequeued as a result of
     /// finishing this node.
     pub fn finish(&mut self, node: &N, edge: &E) -> Vec<&N> {
-        // hashset<Node>
         let reverse_deps = self.reverse_dep_map.get(node).and_then(|map| map.get(edge));
         let Some(reverse_deps) = reverse_deps else {
             return Vec::new();
@@ -193,13 +240,22 @@ impl<N: Hash + Eq + Clone, E: Eq + Hash + Clone, V> DependencyQueue<N, E, V> {
                 result.push(dep);
             }
         }
+        self.ready.reserve(result.len());
+        for dep in &result {
+            let &(priority, order) = &self.priority[*dep];
+            self.ready.push(Ready {
+                key: (**dep).clone(),
+                priority,
+                order,
+            });
+        }
         result
     }
 }
 
 #[cfg(test)]
 mod test {
-    use super::DependencyQueue;
+    use super::{DependencyQueue, HashSet};
 
     #[test]
     fn deep_first_equal_cost() {
@@ -250,5 +306,109 @@ mod test {
         assert_eq!(q.dequeue(), None);
         q.finish(&4, &());
         assert_eq!(q.dequeue(), None);
+    }
+
+    #[test]
+    fn preserves_equal_priority_dispatch_order() {
+        let mut q: DependencyQueue<i32, (), ()> = DependencyQueue::new();
+
+        for node in 0..16 {
+            q.queue(node, (), std::iter::empty::<(i32, ())>(), 1);
+        }
+
+        let mut expected = q.dep_map.keys().copied().collect::<Vec<_>>();
+        expected.reverse();
+        q.queue_finished();
+
+        let actual =
+            std::iter::from_fn(|| q.dequeue().map(|(node, (), _)| node)).collect::<Vec<_>>();
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn heap_matches_previous_scanner() {
+        for seed in 0..16 {
+            let mut heap = seeded_queue(seed);
+            let mut scan = seeded_queue(seed);
+            heap.queue_finished();
+            scan.queue_finished();
+
+            let mut active = Vec::new();
+            let mut scheduled = HashSet::default();
+            let mut step = 0;
+            loop {
+                let ready = heap
+                    .dep_map
+                    .values()
+                    .filter(|(dependencies, _)| dependencies.is_empty())
+                    .count();
+                assert_eq!(heap.ready.len(), ready, "seed {seed}, step {step}");
+
+                let expected =
+                    std::iter::from_fn(|| dequeue_by_scan(&mut scan)).collect::<Vec<_>>();
+                let actual = std::iter::from_fn(|| heap.dequeue()).collect::<Vec<_>>();
+                assert_eq!(actual, expected, "seed {seed}, step {step}");
+                for (node, (), _) in actual {
+                    assert!(scheduled.insert(node), "scheduled node {node} twice");
+                    active.push(node);
+                }
+
+                if active.is_empty() {
+                    break;
+                }
+
+                let completions = 1 + (seed + step * 3) % active.len();
+                for completion in 0..completions {
+                    let index = (seed * 17 + step * 13 + completion * 7) % active.len();
+                    let node = active.swap_remove(index);
+                    assert_eq!(heap.finish(&node, &()).len(), scan.finish(&node, &()).len());
+                }
+                step += 1;
+            }
+
+            assert!(heap.is_empty(), "seed {seed}");
+            assert!(scan.is_empty(), "seed {seed}");
+            assert_eq!(scheduled.len(), 64, "seed {seed}");
+        }
+    }
+
+    #[test]
+    fn waits_for_all_edges_before_becoming_ready() {
+        for edges in [[0, 1], [1, 0]] {
+            let mut queue = DependencyQueue::new();
+            queue.queue(0, (), [], 1);
+            queue.queue(1, (), [(0, 0), (0, 1)], 1);
+            queue.queue_finished();
+
+            assert_eq!(queue.dequeue().map(|(node, (), _)| node), Some(0));
+            assert!(queue.finish(&0, &edges[0]).is_empty());
+            assert_eq!(queue.dequeue(), None);
+            assert_eq!(queue.finish(&0, &edges[1]).len(), 1);
+            assert_eq!(queue.dequeue().map(|(node, (), _)| node), Some(1));
+            assert_eq!(queue.dequeue(), None);
+        }
+    }
+
+    fn seeded_queue(seed: usize) -> DependencyQueue<usize, (), ()> {
+        let mut queue = DependencyQueue::new();
+        for node in 0..64 {
+            let dependencies = (0..node)
+                .filter(|dependency| (node * 37 + dependency * 17 + seed * 13) % 11 < 2)
+                .map(|dependency| (dependency, ()))
+                .collect::<Vec<_>>();
+            queue.queue(node, (), dependencies, (node + seed) % 5 + 1);
+        }
+        queue
+    }
+
+    fn dequeue_by_scan(queue: &mut DependencyQueue<usize, (), ()>) -> Option<(usize, (), usize)> {
+        let (key, priority) = queue
+            .dep_map
+            .iter()
+            .filter(|(_, (dependencies, _))| dependencies.is_empty())
+            .map(|(key, _)| (*key, queue.priority[key].0))
+            .max_by_key(|(_, priority)| *priority)?;
+        let (_, value) = queue.dep_map.remove(&key).unwrap();
+        Some((key, value, priority))
     }
 }

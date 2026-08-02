@@ -34,5 +34,9 @@ harness = false
 name = "global_cache_tracker"
 harness = false
 
+[[bench]]
+name = "dependency_queue"
+harness = false
+
 [lints]
 workspace = true
