@@ -737,4 +737,57 @@ error: unclosed frontmatter; expected `---`
 "#]],
         );
     }
+
+    #[test]
+    fn split_fewer_dashes() {
+        assert_source_err(
+            r#"----
+[dependencies]
+--
+fn main() {}
+"#,
+            str![[r#"
+error: closing code fence has 1 less `-` than the opening fence
+  |
+1 |   ----
+  |   ----
+2 |   [dependencies]
+3 | / --
+4 | | fn main() {}
+  | |_^
+"#]],
+        );
+    }
+
+    #[test]
+    fn split_fewer_dashes_by_one() {
+        assert_source_err(
+            r#"----
+[dependencies]
+---
+fn main() {}
+"#,
+            str![[r#"
+error: closing code fence has 1 less `-` than the opening fence
+  |
+1 | ----
+  | ----
+2 | [dependencies]
+3 | ---
+  | ^^^
+"#]],
+        );
+    }
+
+    #[test]
+    #[should_panic = "is not a char boundary"]
+    fn split_fewer_dashes_before_non_ascii() {
+        // The byte after the short closing fence starts a multi-byte char.
+        assert_source_err(
+            "---
+-\u{2502}
+",
+            str![""],
+        );
+    }
 }
