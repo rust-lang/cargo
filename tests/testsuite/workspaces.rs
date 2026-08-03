@@ -2345,7 +2345,6 @@ fn ws_err_unused() {
         "[features]",
         "[target]",
         "[badges]",
-        "[lints]",
     ] {
         let key = table.trim_start_matches('[').trim_end_matches(']');
         let p = project()
@@ -2379,7 +2378,20 @@ Caused by:
 
 #[cargo_test]
 fn ws_err_unused_similar_suggest() {
-    let cases: &[(&str, &str)] = &[];
+    let cases: &[(&str, &str)] = &[
+        (
+            "[lints]",
+            "[HELP] a similar field exists: `[workspace.lints]`",
+        ),
+        (
+            "[lints.rust]",
+            "[HELP] a similar field exists: `[workspace.lints]`",
+        ),
+        (
+            "[lints.clippy]",
+            "[HELP] a similar field exists: `[workspace.lints]`",
+        ),
+    ];
     for (table, suggestion) in cases {
         let key = table.trim_start_matches('[').trim_end_matches(']');
         let key = key.split_once('.').map(|p| p.0).unwrap_or(key);
