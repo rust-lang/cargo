@@ -223,9 +223,10 @@ fn detect_sysroot_src_path(ws: &Workspace<'_>) -> CargoResult<PathBuf> {
     }
 
     // NOTE: This is temporary until we figure out how to acquire the source.
+    let rustc = ws.gctx().load_global_rustc(Some(ws))?;
     let src_path = ws
         .gctx()
-        .get_sysroot(Some(ws))
+        .get_sysroot(&rustc)
         .expect("able to invoke rustc")
         .join("lib")
         .join("rustlib")

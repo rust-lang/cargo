@@ -184,9 +184,8 @@ pub fn fix(
         wrapper.env(IDIOMS_ENV_INTERNAL, "1");
     }
 
-    let sysroot = gctx
-        .get_sysroot(Some(original_ws))
-        .expect("able to invoke rustc");
+    let rustc = gctx.load_global_rustc(Some(original_ws))?;
+    let sysroot = gctx.get_sysroot(&rustc).expect("able to invoke rustc");
     if sysroot.is_dir() {
         wrapper.env(SYSROOT_INTERNAL, sysroot);
     }

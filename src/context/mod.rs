@@ -614,15 +614,9 @@ impl GlobalContext {
     }
 
     /// Get the sysroot path.
-    pub fn get_sysroot<'gctx>(
-        &'gctx self,
-        ws: Option<&Workspace<'gctx>>,
-    ) -> CargoResult<&'gctx Path> {
+    pub fn get_sysroot<'gctx>(&'gctx self, rustc: &Rustc) -> CargoResult<&'gctx Path> {
         self.sysroot
-            .try_borrow_with(|| {
-                let rustc = self.load_global_rustc(ws)?;
-                rustc.sysroot(self)
-            })
+            .try_borrow_with(|| rustc.sysroot(self))
             .map(AsRef::as_ref)
     }
 

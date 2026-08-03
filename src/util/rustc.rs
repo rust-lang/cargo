@@ -4,7 +4,7 @@ use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-use anyhow::Context as _;
+use anyhow::{Context as _, bail};
 use cargo_util::{ProcessBuilder, ProcessError, paths};
 use filetime::FileTime;
 use serde::{Deserialize, Serialize};
@@ -169,7 +169,11 @@ impl Rustc {
         cmd.arg("--print=sysroot");
 
         let (stdout, _) = self.cached_output(&cmd, 0)?;
-        Ok(stdout.trim().into())
+        let path: PathBuf = stdout.trim().into();
+        if !path.exists() {
+            bail!("sysroot path \"{}\" does not exist", path.display());
+        }
+        Ok(path)
     }
 }
 
