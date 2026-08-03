@@ -54,7 +54,7 @@ pub fn resolve_std<'gctx>(
     crates: &[String],
     kinds: &[CompileKind],
 ) -> CargoResult<(PackageSet<'gctx>, Resolve, ResolvedFeatures)> {
-    let src_path = detect_sysroot_src_path(target_data)?;
+    let src_path = detect_sysroot_src_path(ws)?;
     let std_ws_manifest_path = src_path.join("Cargo.toml");
     let gctx = ws.gctx();
     // TODO: Consider doing something to enforce --locked? Or to prevent the
@@ -217,15 +217,17 @@ fn generate_roots(
     Ok(())
 }
 
-fn detect_sysroot_src_path(target_data: &RustcTargetData<'_>) -> CargoResult<PathBuf> {
-    if let Some(s) = target_data.gctx.get_env_os("__CARGO_TESTS_ONLY_SRC_ROOT") {
+fn detect_sysroot_src_path(ws: &Workspace<'_>) -> CargoResult<PathBuf> {
+    if let Some(s) = ws.gctx().get_env_os("__CARGO_TESTS_ONLY_SRC_ROOT") {
         return Ok(s.into());
     }
 
     // NOTE: This is temporary until we figure out how to acquire the source.
-    let src_path = target_data
-        .info(CompileKind::Host)
-        .sysroot
+    let rustc = ws.gctx().load_global_rustc(Some(ws))?;
+    let src_path = ws
+        .gctx()
+        .get_sysroot(&rustc)
+        .expect("able to invoke rustc")
         .join("lib")
         .join("rustlib")
         .join("src")
@@ -238,7 +240,7 @@ fn detect_sysroot_src_path(target_data: &RustcTargetData<'_>) -> CargoResult<Pat
              library, try:\n        rustup component add rust-src",
             lock
         );
-        match target_data.gctx.get_env("RUSTUP_TOOLCHAIN") {
+        match ws.gctx().get_env("RUSTUP_TOOLCHAIN") {
             Ok(rustup_toolchain) => {
                 anyhow::bail!("{} --toolchain {}", msg, rustup_toolchain);
             }

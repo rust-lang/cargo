@@ -4,7 +4,7 @@ use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-use anyhow::Context as _;
+use anyhow::{Context as _, bail};
 use cargo_util::{ProcessBuilder, ProcessError, paths};
 use filetime::FileTime;
 use serde::{Deserialize, Serialize};
@@ -64,6 +64,7 @@ impl Rustc {
             .wrapped(wrapper.as_deref());
         apply_env_config(gctx, &mut cmd)?;
         cmd.env(crate::CARGO_ENV, gctx.cargo_exe()?);
+
         cmd.arg("-vV");
         let verbose_version = cache.cached_output(&cmd, 0)?.0;
 
@@ -158,6 +159,21 @@ impl Rustc {
             .lock()
             .unwrap()
             .cached_output(cmd, extra_fingerprint)
+    }
+
+    /// Use the rustc executable to fetch the sysroot path.
+    pub fn sysroot(&self, gctx: &GlobalContext) -> CargoResult<PathBuf> {
+        let mut cmd = self.workspace_process();
+        apply_env_config(gctx, &mut cmd)?;
+        cmd.env(crate::CARGO_ENV, gctx.cargo_exe()?);
+        cmd.arg("--print=sysroot");
+
+        let (stdout, _) = self.cached_output(&cmd, 0)?;
+        let path: PathBuf = stdout.trim().into();
+        if !path.exists() {
+            bail!("sysroot path \"{}\" does not exist", path.display());
+        }
+        Ok(path)
     }
 }
 

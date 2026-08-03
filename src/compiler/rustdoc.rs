@@ -1,8 +1,8 @@
 //! Utilities for building with rustdoc.
 
+use crate::compiler::BuildContext;
 use crate::compiler::build_runner::BuildRunner;
 use crate::compiler::unit::Unit;
-use crate::compiler::{BuildContext, CompileKind};
 use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::data_structures::HashMap;
 use crate::util::data_structures::HashSet;
@@ -208,7 +208,7 @@ pub fn add_root_urls(
     let std_url = match &map.std {
         None | Some(RustdocExternMode::Remote) => None,
         Some(RustdocExternMode::Local) => {
-            let sysroot = &build_runner.bcx.target_data.info(CompileKind::Host).sysroot;
+            let sysroot = build_runner.bcx.get_sysroot();
             let html_root = sysroot.join("share").join("doc").join("rust").join("html");
             if html_root.exists() {
                 let url = Url::from_file_path(&html_root).map_err(|()| {
