@@ -645,7 +645,7 @@ fn cargo_compile_with_bin_and_crate_type() {
                 edition = "2015"
 
                 [[bin]]
-                name = "the_foo_bin"
+                name = "the-foo-bin"
                 path = "src/foo.rs"
                 crate-type = ["cdylib", "rlib"]
             "#,
@@ -656,7 +656,7 @@ fn cargo_compile_with_bin_and_crate_type() {
     p.cargo("build")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] Cargo.toml: the target `the_foo_bin` is a binary and can't have any crate-types set (currently "cdylib, rlib")
+[ERROR] Cargo.toml: the target `the-foo-bin` is a binary and can't have any crate-types set (currently "cdylib, rlib")
 [ERROR] could not parse `foo` (manifest) due to 1 previous error
 
 "#]])
@@ -731,7 +731,7 @@ fn cargo_compile_with_bin_and_proc() {
                 edition = "2015"
 
                 [[bin]]
-                name = "the_foo_bin"
+                name = "the-foo-bin"
                 path = "src/foo.rs"
                 proc-macro = true
             "#,
@@ -742,7 +742,7 @@ fn cargo_compile_with_bin_and_proc() {
     p.cargo("build")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] Cargo.toml: the target `the_foo_bin` is a binary and can't have `proc-macro` set `true`
+[ERROR] Cargo.toml: the target `the-foo-bin` is a binary and can't have `proc-macro` set `true`
 [ERROR] could not parse `foo` (manifest) due to 1 previous error
 
 "#]])
