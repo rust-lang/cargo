@@ -582,7 +582,14 @@ fn normalize_toml(
         normalized_toml.badges = original_toml.badges.clone();
     } else {
         if let Some(field) = original_toml.requires_package().next() {
-            bail!("this virtual manifest specifies a `{field}` section, which is not allowed");
+            let suggestion = if field == "lints" {
+                "\nhelp: a similar field exists: `[workspace.lints]`"
+            } else {
+                ""
+            };
+            bail!(
+                "this virtual manifest specifies a `{field}` section, which is not allowed{suggestion}"
+            );
         }
     }
 

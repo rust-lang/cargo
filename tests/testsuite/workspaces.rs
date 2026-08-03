@@ -2345,7 +2345,6 @@ fn ws_err_unused() {
         "[features]",
         "[target]",
         "[badges]",
-        "[lints]",
     ] {
         let key = table.trim_start_matches('[').trim_end_matches(']');
         let p = project()
@@ -2371,6 +2370,55 @@ fn ws_err_unused() {
 
 Caused by:
   this virtual manifest specifies a `{key}` section, which is not allowed
+",
+            ))
+            .run();
+    }
+}
+
+#[cargo_test]
+fn ws_err_unused_similar_suggest() {
+    let cases: &[(&str, &str)] = &[
+        (
+            "[lints]",
+            "[HELP] a similar field exists: `[workspace.lints]`",
+        ),
+        (
+            "[lints.rust]",
+            "[HELP] a similar field exists: `[workspace.lints]`",
+        ),
+        (
+            "[lints.clippy]",
+            "[HELP] a similar field exists: `[workspace.lints]`",
+        ),
+    ];
+    for (table, suggestion) in cases {
+        let key = table.trim_start_matches('[').trim_end_matches(']');
+        let key = key.split_once('.').map(|p| p.0).unwrap_or(key);
+        let p = project()
+            .file(
+                "Cargo.toml",
+                &format!(
+                    r#"
+                    [workspace]
+                    members = ["a"]
+
+                    {table}
+                    "#,
+                ),
+            )
+            .file("a/Cargo.toml", &basic_lib_manifest("a"))
+            .file("a/src/lib.rs", "")
+            .build();
+        p.cargo("check")
+            .with_status(101)
+            .with_stderr_data(&format!(
+                "\
+[ERROR] failed to parse manifest at `[..]/foo/Cargo.toml`
+
+Caused by:
+  this virtual manifest specifies a `{key}` section, which is not allowed
+  {suggestion}
 ",
             ))
             .run();
