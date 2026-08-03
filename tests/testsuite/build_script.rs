@@ -1423,6 +1423,34 @@ Caused by:
 }
 
 #[cargo_test]
+fn build_script_empty() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2024"
+                build = ""
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  invalid `package.build` file name
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn links_duplicates() {
     // this tests that the links_duplicates are caught at resolver time
     let p = project()
