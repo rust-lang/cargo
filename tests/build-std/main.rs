@@ -445,7 +445,7 @@ fn build_std_does_not_warn_about_implicit_std_deps() {
             "Cargo.toml",
             r#"
                 [package]
-                name = "buildstd_test"
+                name = "buildstd-test"
                 version = "0.1.0"
                 edition = "2021"
 
@@ -473,7 +473,7 @@ fn build_std_does_not_warn_about_implicit_std_deps() {
         .with_stderr_data(
             str![[r#"
 [WARNING] extern crate `bar` is unused in crate `buildstd_test`
-[WARNING] `buildstd_test` (bin "buildstd_test") generated 1 warning
+[WARNING] `buildstd-test` (bin "buildstd-test") generated 1 warning
 ...
 "#]]
             .unordered(),
