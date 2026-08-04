@@ -29,13 +29,13 @@ non_kebab_case_bins = "warn"
     p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] binaries should have a kebab-case name
+[WARNING] binary `foo_bar` should have a kebab-case name
   |
 1 | [ROOT]/foo/target/.../foo_bar[EXE]
   |                   [..]^^^^^^^
   |
   = [NOTE] `cargo::non_kebab_case_bins` is set to `warn` in `[lints]`
-[HELP] to change the binary name to kebab case, convert `bin.name`
+[HELP] to change the binary name to `foo-bar`, convert `bin.name`
  --> Cargo.toml:9:8
   |
 9 - name = "foo_bar"
@@ -70,19 +70,19 @@ non_kebab_case_bins = "warn"
     p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] binaries should have a kebab-case name
+[WARNING] binary `foo_bar` should have a kebab-case name
    |
  1 | [ROOT]/foo/target/.../foo_bar[EXE]
    |                   [..]^^^^^^^
    |
    = [NOTE] `cargo::non_kebab_case_bins` is set to `warn` in `[lints]`
-[HELP] to change the binary name to kebab case, convert `package.name`
+[HELP] to change the binary name to `foo-bar`, convert `package.name`
   --> Cargo.toml:3:8
    |
  3 - name = "foo_bar"
  3 + name = "foo-bar"
    |
-[HELP] to change the binary name to kebab case, specify `bin.name`
+[HELP] to change the binary name to `foo-bar`, specify `bin.name`
   --> Cargo.toml:10:30
    |
 10 ~ non_kebab_case_bins = "warn"
@@ -119,13 +119,13 @@ non_kebab_case_bins = "warn"
     p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] binaries should have a kebab-case name
+[WARNING] binary `foo_bar` should have a kebab-case name
   |
 1 | [ROOT]/foo/target/.../foo_bar[EXE]
   |                   [..]^^^^^^^
   |
   = [NOTE] `cargo::non_kebab_case_bins` is set to `warn` in `[lints]`
-[HELP] to change the binary name to kebab case, convert the file stem
+[HELP] to change the binary name to `foo-bar`, convert the file stem
   |
 1 - src/bin/foo_bar.rs
 1 + src/bin/foo-bar.rs
@@ -156,13 +156,13 @@ fn main() {}"#,
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/foo_bar`
-[WARNING] binaries should have a kebab-case name
+[WARNING] binary `foo_bar` should have a kebab-case name
   |
 1 | [ROOT]/home/.cargo/build/[HASH]/target/.../foo_bar[EXE]
   |                                        [..]^^^^^^^
   |
   = [NOTE] `cargo::non_kebab_case_bins` is set to `warn` in `[lints]`
-[HELP] to change the binary name to kebab case, convert the file stem
+[HELP] to change the binary name to `foo-bar`, convert the file stem
   |
 1 - foo_bar
 1 + foo-bar

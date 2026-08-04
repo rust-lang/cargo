@@ -113,9 +113,9 @@ fn lint_package_inner(
     let level = lint_level.to_diagnostic_level();
     let emitted_source = LINT.emitted_source(lint_level, source);
 
-    let mut primary = Group::with_title(
-        level.primary_title("`package.homepage` is redundant with another manifest field"),
-    );
+    let mut primary = Group::with_title(level.primary_title(format!(
+        "`package.homepage` is redundant with `package.{other_field}`"
+    )));
     if let Some(document) = document
         && let Some(contents) = contents
         && let Some(span) = get_key_value_span(document, &["package", "homepage"])

@@ -116,7 +116,9 @@ fn lint_package_inner(
         primary_source.push_str(original_name);
         primary_source.push_str(std::env::consts::EXE_SUFFIX);
         let mut primary_group = level
-            .primary_title("binaries should have a kebab-case name")
+            .primary_title(format!(
+                "binary `{original_name}` should have a kebab-case name"
+            ))
             .element(
                 Snippet::source(&primary_source)
                     .annotation(AnnotationKind::Primary.span(primary_span_start..primary_span_end)),
@@ -133,10 +135,9 @@ fn lint_package_inner(
             .enumerate()
             .find(|(_i, t)| t.name.as_deref() == Some(original_name))
         {
-            let mut help = Group::with_title(
-                Level::HELP
-                    .secondary_title("to change the binary name to kebab case, convert `bin.name`"),
-            );
+            let mut help = Group::with_title(Level::HELP.secondary_title(format!(
+                "to change the binary name to `{kebab_case}`, convert `bin.name`"
+            )));
             if let Some(document) = document
                 && let Some(contents) = contents
                 && let Some(span) = get_key_value_span(
@@ -168,11 +169,12 @@ fn lint_package_inner(
             // Showing package in case this is done before first publish to fix the problem at the
             // root
             let help_package_name =
-                "to change the binary name to kebab case, convert `package.name`";
+                format!("to change the binary name to `{kebab_case}`, convert `package.name`");
             // Including `[[bin]]` in case it is already published.
             // Preferring it over moving the file to avoid having to get into moving the
             // files it `mod`s
-            let help_bin_table = "to change the binary name to kebab case, specify `bin.name`";
+            let help_bin_table =
+                format!("to change the binary name to `{kebab_case}`, specify `bin.name`");
             if let Some(document) = document
                 && let Some(contents) = contents
                 && let Some(span) = get_key_value_span(document, &["package", "name"])
@@ -229,7 +231,9 @@ path = "src/main.rs""#
                 })
                 .unwrap_or(0);
             let help = Level::HELP
-                .secondary_title("to change the binary name to kebab case, convert the file stem")
+                .secondary_title(format!(
+                    "to change the binary name to `{kebab_case}`, convert the file stem"
+                ))
                 .element(Snippet::source(display_path).patch(Patch::new(start..end, kebab_case)));
             report.push(help);
         }
