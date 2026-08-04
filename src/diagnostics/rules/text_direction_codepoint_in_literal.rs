@@ -26,7 +26,6 @@ use crate::workspace::Workspace;
 
 pub static LINT: &Lint = &Lint {
     name: "text_direction_codepoint_in_literal",
-    desc: "unicode codepoint changing visible direction of text present in literal",
     primary_group: &CORRECTNESS,
     msrv: Some(super::CARGO_LINTS_MSRV),
     feature_gate: None,
@@ -148,7 +147,10 @@ pub(crate) fn lint_manifest(
         }
 
         let level = lint_level.to_diagnostic_level();
-        let mut primary = Group::with_title(level.primary_title(LINT.desc)).element(snippet);
+        let mut primary = Group::with_title(level.primary_title(
+            "unicode codepoint changing visible direction of text present in literal",
+        ))
+        .element(snippet);
         if emitted_source.is_none() {
             emitted_source = Some(LINT.emitted_source(lint_level, source));
             primary = primary.element(Level::NOTE.message(emitted_source.as_ref().unwrap()));

@@ -19,7 +19,6 @@ use crate::workspace::Workspace;
 
 pub static LINT: &Lint = &Lint {
     name: "missing_lints_inheritance",
-    desc: "missing `[lints]` to inherit `[workspace.lints]`",
     primary_group: &SUSPICIOUS,
     msrv: Some(super::CARGO_LINTS_MSRV),
     feature_gate: None,
@@ -97,7 +96,8 @@ pub(crate) fn lint_package(
     let emitted_source = LINT.emitted_source(lint_level, source);
     let manifest_path = workspace_rel_path(ws, manifest_path);
 
-    let mut primary = Group::with_title(level.primary_title(LINT.desc));
+    let mut primary =
+        Group::with_title(level.primary_title("missing `[lints]` to inherit `[workspace.lints]`"));
     primary = primary.element(Origin::path(&manifest_path));
     primary = primary.element(Level::NOTE.message(emitted_source));
     let mut report = vec![primary];

@@ -25,7 +25,6 @@ use crate::workspace::Workspace;
 
 pub static LINT: &Lint = &Lint {
     name: "unknown_lints",
-    desc: "unknown lint",
     primary_group: &SUSPICIOUS,
     msrv: Some(super::CARGO_LINTS_MSRV),
     feature_gate: None,
@@ -136,7 +135,7 @@ fn lint_manifest_inner(
     let level = lint_level.to_diagnostic_level();
     let mut emitted_source = None;
     for lint_name in unknown_lints {
-        let title = format!("{}: `{lint_name}`", LINT.desc);
+        let title = format!("unknown lint: `{lint_name}`");
         let underscore_lint_name = lint_name.replace("-", "_");
         let matching = if let Some(lint) = LINTS.iter().find(|l| l.name == underscore_lint_name) {
             Some((lint.name, "lint"))

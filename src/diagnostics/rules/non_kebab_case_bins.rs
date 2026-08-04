@@ -24,7 +24,6 @@ use crate::workspace::Workspace;
 
 pub static LINT: &Lint = &Lint {
     name: "non_kebab_case_bins",
-    desc: "binaries should have a kebab-case name",
     primary_group: &STYLE,
     msrv: Some(super::CARGO_LINTS_MSRV),
     feature_gate: None,
@@ -116,12 +115,12 @@ fn lint_package_inner(
         let primary_span_end = primary_span_start + original_name.len();
         primary_source.push_str(original_name);
         primary_source.push_str(std::env::consts::EXE_SUFFIX);
-        let mut primary_group =
-            level
-                .primary_title(LINT.desc)
-                .element(Snippet::source(&primary_source).annotation(
-                    AnnotationKind::Primary.span(primary_span_start..primary_span_end),
-                ));
+        let mut primary_group = level
+            .primary_title("binaries should have a kebab-case name")
+            .element(
+                Snippet::source(&primary_source)
+                    .annotation(AnnotationKind::Primary.span(primary_span_start..primary_span_end)),
+            );
         if i == 0 {
             primary_group = primary_group.element(Level::NOTE.message(emitted_source));
         }

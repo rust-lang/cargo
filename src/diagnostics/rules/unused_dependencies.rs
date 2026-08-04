@@ -33,7 +33,6 @@ use crate::workspace::dependency::DepKind;
 
 pub static LINT: &Lint = &Lint {
     name: "unused_dependencies",
-    desc: "unused dependency",
     primary_group: &STYLE,
     msrv: Some(super::CARGO_LINTS_MSRV),
     feature_gate: None,
@@ -131,7 +130,7 @@ pub(crate) fn lint_package(
         let level = lint_level.to_diagnostic_level();
         let emitted_source = LINT.emitted_source(lint_level, source);
 
-        let mut primary = Group::with_title(level.primary_title(LINT.desc));
+        let mut primary = Group::with_title(level.primary_title("unused dependency"));
         if let Some(document) = document
             && let Some(contents) = contents
             && let Some(span) = get_key_value_span(document, &["build-dependencies", dep_name])
@@ -307,7 +306,7 @@ fn lint_package_build_results(
                 let emitted_source = LINT.emitted_source(lint_level, source);
                 let toml_path = dependency.toml_path();
 
-                let mut primary = Group::with_title(level.primary_title(LINT.desc));
+                let mut primary = Group::with_title(level.primary_title("unused dependency"));
                 if let Some(document) = document
                     && let Some(contents) = contents
                     && let Some(span) = get_key_value_span(document, &toml_path)
