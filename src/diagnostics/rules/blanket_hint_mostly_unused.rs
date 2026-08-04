@@ -22,7 +22,6 @@ use crate::workspace::Workspace;
 
 pub static LINT: &Lint = &Lint {
     name: "blanket_hint_mostly_unused",
-    desc: "blanket_hint_mostly_unused lint",
     primary_group: &SUSPICIOUS,
     msrv: Some(super::CARGO_LINTS_MSRV),
     feature_gate: None,

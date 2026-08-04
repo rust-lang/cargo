@@ -23,7 +23,6 @@ use crate::workspace::Workspace;
 
 pub static LINT: &Lint = &Lint {
     name: "non_snake_case_features",
-    desc: "features should have a snake-case name",
     primary_group: &RESTRICTION,
     msrv: None,
     feature_gate: None,
@@ -98,7 +97,9 @@ fn lint_package_inner(
         let level = lint_level.to_diagnostic_level();
         let emitted_source = LINT.emitted_source(lint_level, source);
 
-        let mut primary = Group::with_title(level.primary_title(LINT.desc));
+        let mut primary = Group::with_title(level.primary_title(format!(
+            "feature `{original_name}` should have a snake-case name"
+        )));
         if let Some(document) = document
             && let Some(contents) = contents
             && let Some(span) = get_key_value_span(document, &["features", original_name])
@@ -133,9 +134,9 @@ fn lint_package_inner(
             && let Some(contents) = contents
             && let Some(span) = get_key_value_span(document, &["features", original_name])
         {
-            let mut help = Group::with_title(Level::HELP.secondary_title(
-                "to change the feature name to snake case, convert the `features` key",
-            ));
+            let mut help = Group::with_title(Level::HELP.secondary_title(format!(
+                "to change the feature name to `{snake_case}`, convert the `features` key"
+            )));
             help = help.element(
                 Snippet::source(contents)
                     .path(manifest_path)

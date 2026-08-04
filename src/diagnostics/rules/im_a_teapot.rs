@@ -22,7 +22,6 @@ use crate::workspace::Workspace;
 /// This lint is only to be used for testing purposes
 pub static LINT: &Lint = &Lint {
     name: "im_a_teapot",
-    desc: "`im_a_teapot` is specified",
     primary_group: &TEST_DUMMY_UNSTABLE,
     msrv: None,
     feature_gate: Some(Feature::test_dummy_unstable()),
@@ -53,7 +52,7 @@ pub(crate) fn lint_package(
         let manifest_path = workspace_rel_path(ws, path);
         let emitted_source = LINT.emitted_source(lint_level, source);
 
-        let mut desc = Group::with_title(level.primary_title(LINT.desc));
+        let mut desc = Group::with_title(level.primary_title("`im_a_teapot` is specified"));
 
         if let Some(document) = manifest.document()
             && let Some(contents) = manifest.contents()

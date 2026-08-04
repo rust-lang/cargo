@@ -33,7 +33,6 @@ use crate::workspace::dependency::DepKind;
 
 pub static LINT: &Lint = &Lint {
     name: "unused_dependencies",
-    desc: "unused dependency",
     primary_group: &STYLE,
     msrv: Some(super::CARGO_LINTS_MSRV),
     feature_gate: None,
@@ -131,7 +130,8 @@ pub(crate) fn lint_package(
         let level = lint_level.to_diagnostic_level();
         let emitted_source = LINT.emitted_source(lint_level, source);
 
-        let mut primary = Group::with_title(level.primary_title(LINT.desc));
+        let mut primary =
+            Group::with_title(level.primary_title(format!("unused build dependency `{dep_name}`")));
         if let Some(document) = document
             && let Some(contents) = contents
             && let Some(span) = get_key_value_span(document, &["build-dependencies", dep_name])
@@ -150,7 +150,8 @@ pub(crate) fn lint_package(
         }
         let mut report = vec![primary];
         let help = Group::with_title(
-            Level::HELP.secondary_title("consider removing the unused dependency"),
+            Level::HELP
+                .secondary_title(format!("consider removing the dependency on `{dep_name}`")),
         );
         report.push(help);
 
@@ -306,8 +307,11 @@ fn lint_package_build_results(
                 let level = lint_level.to_diagnostic_level();
                 let emitted_source = LINT.emitted_source(lint_level, source);
                 let toml_path = dependency.toml_path();
+                let dep_name = toml_path.last().unwrap();
 
-                let mut primary = Group::with_title(level.primary_title(LINT.desc));
+                let mut primary = Group::with_title(
+                    level.primary_title(format!("unused dependency `{dep_name}`")),
+                );
                 if let Some(document) = document
                     && let Some(contents) = contents
                     && let Some(span) = get_key_value_span(document, &toml_path)
@@ -326,9 +330,10 @@ fn lint_package_build_results(
                 }
                 lint_count += 1;
                 let mut report = vec![primary];
-                let help = Group::with_title(
-                    Level::HELP.secondary_title("consider removing the unused dependency"),
-                );
+                let help =
+                    Group::with_title(Level::HELP.secondary_title(format!(
+                        "consider removing the dependency on `{dep_name}`"
+                    )));
                 report.push(help);
                 if used_in_dev {
                     let help = Group::with_title(Level::HELP.secondary_title(

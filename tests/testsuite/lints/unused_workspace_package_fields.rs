@@ -51,21 +51,21 @@ workspace = true
     p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unused field in `workspace.package`
+[WARNING] unused field `rust-version` in `workspace.package`
  --> Cargo.toml:8:1
   |
 8 | rust-version = "1.0"
   | ^^^^^^^^^^^^
   |
   = [NOTE] `cargo::unused_workspace_package_fields` is set to `warn` in `[lints]`
-[HELP] consider removing the unused field
-[WARNING] unused field in `workspace.package`
+[HELP] consider removing the field `workspace.package.rust-version`
+[WARNING] unused field `unknown` in `workspace.package`
  --> Cargo.toml:9:1
   |
 9 | unknown = "foo"
   | ^^^^^^^
   |
-[HELP] consider removing the unused field
+[HELP] consider removing the field `workspace.package.unknown`
 [WARNING] workspace (manifest) generated 2 warnings
 [WARNING] Cargo.toml: unused manifest key: workspace.package.unknown
 [WARNING] `foo` (manifest) generated 1 warning

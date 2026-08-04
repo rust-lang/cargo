@@ -79,21 +79,21 @@ workspace = true
     p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unused workspace dependency
+[WARNING] unused workspace dependency `not-inherited`
   --> Cargo.toml:12:1
    |
 12 | not-inherited = "1"
    | ^^^^^^^^^^^^^
    |
    = [NOTE] `cargo::unused_workspace_dependencies` is set to `warn` in `[lints]`
-[HELP] consider removing the unused workspace dependency
-[WARNING] unused workspace dependency
+[HELP] consider removing the workspace dependency `not-inherited`
+[WARNING] unused workspace dependency `unused`
   --> Cargo.toml:11:1
    |
 11 | unused = "1"
    | ^^^^^^
    |
-[HELP] consider removing the unused workspace dependency
+[HELP] consider removing the workspace dependency `unused`
 [WARNING] workspace (manifest) generated 2 warnings
 [UPDATING] `dummy-registry` index
 [LOCKING] 6 packages to latest compatible versions

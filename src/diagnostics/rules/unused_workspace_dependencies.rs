@@ -22,7 +22,6 @@ use crate::workspace::Workspace;
 
 pub static LINT: &Lint = &Lint {
     name: "unused_workspace_dependencies",
-    desc: "unused workspace dependency",
     primary_group: &SUSPICIOUS,
     msrv: Some(super::CARGO_LINTS_MSRV),
     feature_gate: None,
@@ -131,7 +130,9 @@ pub(crate) fn lint_workspace(
         let manifest_path = workspace_rel_path(ws, manifest_path);
         let emitted_source = LINT.emitted_source(lint_level, source);
 
-        let mut primary = Group::with_title(level.primary_title(LINT.desc));
+        let mut primary = Group::with_title(
+            level.primary_title(format!("unused workspace dependency `{unused}`")),
+        );
         if let Some(document) = document
             && let Some(contents) = contents
         {
@@ -149,9 +150,9 @@ pub(crate) fn lint_workspace(
             primary = primary.element(Level::NOTE.message(emitted_source));
         }
         let mut report = vec![primary];
-        let help = Group::with_title(
-            Level::HELP.secondary_title("consider removing the unused workspace dependency"),
-        );
+        let help = Group::with_title(Level::HELP.secondary_title(format!(
+            "consider removing the workspace dependency `{unused}`"
+        )));
         report.push(help);
 
         pkg_stats.record_lint(lint_level);

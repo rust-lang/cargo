@@ -23,7 +23,6 @@ use crate::workspace::Workspace;
 
 pub static LINT: &Lint = &Lint {
     name: "redundant_homepage",
-    desc: "`package.homepage` is redundant with another manifest field",
     primary_group: &STYLE,
     msrv: Some(super::CARGO_LINTS_MSRV),
     feature_gate: None,
@@ -114,7 +113,9 @@ fn lint_package_inner(
     let level = lint_level.to_diagnostic_level();
     let emitted_source = LINT.emitted_source(lint_level, source);
 
-    let mut primary = Group::with_title(level.primary_title(LINT.desc));
+    let mut primary = Group::with_title(level.primary_title(format!(
+        "`package.homepage` is redundant with `package.{other_field}`"
+    )));
     if let Some(document) = document
         && let Some(contents) = contents
         && let Some(span) = get_key_value_span(document, &["package", "homepage"])

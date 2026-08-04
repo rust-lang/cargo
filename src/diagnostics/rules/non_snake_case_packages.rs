@@ -23,7 +23,6 @@ use crate::workspace::Workspace;
 
 pub static LINT: &Lint = &Lint {
     name: "non_snake_case_packages",
-    desc: "packages should have a snake-case name",
     primary_group: &RESTRICTION,
     msrv: None,
     feature_gate: None,
@@ -98,7 +97,9 @@ fn lint_package_inner(
     let level = lint_level.to_diagnostic_level();
     let emitted_source = LINT.emitted_source(lint_level, source);
 
-    let mut primary = Group::with_title(level.primary_title(LINT.desc));
+    let mut primary = Group::with_title(level.primary_title(format!(
+        "package `{original_name}` should have a snake-case name"
+    )));
     if let Some(document) = document
         && let Some(contents) = contents
         && let Some(span) = get_key_value_span(document, &["package", "name"])
@@ -117,10 +118,9 @@ fn lint_package_inner(
         && let Some(contents) = contents
         && let Some(span) = get_key_value_span(document, &["package", "name"])
     {
-        let mut help =
-            Group::with_title(Level::HELP.secondary_title(
-                "to change the package name to snake case, convert `package.name`",
-            ));
+        let mut help = Group::with_title(Level::HELP.secondary_title(format!(
+            "to change the package name to `{snake_case}`, convert `package.name`"
+        )));
         help = help.element(
             Snippet::source(contents)
                 .path(manifest_path)
@@ -140,7 +140,9 @@ fn lint_package_inner(
             })
             .unwrap_or(0);
         let help = Level::HELP
-            .secondary_title("to change the package name to snake case, convert the file stem")
+            .secondary_title(format!(
+                "to change the package name to `{snake_case}`, convert the file stem"
+            ))
             .element(Snippet::source(display_path).patch(Patch::new(start..end, snake_case)));
         report.push(help);
     }

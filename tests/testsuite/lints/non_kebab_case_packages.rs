@@ -25,14 +25,14 @@ non_kebab_case_packages = "warn"
     foo.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints", "test-dummy-unstable"])
         .with_stderr_data(str![[r#"
-[WARNING] packages should have a kebab-case name
+[WARNING] package `foo_bar` should have a kebab-case name
  --> Cargo.toml:3:8
   |
 3 | name = "foo_bar"
   |        ^^^^^^^^^
   |
   = [NOTE] `cargo::non_kebab_case_packages` is set to `warn` in `[lints]`
-[HELP] to change the package name to kebab case, convert `package.name`
+[HELP] to change the package name to `foo-bar`, convert `package.name`
   |
 3 - name = "foo_bar"
 3 + name = "foo-bar"
@@ -63,10 +63,10 @@ fn main() {}"#,
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/foo_bar`
-[WARNING] packages should have a kebab-case name
+[WARNING] package `foo_bar` should have a kebab-case name
  --> foo_bar
   = [NOTE] `cargo::non_kebab_case_packages` is set to `warn` in `[lints]`
-[HELP] to change the package name to kebab case, convert the file stem
+[HELP] to change the package name to `foo-bar`, convert the file stem
   |
 1 - [ROOT]/foo/foo_bar
 1 + [ROOT]/foo/foo-bar

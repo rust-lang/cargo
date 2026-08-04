@@ -11,7 +11,6 @@ use crate::workspace::{Feature, Features};
 #[derive(Clone, Debug)]
 pub struct Lint {
     pub name: &'static str,
-    pub desc: &'static str,
     pub primary_group: &'static LintGroup,
     /// The minimum supported Rust version for applying this lint
     ///
@@ -239,7 +238,6 @@ mod tests {
     fn test_lint(name: &'static str, group: &'static LintGroup) -> Lint {
         Lint {
             name,
-            desc: "test lint",
             primary_group: group,
             msrv: None,
             feature_gate: None,

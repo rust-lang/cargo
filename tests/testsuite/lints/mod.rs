@@ -472,7 +472,7 @@ fn explicit_lint_level_overrides_default() {
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] `package.homepage` is redundant with another manifest field
+[ERROR] `package.homepage` is redundant with `package.repository`
  --> Cargo.toml:8:24
   |
 7 |             repository = "https://github.com/rust-lang/cargo/"
