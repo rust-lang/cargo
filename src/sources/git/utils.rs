@@ -1154,6 +1154,9 @@ fn fetch_with_cli(
     debug!(target: "git-fetch", backend = "git-cli");
 
     let mut cmd = ProcessBuilder::new("git");
+    // Avoid potential for unused work that may also hang (#15775)
+    cmd.arg("-c").arg("core.fsmonitor=false");
+
     cmd.arg("fetch");
     if tags {
         cmd.arg("--tags");
