@@ -59,6 +59,7 @@
 //! over the place.
 
 use crate::util::data_structures::{HashMap, HashSet};
+use crate::workspace::dependency::DepKind;
 use rustc_hash::FxBuildHasher;
 use std::collections::BTreeMap;
 use std::rc::Rc;
@@ -240,7 +241,7 @@ fn activate_deps_loop(
     while let Some((just_here_for_the_error_messages, frame)) =
         remaining_deps.pop_most_constrained()
     {
-        let (mut parent, (mut dep, candidates, mut features)) = frame;
+        let (mut parent, parent_inject_builtins, (mut dep, candidates, mut features)) = frame;
 
         // If we spend a lot of time here (we shouldn't in most cases) then give
         // a bit of a visual indicator as to what we're doing.
@@ -393,12 +394,20 @@ fn activate_deps_loop(
             };
 
             let pid = candidate.package_id();
+            // The deps frame inject_builtins field is inherited from the parent, and is a baseline
+            // for all siblings. We override that baseline to false for a dep that's already builtin
+            // or for the host
+            let inject_builtins = parent_inject_builtins
+                && !dep.source_id().is_builtin()
+                && dep.kind() != DepKind::Build;
+
             let opts = ResolveOpts {
                 dev_deps: false,
                 features: RequestedFeatures::DepFeatures {
                     features: Rc::clone(&features),
                     uses_default_features: dep.uses_default_features(),
                 },
+                inject_builtins,
             };
             trace!(
                 "{}[{}]>{} trying {}",
@@ -689,6 +698,7 @@ fn activate(
     let frame = DepsFrame {
         parent: candidate,
         just_for_error_messages: false,
+        inject_builtins: opts.inject_builtins,
         remaining_siblings: RcVecIter::new(Rc::clone(deps)),
     };
     Ok(Some((frame, now.elapsed())))
