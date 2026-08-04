@@ -187,7 +187,7 @@ fn top_level_overrides_deps() {
     p.cargo("build -v --release")
         .with_stderr_data(&format!(
             "\
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [COMPILING] foo v0.0.0 ([ROOT]/foo/foo)
 [RUNNING] `rustc --crate-name foo --edition=2015 foo/src/lib.rs [..]\
         --crate-type dylib --crate-type rlib \
@@ -902,7 +902,7 @@ fn profile_hint_mostly_unused_warn_without_gate() {
     p.cargo("check -v")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 [WARNING] bar@1.0.0: ignoring 'hint-mostly-unused' profile option, pass `-Zprofile-hint-mostly-unused` to enable it
@@ -942,7 +942,7 @@ fn profile_hint_mostly_unused_nightly() {
         .masquerade_as_nightly_cargo(&["profile-hint-mostly-unused"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 [CHECKING] bar v1.0.0

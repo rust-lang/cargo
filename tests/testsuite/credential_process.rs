@@ -670,7 +670,7 @@ fn basic_provider() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 CARGO=Some([..])
 CARGO_REGISTRY_NAME_OPT=Some("alternative")
 CARGO_REGISTRY_INDEX_URL=Some("[ROOTURL]/alternative-registry")
@@ -730,7 +730,7 @@ fn basic_provider_crlf() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `alternative`)
 [CHECKING] bar v0.0.1 (registry `alternative`)

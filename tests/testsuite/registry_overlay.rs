@@ -80,7 +80,7 @@ fn registry_version_wins() {
         .overlay_registry(&reg.index_url(), &alt_path)
         .with_stderr_data(str![[r#"
 [UPDATING] `sparse+http://127.0.0.1:[..]/index/` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] baz v0.1.1 (registry `sparse+http://127.0.0.1:[..]/index/`)
 [CHECKING] baz v0.1.1
@@ -122,7 +122,7 @@ fn overlay_version_wins() {
         .overlay_registry(&reg.index_url(), &alt_path)
         .with_stderr_data(str![[r#"
 [UPDATING] `sparse+http://127.0.0.1:[..]/index/` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [UNPACKING] baz v0.1.1 (registry `[ROOT]/alternative-registry`)
 [CHECKING] baz v0.1.1
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
@@ -163,7 +163,7 @@ fn version_precedence() {
         .overlay_registry(&reg.index_url(), &alt_path)
         .with_stderr_data(str![[r#"
 [UPDATING] `sparse+http://127.0.0.1:[..]/index/` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [UNPACKING] baz v0.1.1 (registry `[ROOT]/alternative-registry`)
 [CHECKING] baz v0.1.1
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
@@ -246,7 +246,7 @@ fn registry_dep_depends_on_new_local_package() {
         .with_stderr_data(
             str![[r#"
 [UPDATING] `sparse+http://127.0.0.1:[..]/index/` index
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 3 packages to highest compatible versions
 [ADDING] workspace-package v0.0.1 (available: v0.1.1)
 [DOWNLOADING] crates ...
 [UNPACKING] workspace-package v0.1.1 (registry `[ROOT]/alternative-registry`)

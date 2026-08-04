@@ -206,7 +206,7 @@ fn package_feature_unification() {
         .masquerade_as_nightly_cargo(&["feature-unification"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [CHECKING] common v0.1.0 ([ROOT]/foo/common)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -485,7 +485,7 @@ fn package_feature_unification_cli_features() {
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [CHECKING] common v0.1.0 ([ROOT]/foo/common)
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] outside v0.1.0 (registry `dummy-registry`)
 [CHECKING] outside v0.1.0
@@ -1059,7 +1059,7 @@ fn edition_v2_resolver_report() {
             str![[r#"
 [MIGRATING] Cargo.toml from 2018 edition to 2021
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 3 packages to highest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] common v1.0.0 (registry `dummy-registry`)
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)

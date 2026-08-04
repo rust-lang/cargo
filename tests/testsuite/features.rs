@@ -133,7 +133,7 @@ fn same_name() {
     p.cargo("tree -f")
         .arg("{p} [{f}]")
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -496,7 +496,7 @@ fn cli_activates_required_dependency() {
 
     p.cargo("check --features bar")
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [ERROR] package `foo v0.0.1 ([ROOT]/foo)` does not have feature `bar`
 
 [HELP] a dependency with that name exists but it is required dependency and only optional dependencies can be used as features.
@@ -666,7 +666,7 @@ fn no_feature_doesnt_build() {
 
     p.cargo("build")
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -742,7 +742,7 @@ fn default_feature_pulled_in() {
 
     p.cargo("build")
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -885,7 +885,7 @@ fn groups_on_groups_on_groups() {
     p.cargo("check")
         .with_stderr_data(
             str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
 [CHECKING] baz v0.0.1 ([ROOT]/foo/baz)
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
@@ -938,7 +938,7 @@ fn many_cli_features() {
         .arg("bar baz")
         .with_stderr_data(
             str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
 [CHECKING] baz v0.0.1 ([ROOT]/foo/baz)
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
@@ -1026,7 +1026,7 @@ fn union_features() {
 
     p.cargo("check")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [CHECKING] d2 v0.0.1 ([ROOT]/foo/d2)
 [CHECKING] d1 v0.0.1 ([ROOT]/foo/d1)
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
@@ -1074,7 +1074,7 @@ fn many_features_no_rebuilds() {
 
     p.cargo("check")
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [CHECKING] a v0.1.0 ([ROOT]/foo/a)
 [CHECKING] b v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1375,7 +1375,7 @@ fn optional_and_dev_dep() {
 
     p.cargo("check")
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [CHECKING] test v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1663,7 +1663,7 @@ fn many_cli_features_comma_delimited() {
     p.cargo("check --features bar,baz")
         .with_stderr_data(
             str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
 [CHECKING] baz v0.0.1 ([ROOT]/foo/baz)
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
@@ -1732,7 +1732,7 @@ fn many_cli_features_comma_and_space_delimited() {
         .arg("bar,baz bam bap")
         .with_stderr_data(
             str![[r#"
-[LOCKING] 4 packages to latest compatible versions
+[LOCKING] 4 packages to highest compatible versions
 [CHECKING] bam v0.0.1 ([ROOT]/foo/bam)
 [CHECKING] bap v0.0.1 ([ROOT]/foo/bap)
 [CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
@@ -1907,7 +1907,7 @@ fn warn_if_default_features() {
 [WARNING] Cargo.toml: `[features]` defines a feature named `default-features`
 [NOTE] only a feature named `default` will be enabled by default
 [WARNING] `foo` (manifest) generated 1 warning
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -2267,7 +2267,7 @@ fn registry_summary_order_doesnt_matter() {
         .with_stderr_data(
             str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
 [DOWNLOADED] dep v0.1.0 (registry `dummy-registry`)

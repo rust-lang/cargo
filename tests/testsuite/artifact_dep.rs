@@ -221,7 +221,7 @@ fn disallow_artifact_and_no_artifact_dep_to_same_package_within_the_same_dep_cat
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_status(101)
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [WARNING] foo v0.0.0 ([ROOT]/foo) ignoring invalid dependency `bar_stable` which is missing a lib target
 [ERROR] the crate `foo v0.0.0 ([ROOT]/foo)` depends on crate `bar v0.5.0 ([ROOT]/foo/bar)` multiple times with different names
 
@@ -331,7 +331,7 @@ fn features_are_unified_among_lib_and_bin_dep_of_same_target() {
     p.cargo("build -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [COMPILING] d2 v0.0.1 ([ROOT]/foo/d2)
 [COMPILING] d1 v0.0.1 ([ROOT]/foo/d1)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
@@ -442,7 +442,7 @@ fn features_are_not_unified_among_lib_and_bin_dep_of_different_target() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_status(101)
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [COMPILING] d2 v0.0.1 ([ROOT]/foo/d2)
 [COMPILING] d1 v0.0.1 ([ROOT]/foo/d1)
 error[E0425]: cannot find function `f2` in crate `d2`
@@ -604,7 +604,7 @@ fn build_script_with_bin_artifacts() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_data(
             str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
@@ -796,7 +796,7 @@ fn build_script_with_selected_dashed_bin_artifact_and_lib_true() {
     p.cargo("build -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [COMPILING] bar-baz v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -888,7 +888,7 @@ fn lib_with_selected_dashed_bin_artifact_and_lib_true() {
     p.cargo("build -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [COMPILING] bar-baz v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -939,7 +939,7 @@ fn allow_artifact_and_no_artifact_dep_to_same_package_within_different_dep_categ
     p.cargo("test -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1014,7 +1014,7 @@ fn disallow_using_example_binaries_as_artifacts() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_status(101)
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [ERROR] dependency `bar` in package `foo` requires a `bin:one-example` artifact to be present.
 
 "#]])
@@ -1067,7 +1067,7 @@ fn allow_artifact_and_non_artifact_dependency_to_same_crate() {
     p.cargo("check -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1186,7 +1186,7 @@ fn build_script_deps_adopt_do_not_allow_multiple_targets_under_different_name_an
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_status(101)
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [ERROR] the crate `foo v0.0.0 ([ROOT]/foo)` depends on crate `bar v0.5.0 ([ROOT]/foo/bar)` multiple times with different names
 
 "#]])
@@ -1288,7 +1288,7 @@ fn cross_doctests_works_with_artifacts() {
         .arg(&target)
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1414,7 +1414,7 @@ fn profile_override_basic() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_data(
             str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [RUNNING] `rustc --crate-name build_script_build [..] -C opt-level=1 [..]`
 [RUNNING] `rustc --crate-name bar --edition=2015 bar/src/main.rs [..] -C opt-level=3 [..]`
@@ -1526,7 +1526,7 @@ fn artifact_dep_target_specified() {
     p.cargo("check -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [COMPILING] bindep v0.0.0 ([ROOT]/foo/bindep)
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1603,7 +1603,7 @@ fn dep_of_artifact_dep_same_target_specified() {
     p.cargo("check -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [COMPILING] baz v0.1.0 ([ROOT]/foo/baz)
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
@@ -1722,7 +1722,7 @@ foo v0.1.0 ([ROOT]/foo)
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [ADDING] artifact v1.0.0
 [UPDATING] bar v1.0.0 -> v1.0.1
 
@@ -1796,7 +1796,7 @@ fn proc_macro_in_artifact_dep() {
         .with_stderr_data(str![[r#"
 ...
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [DOWNLOADING] crates ...
 ...
 [ERROR] failed to download from `[ROOTURL]/dl/pm/1.0.0/download`
@@ -1849,7 +1849,7 @@ fn allow_dep_renames_with_multiple_versions() {
         .with_stderr_data(
             str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 [COMPILING] bar v1.0.0
@@ -1911,7 +1911,7 @@ fn allow_artifact_and_non_artifact_dependency_to_same_crate_if_these_are_not_the
     p.cargo("build -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1947,7 +1947,7 @@ fn prevent_no_lib_warning_with_artifact_dependencies() {
     p.cargo("check -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1984,7 +1984,7 @@ fn show_no_lib_warning_with_artifact_dependencies_that_have_no_lib_but_lib_true(
     p.cargo("check -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [WARNING] foo v0.0.0 ([ROOT]/foo) ignoring invalid dependency `bar` which is missing a lib target
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
@@ -2052,7 +2052,7 @@ fn check_missing_crate_type_in_package_fails() {
             .masquerade_as_nightly_cargo(&["bindeps"])
             .with_status(101)
             .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [ERROR] dependency `bar` in package `foo` requires a [..] artifact to be present.
 
 "#]])
@@ -2203,7 +2203,7 @@ fn env_vars_and_build_products_for_various_build_targets() {
     p.cargo("test -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -2400,7 +2400,7 @@ fn doc_lib_true() {
     p.cargo("doc -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [DOCUMENTING] bar v0.0.1 ([ROOT]/foo/bar)
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
@@ -2482,7 +2482,7 @@ fn rustdoc_works_on_libs_with_artifacts_and_lib_false() {
     p.cargo("doc -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -2689,7 +2689,7 @@ fn calc_bin_artifact_fingerprint() {
     p.cargo("check -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -2768,7 +2768,7 @@ fn with_target_and_optional() {
     p.cargo("check -Z bindeps -F d1 -v")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [COMPILING] d1 v0.0.1 ([ROOT]/foo/d1)
 [RUNNING] `rustc --crate-name d1 [..]--crate-type bin[..]
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
@@ -2818,7 +2818,7 @@ fn with_assumed_host_target_and_optional_build_dep() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_data(
             str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [COMPILING] d1 v0.0.1 ([ROOT]/foo/d1)
 [RUNNING] `rustc --crate-name build_script_build --edition=2021 [..]--crate-type bin[..]
 [RUNNING] `rustc --crate-name d1 --edition=2021 [..]--crate-type bin[..]
@@ -2947,7 +2947,7 @@ fn decouple_same_target_transitive_dep_from_artifact_dep() {
     p.cargo("build -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_data(str![[r#"
-[LOCKING] 4 packages to latest compatible versions
+[LOCKING] 4 packages to highest compatible versions
 [COMPILING] c v0.1.0 ([ROOT]/foo/c)
 [COMPILING] b v0.1.0 ([ROOT]/foo/b)
 [COMPILING] a v0.1.0 ([ROOT]/foo/a)
@@ -3050,7 +3050,7 @@ fn decouple_same_target_transitive_dep_from_artifact_dep_lib() {
     p.cargo("build -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_data(str![[r#"
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 3 packages to highest compatible versions
 [COMPILING] b v0.1.0 ([ROOT]/foo/b)
 [COMPILING] a v0.1.0 ([ROOT]/foo/a)
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
@@ -3177,7 +3177,7 @@ fn decouple_same_target_transitive_dep_from_artifact_dep_and_proc_macro() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_data(
             str![[r#"
-[LOCKING] 5 packages to latest compatible versions
+[LOCKING] 5 packages to highest compatible versions
 [COMPILING] d v0.1.0 ([ROOT]/foo/d)
 [COMPILING] a v0.1.0 ([ROOT]/foo/a)
 [COMPILING] b v0.1.0 ([ROOT]/foo/b)
@@ -3244,7 +3244,7 @@ fn same_target_artifact_dep_sharing() {
     p.cargo(&format!("build -Z bindeps --target {target}"))
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [COMPILING] a v0.1.0 ([ROOT]/foo/a)
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
@@ -3300,7 +3300,7 @@ fn check_transitive_artifact_dependency_with_different_target() {
     p.cargo("check -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [ERROR] failed to determine target information for target `custom-target`.
   Artifact dependency `baz` in package `bar v0.0.0 ([ROOT]/foo/bar)` requires building for `custom-target`
 
@@ -3632,7 +3632,7 @@ fn artifact_dep_target_does_not_propagate_to_deps_of_build_script() {
         .build();
     p.cargo("test -Z bindeps")
         .with_stderr_data(str![[r#"
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 3 packages to highest compatible versions
 [COMPILING] arch v0.0.1 ([ROOT]/foo/arch)
 [COMPILING] builder v0.0.1 ([ROOT]/foo/builder)
 [COMPILING] artifact v0.0.1 ([ROOT]/foo/artifact)
@@ -3724,7 +3724,7 @@ fn artifact_dep_target_does_not_propagate_to_proc_macro() {
         .build();
     p.cargo("test -Z bindeps")
         .with_stderr_data(str![[r#"
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 3 packages to highest compatible versions
 [COMPILING] arch v0.0.1 ([ROOT]/foo/arch)
 [COMPILING] macro v0.0.1 ([ROOT]/foo/macro)
 [COMPILING] artifact v0.0.1 ([ROOT]/foo/artifact)

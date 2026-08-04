@@ -946,7 +946,7 @@ Hello world!
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/script.rs`
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest Rust [..] compatible version
+[LOCKING] 1 package to highest Rust [..] compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] script v1.0.0 (registry `dummy-registry`)
 [COMPILING] script v1.0.0
@@ -985,7 +985,7 @@ Hello world!
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/script.rs`
-[LOCKING] 1 package to latest Rust [..] compatible version
+[LOCKING] 1 package to highest Rust [..] compatible version
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s

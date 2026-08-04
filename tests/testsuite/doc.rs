@@ -119,7 +119,7 @@ fn doc_deps() {
     p.cargo("doc")
         .with_stderr_data(
             str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOCUMENTING] bar v0.0.1 ([ROOT]/foo/bar)
 [CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
@@ -176,7 +176,7 @@ fn doc_no_deps() {
 
     p.cargo("doc --no-deps")
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -729,7 +729,7 @@ fn doc_dash_p() {
     p.cargo("doc -p a")
         .with_stderr_data(
             str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [DOCUMENTING] b v0.0.1 ([ROOT]/foo/b)
 [CHECKING] b v0.0.1 ([ROOT]/foo/b)
 [DOCUMENTING] a v0.0.1 ([ROOT]/foo/a)
@@ -1070,7 +1070,7 @@ fn features() {
     p.cargo("doc --features foo")
         .with_stderr_data(
             str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
 [DOCUMENTING] bar v0.0.1 ([ROOT]/foo/bar)
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
@@ -1408,7 +1408,7 @@ fn doc_all_member_dependency_same_name() {
     p.cargo("doc --workspace")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
 [WARNING] output filename collision at [ROOT]/foo/target/doc/bar/index.html
@@ -1845,7 +1845,7 @@ fn doc_cap_lints() {
     p.cargo("doc")
         .with_stderr_data(
             str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [UPDATING] git repository `[..]`
 [DOCUMENTING] a v0.5.0 ([..])
 [CHECKING] a v0.5.0 ([..])
@@ -2212,7 +2212,7 @@ fn bin_private_items_deps() {
     p.cargo("doc")
         .with_stderr_data(
             str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOCUMENTING] bar v0.0.1 ([ROOT]/foo/bar)
 [CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
@@ -2788,7 +2788,7 @@ fn doc_lib_false() {
 
     p.cargo("doc")
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [DOCUMENTING] foo v0.1.0 ([ROOT]/foo)
@@ -2838,7 +2838,7 @@ fn doc_lib_false_dep() {
 
     p.cargo("doc")
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
 [DOCUMENTING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -3119,7 +3119,7 @@ fn rebuild_tracks_env_in_dep() {
         .with_stderr_data(
             str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
 [CHECKING] bar v0.1.0
@@ -3246,7 +3246,7 @@ fn mergeable_info_with_deps() {
         .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
         .with_stderr_data(
             str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOCUMENTING] dep v0.0.0 ([ROOT]/foo/dep)
 [CHECKING] dep v0.0.0 ([ROOT]/foo/dep)
 [RUNNING] `rustdoc [..]--crate-name dep [..]--write-doc-meta-dir=[ROOT]/foo/target/debug/build/dep-[HASH]/out [..]`
@@ -3332,7 +3332,7 @@ fn mergeable_info_no_deps() {
         .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
         .with_stderr_data(
             str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [CHECKING] dep v0.0.0 ([ROOT]/foo/dep)
 [RUNNING] `rustc --crate-name dep --edition=2015 [..]`
 [DOCUMENTING] foo v0.0.0 ([ROOT]/foo)
@@ -3974,7 +3974,7 @@ fn mergeable_info_dep_collision() {
         .with_stderr_data(
             str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [ADDING] dep v0.1.0 (available: v0.2.0)
 [DOWNLOADING] crates ...
 [DOWNLOADED] dep v0.1.0 (registry `dummy-registry`)
@@ -4134,7 +4134,7 @@ fn doc_output_format_json_no_deps() {
     p.cargo("doc --no-deps -Z unstable-options --output-format json -v")
         .masquerade_as_nightly_cargo(&["rustdoc-output-format"])
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
 [RUNNING] `rustc [..]--crate-name bar [..]`
 [DOCUMENTING] foo v0.1.0 ([ROOT]/foo)
@@ -4185,7 +4185,7 @@ fn doc_output_format_json_with_deps() {
         .masquerade_as_nightly_cargo(&["rustdoc-output-format"])
         .with_stderr_data(
             str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
 [RUNNING] `rustc [..]--crate-name bar [..]`
 [DOCUMENTING] bar v0.1.0 ([ROOT]/foo/bar)

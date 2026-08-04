@@ -159,7 +159,7 @@ fn lint_dep_incompatible_with_rust_version() {
     p.cargo("generate-lockfile")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 3 packages to highest compatible versions
 [ADDING] too_new_child v0.0.1 (requires Rust 1.2345.0)
 [ADDING] too_new_parent v0.0.1 (requires Rust 1.2345.0)
 
@@ -226,7 +226,7 @@ fn resolve_with_rust_version() {
         .env("CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS", "fallback")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 
 "#]])
         .run();
@@ -243,7 +243,7 @@ foo v0.0.1 ([ROOT]/foo)
         .env("CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS", "fallback")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest Rust 1.60.0 compatible versions
+[LOCKING] 2 packages to highest Rust 1.60.0 compatible versions
 [ADDING] newer-and-older v1.5.0 (available: v1.6.0, requires Rust 1.65.0)
 [ADDING] only-newer v1.6.0 (requires Rust 1.65.0)
 
@@ -297,7 +297,7 @@ fn resolve_with_rustc() {
         .env("CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS", "fallback")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [ADDING] newer-and-older v1.6.0 (requires Rust 1.2345)
 [ADDING] only-newer v1.6.0 (requires Rust 1.2345)
 
@@ -316,7 +316,7 @@ foo v0.0.1 ([ROOT]/foo)
         .env("CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS", "fallback")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest Rust 1.60.0 compatible versions
+[LOCKING] 2 packages to highest Rust 1.60.0 compatible versions
 [ADDING] newer-and-older v1.5.0 (available: v1.6.0, requires Rust 1.2345)
 [ADDING] only-newer v1.6.0 (requires Rust 1.2345)
 
@@ -368,7 +368,7 @@ fn resolve_with_backtracking() {
         .env("CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS", "fallback")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 
 "#]])
         .run();
@@ -386,7 +386,7 @@ foo v0.0.1 ([ROOT]/foo)
         .env("CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS", "fallback")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest Rust 1.60.0 compatible versions
+[LOCKING] 2 packages to highest Rust 1.60.0 compatible versions
 [ADDING] has-rust-version v1.6.0 (requires Rust 1.65.0)
 
 "#]])
@@ -480,7 +480,7 @@ fn resolve_with_multiple_rust_versions() {
         .env("CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS", "fallback")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 6 packages to latest compatible versions
+[LOCKING] 6 packages to highest compatible versions
 
 "#]])
         .run();
@@ -499,7 +499,7 @@ higher v0.0.1 ([ROOT]/foo)
         .env("CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS", "fallback")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 6 packages to latest Rust 1.50.0 compatible versions
+[LOCKING] 6 packages to highest Rust 1.50.0 compatible versions
 [ADDING] higher-newer-and-older v1.55.0 (available: v1.65.0, requires Rust 1.65.0)
 [ADDING] higher-only-newer v1.65.0 (requires Rust 1.65.0)
 [ADDING] lower-newer-and-older v1.45.0 (available: v1.55.0, requires Rust 1.55.0)
@@ -559,7 +559,7 @@ fn resolve_edition2024() {
     p.cargo("generate-lockfile")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest Rust 1.85.0 compatible versions
+[LOCKING] 2 packages to highest Rust 1.85.0 compatible versions
 [ADDING] newer-and-older v1.5.0 (available: v1.6.0, requires Rust 1.999.0)
 [ADDING] only-newer v1.6.0 (requires Rust 1.999.0)
 
@@ -578,7 +578,7 @@ foo v0.0.1 ([ROOT]/foo)
     p.cargo("generate-lockfile --ignore-rust-version")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [ADDING] newer-and-older v1.6.0 (requires Rust 1.999.0)
 [ADDING] only-newer v1.6.0 (requires Rust 1.999.0)
 
@@ -598,7 +598,7 @@ foo v0.0.1 ([ROOT]/foo)
         .env("CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS", "allow")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [ADDING] newer-and-older v1.6.0 (requires Rust 1.999.0)
 [ADDING] only-newer v1.6.0 (requires Rust 1.999.0)
 
@@ -653,7 +653,7 @@ fn resolve_v3() {
     p.cargo("generate-lockfile")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest Rust 1.85.0 compatible versions
+[LOCKING] 2 packages to highest Rust 1.85.0 compatible versions
 [ADDING] newer-and-older v1.5.0 (available: v1.6.0, requires Rust 1.999.0)
 [ADDING] only-newer v1.6.0 (requires Rust 1.999.0)
 
@@ -672,7 +672,7 @@ foo v0.0.1 ([ROOT]/foo)
     p.cargo("generate-lockfile --ignore-rust-version")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [ADDING] newer-and-older v1.6.0 (requires Rust 1.999.0)
 [ADDING] only-newer v1.6.0 (requires Rust 1.999.0)
 
@@ -692,7 +692,7 @@ foo v0.0.1 ([ROOT]/foo)
         .env("CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS", "allow")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [ADDING] newer-and-older v1.6.0 (requires Rust 1.999.0)
 [ADDING] only-newer v1.6.0 (requires Rust 1.999.0)
 
@@ -740,7 +740,7 @@ fn update_msrv_resolve() {
         .env("CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS", "fallback")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest Rust 1.60.0 compatible version
+[LOCKING] 1 package to highest Rust 1.60.0 compatible version
 [ADDING] bar v1.5.0 (available: v1.6.0, requires Rust 1.65.0)
 
 "#]])
@@ -749,7 +749,7 @@ fn update_msrv_resolve() {
         .env("CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS", "fallback")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [UPDATING] bar v1.5.0 -> v1.6.0
 
 "#]])
@@ -788,7 +788,7 @@ fn update_precise_overrides_msrv_resolver() {
         .env("CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS", "fallback")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest Rust 1.60.0 compatible version
+[LOCKING] 1 package to highest Rust 1.60.0 compatible version
 [ADDING] bar v1.5.0 (available: v1.6.0, requires Rust 1.65.0)
 
 "#]])
@@ -842,7 +842,7 @@ fn check_msrv_resolve() {
         .with_stderr_data(
             str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] only-newer v1.6.0 (registry `dummy-registry`)
 [DOWNLOADED] newer-and-older v1.6.0 (registry `dummy-registry`)
@@ -869,7 +869,7 @@ foo v0.0.1 ([ROOT]/foo)
         .env("CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS", "fallback")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest Rust 1.60.0 compatible versions
+[LOCKING] 2 packages to highest Rust 1.60.0 compatible versions
 [ADDING] newer-and-older v1.5.0 (available: v1.6.0, requires Rust 1.65.0)
 [ADDING] only-newer v1.6.0 (requires Rust 1.65.0)
 [DOWNLOADING] crates ...
@@ -916,7 +916,7 @@ fn cargo_install_ignores_msrv_config() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.1
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] dep v1.1.0 (registry `dummy-registry`)
 [COMPILING] dep v1.1.0
@@ -953,7 +953,7 @@ fn cargo_install_ignores_resolver_v3_msrv_change() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.1
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] dep v1.1.0 (registry `dummy-registry`)
 [COMPILING] dep v1.1.0
@@ -1001,7 +1001,7 @@ fn cargo_install_path_honors_msrv_config() {
         .with_stderr_data(str![[r#"
 [INSTALLING] foo v0.0.0 ([ROOT]/foo)
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest Rust 1.60 compatible version
+[LOCKING] 1 package to highest Rust 1.60 compatible version
 [ADDING] dep v1.0.0 (available: v1.1.0, requires Rust 1.70)
 [DOWNLOADING] crates ...
 [DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
@@ -1118,7 +1118,7 @@ fn report_rust_versions() {
         .env("CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS", "fallback")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 9 packages to latest Rust 1.60.0 compatible versions
+[LOCKING] 9 packages to highest Rust 1.60.0 compatible versions
 [ADDING] dep-only-high-incompatible v1.75.0 (requires Rust 1.75.0)
 [ADDING] dep-only-low-incompatible v1.75.0 (requires Rust 1.75.0)
 [ADDING] dep-only-unset-incompatible v1.2345.0 (requires Rust 1.2345.0)

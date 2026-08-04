@@ -34,7 +34,7 @@ fn simple_http() {
     simple(
         str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
 [CHECKING] bar v0.0.1
@@ -56,7 +56,7 @@ fn simple_git() {
     simple(
         str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
 [CHECKING] bar v0.0.1
@@ -108,7 +108,7 @@ fn deps_http() {
     let _server = setup_http();
     deps(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] ba[..] v0.0.1 (registry `dummy-registry`)
 [DOWNLOADED] ba[..] v0.0.1 (registry `dummy-registry`)
@@ -124,7 +124,7 @@ fn deps_http() {
 fn deps_git() {
     deps(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] ba[..] v0.0.1 (registry `dummy-registry`)
 [DOWNLOADED] ba[..] v0.0.1 (registry `dummy-registry`)
@@ -408,7 +408,7 @@ fn bad_cksum_http() {
     let _server = setup_http();
     bad_cksum(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bad-cksum v0.0.1 (registry `dummy-registry`)
 [ERROR] failed to download replaced source registry `crates-io`
@@ -423,7 +423,7 @@ Caused by:
 fn bad_cksum_git() {
     bad_cksum(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bad-cksum v0.0.1 (registry `dummy-registry`)
 [ERROR] failed to download replaced source registry `crates-io`
@@ -475,7 +475,7 @@ required by package `foo v0.0.1 ([ROOT]/foo)`
 "#]],
         str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] notyet v0.0.1 (registry `dummy-registry`)
 [CHECKING] notyet v0.0.1
@@ -498,7 +498,7 @@ required by package `foo v0.0.1 ([ROOT]/foo)`
 "#]],
         str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] notyet v0.0.1 (registry `dummy-registry`)
 [CHECKING] notyet v0.0.1
@@ -647,7 +647,7 @@ fn lockfile_locks_http() {
     lockfile_locks(
         str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
 [CHECKING] bar v0.0.1
@@ -667,7 +667,7 @@ fn lockfile_locks_git() {
     lockfile_locks(
         str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
 [CHECKING] bar v0.0.1
@@ -720,7 +720,7 @@ fn lockfile_locks_transitively_http() {
     lockfile_locks_transitively(
         str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] ba[..] v0.0.1 (registry `dummy-registry`)
 [DOWNLOADED] ba[..] v0.0.1 (registry `dummy-registry`)
@@ -742,7 +742,7 @@ fn lockfile_locks_transitively_git() {
     lockfile_locks_transitively(
         str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] ba[..] v0.0.1 (registry `dummy-registry`)
 [DOWNLOADED] ba[..] v0.0.1 (registry `dummy-registry`)
@@ -801,7 +801,7 @@ fn yanks_are_not_used_http() {
     let _server = setup_http();
     yanks_are_not_used(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] ba[..] v0.0.1 (registry `dummy-registry`)
 [DOWNLOADED] ba[..] v0.0.1 (registry `dummy-registry`)
@@ -817,7 +817,7 @@ fn yanks_are_not_used_http() {
 fn yanks_are_not_used_git() {
     yanks_are_not_used(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] ba[..] v0.0.1 (registry `dummy-registry`)
 [DOWNLOADED] ba[..] v0.0.1 (registry `dummy-registry`)
@@ -1002,7 +1002,7 @@ required by package `foo v0.0.1 ([ROOT]/foo)`
 "#]],
         str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [UPDATING] baz v0.0.1 -> v0.0.2
 
 "#]],
@@ -1026,7 +1026,7 @@ required by package `foo v0.0.1 ([ROOT]/foo)`
 "#]],
         str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [UPDATING] baz v0.0.1 -> v0.0.2
 
 "#]],
@@ -1085,7 +1085,7 @@ fn yanks_in_lockfiles_are_ok_with_new_dep_http() {
     let _server = setup_http();
     yanks_in_lockfiles_are_ok_with_new_dep(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [ADDING] baz v0.0.1
 [DOWNLOADING] crates ...
 [DOWNLOADED] baz v0.0.1 (registry `dummy-registry`)
@@ -1100,7 +1100,7 @@ fn yanks_in_lockfiles_are_ok_with_new_dep_http() {
 fn yanks_in_lockfiles_are_ok_with_new_dep_git() {
     yanks_in_lockfiles_are_ok_with_new_dep(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [ADDING] baz v0.0.1
 [DOWNLOADING] crates ...
 [DOWNLOADED] baz v0.0.1 (registry `dummy-registry`)
@@ -1224,7 +1224,7 @@ fn update_lockfile_http() {
 "#]],
         str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [UPDATING] bar v0.0.2 -> v0.0.3
 
 "#]],
@@ -1238,14 +1238,14 @@ fn update_lockfile_http() {
 "#]],
         str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [UPDATING] bar v0.0.3 -> v0.0.4
 [ADDING] spam v0.2.5
 
 "#]],
         str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [UPDATING] bar v0.0.4 -> v0.0.5
 [REMOVING] spam v0.2.5
 
@@ -1271,7 +1271,7 @@ fn update_lockfile_git() {
 "#]],
         str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [UPDATING] bar v0.0.2 -> v0.0.3
 
 "#]],
@@ -1285,14 +1285,14 @@ fn update_lockfile_git() {
 "#]],
         str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [UPDATING] bar v0.0.3 -> v0.0.4
 [ADDING] spam v0.2.5
 
 "#]],
         str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [UPDATING] bar v0.0.4 -> v0.0.5
 [REMOVING] spam v0.2.5
 
@@ -1369,7 +1369,7 @@ fn dev_dependency_not_used_http() {
     let _server = setup_http();
     dev_dependency_not_used(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
 [CHECKING] bar v0.0.1
@@ -1383,7 +1383,7 @@ fn dev_dependency_not_used_http() {
 fn dev_dependency_not_used_git() {
     dev_dependency_not_used(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
 [CHECKING] bar v0.0.1
@@ -1474,7 +1474,7 @@ fn updating_a_dep_http() {
     updating_a_dep(
         str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
 [CHECKING] bar v0.0.1
@@ -1485,7 +1485,7 @@ fn updating_a_dep_http() {
 "#]],
         str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [UPDATING] bar v0.0.1 -> v0.1.0
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
@@ -1503,7 +1503,7 @@ fn updating_a_dep_git() {
     updating_a_dep(
         str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
 [CHECKING] bar v0.0.1
@@ -1514,7 +1514,7 @@ fn updating_a_dep_git() {
 "#]],
         str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [UPDATING] bar v0.0.1 -> v0.1.0
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
@@ -1603,7 +1603,7 @@ fn git_and_registry_dep_http() {
         str![[r#"
 [UPDATING] `dummy-registry` index
 [UPDATING] git repository `[ROOTURL]/b`
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] a v0.0.1 (registry `dummy-registry`)
 [CHECKING] a v0.0.1
@@ -1625,7 +1625,7 @@ fn git_and_registry_dep_git() {
         str![[r#"
 [UPDATING] `dummy-registry` index
 [UPDATING] git repository `[ROOTURL]/b`
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] a v0.0.1 (registry `dummy-registry`)
 [CHECKING] a v0.0.1
@@ -1785,7 +1785,7 @@ fn fetch_downloads_http() {
     let _server = setup_http();
     fetch_downloads(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] a v0.1.0 (registry `dummy-registry`)
 
@@ -1796,7 +1796,7 @@ fn fetch_downloads_http() {
 fn fetch_downloads_git() {
     fetch_downloads(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] a v0.1.0 (registry `dummy-registry`)
 
@@ -1832,7 +1832,7 @@ fn update_transitive_dependency_http() {
     update_transitive_dependency(
         str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [UPDATING] b v0.1.0 -> v0.1.1
 
 "#]],
@@ -1853,7 +1853,7 @@ fn update_transitive_dependency_git() {
     update_transitive_dependency(
         str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [UPDATING] b v0.1.0 -> v0.1.1
 
 "#]],
@@ -1904,7 +1904,7 @@ fn update_backtracking_ok_http() {
     let _server = setup_http();
     update_backtracking_ok(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [UPDATING] hyper v0.6.5 -> v0.6.6
 [UPDATING] openssl v0.1.0 -> v0.1.1
 
@@ -1915,7 +1915,7 @@ fn update_backtracking_ok_http() {
 fn update_backtracking_ok_git() {
     update_backtracking_ok(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [UPDATING] hyper v0.6.5 -> v0.6.6
 [UPDATING] openssl v0.1.0 -> v0.1.1
 
@@ -1969,7 +1969,7 @@ fn update_multiple_packages_http() {
     update_multiple_packages(
         str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [UPDATING] a v0.1.0 -> v0.1.1
 [UPDATING] b v0.1.0 -> v0.1.1
 [NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
@@ -1977,7 +1977,7 @@ fn update_multiple_packages_http() {
 "#]],
         str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [UPDATING] c v0.1.0 -> v0.1.1
 
 "#]],
@@ -2001,7 +2001,7 @@ fn update_multiple_packages_git() {
     update_multiple_packages(
         str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [UPDATING] a v0.1.0 -> v0.1.1
 [UPDATING] b v0.1.0 -> v0.1.1
 [NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
@@ -2009,7 +2009,7 @@ fn update_multiple_packages_git() {
 "#]],
         str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [UPDATING] c v0.1.0 -> v0.1.1
 
 "#]],
@@ -2275,7 +2275,7 @@ fn only_download_relevant_http() {
     let _server = setup_http();
     only_download_relevant(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 3 packages to highest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] baz v0.1.0 (registry `dummy-registry`)
 [CHECKING] baz v0.1.0
@@ -2289,7 +2289,7 @@ fn only_download_relevant_http() {
 fn only_download_relevant_git() {
     only_download_relevant(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 3 packages to highest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] baz v0.1.0 (registry `dummy-registry`)
 [CHECKING] baz v0.1.0
@@ -2715,7 +2715,7 @@ fn bad_and_or_malicious_packages_rejected_http() {
     let _server = setup_http();
     bad_and_or_malicious_packages_rejected(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.2.0 (registry `dummy-registry`)
 [ERROR] failed to download replaced source registry `crates-io`
@@ -2733,7 +2733,7 @@ Caused by:
 fn bad_and_or_malicious_packages_rejected_git() {
     bad_and_or_malicious_packages_rejected(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.2.0 (registry `dummy-registry`)
 [ERROR] failed to download replaced source registry `crates-io`
@@ -3303,7 +3303,7 @@ fn package_lock_as_a_symlink_inside_package_is_invalid() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
 [ERROR] failed to download replaced source registry `crates-io`
@@ -3501,7 +3501,7 @@ fn reach_max_unpack_size() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
 [ERROR] failed to download replaced source registry `crates-io`
@@ -3586,7 +3586,7 @@ internal server error
    [..] DEBUG network::fetch: url="[..]/index/[..]"
    [..] DEBUG cargo::resolver::restarting: pending=[..]
    [..] DEBUG cargo::resolver::restarting: pending=0
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 3 packages to highest compatible versions
 ...
 [DOWNLOADING] crates ...
    [..] DEBUG network::fetch: url="[..]/dl/bar/0.0.1/download"
@@ -3647,7 +3647,7 @@ internal server error
 [WARNING] spurious network error (2 tries remaining): failed to get successful HTTP response from `http://127.0.0.1:[..]/index/3/b/bar` (127.0.0.1), got 500
 body:
 internal server error
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
 [CHECKING] bar v0.0.1
@@ -3733,7 +3733,7 @@ fn sparse_retry_multiple() {
     write!(
         &mut expected,
         "\
-[LOCKING] 93 packages to latest compatible versions
+[LOCKING] 93 packages to highest compatible versions
 "
     )
     .unwrap();
@@ -3786,7 +3786,7 @@ fn dl_retry_single() {
         .build();
     p.cargo("fetch").with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [WARNING] spurious network error (3 tries remaining): failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/1.0.0/download` (127.0.0.1), got 500
 body:
@@ -3883,7 +3883,7 @@ fn dl_retry_multiple() {
     }
     write!(
         &mut expected,
-        "[LOCKING] 93 packages to latest compatible versions\n"
+        "[LOCKING] 93 packages to highest compatible versions\n"
     )
     .unwrap();
     let _server = builder.build();
@@ -3940,7 +3940,7 @@ fn retry_too_many_requests() {
 [WARNING] spurious network error (3 tries remaining): failed to get successful HTTP response from `[..]/index/3/b/bar` ([..]), got 429
 body:
 too many requests, try again in 1 seconds
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
 [CHECKING] bar v0.0.1
@@ -3980,7 +3980,7 @@ fn deleted_entry() {
     p.cargo("tree")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.1 (registry `dummy-registry`)
 
@@ -4016,7 +4016,7 @@ foo v0.1.0 ([ROOT]/foo)
     p.cargo("tree")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
 
@@ -4083,7 +4083,7 @@ fn corrupted_ok_overwritten() {
     p.cargo("fetch")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 
@@ -4351,7 +4351,7 @@ fn debug_header_message_dl() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [WARNING] spurious network error (3 tries remaining): failed to get successful HTTP response from `http://127.0.0.1:[..]/dl/bar/1.0.0/download` (127.0.0.1), got 503
 body:
@@ -4406,7 +4406,7 @@ fn set_mask_during_unpacking() {
     p.cargo("fetch")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 
@@ -4456,7 +4456,7 @@ fn unpack_again_when_cargo_ok_is_unrecognized() {
     p.cargo("fetch")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 
@@ -4530,7 +4530,7 @@ fn differ_only_by_metadata() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] baz v0.0.1+b (registry `dummy-registry`)
 [CHECKING] baz v0.0.1+b
@@ -4627,7 +4627,7 @@ fn builtin_source_replacement() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bad-cksum v0.0.1
 [ERROR] failed to verify the checksum of `bad-cksum v0.0.1`
@@ -4762,7 +4762,7 @@ fn symlink_and_directory() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 [ERROR] failed to download replaced source registry `crates-io`

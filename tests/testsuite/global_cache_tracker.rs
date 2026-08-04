@@ -1276,7 +1276,7 @@ fn package_cache_lock_during_build() {
         .env("CARGO_LOG", "gc=debug")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
    [..]s DEBUG gc: unable to acquire mutate lock, auto gc disabled
 [CHECKING] bar v1.0.0
 [CHECKING] foo2 v0.1.0 ([ROOT]/foo2)
@@ -1547,7 +1547,7 @@ fn clean_max_git_age() {
         .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(2))
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `[ROOTURL]/git_a`
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [UPDATING] git_a v1.0.0 ([ROOTURL]/git_a#[..]) -> #[..]
 
 "#]])
@@ -1623,7 +1623,7 @@ fn clean_max_src_crate_age() {
         .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(2))
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [UPDATING] bar v1.0.0 -> v1.0.1
 
 "#]])

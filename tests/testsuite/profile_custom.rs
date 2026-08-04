@@ -326,7 +326,7 @@ fn overrides_with_custom() {
     p.cargo("build -v")
         .with_stderr_data(
             str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [COMPILING] xxx v0.5.0 ([ROOT]/foo/xxx)
 [COMPILING] yyy v0.5.0 ([ROOT]/foo/yyy)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
@@ -727,7 +727,7 @@ fn test_inherits_dev() {
     p.cargo("test --lib --no-run -v")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] somedep v1.0.0 (registry `dummy-registry`)
 [COMPILING] somedep v1.0.0

@@ -657,7 +657,7 @@ fn index_cache_rebuild() {
         .with_stderr_data(str![[r#"
 [WARNING] no edition set: defaulting to the 2015 edition while the latest is [..]
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.1 (registry `dummy-registry`)
 [CHECKING] bar v1.0.1
