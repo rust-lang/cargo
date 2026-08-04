@@ -69,7 +69,7 @@ impl<'gctx> PathSource<'gctx> {
     }
 
     /// Returns the root package, or an error if it is missing or failed to load.
-    pub fn root_package(&mut self) -> CargoResult<Package> {
+    pub fn root_package(&self) -> CargoResult<Package> {
         trace!("root_package; source={:?}", self);
 
         self.load()?;
@@ -258,7 +258,7 @@ impl<'gctx> RecursivePathSource<'gctx> {
 
     /// Returns the packages discovered by this source. It may walk the
     /// filesystem if package information haven't yet loaded.
-    pub fn read_packages(&mut self) -> CargoResult<Vec<Package>> {
+    pub fn read_packages(&self) -> CargoResult<Vec<Package>> {
         self.load()?;
         Ok(self
             .packages

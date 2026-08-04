@@ -611,7 +611,7 @@ fn alt_paths(
         return None;
     }
     let source_id = dep.source_id();
-    let mut source = RecursivePathSource::new(&path, source_id, gctx);
+    let source = RecursivePathSource::new(&path, source_id, gctx);
     let packages = source.read_packages().ok()?;
     if packages.is_empty() {
         None
