@@ -10,6 +10,7 @@ use std::sync::Arc;
 use tracing::debug;
 
 use super::{BuildContext, BuildRunner, CompileKind, FileFlavor, Layout};
+use crate::compiler::trim_paths;
 use crate::compiler::{CompileMode, CompileTarget, CrateType, FileType, Unit};
 use crate::util::{self, CargoResult, OnceExt, StableHasher};
 use crate::workspace::{Target, TargetKind, Workspace};
@@ -611,6 +612,27 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
                         })
                         .collect();
                     outputs.extend(sbom_files.into_iter());
+                }
+
+                // Only generates unremap files for root units.
+                if bcx.roots.contains(unit) && trim_paths::should_emit_unremap_file(unit) {
+                    let unremap_files: Vec<_> = outputs
+                        .iter()
+                        .filter(|o| matches!(o.flavor, FileFlavor::Normal | FileFlavor::Linkable))
+                        .map(|output| OutputFile {
+                            path: trim_paths::append_unremap_suffix(&output.path),
+                            hardlink: output
+                                .hardlink
+                                .as_ref()
+                                .map(trim_paths::append_unremap_suffix),
+                            export_path: output
+                                .export_path
+                                .as_ref()
+                                .map(trim_paths::append_unremap_suffix),
+                            flavor: FileFlavor::Unremap,
+                        })
+                        .collect();
+                    outputs.extend(unremap_files.into_iter());
                 }
                 outputs
             }
