@@ -520,6 +520,8 @@ pub fn resolve_with_previous<'gctx>(
                     ResolveOpts {
                         dev_deps,
                         features: RequestedFeatures::CliFeatures(features),
+                        // TODO: set this to true when build-std is enabled
+                        inject_builtins: false,
                     },
                 )
             })
