@@ -1590,7 +1590,7 @@ fn cargo_default_env_metadata_env_var() {
         .with_stderr_data(format!(
             "\
 ...
-[RUNNING] `rustc --crate-name foo [..]--extern bar=[ROOT]/foo/target/debug/deps/{dll_prefix}bar{dll_suffix}[..]`
+[RUNNING] `rustc --crate-name foo [..]--extern bar=[ROOT]/foo/target/debug/deps/{dll_prefix}bar{dll_suffix}`
 ...
 "))
         .run();
@@ -1603,7 +1603,7 @@ fn cargo_default_env_metadata_env_var() {
         .with_stderr_data(format!(
             "\
 ...
-[RUNNING] `rustc --crate-name foo [..]--extern bar=[ROOT]/foo/target/debug/deps/{dll_prefix}bar-[..]{dll_suffix}[..]`
+[RUNNING] `rustc --crate-name foo [..]--extern bar=[ROOT]/foo/target/debug/deps/{dll_prefix}bar-[..]{dll_suffix}`
 ...
 "))
         .run();
@@ -5909,7 +5909,7 @@ fn build_lib_only() {
     p.cargo("build --lib -v")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..] -L dependency=[ROOT]/foo/target/debug/deps[..]`
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..] -L dependency=[ROOT]/foo/target/debug/deps`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -6580,7 +6580,7 @@ fn should_not_include_current_build_unit_path_in_rustc_args() {
         // Don't pass any `-L` args if there are no dependencies (including our own `out` dir)
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo [..] --out-dir [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out --verbose`
+[RUNNING] `rustc --crate-name foo [..] --out-dir [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -6611,7 +6611,7 @@ fn should_not_include_build_script_out_dir_path_in_rustc_args() {
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name build_script_build [..]`
 [RUNNING] `[ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/build_script_build`
-[RUNNING] `rustc --crate-name foo [..] --out-dir [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out --verbose`
+[RUNNING] `rustc --crate-name foo [..] --out-dir [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -6837,7 +6837,7 @@ fn should_not_include_proc_macro_deps_paths_in_rustc_args() {
 [COMPILING] my-proc-macro v0.1.0 ([ROOT]/foo/my-proc-macro)
 [RUNNING] `rustc --crate-name my_proc_macro [..]`
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo [..] --out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out -L dependency=[ROOT]/foo/target/debug/build/my-proc-macro/[HASH]/out --extern my_proc_macro=[ROOT]/foo/target/debug/build/my-proc-macro/[HASH]/out/[..] --verbose`
+[RUNNING] `rustc --crate-name foo [..] --out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out -L dependency=[ROOT]/foo/target/debug/build/my-proc-macro/[HASH]/out --extern my_proc_macro=[ROOT]/foo/target/debug/build/my-proc-macro/[HASH]/out/[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]].unordered())
