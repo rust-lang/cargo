@@ -40,9 +40,6 @@
 
 ### Changed
 
-- Forward `--verbose` flag to rustc for local crates
-  [#17006](https://github.com/rust-lang/cargo/pull/17006)
-
 ### Fixed
 
 - Strip the trailing carriage return from tokens of `cargo:token-from-stdout`
