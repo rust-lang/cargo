@@ -52,7 +52,7 @@ requirement in `Cargo.toml` doesn't contain any pre-release identifier (nightly 
 {{/option}}
 
 {{#option "`--breaking` _directory_" }}
-Update _spec_ to latest SemVer-breaking version.
+Update _spec_ to highest SemVer-breaking version.
 
 Version requirements will be modified to allow this update.
 

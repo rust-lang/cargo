@@ -44,7 +44,7 @@ OPTIONS
            identifier (nightly only).
 
        --breaking directory
-           Update spec to latest SemVer-breaking version.
+           Update spec to highest SemVer-breaking version.
 
            Version requirements will be modified to allow this update.
 
