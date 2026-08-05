@@ -1983,6 +1983,8 @@ fn cargo_add_skips_too_new() {
         .env("__CARGO_TEST_INVOCATION_TIME", NOW)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 [ADDING] bar v1.0.0 to dependencies
 [LOCKING] 1 package to latest compatible version
 [ADDING] bar v1.0.0 (available: v1.1.0, published 2 days ago)
