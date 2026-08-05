@@ -213,3 +213,47 @@ blanket_hint_mostly_unused = "deny"
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn disabled_without_profile_hint_mostly_unused() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+[package]
+name = "foo"
+version = "0.0.1"
+edition = "2015"
+
+[profile.dev]
+hint-mostly-unused = true
+
+[lints.cargo]
+default = { level = "allow", priority = -1 }
+blanket_hint_mostly_unused = "warn"
+"#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("fetch -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints"])
+        .with_stderr_data(str![[r#"
+[WARNING] `hint-mostly-unused` is being blanket applied to all dependencies
+ --> Cargo.toml:7:10
+  |
+7 | [profile.dev]
+  |          ^^^
+8 | hint-mostly-unused = true
+  | -------------------------
+  |
+  = [NOTE] `cargo::blanket_hint_mostly_unused` is set to `warn` in `[lints]`
+[HELP] scope `hint-mostly-unused` to specific packages with a lot of unused object code
+  |
+7 | [profile.dev.package.<pkg_name>]
+  |             +++++++++++++++++++
+[WARNING] workspace (manifest) generated 1 warning
+
+"#]])
+        .run();
+}
