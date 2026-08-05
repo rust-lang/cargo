@@ -34,6 +34,13 @@ fn deleting_database_files() {
             ),
         )
         .file("src/lib.rs", "")
+        .file(
+            ".cargo/config.toml",
+            "
+                [net]
+                git-fetch-with-cli = false
+                ",
+        )
         .build();
 
     project.cargo("check").run();
@@ -92,6 +99,13 @@ fn deleting_checkout_files() {
             ),
         )
         .file("src/lib.rs", "")
+        .file(
+            ".cargo/config.toml",
+            "
+                [net]
+                git-fetch-with-cli = false
+                ",
+        )
         .build();
 
     project.cargo("check").run();
