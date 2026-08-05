@@ -1097,5 +1097,5 @@ fn injects_builtins_when_required() {
         .deps(pkg_id("root"))
         .map(|(pkg_id, _)| pkg_id)
         .collect::<Vec<_>>();
-    assert_same(&root_deps, &[]);
+    assert_same(&root_deps, names!(core, compiler_builtins))
 }

@@ -4,6 +4,7 @@ use std::path::Path;
 use std::sync::OnceLock;
 
 use cargo::GlobalContext;
+use cargo::compiler::standard_lib::detect_sysroot_src_path;
 use cargo::util::IntoUrl;
 use cargo::workspace::dependency::DepKind;
 use cargo::workspace::{Dependency, GitReference, PackageId, SourceId, Summary};
@@ -144,11 +145,7 @@ fn builtin_loc() -> SourceId {
 fn builtin_loc_sysroot(gctx: &GlobalContext) -> SourceId {
     static LOCAL_PATH: OnceLock<SourceId> = OnceLock::new();
     let local_path = LOCAL_PATH.get_or_init(|| {
-        SourceId::for_builtin(
-            gctx.get_sysroot(&gctx.load_global_rustc(None).unwrap())
-                .unwrap(),
-        )
-        .unwrap()
+        SourceId::for_builtin(&detect_sysroot_src_path(gctx, None).unwrap()).unwrap()
     });
     *local_path
 }

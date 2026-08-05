@@ -58,7 +58,9 @@
 //! that we're implementing something that probably shouldn't be allocating all
 //! over the place.
 
+use crate::compiler::standard_lib::{detect_sysroot_src_path, std_crates};
 use crate::util::data_structures::{HashMap, HashSet};
+use crate::util::interning::InternedString;
 use crate::workspace::dependency::DepKind;
 use rustc_hash::FxBuildHasher;
 use std::collections::BTreeMap;
@@ -135,7 +137,29 @@ pub fn resolve(
         .cli_unstable()
         .direct_minimal_versions
         .then_some(VersionOrdering::MinimumVersionsFirst);
-    let mut registry = RegistryQueryer::new(registry, replacements, version_prefs);
+
+    let implicit_builtin_deps: Vec<Dependency> = if let Some(crates) =
+        gctx.cli_unstable().build_std.as_ref()
+    {
+        // We default to "std" here as we don't yet know the default crates for any of the targets
+        // we're building for. Unit generation will discard any builtin Summaries that are not
+        // required for each target
+        let crates = std_crates(crates, "std", &[]);
+        let sysroot_src = detect_sysroot_src_path(gctx, None)?;
+        crates
+            .iter()
+            .map(|&name| Dependency::new_implicit_builtin(InternedString::from(name), &sysroot_src))
+            .collect::<CargoResult<Vec<_>>>()?
+    } else {
+        vec![]
+    };
+
+    let mut registry = RegistryQueryer::new(
+        registry,
+        replacements,
+        version_prefs,
+        &implicit_builtin_deps,
+    );
 
     // Global cache of the reasons for each time we backtrack.
     let mut past_conflicting_activations = conflict_cache::ConflictCache::new();
