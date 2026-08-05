@@ -29,13 +29,7 @@ impl<'gctx> BuiltinSource<'gctx> {
             source_id.is_builtin(),
             "source `{source_id} is not a builtin"
         );
-        let path = path
-            .join("lib")
-            .join("rustlib")
-            .join("src")
-            .join("rust")
-            .join("library");
-        let path_source = RecursivePathSource::new(&path, source_id, gctx);
+        let path_source = RecursivePathSource::new(path, source_id, gctx);
         Self {
             source_id,
             path_source,
