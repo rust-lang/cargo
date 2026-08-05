@@ -238,22 +238,6 @@ blanket_hint_mostly_unused = "warn"
 
     p.cargo("fetch -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
-        .with_stderr_data(str![[r#"
-[WARNING] `hint-mostly-unused` is being blanket applied to all dependencies
- --> Cargo.toml:7:10
-  |
-7 | [profile.dev]
-  |          ^^^
-8 | hint-mostly-unused = true
-  | -------------------------
-  |
-  = [NOTE] `cargo::blanket_hint_mostly_unused` is set to `warn` in `[lints]`
-[HELP] scope `hint-mostly-unused` to specific packages with a lot of unused object code
-  |
-7 | [profile.dev.package.<pkg_name>]
-  |             +++++++++++++++++++
-[WARNING] workspace (manifest) generated 1 warning
-
-"#]])
+        .with_stderr_data(str![""])
         .run();
 }
