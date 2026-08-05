@@ -17,11 +17,8 @@
 |----------------------|-------------------------------------------------------------------------------------|---------------|
 | `cargo::default`     | all lints that are on by default (correctness, suspicious, style, complexity, perf) | warn/deny     |
 | `cargo::correctness` | code that is outright wrong or useless                                              | deny          |
-| `cargo::complexity`  | code that does something simple but in a complex way                                | warn          |
-| `cargo::perf`        | code that can be written to run faster                                              | warn          |
 | `cargo::style`       | code that should be written in a more idiomatic way                                 | warn          |
 | `cargo::suspicious`  | code that is most likely wrong or useless                                           | warn          |
-| `cargo::nursery`     | new lints that are still under development                                          | allow         |
 | `cargo::pedantic`    | lints which are rather strict or have occasional false positives                    | allow         |
 | `cargo::restriction` | lints which prevent the use of Cargo features                                       | allow         |
 

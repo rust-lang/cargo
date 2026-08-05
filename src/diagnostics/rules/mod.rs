@@ -126,11 +126,8 @@ static CARGO_LINTS_MSRV: cargo_util_schemas::manifest::RustVersion =
 pub static LINT_GROUPS: &[LintGroup] = &[
     DEFAULT,
     CORRECTNESS,
-    COMPLEXITY,
-    PERF,
     STYLE,
     SUSPICIOUS,
-    NURSERY,
     PEDANTIC,
     RESTRICTION,
     TEST_DUMMY_UNSTABLE,
@@ -144,14 +141,6 @@ const DEFAULT: LintGroup = LintGroup {
     hidden: false,
 };
 
-const COMPLEXITY: LintGroup = LintGroup {
-    name: "complexity",
-    desc: "code that does something simple but in a complex way",
-    default_level: LintLevel::Warn,
-    feature_gate: None,
-    hidden: false,
-};
-
 const CORRECTNESS: LintGroup = LintGroup {
     name: "correctness",
     desc: "code that is outright wrong or useless",
@@ -160,26 +149,10 @@ const CORRECTNESS: LintGroup = LintGroup {
     hidden: false,
 };
 
-const NURSERY: LintGroup = LintGroup {
-    name: "nursery",
-    desc: "new lints that are still under development",
-    default_level: LintLevel::Allow,
-    feature_gate: None,
-    hidden: false,
-};
-
 const PEDANTIC: LintGroup = LintGroup {
     name: "pedantic",
     desc: "lints which are rather strict or have occasional false positives",
     default_level: LintLevel::Allow,
-    feature_gate: None,
-    hidden: false,
-};
-
-const PERF: LintGroup = LintGroup {
-    name: "perf",
-    desc: "code that can be written to run faster",
-    default_level: LintLevel::Warn,
     feature_gate: None,
     hidden: false,
 };
