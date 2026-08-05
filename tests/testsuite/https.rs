@@ -132,7 +132,7 @@ fn self_signed_with_cacert() {
     p.cargo("fetch")
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `https://127.0.0.1:[..]/repos/bar.git`
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 
 "#]])
         .run();
@@ -159,7 +159,7 @@ fn github_works() {
     p.cargo("fetch")
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `https://github.com/rust-lang/bitflags.git`
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 
 "#]])
         .run();
@@ -173,7 +173,7 @@ fn github_works_cargo_install() {
 [INSTALLING] bitflags-smoke-test [..]
 [WARNING] Cargo.toml: unused manifest key: dependencies.bitflags.all-features
 [WARNING] `bitflags-smoke-test` (manifest) generated 1 warning
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 ...
 [INSTALLED] package [..]
 ...

@@ -176,7 +176,7 @@ fn rustdoc_foo_with_bar_dependency() {
 
     foo.cargo("rustdoc -v -- --cfg=foo")
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [CHECKING] bar v0.0.1 ([ROOT]/bar)
 [RUNNING] `rustc [..] [ROOT]/bar/src/lib.rs [..]`
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
@@ -214,7 +214,7 @@ fn rustdoc_only_bar_dependency() {
 
     foo.cargo("rustdoc -v -p bar -- --cfg=foo")
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOCUMENTING] bar v0.0.1 ([ROOT]/bar)
 [RUNNING] `rustdoc [..] --crate-name bar [ROOT]/bar/src/lib.rs -o [ROOT]/foo/target/doc [..]-C metadata=[..] -L dependency=[ROOT]/foo/target/debug/deps [..]--cfg=foo[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -393,7 +393,7 @@ fn rustdoc_json_same_crate_different_version() {
         .cargo("rustdoc -v -Z unstable-options --output-format json -p dep@1.0.0")
         .masquerade_as_nightly_cargo(&["rustdoc-output-format"])
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [DOCUMENTING] dep v1.0.0 ([ROOT]/dep_v1)
 [RUNNING] `rustdoc [..] --crate-name dep [ROOT]/dep_v1/src/lib.rs [..] --output-format=json[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s

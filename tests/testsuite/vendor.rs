@@ -1364,7 +1364,7 @@ fn git_duplicate() {
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `[ROOTURL]/a`
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 3 packages to highest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] b v0.5.0 (registry `dummy-registry`)
 [ERROR] failed to sync
@@ -1881,7 +1881,7 @@ fn no_remote_dependency_no_vendor() {
 
     p.cargo("vendor")
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 There is no dependency to vendor in this project.
 
 "#]])
@@ -2162,7 +2162,7 @@ fn vendor_local_registry() {
 
     p.cargo("vendor --respect-source-config")
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [UNPACKING] bar v0.0.0 (registry `[ROOT]/registry`)
    Vendoring bar v0.0.0 ([ROOT]/home/.cargo/registry/src/-[HASH]/bar-0.0.0) to vendor/bar
 To use vendored sources, add this to your .cargo/config.toml for this project:

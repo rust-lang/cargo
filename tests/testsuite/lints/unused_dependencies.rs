@@ -38,7 +38,7 @@ fn unused_dep_normal() {
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] unused v0.1.0 (registry `dummy-registry`)
 [CHECKING] unused v0.1.0
@@ -97,7 +97,7 @@ fn unused_dep_build() {
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] unused v0.1.0 (registry `dummy-registry`)
 [COMPILING] unused v0.1.0
@@ -159,7 +159,7 @@ fn unused_dep_build_no_build_rs() {
 [HELP] consider removing the dependency on `unused`
 [WARNING] `foo` (manifest) generated 1 warning
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] unused v0.1.0 (registry `dummy-registry`)
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
@@ -223,7 +223,7 @@ fn unused_dep_lib_bins() {
         .with_stderr_data(
             str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 3 packages to highest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] unused v0.1.0 (registry `dummy-registry`)
 [DOWNLOADED] lib_used v0.1.0 (registry `dummy-registry`)
@@ -318,7 +318,7 @@ fn unused_dep_build_with_used_dep_normal() {
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] unused_build v0.1.0 (registry `dummy-registry`)
 [COMPILING] unused_build v0.1.0
@@ -380,7 +380,7 @@ fn unused_dep_normal_but_implicit_used_dep_dev() {
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] used_dev v0.1.0 (registry `dummy-registry`)
 [CHECKING] used_dev v0.1.0
@@ -464,7 +464,7 @@ fn unused_dep_normal_but_explicit_used_dep_dev() {
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] used_once v0.1.0 (registry `dummy-registry`)
 [CHECKING] used_once v0.1.0
@@ -532,7 +532,7 @@ fn unused_dep_dev_but_explicit_used_dep_normal() {
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] used_once v0.1.0 (registry `dummy-registry`)
 [CHECKING] used_once v0.1.0
@@ -582,7 +582,7 @@ fn optional_dependency() {
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -654,7 +654,7 @@ fn unused_dep_renamed() {
         .with_stderr_data(
             str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] baz v0.2.0 (registry `dummy-registry`)
 [DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
@@ -712,7 +712,7 @@ fn warning_replay() {
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] unused v0.1.0 (registry `dummy-registry`)
 [CHECKING] unused v0.1.0
@@ -790,7 +790,7 @@ fn unused_dep_target() {
         .with_stderr_data(
             str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] used v0.1.0 (registry `dummy-registry`)
 [DOWNLOADED] unused v0.1.0 (registry `dummy-registry`)
@@ -887,7 +887,7 @@ fn unused_dev_deps() {
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 6 packages to latest compatible versions
+[LOCKING] 6 packages to highest compatible versions
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1069,7 +1069,7 @@ fn package_selection() {
         .with_stderr_data(
             str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 7 packages to latest compatible versions
+[LOCKING] 7 packages to highest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] unused_bar v0.1.0 (registry `dummy-registry`)
 [DOWNLOADED] unused_external v0.1.0 (registry `dummy-registry`)
@@ -1227,7 +1227,7 @@ fn pinned_transitive_dep() {
         .with_stderr_data(
             str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] intermediate v0.1.0 (registry `dummy-registry`)
 [DOWNLOADED] transitive v0.1.1 (registry `dummy-registry`)
@@ -1302,7 +1302,7 @@ pub fn fun() -> &'static str {
         .with_stderr_data(
             str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] intermediate v0.1.0 (registry `dummy-registry`)
 [DOWNLOADED] transitive v0.1.1 (registry `dummy-registry`)
@@ -1352,7 +1352,7 @@ fn allow_rustflags() {
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] unused v0.1.0 (registry `dummy-registry`)
 [CHECKING] unused v0.1.0
@@ -1407,7 +1407,7 @@ fn allow_attribute() {
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] unused v0.1.0 (registry `dummy-registry`)
 [CHECKING] unused v0.1.0
@@ -1461,7 +1461,7 @@ fn deny_in_manifest() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] unused v0.1.0 (registry `dummy-registry`)
 [CHECKING] unused v0.1.0
@@ -1515,7 +1515,7 @@ fn deny_rustflags() {
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] unused v0.1.0 (registry `dummy-registry`)
 [CHECKING] unused v0.1.0
@@ -1570,7 +1570,7 @@ fn deny_attribute() {
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] unused v0.1.0 (registry `dummy-registry`)
 [CHECKING] unused v0.1.0
@@ -1625,7 +1625,7 @@ fn forbid_rustflags() {
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] unused v0.1.0 (registry `dummy-registry`)
 [CHECKING] unused v0.1.0
@@ -1680,7 +1680,7 @@ fn forbid_attribute() {
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] unused v0.1.0 (registry `dummy-registry`)
 [CHECKING] unused v0.1.0

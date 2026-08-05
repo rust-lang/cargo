@@ -85,7 +85,7 @@ non_kebab_case_features = "warn"
   = [NOTE] `cargo::non_kebab_case_features` is set to `warn` in `[lints]`
 [WARNING] `foo` (manifest) generated 1 warning
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 ...
 

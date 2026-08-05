@@ -70,7 +70,7 @@ fn unknown_hints_warn() {
 [WARNING] Cargo.toml: unused manifest key: hints.this-is-an-unknown-hint
 [WARNING] `foo` (manifest) generated 1 warning
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 [CHECKING] bar v1.0.0
@@ -121,7 +121,7 @@ fn hint_unknown_type_warn() {
     p.cargo("check -v")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 [WARNING] foo@0.0.1: ignoring unsupported value type (string) for 'hints.mostly-unused', which expects a boolean
@@ -174,7 +174,7 @@ fn hints_mostly_unused_warn_without_gate() {
     p.cargo("check -v")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 [WARNING] foo@0.0.1: ignoring 'hints.mostly-unused', pass `-Zprofile-hint-mostly-unused` to enable it
@@ -225,7 +225,7 @@ fn hints_mostly_unused_nightly() {
         .masquerade_as_nightly_cargo(&["profile-hint-mostly-unused"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 [CHECKING] bar v1.0.0
@@ -280,7 +280,7 @@ fn mostly_unused_profile_overrides_hints_nightly() {
         .masquerade_as_nightly_cargo(&["profile-hint-mostly-unused"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 [CHECKING] bar v1.0.0

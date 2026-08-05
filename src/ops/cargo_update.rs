@@ -768,9 +768,9 @@ fn status_locking(ws: &Workspace<'_>, num_pkgs: usize) -> CargoResult<()> {
     if !ws.gctx().cli_unstable().direct_minimal_versions {
         write!(&mut cfg, " to")?;
         if ws.gctx().cli_unstable().minimal_versions {
-            write!(&mut cfg, " earliest")?;
+            write!(&mut cfg, " lowest")?;
         } else {
-            write!(&mut cfg, " latest")?;
+            write!(&mut cfg, " highest")?;
         }
 
         if let Some(rust_version) = required_rust_version(ws) {

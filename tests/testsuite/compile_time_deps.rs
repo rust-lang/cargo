@@ -56,7 +56,7 @@ fn non_comp_time_dep() {
     p.cargo("-Zunstable-options check --compile-time-deps")
         .masquerade_as_nightly_cargo(&["compile-time-deps"])
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -241,7 +241,7 @@ fn build_dep() {
     p.cargo("-Zunstable-options check --compile-time-deps")
         .masquerade_as_nightly_cargo(&["compile-time-deps"])
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [COMPILING] baz v0.0.1 ([ROOT]/foo/bar/baz)
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
@@ -315,7 +315,7 @@ fn indirect_comp_time_dep() {
     p.cargo("-Zunstable-options check --compile-time-deps")
         .masquerade_as_nightly_cargo(&["compile-time-deps"])
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [COMPILING] baz v0.0.1 ([ROOT]/foo/bar/baz)
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -379,7 +379,7 @@ fn tests_target() {
 
     p.cargo("-Zunstable-options check --tests --compile-time-deps")
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 

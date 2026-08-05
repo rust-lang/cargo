@@ -1103,7 +1103,7 @@ fn example_with_release_flag() {
 
     p.cargo("run -v --release --example a")
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [RUNNING] `rustc --crate-name bar --edition=2015 bar/src/bar.rs [..]--crate-type lib --emit=[..]link -C opt-level=3[..] -C metadata=[..] --out-dir [ROOT]/foo/target/release/deps -C strip=debuginfo -L dependency=[ROOT]/foo/target/release/deps`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
@@ -1210,7 +1210,7 @@ fn run_with_bin_dep() {
 
     p.cargo("run")
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [WARNING] foo v0.0.1 ([ROOT]/foo) ignoring invalid dependency `bar` which is missing a lib target
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1274,7 +1274,7 @@ fn run_with_bin_deps() {
 
     p.cargo("run")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [WARNING] foo v0.0.1 ([ROOT]/foo) ignoring invalid dependency `bar1` which is missing a lib target
 [WARNING] foo v0.0.1 ([ROOT]/foo) ignoring invalid dependency `bar2` which is missing a lib target
 [COMPILING] foo v0.0.1 ([ROOT]/foo)

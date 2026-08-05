@@ -2749,7 +2749,7 @@ fn self_referential() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.2 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.2
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [ADDING] foo v0.0.1 (available: v0.0.2)
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
@@ -2794,7 +2794,7 @@ fn ambiguous_registry_vs_local_package() {
         .with_stderr_data(str![[r#"
 [INSTALLING] foo v0.1.0 ([ROOT]/foo)
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [COMPILING] foo v0.0.1
@@ -3068,7 +3068,7 @@ fn dry_run_incompatible_package_dependency() {
 [INSTALLING] foo v0.1.0 ([ROOT]/foo)
 [WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
 [WARNING] `foo` (manifest) generated 1 warning
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [ERROR] failed to compile `foo v0.1.0 ([ROOT]/foo)`, intermediate artifacts can be found at `[ROOT]/foo/target`.
 To reuse those artifacts with a future compilation, set the environment variable `CARGO_BUILD_BUILD_DIR` to that path.
 

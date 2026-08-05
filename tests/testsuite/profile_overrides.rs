@@ -33,7 +33,7 @@ fn profile_override_basic() {
 
     p.cargo("check -v")
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [CHECKING] bar v0.5.0 ([ROOT]/foo/bar)
 [RUNNING] `rustc --crate-name bar [..] -C opt-level=3 [..]`
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
@@ -226,7 +226,7 @@ fn profile_override_hierarchy() {
 
     p.cargo("build -v")
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [COMPILING] m3 v0.5.0 ([ROOT]/foo/m3)
 [COMPILING] dep v0.5.0 ([ROOT]/dep)
 [RUNNING] `rustc --crate-name m3 --edition=2015 m3/src/lib.rs [..] --crate-type lib --emit=[..]link[..]-C codegen-units=4 [..]`

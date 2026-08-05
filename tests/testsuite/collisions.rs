@@ -202,7 +202,7 @@ fn collision_doc_multiple_versions() {
         .with_stderr_data(
             str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 3 packages to highest compatible versions
 [ADDING] bar v1.0.0 (available: v2.0.0)
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v2.0.0 (registry `dummy-registry`)
@@ -380,7 +380,7 @@ fn collision_doc_profile_split() {
         .with_stderr_data(
             str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] common v1.0.0 (registry `dummy-registry`)
 [COMPILING] common v1.0.0
@@ -441,7 +441,7 @@ fn collision_doc_sources() {
         .with_stderr_data(
             str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 [WARNING] output filename collision at [ROOT]/foo/target/doc/bar/index.html
@@ -496,7 +496,7 @@ fn collision_doc_target() {
         .with_stderr_data(
             str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 3 packages to highest compatible versions
 [ADDING] bar v1.0.0 (available: v2.0.0)
 [DOWNLOADING] crates ...
 [DOWNLOADED] orphaned v1.0.0 (registry `dummy-registry`)
@@ -566,7 +566,7 @@ fn collision_with_root() {
     p.cargo("doc -j=1")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo-macro v1.0.0 (registry `dummy-registry`)
 [WARNING] output filename collision at [ROOT]/foo/target/doc/foo_macro/index.html

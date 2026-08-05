@@ -116,7 +116,7 @@ fn transitive_minor_update() {
     p.cargo("update serde")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 0 packages to latest compatible versions
+[LOCKING] 0 packages to highest compatible versions
 [NOTE] pass `--verbose` to see 2 unchanged dependencies behind latest
 
 "#]])
@@ -169,7 +169,7 @@ fn conservative() {
     p.cargo("update serde")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [UPDATING] serde v0.1.0 -> v0.1.1
 [NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 
@@ -574,7 +574,7 @@ fn update_recursive() {
     p.cargo("update serde:0.2.1 --recursive")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [UPDATING] log v0.1.0 -> v0.1.1
 [UPDATING] serde v0.2.1 -> v0.2.2
 
@@ -612,7 +612,7 @@ fn update_aggressive_alias_for_recursive() {
     p.cargo("update serde:0.2.1 --aggressive")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [UPDATING] log v0.1.0 -> v0.1.1
 [UPDATING] serde v0.2.1 -> v0.2.2
 
@@ -922,7 +922,7 @@ fn dry_run_update() {
     p.cargo("update serde --dry-run")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [UPDATING] serde v0.1.0 -> v0.1.1
 [NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 [WARNING] not updating lockfile due to dry run
@@ -1100,7 +1100,7 @@ rustdns.workspace = true
     p.cargo("generate-lockfile")
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `[ROOTURL]/rustdns`
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 
 "#]])
         .run();
@@ -1115,7 +1115,7 @@ rustdns.workspace = true
 
     p.cargo("update -p rootcrate")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [UPDATING] rootcrate v2.29.8 ([ROOT]/foo/rootcrate) -> v2.29.81
 [UPDATING] subcrate v2.29.8 ([ROOT]/foo/subcrate) -> v2.29.81
 
@@ -1190,7 +1190,7 @@ rustdns.workspace = true
     p.cargo("generate-lockfile")
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `[ROOTURL]/rustdns`
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 
 "#]])
         .run();
@@ -1205,7 +1205,7 @@ rustdns.workspace = true
 
     p.cargo("update -p crate2")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [UPDATING] crate1 v2.29.8 ([ROOT]/foo/crate1) -> v2.29.81
 [UPDATING] crate2 v2.29.8 ([ROOT]/foo/crate2) -> v2.29.81
 
@@ -1280,7 +1280,7 @@ rustdns.workspace = true
     p.cargo("generate-lockfile")
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `[ROOTURL]/rustdns`
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 
 "#]])
         .run();
@@ -1295,7 +1295,7 @@ rustdns.workspace = true
 
     p.cargo("update --workspace")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [UPDATING] crate1 v2.29.8 ([ROOT]/foo/crate1) -> v2.29.81
 [UPDATING] crate2 v2.29.8 ([ROOT]/foo/crate2) -> v2.29.81
 
@@ -1340,7 +1340,7 @@ fn update_precise_git_revisions() {
     p.cargo("fetch")
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `[ROOTURL]/git`
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 
 "#]])
         .run();
@@ -1980,7 +1980,7 @@ fn report_behind() {
     p.cargo("update --dry-run")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [UPDATING] breaking v0.1.0 -> v0.1.1 (available: v0.2.0)
 [NOTE] pass `--verbose` to see 2 unchanged dependencies behind latest
 [WARNING] not updating lockfile due to dry run
@@ -1991,7 +1991,7 @@ fn report_behind() {
     p.cargo("update --dry-run --verbose")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [UPDATING] breaking v0.1.0 -> v0.1.1 (available: v0.2.0)
 [UNCHANGED] pre v1.0.0-alpha.0 (available: v1.0.0-alpha.1)
 [UNCHANGED] two-ver v0.1.0 (available: v0.2.0)
@@ -2006,7 +2006,7 @@ fn report_behind() {
     p.cargo("update --dry-run")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 0 packages to latest compatible versions
+[LOCKING] 0 packages to highest compatible versions
 [NOTE] pass `--verbose` to see 3 unchanged dependencies behind latest
 [WARNING] not updating lockfile due to dry run
 
@@ -2016,7 +2016,7 @@ fn report_behind() {
     p.cargo("update --dry-run --verbose")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 0 packages to latest compatible versions
+[LOCKING] 0 packages to highest compatible versions
 [UNCHANGED] breaking v0.1.1 (available: v0.2.0)
 [UNCHANGED] pre v1.0.0-alpha.0 (available: v1.0.0-alpha.1)
 [UNCHANGED] two-ver v0.1.0 (available: v0.2.0)
@@ -2056,7 +2056,7 @@ fn update_with_missing_feature() {
     p.cargo("update")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 0 packages to latest compatible versions
+[LOCKING] 0 packages to highest compatible versions
 [NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 
 "#]])
@@ -2067,7 +2067,7 @@ fn update_with_missing_feature() {
     p.cargo("update")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [UPDATING] bar v0.1.0 -> v0.1.2
 
 "#]])
@@ -2151,7 +2151,7 @@ fn update_breaking_dry_run() {
 [UPDATING] `dummy-registry` index
 [UPGRADING] incompatible ^1.0 -> ^2.0
 [UPGRADING] ws ^1.0 -> ^2.0
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [UPDATING] incompatible v1.0.0 -> v2.0.0
 [UPDATING] ws v1.0.0 -> v2.0.0
 [WARNING] aborting update due to dry run
@@ -2362,7 +2362,7 @@ fn update_breaking() {
 [UPGRADING] dev ^1.0 -> ^2.0
 [UPGRADING] build ^1.0 -> ^2.0
 [UPGRADING] platform-specific ^1.0 -> ^2.0
-[LOCKING] 12 packages to latest compatible versions
+[LOCKING] 12 packages to highest compatible versions
 [UPDATING] alternative-1 v1.0.0 (registry `alternative`) -> v2.0.0
 [UPDATING] alternative-2 v1.0.0 (registry `alternative`) -> v2.0.0
 [UPDATING] build v1.0.0 -> v2.0.0
@@ -2464,7 +2464,7 @@ fn update_breaking() {
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
 [UPDATING] `dummy-registry` index
-[LOCKING] 4 packages to latest compatible versions
+[LOCKING] 4 packages to highest compatible versions
 [UPDATING] compatible v1.0.0 -> v1.0.1
 [UPDATING] less-than v1.0.0 -> v2.0.0
 [UPDATING] pinned v1.0.0 -> v1.0.1 (available: v2.0.0)
@@ -2561,7 +2561,7 @@ fn update_breaking_specific_packages() {
 [UPGRADING] shared ^1.0 -> ^2.0
 [UPGRADING] ws ^1.0 -> ^2.0
 [UPGRADING] just-foo ^1.0 -> ^2.0
-[LOCKING] 5 packages to latest compatible versions
+[LOCKING] 5 packages to highest compatible versions
 [UPDATING] just-foo v1.0.0 -> v2.0.0
 [UPDATING] shared v1.0.0 -> v2.0.0
 [UPDATING] transitive-compatible v1.0.0 -> v1.0.1
@@ -2657,7 +2657,7 @@ fn update_breaking_specific_packages_that_wont_update() {
     )
     .with_stderr_data(str![[r#"
 [UPDATING] `[..]` index
-[LOCKING] 5 packages to latest compatible versions
+[LOCKING] 5 packages to highest compatible versions
 [UPDATING] compatible v1.0.0 -> v1.0.1
 [UPDATING] non-semver v1.0.0 -> v1.0.1 (available: v2.0.0)
 [UPDATING] renamed-from v1.0.0 -> v1.0.1 (available: v2.0.0)
@@ -2701,7 +2701,7 @@ fn update_breaking_without_lock_file() {
         .with_stderr_data(str![[r#"
 [UPDATING] `[..]` index
 [UPGRADING] incompatible ^1.0 -> ^2.0
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 
 "#]])
         .run();
@@ -2778,7 +2778,7 @@ Caused by:
         .with_stderr_data(str![[r#"
 [UPDATING] `[..]` index
 [UPGRADING] incompatible ^1.0 -> ^2.0
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [UPDATING] incompatible v1.0.0 -> v2.0.0
 
 "#]])
@@ -2791,7 +2791,7 @@ Caused by:
         .with_stderr_data(str![[r#"
 [UPDATING] `[..]` index
 [UPGRADING] incompatible ^2.0 -> ^3.0
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [UPDATING] incompatible v2.0.0 -> v3.0.0
 
 "#]])
@@ -2879,7 +2879,7 @@ fn update_breaking_spec_version_transitive() {
         .with_stderr_data(str![[r#"
 [UPDATING] `[..]` index
 [UPGRADING] dep ^1.0 -> ^2.0
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [ADDING] dep v2.0.0
 
 "#]])
@@ -2901,7 +2901,7 @@ fn update_breaking_spec_version_transitive() {
     p.cargo("update dep@1.1")
         .with_stderr_data(str![[r#"
 [UPDATING] `[..]` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [UPDATING] dep v1.1.0 -> v1.1.1
 
 "#]])
@@ -2960,7 +2960,7 @@ fn update_breaking_mixed_compatibility() {
         .with_stderr_data(str![[r#"
 [UPDATING] `[..]` index
 [UPGRADING] mixed-compatibility ^1.0 -> ^2.0
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [ADDING] mixed-compatibility v2.0.1
 
 "#]])
@@ -3048,7 +3048,7 @@ fn update_breaking_mixed_pinning_renaming() {
 [UPGRADING] mixed-pinned ^1.0 -> ^2.0
 [UPGRADING] mixed-ws-pinned ^1.0 -> ^2.0
 [UPGRADING] renamed-from ^1.0 -> ^2.0
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 3 packages to highest compatible versions
 [ADDING] mixed-pinned v2.0.0
 [ADDING] mixed-ws-pinned v2.0.0
 [ADDING] renamed-from v2.0.0
@@ -3218,7 +3218,7 @@ fn update_breaking_pre_release_upgrade() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [UPGRADING] bar ^2.0.0-beta.21 -> ^3.0.0
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [UPDATING] bar v2.0.0-beta.21 -> v3.0.0
 
 "#]])
@@ -3321,7 +3321,7 @@ fn update_breaking_missing_package_error() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [UPGRADING] bar ^1.0 -> ^2.0
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [UPDATING] bar v1.0.0 -> v2.0.0
 [ADDING] transitive v1.0.0
 

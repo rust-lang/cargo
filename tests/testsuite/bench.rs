@@ -522,7 +522,7 @@ fn bench_with_deep_lib_dep() {
 
     p.cargo("bench")
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] bar v0.0.1 ([ROOT]/bar)
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
@@ -1074,7 +1074,7 @@ fn bench_dylib() {
 
     p.cargo("bench -v")
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [RUNNING] [..] -C opt-level=3 [..]
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
@@ -1552,7 +1552,7 @@ fn test_bench_multiple_packages() {
 "#]])
         .with_stderr_data(
             str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [COMPILING] bar v0.1.0 ([ROOT]/bar)
 [COMPILING] baz v0.1.0 ([ROOT]/baz)
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s

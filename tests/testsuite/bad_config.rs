@@ -985,7 +985,7 @@ fn dev_dependencies2() {
 [WARNING] Cargo.toml: `dev_dependencies` is deprecated in favor of `dev-dependencies` and will not work in the 2024 edition
 (in the `foo` package)
 [WARNING] `foo` (manifest) generated 1 warning
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1064,7 +1064,7 @@ fn dev_dependencies2_conflict() {
     p.cargo("check").with_stderr_data(str![[r#"
 [WARNING] Cargo.toml: `dev_dependencies` is redundant with `dev-dependencies`, preferring `dev-dependencies` in the `foo` package
 [WARNING] `foo` (manifest) generated 1 warning
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1102,7 +1102,7 @@ fn build_dependencies2() {
 [WARNING] Cargo.toml: `build_dependencies` is deprecated in favor of `build-dependencies` and will not work in the 2024 edition
 (in the `foo` package)
 [WARNING] `foo` (manifest) generated 1 warning
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1181,7 +1181,7 @@ fn build_dependencies2_conflict() {
     p.cargo("check").with_stderr_data(str![[r#"
 [WARNING] Cargo.toml: `build_dependencies` is redundant with `build-dependencies`, preferring `build-dependencies` in the `foo` package
 [WARNING] `foo` (manifest) generated 1 warning
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1557,7 +1557,7 @@ fn cargo_platform_build_dependencies2() {
 [WARNING] Cargo.toml: `build_dependencies` is deprecated in favor of `build-dependencies` and will not work in the 2024 edition
 (in the `[HOST_TARGET]` platform target)
 [WARNING] `foo` (manifest) generated 1 warning
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [COMPILING] build v0.5.0 ([ROOT]/foo/build)
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1646,7 +1646,7 @@ fn cargo_platform_build_dependencies2_conflict() {
         .with_stderr_data(str![[r#"
 [WARNING] Cargo.toml: `build_dependencies` is redundant with `build-dependencies`, preferring `build-dependencies` in the `[HOST_TARGET]` platform target
 [WARNING] `foo` (manifest) generated 1 warning
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [COMPILING] build v0.5.0 ([ROOT]/foo/build)
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1690,7 +1690,7 @@ fn cargo_platform_dev_dependencies2() {
 [WARNING] Cargo.toml: `dev_dependencies` is deprecated in favor of `dev-dependencies` and will not work in the 2024 edition
 (in the `[HOST_TARGET]` platform target)
 [WARNING] `foo` (manifest) generated 1 warning
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1775,7 +1775,7 @@ fn cargo_platform_dev_dependencies2_conflict() {
         .with_stderr_data(str![[r#"
 [WARNING] Cargo.toml: `dev_dependencies` is redundant with `dev-dependencies`, preferring `dev-dependencies` in the `[HOST_TARGET]` platform target
 [WARNING] `foo` (manifest) generated 1 warning
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1821,7 +1821,7 @@ fn default_features2() {
 [WARNING] Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
 (in the `a` dependency)
 [WARNING] `foo` (manifest) generated 1 warning
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [CHECKING] a v0.1.0 ([ROOT]/foo/a)
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1913,7 +1913,7 @@ fn default_features2_conflict() {
     p.cargo("check").with_stderr_data(str![[r#"
 [WARNING] Cargo.toml: `default_features` is redundant with `default-features`, preferring `default-features` in the `a` dependency
 [WARNING] `foo` (manifest) generated 1 warning
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [CHECKING] a v0.1.0 ([ROOT]/foo/a)
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -2995,7 +2995,7 @@ fn warn_semver_metadata() {
 [WARNING] Cargo.toml: version requirement `1.0.0+1234` for dependency `bar` includes semver metadata which will be ignored, removing the metadata is recommended to avoid confusion
 [WARNING] `foo` (manifest) generated 1 warning
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 [CHECKING] bar v1.0.0

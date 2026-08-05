@@ -1233,7 +1233,7 @@ fn artifact_deps() {
         .masquerade_as_nightly_cargo(&["bindeps", "build-dir-new-layout"])
         .enable_mac_dsym()
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s

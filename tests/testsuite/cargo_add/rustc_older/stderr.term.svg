@@ -25,7 +25,7 @@
 </tspan>
     <tspan x="10px" y="64px"><tspan class="fg-bright-green bold">      Adding</tspan><tspan> rust-version-user v0.1.1 to dependencies</tspan>
 </tspan>
-    <tspan x="10px" y="82px"><tspan class="fg-bright-green bold">     Locking</tspan><tspan> 1 package to latest Rust [..] compatible version</tspan>
+    <tspan x="10px" y="82px"><tspan class="fg-bright-green bold">     Locking</tspan><tspan> 1 package to highest Rust [..] compatible version</tspan>
 </tspan>
     <tspan x="10px" y="100px"><tspan class="fg-bright-green bold">      Adding</tspan><tspan> rust-version-user v0.1.1 (available: v0.2.1, requires Rust 1.2345)</tspan>
 </tspan>

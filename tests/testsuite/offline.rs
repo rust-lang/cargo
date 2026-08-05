@@ -147,7 +147,7 @@ fn cargo_compile_with_downloaded_dependency_with_offline() {
 
     p2.cargo("check --offline")
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [CHECKING] present_dep v1.2.3
 [CHECKING] bar v0.1.0 ([ROOT]/bar)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -265,7 +265,7 @@ fn main(){
 
     p2.cargo("run --offline")
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [COMPILING] present_dep v1.2.3
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -521,7 +521,7 @@ fn compile_offline_with_cached_git_dep(shallow: bool) {
     let mut cargo = p.cargo("build --offline");
     cargo.with_stderr_data(format!(
         "\
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [COMPILING] dep1 v0.5.0 ([ROOTURL]/dep1#[..])
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -702,7 +702,7 @@ fn main(){
 
     p2.cargo("build --offline")
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [COMPILING] present_dep v1.2.9
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -743,7 +743,7 @@ fn main(){
     p2.cargo("update --offline")
         .with_status(0)
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [UPDATING] present_dep v1.2.3 -> v1.2.9
 
 "#]])

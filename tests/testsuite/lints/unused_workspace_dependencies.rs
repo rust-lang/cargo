@@ -96,7 +96,7 @@ workspace = true
 [HELP] consider removing the workspace dependency `unused`
 [WARNING] workspace (manifest) generated 2 warnings
 [UPDATING] `dummy-registry` index
-[LOCKING] 6 packages to latest compatible versions
+[LOCKING] 6 packages to highest compatible versions
 [DOWNLOADING] crates ...
 ...
 

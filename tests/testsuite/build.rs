@@ -962,7 +962,7 @@ fn cargo_compile_with_warnings_in_a_dep_package() {
 
     p.cargo("build")
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [WARNING] [..]dead[..]
 ...
@@ -2844,7 +2844,7 @@ fn bad_platform_specific_dependency() {
     p.cargo("build")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 error[E0463]: can't find crate for `bar`
 ...
@@ -3074,7 +3074,7 @@ fn transitive_dependencies_not_available() {
     p.cargo("build -v")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 2 packages to highest compatible versions
 [COMPILING] bbbbb v0.0.1 ([ROOT]/foo/b)
 [RUNNING] `rustc [..]
 [COMPILING] aaaaa v0.0.1 ([ROOT]/foo/a)
@@ -3486,7 +3486,7 @@ fn invalid_spec() {
     p.cargo("build -p notAValidDep")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [ERROR] package ID specification `notAValidDep` did not match any packages
 
 "#]])
@@ -4354,7 +4354,7 @@ fn build_all_member_dependency_same_name() {
     p.cargo("build --workspace")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] a v0.1.0 (registry `dummy-registry`)
 [COMPILING] a v0.1.0
@@ -4642,7 +4642,7 @@ fn rustc_wrapper_relative() {
         .env("RUSTC_WRAPPER", &relative_path)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 [COMPILING] bar v1.0.0
@@ -5175,7 +5175,7 @@ fn building_a_dependent_crate_without_bin_should_fail() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] testless v0.1.0 (registry `dummy-registry`)
 [ERROR] failed to download replaced source registry `crates-io`
@@ -5418,7 +5418,7 @@ fn no_linkable_target() {
         .build();
     p.cargo("build")
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [WARNING] the package `the_lib` provides no linkable target
   |
   = [NOTE] this might cause `foo` to fail compilation
@@ -5698,7 +5698,7 @@ fn signal_display() {
 
     foo.cargo("build")
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [COMPILING] pm v0.1.0 ([ROOT]/foo/pm)
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [ERROR] could not compile `foo` (lib)
@@ -5756,7 +5756,7 @@ fn pipelining_works() {
     foo.cargo("build")
         .with_stdout_data(str![])
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -5887,7 +5887,7 @@ b
 
 "#]])
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 c
@@ -6542,7 +6542,7 @@ fn embed_metadata_no_invalidate() {
     p.cargo("build -Z embed-metadata=no")
         .masquerade_as_nightly_cargo(&["-Z embed-metadata"])
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -6829,7 +6829,7 @@ fn should_not_include_proc_macro_deps_paths_in_rustc_args() {
         // Verify that the proc-macro dependencies (my-rlib and my-dylib) are not added to the rustc
         // invocation for the `foo` crate as `-L` args.
         .with_stderr_data(str![[r#"
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 3 packages to highest compatible versions
 [COMPILING] my-dylib v0.1.0 ([ROOT]/foo/my-dylib)
 [RUNNING] `rustc --crate-name my_dylib [..]`
 [COMPILING] my-rlib v0.1.0 ([ROOT]/foo/my-rlib)
