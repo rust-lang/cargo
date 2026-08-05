@@ -213,3 +213,31 @@ blanket_hint_mostly_unused = "deny"
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn disabled_without_profile_hint_mostly_unused() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+[package]
+name = "foo"
+version = "0.0.1"
+edition = "2015"
+
+[profile.dev]
+hint-mostly-unused = true
+
+[lints.cargo]
+default = { level = "allow", priority = -1 }
+blanket_hint_mostly_unused = "warn"
+"#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("fetch -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints"])
+        .with_stderr_data(str![""])
+        .run();
+}
