@@ -43,7 +43,7 @@ impl ResolverProgress {
                 .unwrap_or(1),
         }
     }
-    pub fn shell_status(&mut self, gctx: Option<&GlobalContext>) -> CargoResult<()> {
+    pub fn shell_status(&mut self, gctx: &GlobalContext) -> CargoResult<()> {
         // If we spend a lot of time here (we shouldn't in most cases) then give
         // a bit of a visual indicator as to what we're doing. Only enable this
         // when stderr is a tty (a human is likely to be watching) to ensure we
@@ -54,15 +54,13 @@ impl ResolverProgress {
         // like `Instant::now` by only checking every N iterations of this loop
         // to amortize the cost of the current time lookup.
         self.ticks += 1;
-        if let Some(config) = gctx {
-            if config.shell().is_err_tty()
-                && !self.printed
-                && self.ticks % 1000 == 0
-                && self.start.elapsed() - self.deps_time > self.time_to_print
-            {
-                self.printed = true;
-                config.shell().status("Resolving", "dependency graph...")?;
-            }
+        if gctx.shell().is_err_tty()
+            && !self.printed
+            && self.ticks % 1000 == 0
+            && self.start.elapsed() - self.deps_time > self.time_to_print
+        {
+            self.printed = true;
+            gctx.shell().status("Resolving", "dependency graph...")?;
         }
         #[cfg(debug_assertions)]
         {

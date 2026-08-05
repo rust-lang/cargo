@@ -82,7 +82,7 @@ pub(super) fn activation_error(
     dep: &Dependency,
     conflicting_activations: &ConflictMap,
     candidates: &[Summary],
-    gctx: Option<&GlobalContext>,
+    gctx: &GlobalContext,
 ) -> ResolveError {
     let to_resolve_err = |err| {
         ResolveError::new(
@@ -497,16 +497,14 @@ pub(super) fn activation_error(
         );
     }
 
-    if let Some(gctx) = gctx {
-        if let Some(offline_flag) = gctx.offline_flag() {
-            let _ = write!(
-                &mut hints,
-                "\nnote: offline mode (via `{offline_flag}`) \
-                 can sometimes cause surprising resolution failures\
-                 \nhelp: if this error is too confusing you may wish to retry \
-                 without `{offline_flag}`",
-            );
-        }
+    if let Some(offline_flag) = gctx.offline_flag() {
+        let _ = write!(
+            &mut hints,
+            "\nnote: offline mode (via `{offline_flag}`) \
+             can sometimes cause surprising resolution failures\
+             \nhelp: if this error is too confusing you may wish to retry \
+             without `{offline_flag}`",
+        );
     }
 
     to_resolve_err(anyhow::format_err!("{msg}{hints}"))
@@ -598,11 +596,7 @@ fn alt_names(
 /// For path dependencies, scan the dependency directory for any packages
 /// that exist in subdirectories. This helps when the user points to a
 /// directory without a Cargo.toml or with the wrong package name.
-fn alt_paths(
-    dep: &Dependency,
-    gctx: Option<&GlobalContext>,
-) -> Option<Vec<crate::workspace::Package>> {
-    let gctx = gctx?;
+fn alt_paths(dep: &Dependency, gctx: &GlobalContext) -> Option<Vec<crate::workspace::Package>> {
     if !dep.source_id().is_path() {
         return None;
     }

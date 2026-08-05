@@ -120,8 +120,7 @@ mod version_prefs;
 ///
 /// * `resolve_version` - this controls how the lockfile will be serialized.
 ///
-/// * `config` - a location to print warnings and such, or `None` if no warnings
-///   should be printed
+/// * `gctx` - the global context used for configuration and diagnostics.
 #[tracing::instrument(skip_all)]
 pub fn resolve(
     summaries: &[(Summary, ResolveOpts)],
@@ -129,14 +128,12 @@ pub fn resolve(
     registry: &impl Registry,
     version_prefs: &VersionPreferences,
     resolve_version: ResolveVersion,
-    gctx: Option<&GlobalContext>,
+    gctx: &GlobalContext,
 ) -> CargoResult<Resolve> {
-    let first_version = match gctx {
-        Some(config) if config.cli_unstable().direct_minimal_versions => {
-            Some(VersionOrdering::MinimumVersionsFirst)
-        }
-        _ => None,
-    };
+    let first_version = gctx
+        .cli_unstable()
+        .direct_minimal_versions
+        .then_some(VersionOrdering::MinimumVersionsFirst);
     let mut registry = RegistryQueryer::new(registry, replacements, version_prefs);
 
     // Global cache of the reasons for each time we backtrack.
@@ -199,7 +196,7 @@ fn activate_deps_loop(
     registry: &mut RegistryQueryer<'_, impl Registry>,
     summaries: &[(Summary, ResolveOpts)],
     first_version: Option<VersionOrdering>,
-    gctx: Option<&GlobalContext>,
+    gctx: &GlobalContext,
     past_conflicting_activations: &mut conflict_cache::ConflictCache,
 ) -> CargoResult<ResolverContext> {
     let mut resolver_ctx = ResolverContext::new();
