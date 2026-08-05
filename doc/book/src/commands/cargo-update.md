@@ -50,7 +50,7 @@ requirement in <code>Cargo.toml</code> doesn’t contain any pre-release identif
 </dd>
 
 
-<dt class="option-term" id="option-cargo-update---breaking"><a class="option-anchor" href="#option-cargo-update---breaking"><code>--breaking</code> <em>directory</em></a></dt>
+<dt class="option-term" id="option-cargo-update---breaking"><a class="option-anchor" href="#option-cargo-update---breaking"><code>--breaking</code></a></dt>
 <dd class="option-desc"><p>Update <em>spec</em> to highest SemVer-breaking version.</p>
 <p>Version requirements will be modified to allow this update.</p>
 <p>This only applies to dependencies when</p>
