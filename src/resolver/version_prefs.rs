@@ -297,6 +297,28 @@ impl PublishAgePolicy {
 
         &self.global
     }
+
+    /// A single min-publish-age, if there is one
+    pub fn common_min_publish_age(&self) -> Option<PublishAgeViolation> {
+        if !self.per_registry.is_empty() {
+            return None;
+        }
+
+        if self.crates_io.is_set() {
+            return None;
+        }
+
+        if let MinPublishAge::Age(age, config) = &self.global {
+            jiff::SignedDuration::try_from(*age).ok().and_then(|age| {
+                Some(PublishAgeViolation {
+                    age,
+                    config: config.clone(),
+                })
+            })
+        } else {
+            None
+        }
+    }
 }
 
 /// A configured `min-publish-age` value for one scope.

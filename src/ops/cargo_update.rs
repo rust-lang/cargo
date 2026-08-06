@@ -791,11 +791,25 @@ fn status_locking(
         }
         write!(&mut cfg, " compatible version{plural}")?;
         match (publish_age, publish_time) {
-            (Some(_publish_age), Some(publish_time)) => {
-                write!(&mut cfg, " as of min-publish-age before {publish_time}",)?;
+            (Some(publish_age), Some(publish_time)) => {
+                write!(
+                    &mut cfg,
+                    " as of {} before {publish_time}",
+                    publish_age
+                        .common_min_publish_age()
+                        .map(|a| a.age_label())
+                        .unwrap_or_else(|| "min-publish-age".to_owned())
+                )?;
             }
-            (Some(_publish_age), None) => {
-                write!(&mut cfg, " as of min-publish-age",)?;
+            (Some(publish_age), None) => {
+                write!(
+                    &mut cfg,
+                    " as of {}",
+                    publish_age
+                        .common_min_publish_age()
+                        .map(|a| format!("{} ago", a.age_label()))
+                        .unwrap_or_else(|| "min-publish-age".to_owned())
+                )?;
             }
             (None, Some(publish_time)) => {
                 write!(&mut cfg, " as of {publish_time}")?;
