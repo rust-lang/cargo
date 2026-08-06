@@ -56,6 +56,8 @@ use crate::resolver::{ForceAllTargets, HasDevUnits, Resolve};
 use crate::util::BuildLogger;
 use crate::util::interning::InternedString;
 use crate::util::log_message::LogMessage;
+use crate::util::machine_message;
+use crate::util::machine_message::Message as _;
 use crate::util::{CargoResult, StableHasher};
 use crate::workspace::profiles::Profiles;
 use crate::workspace::{PackageId, PackageSet, SourceId, TargetKind, Workspace};
@@ -185,6 +187,12 @@ fn compile_ws<'a>(
             target_dir: ws.target_dir().as_path_unlocked().to_path_buf(),
             workspace_root: ws.root().to_path_buf(),
         });
+
+        if options.build_config.emit_json() {
+            let run_id = logger.run_id().to_string();
+            let msg = machine_message::BuildStarted { run_id: &run_id }.to_json_string();
+            writeln!(ws.gctx().shell().out(), "{msg}")?;
+        }
     }
 
     let bcx = create_bcx(ws, options, &interner, logger.as_ref())?;
