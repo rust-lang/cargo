@@ -208,14 +208,17 @@ jobs:
       if: startsWith(matrix.rust, 'nightly')
     - run: rustup component add rustc-dev llvm-tools-preview rust-docs
       if: startsWith(matrix.rust, 'nightly')
-    - run: sudo apt update -y && sudo apt install lldb gcc-multilib -y
+    - run: sudo apt update -y && sudo apt install gdb lldb gcc-multilib -y
       if: matrix.os == 'ubuntu-latest'
-    - name: Install LLDB on Linux ARM
-      run: sudo apt update -y && sudo apt install lldb -y
+    - name: Install debuggers on Linux ARM
+      run: sudo apt update -y && sudo apt install gdb lldb -y
       if: matrix.os == 'ubuntu-24.04-arm'
     - name: Check LLDB debugger tool
       run: lldb --version
       if: runner.os != 'Windows'
+    - name: Check GDB debugger tool
+      run: gdb --version
+      if: runner.os == 'Linux'
     - run: rustup component add rustfmt || echo "rustfmt not available"
     - name: Add Windows debuggers bin to PATH
       shell: pwsh
