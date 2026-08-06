@@ -1302,7 +1302,10 @@ Hello, Ferris!
     );
 }
 
-#[cfg(all(target_os = "windows", target_env = "gnu", not(target_abi = "llvm")))]
+#[cfg(any(
+    target_os = "linux",
+    all(target_os = "windows", target_env = "gnu", not(target_abi = "llvm"))
+))]
 #[cargo_test(requires = "gdb")]
 fn gdb_works_after_trimmed() {
     use cargo_test_support::compare::assert_e2e;
