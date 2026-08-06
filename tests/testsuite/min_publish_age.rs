@@ -2084,6 +2084,7 @@ fn generate_lockfile_with_publish_time_and_min_publish_age() {
     .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to highest compatible version as of 2006-08-08T00:00:00Z
+[ADDING] bar v1.0.0 (available: v1.1.0, published 2 days ago)
 
 "#]])
     .run();
@@ -2098,9 +2099,9 @@ version = 4
 
 [[package]]
 name = "bar"
-version = "1.1.0"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2216902cacb5611f65e00da63d917a6b9f4dbb10ddc39ee24c853322ab44b041"
+checksum = "75120345f1869de1197d82823818e8151ad3325d58f084044181fc4457c087c4"
 
 [[package]]
 name = "foo"
