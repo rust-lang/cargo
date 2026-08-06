@@ -157,7 +157,7 @@ pub fn read_manifest(
 
 /// Transform the parsed TOML document so that all its values are owned, so that it has a 'static
 /// lifetime, to make it easier to work with it.
-fn make_document_owned(
+pub(crate) fn make_document_owned(
     mut document: toml::Spanned<toml::de::DeTable<'_>>,
 ) -> toml::Spanned<toml::de::DeTable<'static>> {
     document.get_mut().make_owned();
@@ -185,7 +185,9 @@ fn read_toml_string(path: &Path, is_embedded: bool, gctx: &GlobalContext) -> Car
 }
 
 #[tracing::instrument(skip_all)]
-fn parse_document(contents: &str) -> Result<toml::Spanned<toml::de::DeTable<'_>>, toml::de::Error> {
+pub(crate) fn parse_document(
+    contents: &str,
+) -> Result<toml::Spanned<toml::de::DeTable<'_>>, toml::de::Error> {
     toml::de::DeTable::parse(&contents)
 }
 
