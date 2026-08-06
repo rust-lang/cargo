@@ -501,12 +501,12 @@ fn clean_doc_target() {
     p.cargo("clean --doc --target")
         .arg(target)
         .with_stderr_data(str![[r#"
-[REMOVED] 0 files
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
 
 "#]])
         .env("__CARGO_TEMPORARY_BUILD_DIR_NEW_LAYOUT_OPT_OUT", "1")
         .run();
-    assert!(doc_path.is_dir());
+    assert!(!doc_path.is_dir());
 
     p.change_file(
         ".cargo/config.toml",
@@ -519,12 +519,12 @@ fn clean_doc_target() {
 
     p.cargo("clean --doc")
         .with_stderr_data(str![[r#"
-[REMOVED] 0 files
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
 
 "#]])
         .env("__CARGO_TEMPORARY_BUILD_DIR_NEW_LAYOUT_OPT_OUT", "1")
         .run();
-    assert!(doc_path.is_dir());
+    assert!(!doc_path.is_dir());
 }
 
 #[cargo_test]

@@ -373,13 +373,13 @@ fn clean_doc_target() {
     p.cargo("clean --doc --target")
         .arg(target)
         .with_stderr_data(str![[r#"
-[REMOVED] 0 files
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
 
 "#]])
         .arg("-Zbuild-dir-new-layout")
         .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .run();
-    assert!(doc_path.is_dir());
+    assert!(!doc_path.is_dir());
 
     p.change_file(
         ".cargo/config.toml",
@@ -393,13 +393,13 @@ fn clean_doc_target() {
 
     p.cargo("clean --doc")
         .with_stderr_data(str![[r#"
-[REMOVED] 0 files
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
 
 "#]])
         .arg("-Zbuild-dir-new-layout")
         .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .run();
-    assert!(doc_path.is_dir());
+    assert!(!doc_path.is_dir());
 }
 
 #[cargo_test]
