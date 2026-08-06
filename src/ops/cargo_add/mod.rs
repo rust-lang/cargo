@@ -114,6 +114,18 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
             .collect::<CargoResult<Vec<_>>>()?
     };
 
+    {
+        let mut seen = BTreeSet::new();
+        for dep in &deps {
+            let toml_key = dep.toml_key();
+            if !seen.insert(toml_key) {
+                anyhow::bail!(
+                    "dependency `{toml_key}` specified multiple times in the same `cargo add` invocation"
+                );
+            }
+        }
+    }
+
     let was_sorted = manifest
         .get_table(&dep_table)
         .map(TomlItem::as_table)
