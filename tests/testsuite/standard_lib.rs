@@ -549,6 +549,9 @@ fn build_std_with_no_arg_for_core_only_target() {
 "#]]
             .unordered(),
         )
+        .with_stderr_does_not_contain(
+            "[RUNNING] `[..]rustc --crate-name alloc [..]--target aarch64-unknown-none[..]`",
+        )
         .run();
 }
 
