@@ -856,7 +856,7 @@ fn report_latest(
 
     let publish_note = |summary| {
         let age = publish_age?.too_new(summary)?.age_label();
-        Some(format!(", published {age}"))
+        Some(format!(", published {age} ago"))
     };
 
     let compat_ver_compat_msrv_summary = possibilities
