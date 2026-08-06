@@ -761,6 +761,8 @@ fn print_lockfile_updates(
 fn status_locking(ws: &Workspace<'_>, num_pkgs: usize) -> CargoResult<()> {
     use std::fmt::Write as _;
 
+    let publish_time = ws.resolve_publish_time();
+
     let plural = if num_pkgs == 1 { "" } else { "s" };
 
     let mut cfg = String::new();
@@ -777,8 +779,11 @@ fn status_locking(ws: &Workspace<'_>, num_pkgs: usize) -> CargoResult<()> {
             write!(&mut cfg, " Rust {rust_version}")?;
         }
         write!(&mut cfg, " compatible version{plural}")?;
-        if let Some(publish_time) = ws.resolve_publish_time() {
-            write!(&mut cfg, " as of {publish_time}")?;
+        match publish_time {
+            Some(publish_time) => {
+                write!(&mut cfg, " as of {publish_time}")?;
+            }
+            None => {}
         }
     }
 
