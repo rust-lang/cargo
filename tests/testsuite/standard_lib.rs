@@ -265,7 +265,11 @@ fn shared_std_dependency_rebuild() {
 
                 [build-dependencies]
                 dep_test = {{ path = \"{}/tests/testsuite/mock-std/dep_test\" }}
+
+                [dependencies]
+                dep_test = {{ path = \"{}/tests/testsuite/mock-std/dep_test\" }}
             ",
+                manifest_dir.replace('\\', "/"),
                 manifest_dir.replace('\\', "/")
             )
             .as_str(),
@@ -288,10 +292,15 @@ fn shared_std_dependency_rebuild() {
         )
         .build();
 
+    // One build each for the:
+    //  - build-std build
+    //  - build-dependency (for the host, with the sysroot std)
+    //  - dependency (for the host, with build-std std)
     p.cargo("build -v")
         .build_std(&setup)
-        .target_host()
         .with_stderr_data(str![[r#"
+...
+[RUNNING] `[..] rustc --crate-name dep_test [..]`
 ...
 [RUNNING] `[..] rustc --crate-name dep_test [..]`
 ...
@@ -300,15 +309,13 @@ fn shared_std_dependency_rebuild() {
 "#]])
         .run();
 
+    // Sanity check that all artifacts are reused.
+    // TODO: This test used to test that the build-dependency would be shared between `--target=host` and
+    // non-`--target` invocations, but that isn't currently testable as RUSTFLAGS set in this file's
+    // test harness apply to the non-cross-compile mode.
     p.cargo("build -v")
         .build_std(&setup)
-        .with_stderr_does_not_contain(str![[r#"
-    ...
-    [RUNNING] `[..] rustc --crate-name dep_test [..]`
-    ...
-    [RUNNING] `[..] rustc --crate-name dep_test [..]`
-    ...
-    "#]])
+        .with_stderr_does_not_contain("[RUNNING] `[..] rustc --crate-name dep_test [..]`")
         .run();
 }
 
