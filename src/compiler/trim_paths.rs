@@ -20,6 +20,7 @@ use super::Unit;
 use crate::util::data_structures::HashSet;
 use crate::util::errors::CargoResult;
 use crate::util::hex;
+use crate::util::path_args;
 
 /// The current version of the unremap file.
 const CURRENT_UNREMAP_VERSION: u8 = 1;
@@ -160,12 +161,29 @@ fn package_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> (PathBuf, S
     // Handle path local dependencies and abnormal reg/git deps source location.
     if pkg_root.strip_prefix(ws_root).is_ok() {
         // remap to relative rustc work dir explicitly
-        (ws_root.to_path_buf(), ".".to_owned())
+        workspace_remap(build_runner, unit)
     } else {
         let from = pkg_root.to_path_buf();
         let to = format!("/cargo/deps/{}-{}", unit.pkg.name(), unit.pkg.version());
         (from, to)
     }
+}
+
+/// Path prefix remap rules for dependencies within workspaces.
+fn workspace_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> (PathBuf, String) {
+    let ws_root = build_runner.bcx.ws.root();
+    // rustc working directory is usually workspace root.
+    // However, when `-Zroot-dir` is set, it may not be.
+    // We may need to remap to that otherwise debuginfo like `DW_AT_comp_dir`
+    // would point to rustc working directory,
+    // and won't be remapped by workspace root.
+    let (_, rustc_workdir) = path_args(build_runner.bcx.ws, unit);
+    let from = if ws_root.starts_with(&rustc_workdir) {
+        rustc_workdir
+    } else {
+        ws_root.to_path_buf()
+    };
+    (from, ".".into())
 }
 
 /// Finds the checkout root and revision directory name of a git dependency.
