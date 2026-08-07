@@ -747,7 +747,6 @@ foo v0.1.0 ([ROOT]/foo)
         .run();
 }
 
-#[ignore = "vendoring tries to vendor builtins and fails"]
 #[cargo_test(build_std_mock)]
 fn builtins_are_not_vendored() {
     let setup = setup();
