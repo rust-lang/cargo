@@ -265,7 +265,11 @@ fn shared_std_dependency_rebuild() {
 
                 [build-dependencies]
                 dep_test = {{ path = \"{}/tests/testsuite/mock-std/dep_test\" }}
+
+                [dependencies]
+                dep_test = {{ path = \"{}/tests/testsuite/mock-std/dep_test\" }}
             ",
+                manifest_dir.replace('\\', "/"),
                 manifest_dir.replace('\\', "/")
             )
             .as_str(),
@@ -288,27 +292,78 @@ fn shared_std_dependency_rebuild() {
         )
         .build();
 
+    // The key assertion here is that dep_test is built 3 times, once each for:
+    //  - build-std build
+    //  - build-dependency (for the host, with the sysroot std)
+    //  - dependency (for the host, with build-std std)
     p.cargo("build -v")
         .build_std(&setup)
-        .target_host()
         .with_stderr_data(str![[r#"
-...
+[LOCKING] 1 package to highest compatible version
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] registry-dep-using-alloc v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] registry-dep-using-core v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] registry-dep-using-std v1.0.0 (registry `dummy-registry`)
+[COMPILING] core v0.1.0 ([..]/tests/testsuite/mock-std/library/core)
+[RUNNING] `[..] rustc --crate-name core [..]`
+[COMPILING] rustc-std-workspace-core v1.9.0 ([..]/tests/testsuite/mock-std/library/rustc-std-workspace-core)
+[RUNNING] `[..] rustc --crate-name rustc_std_workspace_core [..]`
+[COMPILING] registry-dep-using-core v1.0.0
+[RUNNING] `[..] rustc --crate-name registry_dep_using_core [..]`
+[COMPILING] alloc v0.1.0 ([..]/tests/testsuite/mock-std/library/alloc)
+[RUNNING] `[..] rustc --crate-name alloc [..]`
+[COMPILING] compiler_builtins v0.1.0 ([..]/tests/testsuite/mock-std/library/compiler_builtins)
+[RUNNING] `[..] rustc --crate-name build_script_build [..]`
+[RUNNING] `[..]build_script_build`
+[COMPILING] rustc-std-workspace-alloc v1.9.0 ([..]/tests/testsuite/mock-std/library/rustc-std-workspace-alloc)
+[RUNNING] `[..] rustc --crate-name rustc_std_workspace_alloc [..]`
+[COMPILING] registry-dep-using-alloc v1.0.0
+[RUNNING] `[..] rustc --crate-name registry_dep_using_alloc [..]`
+[COMPILING] dep_test v0.1.0 ([..]/tests/testsuite/mock-std/dep_test)
 [RUNNING] `[..] rustc --crate-name dep_test [..]`
-...
 [RUNNING] `[..] rustc --crate-name dep_test [..]`
-...
-"#]])
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `[..] rustc --crate-name build_script_build [..]`
+[COMPILING] std v0.1.0 ([..]/tests/testsuite/mock-std/library/std)
+[RUNNING] `[..] rustc --crate-name std [..]`
+[RUNNING] `[..] rustc --crate-name compiler_builtins [..]`
+[COMPILING] proc_macro v0.1.0 ([..]/tests/testsuite/mock-std/library/proc_macro)
+[RUNNING] `[..] rustc --crate-name proc_macro [..]`
+[COMPILING] panic_unwind v0.1.0 ([..]/tests/testsuite/mock-std/library/panic_unwind)
+[RUNNING] `[..] rustc --crate-name panic_unwind [..]`
+[RUNNING] `[..] rustc --crate-name dep_test [..]`
+[RUNNING] `[..]build_script_build`
+[RUNNING] `[..] rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered())
         .run();
 
+    // Sanity check that all artifacts are reused.
+    // TODO: This test used to test that the build-dependency would be shared between `--target=host` and
+    // non-`--target` invocations, but that isn't currently testable as RUSTFLAGS set in this file's
+    // test harness apply to the non-cross-compile mode.
     p.cargo("build -v")
         .build_std(&setup)
-        .with_stderr_does_not_contain(str![[r#"
-    ...
-    [RUNNING] `[..] rustc --crate-name dep_test [..]`
-    ...
-    [RUNNING] `[..] rustc --crate-name dep_test [..]`
-    ...
-    "#]])
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[FRESH] core v0.1.0 ([..]/tests/testsuite/mock-std/library/core)
+[FRESH] rustc-std-workspace-core v1.9.0 ([..]/tests/testsuite/mock-std/library/rustc-std-workspace-core)
+[FRESH] proc_macro v0.1.0 ([..]/tests/testsuite/mock-std/library/proc_macro)
+[FRESH] panic_unwind v0.1.0 ([..]/tests/testsuite/mock-std/library/panic_unwind)
+[FRESH] registry-dep-using-core v1.0.0
+[FRESH] alloc v0.1.0 ([..]/tests/testsuite/mock-std/library/alloc)
+[FRESH] compiler_builtins v0.1.0 ([..]/tests/testsuite/mock-std/library/compiler_builtins)
+[FRESH] rustc-std-workspace-alloc v1.9.0 ([..]/tests/testsuite/mock-std/library/rustc-std-workspace-alloc)
+[FRESH] registry-dep-using-alloc v1.0.0
+[FRESH] std v0.1.0 ([..]/tests/testsuite/mock-std/library/std)
+[FRESH] dep_test v0.1.0 ([..]/tests/testsuite/mock-std/dep_test)
+[FRESH] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]].unordered())
         .run();
 }
 
