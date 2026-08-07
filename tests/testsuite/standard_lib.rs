@@ -463,7 +463,6 @@ fn builtins_do_not_show_in_status_messages() {
         .run();
 }
 
-#[ignore = "implicit builtin dependencies are currently emitted by cargo metadata, but not the whole unit graph"]
 #[cargo_test(build_std_mock)]
 fn builtins_do_not_show_in_metadata() {
     let setup = setup();
