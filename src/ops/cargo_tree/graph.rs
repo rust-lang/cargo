@@ -430,7 +430,10 @@ fn add_pkg(
     let from_index = graph.add_node(node);
     // Compute the dep name map which is later used for foo/bar feature lookups.
     let mut dep_name_map: HashMap<InternedString, HashSet<(NodeId, bool)>> = HashMap::default();
-    let mut deps: Vec<_> = resolve.deps(package_id).collect();
+    let mut deps: Vec<_> = resolve
+        .deps(package_id)
+        .filter(|(dep_id, _)| !dep_id.source_id().is_builtin())
+        .collect();
     deps.sort_unstable_by_key(|(dep_id, _)| *dep_id);
     let show_all_targets = opts.target == super::Target::All;
     for (dep_id, deps) in deps {

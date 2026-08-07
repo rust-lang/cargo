@@ -488,7 +488,6 @@ fn builtins_do_not_show_in_metadata() {
         .run();
 }
 
-#[ignore = "implicit builtin dependencies are currently emitted by cargo tree"]
 #[cargo_test(build_std_mock)]
 fn builtins_do_not_show_in_tree() {
     let setup = setup();
