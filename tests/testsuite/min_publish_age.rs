@@ -208,7 +208,7 @@ fn filters_too_new_versions() {
         .env("__CARGO_TEST_INVOCATION_TIME", NOW)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to highest compatible version
+[LOCKING] 1 package to highest compatible version as of 7 days ago
 [ADDING] bar v1.0.0 (available: v1.1.0, published 2 days ago)
 
 "#]])
@@ -336,7 +336,7 @@ fn incompatible_publish_age_deny() {
         .env("__CARGO_TEST_INVOCATION_TIME", NOW)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to highest compatible version
+[LOCKING] 1 package to highest compatible version as of 7 days ago
 [ADDING] bar v1.0.0 (available: v1.1.0, published 2 days ago)
 
 "#]])
@@ -652,7 +652,7 @@ fn patched_versions_preserved() {
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to highest compatible version
+[LOCKING] 1 package to highest compatible version as of 7 days ago
 [ADDING] bar v1.1.0 (registry `alternative`) (published 2 days ago, minimum age 7 days)
 
 "#]])
@@ -714,7 +714,7 @@ fn versions_without_pubtime_unaffected() {
         .env("__CARGO_TEST_INVOCATION_TIME", NOW)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to highest compatible version
+[LOCKING] 1 package to highest compatible version as of 7 days ago
 
 "#]])
         .run();
@@ -847,7 +847,7 @@ fn cargo_install_path_allows_too_new_deps() {
         .with_stderr_data(str![[r#"
 [INSTALLING] foo v0.0.0 ([ROOT]/foo)
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to highest compatible version
+[LOCKING] 1 package to highest compatible version as of 7 days ago
 [ADDING] bar v1.0.0 (available: v1.1.0, published 2 days ago)
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
@@ -945,7 +945,7 @@ fn update_precise_to_too_new() {
         .env("__CARGO_TEST_INVOCATION_TIME", NOW)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to highest compatible version
+[LOCKING] 1 package to highest compatible version as of 7 days ago
 [ADDING] bar v1.0.0 (available: v1.1.0, published 2 days ago)
 
 "#]])
@@ -1048,7 +1048,7 @@ fn update_precise_with_allow() {
         .env("__CARGO_TEST_INVOCATION_TIME", NOW)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to highest compatible version
+[LOCKING] 1 package to highest compatible version as of 7 days ago
 [ADDING] bar v1.0.0 (available: v1.2.0, published 24 hours ago)
 
 "#]])
@@ -1143,7 +1143,7 @@ fn publish_age_zero() {
         .env("__CARGO_TEST_INVOCATION_TIME", NOW)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to highest compatible version
+[LOCKING] 1 package to highest compatible version as of min-publish-age
 
 "#]])
         .run();
@@ -1240,7 +1240,7 @@ fn registry_default() {
         .env("__CARGO_TEST_INVOCATION_TIME", NOW)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to highest compatible version
+[LOCKING] 1 package to highest compatible version as of min-publish-age
 [ADDING] bar v1.0.0 (available: v1.1.0, published 2 days ago)
 
 "#]])
@@ -1302,7 +1302,7 @@ fn registry_default_overrides_global() {
         .env("__CARGO_TEST_INVOCATION_TIME", NOW)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to highest compatible version
+[LOCKING] 1 package to highest compatible version as of min-publish-age
 [ADDING] bar v1.0.0 (available: v1.1.0, published 2 days ago)
 
 "#]])
@@ -1364,7 +1364,7 @@ fn registry_default_zero_overrides_global() {
         .env("__CARGO_TEST_INVOCATION_TIME", NOW)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to highest compatible version
+[LOCKING] 1 package to highest compatible version as of min-publish-age
 
 "#]])
         .run();
@@ -1424,7 +1424,7 @@ fn registries_crates_io() {
         .env("__CARGO_TEST_INVOCATION_TIME", NOW)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to highest compatible version
+[LOCKING] 1 package to highest compatible version as of min-publish-age
 [ADDING] bar v1.0.0 (available: v1.1.0, published 2 days ago)
 
 "#]])
@@ -1488,7 +1488,7 @@ fn registries_crates_io_overrides_registry_default() {
         .env("__CARGO_TEST_INVOCATION_TIME", NOW)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to highest compatible version
+[LOCKING] 1 package to highest compatible version as of min-publish-age
 
 "#]])
         .run();
@@ -1556,7 +1556,7 @@ fn registries_alt() {
         .env("__CARGO_TEST_INVOCATION_TIME", NOW)
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
-[LOCKING] 1 package to highest compatible version
+[LOCKING] 1 package to highest compatible version as of min-publish-age
 [ADDING] bar v1.0.0 (registry `alternative`) (available: v1.1.0, published 2 days ago)
 
 "#]])
@@ -1628,7 +1628,7 @@ fn registries_alt_overrides_global() {
         .env("__CARGO_TEST_INVOCATION_TIME", NOW)
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
-[LOCKING] 1 package to highest compatible version
+[LOCKING] 1 package to highest compatible version as of min-publish-age
 
 "#]])
         .run();
@@ -1696,7 +1696,7 @@ fn registries_alt_respects_global() {
         .env("__CARGO_TEST_INVOCATION_TIME", NOW)
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
-[LOCKING] 1 package to highest compatible version
+[LOCKING] 1 package to highest compatible version as of 7 days ago
 [ADDING] bar v1.0.0 (registry `alternative`) (available: v1.1.0, published 2 days ago)
 
 "#]])
@@ -1765,7 +1765,7 @@ fn registries_alt_ignores_registry_default() {
         .env("__CARGO_TEST_INVOCATION_TIME", NOW)
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
-[LOCKING] 1 package to highest compatible version
+[LOCKING] 1 package to highest compatible version as of min-publish-age
 
 "#]])
         .run();
@@ -1838,7 +1838,7 @@ fn registry_alt_ignores_min_publish_age() {
         .env("__CARGO_TEST_INVOCATION_TIME", NOW)
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
-[LOCKING] 1 package to highest compatible version
+[LOCKING] 1 package to highest compatible version as of min-publish-age
 
 "#]])
         .run();
@@ -1916,7 +1916,7 @@ fn resolve_with_backtracking() {
         .env("__CARGO_TEST_INVOCATION_TIME", NOW)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to highest compatible versions
+[LOCKING] 2 packages to highest compatible versions as of 7 days ago
 [ADDING] dep v1.0.0 (available: v1.1.0)
 
 "#]])
@@ -1984,7 +1984,7 @@ fn cargo_add_skips_too_new() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ADDING] bar v1.0.0 to dependencies
-[LOCKING] 1 package to highest compatible version
+[LOCKING] 1 package to highest compatible version as of 7 days ago
 [ADDING] bar v1.0.0 (available: v1.1.0, published 2 days ago)
 
 "#]])
@@ -2083,7 +2083,7 @@ fn generate_lockfile_with_publish_time_and_min_publish_age() {
     .masquerade_as_nightly_cargo(&["publish-time", "min-publish-age"])
     .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to highest compatible version as of 2006-08-08T00:00:00Z
+[LOCKING] 1 package to highest compatible version as of 7 days before 2006-08-08T00:00:00Z
 [ADDING] bar v1.0.0 (available: v1.1.0, published 2 days ago)
 
 "#]])

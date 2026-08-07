@@ -1,4 +1,6 @@
+use crate::context::CargoResolverConfig;
 use crate::context::GlobalContext;
+use crate::context::IncompatiblePublishAge;
 use crate::ops;
 use crate::resolver::PublishAgePolicy;
 use crate::resolver::Resolve;
@@ -575,7 +577,7 @@ fn print_lockfile_generation(
     annotate_required_rust_version(ws, resolve, &mut changes);
     let publish_age = publish_age_policy_for_report(ws);
 
-    status_locking(ws, num_pkgs)?;
+    status_locking(ws, publish_age.as_ref(), num_pkgs)?;
     for change in changes.values() {
         if change.is_member.unwrap_or(false) {
             continue;
@@ -631,7 +633,7 @@ fn print_lockfile_sync(
     annotate_required_rust_version(ws, resolve, &mut changes);
     let publish_age = publish_age_policy_for_report(ws);
 
-    status_locking(ws, num_pkgs)?;
+    status_locking(ws, publish_age.as_ref(), num_pkgs)?;
     for change in changes.values() {
         if change.is_member.unwrap_or(false) {
             continue;
@@ -683,7 +685,7 @@ fn print_lockfile_updates(
     let publish_age = publish_age_policy_for_report(ws);
 
     if !precise {
-        status_locking(ws, num_pkgs)?;
+        status_locking(ws, publish_age.as_ref(), num_pkgs)?;
     }
     let mut unchanged_behind = 0;
     for change in changes.values() {
@@ -758,8 +760,19 @@ fn print_lockfile_updates(
     Ok(())
 }
 
-fn status_locking(ws: &Workspace<'_>, num_pkgs: usize) -> CargoResult<()> {
+fn status_locking(
+    ws: &Workspace<'_>,
+    publish_age: Option<&PublishAgePolicy>,
+    num_pkgs: usize,
+) -> CargoResult<()> {
     use std::fmt::Write as _;
+
+    let resolver_config = ws.gctx().get::<Option<CargoResolverConfig>>("resolver")?;
+    let deny_min_publish_age = resolver_config
+        .and_then(|c| c.incompatible_publish_age)
+        .is_none_or(|v| v == IncompatiblePublishAge::Deny);
+    let publish_age = publish_age.filter(|_| deny_min_publish_age);
+    let publish_time = ws.resolve_publish_time();
 
     let plural = if num_pkgs == 1 { "" } else { "s" };
 
@@ -777,8 +790,31 @@ fn status_locking(ws: &Workspace<'_>, num_pkgs: usize) -> CargoResult<()> {
             write!(&mut cfg, " Rust {rust_version}")?;
         }
         write!(&mut cfg, " compatible version{plural}")?;
-        if let Some(publish_time) = ws.resolve_publish_time() {
-            write!(&mut cfg, " as of {publish_time}")?;
+        match (publish_age, publish_time) {
+            (Some(publish_age), Some(publish_time)) => {
+                write!(
+                    &mut cfg,
+                    " as of {} before {publish_time}",
+                    publish_age
+                        .common_min_publish_age()
+                        .map(|a| a.age_label())
+                        .unwrap_or_else(|| "min-publish-age".to_owned())
+                )?;
+            }
+            (Some(publish_age), None) => {
+                write!(
+                    &mut cfg,
+                    " as of {}",
+                    publish_age
+                        .common_min_publish_age()
+                        .map(|a| format!("{} ago", a.age_label()))
+                        .unwrap_or_else(|| "min-publish-age".to_owned())
+                )?;
+            }
+            (None, Some(publish_time)) => {
+                write!(&mut cfg, " as of {publish_time}")?;
+            }
+            (None, None) => {}
         }
     }
 
@@ -856,7 +892,7 @@ fn report_latest(
 
     let publish_note = |summary| {
         let age = publish_age?.too_new(summary)?.age_label();
-        Some(format!(", published {age}"))
+        Some(format!(", published {age} ago"))
     };
 
     let compat_ver_compat_msrv_summary = possibilities
