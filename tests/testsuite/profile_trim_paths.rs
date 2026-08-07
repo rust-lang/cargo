@@ -1302,7 +1302,10 @@ Hello, Ferris!
     );
 }
 
-#[cfg(all(target_os = "windows", target_env = "gnu", not(target_abi = "llvm")))]
+#[cfg(any(
+    target_os = "linux",
+    all(target_os = "windows", target_env = "gnu", not(target_abi = "llvm"))
+))]
 #[cargo_test(requires = "gdb")]
 fn gdb_works_after_trimmed() {
     use cargo_test_support::compare::assert_e2e;
@@ -1818,8 +1821,303 @@ fn unremap_file_with_multiple_crate_types() {
     assert_eq!(contents[0], contents[1]);
 }
 
+#[cfg(any(
+    target_os = "linux",
+    all(target_os = "windows", target_env = "gnu", not(target_abi = "llvm"))
+))]
+#[cargo_test(requires = "gdb")]
+fn unremap_file_works_in_gdb() {
+    let p = unremap_debugger_project();
+    let subs = unremap_substitutions(&p.bin("foo"));
+
+    let breakpoints = [
+        "break -source src/main.rs -line 5",
+        "break bar::hello",
+        "break baz::hi",
+        "break foo::generated",
+        "run",
+        "continue",
+        "continue",
+        "continue",
+        "continue",
+        "",
+    ]
+    .join("\n");
+
+    let run_gdb = |commands_file: &str| {
+        let stdout = p
+            .process("gdb")
+            .args(&["--batch", "--nx", "--quiet", "--command"])
+            .arg(&p.root().join(commands_file))
+            .arg(&p.bin("foo"))
+            // We set to test root rather than package root
+            // so that we can exercise remap of ws-root -> `.`
+            .cwd(paths::root())
+            .run()
+            .stdout;
+        String::from_utf8(stdout).unwrap()
+    };
+
+    // No remap: breakpoints hit, but no source marker is shown.
+    p.change_file("gdb.commands", &breakpoints);
+    let stdout = run_gdb("gdb.commands");
+    for marker in UNREMAP_MARKERS {
+        assert!(
+            !stdout.contains(marker),
+            "unexpected `{marker}` in:\n{stdout}"
+        );
+    }
+
+    let subs: String = subs
+        .iter()
+        .map(|(from, to)| format!("set substitute-path \"{from}\" \"{to}\"\n"))
+        .collect();
+    p.change_file("gdb-unremap.commands", &format!("{subs}{breakpoints}"));
+    let stdout = run_gdb("gdb-unremap.commands");
+    for marker in UNREMAP_MARKERS {
+        assert!(stdout.contains(marker), "missing `{marker}` in:\n{stdout}");
+    }
+}
+
+#[cfg(unix)]
+#[cargo_test(requires = "lldb")]
+fn unremap_file_works_in_lldb() {
+    #[cfg(target_os = "macos")]
+    if !cargo_util::is_ci() {
+        // On macOS lldb requires elevated privileges to run developer tools.
+        // See rust-lang/cargo#13413
+        return;
+    }
+
+    let p = unremap_debugger_project();
+    let subs = unremap_substitutions(&p.bin("foo"));
+
+    let breakpoints = [
+        "breakpoint set --file src/main.rs --line 5",
+        "breakpoint set --name bar::hello",
+        "breakpoint set --name baz::hi",
+        "breakpoint set --name foo::generated",
+        "run",
+        "continue",
+        "continue",
+        "continue",
+        "",
+    ]
+    .join("\n");
+
+    let run_lldb = |commands_file: &str| {
+        let stdout = p
+            .process("lldb")
+            .args(&["--batch", "--no-lldbinit", "--no-use-colors"])
+            // If without rust-src component,
+            // sysroot remap will not be found and lldb errors on that.
+            // Set this to makes lldb continue.
+            .args(&[
+                "-O",
+                "settings set interpreter.stop-command-source-on-error false",
+            ])
+            .arg("--source")
+            .arg(&p.root().join(commands_file))
+            .arg(&p.bin("foo"))
+            // We set to test root rather than package root
+            // so that we can exercise remap of ws-root -> `.`
+            .cwd(paths::root())
+            .run()
+            .stdout;
+        String::from_utf8(stdout).unwrap()
+    };
+
+    // No remap: breakpoints hit, but no source marker is shown.
+    p.change_file("lldb.commands", &breakpoints);
+    let stdout = run_lldb("lldb.commands");
+    for marker in UNREMAP_MARKERS {
+        assert!(
+            !stdout.contains(marker),
+            "unexpected `{marker}` in:\n{stdout}"
+        );
+    }
+
+    let source_map = format!(
+        "settings append target.source-map{}",
+        subs.iter()
+            .map(|(from, to)| format!(r#" "{from}" "{to}""#))
+            .collect::<String>()
+    );
+    p.change_file(
+        "lldb-unremap.commands",
+        &format!("{source_map}\n{breakpoints}"),
+    );
+    let stdout = run_lldb("lldb-unremap.commands");
+    // Expect to find all markers.
+    for marker in UNREMAP_MARKERS {
+        assert!(stdout.contains(marker), "missing `{marker}` in:\n{stdout}");
+    }
+}
+
 fn unremap_file_path(artifact: &std::path::Path) -> std::path::PathBuf {
     let mut path = artifact.as_os_str().to_owned();
     path.push(".trim-paths.jsonl");
     path.into()
+}
+
+/// Source markers on breakpoints.
+#[cfg(any(
+    unix,
+    all(target_os = "windows", target_env = "gnu", not(target_abi = "llvm"))
+))]
+const UNREMAP_MARKERS: &[&str] = &[
+    "TRIM_PATHS_ROOT_MARKER",
+    "TRIM_PATHS_REGISTRY_MARKER",
+    "TRIM_PATHS_PATH_DEP_MARKER",
+    "TRIM_PATHS_BUILD_DIR_MARKER",
+];
+
+/// Builds a `-Ztrim-paths` project covering several remap kinds via [`UNREMAP_MARKERS`].
+#[cfg(any(
+    unix,
+    all(target_os = "windows", target_env = "gnu", not(target_abi = "llvm"))
+))]
+fn unremap_debugger_project() -> cargo_test_support::Project {
+    Package::new("bar", "0.0.1")
+        .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file(
+            "src/lib.rs",
+            r#"
+                pub fn hello() {
+                    println!("in registry dep"); // TRIM_PATHS_REGISTRY_MARKER
+                }
+            "#,
+        )
+        .publish();
+
+    let _baz = project()
+        .at("baz")
+        .file("Cargo.toml", &basic_manifest("baz", "0.0.1"))
+        .file(
+            "src/lib.rs",
+            r#"
+                pub fn hi() {
+                    println!("in path dep"); // TRIM_PATHS_PATH_DEP_MARKER
+                }
+            "#,
+        )
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+
+                [dependencies]
+                bar = "0.0.1"
+                baz = { path = "../baz" }
+
+                [profile.dev]
+                trim-paths = "object"
+           "#,
+        )
+        .file(
+            "build.rs",
+            r##"
+                fn main() {
+                    let out_dir = std::env::var("OUT_DIR").unwrap();
+                    let gen = r#"
+                pub fn generated() {
+                    println!("in generated code"); // TRIM_PATHS_BUILD_DIR_MARKER
+                }
+            "#;
+                    std::fs::write(std::path::Path::new(&out_dir).join("gen.rs"), gen).unwrap();
+                }
+            "##,
+        )
+        // Line numbers matter: breakpoints are set at line 5.
+        .file(
+            "src/main.rs",
+            r#"
+                include!(concat!(env!("OUT_DIR"), "/gen.rs"));
+
+                fn main() {
+                    println!("in root package"); // TRIM_PATHS_ROOT_MARKER
+                    bar::hello();
+                    baz::hi();
+                    generated();
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("build -Ztrim-paths")
+        .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
+        .run();
+
+    assert_e2e().eq(
+        &std::fs::read_to_string(unremap_file_path(&p.bin("foo"))).unwrap(),
+        str![[r#"
+[
+  {
+    "v": 1
+  },
+  {
+    "rust_version": "[..]",
+    "workspace_root": "[ROOT]/foo"
+  },
+  {
+    "from": "/cargo/build-dir",
+    "to": "[ROOT]/foo/target"
+  },
+  {
+    "from": "/cargo/path/baz-0.0.1",
+    "to": "[ROOT]/baz"
+  },
+  {
+    "from": "/cargo/registry/[..]",
+    "to": "[ROOT]/home/.cargo/registry/src/-[HASH]"
+  },
+  {
+    "from": "/rustc/[..]",
+    "to": "[..]/lib/rustlib/src/rust"
+  }
+]
+"#]]
+        .is_json()
+        .against_jsonlines(),
+    );
+    p
+}
+
+/// Parses an unremap file into the substitution pairs for a debugger to consume.
+#[cfg(any(
+    unix,
+    all(target_os = "windows", target_env = "gnu", not(target_abi = "llvm"))
+))]
+fn unremap_substitutions(artifact: &std::path::Path) -> Vec<(String, String)> {
+    let content = std::fs::read_to_string(unremap_file_path(artifact)).unwrap();
+    let mut values = serde_json::Deserializer::from_str(&content).into_iter::<serde_json::Value>();
+
+    let version = values.next().unwrap().unwrap();
+    assert_eq!(version["v"], 1);
+
+    let metadata = values.next().unwrap().unwrap();
+
+    let mut pairs = Vec::new();
+
+    for record in values {
+        let record = record.unwrap();
+        pairs.push((
+            record["from"].as_str().unwrap().to_owned(),
+            record["to"].as_str().unwrap().to_owned(),
+        ));
+    }
+
+    // remap local workspace source
+    pairs.push((
+        ".".to_owned(),
+        metadata["workspace_root"].as_str().unwrap().to_owned(),
+    ));
+
+    pairs
 }
