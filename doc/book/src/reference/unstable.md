@@ -106,7 +106,7 @@ Each new feature described below should explain how to use it.
 * rustdoc
     * [rustdoc-map](#rustdoc-map) --- Provides mappings for documentation to link to external sites like [docs.rs](https://docs.rs/).
     * [scrape-examples](#scrape-examples) --- Shows examples within documentation.
-    * [output-format](#output-format-for-rustdoc-and-cargo-doc) --- Allows documentation to also be emitted in the experimental [JSON format](https://doc.rust-lang.org/nightly/nightly-rustc/rustdoc_json_types/).
+    * [output-format](#output-format-for-rustdoc) --- Allows documentation to also be emitted in the experimental [JSON format](https://doc.rust-lang.org/nightly/nightly-rustc/rustdoc_json_types/).
     * [rustdoc-depinfo](#rustdoc-depinfo) --- Use dep-info files in rustdoc rebuild detection.
     * [rustdoc-mergeable-info](#rustdoc-mergeable-info) --- Use rustdoc mergeable cross-crate-info files.
 * `Cargo.toml` extensions
@@ -1305,7 +1305,7 @@ If you want examples to be scraped from example targets, then you must not satis
 For example, you can set `doc-scrape-examples` to true for one example target, and that signals to Cargo that
 you are ok with dev-deps being build for `cargo doc`.
 
-## output-format for rustdoc and cargo doc
+## output-format for rustdoc
 
 * Tracking Issue: [#13283](https://github.com/rust-lang/cargo/issues/13283)
 
