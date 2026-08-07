@@ -2,6 +2,7 @@ use cargo::util::GlobalContext;
 use cargo::workspace::Dependency;
 use cargo::workspace::dependency::DepKind;
 use resolver_tests::helpers::dep_builtin;
+use resolver_tests::resolve_with_implicit_builtins;
 use snapbox::assert_data_eq;
 use snapbox::str;
 
@@ -1061,4 +1062,24 @@ fn normal_dependency_is_not_satisfied_by_builtin_package() {
 #[test]
 fn missing_builtin_dependency_errors() {
     assert!(resolve(vec![dep_builtin("core")], &registry(vec![])).is_err());
+}
+
+#[test]
+fn injected_builtins() {
+    let core = BuiltinPid { name: "core" };
+    let core = pkg!(core);
+    let compiler_builtins = BuiltinPid {
+        name: "compiler_builtins",
+    };
+    let compiler_builtins = pkg!(compiler_builtins);
+
+    let reg = registry(vec![core, compiler_builtins]);
+
+    let resolve = resolve_with_implicit_builtins(Vec::new(), &reg, &[]).unwrap();
+
+    let root_deps = resolve
+        .deps(pkg_id("root"))
+        .map(|(pkg_id, _)| pkg_id)
+        .collect::<Vec<_>>();
+    assert_same(&root_deps, &[]);
 }
