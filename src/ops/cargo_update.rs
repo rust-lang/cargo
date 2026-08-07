@@ -806,7 +806,9 @@ fn publish_age_policy_for_report(ws: &Workspace<'_>) -> Option<PublishAgePolicy>
     if !ws.resolve_honors_publish_age() {
         return None;
     }
-    PublishAgePolicy::for_report(ws.gctx()).ok().flatten()
+    PublishAgePolicy::for_report(ws.resolve_publish_time(), ws.gctx())
+        .ok()
+        .flatten()
 }
 
 fn report_required_rust_version(resolve: &Resolve, change: &PackageChange) -> Option<String> {

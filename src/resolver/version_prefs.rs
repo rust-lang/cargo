@@ -176,7 +176,7 @@ impl PublishAgePolicy {
     /// * the `-Zmin-publish-age` gate is off
     /// * the resolver is configured to allow pubtime-incompatible versions
     /// * no threshold is configured at all
-    pub fn new(gctx: &GlobalContext) -> CargoResult<Option<Self>> {
+    pub fn new(now: Option<jiff::Timestamp>, gctx: &GlobalContext) -> CargoResult<Option<Self>> {
         let resolver_config = gctx.get::<Option<CargoResolverConfig>>("resolver")?;
         if resolver_config
             .and_then(|c| c.incompatible_publish_age)
@@ -185,12 +185,15 @@ impl PublishAgePolicy {
             return Ok(None);
         }
 
-        Self::for_report(gctx)
+        Self::for_report(now, gctx)
     }
 
     /// Like [`PublishAgePolicy::new`] but ignore config from `[resolver]`,
     /// so it report too-new packages regardess they are allowed or denied.
-    pub fn for_report(gctx: &GlobalContext) -> CargoResult<Option<Self>> {
+    pub fn for_report(
+        now: Option<jiff::Timestamp>,
+        gctx: &GlobalContext,
+    ) -> CargoResult<Option<Self>> {
         if !gctx.cli_unstable().min_publish_age {
             return Ok(None);
         }
@@ -239,7 +242,7 @@ impl PublishAgePolicy {
         }
 
         Ok(Some(Self {
-            invocation_time: gctx.invocation_time(),
+            invocation_time: now.unwrap_or_else(|| gctx.invocation_time()),
             global,
             crates_io,
             per_registry,

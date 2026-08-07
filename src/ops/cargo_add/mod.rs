@@ -849,7 +849,7 @@ fn get_latest_dependency(
 
             // `cargo add` selects a version outside the resolver,
             // so the `min-publish-age` policy must be applied here too.
-            let publish_age = PublishAgePolicy::new(gctx)?;
+            let publish_age = PublishAgePolicy::new(None, gctx)?;
             if let Some(publish_age) = &publish_age {
                 let mut too_new = Vec::new();
                 possibilities.retain(|s| match publish_age.too_new(s) {
