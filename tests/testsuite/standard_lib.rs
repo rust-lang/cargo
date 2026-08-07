@@ -556,106 +556,6 @@ fn builtins_do_not_show_in_metadata() {
 {
   "packages": [
     {
-      "name": "compiler_builtins",
-      "version": "0.1.0",
-      "id": "builtin://.#compiler_builtins",
-      "license": null,
-      "license_file": null,
-      "description": null,
-      "source": "builtin+file:///home/adagem01/work/cargo/tests/testsuite/mock-std/library",
-      "dependencies": [],
-      "targets": [
-        {
-          "kind": [
-            "lib"
-          ],
-          "crate_types": [
-            "lib"
-          ],
-          "name": "compiler_builtins",
-          "src_path": "/home/adagem01/work/cargo/tests/testsuite/mock-std/library/compiler_builtins/src/lib.rs",
-          "edition": "2018",
-          "doc": true,
-          "doctest": true,
-          "test": true
-        },
-        {
-          "kind": [
-            "custom-build"
-          ],
-          "crate_types": [
-            "bin"
-          ],
-          "name": "build-script-build",
-          "src_path": "/home/adagem01/work/cargo/tests/testsuite/mock-std/library/compiler_builtins/build.rs",
-          "edition": "2018",
-          "doc": false,
-          "doctest": false,
-          "test": false
-        }
-      ],
-      "features": {},
-      "manifest_path": "/home/adagem01/work/cargo/tests/testsuite/mock-std/library/compiler_builtins/Cargo.toml",
-      "metadata": null,
-      "publish": null,
-      "authors": [
-        "Alex Crichton <alex@alexcrichton.com>"
-      ],
-      "categories": [],
-      "keywords": [],
-      "readme": null,
-      "repository": null,
-      "homepage": null,
-      "documentation": null,
-      "edition": "2018",
-      "links": "compiler-rt",
-      "default_run": null,
-      "rust_version": null
-    },
-    {
-      "name": "core",
-      "version": "0.1.0",
-      "id": "builtin://.#core",
-      "license": null,
-      "license_file": null,
-      "description": null,
-      "source": "builtin+file:///home/adagem01/work/cargo/tests/testsuite/mock-std/library",
-      "dependencies": [],
-      "targets": [
-        {
-          "kind": [
-            "lib"
-          ],
-          "crate_types": [
-            "lib"
-          ],
-          "name": "core",
-          "src_path": "/home/adagem01/work/cargo/tests/testsuite/mock-std/library/core/src/lib.rs",
-          "edition": "2018",
-          "doc": true,
-          "doctest": true,
-          "test": true
-        }
-      ],
-      "features": {},
-      "manifest_path": "/home/adagem01/work/cargo/tests/testsuite/mock-std/library/core/Cargo.toml",
-      "metadata": null,
-      "publish": null,
-      "authors": [
-        "Alex Crichton <alex@alexcrichton.com>"
-      ],
-      "categories": [],
-      "keywords": [],
-      "readme": null,
-      "repository": null,
-      "homepage": null,
-      "documentation": null,
-      "edition": "2018",
-      "links": null,
-      "default_run": null,
-      "rust_version": null
-    },
-    {
       "name": "foo",
       "version": "0.1.0",
       "id": "path+[ROOTURL]/foo#0.1.0",
@@ -780,45 +680,11 @@ fn builtins_do_not_show_in_metadata() {
   "resolve": {
     "nodes": [
       {
-        "id": "builtin://.#compiler_builtins",
-        "dependencies": [],
-        "deps": [],
-        "features": []
-      },
-      {
-        "id": "builtin://.#core",
-        "dependencies": [],
-        "deps": [],
-        "features": []
-      },
-      {
         "id": "path+[ROOTURL]/foo#0.1.0",
         "dependencies": [
-          "builtin://.#compiler_builtins",
-          "builtin://.#core",
           "registry+https://github.com/rust-lang/crates.io-index#registry-dep-using-core@1.0.0"
         ],
         "deps": [
-          {
-            "name": "compiler_builtins",
-            "pkg": "builtin://.#compiler_builtins",
-            "dep_kinds": [
-              {
-                "kind": null,
-                "target": null
-              }
-            ]
-          },
-          {
-            "name": "core",
-            "pkg": "builtin://.#core",
-            "dep_kinds": [
-              {
-                "kind": null,
-                "target": null
-              }
-            ]
-          },
           {
             "name": "registry_dep_using_core",
             "pkg": "registry+https://github.com/rust-lang/crates.io-index#registry-dep-using-core@1.0.0",
@@ -835,31 +701,8 @@ fn builtins_do_not_show_in_metadata() {
       {
         "id": "registry+https://github.com/rust-lang/crates.io-index#registry-dep-using-core@1.0.0",
         "dependencies": [
-          "builtin://.#compiler_builtins",
-          "builtin://.#core"
         ],
-        "deps": [
-          {
-            "name": "compiler_builtins",
-            "pkg": "builtin://.#compiler_builtins",
-            "dep_kinds": [
-              {
-                "kind": null,
-                "target": null
-              }
-            ]
-          },
-          {
-            "name": "core",
-            "pkg": "builtin://.#core",
-            "dep_kinds": [
-              {
-                "kind": null,
-                "target": null
-              }
-            ]
-          }
-        ],
+        "deps": [],
         "features": []
       }
     ],
