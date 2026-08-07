@@ -17,3 +17,12 @@ Please read [the process] of how features and bugs are managed in Cargo.
 [file an issue]: https://github.com/rust-lang/cargo/issues
 [the process]: https://doc.crates.io/contrib/process/index.html
 [accepted]: https://github.com/rust-lang/cargo/issues?q=is%3Aissue+is%3Aopen+label%3AS-accepted
+
+## LLM policy
+
+Cargo follows the same [LLM usage policy] as `rust-lang/rust`.
+See the [LLM usage chapter] of the Cargo Contributor Guide
+for how it applies to Cargo.
+
+[LLM usage policy]: https://forge.rust-lang.org/policies/llm-usage.html
+[LLM usage chapter]: https://doc.crates.io/contrib/process/llm-usage.html
