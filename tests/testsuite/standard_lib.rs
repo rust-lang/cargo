@@ -720,6 +720,38 @@ fn builtins_do_not_show_in_metadata() {
 }
 
 #[cargo_test(build_std_mock)]
+fn builtins_do_not_show_in_tree() {
+    let setup = setup();
+    let p = project()
+        .file("src/lib.rs", "#![no_std]")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                registry-dep-using-core = "1.0"
+            "#,
+        )
+        .build();
+
+    p.cargo("tree")
+        .build_std_arg(&setup, "core")
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
+├── compiler_builtins v0.1.0 (builtin [..]/tests/testsuite/mock-std/library)
+├── core v0.1.0 (builtin [..]/tests/testsuite/mock-std/library)
+└── registry-dep-using-core v1.0.0
+    ├── compiler_builtins v0.1.0 (builtin [..]/tests/testsuite/mock-std/library)
+    └── core v0.1.0 (builtin [..]/tests/testsuite/mock-std/library)
+
+"#]])
+        .run();
+}
+
+#[cargo_test(build_std_mock)]
 fn build_std_with_no_arg_for_core_only_target() {
     let target = "aarch64-unknown-none";
     if !cross_compile::requires_target_installed(target) {
