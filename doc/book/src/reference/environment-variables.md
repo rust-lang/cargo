@@ -133,12 +133,15 @@ In summary, the supported environment variables are:
 * `CARGO_PROFILE_<name>_STRIP` --- Controls stripping of symbols and/or debuginfos, see [`profile.<name>.strip`].
 * `CARGO_REGISTRIES_<name>_CREDENTIAL_PROVIDER` --- Credential provider for a registry, see [`registries.<name>.credential-provider`].
 * `CARGO_REGISTRIES_<name>_INDEX` --- URL of a registry index, see [`registries.<name>.index`].
+* `CARGO_REGISTRIES_<name>_MIN_PUBLISH_AGE` --- Minimum publish age for packages from a registry, see [`registries.<name>.min-publish-age`].
 * `CARGO_REGISTRIES_<name>_TOKEN` --- Authentication token of a registry, see [`registries.<name>.token`].
 * `CARGO_REGISTRIES_CRATES_IO_PROTOCOL` --- The protocol used to access [crates.io], see [`registries.crates-io.protocol`].
 * `CARGO_REGISTRY_CREDENTIAL_PROVIDER` --- Credential provider for [crates.io], see [`registry.credential-provider`].
 * `CARGO_REGISTRY_DEFAULT` --- Default registry for the `--registry` flag, see [`registry.default`].
 * `CARGO_REGISTRY_GLOBAL_CREDENTIAL_PROVIDERS` --- Credential providers for registries that do not have a specific provider defined. See [`registry.global-credential-providers`].
+* `CARGO_REGISTRY_GLOBAL_MIN_PUBLISH_AGE` --- Default minimum publish age for packages from registries, see [`registry.global-min-publish-age`].
 * `CARGO_REGISTRY_TOKEN` --- Authentication token for [crates.io], see [`registry.token`].
+* `CARGO_RESOLVER_INCOMPATIBLE_PUBLISH_AGE` --- How recently published versions are treated during dependency resolution, see [`resolver.incompatible-publish-age`].
 * `CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS` --- How incompatible Rust versions are treated during dependency resolution, see [`resolver.incompatible-rust-versions`].
 * `CARGO_RESOLVER_LOCKFILE_PATH` --- The path to the lockfile, see [`resolver.lockfile-path`].
 * `CARGO_TARGET_<triple>_LINKER` --- The linker to use, see [`target.<triple>.linker`]. The triple must be [converted to uppercase and underscores](config.md#environment-variables).
@@ -211,13 +214,17 @@ In summary, the supported environment variables are:
 [`profile.<name>.strip`]: config.md#profilenamestrip
 [`resolver.lockfile-path`]: config.md#resolverlockfile-path
 [`resolver.incompatible-rust-versions`]: config.md#resolverincompatible-rust-versions
+[`resolver.incompatible-publish-age`]: config.md#resolverincompatible-publish-age
 [`registries.<name>.credential-provider`]: config.md#registriesnamecredential-provider
 [`registries.<name>.index`]: config.md#registriesnameindex
+[`registries.<name>.min-publish-age`]: config.md#registriesnamemin-publish-age
 [`registries.<name>.token`]: config.md#registriesnametoken
 [`registries.crates-io.protocol`]: config.md#registriescrates-ioprotocol
 [`registry.credential-provider`]: config.md#registrycredential-provider
 [`registry.default`]: config.md#registrydefault
 [`registry.global-credential-providers`]: config.md#registryglobal-credential-providers
+[`registry.global-min-publish-age`]: config.md#registryglobal-min-publish-age
+[`registry.min-publish-age`]: config.md#registrymin-publish-age
 [`registry.token`]: config.md#registrytoken
 [`target.<triple>.linker`]: config.md#targettriplelinker
 [`target.<triple>.runner`]: config.md#targettriplerunner

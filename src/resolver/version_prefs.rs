@@ -172,7 +172,6 @@ impl PublishAgePolicy {
     ///
     /// Returns `None` when either meets
     ///
-    /// * the `-Zmin-publish-age` gate is off
     /// * the resolver is configured to allow pubtime-incompatible versions
     /// * no threshold is configured at all
     pub fn new(now: Option<jiff::Timestamp>, gctx: &GlobalContext) -> CargoResult<Option<Self>> {
@@ -193,10 +192,6 @@ impl PublishAgePolicy {
         now: Option<jiff::Timestamp>,
         gctx: &GlobalContext,
     ) -> CargoResult<Option<Self>> {
-        if !gctx.cli_unstable().min_publish_age {
-            return Ok(None);
-        }
-
         let parse = |key: &str, config: Option<String>| -> CargoResult<MinPublishAge> {
             let Some(config) = config else {
                 return Ok(MinPublishAge::Unset);
