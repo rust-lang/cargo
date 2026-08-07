@@ -509,6 +509,38 @@ fn builtins_do_not_show_in_tree() {
         .run();
 }
 
+#[ignore = "vendoring tries to vendor builtins, and fails"]
+#[cargo_test(build_std_mock)]
+fn builtins_are_not_vendored() {
+    let setup = setup();
+    let p = project()
+        .file("src/lib.rs", "#![no_std]")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                registry-dep-using-core = "1.0"
+            "#,
+        )
+        .build();
+
+    p.cargo("vendor --respect-source-config")
+        .build_std_arg(&setup, "core")
+        .run();
+
+    assert!(
+        p.root()
+            .join("vendor/registry-dep-using-core/Cargo.toml")
+            .is_file()
+    );
+    assert!(!p.root().join("vendor/core").exists());
+    assert!(!p.root().join("vendor/compiler_builtins").exists());
+}
+
 #[cargo_test(build_std_mock)]
 fn build_std_with_no_arg_for_core_only_target() {
     let target = "aarch64-unknown-none";
