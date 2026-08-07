@@ -1630,6 +1630,100 @@ fn workspace_remap_with_root_dir() {
 }
 
 #[cargo_test]
+fn workspace_prefix_override_from_env() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+
+                [profile.dev]
+                trim-paths = "object"
+           "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build --verbose -Ztrim-paths")
+        .env("__CARGO_RUSTC_BOOTSTRAP_WS_REMAP", "/rustc-dev/1111111")
+        .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc [..]--remap-path-prefix=[ROOT]/foo=. [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    let unremap_file = unremap_file_path(&p.bin("foo"));
+    assert_e2e().eq(
+        &std::fs::read_to_string(&unremap_file).unwrap(),
+        str![[r#"
+[
+  {
+    "v": 1
+  },
+  {
+    "rust_version": "[..]",
+    "workspace_root": "[ROOT]/foo"
+  },
+  {
+    "from": ".",
+    "to": "[ROOT]/foo"
+  },
+  {
+    "from": "/cargo/build-dir",
+    "to": "[ROOT]/foo/target"
+  },
+  {
+    "from": "/rustc/[..]",
+    "to": "[..]/lib/rustlib/src/rust"
+  }
+]
+"#]]
+        .is_json()
+        .against_jsonlines(),
+    );
+}
+
+#[cargo_test]
+fn workspace_prefix_override_fingerprint() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+
+                [profile.dev]
+                trim-paths = "object"
+           "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build -Ztrim-paths")
+        .env("__CARGO_RUSTC_BOOTSTRAP_WS_REMAP", "/rustc-dev/1111111")
+        .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
+        .run();
+
+    p.cargo("build --verbose -Ztrim-paths")
+        .env("__CARGO_RUSTC_BOOTSTRAP_WS_REMAP", "/rustc-dev/2222222")
+        .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
+        .with_stderr_data(str![[r#"
+[FRESH] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn unremap_file_rebuild() {
     let p = project()
         .file(
