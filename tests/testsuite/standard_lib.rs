@@ -509,7 +509,6 @@ fn builtins_do_not_show_in_tree() {
         .run();
 }
 
-#[ignore = "vendoring tries to vendor builtins, and fails"]
 #[cargo_test(build_std_mock)]
 fn builtins_are_not_vendored() {
     let setup = setup();

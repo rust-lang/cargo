@@ -154,10 +154,10 @@ fn sync(
             .with_context(|| format!("failed to load lockfile for {}", ws.root().display()))?;
 
         packages
-            .get_many(resolve.iter())
+            .get_many(resolve.iter().filter(|pkg| !pkg.source_id().is_builtin()))
             .with_context(|| format!("failed to download packages for {}", ws.root().display()))?;
 
-        for pkg in resolve.iter() {
+        for pkg in resolve.iter().filter(|pkg| !pkg.source_id().is_builtin()) {
             let sid = source_replacement_cache.get(pkg.source_id())?;
 
             // Don't vendor path crates since they're already in the repository
