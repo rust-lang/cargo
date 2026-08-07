@@ -709,7 +709,7 @@ Run `{cmd}` to see possible targets."
         ) {
             (false, false, None) => default,
             (true, _, None) => "release",
-            (_, true, None) => "dev",
+            (_, true, None) => "debug",
             // `doc` is separate from all the other reservations because
             // [profile.doc] was historically allowed, but is deprecated and
             // has no effect. To avoid potentially breaking projects, it is a
