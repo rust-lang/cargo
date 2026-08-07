@@ -1037,3 +1037,115 @@ fn std_build_script_metadata_propagate_to_user() {
 
     p.cargo("check").build_std(&setup).target_host().run();
 }
+
+#[ignore = "Fails with rustc errors. builtin roots are not replaced."]
+#[cargo_test(build_std_mock)]
+fn std_build_dash_p() {
+    let setup = setup();
+
+    let p = project().file("src/main.rs", "fn main() {}").build();
+    p.cargo("b -v -p std")
+        .build_std(&setup)
+        .with_stderr_data(
+            str![[r#"
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] registry-dep-using-alloc v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] registry-dep-using-core v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] registry-dep-using-std v1.0.0 (registry `dummy-registry`)
+[COMPILING] core v0.1.0 ([..]/library/core)
+[COMPILING] dep_test v0.1.0 ([..]/tests/testsuite/mock-std/dep_test)
+[COMPILING] rustc-std-workspace-core v1.9.0 ([..]/library/rustc-std-workspace-core)
+[COMPILING] registry-dep-using-core v1.0.0
+[COMPILING] alloc v0.1.0 ([..]/library/alloc)
+[COMPILING] rustc-std-workspace-alloc v1.9.0 ([..]/library/rustc-std-workspace-alloc)
+[COMPILING] registry-dep-using-alloc v1.0.0
+[COMPILING] std v0.1.0 ([..]/library/std)
+[RUNNING] `[..] rustc --crate-name core [..]`
+[RUNNING] `[..] rustc --crate-name dep_test [..]`
+[RUNNING] `[..] rustc --crate-name rustc_std_workspace_core [..]`
+[RUNNING] `[..] rustc --crate-name registry_dep_using_core [..]`
+[RUNNING] `[..] rustc --crate-name alloc [..]`
+[RUNNING] `[..] rustc --crate-name rustc_std_workspace_alloc [..]`
+[RUNNING] `[..] rustc --crate-name registry_dep_using_alloc [..]`
+[RUNNING] `[..] rustc --crate-name std [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered(),
+        )
+        .run();
+
+    // The key assertion here is that foo is built, but not crates that were already built in the
+    // previous build.
+    p.cargo("b -v -p foo")
+        .build_std(&setup)
+        .with_stderr_data(
+            str![[r#"
+[UPDATING] `dummy-registry` index
+[FRESH] core v0.1.0 ([..]/tests/testsuite/mock-std/library/core)
+[FRESH] rustc-std-workspace-core v1.9.0 ([..]/tests/testsuite/mock-std/library/rustc-std-workspace-core)
+[FRESH] registry-dep-using-core v1.0.0
+[FRESH] alloc v0.1.0 ([..]/library/alloc)
+[FRESH] rustc-std-workspace-alloc v1.9.0 ([..]/library/rustc-std-workspace-alloc)
+[FRESH] registry-dep-using-alloc v1.0.0
+[FRESH] std v0.1.0 ([..]/library/std)
+[FRESH] dep_test v0.1.0 ([..]/tests/testsuite/mock-std/dep_test)
+[COMPILING] compiler_builtins v0.1.0 ([..]/library/compiler_builtins)
+[COMPILING] panic_unwind v0.1.0 ([..]/library/panic_unwind)
+[COMPILING] proc_macro v0.1.0 ([..]/library/proc_macro)
+[RUNNING] `[..] rustc --crate-name build_script_build [..]`
+[RUNNING] `[..]build_script_build`
+[RUNNING] `[..] rustc --crate-name compiler_builtins [..]`
+[RUNNING] `[..] rustc --crate-name panic_unwind [..]`
+[RUNNING] `[..] rustc --crate-name proc_macro [..]`
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `[..]rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered(),
+        )
+        .run();
+
+    p.cargo("clean -v -p std")
+        .build_std(&setup)
+        .with_stderr_data(
+            str![[r#"
+[REMOVING] [ROOT]/foo/target/debug/build/std
+[REMOVING] [ROOT]/foo/target/debug/libstd.d
+[REMOVING] [ROOT]/foo/target/debug/libstd.rlib
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
+"#]]
+            .unordered(),
+        )
+        .run();
+
+    p.cargo("b -v -p foo")
+        .build_std(&setup)
+        .with_stderr_data(
+            str![[r#"
+[UPDATING] `dummy-registry` index
+[FRESH] core v0.1.0 ([..]/library/core)
+[FRESH] rustc-std-workspace-core v1.9.0 ([..]/library/rustc-std-workspace-core)
+[FRESH] registry-dep-using-core v1.0.0
+[FRESH] alloc v0.1.0 ([..]/library/alloc)
+[FRESH] rustc-std-workspace-alloc v1.9.0 ([..]/library/rustc-std-workspace-alloc)
+[FRESH] registry-dep-using-alloc v1.0.0
+[FRESH] dep_test v0.1.0 ([..]/tests/testsuite/mock-std/dep_test)
+[FRESH] proc_macro v0.1.0 ([..]/library/proc_macro)
+[FRESH] panic_unwind v0.1.0 ([..]/library/panic_unwind)
+[FRESH] compiler_builtins v0.1.0 ([..]/library/compiler_builtins)
+[COMPILING] std v0.1.0 ([..]/library/std)
+[RUNNING] `[..] rustc --crate-name std [..]`
+[DIRTY] foo v0.0.1 ([ROOT]/foo): the dependency `std` was rebuilt
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `[..] rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered(),
+        )
+        .run();
+}
