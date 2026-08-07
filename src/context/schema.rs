@@ -15,6 +15,7 @@ use std::borrow::Cow;
 use std::ffi::OsStr;
 
 use cargo_credential::Secret;
+use cargo_util_schemas::manifest::ProfileName;
 use serde::Deserialize;
 use serde_untagged::UntaggedEnumVisitor;
 
@@ -205,6 +206,7 @@ pub struct CargoBuildConfig {
     pub build_dir: Option<ConfigRelativePath>,
     pub incremental: Option<bool>,
     pub target: Option<BuildTargetConfig>,
+    pub profile: Option<ProfileName>,
     pub jobs: Option<JobsConfig>,
     pub rustflags: Option<StringList>,
     pub rustdocflags: Option<StringList>,
