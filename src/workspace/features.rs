@@ -903,7 +903,6 @@ unstable_cli_options!(
     hint_msrv: bool = ("Enable passing `package.rust-version` to rustc for lints"),
     host_config: bool = ("Enable the `[host]` section in the .cargo/config.toml file"),
     json_target_spec: bool = ("Enable `.json` target spec files"),
-    min_publish_age: bool = ("Enable the `min-publish-age` configuration for dependency version age filtering"),
     minimal_versions: bool = ("Resolve minimal dependency versions instead of maximum"),
     msrv_policy: bool = ("Enable rust-version aware policy within cargo"),
     mtime_on_use: bool = ("Configure Cargo to update the mtime of used files"),
@@ -1020,6 +1019,9 @@ const STABILIZED_LOCKFILE_PATH: &str = "The `lockfile-path` config key is now al
 const STABILIZED_WARNINGS: &str = "The `build.warnings` config key is now always available";
 
 const STABILIZED_BUILD_DIR_NEW_LAYOUT: &str = "build.build-dir-new-layout is now always enabled.";
+
+const STABILIZED_MIN_PUBLISH_AGE: &str =
+    "The `min-publish-age` configuration is now always available.";
 
 fn deserialize_comma_separated_list<'de, D>(
     deserializer: D,
@@ -1422,6 +1424,7 @@ impl CliUnstable {
             "lockfile-path" => stabilized_warn(k, "1.97", STABILIZED_LOCKFILE_PATH),
             "warnings" => stabilized_warn(k, "1.97", STABILIZED_WARNINGS),
             "build-dir-new-layout" => stabilized_warn(k, "1.100", STABILIZED_BUILD_DIR_NEW_LAYOUT),
+            "min-publish-age" => stabilized_warn(k, "1.100", STABILIZED_MIN_PUBLISH_AGE),
 
             // Unstable features
             // Sorted alphabetically:
@@ -1459,7 +1462,6 @@ impl CliUnstable {
             }
             "host-config" => self.host_config = parse_empty(k, v)?,
             "json-target-spec" => self.json_target_spec = parse_empty(k, v)?,
-            "min-publish-age" => self.min_publish_age = parse_empty(k, v)?,
             "hint-msrv" => self.hint_msrv = parse_empty(k, v)?,
             "next-lockfile-bump" => self.next_lockfile_bump = parse_empty(k, v)?,
             "minimal-versions" => self.minimal_versions = parse_empty(k, v)?,

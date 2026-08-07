@@ -310,6 +310,20 @@ the resolver will need to pick one version that works in both cases and that wou
 [Rust version]: rust-version.md
 [`resolver.incompatible-rust-versions`]: config.md#resolverincompatible-rust-versions
 
+### Publish age
+
+Versions with a publish time newer than the configured [`min-publish-age`][`registry.global-min-publish-age`]
+are considered pubtime-incompatible.
+When [`resolver.incompatible-publish-age`] is set to `deny`,
+the resolver will ignore these versions
+unless they already exist in the `Cargo.lock` file.
+Setting the config to `allow` would disable the check,
+which if combined with `cargo update --precise`,
+cargo would pull in a specific version and its transitive dependencies.
+
+[`registry.global-min-publish-age`]: config.md#registryglobal-min-publish-age
+[`resolver.incompatible-publish-age`]: config.md#resolverincompatible-publish-age
+
 ### Features
 
 For the purpose of generating `Cargo.lock`, the resolver builds the dependency
