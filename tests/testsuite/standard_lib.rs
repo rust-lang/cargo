@@ -741,11 +741,7 @@ fn builtins_do_not_show_in_tree() {
         .build_std_arg(&setup, "core")
         .with_stdout_data(str![[r#"
 foo v0.1.0 ([ROOT]/foo)
-├── compiler_builtins v0.1.0 (builtin [..]/tests/testsuite/mock-std/library)
-├── core v0.1.0 (builtin [..]/tests/testsuite/mock-std/library)
 └── registry-dep-using-core v1.0.0
-    ├── compiler_builtins v0.1.0 (builtin [..]/tests/testsuite/mock-std/library)
-    └── core v0.1.0 (builtin [..]/tests/testsuite/mock-std/library)
 
 "#]])
         .run();
