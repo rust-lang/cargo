@@ -477,6 +477,194 @@ fn builtins_do_not_show_in_package_diff_status_messages() {
 }
 
 #[cargo_test(build_std_mock)]
+fn builtins_do_not_show_in_metadata() {
+    let setup = setup();
+    let p = project()
+        .file("src/lib.rs", "#![no_std]")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                registry-dep-using-core = "1.0"
+            "#,
+        )
+        .build();
+
+    p.cargo("metadata")
+        .build_std_arg(&setup, "core")
+        .with_stdout_data(
+            str![[r#"
+{
+  "packages": [
+    {
+      "name": "foo",
+      "version": "0.1.0",
+      "id": "path+[ROOTURL]/foo#0.1.0",
+      "license": null,
+      "license_file": null,
+      "description": null,
+      "source": null,
+      "dependencies": [
+        {
+          "name": "registry-dep-using-core",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "req": "^1.0",
+          "kind": null,
+          "rename": null,
+          "optional": false,
+          "uses_default_features": true,
+          "features": [],
+          "target": null,
+          "registry": null
+        }
+      ],
+      "targets": [
+        {
+          "kind": [
+            "lib"
+          ],
+          "crate_types": [
+            "lib"
+          ],
+          "name": "foo",
+          "src_path": "[ROOT]/foo/src/lib.rs",
+          "edition": "2015",
+          "doc": true,
+          "doctest": true,
+          "test": true
+        }
+      ],
+      "features": {},
+      "manifest_path": "[ROOT]/foo/Cargo.toml",
+      "metadata": null,
+      "publish": null,
+      "authors": [],
+      "categories": [],
+      "keywords": [],
+      "readme": null,
+      "repository": null,
+      "homepage": null,
+      "documentation": null,
+      "edition": "2015",
+      "links": null,
+      "default_run": null,
+      "rust_version": null
+    },
+    {
+      "name": "registry-dep-using-core",
+      "version": "1.0.0",
+      "id": "registry+https://github.com/rust-lang/crates.io-index#registry-dep-using-core@1.0.0",
+      "license": null,
+      "license_file": null,
+      "description": null,
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "dependencies": [
+        {
+          "name": "rustc-std-workspace-core",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "req": "*",
+          "kind": null,
+          "rename": null,
+          "optional": true,
+          "uses_default_features": true,
+          "features": [],
+          "target": null,
+          "registry": null
+        }
+      ],
+      "targets": [
+        {
+          "kind": [
+            "lib"
+          ],
+          "crate_types": [
+            "lib"
+          ],
+          "name": "registry_dep_using_core",
+          "src_path": "[ROOT]/home/.cargo/registry/src/-[HASH]/registry-dep-using-core-1.0.0/src/lib.rs",
+          "edition": "2015",
+          "doc": true,
+          "doctest": true,
+          "test": true
+        }
+      ],
+      "features": {
+        "mockbuild": [
+          "rustc-std-workspace-core"
+        ],
+        "rustc-std-workspace-core": [
+          "dep:rustc-std-workspace-core"
+        ]
+      },
+      "manifest_path": "[ROOT]/home/.cargo/registry/src/-[HASH]/registry-dep-using-core-1.0.0/Cargo.toml",
+      "metadata": null,
+      "publish": null,
+      "authors": [],
+      "categories": [],
+      "keywords": [],
+      "readme": null,
+      "repository": null,
+      "homepage": null,
+      "documentation": null,
+      "edition": "2015",
+      "links": null,
+      "default_run": null,
+      "rust_version": null
+    }
+  ],
+  "workspace_members": [
+    "path+[ROOTURL]/foo#0.1.0"
+  ],
+  "workspace_default_members": [
+    "path+[ROOTURL]/foo#0.1.0"
+  ],
+  "resolve": {
+    "nodes": [
+      {
+        "id": "path+[ROOTURL]/foo#0.1.0",
+        "dependencies": [
+          "registry+https://github.com/rust-lang/crates.io-index#registry-dep-using-core@1.0.0"
+        ],
+        "deps": [
+          {
+            "name": "registry_dep_using_core",
+            "pkg": "registry+https://github.com/rust-lang/crates.io-index#registry-dep-using-core@1.0.0",
+            "dep_kinds": [
+              {
+                "kind": null,
+                "target": null
+              }
+            ]
+          }
+        ],
+        "features": []
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#registry-dep-using-core@1.0.0",
+        "dependencies": [
+        ],
+        "deps": [],
+        "features": []
+      }
+    ],
+    "root": "path+[ROOTURL]/foo#0.1.0"
+  },
+  "target_directory": "[ROOT]/foo/target",
+  "build_directory": "[ROOT]/foo/target",
+  "version": 1,
+  "workspace_root": "[ROOT]/foo",
+  "metadata": null
+}
+"#]].is_json(),
+        )
+        .run();
+}
+
+#[cargo_test(build_std_mock)]
 fn build_std_with_no_arg_for_core_only_target() {
     let target = "aarch64-unknown-none";
     if !cross_compile::requires_target_installed(target) {
