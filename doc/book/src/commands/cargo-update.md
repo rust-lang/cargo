@@ -50,23 +50,6 @@ requirement in <code>Cargo.toml</code> doesn’t contain any pre-release identif
 </dd>
 
 
-<dt class="option-term" id="option-cargo-update---breaking"><a class="option-anchor" href="#option-cargo-update---breaking"><code>--breaking</code></a></dt>
-<dd class="option-desc"><p>Update <em>spec</em> to highest SemVer-breaking version.</p>
-<p>Version requirements will be modified to allow this update.</p>
-<p>This only applies to dependencies when</p>
-<ul>
-<li>The package is a dependency of a workspace member</li>
-<li>The dependency is not renamed</li>
-<li>A SemVer-incompatible version is available</li>
-<li>The “SemVer operator” is used (<code>^</code> which is the default)</li>
-</ul>
-<p>This option is unstable and available only on the
-<a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly channel</a>
-and requires the <code>-Z unstable-options</code> flag to enable.
-See <a href="https://github.com/rust-lang/cargo/issues/12425">https://github.com/rust-lang/cargo/issues/12425</a> for more information.</p>
-</dd>
-
-
 <dt class="option-term" id="option-cargo-update--w"><a class="option-anchor" href="#option-cargo-update--w"><code>-w</code></a></dt>
 <dt class="option-term" id="option-cargo-update---workspace"><a class="option-anchor" href="#option-cargo-update---workspace"><code>--workspace</code></a></dt>
 <dd class="option-desc"><p>Attempt to update only packages defined in the workspace. Other packages
