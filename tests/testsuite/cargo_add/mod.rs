@@ -48,6 +48,8 @@ mod git_rev;
 mod git_tag;
 mod help;
 mod infer_prerelease;
+mod inherit_default_features_2024_edition;
+mod inherit_no_default_features_2024_edition;
 mod invalid_arg;
 mod invalid_git_name;
 mod invalid_inherited_dependency;

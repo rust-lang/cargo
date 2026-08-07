@@ -392,8 +392,8 @@ impl Dependency {
     ///
     /// Returns a tuple with the dependency's name and either the version as a
     /// `String` or the path/git repository as an `InlineTable`.
-    /// (If the dependency is set as `optional` or `default-features` is set to
-    /// `false`, an `InlineTable` is returned in any case.)
+    /// (If the dependency is set as `optional` or `default-features` is
+    /// explicitly set, an `InlineTable` is returned in any case.)
     ///
     /// # Panic
     ///
@@ -414,7 +414,7 @@ impl Dependency {
             self.public.unwrap_or(false),
             self.optional.unwrap_or(false),
             self.features.as_ref(),
-            self.default_features.unwrap_or(true),
+            self.default_features,
             self.source.as_ref(),
             self.registry.as_ref(),
             self.rename.as_ref(),
@@ -424,12 +424,12 @@ impl Dependency {
                 false,
                 false,
                 None,
-                true,
+                None,
                 Some(Source::Registry(RegistrySource { version: v })),
                 None,
                 None,
             ) => toml_edit::value(v),
-            (false, false, None, true, Some(Source::Workspace(WorkspaceSource {})), None, None) => {
+            (false, false, None, None, Some(Source::Workspace(WorkspaceSource {})), None, None) => {
                 let mut table = toml_edit::InlineTable::default();
                 table.set_dotted(true);
                 table.insert("workspace", true.into());
