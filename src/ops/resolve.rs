@@ -534,7 +534,7 @@ pub fn resolve_with_previous<'gctx>(
         registry,
         &version_prefs,
         ResolveVersion::with_rust_version(ws.lowest_rust_version()),
-        Some(ws.gctx()),
+        ws.gctx(),
     )?;
 
     let patches = registry.patches().values().flat_map(|v| v.iter());
