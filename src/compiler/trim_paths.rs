@@ -28,6 +28,12 @@ const CURRENT_UNREMAP_VERSION: u8 = 1;
 /// Filename suffix of the unremap file.
 pub(crate) const UNREMAP_SUFFIX: &str = ".trim-paths.jsonl";
 
+/// This is an internal contract with rustc bootstrap,
+/// which needs workspace sources remapped to `/rust{c,-dev}/<sha>`.
+///
+/// See <https://github.com/rust-lang/cargo/issues/17309>.
+pub(crate) const WS_REMAP_ENV: &str = "__CARGO_RUSTC_BOOTSTRAP_WS_REMAP";
+
 /// Like [`trim_paths_args`] but for rustdoc invocations.
 pub(crate) fn trim_paths_args_rustdoc(
     cmd: &mut ProcessBuilder,
@@ -160,7 +166,6 @@ fn package_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> (PathBuf, S
 
     // Handle path local dependencies and abnormal reg/git deps source location.
     if pkg_root.strip_prefix(ws_root).is_ok() {
-        // remap to relative rustc work dir explicitly
         workspace_remap(build_runner, unit)
     } else {
         let from = pkg_root.to_path_buf();
@@ -183,7 +188,15 @@ fn workspace_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> (PathBuf,
     } else {
         ws_root.to_path_buf()
     };
-    (from, ".".into())
+    let to = build_runner
+        .bcx
+        .gctx
+        .get_env(WS_REMAP_ENV)
+        .ok()
+        .filter(|prefix| !prefix.is_empty())
+        .unwrap_or(".")
+        .to_owned();
+    (from, to)
 }
 
 /// Finds the checkout root and revision directory name of a git dependency.

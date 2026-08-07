@@ -1652,7 +1652,7 @@ fn workspace_prefix_override_from_env() {
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc [..]--remap-path-prefix=[ROOT]/foo=. [..]`
+[RUNNING] `rustc [..]--remap-path-prefix=[ROOT]/foo=/rustc-dev/1111111 [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -1671,12 +1671,12 @@ fn workspace_prefix_override_from_env() {
     "workspace_root": "[ROOT]/foo"
   },
   {
-    "from": ".",
-    "to": "[ROOT]/foo"
-  },
-  {
     "from": "/cargo/build-dir",
     "to": "[ROOT]/foo/target"
+  },
+  {
+    "from": "/rustc-dev/1111111",
+    "to": "[ROOT]/foo"
   },
   {
     "from": "/rustc/[..]",
@@ -1716,7 +1716,9 @@ fn workspace_prefix_override_fingerprint() {
         .env("__CARGO_RUSTC_BOOTSTRAP_WS_REMAP", "/rustc-dev/2222222")
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
         .with_stderr_data(str![[r#"
-[FRESH] foo v0.0.1 ([ROOT]/foo)
+[DIRTY] foo v0.0.1 ([ROOT]/foo): the profile configuration changed
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc [..]--remap-path-prefix=[ROOT]/foo=/rustc-dev/2222222 [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
