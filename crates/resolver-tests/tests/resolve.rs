@@ -1049,3 +1049,16 @@ fn test_builtin_dependency() {
 
     assert_same(&res, &names!("root", core));
 }
+
+#[test]
+fn normal_dependency_is_not_satisfied_by_builtin_package() {
+    let core = BuiltinPid { name: "core" };
+    let reg = registry(vec![pkg!(core)]);
+
+    assert!(resolve(vec![dep("core")], &reg).is_err());
+}
+
+#[test]
+fn missing_builtin_dependency_errors() {
+    assert!(resolve(vec![dep_builtin("core")], &registry(vec![])).is_err());
+}
