@@ -3,6 +3,7 @@ use std::fmt::Debug;
 use std::path::Path;
 use std::sync::OnceLock;
 
+use cargo::GlobalContext;
 use cargo::util::IntoUrl;
 use cargo::workspace::dependency::DepKind;
 use cargo::workspace::{Dependency, GitReference, PackageId, SourceId, Summary};
@@ -99,6 +100,18 @@ impl ToPkgId for BuiltinPid {
     }
 }
 
+#[derive(Copy, Clone)]
+pub struct BuiltinPidWithGctx<'a> {
+    pub name: &'static str,
+    pub gctx: &'a GlobalContext,
+}
+
+impl<'a> ToPkgId for BuiltinPidWithGctx<'a> {
+    fn to_pkgid(&self) -> PackageId {
+        PackageId::try_new(self.name, "0.0.0", builtin_loc_sysroot(self.gctx)).unwrap()
+    }
+}
+
 #[macro_export]
 macro_rules! pkg {
     ($pkgid:expr => [$($deps:expr),* $(,)? ]) => ({
@@ -124,6 +137,18 @@ fn builtin_loc() -> SourceId {
     static LOCAL_PATH: OnceLock<SourceId> = OnceLock::new();
     let local_path = LOCAL_PATH.get_or_init(|| {
         SourceId::for_builtin(Path::new(&std::env::current_dir().unwrap())).unwrap()
+    });
+    *local_path
+}
+
+fn builtin_loc_sysroot(gctx: &GlobalContext) -> SourceId {
+    static LOCAL_PATH: OnceLock<SourceId> = OnceLock::new();
+    let local_path = LOCAL_PATH.get_or_init(|| {
+        SourceId::for_builtin(
+            gctx.get_sysroot(&gctx.load_global_rustc(None).unwrap())
+                .unwrap(),
+        )
+        .unwrap()
     });
     *local_path
 }
