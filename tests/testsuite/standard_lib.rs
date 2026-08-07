@@ -693,6 +693,38 @@ foo v0.1.0 ([ROOT]/foo)
 }
 
 #[cargo_test(build_std_mock)]
+fn builtins_are_not_vendored() {
+    let setup = setup();
+    let p = project()
+        .file("src/lib.rs", "#![no_std]")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                registry-dep-using-core = "1.0"
+            "#,
+        )
+        .build();
+
+    // --respect-source-config is required to use the crates.io replacement in the test harness
+    p.cargo("vendor --respect-source-config")
+        .build_std_arg(&setup, "core")
+        .run();
+
+    assert!(
+        p.root()
+            .join("vendor/registry-dep-using-core/Cargo.toml")
+            .is_file()
+    );
+    assert!(!p.root().join("vendor/core").exists());
+    assert!(!p.root().join("vendor/compiler_builtins").exists());
+}
+
+#[cargo_test(build_std_mock)]
 fn build_std_with_no_arg_for_core_only_target() {
     let target = "aarch64-unknown-none";
     if !cross_compile::requires_target_installed(target) {
