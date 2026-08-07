@@ -973,7 +973,6 @@ fn std_build_script_metadata_propagate_to_user() {
     p.cargo("check").build_std(&setup).target_host().run();
 }
 
-#[ignore = "Fails with rustc errors. builtin roots are not replaced."]
 #[cargo_test(build_std_mock)]
 fn std_build_dash_p() {
     let setup = setup();
@@ -983,5 +982,28 @@ fn std_build_dash_p() {
         .build_std(&setup)
         .with_stderr_contains("[RUNNING] `[..] rustc --crate-name std [..]`")
         .with_stderr_does_not_contain("[RUNNING] `[..] rustc --crate-name foo [..]`")
+        .run();
+
+    p.cargo("b -v -p foo")
+        .build_std(&setup)
+        .with_stderr_contains("[RUNNING] `[..] rustc --crate-name foo [..]`")
+        .with_stderr_does_not_contain("[RUNNING] `[..] rustc --crate-name std [..]`")
+        .run();
+
+    p.cargo("clean -v -p std")
+        .build_std(&setup)
+        .with_stderr_contains("[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total")
+        .run();
+
+    p.cargo("b -v -p foo")
+        .build_std(&setup)
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `[..] rustc --crate-name std [..]`
+...
+[RUNNING] `[..] rustc --crate-name foo [..]`
+...
+"#]])
+        .with_stderr_does_not_contain("[RUNNING] `[..] rustc --crate-name core [..]`")
         .run();
 }

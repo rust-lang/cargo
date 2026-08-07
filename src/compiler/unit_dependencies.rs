@@ -93,7 +93,7 @@ pub fn build_unit_dependencies<'a, 'gctx>(
     resolve: &'a Resolve,
     features: &'a ResolvedFeatures,
     std_resolve: Option<&'a (Resolve, ResolvedFeatures)>,
-    roots: &[Unit], //TODO: builtins can be roots if requested on the command line
+    roots: &[Unit],
     scrape_units: &[Unit],
     std_roots: &HashMap<CompileKind, Vec<Unit>>,
     intent: UserIntent,
