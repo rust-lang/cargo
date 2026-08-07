@@ -3,7 +3,9 @@ use std::fmt::Debug;
 use std::path::Path;
 use std::sync::OnceLock;
 
+use cargo::GlobalContext;
 use cargo::util::IntoUrl;
+use cargo::util::data_structures::HashMap;
 use cargo::workspace::dependency::DepKind;
 use cargo::workspace::{Dependency, GitReference, PackageId, SourceId, Summary};
 
@@ -99,6 +101,18 @@ impl ToPkgId for BuiltinPid {
     }
 }
 
+#[derive(Copy, Clone)]
+pub struct BuiltinPidWithGctx<'a> {
+    pub name: &'static str,
+    pub gctx: &'a GlobalContext,
+}
+
+impl<'a> ToPkgId for BuiltinPidWithGctx<'a> {
+    fn to_pkgid(&self) -> PackageId {
+        PackageId::try_new(self.name, "0.0.0", builtin_loc_sysroot(self.gctx)).unwrap()
+    }
+}
+
 #[macro_export]
 macro_rules! pkg {
     ($pkgid:expr => [$($deps:expr),* $(,)? ]) => ({
@@ -126,6 +140,42 @@ fn builtin_loc() -> SourceId {
         SourceId::for_builtin(Path::new(&std::env::current_dir().unwrap())).unwrap()
     });
     *local_path
+}
+
+fn builtin_loc_sysroot(gctx: &GlobalContext) -> SourceId {
+    static LOCAL_PATH: OnceLock<SourceId> = OnceLock::new();
+    let local_path = LOCAL_PATH.get_or_init(|| {
+        SourceId::for_builtin(
+            gctx.get_sysroot(&gctx.load_global_rustc(None).unwrap())
+                .unwrap(),
+        )
+        .unwrap()
+    });
+    *local_path
+}
+
+pub fn gctx_for_build_std() -> GlobalContext {
+    let mut gctx = GlobalContext::default().unwrap();
+    gctx.nightly_features_allowed = true;
+    gctx.configure(
+        1,
+        false,
+        None,
+        false,
+        false,
+        false,
+        &None,
+        &["build-std=core".to_owned()],
+        &[],
+    )
+    .unwrap();
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/testsuite/mock-std/library");
+    let env = HashMap::from_iter([(
+        "__CARGO_TESTS_ONLY_SRC_ROOT".to_owned(),
+        root.into_os_string().into_string().unwrap(),
+    )]);
+    gctx.set_env(env);
+    gctx
 }
 
 pub fn pkg<T: ToPkgId>(name: T) -> Summary {
