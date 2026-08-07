@@ -21,16 +21,6 @@ fn test_dependency_with_empty_name() {
 }
 
 #[test]
-fn test_builtin_dependency() {
-    let core = BuiltinPid { name: "core" };
-    let reg = registry(vec![pkg!(core)]);
-
-    let res = resolve(vec![dep_builtin("core")], &reg).unwrap();
-
-    assert_same(&res, &names!("root", core));
-}
-
-#[test]
 fn test_resolving_empty_dependency_list() {
     let res = resolve(Vec::new(), &registry(vec![])).unwrap();
 
@@ -1046,4 +1036,27 @@ all possible versions conflict with previously selected packages
 failed to select a version for `F` which could resolve this conflict
 "#]]
     );
+}
+
+#[test]
+fn test_builtin_dependency() {
+    let core = BuiltinPid { name: "core" };
+    let reg = registry(vec![pkg!(core)]);
+
+    let res = resolve(vec![dep_builtin("core")], &reg).unwrap();
+
+    assert_same(&res, &names!("root", core));
+}
+
+#[test]
+fn normal_dependency_is_not_satisfied_by_builtin_package() {
+    let core = BuiltinPid { name: "core" };
+    let reg = registry(vec![pkg!(core)]);
+
+    assert!(resolve(vec![dep("core")], &reg).is_err());
+}
+
+#[test]
+fn missing_builtin_dependency_errors() {
+    assert!(resolve(vec![dep_builtin("core")], &registry(vec![])).is_err());
 }
