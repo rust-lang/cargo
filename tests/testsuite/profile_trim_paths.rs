@@ -1584,7 +1584,7 @@ fn workspace_remap_with_root_dir() {
         .masquerade_as_nightly_cargo(&["-Ztrim-paths", "-Zroot-dir"])
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `rustc [..]--remap-path-scope=object --remap-path-prefix=[ROOT]=. --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -1604,7 +1604,7 @@ fn workspace_remap_with_root_dir() {
   },
   {
     "from": ".",
-    "to": "[ROOT]/foo"
+    "to": "[ROOT]"
   },
   {
     "from": "/cargo/build-dir",
