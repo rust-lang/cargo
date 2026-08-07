@@ -459,6 +459,32 @@ fn builtins_do_not_show_in_status_messages() {
         .run();
 }
 
+#[ignore = "implicit builtin dependencies are currently emitted by cargo metadata, but not the whole unit graph"]
+#[cargo_test(build_std_mock)]
+fn builtins_do_not_show_in_metadata() {
+    let setup = setup();
+    let p = project()
+        .file("src/lib.rs", "#![no_std]")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                registry-dep-using-core = "1.0"
+            "#,
+        )
+        .build();
+
+    p.cargo("metadata")
+        .build_std_arg(&setup, "core")
+        .with_stdout_contains("[..]registry-dep-using-core[..]")
+        .with_stdout_does_not_contain("[..]builtin[..]")
+        .run();
+}
+
 #[cargo_test(build_std_mock)]
 fn build_std_with_no_arg_for_core_only_target() {
     let target = "aarch64-unknown-none";
