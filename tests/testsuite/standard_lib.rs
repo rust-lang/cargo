@@ -972,3 +972,16 @@ fn std_build_script_metadata_propagate_to_user() {
 
     p.cargo("check").build_std(&setup).target_host().run();
 }
+
+#[ignore = "Fails with rustc errors. builtin roots are not replaced."]
+#[cargo_test(build_std_mock)]
+fn std_build_dash_p() {
+    let setup = setup();
+
+    let p = project().file("src/main.rs", "fn main() {}").build();
+    p.cargo("b -v -p std")
+        .build_std(&setup)
+        .with_stderr_contains("[RUNNING] `[..] rustc --crate-name std [..]`")
+        .with_stderr_does_not_contain("[RUNNING] `[..] rustc --crate-name foo [..]`")
+        .run();
+}
