@@ -54,6 +54,9 @@ use tracing::{debug, trace, warn};
 
 pub use self::fix_edition::fix_edition;
 use crate::compiler::RustcTargetData;
+use crate::diagnostics::{
+    PublicDependencyManifest, add_public_dependency_suggestion_to_diagnostic,
+};
 use crate::ops::resolve::WorkspaceResolve;
 use crate::ops::{self, CompileOptions};
 use crate::resolver::features::{DiffMap, FeatureOpts, FeatureResolver, FeaturesFor};
@@ -1015,13 +1018,22 @@ fn rustfix_and_fix(
     // Sift through the output of the compiler to look for JSON messages.
     // indicating fixes that we can apply.
     let stderr = str::from_utf8(&output.stderr).context("failed to parse rustc stderr as UTF-8")?;
+    let public_dependency_manifest = public_dependency_manifest_for_fix(args);
 
     let suggestions = stderr
         .lines()
         .filter(|x| !x.is_empty())
         .inspect(|y| trace!("line: {}", y))
         // Parse each line of stderr, ignoring errors, as they may not all be JSON.
-        .filter_map(|line| serde_json::from_str::<Diagnostic>(line).ok())
+        .filter_map(|line| {
+            if let Some(manifest) = &public_dependency_manifest {
+                let mut diagnostic = serde_json::from_str::<serde_json::Value>(line).ok()?;
+                add_public_dependency_suggestion_to_diagnostic(&mut diagnostic, manifest);
+                serde_json::from_value::<Diagnostic>(diagnostic).ok()
+            } else {
+                serde_json::from_str::<Diagnostic>(line).ok()
+            }
+        })
         // From each diagnostic, try to extract suggestions from rustc.
         .filter_map(|diag| rustfix::collect_suggestions(&diag, &only, fix_mode));
 
@@ -1129,6 +1141,28 @@ fn rustfix_and_fix(
     }
 
     Ok((output, made_changes))
+}
+
+fn public_dependency_manifest_for_fix(args: &FixArgs) -> Option<PublicDependencyManifest> {
+    let manifest_path = cargo_manifest_path_for_fix(args)?;
+    PublicDependencyManifest::load(manifest_path).ok()
+}
+
+fn cargo_manifest_path_for_fix(args: &FixArgs) -> Option<PathBuf> {
+    #[expect(
+        clippy::disallowed_methods,
+        reason = "rustc proxy receives the environment prepared for the compile"
+    )]
+    if let Some(manifest_dir) = env::var_os("CARGO_MANIFEST_DIR") {
+        return Some(PathBuf::from(manifest_dir).join("Cargo.toml"));
+    }
+
+    args.file.parent().and_then(|parent| {
+        parent.ancestors().find_map(|ancestor| {
+            let manifest_path = ancestor.join("Cargo.toml");
+            manifest_path.exists().then_some(manifest_path)
+        })
+    })
 }
 
 fn exit_with(status: ExitStatus) -> ! {
