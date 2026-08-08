@@ -4214,3 +4214,68 @@ fn doc_output_format_json_with_deps() {
     assert!(!p.root().join("target/doc/foo/index.html").exists());
     assert!(!p.root().join("target/doc/bar/index.html").exists());
 }
+
+#[cargo_test(
+    nightly,
+    reason = "--output-format and -Zrustdoc-mergeable-info are unstable"
+)]
+fn doc_output_format_json_with_deps_and_mergeable_info() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+
+                [dependencies]
+                bar = { path = "bar" }
+            "#,
+        )
+        .file("src/lib.rs", "pub fn foo_fn() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                edition = "2021"
+            "#,
+        )
+        .file("bar/src/lib.rs", "pub fn bar_fn() {}")
+        .build();
+
+    p.cargo("doc -Z unstable-options --output-format json -Zrustdoc-mergeable-info -v")
+        .masquerade_as_nightly_cargo(&["rustdoc-output-format"])
+        .with_stderr_data(
+            str![[r#"
+[LOCKING] 1 package to highest compatible version
+[CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
+[RUNNING] `rustc [..]--crate-name bar [..]`
+[DOCUMENTING] bar v0.1.0 ([ROOT]/foo/bar)
+[RUNNING] `rustdoc [..]--crate-name bar [..]--output-format=json[..]`
+[DOCUMENTING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `rustdoc [..]--crate-name foo [..]--output-format=json[..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo.json
+
+"#]]
+            .unordered(),
+        )
+        .run();
+
+    let foo_json_path = p.root().join("target/doc/foo.json");
+    let bar_json_path = p.root().join("target/doc/bar.json");
+    assert!(foo_json_path.is_file());
+    assert!(bar_json_path.is_file());
+
+    let foo_json = fs::read_to_string(&foo_json_path).unwrap();
+    assert!(foo_json.contains("foo_fn"));
+
+    let bar_json = fs::read_to_string(&bar_json_path).unwrap();
+    assert!(bar_json.contains("bar_fn"));
+
+    assert!(!p.root().join("target/doc/foo/index.html").exists());
+    assert!(!p.root().join("target/doc/bar/index.html").exists());
+}

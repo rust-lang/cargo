@@ -871,6 +871,7 @@ fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResu
     let bcx = build_runner.bcx;
     // script_metadata is not needed here, it is only for tests.
     let mut rustdoc = build_runner.compilation.rustdoc_process(unit, None)?;
+    let wants_json_output = build_runner.bcx.build_config.intent.wants_doc_json_output();
     if unit.pkg.manifest().is_embedded() {
         if !bcx.gctx.cli_unstable().script {
             anyhow::bail!(
@@ -889,7 +890,7 @@ fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResu
 
     unit.kind.add_target_arg(&mut rustdoc);
 
-    let doc_dir = if build_runner.bcx.build_config.intent.wants_doc_json_output() {
+    let doc_dir = if wants_json_output {
         // Always use new layout for '--output-format=json'.
         // In fix for https://github.com/rust-lang/cargo/issues/16291
 
@@ -908,7 +909,9 @@ fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResu
     if build_runner.bcx.gctx.cli_unstable().rustdoc_depinfo {
         // html-static-files is required for keeping the shared styling resources
         // html-non-static-files is required for keeping the original rustdoc emission
-        let mut arg = if build_runner.bcx.gctx.cli_unstable().rustdoc_mergeable_info {
+        let mut arg = if wants_json_output {
+            OsString::from("--emit=dep-info=")
+        } else if build_runner.bcx.gctx.cli_unstable().rustdoc_mergeable_info {
             // toolchain resources are written at the end, at the same time as merging
             OsString::from("--emit=html-non-static-files,dep-info=")
         } else {
@@ -921,12 +924,12 @@ fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResu
         if build_runner.bcx.gctx.cli_unstable().checksum_freshness {
             rustdoc.arg("-Z").arg("checksum-hash-algorithm=blake3");
         }
-    } else if build_runner.bcx.gctx.cli_unstable().rustdoc_mergeable_info {
+    } else if build_runner.bcx.gctx.cli_unstable().rustdoc_mergeable_info && !wants_json_output {
         // toolchain resources are written at the end, at the same time as merging
         rustdoc.arg("--emit=html-non-static-files");
     }
 
-    if build_runner.bcx.gctx.cli_unstable().rustdoc_mergeable_info {
+    if build_runner.bcx.gctx.cli_unstable().rustdoc_mergeable_info && !wants_json_output {
         // write out mergeable data to be imported
         rustdoc.arg("-Zunstable-options");
         let mut arg = OsString::from("--write-doc-meta-dir=");
