@@ -555,7 +555,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
                     flavor: FileFlavor::Normal,
                 }];
 
-                if bcx.gctx.cli_unstable().rustdoc_mergeable_info {
+                if bcx.gctx.cli_unstable().rustdoc_mergeable_info && !wants_json_doc {
                     // `-Zrustdoc-mergeable-info` always uses the new layout.
                     outputs.push(OutputFile {
                         path: self

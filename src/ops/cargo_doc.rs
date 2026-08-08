@@ -58,7 +58,8 @@ pub struct DocOptions {
 pub fn doc(ws: &Workspace<'_>, options: &DocOptions) -> CargoResult<()> {
     let compilation = ops::compile(ws, &options.compile_opts)?;
 
-    if ws.gctx().cli_unstable().rustdoc_mergeable_info {
+    let wants_json_doc = matches!(options.output_format, OutputFormat::Json);
+    if ws.gctx().cli_unstable().rustdoc_mergeable_info && !wants_json_doc {
         merge_cross_crate_info(ws, &compilation)?;
     }
 
