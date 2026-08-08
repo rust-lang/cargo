@@ -288,6 +288,9 @@ fn profile_config_override_precedence() {
 
                 [profile.dev.package.bar]
                 opt-level = 3
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")

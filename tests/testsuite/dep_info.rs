@@ -205,6 +205,9 @@ fn relative_depinfo_paths_ws() {
             [build-dependencies]
             bdep = "0.1"
             bar = {path = "../bar"}
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file(
@@ -233,6 +236,9 @@ fn relative_depinfo_paths_ws() {
 
             [dependencies]
             pmdep = "0.1"
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file(
@@ -337,6 +343,9 @@ fn relative_depinfo_paths_no_ws() {
             [build-dependencies]
             bdep = "0.1"
             bar = {path = "bar"}
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file(
@@ -365,6 +374,9 @@ fn relative_depinfo_paths_no_ws() {
 
             [dependencies]
             pmdep = "0.1"
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file(

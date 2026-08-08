@@ -584,6 +584,9 @@ fn test_with_deep_lib_dep() {
 
                 [dependencies.bar]
                 path = "../bar"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file(

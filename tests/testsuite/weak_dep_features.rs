@@ -44,6 +44,9 @@ fn simple() {
 
                 [features]
                 f1 = ["bar?/feat"]
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", &require(&["f1"], &[]))
@@ -100,6 +103,9 @@ fn deferred() {
                 [dependencies]
                 dep = { version = "1.0", features = ["feat"] }
                 bar_activator = "1.0"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -182,6 +188,9 @@ fn optional_cli_syntax() {
 
                 [dependencies]
                 bar = { version = "1.0", optional = true }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -397,6 +406,9 @@ fn weak_namespaced() {
                 [features]
                 f1 = ["bar?/feat"]
                 f2 = ["dep:bar"]
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", &require(&["f1"], &["f2", "bar"]))

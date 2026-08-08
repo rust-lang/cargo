@@ -1750,6 +1750,9 @@ fn host_config_shared_build_dep() {
 
             [profile.dev]
             debug = 0
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file("src/lib.rs", "")

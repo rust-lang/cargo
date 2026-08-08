@@ -18,6 +18,9 @@ fn make_lib(lib_src: &str) {
                 version = "0.0.1"
                 edition = "2015"
                 build = "build.rs"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file(
@@ -52,6 +55,9 @@ fn make_upstream(main_src: &str) -> Project {
 
                 [dependencies]
                 bar = "*"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", &format!("fn main() {{ {} }}", main_src))

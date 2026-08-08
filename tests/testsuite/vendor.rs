@@ -1393,6 +1393,9 @@ fn git_complex() {
 
                 [dependencies]
                 dep_b = { path = 'dep_b' }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1413,6 +1416,9 @@ fn git_complex() {
                     [dependencies]
                     b = {{ git = '{}' }}
                     dep_a = {{ path = 'dep_a' }}
+
+                    [lints.cargo]
+                    default = "allow"
                 "#,
                 git_b.url()
             ),
@@ -1434,6 +1440,9 @@ fn git_complex() {
 
                     [dependencies]
                     a = {{ git = '{}' }}
+
+                    [lints.cargo]
+                    default = "allow"
                 "#,
                 git_a.url()
             ),
@@ -1749,6 +1758,9 @@ fn config_instructions_works() {
                 dep = "0.1"
                 altdep = {{version="0.1", registry="alternative"}}
                 gitdep = {{git='{}'}}
+
+                [lints.cargo]
+                default = "allow"
                 "#,
                 git_project.url()
             ),
@@ -1908,6 +1920,9 @@ fn vendor_crate_with_ws_inherit() {
                 name = "bar"
                 version.workspace = true
                 edition = "2021"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("bar/src/lib.rs", "")
@@ -1925,6 +1940,9 @@ fn vendor_crate_with_ws_inherit() {
 
                     [dependencies]
                     bar = {{ git = '{}' }}
+
+                    [lints.cargo]
+                    default = "allow"
                 "#,
                 git.url()
             ),

@@ -978,6 +978,9 @@ fn dep_with_relative_submodule() {
 
             [dependencies]
             deployment.path = "deployment"
+
+            [lints.cargo]
+            default = "allow"
         "#,
             )
             .file(
@@ -1011,6 +1014,9 @@ fn dep_with_relative_submodule() {
 
                     [dependencies.base]
                     git = '{}'
+
+                    [lints.cargo]
+                    default = "allow"
                 "#,
                 base.url()
             ),
@@ -1162,6 +1168,9 @@ fn dep_with_skipped_submodule() {
 
                     [dependencies.bar]
                     git = "{}"
+
+                    [lints.cargo]
+                    default = "allow"
                 "#,
                 bar.url()
             ),
@@ -1196,6 +1205,9 @@ fn ambiguous_published_deps() {
                     version = "0.5.0"
                     edition = "2015"
                     publish = true
+
+                    [lints.cargo]
+                    default = "allow"
                 "#
                 ),
             )
@@ -1209,6 +1221,9 @@ fn ambiguous_published_deps() {
                     version = "0.5.0"
                     edition = "2015"
                     publish = true
+
+                    [lints.cargo]
+                    default = "allow"
                 "#
                 ),
             )
@@ -1229,6 +1244,9 @@ fn ambiguous_published_deps() {
 
                     [dependencies.duplicate]
                     git = '{}'
+
+                    [lints.cargo]
+                    default = "allow"
                 "#,
                 git_project.url()
             ),
@@ -1270,6 +1288,9 @@ fn no_duplicate_package_warning_with_dotdot_cargo_home() {
 
                     [dependencies]
                     member = { path = "member" }
+
+                    [lints.cargo]
+                    default = "allow"
                 "#,
             )
             .file("src/lib.rs", "")
@@ -1280,6 +1301,9 @@ fn no_duplicate_package_warning_with_dotdot_cargo_home() {
                     name = "member"
                     version = "0.1.0"
                     edition = "2015"
+
+                    [lints.cargo]
+                    default = "allow"
                 "#,
             )
             .file("member/src/lib.rs", "")
@@ -1296,6 +1320,9 @@ fn no_duplicate_package_warning_with_dotdot_cargo_home() {
 
                     [dependencies]
                     dep = {{ git = '{}' }}
+
+                    [lints.cargo]
+                    default = "allow"
                 "#,
                 git_project.url()
             ),
@@ -1334,6 +1361,9 @@ fn unused_ambiguous_published_deps() {
                     version = "0.5.0"
                     edition = "2015"
                     publish = true
+
+                    [lints.cargo]
+                    default = "allow"
                 "#
                 ),
             )
@@ -1347,6 +1377,9 @@ fn unused_ambiguous_published_deps() {
                     version = "0.5.0"
                     edition = "2015"
                     publish = true
+
+                    [lints.cargo]
+                    default = "allow"
                 "#
                 ),
             )
@@ -1360,6 +1393,9 @@ fn unused_ambiguous_published_deps() {
                     version = "0.5.0"
                     edition = "2015"
                     publish = true
+
+                    [lints.cargo]
+                    default = "allow"
                 "#
                 ),
             )
@@ -1393,6 +1429,9 @@ fn unused_ambiguous_published_deps() {
 
                     [dependencies.unique]
                     git = '{}'
+
+                    [lints.cargo]
+                    default = "allow"
                 "#,
                 git_project.url()
             ),
@@ -1445,6 +1484,9 @@ fn two_deps_only_update_one() {
                     git = '{}'
                     [dependencies.dep2]
                     git = '{}'
+
+                    [lints.cargo]
+                    default = "allow"
                 "#,
                 git1.url(),
                 git2.url()
@@ -1915,6 +1957,9 @@ fn git_repo_changing_no_rebuild() {
                     build = 'build.rs'
                     [dependencies.bar]
                     git = '{}'
+
+                    [lints.cargo]
+                    default = "allow"
                 "#,
                 bar.url()
             ),
@@ -1954,6 +1999,9 @@ fn git_repo_changing_no_rebuild() {
                     authors = []
                     [dependencies.bar]
                     git = '{}'
+
+                    [lints.cargo]
+                    default = "allow"
                 "#,
                 bar.url()
             ),
@@ -2167,6 +2215,9 @@ fn warnings_in_git_dep() {
                     authors = []
                     [dependencies.bar]
                     git = '{}'
+
+                    [lints.cargo]
+                    default = "allow"
                 "#,
                 bar.url()
             ),
@@ -2317,6 +2368,9 @@ fn switch_deps_does_not_update_transitive() {
 
                         [dependencies.transitive]
                         git = '{}'
+
+                        [lints.cargo]
+                        default = "allow"
                     "#,
                     transitive.url()
                 ),
@@ -2337,6 +2391,9 @@ fn switch_deps_does_not_update_transitive() {
 
                         [dependencies.transitive]
                         git = '{}'
+
+                        [lints.cargo]
+                        default = "allow"
                     "#,
                     transitive.url()
                 ),
@@ -2356,6 +2413,9 @@ fn switch_deps_does_not_update_transitive() {
                     authors = []
                     [dependencies.dep]
                     git = '{}'
+
+                    [lints.cargo]
+                    default = "allow"
                 "#,
                 dep1.url()
             ),
@@ -2389,6 +2449,9 @@ fn switch_deps_does_not_update_transitive() {
                 authors = []
                 [dependencies.dep]
                 git = '{}'
+
+                [lints.cargo]
+                default = "allow"
             "#,
             dep2.url()
         ),
@@ -2492,6 +2555,9 @@ fn switch_sources() {
                 authors = []
                 [dependencies.b]
                 path = "b"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -2506,6 +2572,9 @@ fn switch_sources() {
                     authors = []
                     [dependencies.a]
                     git = '{}'
+
+                    [lints.cargo]
+                    default = "allow"
                 "#,
                 a1.url()
             ),
@@ -2536,6 +2605,9 @@ fn switch_sources() {
                 authors = []
                 [dependencies.a]
                 git = '{}'
+
+                [lints.cargo]
+                default = "allow"
             "#,
             a2.url()
         ),
@@ -2668,6 +2740,9 @@ fn lints_are_suppressed() {
 
                     [dependencies]
                     a = {{ git = '{}' }}
+
+                    [lints.cargo]
+                    default = "allow"
                 "#,
                 a.url()
             ),
@@ -2712,6 +2787,9 @@ fn denied_lints_are_allowed() {
 
                     [dependencies]
                     a = {{ git = '{}' }}
+
+                    [lints.cargo]
+                    default = "allow"
                 "#,
                 a.url()
             ),
@@ -3074,6 +3152,9 @@ fn use_the_cli() {
 
                     [dependencies]
                     dep1 = {{ git = '{}' }}
+
+                    [lints.cargo]
+                    default = "allow"
                 "#,
                 git_project.url()
             ),
@@ -3759,6 +3840,9 @@ fn historical_lockfile_works() {
 
                     [dependencies]
                     dep1 = {{ git = '{}', branch = 'master' }}
+
+                    [lints.cargo]
+                    default = "allow"
                 "#,
                 git_project.url()
             ),
@@ -3880,6 +3964,9 @@ fn two_dep_forms() {
                     [dependencies]
                     dep1 = {{ git = '{}', branch = 'master' }}
                     a = {{ path = 'a' }}
+
+                    [lints.cargo]
+                    default = "allow"
                 "#,
                 git_project.url()
             ),
@@ -3895,6 +3982,9 @@ fn two_dep_forms() {
                     edition = "2015"
                     [dependencies]
                     dep1 = {{ git = '{}' }}
+
+                    [lints.cargo]
+                    default = "allow"
                 "#,
                 git_project.url()
             ),
@@ -4421,6 +4511,9 @@ fn different_user_relative_submodules() {
 
                     [dependencies.dep1]
                     git = '{}'
+
+                    [lints.cargo]
+                    default = "allow"
                 "#,
                 user1_git_project.url()
             ),
@@ -4464,6 +4557,9 @@ fn git_worktree_with_original_repo_renamed() {
                     documentation = ""
                     repository = "https://example.org"
                     readme = "./README.md"
+
+                    [lints.cargo]
+                    default = "allow"
                 "#,
             )
             .file("src/lib.rs", "")
@@ -4627,6 +4723,9 @@ fn git_worktree_with_bare_original_repo() {
                     documentation = ""
                     repository = "https://example.org"
                     readme = "./README.md"
+
+                    [lints.cargo]
+                    default = "allow"
                 "#,
             )
             .file("src/lib.rs", "")
@@ -5041,6 +5140,9 @@ fn lockfile_with_multiple_revisions_change_code_content() {
 
                     [dependencies]
                     a = {{ git = "{}" }}
+
+                    [lints.cargo]
+                    default = "allow"
                 "#,
                 upstream.url()
             ),
@@ -5093,6 +5195,9 @@ rev1
 
                     [dependencies]
                     b = {{ git = "{}" }}
+
+                    [lints.cargo]
+                    default = "allow"
                 "#,
                 upstream.url()
             ),
@@ -5111,6 +5216,9 @@ rev1
                 [dependencies]
                 a = {{ git = "{}" }}
                 m2 = {{ git = "{}" }}
+
+                [lints.cargo]
+                default = "allow"
             "#,
             upstream.url(),
             m2.url()

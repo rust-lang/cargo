@@ -352,6 +352,9 @@ fn collision_doc_profile_split() {
 
                 [profile.dev]
                 opt-level = 2
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -368,6 +371,9 @@ fn collision_doc_profile_split() {
 
                 [lib]
                 proc-macro = true
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("pm/src/lib.rs", "")

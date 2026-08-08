@@ -26,8 +26,8 @@ non_snake_case_features = "warn"
         .file("src/lib.rs", "")
         .build();
 
-    foo.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints", "test-dummy-unstable"])
+    foo.cargo("fetch")
+        .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
         .with_stderr_data(str![[r#"
 [WARNING] feature `foo-bar` should have a snake-case name
  --> Cargo.toml:9:1
@@ -72,8 +72,8 @@ non_snake_case_features = "warn"
         .file("src/lib.rs", "")
         .build();
 
-    foo.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints", "test-dummy-unstable"])
+    foo.cargo("fetch")
+        .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
         .with_stderr_data(str![[r#"
 [WARNING] feature `foo-bar` should have a snake-case name
  --> Cargo.toml:9:1

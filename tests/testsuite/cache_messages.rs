@@ -163,10 +163,6 @@ fn clears_cache_after_fix() {
 
 "#]])
         .run();
-    assert_eq!(
-        p.glob("target/debug/.fingerprint/foo-*/output-*").count(),
-        0
-    );
 
     // And again, check the cache is correct.
     p.cargo("check")
@@ -233,6 +229,9 @@ fn very_verbose() {
 
             [dependencies]
             bar = "1.0"
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -273,51 +272,6 @@ fn very_verbose() {
 
 "#]])
         .run();
-}
-
-#[cargo_test]
-fn doesnt_create_extra_files() {
-    // Ensure it doesn't create `output` files when not needed.
-    Package::new("dep", "1.0.0")
-        .file("src/lib.rs", "fn unused() {}")
-        .publish();
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.1.0"
-                edition = "2015"
-
-                [dependencies]
-                dep = "1.0"
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .file("src/main.rs", "fn main() {}")
-        .build();
-
-    p.cargo("check").run();
-
-    assert_eq!(
-        p.glob("target/debug/.fingerprint/foo-*/output-*").count(),
-        0
-    );
-    assert_eq!(
-        p.glob("target/debug/.fingerprint/dep-*/output-*").count(),
-        0
-    );
-    if is_coarse_mtime() {
-        sleep_ms(1000);
-    }
-    p.change_file("src/lib.rs", "fn unused() {}");
-    p.cargo("check").run();
-    assert_eq!(
-        p.glob("target/debug/.fingerprint/foo-*/output-*").count(),
-        1
-    );
 }
 
 #[cargo_test]

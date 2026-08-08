@@ -998,6 +998,9 @@ dependencies = [
 
                     [dependencies]
                     dep1 = {{ git = '{url}', {ref_kind} = '{git_ref}' }}
+
+                    [lints.cargo]
+                    default = "allow"
                 "#,
             ),
         )
@@ -1093,6 +1096,9 @@ dependencies = [
 
                     [dependencies]
                     dep1 = {{ git = '{url}', {ref_kind} = '{git_ref}' }}
+
+                    [lints.cargo]
+                    default = "allow"
                 "#,
             ),
         )

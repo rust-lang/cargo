@@ -25,6 +25,7 @@ use cargo_test_support::basic_manifest;
 use cargo_test_support::paths;
 use cargo_test_support::project;
 use cargo_test_support::rustc_host;
+use cargo_test_support::snapbox::assert_data_eq;
 use cargo_test_support::str;
 use cargo_test_support::target_spec_json;
 use cargo_test_support::{Project, prelude::*};
@@ -445,7 +446,7 @@ fn build_std_does_not_warn_about_implicit_std_deps() {
             "Cargo.toml",
             r#"
                 [package]
-                name = "buildstd_test"
+                name = "buildstd-test"
                 version = "0.1.0"
                 edition = "2021"
 
@@ -466,19 +467,16 @@ fn build_std_does_not_warn_about_implicit_std_deps() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("build")
-        .build_std()
-        .target_host()
-        .env("RUSTFLAGS", "-W unused-crate-dependencies")
-        .with_stderr_data(
-            str![[r#"
-[WARNING] extern crate `bar` is unused in crate `buildstd_test`
-[WARNING] `buildstd_test` (bin "buildstd_test") generated 1 warning
-...
-"#]]
-            .unordered(),
-        )
-        .run();
+    let output = p.cargo("build").build_std().target_host().run();
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    println!("{stderr}");
+    let mut unused_warnings = stderr
+        .lines()
+        .filter(|l| l.contains("unused dependency"))
+        .collect::<Vec<_>>();
+    unused_warnings.sort();
+    let unused_warnings = unused_warnings.join("\n");
+    assert_data_eq!(unused_warnings, str!["warning: unused dependency `bar`"]);
 }
 
 #[cargo_test(build_std_real)]

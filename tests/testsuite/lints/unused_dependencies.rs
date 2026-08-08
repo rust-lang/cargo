@@ -34,8 +34,7 @@ fn unused_dep_normal() {
         )
         .build();
 
-    p.cargo("check -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("check")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to highest compatible version
@@ -93,8 +92,7 @@ fn unused_dep_build() {
         )
         .build();
 
-    p.cargo("check -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("check")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to highest compatible version
@@ -146,8 +144,7 @@ fn unused_dep_build_no_build_rs() {
         )
         .build();
 
-    p.cargo("check -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("check")
         .with_stderr_data(str![[r#"
 [WARNING] unused build dependency `unused`
  --> Cargo.toml:9:13
@@ -218,8 +215,7 @@ fn unused_dep_lib_bins() {
         )
         .build();
 
-    p.cargo("check -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("check")
         .with_stderr_data(
             str![[r#"
 [UPDATING] `dummy-registry` index
@@ -248,24 +244,21 @@ fn unused_dep_lib_bins() {
         )
         .run();
 
-    p.cargo("check -Zcargo-lints --lib")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("check --lib")
         .with_stderr_data(str![[r#"
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
 
-    p.cargo("check -Zcargo-lints --bins")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("check --bins")
         .with_stderr_data(str![[r#"
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
 
-    p.cargo("check -Zcargo-lints --bin foo")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("check --bin foo")
         .with_stderr_data(str![[r#"
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -314,8 +307,7 @@ fn unused_dep_build_with_used_dep_normal() {
         )
         .build();
 
-    p.cargo("check -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("check")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to highest compatible version
@@ -376,8 +368,7 @@ fn unused_dep_normal_but_implicit_used_dep_dev() {
         )
         .build();
 
-    p.cargo("check -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("check")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to highest compatible version
@@ -399,8 +390,7 @@ fn unused_dep_normal_but_implicit_used_dep_dev() {
 "#]])
         .run();
 
-    p.cargo("check -Zcargo-lints --all-targets")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("check --all-targets")
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [WARNING] unused dependency `used_dev`
@@ -460,8 +450,7 @@ fn unused_dep_normal_but_explicit_used_dep_dev() {
         )
         .build();
 
-    p.cargo("check -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("check")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to highest compatible version
@@ -528,8 +517,7 @@ fn unused_dep_dev_but_explicit_used_dep_normal() {
 
     // No warning because the dependency is used at test time by the unit tests and the two
     // dependencies are indistinguishable
-    p.cargo("check -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("check")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to highest compatible version
@@ -578,8 +566,7 @@ fn optional_dependency() {
         )
         .build();
 
-    p.cargo("check -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("check")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to highest compatible versions
@@ -589,8 +576,7 @@ fn optional_dependency() {
 "#]])
         .run();
 
-    p.cargo("check -Zcargo-lints -F used,unused")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("check -F used,unused")
         .with_stderr_data(
             str![[r#"
 [DOWNLOADING] crates ...
@@ -649,8 +635,7 @@ fn unused_dep_renamed() {
         )
         .build();
 
-    p.cargo("check -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("check")
         .with_stderr_data(
             str![[r#"
 [UPDATING] `dummy-registry` index
@@ -708,8 +693,7 @@ fn warning_replay() {
         )
         .build();
 
-    p.cargo("check -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("check")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to highest compatible version
@@ -731,8 +715,7 @@ fn warning_replay() {
 "#]])
         .run();
 
-    p.cargo("check -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("check")
         .with_stderr_data(str![[r#"
 [WARNING] unused dependency `unused`
  --> Cargo.toml:9:13
@@ -785,8 +768,7 @@ fn unused_dep_target() {
         )
         .build();
 
-    p.cargo(&format!("check -Zcargo-lints --target {host}"))
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo(&format!("check --target {host}"))
         .with_stderr_data(
             str![[r#"
 [UPDATING] `dummy-registry` index
@@ -883,8 +865,7 @@ fn unused_dev_deps() {
         .build();
 
     // doesn't check any tests, still no unused dev dep warnings
-    p.cargo("check -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("check")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 6 packages to highest compatible versions
@@ -895,8 +876,7 @@ fn unused_dev_deps() {
         .run();
 
     // doesn't check doctests, still no unused dev dep warnings
-    p.cargo("check -Zcargo-lints --all-targets")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("check --all-targets")
         .with_stderr_data(
             str![[r#"
 [DOWNLOADING] crates ...
@@ -921,8 +901,7 @@ fn unused_dev_deps() {
         .run();
 
     // doesn't test doctests and benches and thus doesn't create unused dev dep warnings
-    p.cargo("test -Zcargo-lints --no-run")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("test --no-run")
         .with_stderr_data(
             str![[r#"
 [COMPILING] example_used v0.1.0
@@ -942,8 +921,7 @@ fn unused_dev_deps() {
         .run();
 
     // doesn't test doctests, still no unused dev dep warnings
-    p.cargo("test -Zcargo-lints --no-run --all-targets")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("test --no-run --all-targets")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -957,8 +935,7 @@ fn unused_dev_deps() {
 
     // tests everything including doctests, but not
     // the benches
-    p.cargo("test -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("test")
         .with_stderr_data(str![[r#"
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
@@ -1064,8 +1041,7 @@ fn package_selection() {
         )
         .build();
 
-    p.cargo("check -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("check")
         .with_stderr_data(
             str![[r#"
 [UPDATING] `dummy-registry` index
@@ -1125,8 +1101,7 @@ fn package_selection() {
         )
         .run();
 
-    p.cargo("check -Zcargo-lints -p foo")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("check -p foo")
         .with_stderr_data(
             str![[r#"
 [WARNING] unused dependency `bar`
@@ -1159,8 +1134,7 @@ fn package_selection() {
         )
         .run();
 
-    p.cargo("check -Zcargo-lints -p bar")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("check -p bar")
         .with_stderr_data(
             str![[r#"
 [WARNING] unused dependency `unused_bar`
@@ -1222,8 +1196,7 @@ fn pinned_transitive_dep() {
         )
         .build();
 
-    p.cargo("check -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("check")
         .with_stderr_data(
             str![[r#"
 [UPDATING] `dummy-registry` index
@@ -1297,8 +1270,7 @@ pub fn fun() -> &'static str {
         )
         .build();
 
-    p.cargo("check -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("check")
         .with_stderr_data(
             str![[r#"
 [UPDATING] `dummy-registry` index
@@ -1347,9 +1319,8 @@ fn allow_rustflags() {
         )
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("check")
         .env("RUSTFLAGS", "-Aunused_crate_dependencies")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to highest compatible version
@@ -1403,8 +1374,7 @@ fn allow_attribute() {
         )
         .build();
 
-    p.cargo("check -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("check")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to highest compatible version
@@ -1456,8 +1426,7 @@ fn deny_in_manifest() {
         )
         .build();
 
-    p.cargo("check -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
@@ -1510,9 +1479,8 @@ fn deny_rustflags() {
         )
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("check")
         .env("RUSTFLAGS", "-Dunused_crate_dependencies")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to highest compatible version
@@ -1566,8 +1534,7 @@ fn deny_attribute() {
         )
         .build();
 
-    p.cargo("check -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("check")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to highest compatible version
@@ -1620,9 +1587,8 @@ fn forbid_rustflags() {
         )
         .build();
 
-    p.cargo("check -Zcargo-lints")
+    p.cargo("check")
         .env("RUSTFLAGS", "-Funused_crate_dependencies")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to highest compatible version
@@ -1676,8 +1642,7 @@ fn forbid_attribute() {
         )
         .build();
 
-    p.cargo("check -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("check")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to highest compatible version
