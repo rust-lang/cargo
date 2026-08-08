@@ -355,6 +355,54 @@ fn clean_doc() {
 }
 
 #[cargo_test]
+fn clean_doc_target() {
+    let target = rustc_host();
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("src/lib.rs", "")
+        .build();
+    let doc_path = p.build_dir().join(target).join("doc");
+
+    p.cargo("doc --target")
+        .arg(target)
+        .arg("-Zbuild-dir-new-layout")
+        .masquerade_as_nightly_cargo(&["new build-dir layout"])
+        .run();
+    assert!(doc_path.is_dir());
+
+    p.cargo("clean --doc --target")
+        .arg(target)
+        .with_stderr_data(str![[r#"
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
+"#]])
+        .arg("-Zbuild-dir-new-layout")
+        .masquerade_as_nightly_cargo(&["new build-dir layout"])
+        .run();
+    assert!(!doc_path.is_dir());
+
+    p.change_file(
+        ".cargo/config.toml",
+        &format!("[build]\ntarget = \"{target}\""),
+    );
+    p.cargo("doc")
+        .arg("-Zbuild-dir-new-layout")
+        .masquerade_as_nightly_cargo(&["new build-dir layout"])
+        .run();
+    assert!(doc_path.is_dir());
+
+    p.cargo("clean --doc")
+        .with_stderr_data(str![[r#"
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
+"#]])
+        .arg("-Zbuild-dir-new-layout")
+        .masquerade_as_nightly_cargo(&["new build-dir layout"])
+        .run();
+    assert!(!doc_path.is_dir());
+}
+
+#[cargo_test]
 fn build_script() {
     let p = project()
         .file(
