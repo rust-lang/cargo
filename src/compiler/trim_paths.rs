@@ -83,15 +83,17 @@ pub(crate) fn trim_paths_args(
 /// Order of `--remap-path-prefix` flags is important for `-Zbuild-std`.
 /// We want to show `/rustc/<hash>/library/std` instead of `std-0.0.0`.
 ///
-/// | Category            | From                                         | To                                 |
-/// |---------------------|----------------------------------------------|------------------------------------|
-/// | Sysroot             | `<sysroot>/lib/rustlib/src/rust`             | `/rustc/<commit-hash>`             |
-/// | Registry dep        | `$CARGO_HOME/registry/src/<registry-dir>`        | `/cargo/registry/<registry-id>`    |
-/// | Git dep             | `$CARGO_HOME/git/checkouts/<repo-dir>/<rev-dir>` | `/cargo/git/<git-source-id>/<rev>` |
-/// | Workspace           | `<workspace-root>`                           | `.` (workspace-relative)           |
-/// | Path dep outside ws | `<pkg-root>`                                 | `/cargo/path/<name>-<version>`     |
-/// | Vendored            | `<pkg-root>` (by file location)              | workspace or path rules above      |
-/// | Build directory     | `<build-dir>`                                | `/cargo/build-dir`                 |
+/// | Category     | From                                             | To                                 |
+/// |--------------|--------------------------------------------------|------------------------------------|
+/// | Sysroot      | `<sysroot>/lib/rustlib/src/rust`                 | `/rustc/<commit-hash>`             |
+/// | Registry dep | `$CARGO_HOME/registry/src/<registry-dir>`        | `/cargo/registry/<registry-id>`    |
+/// | Git dep      | `$CARGO_HOME/git/checkouts/<repo-dir>/<rev-dir>` | `/cargo/git/<git-source-id>/<rev>` |
+/// | Workspace    | `<workspace-root>`                               | `.` (workspace-relative)           |
+/// | Path dep†    | `<pkg-root>`                                     | `/cargo/deps/<name>-<version>`     |
+/// | Vendored     | `<pkg-root>` (by file location)                  | workspace or path rules above      |
+/// | Build dir    | `<build-dir>`                                    | `/cargo/build-dir`                 |
+///
+/// **†**: path dependencies outside the workspace and other uncategorized dependencies.
 ///
 /// [RFC 3127]: https://rust-lang.github.io/rfcs/3127-trim-paths.html
 pub(crate) fn trim_paths_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> [OsString; 3] {
@@ -161,7 +163,7 @@ fn package_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> (PathBuf, S
         (ws_root.to_path_buf(), ".".to_owned())
     } else {
         let from = pkg_root.to_path_buf();
-        let to = format!("/cargo/path/{}-{}", unit.pkg.name(), unit.pkg.version());
+        let to = format!("/cargo/deps/{}-{}", unit.pkg.name(), unit.pkg.version());
         (from, to)
     }
 }

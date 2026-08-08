@@ -1565,7 +1565,7 @@ If `trim-paths` is not `none` or `false`, then the following paths are sanitized
    which replaces the checkout directory.
    `<revision>` is a prefix of the resolved commit ID recorded in the lockfile.
 5. Path to a path dependency outside the workspace will be replaced with
-   `/cargo/path/<package name>-<package version>`.
+   `/cargo/deps/<package name>-<package version>`.
 6. Path into the build directory, for example `OUT_DIR` generated sources,
    will begin with `/cargo/build-dir`.
 

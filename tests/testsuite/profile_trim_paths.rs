@@ -541,13 +541,13 @@ fn path_dependency_outside_workspace() {
     p.cargo("run --verbose -Ztrim-paths")
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
         .with_stdout_data(str![[r#"
-/cargo/path/bar-0.0.1/src/lib.rs
+/cargo/deps/bar-0.0.1/src/lib.rs
 
 "#]])
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.0.1 ([ROOT]/bar)
-[RUNNING] `rustc [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/bar=/cargo/path/bar-0.0.1 --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `rustc [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/bar=/cargo/deps/bar-0.0.1 --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -575,7 +575,7 @@ fn path_dependency_outside_workspace() {
     "to": "[ROOT]/foo/target"
   },
   {
-    "from": "/cargo/path/bar-0.0.1",
+    "from": "/cargo/deps/bar-0.0.1",
     "to": "[ROOT]/bar"
   },
   {
@@ -760,8 +760,8 @@ fn vendored_dependencies_outside_workspace() {
             str![[r#"
 [COMPILING] bar v0.0.1
 [COMPILING] baz v0.0.1 ([ROOTURL]/baz#[..])
-[RUNNING] `rustc --crate-name bar [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/shared-vendor/bar=/cargo/path/bar-0.0.1 --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
-[RUNNING] `rustc --crate-name baz [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/shared-vendor/baz=/cargo/path/baz-0.0.1 --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `rustc --crate-name bar [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/shared-vendor/bar=/cargo/deps/bar-0.0.1 --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `rustc --crate-name baz [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/shared-vendor/baz=/cargo/deps/baz-0.0.1 --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -771,8 +771,8 @@ fn vendored_dependencies_outside_workspace() {
             .unordered(),
         )
         .with_stdout_data(str![[r#"
-/cargo/path/bar-0.0.1/src/lib.rs
-/cargo/path/baz-0.0.1/src/lib.rs
+/cargo/deps/bar-0.0.1/src/lib.rs
+/cargo/deps/baz-0.0.1/src/lib.rs
 
 "#]])
         .run();
@@ -796,11 +796,11 @@ fn vendored_dependencies_outside_workspace() {
     "to": "[ROOT]/foo/target"
   },
   {
-    "from": "/cargo/path/bar-0.0.1",
+    "from": "/cargo/deps/bar-0.0.1",
     "to": "[ROOT]/shared-vendor/bar"
   },
   {
-    "from": "/cargo/path/baz-0.0.1",
+    "from": "/cargo/deps/baz-0.0.1",
     "to": "[ROOT]/shared-vendor/baz"
   },
   {
@@ -2070,7 +2070,7 @@ fn unremap_debugger_project() -> cargo_test_support::Project {
     "to": "[ROOT]/foo/target"
   },
   {
-    "from": "/cargo/path/baz-0.0.1",
+    "from": "/cargo/deps/baz-0.0.1",
     "to": "[ROOT]/baz"
   },
   {
