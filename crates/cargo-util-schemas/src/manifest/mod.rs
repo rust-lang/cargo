@@ -941,6 +941,7 @@ pub struct TomlProfile {
     pub trim_paths: Option<TomlTrimPaths>,
     /// Unstable feature `hint-mostly-unused`
     pub hint_mostly_unused: Option<bool>,
+    pub frame_pointers: Option<String>,
 }
 
 impl TomlProfile {
@@ -1035,6 +1036,10 @@ impl TomlProfile {
 
         if let Some(v) = profile.hint_mostly_unused {
             self.hint_mostly_unused = Some(v);
+        }
+
+        if let Some(v) = &profile.frame_pointers {
+            self.frame_pointers = Some(v.clone());
         }
     }
 }

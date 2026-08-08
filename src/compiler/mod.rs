@@ -113,7 +113,7 @@ use crate::util::interning::InternedString;
 use crate::util::machine_message::{self, Message};
 use crate::util::{add_path_args, internal, path_args};
 use crate::workspace::manifest::TargetSourcePath;
-use crate::workspace::profiles::{PanicStrategy, Profile, StripInner};
+use crate::workspace::profiles::{FramePointers, PanicStrategy, Profile, StripInner};
 use crate::workspace::{Feature, PackageId, Target};
 
 use cargo_util::{ProcessBuilder, ProcessError, paths};
@@ -1281,6 +1281,7 @@ fn build_base_args(
         rustflags: profile_rustflags,
         trim_paths,
         hint_mostly_unused: profile_hint_mostly_unused,
+        frame_pointers,
         ..
     } = unit.profile.clone();
     let hints = unit.pkg.hints().cloned().unwrap_or_default();
@@ -1508,6 +1509,13 @@ fn build_base_args(
     let strip = strip.into_inner();
     if strip != StripInner::None {
         cmd.arg("-C").arg(format!("strip={}", strip));
+    }
+
+    if let Some(frame_pointers) = frame_pointers {
+        let val = match frame_pointers {
+            FramePointers::On => "on",
+        };
+        cmd.arg("-C").arg(format!("force-frame-pointers={}", val));
     }
 
     if unit.is_std {

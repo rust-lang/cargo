@@ -1437,6 +1437,13 @@
             "null"
           ],
           "default": null
+        },
+        "frame-pointers": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
         }
       }
     },
