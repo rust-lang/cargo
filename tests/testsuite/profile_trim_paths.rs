@@ -261,6 +261,10 @@ fn registry_dependency() {
     "workspace_root": "[ROOT]/foo"
   },
   {
+    "from": ".",
+    "to": "[ROOT]/foo"
+  },
+  {
     "from": "/cargo/build-dir",
     "to": "[ROOT]/foo/target"
   },
@@ -420,6 +424,10 @@ fn git_dependency() {
     "workspace_root": "[ROOT]/foo"
   },
   {
+    "from": ".",
+    "to": "[ROOT]/foo"
+  },
+  {
     "from": "/cargo/build-dir",
     "to": "[ROOT]/foo/target"
   },
@@ -497,6 +505,10 @@ cocktail-bar/src/lib.rs
     "workspace_root": "[ROOT]/foo"
   },
   {
+    "from": ".",
+    "to": "[ROOT]/foo"
+  },
+  {
     "from": "/cargo/build-dir",
     "to": "[ROOT]/foo/target"
   },
@@ -569,6 +581,10 @@ fn path_dependency_outside_workspace() {
   {
     "rust_version": "[..]",
     "workspace_root": "[ROOT]/foo"
+  },
+  {
+    "from": ".",
+    "to": "[ROOT]/foo"
   },
   {
     "from": "/cargo/build-dir",
@@ -683,6 +699,10 @@ fn vendored_dependencies() {
     "workspace_root": "[ROOT]/foo"
   },
   {
+    "from": ".",
+    "to": "[ROOT]/foo"
+  },
+  {
     "from": "/cargo/build-dir",
     "to": "[ROOT]/foo/target"
   },
@@ -790,6 +810,10 @@ fn vendored_dependencies_outside_workspace() {
   {
     "rust_version": "[..]",
     "workspace_root": "[ROOT]/foo"
+  },
+  {
+    "from": ".",
+    "to": "[ROOT]/foo"
   },
   {
     "from": "/cargo/build-dir",
@@ -1579,6 +1603,10 @@ fn workspace_remap_with_root_dir() {
     "workspace_root": "[ROOT]/foo"
   },
   {
+    "from": ".",
+    "to": "[ROOT]/foo"
+  },
+  {
     "from": "/cargo/build-dir",
     "to": "[ROOT]/foo/target"
   },
@@ -2121,6 +2149,10 @@ fn unremap_debugger_project() -> cargo_test_support::Project {
     "workspace_root": "[ROOT]/foo"
   },
   {
+    "from": ".",
+    "to": "[ROOT]"
+  },
+  {
     "from": "/cargo/build-dir",
     "to": "[ROOT]/foo/target"
   },
@@ -2156,7 +2188,7 @@ fn unremap_substitutions(artifact: &std::path::Path) -> Vec<(String, String)> {
     let version = values.next().unwrap().unwrap();
     assert_eq!(version["v"], 1);
 
-    let metadata = values.next().unwrap().unwrap();
+    let _metadata = values.next().unwrap().unwrap();
 
     let mut pairs = Vec::new();
 
@@ -2167,12 +2199,6 @@ fn unremap_substitutions(artifact: &std::path::Path) -> Vec<(String, String)> {
             record["to"].as_str().unwrap().to_owned(),
         ));
     }
-
-    // remap local workspace source
-    pairs.push((
-        ".".to_owned(),
-        metadata["workspace_root"].as_str().unwrap().to_owned(),
-    ));
 
     pairs
 }
