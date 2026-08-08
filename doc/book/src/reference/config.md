@@ -152,11 +152,13 @@ rpath = false            # Sets the rpath linking option.
 [resolver]
 lockfile-path = "…"  # Overrides the path used for
 incompatible-rust-versions = "allow"  # Specifies how resolver reacts to these
+incompatible-publish-age = "deny"  # Specifies how resolver treats recently published versions
 
 [registries.<name>]  # registries other than crates.io
 index = "…"          # URL of the registry index
 token = "…"          # authentication token for the registry
 credential-provider = "cargo:token" # The credential provider for this registry.
+min-publish-age = "7 days" # Override `registry.global-min-publish-age` for this registry
 
 [registries.crates-io]
 protocol = "sparse"  # The protocol to use to access crates.io.
@@ -166,6 +168,8 @@ default = "…"        # name of the default registry
 token = "…"          # authentication token for crates.io
 credential-provider = "cargo:token"           # The credential provider for crates.io.
 global-credential-providers = ["cargo:token"] # The credential providers to use by default.
+min-publish-age = "7 days" # Override `registry.global-min-publish-age` for crates.io
+global-min-publish-age = "7 days" # The time span allowed for registry packages to use by default.
 
 [source.<name>]      # source definition and replacement
 replace-with = "…"   # replace this source with the given named source
@@ -1154,6 +1158,23 @@ See the [resolver](resolver.md#rust-version) chapter for more details.
 > - `allow` is supported on any version
 > - `fallback` is respected as of 1.84
 
+#### `resolver.incompatible-publish-age`
+* Type: string
+* Default: `"deny"`
+* Environment: `CARGO_RESOLVER_INCOMPATIBLE_PUBLISH_AGE`
+
+When resolving the version of a dependency,
+specify the behavior for versions with a `pubtime` (if present)
+that is incompatible with `registry.min-publish-age`.
+Values include:
+
+- `allow`: treat pubtime-incompatible versions like any other version
+- `deny`: ignore pubtime-incompatible versions unless they already exist in the lock file
+
+See the [resolver](resolver.md#publish-age) chapter for more details.
+
+> **MSRV:** Respected as of 1.99+
+
 ### `[registries]`
 
 The `[registries]` table is used for specifying additional [registries]. It
@@ -1192,6 +1213,26 @@ paths or arguments that contain spaces, use an array.
 If the value exists in the [`[credential-alias]`](#credential-alias) table, the alias will be used.
 
 See [Registry Authentication](registry-authentication.md) for more information.
+
+#### `registries.<name>.min-publish-age`
+* Type: string
+* Default: [`registry.global-min-publish-age`](#registryglobal-min-publish-age)
+* Environment: `CARGO_REGISTRIES_<name>_MIN_PUBLISH_AGE`
+
+Specifies the minimum timespan since a version's `pubtime` that may be
+considered for [`resolver.incompatible-publish-age`] for packages from this
+registry. If not set, [`registry.global-min-publish-age`](#registryglobal-min-publish-age) will be used.
+
+Will be ignored if the registry does not support this.
+
+It supports the following values:
+
+- An integer followed by "seconds", "minutes", "hours", "days", "weeks", or "months"
+- `"0"` to allow all packages
+
+Generally, `"0"`, `"N days"`, and `"N weeks"` will be used.
+
+> **MSRV:** Respected as of 1.99+
 
 #### `registries.crates-io.protocol`
 * Type: string
@@ -1242,6 +1283,24 @@ If the value exists in the `[credential-alias]` table, the alias will be used.
 
 See [Registry Authentication](registry-authentication.md) for more information.
 
+#### `registry.min-publish-age`
+* Type: string
+* Default: [`registry.global-min-publish-age`](#registryglobal-min-publish-age)
+* Environment: `CARGO_REGISTRY_MIN_PUBLISH_AGE`
+
+Specifies the minimum timespan since a version's `pubtime` that it may be
+considered for [`resolver.incompatible-publish-age`] for packages from crates.io.
+If not set, [`registry.global-min-publish-age`](#registryglobal-min-publish-age) will be used.
+
+It supports the following values:
+
+- An integer followed by "seconds", "minutes", "hours", "days", "weeks", or "months"
+- `"0"` to allow all packages
+
+Generally, `"0"`, `"N days"`, and `"N weeks"` will be used.
+
+> **MSRV:** Respected as of 1.99+
+
 #### `registry.token`
 * Type: string
 * Default: none
@@ -1267,6 +1326,25 @@ provider should be defined in the [`[credential-alias]`](#credential-alias) tabl
 referenced here by its alias.
 
 See [Registry Authentication](registry-authentication.md) for more information.
+
+#### `registry.global-min-publish-age`
+* Type: string
+* Default: `"0"`
+* Environment: `CARGO_REGISTRY_GLOBAL_MIN_PUBLISH_AGE`
+
+Specifies the global minimum timespan since a version's `pubtime` that it may
+be considered for [`resolver.incompatible-publish-age`] for packages.
+If `min-publish-age` is not set for a specific registry using
+`registries.<name>.min-publish-age`, Cargo will use this minimum publish age.
+
+It supports the following values:
+
+- An integer followed by "seconds", "minutes", "hours", "days", "weeks", or "months"
+- `"0"` to allow all packages
+
+Generally, `"0"`, `"N days"`, and `"N weeks"` will be used.
+
+> **MSRV:** Respected as of 1.99+
 
 ### `[source]`
 
@@ -1555,3 +1633,4 @@ Report progress to the terminal emulator for display in places like the task bar
 [crates.io]: https://crates.io/
 [target triple]: ../appendix/glossary.md#target '"target" (glossary)'
 [`<triple>`]: ../appendix/glossary.md#target '"target" (glossary)'
+[`resolver.incompatible-publish-age`]: config.md#resolverincompatible-publish-age
