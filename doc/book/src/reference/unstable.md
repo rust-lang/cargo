@@ -1309,12 +1309,13 @@ you are ok with dev-deps being build for `cargo doc`.
 
 * Tracking Issue: [#13283](https://github.com/rust-lang/cargo/issues/13283)
 
-This flag determines the output format of `cargo rustdoc`, accepting `html` or `json`, providing tools with a way to lean on [rustdoc's experimental JSON format](https://doc.rust-lang.org/nightly/nightly-rustc/rustdoc_json_types/).
+This flag determines the output format of `cargo rustdoc` and `cargo doc`, accepting `html` or `json`, providing tools with a way to lean on [rustdoc's experimental JSON format](https://doc.rust-lang.org/nightly/nightly-rustc/rustdoc_json_types/).
 
 You can use the flag like this:
 
 ```
 cargo rustdoc -Z unstable-options --output-format json
+cargo doc -Z unstable-options --output-format json
 ```
 
 ## codegen-backend

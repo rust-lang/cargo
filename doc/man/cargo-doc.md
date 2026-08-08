@@ -116,6 +116,7 @@ and supports common Unix glob patterns.
 {{#options}}
 {{> options-jobs }}
 {{> options-keep-going }}
+{{> options-output-format }}
 {{/options}}
 
 {{> section-environment }}
