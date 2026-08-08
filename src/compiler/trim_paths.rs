@@ -276,14 +276,7 @@ pub(crate) fn write_unremap_file(
         for dep in build_runner.unit_deps(&unit) {
             stack.push(dep.unit.clone());
         }
-        let (from, to) = package_remap(build_runner, &unit);
-
-        // Skipping workspace remap because debugger substitutions are global in a session.
-        // If two unremap files with different workspace roots are loaded.
-        // substitutions of `.` would override each others.
-        if to != "." {
-            insert((from, to));
-        }
+        insert(package_remap(build_runner, &unit));
     }
 
     serde_json::to_writer(

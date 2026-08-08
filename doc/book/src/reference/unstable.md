@@ -1618,6 +1618,7 @@ An example of the unremap file:
 ```json
 {"v":1}
 {"rust_version":"1.96.0-nightly","workspace_root":"/home/me/app"}
+{"from":".","to":"/home/me/app"}
 {"from":"/cargo/build-dir","to":"/home/me/app/target"}
 {"from":"/cargo/registry/6f17d22d3f0a95d1","to":"/home/me/.cargo/registry/src/index.crates.io-6f17d22d3f0a95d1"}
 {"from":"/rustc/abc123","to":"/home/me/.rustup/toolchains/nightly/lib/rustlib/src/rust"}
