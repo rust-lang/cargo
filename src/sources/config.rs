@@ -193,7 +193,8 @@ impl<'gctx> SourceConfigMap<'gctx> {
 
         let new_src = self.load_overlaid(new_id)?;
         let old_src = id.load(self.gctx)?;
-        if !new_src.supports_checksums() && old_src.supports_checksums() {
+        let old_src_supports_checksums = old_src.supports_checksums();
+        if !new_src.supports_checksums() && old_src_supports_checksums {
             bail!(
                 "\
 cannot replace `{orig}` with `{name}`, the source `{orig}` supports \
@@ -219,7 +220,12 @@ restore the source replacement configuration to continue the build
             );
         }
 
-        Ok(Box::new(ReplacedSource::new(id, new_id, new_src)))
+        Ok(Box::new(ReplacedSource::new(
+            id,
+            new_id,
+            old_src_supports_checksums,
+            new_src,
+        )))
     }
 
     /// Gets the [`Source`] for a given [`SourceId`] without performing any source replacement.
