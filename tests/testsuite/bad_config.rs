@@ -2397,21 +2397,12 @@ fn fragment_in_git_url() {
         // ...
         // [..]127.0.0.1[..]
         .with_stderr_data(str![[r#"
-[WARNING] Cargo.toml: URL fragment `#foo` in git URL is ignored for dependency (bar). If you were trying to specify a specific git revision, use `rev = "foo"` in the dependency declaration.
-[WARNING] `foo` (manifest) generated 1 warning
-[UPDATING] git repository `http://127.0.0.1/#foo`
-...
-[ERROR] failed to get `bar` as a dependency of package `foo v0.0.0 ([ROOT]/foo)`
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
-  failed to load source for dependency `bar`
+  invalid url `http://127.0.0.1/#foo` to create a git reference: URL fragments are not supported
 
-Caused by:
-  unable to update http://127.0.0.1/#foo
-
-Caused by:
-  failed to clone into: [ROOT]/home/.cargo/git/db/_empty-[HASH]
-...
+  [HELP] remove the fragment, or use `--rev`, `--branch`, or `--tag` to select a git reference
 
 "#]])
         .run();
