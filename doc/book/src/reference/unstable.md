@@ -1586,6 +1586,10 @@ Paths to all other source files will not be affected.
 
 This will not affect any hard-coded paths in the source code, such as in strings.
 
+The exact remap path prefixes are not stable across Cargo versions.
+Tools that map paths embedded in artifacts back to local sources
+should consume unremap files instead of interpreting these prefixes.
+
 ##### Unremap files
 
 When the `object` scope is active and debuginfo is enabled,
