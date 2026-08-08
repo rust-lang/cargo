@@ -26,6 +26,7 @@
 //!
 //! [source replacement]: https://doc.rust-lang.org/nightly/cargo/reference/source-replacement.html
 
+pub use self::builtin::BuiltinSource;
 pub use self::config::SourceConfigMap;
 pub use self::directory::DirectorySource;
 pub use self::git::GitSource;
@@ -37,6 +38,7 @@ pub use self::registry::{
 };
 pub use self::replaced::ReplacedSource;
 
+pub mod builtin;
 pub mod config;
 pub mod directory;
 pub mod git;

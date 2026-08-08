@@ -261,7 +261,11 @@ fn shared_std_dependency_rebuild() {
 
                 [build-dependencies]
                 dep_test = {{ path = \"{}/tests/testsuite/mock-std/dep_test\" }}
+
+                [dependencies]
+                dep_test = {{ path = \"{}/tests/testsuite/mock-std/dep_test\" }}
             ",
+                manifest_dir.replace('\\', "/"),
                 manifest_dir.replace('\\', "/")
             )
             .as_str(),
@@ -284,10 +288,15 @@ fn shared_std_dependency_rebuild() {
         )
         .build();
 
+    // One build each for the:
+    //  - build-std build
+    //  - build-dependency (for the host, with the sysroot std)
+    //  - dependency (for the host, with build-std std)
     p.cargo("build -v")
         .build_std(&setup)
-        .target_host()
         .with_stderr_data(str![[r#"
+...
+[RUNNING] `[..] rustc --crate-name dep_test [..]`
 ...
 [RUNNING] `[..] rustc --crate-name dep_test [..]`
 ...
@@ -296,15 +305,13 @@ fn shared_std_dependency_rebuild() {
 "#]])
         .run();
 
+    // Sanity check that all artifacts are reused.
+    // TODO: This test used to test that the build-dependency would be shared between `--target=host` and
+    // non-`--target` invocations, but that isn't currently testable as RUSTFLAGS set in this file's
+    // test harness apply to the non-cross-compile mode.
     p.cargo("build -v")
         .build_std(&setup)
-        .with_stderr_does_not_contain(str![[r#"
-    ...
-    [RUNNING] `[..] rustc --crate-name dep_test [..]`
-    ...
-    [RUNNING] `[..] rustc --crate-name dep_test [..]`
-    ...
-    "#]])
+        .with_stderr_does_not_contain("[RUNNING] `[..] rustc --crate-name dep_test [..]`")
         .run();
 }
 
@@ -382,6 +389,155 @@ fn check_core() {
 ...
 "#]])
         .run();
+}
+
+#[cargo_test(build_std_mock)]
+fn build_std_does_not_change_lockfile() {
+    let setup = setup();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {
+                    std::custom_api();
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("generate-lockfile").run();
+    let lockfile = p.read_lockfile();
+
+    p.cargo("build").build_std(&setup).run();
+
+    let build_std_lockfile = p.read_lockfile();
+    assert_eq!(lockfile, build_std_lockfile);
+    assert!(!build_std_lockfile.contains("name = \"core\""));
+    assert!(!build_std_lockfile.contains("name = \"std\""));
+    assert!(!build_std_lockfile.contains("name = \"alloc\""));
+}
+
+#[cargo_test(build_std_mock)]
+fn builtins_do_not_show_in_status_messages() {
+    let setup = setup();
+    let p = project()
+        .file("src/lib.rs", "#![no_std]")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                registry-dep-using-core = "1.0"
+            "#,
+        )
+        .build();
+
+    // New lockfile
+    p.cargo("c")
+        .build_std_arg(&setup, "core")
+        .with_stderr_contains("[LOCKING] 1 package [..]")
+        .with_stderr_does_not_contain("[ADDING] core")
+        .run();
+
+    // Updating lockfile
+    p.cargo("add registry-dep-using-alloc")
+        .build_std_arg(&setup, "core,alloc")
+        .with_stderr_contains("[ADDING] registry-dep-using-alloc [..]")
+        .with_stderr_contains("[LOCKING] 1 package [..]")
+        .run();
+}
+
+#[cargo_test(build_std_mock)]
+fn builtins_do_not_show_in_metadata() {
+    let setup = setup();
+    let p = project()
+        .file("src/lib.rs", "#![no_std]")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                registry-dep-using-core = "1.0"
+            "#,
+        )
+        .build();
+
+    p.cargo("metadata")
+        .build_std_arg(&setup, "core")
+        .with_stdout_contains("[..]registry-dep-using-core[..]")
+        .with_stdout_does_not_contain("[..]builtin[..]")
+        .run();
+}
+
+#[cargo_test(build_std_mock)]
+fn builtins_do_not_show_in_tree() {
+    let setup = setup();
+    let p = project()
+        .file("src/lib.rs", "#![no_std]")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                registry-dep-using-core = "1.0"
+            "#,
+        )
+        .build();
+
+    p.cargo("tree")
+        .build_std_arg(&setup, "core")
+        .with_stdout_contains("[..]registry-dep-using-core[..]")
+        .with_stdout_does_not_contain("[..]builtin[..]")
+        .run();
+}
+
+#[cargo_test(build_std_mock)]
+fn builtins_are_not_vendored() {
+    let setup = setup();
+    let p = project()
+        .file("src/lib.rs", "#![no_std]")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                registry-dep-using-core = "1.0"
+            "#,
+        )
+        .build();
+
+    p.cargo("vendor --respect-source-config")
+        .build_std_arg(&setup, "core")
+        .run();
+
+    assert!(
+        p.root()
+            .join("vendor/registry-dep-using-core/Cargo.toml")
+            .is_file()
+    );
+    assert!(!p.root().join("vendor/core").exists());
+    assert!(!p.root().join("vendor/compiler_builtins").exists());
 }
 
 #[cargo_test(build_std_mock)]
@@ -480,6 +636,9 @@ fn build_std_with_no_arg_for_core_only_target() {
 
 "#]]
             .unordered(),
+        )
+        .with_stderr_does_not_contain(
+            "[RUNNING] `[..]rustc --crate-name alloc [..]--target aarch64-unknown-none[..]`",
         )
         .run();
 }
@@ -889,4 +1048,39 @@ fn std_build_script_metadata_propagate_to_user() {
         .build();
 
     p.cargo("check").build_std(&setup).target_host().run();
+}
+
+#[cargo_test(build_std_mock)]
+fn std_build_dash_p() {
+    let setup = setup();
+
+    let p = project().file("src/main.rs", "fn main() {}").build();
+    p.cargo("b -v -p std")
+        .build_std(&setup)
+        .with_stderr_contains("[RUNNING] `[..] rustc --crate-name std [..]`")
+        .with_stderr_does_not_contain("[RUNNING] `[..] rustc --crate-name foo [..]`")
+        .run();
+
+    p.cargo("b -v -p foo")
+        .build_std(&setup)
+        .with_stderr_contains("[RUNNING] `[..] rustc --crate-name foo [..]`")
+        .with_stderr_does_not_contain("[RUNNING] `[..] rustc --crate-name std [..]`")
+        .run();
+
+    p.cargo("clean -v -p std")
+        .build_std(&setup)
+        .with_stderr_contains("[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total")
+        .run();
+
+    p.cargo("b -v -p foo")
+        .build_std(&setup)
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `[..] rustc --crate-name std [..]`
+...
+[RUNNING] `[..] rustc --crate-name foo [..]`
+...
+"#]])
+        .with_stderr_does_not_contain("[RUNNING] `[..] rustc --crate-name core [..]`")
+        .run();
 }

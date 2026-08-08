@@ -1,7 +1,10 @@
 use std::collections::BTreeMap;
 use std::fmt::Debug;
+use std::path::Path;
 use std::sync::OnceLock;
 
+use cargo::GlobalContext;
+use cargo::compiler::standard_lib::detect_sysroot_src_path;
 use cargo::util::IntoUrl;
 use cargo::workspace::dependency::DepKind;
 use cargo::workspace::{Dependency, GitReference, PackageId, SourceId, Summary};
@@ -87,6 +90,29 @@ impl<T: AsRef<str>, U: AsRef<str>> ToPkgId for (T, U) {
     }
 }
 
+#[derive(Copy, Clone)]
+pub struct BuiltinPid {
+    pub name: &'static str,
+}
+
+impl ToPkgId for BuiltinPid {
+    fn to_pkgid(&self) -> PackageId {
+        PackageId::try_new(self.name, "0.0.0", builtin_loc()).unwrap()
+    }
+}
+
+#[derive(Copy, Clone)]
+pub struct BuiltinPidWithGctx<'a> {
+    pub name: &'static str,
+    pub gctx: &'a GlobalContext,
+}
+
+impl<'a> ToPkgId for BuiltinPidWithGctx<'a> {
+    fn to_pkgid(&self) -> PackageId {
+        PackageId::try_new(self.name, "0.0.0", builtin_loc_sysroot(self.gctx)).unwrap()
+    }
+}
+
 #[macro_export]
 macro_rules! pkg {
     ($pkgid:expr => [$($deps:expr),* $(,)? ]) => ({
@@ -106,6 +132,22 @@ fn registry_loc() -> SourceId {
         SourceId::for_registry(&"https://example.com".into_url().unwrap()).unwrap()
     });
     *example_dot
+}
+
+fn builtin_loc() -> SourceId {
+    static LOCAL_PATH: OnceLock<SourceId> = OnceLock::new();
+    let local_path = LOCAL_PATH.get_or_init(|| {
+        SourceId::for_builtin(Path::new(&std::env::current_dir().unwrap())).unwrap()
+    });
+    *local_path
+}
+
+fn builtin_loc_sysroot(gctx: &GlobalContext) -> SourceId {
+    static LOCAL_PATH: OnceLock<SourceId> = OnceLock::new();
+    let local_path = LOCAL_PATH.get_or_init(|| {
+        SourceId::for_builtin(&detect_sysroot_src_path(gctx, None).unwrap()).unwrap()
+    });
+    *local_path
 }
 
 pub fn pkg<T: ToPkgId>(name: T) -> Summary {
@@ -215,6 +257,10 @@ pub fn dep_loc(name: &str, location: &str) -> Dependency {
     Dependency::parse(name, Some("1.0.0"), source_id).unwrap()
 }
 
+pub fn dep_builtin(name: &str) -> Dependency {
+    Dependency::parse(name, None, builtin_loc()).unwrap()
+}
+
 pub fn dep_kind(name: &str, kind: DepKind) -> Dependency {
     let mut dep = dep(name);
     dep.set_kind(kind);
@@ -233,6 +279,12 @@ pub fn registry(pkgs: Vec<Summary>) -> Vec<Summary> {
 
 pub fn names<P: ToPkgId>(names: &[P]) -> Vec<PackageId> {
     names.iter().map(|name| name.to_pkgid()).collect()
+}
+
+/// For a set of name specifiers of varying types
+#[macro_export]
+macro_rules! names {
+    ($($name:expr),* $(,)?) => {&vec![$($name.to_pkgid()),*]};
 }
 
 pub fn loc_names(names: &[(&'static str, &'static str)]) -> Vec<PackageId> {

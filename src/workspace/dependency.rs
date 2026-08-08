@@ -51,6 +51,10 @@ struct Inner {
     // This dependency should be used only for this platform.
     // `None` means *all platforms*.
     platform: Option<Platform>,
+    // Opaque dependencies should not be traversed any deeper by the resolver. Required packages should
+    // be resolved as roots of a separate resolver run and the dependency handled during unit
+    // generation.
+    opaque: bool,
 }
 
 #[derive(Serialize)]
@@ -162,8 +166,33 @@ impl Dependency {
                 platform: None,
                 explicit_name_in_toml: None,
                 artifact: None,
+                opaque: source_id.is_builtin(), // All deps on builtin packages are opaque
             }),
         }
+    }
+
+    pub fn new_implicit_builtin(name: InternedString, path: &Path) -> CargoResult<Dependency> {
+        Ok(Dependency {
+            inner: Arc::new(Inner {
+                name,
+                source_id: SourceId::for_builtin(path)?,
+                registry_id: None,
+                req: OptVersionReq::Any,
+                kind: DepKind::Normal,
+                only_match_name: false,
+                optional: false,
+                public: true,
+                // Note that the feature specifications here will be thrown away during Unit
+                // generation if `-Zbuild-std-features` is enabled
+                features: Vec::new(),
+                default_features: false,
+                specified_req: false,
+                platform: None,
+                explicit_name_in_toml: None,
+                artifact: None,
+                opaque: true,
+            }),
+        })
     }
 
     pub fn serialized(
@@ -410,6 +439,10 @@ impl Dependency {
 
     pub fn is_optional(&self) -> bool {
         self.inner.optional
+    }
+
+    pub fn is_opaque(&self) -> bool {
+        self.inner.opaque
     }
 
     /// Returns `true` if the default features of the dependency are requested.

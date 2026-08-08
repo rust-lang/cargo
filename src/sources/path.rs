@@ -1184,12 +1184,15 @@ fn read_nested_packages(
     // Registry sources are not allowed to have `path=` dependencies because
     // they're all translated to actual registry dependencies.
     //
+    // The standard library source intentionally does not include some test crates leading to broken
+    // dev-dependencies links. The main directory walk already gets all the packages we need.
+    //
     // We normalize the path here ensure that we don't infinitely walk around
     // looking for crates. By normalizing we ensure that we visit this crate at
     // most once.
     //
     // TODO: filesystem/symlink implications?
-    if !source_id.is_registry() {
+    if !source_id.is_registry() && !source_id.is_builtin() {
         for p in nested.iter() {
             let path = paths::normalize_path(&path.join(p));
             let result =

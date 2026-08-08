@@ -7,7 +7,7 @@ use crate::ops::{self, Packages};
 use crate::resolver::HasDevUnits;
 use crate::resolver::Resolve;
 use crate::resolver::features::{CliFeatures, FeaturesFor, ResolvedFeatures};
-use crate::util::errors::CargoResult;
+use crate::util::{CargoResult, GlobalContext};
 use crate::workspace::profiles::{Profiles, UnitFor};
 use crate::workspace::{PackageId, PackageSet, Workspace};
 
@@ -16,7 +16,11 @@ use std::path::PathBuf;
 
 use super::BuildConfig;
 
-fn std_crates<'a>(crates: &'a [String], default: &'static str, units: &[Unit]) -> HashSet<&'a str> {
+pub fn std_crates<'a>(
+    crates: &'a [String],
+    default: &'static str,
+    units: &[Unit],
+) -> HashSet<&'a str> {
     let mut crates = HashSet::from_iter(crates.iter().map(|s| s.as_str()));
     // This is a temporary hack until there is a more principled way to
     // declare dependencies in Cargo.toml.
@@ -54,12 +58,13 @@ pub fn resolve_std<'gctx>(
     crates: &[String],
     kinds: &[CompileKind],
 ) -> CargoResult<(PackageSet<'gctx>, Resolve, ResolvedFeatures)> {
-    let src_path = detect_sysroot_src_path(ws)?;
+    let src_path = detect_sysroot_src_path(ws.gctx(), Some(ws))?;
     let std_ws_manifest_path = src_path.join("Cargo.toml");
     let gctx = ws.gctx();
     // TODO: Consider doing something to enforce --locked? Or to prevent the
     // lock file from being written, such as setting ephemeral.
     let mut std_ws = Workspace::new(&std_ws_manifest_path, gctx)?;
+    std_ws.set_is_std(true);
     // Don't require optional dependencies in this workspace, aka std's own
     // `[dev-dependencies]`. No need for us to generate a `Resolve` which has
     // those included because we'll never use them anyway.
@@ -217,15 +222,17 @@ fn generate_roots(
     Ok(())
 }
 
-fn detect_sysroot_src_path(ws: &Workspace<'_>) -> CargoResult<PathBuf> {
-    if let Some(s) = ws.gctx().get_env_os("__CARGO_TESTS_ONLY_SRC_ROOT") {
+pub fn detect_sysroot_src_path(
+    gctx: &GlobalContext,
+    ws: Option<&Workspace<'_>>,
+) -> CargoResult<PathBuf> {
+    if let Some(s) = gctx.get_env_os("__CARGO_TESTS_ONLY_SRC_ROOT") {
         return Ok(s.into());
     }
 
     // NOTE: This is temporary until we figure out how to acquire the source.
-    let rustc = ws.gctx().load_global_rustc(Some(ws))?;
-    let src_path = ws
-        .gctx()
+    let rustc = gctx.load_global_rustc(ws)?;
+    let src_path = gctx
         .get_sysroot(&rustc)
         .expect("able to invoke rustc")
         .join("lib")
@@ -240,7 +247,7 @@ fn detect_sysroot_src_path(ws: &Workspace<'_>) -> CargoResult<PathBuf> {
              library, try:\n        rustup component add rust-src",
             lock
         );
-        match ws.gctx().get_env("RUSTUP_TOOLCHAIN") {
+        match gctx.get_env("RUSTUP_TOOLCHAIN") {
             Ok(rustup_toolchain) => {
                 anyhow::bail!("{} --toolchain {}", msg, rustup_toolchain);
             }
