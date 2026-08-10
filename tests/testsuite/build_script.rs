@@ -3598,7 +3598,8 @@ fn cfg_override_test() {
         .file("tests/test.rs", "#[cfg(foo)] #[test] fn test_bar() {}")
         .build();
     p.cargo("test -v")
-        .with_stderr_data(str![[r#"
+        .with_stderr_data(
+            str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo[..]`
 [RUNNING] `rustc --crate-name foo[..]`
@@ -3609,7 +3610,9 @@ fn cfg_override_test() {
 [DOCTEST] foo
 [RUNNING] `rustdoc [..] --cfg foo[..]`
 
-"#]])
+"#]]
+            .unordered(),
+        )
         .with_stdout_data(str![[r#"
 
 running 1 test
