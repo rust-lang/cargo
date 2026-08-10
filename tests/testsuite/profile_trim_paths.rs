@@ -261,6 +261,10 @@ fn registry_dependency() {
     "workspace_root": "[ROOT]/foo"
   },
   {
+    "from": ".",
+    "to": "[ROOT]/foo"
+  },
+  {
     "from": "/cargo/build-dir",
     "to": "[ROOT]/foo/target"
   },
@@ -420,6 +424,10 @@ fn git_dependency() {
     "workspace_root": "[ROOT]/foo"
   },
   {
+    "from": ".",
+    "to": "[ROOT]/foo"
+  },
+  {
     "from": "/cargo/build-dir",
     "to": "[ROOT]/foo/target"
   },
@@ -497,6 +505,10 @@ cocktail-bar/src/lib.rs
     "workspace_root": "[ROOT]/foo"
   },
   {
+    "from": ".",
+    "to": "[ROOT]/foo"
+  },
+  {
     "from": "/cargo/build-dir",
     "to": "[ROOT]/foo/target"
   },
@@ -569,6 +581,10 @@ fn path_dependency_outside_workspace() {
   {
     "rust_version": "[..]",
     "workspace_root": "[ROOT]/foo"
+  },
+  {
+    "from": ".",
+    "to": "[ROOT]/foo"
   },
   {
     "from": "/cargo/build-dir",
@@ -683,6 +699,10 @@ fn vendored_dependencies() {
     "workspace_root": "[ROOT]/foo"
   },
   {
+    "from": ".",
+    "to": "[ROOT]/foo"
+  },
+  {
     "from": "/cargo/build-dir",
     "to": "[ROOT]/foo/target"
   },
@@ -790,6 +810,10 @@ fn vendored_dependencies_outside_workspace() {
   {
     "rust_version": "[..]",
     "workspace_root": "[ROOT]/foo"
+  },
+  {
+    "from": ".",
+    "to": "[ROOT]/foo"
   },
   {
     "from": "/cargo/build-dir",
@@ -1539,6 +1563,73 @@ fn command_output(command: &mut std::process::Command, name: &str) -> std::proce
 }
 
 #[cargo_test]
+fn workspace_remap_with_root_dir() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+
+                [dependencies]
+                bar = { path = "bar" }
+
+                [profile.dev]
+                trim-paths = "object"
+           "#,
+        )
+        .file("src/main.rs", "fn main() { bar::f(); }")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("bar/src/lib.rs", "pub fn f() {}")
+        .build();
+
+    p.cargo("build --verbose -Ztrim-paths -Zroot-dir=..")
+        .masquerade_as_nightly_cargo(&["-Ztrim-paths", "-Zroot-dir"])
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to highest compatible version
+[COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
+[RUNNING] `rustc [..]--remap-path-scope=object --remap-path-prefix=[ROOT]=. --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc [..]--remap-path-scope=object --remap-path-prefix=[ROOT]=. --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    let unremap_file = unremap_file_path(&p.bin("foo"));
+    assert_e2e().eq(
+        &std::fs::read_to_string(&unremap_file).unwrap(),
+        str![[r#"
+[
+  {
+    "v": 1
+  },
+  {
+    "rust_version": "[..]",
+    "workspace_root": "[ROOT]/foo"
+  },
+  {
+    "from": ".",
+    "to": "[ROOT]"
+  },
+  {
+    "from": "/cargo/build-dir",
+    "to": "[ROOT]/foo/target"
+  },
+  {
+    "from": "/rustc/[..]",
+    "to": "[..]/lib/rustlib/src/rust"
+  }
+]
+"#]]
+        .is_json()
+        .against_jsonlines(),
+    );
+}
+
+#[cargo_test]
 fn unremap_file_rebuild() {
     let p = project()
         .file(
@@ -2066,6 +2157,10 @@ fn unremap_debugger_project() -> cargo_test_support::Project {
     "workspace_root": "[ROOT]/foo"
   },
   {
+    "from": ".",
+    "to": "[ROOT]/foo"
+  },
+  {
     "from": "/cargo/build-dir",
     "to": "[ROOT]/foo/target"
   },
@@ -2101,7 +2196,7 @@ fn unremap_substitutions(artifact: &std::path::Path) -> Vec<(String, String)> {
     let version = values.next().unwrap().unwrap();
     assert_eq!(version["v"], 1);
 
-    let metadata = values.next().unwrap().unwrap();
+    let _metadata = values.next().unwrap().unwrap();
 
     let mut pairs = Vec::new();
 
@@ -2112,12 +2207,6 @@ fn unremap_substitutions(artifact: &std::path::Path) -> Vec<(String, String)> {
             record["to"].as_str().unwrap().to_owned(),
         ));
     }
-
-    // remap local workspace source
-    pairs.push((
-        ".".to_owned(),
-        metadata["workspace_root"].as_str().unwrap().to_owned(),
-    ));
 
     pairs
 }
