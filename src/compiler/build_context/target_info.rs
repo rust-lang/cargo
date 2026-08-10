@@ -165,8 +165,6 @@ impl TargetInfo {
     /// invocation is cached by [`Rustc::cached_output`].
     ///
     /// Search `Tricky` to learn why querying `rustc` several times is needed.
-    ///
-    /// When a Workspace is provided,
     #[tracing::instrument(skip_all)]
     pub fn new(
         gctx: &GlobalContext,
