@@ -77,6 +77,7 @@
 //! Immediate dependency’s hashes              | ✓[^1]       | ✓                        | ✓
 //! [`CompileKind`] (host/target)              | ✓           | ✓                        | ✓
 //! `__CARGO_DEFAULT_LIB_METADATA`[^4]         |             | ✓                        | ✓
+//! `__CARGO_RUSTC_BOOTSTRAP_WS_REMAP`[^2]     | ✓           |                          |
 //! `package_id`                               |             | ✓                        | ✓
 //! Target src path relative to ws             | ✓           |                          |
 //! Target flags (test/bench/for_host/edition) | ✓           |                          |
@@ -91,6 +92,9 @@
 //! `--extern priv:`                           | ✓           |                          |
 //!
 //! [^1]: Bin dependencies are not included.
+//!
+//! [^2]: `__CARGO_RUSTC_BOOTSTRAP_WS_REMAP` is set by rustc bootstrap
+//!       to customize remap-path-prefix
 //!
 //! [^3]: See below for details on mtime tracking.
 //!
@@ -1631,6 +1635,18 @@ fn calculate_normal(
         build_runner.bcx.extra_args_for(unit),
         build_runner.lto[unit],
         unit.pkg.manifest().lint_rustflags(),
+        unit.profile
+            .trim_paths
+            .as_ref()
+            .filter(|trim_paths| !trim_paths.is_none())
+            .map(|_| {
+                build_runner
+                    .bcx
+                    .gctx
+                    .get_env(super::trim_paths::WS_REMAP_ENV)
+                    .ok()
+                    .filter(|prefix| !prefix.is_empty())
+            }),
     ));
     let mut config = StableHasher::new();
     let linker = if unit.target.for_host() && !build_runner.bcx.gctx.target_applies_to_host()? {
