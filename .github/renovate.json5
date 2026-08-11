@@ -2,6 +2,8 @@
   schedule: [
     'before 5am on the first day of the month',
   ],
+  minimumReleaseAge: "3 days",
+  internalChecksFilter: "strict",
   semanticCommits: 'enabled',
   configMigration: true,
   dependencyDashboard: true,
