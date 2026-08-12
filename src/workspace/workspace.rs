@@ -2108,14 +2108,6 @@ fn warn_unused_min_publish_age(gctx: &GlobalContext) -> CargoResult<()> {
             .warn("ignoring `registry.global-min-publish-age` without `-Zmin-publish-age`")?;
     }
 
-    if gctx
-        .get::<Option<String>>("registry.min-publish-age")?
-        .is_some()
-    {
-        gctx.shell()
-            .warn("ignoring `registry.min-publish-age` without `-Zmin-publish-age`")?;
-    }
-
     if let Some(context::ConfigValue::Table(registries, _)) = gctx.values()?.get("registries") {
         for (name, val) in registries {
             if let context::ConfigValue::Table(val, _) = val {

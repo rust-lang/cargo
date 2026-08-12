@@ -551,8 +551,6 @@ pub struct GlobalRegistryConfig {
     pub credential_provider: Option<PathAndArgs>,
     pub secret_key: OptValue<Secret<String>>,
     pub secret_key_subject: Option<String>,
-    /// Minimum publish age threshold for RFC 3923
-    pub min_publish_age: Option<String>,
     /// Global default Minimum publish age threshold for RFC 3923
     pub global_min_publish_age: Option<String>,
     #[serde(rename = "default")]
@@ -569,7 +567,8 @@ impl GlobalRegistryConfig {
             credential_provider: self.credential_provider,
             secret_key: self.secret_key,
             secret_key_subject: self.secret_key_subject,
-            min_publish_age: self.min_publish_age,
+            // `min-publish-age` is per-registry config only.
+            min_publish_age: None,
             _protocol: None,
         }
     }

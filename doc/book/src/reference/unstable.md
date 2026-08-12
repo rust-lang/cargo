@@ -2123,8 +2123,7 @@ incompatible-publish-age = "deny" # Specifies how resolver reacts to these
 min-publish-age = "..."  # Override `registry.global-min-publish-age` for this registry
 
 [registry]
-min-publish-age = "..."  # Override `registry.global-min-publish-age` for crates.io
-global-min-publish-age = "0"  # Minimum time span allowed for packages from this registry
+global-min-publish-age = "0"  # Minimum time span allowed for registry packages by default
 ```
 
 #### `resolver.incompatible-publish-age`
@@ -2135,7 +2134,7 @@ global-min-publish-age = "0"  # Minimum time span allowed for packages from this
 
 When resolving the version of a dependency,
 specify the behavior for versions with a `pubtime` (if present)
-that is incompatible with `registry.min-publish-age`.
+that is incompatible with the configured `min-publish-age`.
 Values include:
 
 - `allow`: treat pubtime-incompatible versions like any other version
@@ -2157,23 +2156,6 @@ It supports the following values:
 
 - An integer followed by "seconds", "minutes", "hours", "days", "weeks", or "months"
 - `"0"` to allow all packages
-
-#### `registry.min-publish-age`
-
-* Type: String
-* Default: none
-* Environment: `CARGO_REGISTRY_MIN_PUBLISH_AGE`
-
-Specifies the minimum timespan since a version's `pubtime` that it may be
-considered for `resolver.incompatible-publish-age` for packages from crates.io.
-If not set, `registry.global-min-publish-age` will be used.
-
-It supports the following values:
-
-- An integer followed by "seconds", "minutes", "hours", "days", "weeks", or "months"
-- `"0"` to allow all packages
-
-Generally, `"0"`, `"N days"`, and `"N weeks"` will be used.
 
 #### `registry.global-min-publish-age`
 
