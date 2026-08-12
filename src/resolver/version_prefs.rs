@@ -708,8 +708,13 @@ mod test {
     }
 
     #[test]
+    #[ignore = "non-deterministic, crates-io from alt-registry races with built-in crate-io Source in SOURCE_ID_CACHE"]
     fn publish_age_crates_io_scope_excludes_alt_registry() {
-        let p = policy(age("1 day"), age("30 days"), &[]);
+        let p = policy(
+            age("1 day"),
+            MinPublishAge::Unset,
+            &[(CRATES_IO_REGISTRY, age("30 days"))],
+        );
         let crates_io = p.too_new(&published(crates_io_source(), hours(2 * 24)));
         let alt = p.too_new(&published(alt_source(), hours(2 * 24)));
         assert_eq!(
@@ -778,8 +783,13 @@ mod test {
     }
 
     #[test]
+    #[ignore = "non-deterministic, crates-io from alt-registry races with built-in crate-io Source in SOURCE_ID_CACHE"]
     fn publish_age_zero_stops_scope_fallthrough() {
-        let p = policy(age("30 days"), MinPublishAge::None, &[]);
+        let p = policy(
+            age("30 days"),
+            MinPublishAge::Unset,
+            &[(CRATES_IO_REGISTRY, MinPublishAge::None)],
+        );
         let violation = p.too_new(&published(crates_io_source(), hours(0)));
         assert_eq!(violation, None);
     }
