@@ -11,6 +11,7 @@ use crate::context::CargoResolverConfig;
 use crate::context::GlobalRegistryConfig;
 use crate::context::IncompatiblePublishAge;
 use crate::context::RegistryConfig;
+use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::CargoResult;
 use crate::util::GlobalContext;
 use crate::util::interning::InternedString;
@@ -282,9 +283,15 @@ impl PublishAgePolicy {
     /// 2. `registry.min-publish-age`
     /// 3. `registry.global-min-publish-age`
     fn min_age(&self, source_id: SourceId) -> &MinPublishAge {
-        // `registries.<name>` also covers crates.io, whose name is `crates-io`.
-        if let Some(min_age) = source_id
-            .alt_registry_key()
+        let name = source_id.alt_registry_key().or_else(|| {
+            // Our crates.io source ID has two forms:
+            // One with al_registry_key name and one without.
+            // SOURCE_ID_CACHE hold only one instance of them,
+            // so there may be a race.
+            // We need to fall back if missing one.
+            source_id.is_crates_io().then_some(CRATES_IO_REGISTRY)
+        });
+        if let Some(min_age) = name
             .and_then(|name| self.per_registry.get(name))
             .filter(|min_age| min_age.is_set())
         {
@@ -708,7 +715,6 @@ mod test {
     }
 
     #[test]
-    #[ignore = "non-deterministic, crates-io from alt-registry races with built-in crate-io Source in SOURCE_ID_CACHE"]
     fn publish_age_crates_io_scope_excludes_alt_registry() {
         let p = policy(
             age("1 day"),
@@ -783,7 +789,6 @@ mod test {
     }
 
     #[test]
-    #[ignore = "non-deterministic, crates-io from alt-registry races with built-in crate-io Source in SOURCE_ID_CACHE"]
     fn publish_age_zero_stops_scope_fallthrough() {
         let p = policy(
             age("30 days"),
