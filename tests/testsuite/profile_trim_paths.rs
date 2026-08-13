@@ -1862,8 +1862,8 @@ fn unremap_file_with_cargo_clean() {
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
         .run();
 
-    assert!(unremap_file_path(&p.bin("foo")).exists());
-    assert_eq!(p.glob("target/**/*.trim-paths.jsonl").count(), 1);
+    assert!(!unremap_file_path(&p.bin("foo")).exists());
+    assert_eq!(p.glob("target/**/*.trim-paths.jsonl").count(), 0);
 }
 
 // MSVC always emits a PDB when debuginfo is on (which the unremap file requires),
