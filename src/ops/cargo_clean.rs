@@ -322,6 +322,11 @@ fn clean_specs(
                                     .to_string_lossy()
                                     .into_owned();
 
+                                let uplifted_path = uplift_dir.join(&uplifted_filename);
+                                // Unremap file emitted for `-Ztrim-paths`.
+                                let unremap = trim_paths::append_unremap_suffix(&uplifted_path);
+                                clean_ctx.rm_rf(&unremap)?;
+
                                 dirs_to_clean.mark_utf(uplift_dir, |filename| {
                                     filename == uplifted_filename || filename == dep_info
                                 });
