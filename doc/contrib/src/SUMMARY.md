@@ -9,6 +9,7 @@
     - [Writing an RFC](./process/rfc.md)
     - [Unstable features](./process/unstable.md)
     - [Security issues](./process/security.md)
+    - [LLM usage](./process/llm-usage.md)
 - [Design Principles](./design.md)
 - [Implementing a Change](./implementation/index.md)
     - [Architecture](./implementation/architecture.md)
