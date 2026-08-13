@@ -77,7 +77,6 @@ Each new feature described below should explain how to use it.
     * [msrv-policy](#msrv-policy) --- MSRV-aware resolver and version selection
     * [precise-pre-release](#precise-pre-release) --- Allows pre-release versions to be selected with `update --precise`
     * [sbom](#sbom) --- Generates SBOM pre-cursor files for compiled artifacts
-    * [update-breaking](#update-breaking) --- Allows upgrading to breaking versions with `update --breaking`
     * [feature-unification](#feature-unification) --- Enable new feature unification modes in workspaces
     * [lockfile-publish-time](#lockfile-publish-time) --- Limit resolver to packages older than the specified time
     * [min-publish-age](#min-publish-age) --- Filters out dependency versions published more recently than a configured minimum age.
@@ -502,30 +501,6 @@ that are uplifted into the target or artifact directories.
   }
 }
 ```
-
-## update-breaking
-
-* Tracking Issue: [#12425](https://github.com/rust-lang/cargo/issues/12425)
-
-Allow upgrading dependencies version requirements in `Cargo.toml` across SemVer
-incompatible versions using with the `--breaking` flag.
-
-This only applies to dependencies when
-- The package is a dependency of a workspace member
-- The dependency is not renamed
-- A SemVer-incompatible version is available
-- The "SemVer operator" is used (`^` which is the default)
-
-Users may further restrict which packages get upgraded by specifying them on
-the command line.
-
-Example:
-```console
-$ cargo +nightly -Zunstable-options update --breaking
-$ cargo +nightly -Zunstable-options update --breaking clap
-```
-
-*This is meant to fill a similar role as [cargo-upgrade](https://github.com/killercup/cargo-edit/)*
 
 ## build-std
 * Tracking Repository: <https://github.com/rust-lang/wg-cargo-std-aware>
@@ -2485,3 +2460,8 @@ Support for `resolver.lockfile-path` config field has been stabilized in Rust 1.
 ## warnings
 
 The `build.warnings` config field has been stabilized in Rust 1.97.
+
+## update-breaking
+
+The `cargo update -Zunstable-options --breaking` flag has been removed in 1.99-nightly.
+See <https://github.com/rust-lang/cargo/pull/17333> fopr the reason for its removal.
