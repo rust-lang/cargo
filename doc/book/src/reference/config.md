@@ -1341,7 +1341,7 @@ If none of `branch`, `tag`, or `rev` is set, defaults to the `master` branch.
 ### `[target]`
 
 The `[target]` table is used for specifying settings for specific platform
-targets. It consists of a sub-table which is either a [platform triple][target triple] 
+targets. It consists of a sub-table which is either a [platform triple][target triple]
 or a [`cfg()` expression]. The given values will be used if the target platform
 matches either the `<triple>` value or the `<cfg>` expression.
 
@@ -1404,7 +1404,7 @@ the `<triple>` will take precedence. It is an error if more than one
 * Default: none
 * Environment: `CARGO_TARGET_<triple>_RUSTFLAGS`
 
-Passes a set of custom flags to the compiler for this [`<triple>`]. 
+Passes a set of custom flags to the compiler for this [`<triple>`].
 The value may be an array of strings or a space-separated string.
 
 See [`build.rustflags`](#buildrustflags) for more details on the different

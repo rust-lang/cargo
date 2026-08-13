@@ -101,7 +101,7 @@ Registry sources can use [either git or sparse HTTP protocol][protocols]:
 # Git protocol
 registry = "ssh://git@example.com/path/to/index.git"
 
-# Sparse HTTP protocol  
+# Sparse HTTP protocol
 registry = "sparse+https://example.com/path/to/index"
 
 # HTTPS git protocol

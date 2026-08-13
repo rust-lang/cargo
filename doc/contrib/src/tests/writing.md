@@ -77,7 +77,7 @@ Note: You will commonly need to call `unordered()` before passing your snapshot 
 #### Testing Nightly Features
 
 If you are testing a Cargo feature that only works on "nightly" Cargo, then
-you need to call `masquerade_as_nightly_cargo` on the process builder and pass 
+you need to call `masquerade_as_nightly_cargo` on the process builder and pass
 the name of the feature as the reason, like this:
 
 ```rust,ignore

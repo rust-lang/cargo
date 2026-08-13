@@ -122,7 +122,7 @@ Each new feature described below should explain how to use it.
     * [unit-graph](#unit-graph) --- Emits JSON for Cargo's internal graph structure.
     * [`cargo rustc --print`](#rustc---print) --- Calls rustc with `--print` to display information from rustc.
     * [Build analysis](#build-analysis) --- Record and persist detailed build metrics across runs, with new commands to query past builds.
-    * [`rustc-unicode`](#rustc-unicode) --- Enables `rustc`'s unicode error format in Cargo's error messages 
+    * [`rustc-unicode`](#rustc-unicode) --- Enables `rustc`'s unicode error format in Cargo's error messages
 * Configuration
     * [`cargo config`](#cargo-config) --- Adds a new subcommand for viewing config files.
 * Registries
@@ -310,7 +310,7 @@ version = "0.0.1"
 build = ["foo.rs", "bar.rs"]
 ```
 
-**Accessing Output Directories**:  Output directory of each build script can be accessed by using `<script-name>_OUT_DIR` 
+**Accessing Output Directories**:  Output directory of each build script can be accessed by using `<script-name>_OUT_DIR`
   where the `<script-name>` is the file-stem of the build script, exactly as-is.
   For example, `bar_OUT_DIR` for script at `foo/bar.rs`. (Only set during compilation, can be accessed via `env!` macro)
 
@@ -465,7 +465,7 @@ that are uplifted into the target or artifact directories.
         {
           // Index in to the crates array.
           "index": 1,
-          // Dependency kind: 
+          // Dependency kind:
           // Normal: A dependency linked to the artifact produced by this crate.
           // Build: A compile-time dependency used to build this crate (build-script or proc-macro).
           "kind": "normal"
@@ -1843,7 +1843,7 @@ When in doubt, you can discuss this in [#14520](https://github.com/rust-lang/car
 
 - zsh:
   Add `source <(CARGO_COMPLETE=zsh cargo +nightly)` to your `.zshrc`.
-  
+
 - fish:
   Add `source (CARGO_COMPLETE=fish cargo +nightly | psub)` to `$XDG_CONFIG_HOME/fish/completions/cargo.fish`
 
@@ -1973,7 +1973,7 @@ The `-Zbuild-analysis` feature records and persists detailed build metrics on di
 with new commands to query past builds.
 
 When enabled,
-Cargo writes build logs in JSONL format to the `$CARGO_HOME/log/` directory 
+Cargo writes build logs in JSONL format to the `$CARGO_HOME/log/` directory
 Each cargo invocation produces a log file named with a unique session ID.
 These logs contain timing information, rebuild reasons, and other build metadata
 that can be analyzed with the `cargo report` subcommands.

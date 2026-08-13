@@ -28,7 +28,7 @@ Finally, run `cargo login` to save your registry token in 1password.
 
 `cargo-credential-1password` supports the following command-line arguments:
 
-* `--account`: The account name to use. For a list of available accounts, 
+* `--account`: The account name to use. For a list of available accounts,
   run `op account list`.
 * `--vault`: The vault name to use. For a list of available vaults,
   run `op vault list`.

@@ -151,7 +151,7 @@ one detailed below.
 * [`cargo::rustc-cfg=KEY[="VALUE"]`](#rustc-cfg) --- Enables compile-time `cfg`
   settings.
 * [`cargo::rustc-check-cfg=CHECK_CFG`](#rustc-check-cfg) -- Register custom `cfg`s as
-  expected for compile-time checking of configs. 
+  expected for compile-time checking of configs.
 * [`cargo::rustc-env=VAR=VALUE`](#rustc-env) --- Sets an environment variable.
 - [`cargo::error=MESSAGE`](#cargo-error) --- Displays an error on the terminal.
 * [`cargo::warning=MESSAGE`](#cargo-warning) --- Displays a warning on the
@@ -467,11 +467,11 @@ key-value pairs. This metadata is set with the `cargo::metadata=KEY=VALUE`
 instruction.
 
 The metadata is passed to the build scripts of **dependent** packages. For
-example, if the package `foo` depends on `bar`, which links `baz`, then if 
+example, if the package `foo` depends on `bar`, which links `baz`, then if
 `bar` generates `key=value` as part of its build script metadata, then the
 build script of `foo` will have the environment variables `DEP_BAZ_KEY=value`
 (note that the value of the `links` key is used and the case change for `key`).
-See the ["Using another `sys` crate"][using-another-sys] for an example of 
+See the ["Using another `sys` crate"][using-another-sys] for an example of
 how this can be used.
 
 Note that metadata is only passed to immediate dependents, not transitive

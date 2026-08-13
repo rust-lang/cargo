@@ -15,7 +15,7 @@ on:
   push:
   pull_request:
 
-env: 
+env:
   CARGO_TERM_COLOR: always
 
 jobs:
@@ -33,7 +33,7 @@ jobs:
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
       - run: cargo build --verbose
       - run: cargo test --verbose
-  
+
 ```
 
 This will test all three release channels (note a failure in any toolchain version will fail the entire job). You can also click `"Actions" > "new workflow"` in the GitHub UI and select Rust to add the [default configuration](https://github.com/actions/starter-workflows/blob/main/ci/rust.yml) to your repo. See [GitHub Actions documentation](https://docs.github.com/en/actions) for more information.

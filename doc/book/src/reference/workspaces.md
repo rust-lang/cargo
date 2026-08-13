@@ -87,7 +87,7 @@ By having a workspace without a root package,
 - Commands run in the workspace root will run against all workspace
   members by default, see [`default-members`](#the-default-members-field).
 
-## The `members` and `exclude` fields 
+## The `members` and `exclude` fields
 
 The `members` and `exclude` fields define which packages are members of
 the workspace:
