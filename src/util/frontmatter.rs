@@ -461,12 +461,12 @@ content: "fn main() {}\n"
     #[test]
     fn split_infostring_whitespace() {
         assert_source(
-            r#"--- cargo 
-[dependencies]
-time="0.1.25"
----
-fn main() {}
-"#,
+            "--- cargo \n\
+[dependencies]\n\
+time=\"0.1.25\"\n\
+---\n\
+fn main() {}\n\
+",
             str![[r#"
 shebang: None
 info: "cargo"
@@ -514,18 +514,18 @@ content: "fn main() {}"
     #[test]
     fn split_leading_newlines() {
         assert_source(
-            r#"#!/usr/bin/env cargo
-    
-
-
----
-[dependencies]
-time="0.1.25"
----
-
-
-fn main() {}
-"#,
+            "#!/usr/bin/env cargo\n\
+    \n\
+\n\
+\n\
+---\n\
+[dependencies]\n\
+time=\"0.1.25\"\n\
+---\n\
+\n\
+\n\
+fn main() {}\n\
+",
             str![[r##"
 shebang: "#!/usr/bin/env cargo\n"
 info: None

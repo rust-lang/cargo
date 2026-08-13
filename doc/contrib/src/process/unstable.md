@@ -69,7 +69,7 @@ This can also serve as a place for the final documentation to live until its sta
 
 [unstable chapter]: https://github.com/rust-lang/cargo/blob/master/doc/book/src/reference/unstable.md
 
-## Pre-Stabilization 
+## Pre-Stabilization
 
 Once an unstable feature is "complete", the search for users to test
 and give feedback begins:
