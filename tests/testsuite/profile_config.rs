@@ -261,7 +261,7 @@ fn profile_config_all_options() {
         .env_remove("CARGO_INCREMENTAL")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo [..] -C opt-level=1 -C panic=abort -C lto[..]-C codegen-units=2 -C debuginfo=2 [..]-C debug-assertions=on -C overflow-checks=off [..]-C rpath --out-dir [ROOT]/foo/target/release/deps -C incremental=[ROOT]/foo/target/release/incremental[..]`
+[RUNNING] `rustc --crate-name foo [..] -C opt-level=1 -C panic=abort -C lto[..]-C codegen-units=2 -C debuginfo=2 [..]-C debug-assertions=on -C overflow-checks=off [..]-C rpath --out-dir [ROOT]/foo/target/release/build/foo/[HASH]/out -C incremental=[ROOT]/foo/target/release/incremental[..]`
 [FINISHED] `release` profile [optimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])

@@ -334,7 +334,7 @@ fn registry_dependency_with_build_script_codegen() {
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
         // Macros should be sanitized
         .with_stdout_data(str![[r#"
-/cargo/build-dir/debug/build/bar-[HASH]/out/bindings.rs
+/cargo/build-dir/debug/build/bar/[HASH]/out/bindings.rs
 
 "#]]) // Omit the hash of Source URL
         .with_stderr_data(str![[r#"
@@ -344,7 +344,7 @@ fn registry_dependency_with_build_script_codegen() {
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
 [COMPILING] bar v0.0.1
 [RUNNING] `rustc --crate-name build_script_build [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/home/.cargo/registry/src/[..]=/cargo/registry/[..] --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
-[RUNNING] `[ROOT]/foo/target/debug/build/bar-[HASH]/build-script-build`
+[RUNNING] `[ROOT]/foo/target/debug/build/bar/[HASH]/out/build_script_build`
 [RUNNING] `rustc --crate-name bar [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/home/.cargo/registry/src/[..]=/cargo/registry/[..] --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
@@ -881,13 +881,13 @@ fn local_package_with_build_script_codegen() {
     p.cargo("run --verbose -Ztrim-paths")
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
         .with_stdout_data(str![[r#"
-/cargo/build-dir/debug/build/foo-[HASH]/out/bindings.rs
+/cargo/build-dir/debug/build/foo/[HASH]/out/bindings.rs
 
 "#]])
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name build_script_build [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
-[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/build_script_build`
 [RUNNING] `rustc --crate-name foo [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/foo[EXE]`
@@ -1844,26 +1844,6 @@ fn unremap_file_with_cargo_clean() {
 
     assert!(!unremap_file_path(&p.bin("foo")).exists());
     assert_eq!(p.glob("target/**/*.trim-paths.jsonl").count(), 0);
-
-    // Test the new layout
-
-    p.cargo("clean -Ztrim-paths")
-        .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
-        .run();
-
-    p.cargo("build -Ztrim-paths -Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
-        .run();
-
-    assert!(unremap_file_path(&p.bin("foo")).exists());
-    assert_eq!(p.glob("target/**/*.trim-paths.jsonl").count(), 2);
-
-    p.cargo("clean -p foo -Ztrim-paths -Zbuild-dir-new-layout")
-        .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
-        .run();
-
-    assert!(!unremap_file_path(&p.bin("foo")).exists());
-    assert_eq!(p.glob("target/**/*.trim-paths.jsonl").count(), 0);
 }
 
 // MSVC always emits a PDB when debuginfo is on (which the unremap file requires),
@@ -1980,12 +1960,9 @@ fn unremap_file_for_all_bin_types() {
     // and receive unremap files.
     assert_eq!(p.glob("target/**/foo-*.trim-paths.jsonl").count(), 1);
     assert_eq!(p.glob("target/**/it-*.trim-paths.jsonl").count(), 1);
-    // MSVC executables don't get a hashed filename
-    // The PDB path is embedded in the executable.
-    let expected = if cfg!(target_env = "msvc") { 1 } else { 2 };
     assert_eq!(
         p.glob("target/debug/examples/*.trim-paths.jsonl").count(),
-        expected
+        1
     );
 }
 

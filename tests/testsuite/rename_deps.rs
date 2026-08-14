@@ -282,7 +282,7 @@ fn can_run_doc_tests() {
     foo.cargo("test -v").with_stderr_data(str![[r#"
 ...
 [DOCTEST] foo
-[RUNNING] `rustdoc [..]--test src/lib.rs [..] --extern bar=[ROOT]/foo/target/debug/deps/libbar-[HASH].rlib --extern baz=[ROOT]/foo/target/debug/deps/libbar-[HASH].rlib [..]`
+[RUNNING] `rustdoc [..]--test src/lib.rs [..] --extern bar=[ROOT]/foo/target/debug/build/bar/[HASH]/out/libbar-[HASH].rlib --extern baz=[ROOT]/foo/target/debug/build/bar/[HASH]/out/libbar-[HASH].rlib [..]`
 
 "#]]).run();
 }

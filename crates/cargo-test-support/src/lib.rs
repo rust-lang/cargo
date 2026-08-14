@@ -1439,10 +1439,6 @@ pub trait TestEnvCommandExt: Sized {
             .env("CARGO_INCREMENTAL", "0")
             // Don't read the system git config which is out of our control.
             .env("GIT_CONFIG_NOSYSTEM", "1")
-            // See: https://github.com/rust-lang/rust/pull/159857#issuecomment-5119325932
-            // This should be removed once the new build-dir layout is stabilized and the old layout
-            // is removed.
-            .env("__CARGO_TEMPORARY_BUILD_DIR_NEW_LAYOUT_OPT_OUT", "1")
             .env_remove("CI")
             .env_remove("__CARGO_DEFAULT_LIB_METADATA")
             .env_remove("ALL_PROXY")

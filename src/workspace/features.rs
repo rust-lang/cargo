@@ -838,11 +838,7 @@ macro_rules! unstable_cli_options {
                     ),*
                 };
 
-                // Defaults to enabled on nightly unless explicitly opted out.
-                if !is_new_build_dir_layout_opt_out() {
-                    unstable.build_dir_new_layout =
-                        matches!(crate::version().release_channel.as_deref(), Some("nightly" | "dev"));
-                }
+                unstable.build_dir_new_layout = !is_new_build_dir_layout_opt_out();
 
                 return unstable;
             }
@@ -1022,6 +1018,8 @@ const STABILIZED_CONFIG_INCLUDE: &str = "The `include` config key is now always 
 const STABILIZED_LOCKFILE_PATH: &str = "The `lockfile-path` config key is now always available";
 
 const STABILIZED_WARNINGS: &str = "The `build.warnings` config key is now always available";
+
+const STABILIZED_BUILD_DIR_NEW_LAYOUT: &str = "build.build-dir-new-layout is now always enabled.";
 
 fn deserialize_comma_separated_list<'de, D>(
     deserializer: D,
@@ -1423,6 +1421,7 @@ impl CliUnstable {
             "config-include" => stabilized_warn(k, "1.93", STABILIZED_CONFIG_INCLUDE),
             "lockfile-path" => stabilized_warn(k, "1.97", STABILIZED_LOCKFILE_PATH),
             "warnings" => stabilized_warn(k, "1.97", STABILIZED_WARNINGS),
+            "build-dir-new-layout" => stabilized_warn(k, "1.100", STABILIZED_BUILD_DIR_NEW_LAYOUT),
 
             // Unstable features
             // Sorted alphabetically:
@@ -1433,7 +1432,6 @@ impl CliUnstable {
             "binary-dep-depinfo" => self.binary_dep_depinfo = parse_empty(k, v)?,
             "bindeps" => self.bindeps = parse_empty(k, v)?,
             "build-analysis" => self.build_analysis = parse_empty(k, v)?,
-            "build-dir-new-layout" => self.build_dir_new_layout = parse_empty(k, v)?,
             "build-std" => self.build_std = Some(parse_list(v)),
             "build-std-features" => self.build_std_features = Some(parse_list(v)),
             "cargo-lints" => self.cargo_lints = parse_empty(k, v)?,
