@@ -23,6 +23,12 @@ system:
 * `CARGO_TARGET_DIR` --- Location of where to place all generated artifacts,
   relative to the current working directory. See [`build.target-dir`] to set
   via config.
+* `CARGO_FIX_MAX_RETRIES` --- Sets the maximum number of times `cargo fix`
+  will re-run the compiler to apply additional suggestions. `cargo fix`
+  repeats the fix loop because applying one suggestion can expose another,
+  but stops to keep this from running forever. The default is 4 iterations;
+  setting this to a non-negative integer overrides that. Used by the
+  implementation in `src/cargo/ops/cargo_fix.rs`.
 * `CARGO` --- If set, Cargo will forward this value instead of setting it
   to its own auto-detected path when it builds crates and when it
   executes build scripts and external subcommands. This value is not
