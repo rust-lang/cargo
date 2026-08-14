@@ -27,6 +27,11 @@
 - `-Zbindeps`: Fixed panics by registering transitive artifact dependency targets
   [#17135](https://github.com/rust-lang/cargo/pull/17135)
 
+### Documentation
+
+- Note `workspace.package.authors` is deprecated.
+  [#16951](https://github.com/rust-lang/cargo/pull/16951)
+
 ### Internal
 
 - test: Separate bindeps no-deps coverage for cargo-metadata
