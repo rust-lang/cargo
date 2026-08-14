@@ -456,6 +456,7 @@ From [ROOTURL]/registry
 [COMPILING] dep_test v0.1.0 ([..]/dep_test)
 [COMPILING] compiler_builtins v0.1.0 ([..]/library/compiler_builtins)
 [COMPILING] proc_macro v0.1.0 ([..]/library/proc_macro)
+[COMPILING] panic_abort v0.1.0 ([..]/library/panic_abort)
 [COMPILING] panic_unwind v0.1.0 ([..]/library/panic_unwind)
 [COMPILING] rustc-std-workspace-core v1.9.0 ([..]/library/rustc-std-workspace-core)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
@@ -473,6 +474,7 @@ From [ROOTURL]/registry
 [RUNNING] `[..]rustc --crate-name core [..]--target [HOST_TARGET][..]`
 [RUNNING] `[..]rustc --crate-name dep_test [..]--target [HOST_TARGET][..]`
 [RUNNING] `[..]rustc --crate-name proc_macro [..]--target [HOST_TARGET][..]`
+[RUNNING] `[..]rustc --crate-name panic_abort [..]--target [HOST_TARGET][..]`
 [RUNNING] `[..]rustc --crate-name panic_unwind [..]--target [HOST_TARGET][..]`
 [RUNNING] `[..]rustc --crate-name compiler_builtins [..]--target [HOST_TARGET][..]`
 [RUNNING] `[..]rustc --crate-name rustc_std_workspace_core [..]--target [HOST_TARGET][..]`
