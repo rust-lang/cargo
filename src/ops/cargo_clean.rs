@@ -300,7 +300,7 @@ fn clean_specs(
                         let triple = target_data.short_name(compile_kind);
                         let (file_types, _unsupported) = target_data
                             .info(*compile_kind)
-                            .rustc_outputs(mode, target.kind(), triple, clean_ctx.gctx)?;
+                            .rustc_outputs(mode, target.kind(), triple)?;
                         let artifact_dir = layout
                             .artifact_dir()
                             .expect("artifact-dir was not locked during clean");
@@ -377,7 +377,7 @@ fn clean_specs(
                         let triple = target_data.short_name(compile_kind);
                         let (file_types, _unsupported) = target_data
                             .info(*compile_kind)
-                            .rustc_outputs(mode, target.kind(), triple, clean_ctx.gctx)?;
+                            .rustc_outputs(mode, target.kind(), triple)?;
                         let artifact_dir = layout
                             .artifact_dir()
                             .expect("artifact-dir was not locked during clean");

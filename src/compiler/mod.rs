@@ -1320,7 +1320,12 @@ fn build_base_args(
 
     if unit.mode.is_check() {
         cmd.arg("--emit=dep-info,metadata");
-    } else if !build_runner.bcx.gctx.should_embed_metadata() {
+    } else if !build_runner
+        .bcx
+        .target_data
+        .info(unit.kind)
+        .should_embed_metadata()
+    {
         // Nightly rustc supports the -Zembed-metadata=no flag, which tells it to avoid including
         // full metadata in rlib/dylib artifacts, to save space on disk. In this case, metadata
         // will only be stored in .rmeta files.
@@ -1814,7 +1819,11 @@ pub fn extern_args(
     let mut result = Vec::new();
     let deps = build_runner.unit_deps(unit);
 
-    let no_embed_metadata = !build_runner.bcx.gctx.should_embed_metadata();
+    let no_embed_metadata = !build_runner
+        .bcx
+        .target_data
+        .info(unit.kind)
+        .should_embed_metadata();
     let public_dependency_enabled = is_public_dependency_enabled(build_runner, unit);
 
     // Closure to add one dependency to `result`.
