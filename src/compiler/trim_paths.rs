@@ -103,12 +103,16 @@ pub(crate) fn trim_paths_args(
 /// **†**: path dependencies outside the workspace and other uncategorized dependencies.
 ///
 /// [RFC 3127]: https://rust-lang.github.io/rfcs/3127-trim-paths.html
-pub(crate) fn trim_paths_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> [OsString; 3] {
-    [
-        join_remap(package_remap(build_runner, unit)),
-        join_remap(build_dir_remap(build_runner)),
-        join_remap(sysroot_remap(build_runner)),
-    ]
+pub(crate) fn trim_paths_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> Vec<OsString> {
+    let package = package_remap(build_runner, unit);
+    let workspace_relative = custom_workspace_relative_remap(unit, &package);
+
+    let mut remaps = Vec::with_capacity(4);
+    remaps.push(join_remap(package));
+    remaps.extend(workspace_relative.map(join_remap));
+    remaps.push(join_remap(build_dir_remap(build_runner)));
+    remaps.push(join_remap(sysroot_remap(build_runner)));
+    remaps
 }
 
 fn join_remap((from, to): (PathBuf, String)) -> OsString {
@@ -197,6 +201,41 @@ fn workspace_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> (PathBuf,
         .unwrap_or(".")
         .to_owned();
     (from, to)
+}
+
+/// Extra remap rule for relative workspace member paths.
+///
+/// Cargo passes member source paths relative to the working directory (see [`path_args`]),
+/// so the absolute [`workspace_remap`] rule never covers them.
+///
+/// When custom prefix for workspace remap is set via [`WS_REMAP_ENV`],
+/// an extra remap rule for relative member paths is required for correctly
+/// adding prefix to member paths.
+fn custom_workspace_relative_remap(
+    unit: &Unit,
+    (from, to): &(PathBuf, String),
+) -> Option<(PathBuf, String)> {
+    // `to` staying as `.` means WS_REMAP_ENV didn't kick in.
+    if to == "." {
+        return None;
+    }
+
+    if !unit.pkg.package_id().source_id().is_path() {
+        return None;
+    }
+
+    let rel = unit.pkg.root().strip_prefix(from).ok()?;
+    if rel.as_os_str().is_empty() {
+        return None;
+    }
+
+    let mut rel_to = to.clone();
+    for comp in rel.components() {
+        // e.g., library -> <custom-prefix>/library
+        rel_to.push('/');
+        rel_to.push_str(&comp.as_os_str().to_string_lossy());
+    }
+    Some((rel.to_path_buf(), rel_to))
 }
 
 /// Finds the checkout root and revision directory name of a git dependency.
