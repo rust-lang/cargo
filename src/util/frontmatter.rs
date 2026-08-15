@@ -395,13 +395,12 @@ mod test {
     }
 
     #[track_caller]
-    fn assert_err(
-        result: Result<impl std::fmt::Debug, impl std::fmt::Display>,
-        err: impl IntoData,
-    ) {
-        match result {
+    fn assert_source_err(source: &str, err: impl IntoData) {
+        match ScriptSource::parse(source) {
             Ok(d) => panic!("unexpected Ok({d:#?})"),
-            Err(actual) => snapbox::assert_data_eq!(actual.to_string(), err.raw()),
+            Err(actual) => {
+                snapbox::assert_data_eq!(actual.to_string(), err.raw())
+            }
         }
     }
 
@@ -578,16 +577,14 @@ content: "\nfn main() {}"
 
     #[test]
     fn split_too_few_dashes() {
-        assert_err(
-            ScriptSource::parse(
-                r#"#!/usr/bin/env cargo
+        assert_source_err(
+            r#"#!/usr/bin/env cargo
 --
 [dependencies]
 time="0.1.25"
 --
 fn main() {}
 "#,
-            ),
             str!["found 2 `-` in rust frontmatter, expected at least 3"],
         );
     }
@@ -636,9 +633,8 @@ content: "\nfn main() {}\n"
 
     #[test]
     fn split_invalid_escaped() {
-        assert_err(
-            ScriptSource::parse(
-                r#"#!/usr/bin/env cargo
+        assert_source_err(
+            r#"#!/usr/bin/env cargo
 ---
 -----
 -----
@@ -646,7 +642,6 @@ content: "\nfn main() {}\n"
 
 fn main() {}
 "#,
-            ),
             str!["closing code fence has 2 more `-` than the opening fence"],
         );
     }
@@ -674,31 +669,27 @@ content: "\nfn main() {}\n"
 
     #[test]
     fn split_mismatched_dashes() {
-        assert_err(
-            ScriptSource::parse(
-                r#"#!/usr/bin/env cargo
+        assert_source_err(
+            r#"#!/usr/bin/env cargo
 ---
 [dependencies]
 time="0.1.25"
 ----
 fn main() {}
 "#,
-            ),
             str!["closing code fence has 1 more `-` than the opening fence"],
         );
     }
 
     #[test]
     fn split_missing_close() {
-        assert_err(
-            ScriptSource::parse(
-                r#"#!/usr/bin/env cargo
+        assert_source_err(
+            r#"#!/usr/bin/env cargo
 ---
 [dependencies]
 time="0.1.25"
 fn main() {}
 "#,
-            ),
             str!["unclosed frontmatter; expected `---`"],
         );
     }
