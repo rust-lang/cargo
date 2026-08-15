@@ -395,11 +395,24 @@ mod test {
     }
 
     #[track_caller]
-    fn assert_source_err(source: &str, err: impl IntoData) {
+    fn assert_source_err(source: &str, expected: impl IntoData) {
         match ScriptSource::parse(source) {
             Ok(d) => panic!("unexpected Ok({d:#?})"),
-            Err(actual) => {
-                snapbox::assert_data_eq!(actual.to_string(), err.raw())
+            Err(err) => {
+                let report = &[annotate_snippets::Level::ERROR
+                    .primary_title(err.to_string())
+                    .element(
+                        annotate_snippets::Snippet::source(source)
+                            .annotation(
+                                annotate_snippets::AnnotationKind::Primary.span(err.primary_span()),
+                            )
+                            .annotations(err.visible_spans().iter().map(|s| {
+                                annotate_snippets::AnnotationKind::Context.span(s.clone())
+                            })),
+                    )];
+                let renderer = annotate_snippets::Renderer::plain();
+                let actual = renderer.render(report);
+                snapbox::assert_data_eq!(actual, expected.raw())
             }
         }
     }
@@ -585,7 +598,15 @@ time="0.1.25"
 --
 fn main() {}
 "#,
-            str!["found 2 `-` in rust frontmatter, expected at least 3"],
+            str![[r#"
+error: found 2 `-` in rust frontmatter, expected at least 3
+  |
+2 | --
+  | --
+...
+6 | fn main() {}
+  |             ^
+"#]],
         );
     }
 
@@ -642,7 +663,14 @@ content: "\nfn main() {}\n"
 
 fn main() {}
 "#,
-            str!["closing code fence has 2 more `-` than the opening fence"],
+            str![[r#"
+error: closing code fence has 2 more `-` than the opening fence
+  |
+2 | ---
+  | ---
+3 | -----
+  |    ^^
+"#]],
         );
     }
 
@@ -677,7 +705,15 @@ time="0.1.25"
 ----
 fn main() {}
 "#,
-            str!["closing code fence has 1 more `-` than the opening fence"],
+            str![[r#"
+error: closing code fence has 1 more `-` than the opening fence
+  |
+2 | ---
+  | ---
+...
+5 | ----
+  |    ^
+"#]],
         );
     }
 
@@ -690,7 +726,15 @@ fn main() {}
 time="0.1.25"
 fn main() {}
 "#,
-            str!["unclosed frontmatter; expected `---`"],
+            str![[r#"
+error: unclosed frontmatter; expected `---`
+  |
+2 | ---
+  | ---
+...
+5 | fn main() {}
+  |             ^
+"#]],
         );
     }
 }
