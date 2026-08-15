@@ -105,15 +105,19 @@ impl<'s> ScriptSource<'s> {
         // Ends with a line that starts with a matching number of `-` only followed by whitespace
         let nl_fence_pattern = format!("\n{fence_pattern}");
         let Some(frontmatter_nl) = input.find_slice(nl_fence_pattern.as_str()) else {
-            for len in (2..(nl_fence_pattern.len() - 1)).rev() {
-                let Some(frontmatter_nl) = input.find_slice(&nl_fence_pattern[0..len]) else {
+            for prefix_len in (2..=(nl_fence_pattern.len() - 1)).rev() {
+                let Some(frontmatter_nl) = input.find_slice(&nl_fence_pattern[0..prefix_len])
+                else {
                     continue;
                 };
-                let _ = input.next_slice(frontmatter_nl.start + 1);
+                let nl_len = "\n".len();
+                let close_len = prefix_len - nl_len;
+
+                let _ = input.next_slice(frontmatter_nl.start + nl_len);
                 let close_start = input.current_token_start();
-                let _ = input.next_slice(len);
+                let _ = input.next_slice(close_len);
                 let close_end = input.current_token_start();
-                let fewer_dashes = fence_length - len;
+                let fewer_dashes = fence_length - close_len;
                 return Err(FrontmatterError::new(
                     format!(
                         "closing code fence has {fewer_dashes} less `-` than the opening fence"
@@ -395,13 +399,25 @@ mod test {
     }
 
     #[track_caller]
-    fn assert_err(
-        result: Result<impl std::fmt::Debug, impl std::fmt::Display>,
-        err: impl IntoData,
-    ) {
-        match result {
+    fn assert_source_err(source: &str, expected: impl IntoData) {
+        match ScriptSource::parse(source) {
             Ok(d) => panic!("unexpected Ok({d:#?})"),
-            Err(actual) => snapbox::assert_data_eq!(actual.to_string(), err.raw()),
+            Err(err) => {
+                let report = &[annotate_snippets::Level::ERROR
+                    .primary_title(err.to_string())
+                    .element(
+                        annotate_snippets::Snippet::source(source)
+                            .annotation(
+                                annotate_snippets::AnnotationKind::Primary.span(err.primary_span()),
+                            )
+                            .annotations(err.visible_spans().iter().map(|s| {
+                                annotate_snippets::AnnotationKind::Context.span(s.clone())
+                            })),
+                    )];
+                let renderer = annotate_snippets::Renderer::plain();
+                let actual = renderer.render(report);
+                snapbox::assert_data_eq!(actual, expected.raw())
+            }
         }
     }
 
@@ -578,17 +594,23 @@ content: "\nfn main() {}"
 
     #[test]
     fn split_too_few_dashes() {
-        assert_err(
-            ScriptSource::parse(
-                r#"#!/usr/bin/env cargo
+        assert_source_err(
+            r#"#!/usr/bin/env cargo
 --
 [dependencies]
 time="0.1.25"
 --
 fn main() {}
 "#,
-            ),
-            str!["found 2 `-` in rust frontmatter, expected at least 3"],
+            str![[r#"
+error: found 2 `-` in rust frontmatter, expected at least 3
+  |
+2 | --
+  | --
+...
+6 | fn main() {}
+  |             ^
+"#]],
         );
     }
 
@@ -636,9 +658,8 @@ content: "\nfn main() {}\n"
 
     #[test]
     fn split_invalid_escaped() {
-        assert_err(
-            ScriptSource::parse(
-                r#"#!/usr/bin/env cargo
+        assert_source_err(
+            r#"#!/usr/bin/env cargo
 ---
 -----
 -----
@@ -646,8 +667,14 @@ content: "\nfn main() {}\n"
 
 fn main() {}
 "#,
-            ),
-            str!["closing code fence has 2 more `-` than the opening fence"],
+            str![[r#"
+error: closing code fence has 2 more `-` than the opening fence
+  |
+2 | ---
+  | ---
+3 | -----
+  |    ^^
+"#]],
         );
     }
 
@@ -674,32 +701,102 @@ content: "\nfn main() {}\n"
 
     #[test]
     fn split_mismatched_dashes() {
-        assert_err(
-            ScriptSource::parse(
-                r#"#!/usr/bin/env cargo
+        assert_source_err(
+            r#"#!/usr/bin/env cargo
 ---
 [dependencies]
 time="0.1.25"
 ----
 fn main() {}
 "#,
-            ),
-            str!["closing code fence has 1 more `-` than the opening fence"],
+            str![[r#"
+error: closing code fence has 1 more `-` than the opening fence
+  |
+2 | ---
+  | ---
+...
+5 | ----
+  |    ^
+"#]],
         );
     }
 
     #[test]
     fn split_missing_close() {
-        assert_err(
-            ScriptSource::parse(
-                r#"#!/usr/bin/env cargo
+        assert_source_err(
+            r#"#!/usr/bin/env cargo
 ---
 [dependencies]
 time="0.1.25"
 fn main() {}
 "#,
-            ),
-            str!["unclosed frontmatter; expected `---`"],
+            str![[r#"
+error: unclosed frontmatter; expected `---`
+  |
+2 | ---
+  | ---
+...
+5 | fn main() {}
+  |             ^
+"#]],
+        );
+    }
+
+    #[test]
+    fn split_fewer_dashes() {
+        assert_source_err(
+            r#"----
+[dependencies]
+--
+fn main() {}
+"#,
+            str![[r#"
+error: closing code fence has 2 less `-` than the opening fence
+  |
+1 | ----
+  | ----
+2 | [dependencies]
+3 | --
+  | ^^
+"#]],
+        );
+    }
+
+    #[test]
+    fn split_fewer_dashes_by_one() {
+        assert_source_err(
+            r#"----
+[dependencies]
+---
+fn main() {}
+"#,
+            str![[r#"
+error: closing code fence has 1 less `-` than the opening fence
+  |
+1 | ----
+  | ----
+2 | [dependencies]
+3 | ---
+  | ^^^
+"#]],
+        );
+    }
+
+    #[test]
+    fn split_fewer_dashes_before_non_ascii() {
+        // The byte after the short closing fence starts a multi-byte char.
+        assert_source_err(
+            "---
+-\u{2502}
+",
+            str![[r#"
+error: closing code fence has 2 less `-` than the opening fence
+  |
+1 | ---
+  | ---
+2 | -│
+  | ^
+"#]],
         );
     }
 }
