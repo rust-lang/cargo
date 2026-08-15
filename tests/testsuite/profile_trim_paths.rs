@@ -1640,19 +1640,27 @@ fn workspace_prefix_override_from_env() {
                 version = "0.0.1"
                 edition = "2015"
 
+                [dependencies]
+                member = { path = "member" }
+
                 [profile.dev]
                 trim-paths = "object"
            "#,
         )
-        .file("src/main.rs", "fn main() {}")
+        .file("src/main.rs", "extern crate member; fn main() {}")
+        .file("member/Cargo.toml", &basic_manifest("member", "0.0.1"))
+        .file("member/src/lib.rs", "")
         .build();
 
     p.cargo("build --verbose -Ztrim-paths")
         .env("__CARGO_RUSTC_BOOTSTRAP_WS_REMAP", "/rustc-dev/1111111")
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
         .with_stderr_data(str![[r#"
+[LOCKING] 1 package to highest compatible version
+[COMPILING] member v0.0.1 ([ROOT]/foo/member)
+[RUNNING] `rustc [..]--remap-path-prefix=[ROOT]/foo=/rustc-dev/1111111 --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir [..]`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc [..]--remap-path-prefix=[ROOT]/foo=/rustc-dev/1111111 [..]`
+[RUNNING] `rustc [..]--remap-path-prefix=[ROOT]/foo=/rustc-dev/1111111 --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
