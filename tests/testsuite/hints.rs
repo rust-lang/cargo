@@ -2,7 +2,7 @@
 
 use crate::prelude::*;
 use cargo_test_support::registry::Package;
-use cargo_test_support::{project, str};
+use cargo_test_support::{Execs, project, str};
 
 #[cargo_test]
 fn empty_hints_no_warn() {
@@ -323,4 +323,416 @@ fn mostly_unused_profile_overrides_hints_on_self_nightly() {
 "#]])
         .with_stderr_does_not_contain("-Zhint-mostly-unused")
         .run();
+}
+
+fn with_opt_level(cargo: &mut Execs, crate_name: &str, level: &str) {
+    let crate_marker = format!("[RUNNING] `rustc --crate-name {crate_name}");
+    if level == "0" {
+        // Cargo omits `-C opt-level` entirely at level 0.
+        cargo.with_stderr_line_without(&[crate_marker], &["-C opt-level".to_owned()]);
+    } else {
+        cargo.with_stderr_line_without(&[crate_marker, format!("-C opt-level={level}")], &[]);
+    }
+}
+
+#[cargo_test]
+fn min_opt_level_with_numeric_profiles() {
+    Package::new("dep", "1.0.0")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "dep"
+            version = "1.0.0"
+            edition = "2024"
+
+            [hints]
+            min-opt-level = 2
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2024"
+
+            [dependencies]
+            dep = "1.0"
+
+            [profile.low]
+            inherits = "dev"
+            opt-level = 1
+
+            [profile.high]
+            inherits = "dev"
+            opt-level = 3
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    let mut cargo = p.cargo("check -v");
+    with_opt_level(&mut cargo, "dep", "0");
+    with_opt_level(&mut cargo, "foo", "0");
+    cargo.run();
+
+    let mut cargo = p.cargo("check -v --profile low");
+    with_opt_level(&mut cargo, "dep", "1");
+    with_opt_level(&mut cargo, "foo", "1");
+    cargo.run();
+
+    let mut cargo = p.cargo("check -v --profile high");
+    with_opt_level(&mut cargo, "dep", "3");
+    with_opt_level(&mut cargo, "foo", "3");
+    cargo.run();
+
+    let mut cargo = p.cargo("check -v --release");
+    with_opt_level(&mut cargo, "dep", "3");
+    with_opt_level(&mut cargo, "foo", "3");
+    cargo.run();
+}
+
+#[cargo_test]
+fn min_opt_level_on_root_package() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2024"
+
+            [hints]
+            min-opt-level = 3
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    let mut cargo = p.cargo("check -v");
+    with_opt_level(&mut cargo, "foo", "0");
+    cargo.run();
+}
+
+#[cargo_test]
+fn min_opt_level_with_size_profiles() {
+    Package::new("dep", "1.0.0")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "dep"
+            version = "1.0.0"
+            edition = "2024"
+
+            [hints]
+            min-opt-level = 2
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2024"
+
+            [dependencies]
+            dep = "1.0"
+
+            [profile.small]
+            inherits = "dev"
+            opt-level = "s"
+
+            [profile.tiny]
+            inherits = "dev"
+            opt-level = "z"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    let mut cargo = p.cargo("check -v --profile small");
+    with_opt_level(&mut cargo, "dep", "s");
+    cargo.run();
+
+    let mut cargo = p.cargo("check -v --profile tiny");
+    with_opt_level(&mut cargo, "dep", "z");
+    cargo.run();
+}
+
+#[cargo_test]
+fn min_opt_level_with_package_overrides() {
+    Package::new("dep", "1.0.0")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "dep"
+            version = "1.0.0"
+            edition = "2024"
+
+            [hints]
+            min-opt-level = 2
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2024"
+
+            [dependencies]
+            dep = "1.0"
+
+            [profile.wildcard]
+            inherits = "dev"
+
+            [profile.wildcard.package."*"]
+            opt-level = 1
+
+            [profile.specific]
+            inherits = "dev"
+
+            [profile.specific.package.dep]
+            opt-level = 0
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    let mut cargo = p.cargo("check -v --profile wildcard");
+    with_opt_level(&mut cargo, "dep", "1");
+    cargo.run();
+
+    let mut cargo = p.cargo("check -v --profile specific");
+    with_opt_level(&mut cargo, "dep", "0");
+    cargo.run();
+}
+
+#[cargo_test]
+fn min_opt_level_with_transitive_dependency() {
+    Package::new("leaf", "1.0.0").publish();
+    Package::new("dep", "1.0.0")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "dep"
+            version = "1.0.0"
+            edition = "2024"
+
+            [dependencies]
+            leaf = "1.0"
+
+            [hints]
+            min-opt-level = 2
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .dep("leaf", "1.0")
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2024"
+
+            [dependencies]
+            dep = "1.0"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    let mut cargo = p.cargo("check -v");
+    with_opt_level(&mut cargo, "dep", "0");
+    with_opt_level(&mut cargo, "leaf", "0");
+    cargo.run();
+}
+
+#[cargo_test]
+fn min_opt_level_with_build_dependencies() {
+    Package::new("dep", "1.0.0")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "dep"
+            version = "1.0.0"
+            edition = "2024"
+
+            [hints]
+            min-opt-level = 2
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2024"
+
+            [build-dependencies]
+            dep = "1.0"
+
+            [profile.overridden]
+            inherits = "dev"
+
+            [profile.overridden.build-override]
+            opt-level = 0
+            "#,
+        )
+        .file("build.rs", "fn main() {}")
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    let mut cargo = p.cargo("check -v");
+    with_opt_level(&mut cargo, "dep", "0");
+    cargo.run();
+
+    let mut cargo = p.cargo("check -v --profile overridden");
+    with_opt_level(&mut cargo, "dep", "0");
+    cargo.run();
+}
+
+#[cargo_test]
+fn min_opt_level_with_wrong_type() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2024"
+
+            [hints]
+            min-opt-level = "s"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    let mut cargo = p.cargo("check -v");
+    with_opt_level(&mut cargo, "foo", "0");
+    cargo
+        .with_stderr_data(str![[r#"
+[WARNING] Cargo.toml: unused manifest key: hints.min-opt-level
+[WARNING] `foo` (manifest) generated 1 warning
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn min_opt_level_with_out_of_range_values() {
+    for (path, name, level) in [("negative", "negative", "-1"), ("high", "high", "4")] {
+        let p = project()
+            .at(path)
+            .file(
+                "Cargo.toml",
+                &format!(
+                    r#"
+                    [package]
+                    name = "{name}"
+                    version = "0.0.1"
+                    edition = "2024"
+
+                    [hints]
+                    min-opt-level = {level}
+                    "#,
+                ),
+            )
+            .file("src/main.rs", "fn main() {}")
+            .build();
+
+        let mut cargo = p.cargo("check -v");
+        with_opt_level(&mut cargo, name, "0");
+        cargo
+            .with_stderr_data(str![[r#"
+[WARNING] Cargo.toml: unused manifest key: hints.min-opt-level
+[WARNING] [..] (manifest) generated 1 warning
+[CHECKING] [..] v0.0.1 ([ROOT]/[..])
+[RUNNING] `rustc --crate-name [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+            .run();
+    }
+}
+
+#[cargo_test]
+fn min_opt_level_registry_dependency_warnings_are_suppressed() {
+    for (path, name, level) in [
+        ("positive", "positive", "2"),
+        ("wrong-type", "wrong_type", r#""s""#),
+        ("out-of-range", "out_of_range", "4"),
+    ] {
+        Package::new(name, "1.0.0")
+            .file(
+                "Cargo.toml",
+                &format!(
+                    r#"
+                    [package]
+                    name = "{name}"
+                    version = "1.0.0"
+                    edition = "2024"
+
+                    [hints]
+                    min-opt-level = {level}
+                    "#,
+                ),
+            )
+            .file("src/lib.rs", "")
+            .publish();
+        let p = project()
+            .at(path)
+            .file(
+                "Cargo.toml",
+                &format!(
+                    r#"
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+                    edition = "2024"
+
+                    [dependencies]
+                    {name} = "1.0"
+                    "#,
+                ),
+            )
+            .file("src/main.rs", "fn main() {}")
+            .build();
+
+        let mut cargo = p.cargo("check -v");
+        with_opt_level(&mut cargo, name, "0");
+        cargo
+            .with_stderr_does_not_contain("[WARNING] [..]hints.min-opt-level[..]")
+            .run();
+    }
 }
