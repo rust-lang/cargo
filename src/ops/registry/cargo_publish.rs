@@ -337,6 +337,13 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
                     } else {
                         "crates"
                     };
+                    if plan.is_empty() {
+                        bail!(
+                            "timed out waiting for {short_pkg_descriptions} to be available in {source_description}; \
+                             the {krate} may have been published successfully, but the registry has not \
+                             confirmed it yet"
+                        );
+                    }
                     opts.gctx.shell().print_report(
                         &[Level::WARNING
                             .secondary_title(format!(
