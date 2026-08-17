@@ -1269,10 +1269,6 @@ impl GlobalContext {
         self.extra_verbose
     }
 
-    pub fn should_embed_metadata(&self) -> bool {
-        self.cli_unstable().embed_metadata.unwrap_or(true)
-    }
-
     pub fn network_allowed(&self) -> bool {
         !self.offline_flag().is_some()
     }

@@ -1675,7 +1675,8 @@ fn calculate_normal(
     // rustc to link to deps using `--extern`. If it changes, we should rebuild everything.
     build_runner
         .bcx
-        .gctx
+        .target_data
+        .info(unit.kind)
         .should_embed_metadata()
         .not()
         .hash(&mut config);
