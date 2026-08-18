@@ -753,7 +753,7 @@ fn test_profile() {
 [COMPILING] bar v0.0.1
 [RUNNING] `rustc --crate-name bar [..]--crate-type lib [..]`
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo [..]--crate-type lib --emit=dep-info,metadata,link -C linker-plugin-lto [..]`
+[RUNNING] `rustc --crate-name foo [..]--crate-type lib --emit=dep-info,metadata,link[..] -C linker-plugin-lto [..]`
 [RUNNING] `rustc --crate-name foo [..]--emit=dep-info,link -C lto=thin [..]--test [..]`
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/foo-[HASH][EXE]`
