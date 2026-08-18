@@ -127,6 +127,7 @@ pub fn generate_std_roots(
     interner: &UnitInterner,
     profiles: &Profiles,
     target_data: &RustcTargetData<'_>,
+    hint_min_opt_level: bool,
 ) -> CargoResult<HashMap<CompileKind, Vec<Unit>>> {
     // Generate a map of Units for each kind requested.
     let mut ret = HashMap::default();
@@ -149,6 +150,7 @@ pub fn generate_std_roots(
             interner,
             profiles,
             target_data,
+            hint_min_opt_level,
         )?;
     }
 
@@ -167,6 +169,7 @@ fn generate_roots(
     interner: &UnitInterner,
     profiles: &Profiles,
     target_data: &RustcTargetData<'_>,
+    hint_min_opt_level: bool,
 ) -> CargoResult<()> {
     let std_ids = std_crates(crates, default, units)
         .iter()
@@ -191,6 +194,8 @@ fn generate_roots(
             let unit_for = UnitFor::new_normal(kind);
             let profile = profiles.get_profile(
                 pkg.package_id(),
+                pkg.hints(),
+                hint_min_opt_level,
                 /*is_member*/ false,
                 /*is_local*/ false,
                 unit_for,
