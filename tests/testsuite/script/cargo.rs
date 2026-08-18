@@ -1770,7 +1770,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/script.rs`
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] unittests script.rs ([ROOT]/home/.cargo/build/[HASH]/debug/deps/script-[HASH][EXE])
+[RUNNING] unittests script.rs ([ROOT]/home/.cargo/build/[HASH]/debug/build/script/[HASH]/out/script-[HASH][EXE])
 
 "#]])
         .run();

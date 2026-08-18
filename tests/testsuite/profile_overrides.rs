@@ -235,8 +235,8 @@ fn profile_override_hierarchy() {
 [RUNNING] `rustc --crate-name build_script_build --edition=2015 m1/build.rs [..] --crate-type bin --emit=[..]link[..]-C codegen-units=4 [..]`
 [COMPILING] m2 v0.0.1 ([ROOT]/foo/m2)
 [RUNNING] `rustc --crate-name build_script_build --edition=2015 m2/build.rs [..] --crate-type bin --emit=[..]link[..]-C codegen-units=2 [..]`
-[RUNNING] `[ROOT]/foo/target/debug/build/m1-[HASH]/build-script-build`
-[RUNNING] `[ROOT]/foo/target/debug/build/m2-[HASH]/build-script-build`
+[RUNNING] `[ROOT]/foo/target/debug/build/m1/[HASH]/out/build_script_build`
+[RUNNING] `[ROOT]/foo/target/debug/build/m2/[HASH]/out/build_script_build`
 [RUNNING] `rustc --crate-name m2 --edition=2015 m2/src/lib.rs [..] --crate-type lib --emit=[..]link[..]-C codegen-units=2 [..]`
 [COMPILING] m1 v0.0.1 ([ROOT]/foo/m1)
 [RUNNING] `rustc --crate-name m1 --edition=2015 m1/src/lib.rs [..] --crate-type lib --emit=[..]link[..]-C codegen-units=1 [..]`

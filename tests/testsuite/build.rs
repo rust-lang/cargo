@@ -128,7 +128,7 @@ fn cargo_compile_incremental() {
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [RUNNING] `rustc [..] -C incremental=[ROOT]/foo/target/debug/incremental[..]`
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/foo-[HASH][EXE]`
 
 "#]])
         .run();
@@ -1590,7 +1590,7 @@ fn cargo_default_env_metadata_env_var() {
         .with_stderr_data(format!(
             "\
 ...
-[RUNNING] `rustc --crate-name foo [..]--extern bar=[ROOT]/foo/target/debug/deps/{dll_prefix}bar{dll_suffix}`
+[RUNNING] `rustc --crate-name foo [..]--extern bar=[ROOT]/foo/target/debug/build/bar/[HASH]/out/{dll_prefix}bar{dll_suffix}[..]`
 ...
 "))
         .run();
@@ -1603,7 +1603,7 @@ fn cargo_default_env_metadata_env_var() {
         .with_stderr_data(format!(
             "\
 ...
-[RUNNING] `rustc --crate-name foo [..]--extern bar=[ROOT]/foo/target/debug/deps/{dll_prefix}bar-[..]{dll_suffix}`
+[RUNNING] `rustc --crate-name foo [..]--extern bar=[ROOT]/foo/target/debug/build/bar/[HASH]/out/{dll_prefix}bar-[..]{dll_suffix}[..]`
 ...
 "))
         .run();
@@ -1708,6 +1708,9 @@ fn crate_env_vars() {
 
                     let exe: PathBuf = env::current_exe().unwrap().into();
                     let mut expected: PathBuf = exe.parent().unwrap()
+                        .parent().unwrap()
+                        .parent().unwrap()
+                        .parent().unwrap()
                         .parent().unwrap()
                         .parent().unwrap()
                         .into();
@@ -3619,7 +3622,7 @@ fn compiler_json_error_format() {
     "env": [],
     "linked_libs": [],
     "linked_paths": [],
-    "out_dir": "[ROOT]/foo/target/debug/build/foo-[HASH]/out",
+    "out_dir": "[ROOT]/foo/target/debug/build/foo/[HASH]/out",
     "package_id": "path+[ROOTURL]/foo#0.5.0",
     "reason": "build-script-executed"
   },
@@ -4755,7 +4758,18 @@ fn cdylib_not_lifted() {
 
     for file in files {
         println!("checking: {}", file);
-        assert!(p.root().join("target/debug/deps").join(&file).is_file());
+        assert_eq!(
+            glob::glob(
+                p.root()
+                    .join("target/debug/build/foo/*/out")
+                    .join(&file)
+                    .to_str()
+                    .unwrap()
+            )
+            .into_iter()
+            .count(),
+            1
+        );
     }
 }
 
@@ -4833,11 +4847,12 @@ fn no_dep_info_collision_when_cdylib_and_bin_coexist() {
         )
         .run();
 
-    let deps_dir = p.target_debug_dir().join("deps");
-    assert!(deps_dir.join("foo.d").exists());
-    let dep_info_count = deps_dir
+    let build_dir = p.target_debug_dir().join("build");
+    let dep_info_count = build_dir
         .read_dir()
         .unwrap()
+        .flat_map(|build_unit| build_unit.unwrap().path().read_dir().unwrap())
+        .flat_map(|hash_dir| hash_dir.unwrap().path().join("out").read_dir().unwrap())
         .filter(|e| {
             let filename = e.as_ref().unwrap().file_name();
             let filename = filename.to_str().unwrap();
@@ -4891,7 +4906,7 @@ fn deterministic_cfg_flags() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustc [..]`
-[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/build_script_build`
 [RUNNING] `rustc --crate-name foo [..] --cfg[..]default[..]--cfg[..]f_a[..]--cfg[..]f_b[..] --cfg[..]f_c[..]--cfg[..]f_d[..] --cfg cfg_a --cfg cfg_b --cfg cfg_c --cfg cfg_d --cfg cfg_e`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -5909,7 +5924,7 @@ fn build_lib_only() {
     p.cargo("build --lib -v")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..] -L dependency=[ROOT]/foo/target/debug/deps`
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..] --out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -6455,7 +6470,7 @@ fn embed_metadata_no() {
         .arg("-v")
         .with_stderr_contains("[RUNNING] `[..]-Z embed-metadata=no[..]`")
         .with_stderr_contains(
-            "[RUNNING] `[..]--extern bar=[ROOT]/foo/target/debug/deps/libbar-[HASH].rmeta[..]`",
+"[RUNNING] `[..]--extern bar=[ROOT]/foo/target/debug/build/bar/[HASH]/out/libbar-[HASH].rmeta[..]`",
         )
         .run();
 }
@@ -6505,7 +6520,7 @@ fn embed_metadata_no_dylib_dep() {
         .arg("-v")
         .with_stderr_contains("[RUNNING] `[..]-Z embed-metadata=no[..]`")
         .with_stderr_contains(
-            "[RUNNING] `[..]--extern bar=[ROOT]/foo/target/debug/deps/libbar.rmeta[..]`",
+    "[RUNNING] `[..]--extern bar=[ROOT]/foo/target/debug/build/bar/[HASH]/out/libbar.rmeta[..]`",
         )
         .run();
 }
@@ -6574,8 +6589,7 @@ fn should_not_include_current_build_unit_path_in_rustc_args() {
         )
         .build();
 
-    p.cargo("-Zbuild-dir-new-layout -v build")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
+    p.cargo("-v build")
         .enable_mac_dsym()
         // Don't pass any `-L` args if there are no dependencies (including our own `out` dir)
         .with_stderr_data(str![[r#"
@@ -6602,8 +6616,7 @@ fn should_not_include_build_script_out_dir_path_in_rustc_args() {
         )
         .build();
 
-    p.cargo("-Zbuild-dir-new-layout -v build")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
+    p.cargo("-v build")
         .enable_mac_dsym()
         // Don't pass build script `out` dirs and avoid bloating the rustc command args which can
         // lead to problems on Windows.
@@ -6715,8 +6728,7 @@ fn should_only_include_dylibs_on_lib_search_path() {
         .file("qux/src/lib.rs", r#"pub fn qux_value() -> i32 { 200 }"#)
         .build();
 
-    p.cargo("-Zbuild-dir-new-layout -v run")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
+    p.cargo("-v run")
         .enable_mac_dsym()
         .with_stdout_data(str![[r#"
 bar (dylib) on search path: true
@@ -6729,6 +6741,7 @@ qux (cdylib) on search path: false
     // Legacy layout
     p.cargo("-v run")
         .enable_mac_dsym()
+        .env("__CARGO_TEMPORARY_BUILD_DIR_NEW_LAYOUT_OPT_OUT", "1")
         .with_stdout_data(str![[r#"
 bar (dylib) on search path: true
 baz (rlib) on search path: true
@@ -6823,8 +6836,7 @@ fn should_not_include_proc_macro_deps_paths_in_rustc_args() {
         )
         .build();
 
-    p.cargo("-Zbuild-dir-new-layout -v build")
-        .masquerade_as_nightly_cargo(&["new build-dir layout"])
+    p.cargo("-v build")
         .enable_mac_dsym()
         // Verify that the proc-macro dependencies (my-rlib and my-dylib) are not added to the rustc
         // invocation for the `foo` crate as `-L` args.

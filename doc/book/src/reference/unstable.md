@@ -82,7 +82,6 @@ Each new feature described below should explain how to use it.
     * [min-publish-age](#min-publish-age) --- Filters out dependency versions published more recently than a configured minimum age.
 * Output behavior
     * [artifact-dir](#artifact-dir) --- Adds a directory where artifacts are copied to.
-    * [build-dir-new-layout](#build-dir-new-layout) --- Enables the new build-dir filesystem layout
     * [Different binary name](#different-binary-name) --- Assign a name to the built binary that is separate from the crate name.
     * [root-dir](#root-dir) --- Controls the root directory relative to which paths are printed
 * Compile behavior
@@ -1735,8 +1734,6 @@ panic = "immediate-abort"
 
 Use fine grain locking instead of locking the entire build cache.
 
-Note: Fine grain locking implicitly enables [build-dir-new-layout](#build-dir-new-layout) as fine grain locking builds on that directory reoganization.
-
 ## `[lints.cargo]`
 
 * Tracking Issue: [#12235](https://github.com/rust-lang/cargo/issues/12235)
@@ -2004,14 +2001,6 @@ The following commands are available under `-Zbuild-analysis`:
   similar to `cargo build --timings` but without rebuilding.
 - `cargo report rebuilds` --- Reports why crates were rebuilt,
   helping diagnose unexpected recompilations.
-
-## build-dir-new-layout
-
-* Tracking Issue: [#15010](https://github.com/rust-lang/cargo/issues/15010)
-
-Enables the new build-dir filesystem layout.
-This layout change unblocks work towards caching and locking improvements.
-
 
 ## compile-time-deps
 
@@ -2465,3 +2454,7 @@ The `build.warnings` config field has been stabilized in Rust 1.97.
 
 The `cargo update -Zunstable-options --breaking` flag has been removed in 1.99-nightly.
 See <https://github.com/rust-lang/cargo/pull/17333> fopr the reason for its removal.
+
+## build-dir-new-layout
+
+The new build-dir filesystem layout was stabilized in the 1.100.0 release.

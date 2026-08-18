@@ -27,7 +27,7 @@ fn pathless_tools() {
     foo.cargo("build --verbose")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
-[RUNNING] `rustc [..]-C linker=nonexistent-linker [..]`
+[RUNNING] `rustc [..]-C linker=nonexistent-linker[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -52,7 +52,7 @@ fn custom_linker_cfg() {
     foo.cargo("build --verbose")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
-[RUNNING] `rustc [..]-C linker=nonexistent-linker [..]`
+[RUNNING] `rustc [..]-C linker=nonexistent-linker[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -84,7 +84,7 @@ fn custom_linker_cfg_precedence() {
     foo.cargo("build --verbose")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
-[RUNNING] `rustc [..]-C linker=nonexistent-linker [..]`
+[RUNNING] `rustc [..]-C linker=nonexistent-linker[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -148,7 +148,7 @@ fn absolute_tools() {
     foo.cargo("build --verbose")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
-[RUNNING] `rustc [..]-C linker=[..]/bogus/nonexistent-linker [..]`
+[RUNNING] `rustc [..]-C linker=[..]/bogus/nonexistent-linker[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -189,7 +189,7 @@ fn relative_tools() {
         .cwd("bar")
         .with_stderr_data(str![[r#"
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
-[RUNNING] `rustc [..]-C linker=[ROOT]/foo/./tools/nonexistent-linker [..]`
+[RUNNING] `rustc [..]-C linker=[ROOT]/foo/./tools/nonexistent-linker[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -232,7 +232,7 @@ fn custom_runner() {
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..]`
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `nonexistent-runner -r [ROOT]/foo/target/debug/deps/test-[HASH][EXE] --param`
+[RUNNING] `nonexistent-runner -r [ROOT]/foo/target/debug/build/foo/[HASH]/out/test-[HASH][EXE] --param`
 ...
 "#]])
         .run();
@@ -244,7 +244,7 @@ fn custom_runner() {
 [RUNNING] `rustc [..]`
 [RUNNING] `rustc [..]`
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
-[RUNNING] `nonexistent-runner -r [ROOT]/foo/target/release/deps/bench-[HASH][EXE] --param --bench`
+[RUNNING] `nonexistent-runner -r [ROOT]/foo/target/release/build/foo/[HASH]/out/bench-[HASH][EXE] --param --bench`
 ...
 "#]])
         .run();
@@ -462,11 +462,11 @@ fn custom_runner_proc_macro_test() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 ...
-[RUNNING] `nonexistent-runner -r [ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+[RUNNING] `nonexistent-runner -r [ROOT]/foo/target/debug/build/foo/[HASH]/out/foo-[HASH][EXE]`
 [ERROR] test failed, to rerun pass `--lib`
 
 Caused by:
-  could not execute process `nonexistent-runner -r [ROOT]/foo/target/debug/deps/foo-[HASH][EXE]` (never executed)
+  could not execute process `nonexistent-runner -r [ROOT]/foo/target/debug/build/foo/[HASH]/out/foo-[HASH][EXE]` (never executed)
 
 Caused by:
   [NOT_FOUND]
@@ -490,11 +490,11 @@ fn custom_runner_cfg_proc_macro_test() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 ...
-[RUNNING] `nonexistent-runner -r [ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+[RUNNING] `nonexistent-runner -r [ROOT]/foo/target/debug/build/foo/[HASH]/out/foo-[HASH][EXE]`
 [ERROR] test failed, to rerun pass `--lib`
 
 Caused by:
-  could not execute process `nonexistent-runner -r [ROOT]/foo/target/debug/deps/foo-[HASH][EXE]` (never executed)
+  could not execute process `nonexistent-runner -r [ROOT]/foo/target/debug/build/foo/[HASH]/out/foo-[HASH][EXE]` (never executed)
 
 Caused by:
   [NOT_FOUND]
@@ -522,11 +522,11 @@ fn custom_runner_proc_macro_test_with_target() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 ...
-[RUNNING] `nonexistent-runner -r [ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+[RUNNING] `nonexistent-runner -r [ROOT]/foo/target/debug/build/foo/[HASH]/out/foo-[HASH][EXE]`
 [ERROR] test failed, to rerun pass `--lib`
 
 Caused by:
-  could not execute process `nonexistent-runner -r [ROOT]/foo/target/debug/deps/foo-[HASH][EXE]` (never executed)
+  could not execute process `nonexistent-runner -r [ROOT]/foo/target/debug/build/foo/[HASH]/out/foo-[HASH][EXE]` (never executed)
 
 Caused by:
   [NOT_FOUND]
@@ -552,11 +552,11 @@ fn custom_runner_cfg_proc_macro_test_with_target() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 ...
-[RUNNING] `nonexistent-runner -r [ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+[RUNNING] `nonexistent-runner -r [ROOT]/foo/target/debug/build/foo/[HASH]/out/foo-[HASH][EXE]`
 [ERROR] test failed, to rerun pass `--lib`
 
 Caused by:
-  could not execute process `nonexistent-runner -r [ROOT]/foo/target/debug/deps/foo-[HASH][EXE]` (never executed)
+  could not execute process `nonexistent-runner -r [ROOT]/foo/target/debug/build/foo/[HASH]/out/foo-[HASH][EXE]` (never executed)
 
 Caused by:
   [NOT_FOUND]
@@ -587,11 +587,11 @@ fn custom_runner_proc_macro_test_with_host_config() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 ...
-[RUNNING] `nonexistent-target-runner [ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+[RUNNING] `nonexistent-target-runner [ROOT]/foo/target/debug/build/foo/[HASH]/out/foo-[HASH][EXE]`
 [ERROR] test failed, to rerun pass `--lib`
 
 Caused by:
-  could not execute process `nonexistent-target-runner [ROOT]/foo/target/debug/deps/foo-[HASH][EXE]` (never executed)
+  could not execute process `nonexistent-target-runner [ROOT]/foo/target/debug/build/foo/[HASH]/out/foo-[HASH][EXE]` (never executed)
 
 Caused by:
   [NOT_FOUND]
@@ -620,11 +620,11 @@ fn custom_runner_cfg_proc_macro_test_with_host_config() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 ...
-[RUNNING] `nonexistent-cfg-runner [ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+[RUNNING] `nonexistent-cfg-runner [ROOT]/foo/target/debug/build/foo/[HASH]/out/foo-[HASH][EXE]`
 [ERROR] test failed, to rerun pass `--lib`
 
 Caused by:
-  could not execute process `nonexistent-cfg-runner [ROOT]/foo/target/debug/deps/foo-[HASH][EXE]` (never executed)
+  could not execute process `nonexistent-cfg-runner [ROOT]/foo/target/debug/build/foo/[HASH]/out/foo-[HASH][EXE]` (never executed)
 
 Caused by:
   [NOT_FOUND]
@@ -651,11 +651,11 @@ fn custom_runner_cfg_proc_macro_test_with_host_config_no_target() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 ...
-[RUNNING] `nonexistent-cfg-runner [ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+[RUNNING] `nonexistent-cfg-runner [ROOT]/foo/target/debug/build/foo/[HASH]/out/foo-[HASH][EXE]`
 [ERROR] test failed, to rerun pass `--lib`
 
 Caused by:
-  could not execute process `nonexistent-cfg-runner [ROOT]/foo/target/debug/deps/foo-[HASH][EXE]` (never executed)
+  could not execute process `nonexistent-cfg-runner [ROOT]/foo/target/debug/build/foo/[HASH]/out/foo-[HASH][EXE]` (never executed)
 
 Caused by:
   [NOT_FOUND]
@@ -681,7 +681,7 @@ fn host_runner_proc_macro_test() {
         .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
         .with_stderr_data(str![[r#"
 ...
-[RUNNING] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/foo-[HASH][EXE]`
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -695,7 +695,7 @@ running 1 test
         .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
         .with_stderr_data(str![[r#"
 ...
-[RUNNING] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/foo-[HASH][EXE]`
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -731,11 +731,11 @@ fn custom_runner_proc_macro_test_with_cross_target() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 ...
-[RUNNING] `nonexistent-runner -r [ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+[RUNNING] `nonexistent-runner -r [ROOT]/foo/target/debug/build/foo/[HASH]/out/foo-[HASH][EXE]`
 [ERROR] test failed, to rerun pass `--lib`
 
 Caused by:
-  could not execute process `nonexistent-runner -r [ROOT]/foo/target/debug/deps/foo-[HASH][EXE]` (never executed)
+  could not execute process `nonexistent-runner -r [ROOT]/foo/target/debug/build/foo/[HASH]/out/foo-[HASH][EXE]` (never executed)
 
 Caused by:
   [NOT_FOUND]
@@ -771,7 +771,7 @@ fn custom_runner_proc_macro_test_with_cross_target_host_config() {
         .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
         .with_stderr_data(str![[r#"
 ...
-[RUNNING] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/foo-[HASH][EXE]`
 
 "#]])
         .with_stdout_data(str![[r#"
@@ -1064,7 +1064,7 @@ fn custom_linker_env() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc [..]-C linker=nonexistent-linker [..]`
+[RUNNING] `rustc [..]-C linker=nonexistent-linker[..]`
 ...
 "#]])
         .run();
