@@ -904,6 +904,7 @@ unstable_cli_options!(
     git: Option<GitFeatures> = ("Enable support for shallow git fetch operations"),
     #[serde(deserialize_with = "deserialize_gitoxide_features")]
     gitoxide: Option<GitoxideFeatures> = ("Use gitoxide for the given git interactions, or all of them if no argument is given"),
+    hint_min_opt_level: bool = ("Enable the `hints.min-opt-level` manifest key"),
     hint_msrv: bool = ("Enable passing `package.rust-version` to rustc for lints"),
     host_config: bool = ("Enable the `[host]` section in the .cargo/config.toml file"),
     json_target_spec: bool = ("Enable `.json` target spec files"),
@@ -1459,6 +1460,7 @@ impl CliUnstable {
                     |v| parse_gitoxide(v.split(',')),
                 )?
             }
+            "hint-min-opt-level" => self.hint_min_opt_level = parse_empty(k, v)?,
             "host-config" => self.host_config = parse_empty(k, v)?,
             "json-target-spec" => self.json_target_spec = parse_empty(k, v)?,
             "min-publish-age" => self.min_publish_age = parse_empty(k, v)?,

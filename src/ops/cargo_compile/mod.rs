@@ -497,6 +497,7 @@ pub fn create_bcx<'a, 'gctx>(
                 interner,
                 &profiles,
                 &target_data,
+                gctx.cli_unstable().hint_min_opt_level,
             )?
         } else {
             Default::default()
