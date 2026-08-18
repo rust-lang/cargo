@@ -652,7 +652,7 @@ impl<'gctx> InstallablePackage<'gctx> {
             self.ws.gctx(),
             &pkg_set,
             &resolve,
-            "consider running without --locked",
+            Some("consider running without --locked"),
         )
     }
 }
