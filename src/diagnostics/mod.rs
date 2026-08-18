@@ -20,7 +20,7 @@
 //! - TOML syntax or manifest schema: [`passes::emit_parse_diagnostics`], [`rules::PARSE_PASS_RULES`]
 //! - Lockfile
 //!   - May be overly broad for what dependencies are checked
-//! - Pre-build unit graph
+//! - Pre-build unit graph: [`rules::min_opt_level_hint::diagnose`]
 //!   - Tailored to a specific configuration (features, targets) but requires users to enumerate every configuration
 //! - Post-build unit graph: [`rules::unused_dependencies::lint_build_results`]
 //!   - Slow feedback cycle since a build needs to happen

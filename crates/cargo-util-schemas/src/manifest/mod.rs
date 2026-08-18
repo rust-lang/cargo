@@ -1709,6 +1709,11 @@ pub struct Hints {
         feature = "unstable-schema",
         schemars(with = "Option<TomlValueWrapper>")
     )]
+    pub min_opt_level: Option<toml::Value>,
+    #[cfg_attr(
+        feature = "unstable-schema",
+        schemars(with = "Option<TomlValueWrapper>")
+    )]
     pub mostly_unused: Option<toml::Value>,
 }
 

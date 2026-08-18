@@ -2,6 +2,7 @@ mod blanket_hint_mostly_unused;
 mod deferred_parse_diagnostics;
 mod im_a_teapot;
 mod manual_readme;
+pub mod min_opt_level_hint;
 mod missing_lints_features;
 mod missing_lints_inheritance;
 mod non_kebab_case_bins;

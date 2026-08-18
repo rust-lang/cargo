@@ -196,6 +196,7 @@ fn compile_ws<'a>(
     }
 
     let bcx = create_bcx(ws, options, &interner, logger.as_ref())?;
+    crate::diagnostics::rules::min_opt_level_hint::diagnose(&bcx)?;
 
     if options.build_config.unit_graph {
         unit_graph::emit_serialized_unit_graph(&bcx.roots, &bcx.unit_graph, ws.gctx())?;
@@ -497,6 +498,7 @@ pub fn create_bcx<'a, 'gctx>(
                 interner,
                 &profiles,
                 &target_data,
+                gctx.cli_unstable().hint_min_opt_level,
             )?
         } else {
             Default::default()

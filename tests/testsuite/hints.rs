@@ -407,21 +407,33 @@ fn min_opt_level_with_numeric_profiles() {
         .build();
 
     let mut cargo = p.cargo("check -v");
-    with_opt_level(&mut cargo, "dep", "0");
+    cargo
+        .arg("-Zhint-min-opt-level")
+        .masquerade_as_nightly_cargo(&["hint-min-opt-level"]);
+    with_opt_level(&mut cargo, "dep", "2");
     with_opt_level(&mut cargo, "foo", "0");
     cargo.run();
 
     let mut cargo = p.cargo("check -v --profile low");
-    with_opt_level(&mut cargo, "dep", "1");
+    cargo
+        .arg("-Zhint-min-opt-level")
+        .masquerade_as_nightly_cargo(&["hint-min-opt-level"]);
+    with_opt_level(&mut cargo, "dep", "2");
     with_opt_level(&mut cargo, "foo", "1");
     cargo.run();
 
     let mut cargo = p.cargo("check -v --profile high");
+    cargo
+        .arg("-Zhint-min-opt-level")
+        .masquerade_as_nightly_cargo(&["hint-min-opt-level"]);
     with_opt_level(&mut cargo, "dep", "3");
     with_opt_level(&mut cargo, "foo", "3");
     cargo.run();
 
     let mut cargo = p.cargo("check -v --release");
+    cargo
+        .arg("-Zhint-min-opt-level")
+        .masquerade_as_nightly_cargo(&["hint-min-opt-level"]);
     with_opt_level(&mut cargo, "dep", "3");
     with_opt_level(&mut cargo, "foo", "3");
     cargo.run();
@@ -446,7 +458,10 @@ fn min_opt_level_on_root_package() {
         .build();
 
     let mut cargo = p.cargo("check -v");
-    with_opt_level(&mut cargo, "foo", "0");
+    cargo
+        .arg("-Zhint-min-opt-level")
+        .masquerade_as_nightly_cargo(&["hint-min-opt-level"]);
+    with_opt_level(&mut cargo, "foo", "3");
     cargo.run();
 }
 
@@ -492,10 +507,16 @@ fn min_opt_level_with_size_profiles() {
         .build();
 
     let mut cargo = p.cargo("check -v --profile small");
+    cargo
+        .arg("-Zhint-min-opt-level")
+        .masquerade_as_nightly_cargo(&["hint-min-opt-level"]);
     with_opt_level(&mut cargo, "dep", "s");
     cargo.run();
 
     let mut cargo = p.cargo("check -v --profile tiny");
+    cargo
+        .arg("-Zhint-min-opt-level")
+        .masquerade_as_nightly_cargo(&["hint-min-opt-level"]);
     with_opt_level(&mut cargo, "dep", "z");
     cargo.run();
 }
@@ -546,10 +567,16 @@ fn min_opt_level_with_package_overrides() {
         .build();
 
     let mut cargo = p.cargo("check -v --profile wildcard");
+    cargo
+        .arg("-Zhint-min-opt-level")
+        .masquerade_as_nightly_cargo(&["hint-min-opt-level"]);
     with_opt_level(&mut cargo, "dep", "1");
     cargo.run();
 
     let mut cargo = p.cargo("check -v --profile specific");
+    cargo
+        .arg("-Zhint-min-opt-level")
+        .masquerade_as_nightly_cargo(&["hint-min-opt-level"]);
     with_opt_level(&mut cargo, "dep", "0");
     cargo.run();
 }
@@ -593,7 +620,10 @@ fn min_opt_level_with_transitive_dependency() {
         .build();
 
     let mut cargo = p.cargo("check -v");
-    with_opt_level(&mut cargo, "dep", "0");
+    cargo
+        .arg("-Zhint-min-opt-level")
+        .masquerade_as_nightly_cargo(&["hint-min-opt-level"]);
+    with_opt_level(&mut cargo, "dep", "2");
     with_opt_level(&mut cargo, "leaf", "0");
     cargo.run();
 }
@@ -639,10 +669,16 @@ fn min_opt_level_with_build_dependencies() {
         .build();
 
     let mut cargo = p.cargo("check -v");
-    with_opt_level(&mut cargo, "dep", "0");
+    cargo
+        .arg("-Zhint-min-opt-level")
+        .masquerade_as_nightly_cargo(&["hint-min-opt-level"]);
+    with_opt_level(&mut cargo, "dep", "2");
     cargo.run();
 
     let mut cargo = p.cargo("check -v --profile overridden");
+    cargo
+        .arg("-Zhint-min-opt-level")
+        .masquerade_as_nightly_cargo(&["hint-min-opt-level"]);
     with_opt_level(&mut cargo, "dep", "0");
     cargo.run();
 }
@@ -666,11 +702,13 @@ fn min_opt_level_with_wrong_type() {
         .build();
 
     let mut cargo = p.cargo("check -v");
+    cargo
+        .arg("-Zhint-min-opt-level")
+        .masquerade_as_nightly_cargo(&["hint-min-opt-level"]);
     with_opt_level(&mut cargo, "foo", "0");
     cargo
         .with_stderr_data(str![[r#"
-[WARNING] Cargo.toml: unused manifest key: hints.min-opt-level
-[WARNING] `foo` (manifest) generated 1 warning
+[WARNING] foo@0.0.1: ignoring unsupported value type (string) for 'hints.min-opt-level', which expects an integer
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -702,11 +740,13 @@ fn min_opt_level_with_out_of_range_values() {
             .build();
 
         let mut cargo = p.cargo("check -v");
+        cargo
+            .arg("-Zhint-min-opt-level")
+            .masquerade_as_nightly_cargo(&["hint-min-opt-level"]);
         with_opt_level(&mut cargo, name, "0");
         cargo
             .with_stderr_data(str![[r#"
-[WARNING] Cargo.toml: unused manifest key: hints.min-opt-level
-[WARNING] [..] (manifest) generated 1 warning
+[WARNING] [..]@0.0.1: ignoring unsupported value ([..]) for 'hints.min-opt-level', which only supports integers from 0 to 3
 [CHECKING] [..] v0.0.1 ([ROOT]/[..])
 [RUNNING] `rustc --crate-name [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -719,7 +759,7 @@ fn min_opt_level_with_out_of_range_values() {
 #[cargo_test]
 fn min_opt_level_registry_dependency_warnings_are_suppressed() {
     for (path, name, level, expected_opt_level) in [
-        ("positive", "positive", "2", "0"),
+        ("positive", "positive", "2", "2"),
         ("wrong-type", "wrong_type", r#""s""#, "0"),
         ("out-of-range", "out_of_range", "4", "0"),
     ] {
@@ -760,6 +800,9 @@ fn min_opt_level_registry_dependency_warnings_are_suppressed() {
             .build();
 
         let mut cargo = p.cargo("check -v");
+        cargo
+            .arg("-Zhint-min-opt-level")
+            .masquerade_as_nightly_cargo(&["hint-min-opt-level"]);
         with_opt_level(&mut cargo, name, expected_opt_level);
         cargo
             .with_stderr_does_not_contain("[WARNING] [..]hints.min-opt-level[..]")
@@ -789,8 +832,7 @@ fn min_opt_level_without_feature_gate() {
     with_opt_level(&mut cargo, "foo", "0");
     cargo
         .with_stderr_data(str![[r#"
-[WARNING] Cargo.toml: unused manifest key: hints.min-opt-level
-[WARNING] `foo` (manifest) generated 1 warning
+[WARNING] foo@0.0.1: ignoring 'hints.min-opt-level', pass `-Zhint-min-opt-level` to enable it
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -800,8 +842,7 @@ fn min_opt_level_without_feature_gate() {
 
     p.cargo("check -v")
         .with_stderr_data(str![[r#"
-[WARNING] Cargo.toml: unused manifest key: hints.min-opt-level
-[WARNING] `foo` (manifest) generated 1 warning
+[WARNING] foo@0.0.1: ignoring 'hints.min-opt-level', pass `-Zhint-min-opt-level` to enable it
 [FRESH] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -830,8 +871,7 @@ fn min_opt_level_warning_is_emitted_once_per_package() {
 
     p.cargo("check")
         .with_stderr_data(str![[r#"
-[WARNING] Cargo.toml: unused manifest key: hints.min-opt-level
-[WARNING] `foo` (manifest) generated 1 warning
+[WARNING] foo@0.0.1: ignoring 'hints.min-opt-level', pass `-Zhint-min-opt-level` to enable it
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -896,6 +936,7 @@ fn min_opt_level_on_local_dependencies_without_feature_gate() {
     cargo
         .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to highest Rust [..] compatible versions
+[WARNING] bar@1.0.0: ignoring 'hints.min-opt-level', pass `-Zhint-min-opt-level` to enable it
 [CHECKING] zero v1.0.0 ([ROOT]/foo/zero)
 [RUNNING] `rustc --crate-name zero [..]`
 [CHECKING] bar v1.0.0 ([ROOT]/foo/bar)

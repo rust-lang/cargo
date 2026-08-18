@@ -1030,6 +1030,16 @@
     "Hints": {
       "type": "object",
       "properties": {
+        "min-opt-level": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TomlValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "mostly-unused": {
           "anyOf": [
             {
@@ -1444,7 +1454,11 @@
       "type": "string"
     },
     "TomlDebugInfo": {
-      "type": ["string", "integer", "boolean"],
+      "type": [
+        "string",
+        "integer",
+        "boolean"
+      ],
       "enum": [
         "none",
         "line-directives-only",
