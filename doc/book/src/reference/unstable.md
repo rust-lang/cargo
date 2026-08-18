@@ -109,6 +109,7 @@ Each new feature described below should explain how to use it.
 * `Cargo.toml` extensions
     * [Profile `rustflags` option](#profile-rustflags-option) --- Passed directly to rustc.
     * [Profile `hint-mostly-unused` option](#profile-hint-mostly-unused-option) --- Hint that a dependency is mostly unused, to optimize compilation time.
+    * [Package `min-opt-level` hint](#package-min-opt-level-hint) --- Request a numeric optimization floor for one package.
     * [codegen-backend](#codegen-backend) --- Select the codegen backend used by rustc.
     * [per-package-target](#per-package-target) --- Sets the `--target` to use for each individual package.
     * [artifact dependencies](#artifact-dependencies) --- Allow build artifacts to be included into other build artifacts and build them for different targets.
@@ -922,6 +923,54 @@ mostly-unused = true
 This will cause the crate to default to hint-mostly-unused, unless overridden
 via `profile`, which takes precedence, and which can only be specified in the
 top-level crate being built.
+
+## Package `min-opt-level` hint
+* Tracking Issue: [#17334](https://github.com/rust-lang/cargo/issues/17334)
+* RFC: [#3924](https://github.com/rust-lang/rfcs/pull/3924)
+
+The `min-opt-level` hint lets a package request a numeric optimization floor
+for itself:
+
+```toml
+# In example-dependency's Cargo.toml
+[hints]
+min-opt-level = 2
+```
+
+To enable this feature, pass `-Zhint-min-opt-level`. Without the flag, Cargo
+warns and ignores a positive hint. Older versions of Cargo may instead report
+an unused manifest key, but specifying the hint does not change the package's
+MSRV.
+
+The hint accepts the numeric optimization levels 0, 1, 2, and 3. Other values
+produce a warning and are ignored. If the selected [profile](profiles.md) has a
+lower numeric [`opt-level`](profiles.md#opt-level), Cargo raises it to the
+hinted minimum for that package. A higher numeric level remains unchanged. The
+hint also applies to Cargo's built-in `opt-level = 0` default for build
+dependencies. The size optimization levels `"s"` and `"z"` override a numeric
+hint.
+
+Explicit [package overrides](profiles.md#overrides) from the top-level package,
+including `[profile.dev.package."*"]`, take precedence over a hint, as do
+explicit build overrides. A lower numeric `opt-level` in the general profile
+cannot reduce the hinted floor. For example:
+
+```toml
+# In the top-level package's Cargo.toml
+
+# Does not affect example-dependency: the hint keeps it at opt-level 2.
+[profile.dev]
+opt-level = 0
+
+# Takes precedence over the hint, forcing example-dependency back to no
+# optimization when debugging it.
+[profile.dev.package.example-dependency]
+opt-level = 0
+```
+
+A hint only affects the package that declares it, not its dependencies. Use
+this hint when optimization either makes a typical full build faster or when
+the package is many times slower without it.
 
 ## rustdoc-map
 * Tracking Issue: [#8296](https://github.com/rust-lang/cargo/issues/8296)

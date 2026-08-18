@@ -590,9 +590,9 @@ Individual hints may have an associated unstable feature gate that you need to
 pass in order to apply the configuration they specify, but if you don't specify
 that unstable feature gate, you will again get only a warning, not an error.
 
-There are no stable hints at this time. See the [hint-mostly-unused
-documentation](unstable.md#profile-hint-mostly-unused-option) for information
-on an unstable hint.
+There are no stable hints at this time. See the documentation for the unstable
+[`mostly-unused`](unstable.md#profile-hint-mostly-unused-option) and
+[`min-opt-level`](unstable.md#package-min-opt-level-hint) hints.
 
 > **MSRV:** Respected as of 1.90.
 
