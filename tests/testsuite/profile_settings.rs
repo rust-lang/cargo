@@ -114,7 +114,7 @@ fn check_opt_level_override(profile_level: &str, rustc_level: &str) {
             "\
 [COMPILING] test v0.0.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name test --edition=2015 src/lib.rs [..]--crate-type lib \
-        --emit=[..]link \
+        --emit=[..]link[..] \
         -C opt-level={level}[..]\
         -C debuginfo=2 [..]\
         -C debug-assertions=on[..] \
@@ -190,7 +190,7 @@ fn top_level_overrides_deps() {
 [COMPILING] foo v0.0.0 ([ROOT]/foo/foo)
 [RUNNING] `rustc --crate-name foo --edition=2015 foo/src/lib.rs [..]\
         --crate-type dylib --crate-type rlib \
-        --emit=[..]link \
+        --emit=[..]link[..] \
         -C prefer-dynamic \
         -C opt-level=1[..]\
         -C debuginfo=2 [..]\
@@ -198,14 +198,14 @@ fn top_level_overrides_deps() {
         --out-dir [ROOT]/foo/target/release/build/foo/[HASH]/out`
 [COMPILING] test v0.0.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name test --edition=2015 src/lib.rs [..]--crate-type lib \
-        --emit=[..]link \
+        --emit=[..]link[..] \
         -C opt-level=1[..]\
         -C debuginfo=2 [..]\
         -C metadata=[..] \
         --out-dir [..] \
         --extern foo=[ROOT]/foo/target/release/build/foo/[HASH]/out/\
                      {prefix}foo[..]{suffix} \
-        --extern foo=[ROOT]/foo/target/release/build/foo/[HASH]/out/libfoo.rlib`
+        --extern foo=[ROOT]/foo/target/release/build/foo/[HASH]/out/libfoo.rlib[..]`
 [FINISHED] `release` profile [optimized + debuginfo] target(s) in [ELAPSED]s
 ",
             prefix = env::consts::DLL_PREFIX,
