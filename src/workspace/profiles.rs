@@ -33,13 +33,14 @@ use crate::workspace::parser::validate_profile;
 use crate::workspace::{PackageId, PackageIdSpec, PackageIdSpecQuery, Target, Workspace};
 use anyhow::{Context as _, bail};
 use cargo_util::is_ci;
-use cargo_util_schemas::manifest::TomlTrimPaths;
+use cargo_util_schemas::manifest::{Hints, TomlTrimPaths};
 use cargo_util_schemas::manifest::{
     ProfilePackageSpec, StringOrBool, TomlDebugInfo, TomlProfile, TomlProfiles,
 };
 use cargo_util_terminal::Shell;
 use std::collections::BTreeMap;
 use std::hash::Hash;
+use std::ops::RangeInclusive;
 use std::{cmp, fmt, hash};
 
 /// Collection of all profiles.
@@ -66,6 +67,9 @@ pub struct Profiles {
     requested_profile: InternedString,
     /// The host target for rustc being used by this `Profiles`.
     rustc_host: InternedString,
+    /// Whether `-Zhint-min-opt-level` was passed, enabling the
+    /// `hints.min-opt-level` manifest key.
+    hint_min_opt_level: bool,
 }
 
 impl Profiles {
@@ -88,6 +92,7 @@ impl Profiles {
             original_profiles: profiles.clone(),
             requested_profile,
             rustc_host,
+            hint_min_opt_level: gctx.cli_unstable().hint_min_opt_level,
         };
 
         Self::add_root_profiles(&mut profile_makers, &profiles);
@@ -275,13 +280,28 @@ impl Profiles {
     pub fn get_profile(
         &self,
         pkg_id: PackageId,
+        pkg_hints: Option<&Hints>,
         is_member: bool,
         is_local: bool,
         unit_for: UnitFor,
         kind: CompileKind,
     ) -> Profile {
         let maker = self.get_profile_maker(&self.requested_profile).unwrap();
-        let mut profile = maker.get_profile(Some(pkg_id), is_member, unit_for.is_for_host());
+        let min_opt_level = if self.hint_min_opt_level {
+            parse_min_opt_level_hint(pkg_hints.and_then(|hints| hints.min_opt_level.as_ref()))
+                .ok()
+                .flatten()
+        } else {
+            // The `min_opt_level_hint` parse pass rule warns that the hint is being ignored.
+            None
+        };
+
+        let mut profile = maker.get_profile(
+            Some(pkg_id),
+            is_member,
+            unit_for.is_for_host(),
+            min_opt_level,
+        );
 
         // Dealing with `panic=abort` and `panic=unwind` requires some special
         // treatment. Be sure to process all the various options here.
@@ -345,7 +365,9 @@ impl Profiles {
     pub fn base_profile(&self) -> Profile {
         let profile_name = self.requested_profile;
         let maker = self.get_profile_maker(&profile_name).unwrap();
-        maker.get_profile(None, /*is_member*/ true, /*is_for_host*/ false)
+        maker.get_profile(
+            None, /*is_member*/ true, /*is_for_host*/ false, None,
+        )
     }
 
     /// Gets the directory name for a profile, like `debug` or `release`.
@@ -403,6 +425,31 @@ impl Profiles {
     }
 }
 
+pub(crate) enum MinOptLevelHintError {
+    OutOfRange {
+        level: i64,
+        expected: RangeInclusive<i64>,
+    },
+    WrongType(&'static str),
+}
+
+pub(crate) fn parse_min_opt_level_hint(
+    value: Option<&toml::Value>,
+) -> Result<Option<u32>, MinOptLevelHintError> {
+    let Some(value) = value else {
+        return Ok(None);
+    };
+    let Some(level) = value.as_integer() else {
+        return Err(MinOptLevelHintError::WrongType(value.type_str()));
+    };
+    let expected = 0..=3;
+    if expected.contains(&level) {
+        Ok(Some(level as u32))
+    } else {
+        Err(MinOptLevelHintError::OutOfRange { level, expected })
+    }
+}
+
 /// An object used for handling the profile hierarchy.
 ///
 /// The precedence of profiles are (first one wins):
@@ -440,6 +487,7 @@ impl ProfileMaker {
         pkg_id: Option<PackageId>,
         is_member: bool,
         is_for_host: bool,
+        min_opt_level: Option<u32>,
     ) -> Profile {
         let mut profile = self.default.clone();
 
@@ -474,6 +522,13 @@ impl ProfileMaker {
             // below so the unit can be reused, otherwise we can avoid emitting
             // the unit's debuginfo.
             profile.debuginfo = DebugInfo::Deferred(profile.debuginfo.into_inner());
+        }
+        if let (Some(min_opt_level), Ok(opt_level)) =
+            (min_opt_level, profile.opt_level.as_str().parse::<u32>())
+        {
+            if opt_level < min_opt_level {
+                profile.opt_level = min_opt_level.to_string().into();
+            }
         }
         // ... and next comes any other sorts of overrides specified in
         // profiles, such as `[profile.release.build-override]` or

@@ -191,6 +191,7 @@ fn generate_roots(
             let unit_for = UnitFor::new_normal(kind);
             let profile = profiles.get_profile(
                 pkg.package_id(),
+                pkg.hints(),
                 /*is_member*/ false,
                 /*is_local*/ false,
                 unit_for,

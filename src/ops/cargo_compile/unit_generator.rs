@@ -148,6 +148,7 @@ impl<'a> UnitGenerator<'a, '_> {
                 };
                 let profile = self.profiles.get_profile(
                     pkg.package_id(),
+                    pkg.hints(),
                     self.ws.is_member(pkg),
                     is_local,
                     unit_for,
