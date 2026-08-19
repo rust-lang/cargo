@@ -3178,6 +3178,7 @@ fn rebuild_tracks_checksum() {
         .build();
 
     p.cargo("doc -Zrustdoc-depinfo -Zchecksum-freshness")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .masquerade_as_nightly_cargo(&["rustdoc-depinfo", "checksum-freshness"])
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.5.0 ([ROOT]/parent/foo)
@@ -3195,6 +3196,7 @@ fn rebuild_tracks_checksum() {
     p.root().move_into_the_future();
 
     p.cargo("doc --verbose -Zrustdoc-depinfo -Zchecksum-freshness")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
         .with_stderr_data(str![[r#"
 [DIRTY] foo v0.5.0 ([ROOT]/parent/foo): file size changed (16 != 15) for `src/../../README`

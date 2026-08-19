@@ -608,6 +608,29 @@ between cargo versions. Fingerprints are used by cargo to determine when a crate
 For the time being files ingested by build script will continue to use mtimes, even when `checksum-freshness`
 is enabled. This is not intended as a long term solution.
 
+```toml
+# .cargo/config.toml
+[unstable]
+checksum-freshness = true
+
+[build]
+fingerprint = "content"
+```
+
+### `build.fingerprint`
+
+* Type: string
+* Default: `"mtime"`
+* Environment: `CARGO_BUILD_FINGERPRINT`
+
+Select the method used for detecting when a build should occur based on source input changes.
+
+* `mtime`: Last modified time of the input
+* `content`: Checksum of the input
+
+> [!NOTE]
+> This does not affect the build script `cargo::rerun-if-changed` directive.
+
 ## panic-abort-tests
 * Tracking Issue: [#67650](https://github.com/rust-lang/rust/issues/67650)
 * Original Pull Request: [#7460](https://github.com/rust-lang/cargo/pull/7460)

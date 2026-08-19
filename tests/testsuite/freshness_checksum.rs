@@ -23,6 +23,7 @@ use filetime::FileTime;
 fn non_nightly_fails() {
     let p = project().file("src/main.rs", "fn main() {}").build();
     p.cargo("build")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .with_stderr_data(str![[r#"
 [ERROR] the `-Z` flag is only accepted on the nightly channel of Cargo, but this is the `stable` channel
@@ -39,6 +40,7 @@ fn warn_on_missing_feature() {
     p.cargo("check")
         .env("CARGO_BUILD_FINGERPRINT", "content")
         .with_stderr_data(str![[r#"
+[WARNING] ignoring `build.fingerprint = "content"` without `-Zchecksum-freshness`
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -61,6 +63,7 @@ fn checksum_actually_uses_checksum() {
         .build();
 
     p.cargo("check")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stderr_data(str![[r#"
@@ -72,6 +75,7 @@ fn checksum_actually_uses_checksum() {
     p.root().move_into_the_future();
 
     p.cargo("check")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stderr_data(str![[r#"
@@ -89,6 +93,7 @@ fn same_size_different_content() {
         .build();
 
     p.cargo("check")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stderr_data(str![[r#"
@@ -100,6 +105,7 @@ fn same_size_different_content() {
     p.change_file("src/main.rs", "mod a;fn main() { }");
 
     p.cargo("check -v")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stderr_data(str![[r#"
@@ -112,6 +118,7 @@ fn same_size_different_content() {
         .run();
 
     p.cargo("check")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stderr_data(str![[r#"
@@ -161,6 +168,7 @@ fn binary_depinfo_correctly_encoded() {
     let host = rustc_host();
     p.cargo("build -Zbinary-dep-depinfo --target")
         .arg(&host)
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["binary-dep-depinfo", "checksum-freshness"])
         .with_stderr_data(str![[r#"
@@ -187,6 +195,7 @@ fn binary_depinfo_correctly_encoded() {
     // Make sure it stays fresh.
     p.cargo("build -Zbinary-dep-depinfo --target")
         .arg(&host)
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["binary-dep-depinfo", "checksum-freshness"])
         .with_stderr_data(str![[r#"
@@ -204,6 +213,7 @@ fn modifying_and_moving() {
         .build();
 
     p.cargo("build")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stderr_data(str![[r#"
@@ -214,6 +224,7 @@ fn modifying_and_moving() {
         .run();
 
     p.cargo("build")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stderr_data(str![[r#"
@@ -226,6 +237,7 @@ fn modifying_and_moving() {
 
     p.change_file("src/a.rs", "#[allow(unused)]fn main() {}");
     p.cargo("build -v")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stderr_data(str![[r#"
@@ -239,6 +251,7 @@ fn modifying_and_moving() {
 
     fs::rename(&p.root().join("src/a.rs"), &p.root().join("src/b.rs")).unwrap();
     p.cargo("build")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_status(101)
@@ -263,6 +276,7 @@ fn modify_only_some_files() {
         .build();
 
     p.cargo("build")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stderr_data(str![[r#"
@@ -272,6 +286,7 @@ fn modify_only_some_files() {
 "#]])
         .run();
     p.cargo("test")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .run();
@@ -285,6 +300,7 @@ fn modify_only_some_files() {
 
     // Despite mtime change, lib rebuilds and fails
     p.cargo("build -v")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_status(101)
@@ -329,6 +345,7 @@ fn rebuild_sub_package_then_while_package() {
         .build();
 
     p.cargo("build")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stderr_data(str![[r#"
@@ -344,6 +361,7 @@ fn rebuild_sub_package_then_while_package() {
     p.change_file("b/src/lib.rs", "pub fn b() {}");
 
     p.cargo("build -pb -v")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stderr_data(str![[r#"
@@ -361,6 +379,7 @@ fn rebuild_sub_package_then_while_package() {
     );
 
     p.cargo("build -v")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stderr_data(str![[r#"
@@ -385,10 +404,12 @@ fn rebuild_tests_if_lib_changes() {
         .build();
 
     p.cargo("build")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .run();
     p.cargo("test")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .run();
@@ -396,10 +417,12 @@ fn rebuild_tests_if_lib_changes() {
     p.change_file("src/lib.rs", "");
 
     p.cargo("build")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .run();
     p.cargo("test -v --test foo-test")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stderr_data(str![[r#"
@@ -435,6 +458,7 @@ fn no_rebuild_if_build_artifacts_move_backwards_in_time() {
         .build();
 
     p.cargo("build")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .run();
@@ -442,6 +466,7 @@ fn no_rebuild_if_build_artifacts_move_backwards_in_time() {
     p.root().move_into_the_past();
 
     p.cargo("build")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stdout_data(str![])
@@ -474,6 +499,7 @@ fn no_rebuild_if_build_artifacts_move_forward_in_time() {
         .build();
 
     p.cargo("build")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .run();
@@ -481,6 +507,7 @@ fn no_rebuild_if_build_artifacts_move_forward_in_time() {
     p.root().move_into_the_future();
 
     p.cargo("build")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .env("CARGO_LOG", "")
@@ -523,6 +550,7 @@ fn no_rebuild_when_rename_dir() {
     fs::write(p.root().join("src/lib.rs"), "").unwrap();
 
     p.cargo("build")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .run();
@@ -532,6 +560,7 @@ fn no_rebuild_when_rename_dir() {
     fs::rename(p.root(), &new).unwrap();
 
     p.cargo("build")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .cwd(&new)
@@ -563,6 +592,7 @@ fn update_dependency_mtime_does_not_rebuild() {
         .build();
 
     p.cargo("build -Z mtime-on-use")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["mtime-on-use", "checksum-freshness"])
         .env("RUSTFLAGS", "-C linker=cc")
@@ -576,6 +606,7 @@ fn update_dependency_mtime_does_not_rebuild() {
         .run();
     // This does not make new files, but it does update the mtime of the dependency.
     p.cargo("build -p bar -Z mtime-on-use")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["mtime-on-use", "checksum-freshness"])
         .env("RUSTFLAGS", "-C linker=cc")
@@ -586,6 +617,7 @@ fn update_dependency_mtime_does_not_rebuild() {
         .run();
     // This should not recompile!
     p.cargo("build -Z mtime-on-use")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["mtime-on-use", "checksum-freshness"])
         .env("RUSTFLAGS", "-C linker=cc")
@@ -654,10 +686,12 @@ fn fingerprint_cleaner_does_not_rebuild() {
         .build();
 
     p.cargo("build -Z mtime-on-use")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["mtime-on-use", "checksum-freshness"])
         .run();
     p.cargo("build -Z mtime-on-use --features a")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["mtime-on-use", "checksum-freshness"])
         .with_stderr_data(str![[r#"
@@ -675,6 +709,7 @@ fn fingerprint_cleaner_does_not_rebuild() {
     }
     // This does not make new files, but it does update the mtime.
     p.cargo("build -Z mtime-on-use --features a")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["mtime-on-use", "checksum-freshness"])
         .with_stderr_data(str![[r#"
@@ -685,6 +720,7 @@ fn fingerprint_cleaner_does_not_rebuild() {
     fingerprint_cleaner(p.target_debug_dir(), timestamp);
     // This should not recompile!
     p.cargo("build -Z mtime-on-use --features a")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["mtime-on-use", "checksum-freshness"])
         .with_stderr_data(str![[r#"
@@ -694,6 +730,7 @@ fn fingerprint_cleaner_does_not_rebuild() {
         .run();
     // But this should be cleaned and so need a rebuild
     p.cargo("build -Z mtime-on-use")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["mtime-on-use", "checksum-freshness"])
         .with_stderr_data(str![[r#"
@@ -733,6 +770,7 @@ fn bust_patched_dep() {
         .build();
 
     p.cargo("build")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .run();
@@ -740,6 +778,7 @@ fn bust_patched_dep() {
     p.change_file("reg1new/src/lib.rs", "// modified");
 
     p.cargo("build -v")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stderr_data(str![[r#"
@@ -758,6 +797,7 @@ fn bust_patched_dep() {
         .run();
 
     p.cargo("build -v")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stderr_data(str![[r#"
@@ -857,6 +897,7 @@ fn rebuild_on_mid_build_file_modification() {
     });
 
     p.cargo("build")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stderr_data(str![[r#"
@@ -868,6 +909,7 @@ fn rebuild_on_mid_build_file_modification() {
         .run();
 
     p.cargo("build -v")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stderr_data(str![[r#"
@@ -956,12 +998,14 @@ fn dirty_both_lib_and_test() {
         .build();
 
     p.cargo("build")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .run();
 
     // 2 != 1
     p.cargo("test --lib")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_status(101)
@@ -972,11 +1016,13 @@ fn dirty_both_lib_and_test() {
     p.change_file("slib.rs", &slib(1));
 
     p.cargo("build")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .run();
     // This should recompile with the new static lib, and the test should pass.
     p.cargo("test --lib")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .run();
@@ -1006,11 +1052,13 @@ fn script_fails_stay_dirty() {
         .build();
 
     p.cargo("build")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .run();
     p.change_file("helper.rs", r#"pub fn doit() {panic!("Crash!");}"#);
     p.cargo("build")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stderr_data("...\n[..]Crash![..]\n...")
@@ -1018,6 +1066,7 @@ fn script_fails_stay_dirty() {
         .run();
     // There was a bug where this second call would be "fresh".
     p.cargo("build")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stderr_data("...\n[..]Crash![..]\n...")
@@ -1089,6 +1138,7 @@ fn simulated_docker_deps_stay_cached() {
         .build();
 
     p.cargo("build")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .run();
@@ -1134,6 +1184,7 @@ fn simulated_docker_deps_stay_cached() {
         println!("already zero");
         // If it was already truncated, then everything stays fresh.
         p.cargo("build -v")
+            .env("CARGO_BUILD_FINGERPRINT", "content")
             .arg("-Zchecksum-freshness")
             .masquerade_as_nightly_cargo(&["checksum-freshness"])
             .with_stderr_data(
@@ -1162,6 +1213,7 @@ fn simulated_docker_deps_stay_cached() {
         // in it. It differs between builds because one has nsec=0 and the other
         // likely has a nonzero nsec. Hence, the rebuild.
         p.cargo("build -v")
+            .env("CARGO_BUILD_FINGERPRINT", "content")
             .arg("-Zchecksum-freshness")
             .masquerade_as_nightly_cargo(&["checksum-freshness"])
             .with_stderr_data(
@@ -1229,6 +1281,7 @@ fn rename_with_path_deps() {
     let p = p.build();
 
     p.cargo("build")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .run();
@@ -1242,6 +1295,7 @@ fn rename_with_path_deps() {
     fs::rename(p.root(), &new).unwrap();
 
     p.cargo("build")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .cwd(&new)
@@ -1311,6 +1365,7 @@ fn move_target_directory_with_path_deps() {
     parent.pop();
 
     p.cargo("build")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .run();
@@ -1319,6 +1374,7 @@ fn move_target_directory_with_path_deps() {
     fs::rename(p.root().join("target"), &new_target).unwrap();
 
     p.cargo("build")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .env("CARGO_TARGET_DIR", &new_target)
@@ -1363,6 +1419,7 @@ fn verify_source_before_recompile() {
     );
     // Sanity check: vendoring works correctly.
     p.cargo("check --verbose")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stderr_data(str![[r#"
@@ -1381,6 +1438,7 @@ fn verify_source_before_recompile() {
     );
     // Should ignore modified sources without any recompile.
     p.cargo("check --verbose")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stderr_data(str![[r#"
@@ -1396,6 +1454,7 @@ fn verify_source_before_recompile() {
     // Cargo should refuse to build because of checksum verification failure.
     // Cargo shouldn't recompile dependency `bar`.
     p.cargo("check --verbose")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .env("RUSTFLAGS", "-W warnings")
@@ -1421,6 +1480,7 @@ fn skip_checksum_check_in_selected_cargo_home_subdirs() {
     let project_root = p.root();
     let cargo_home = project_root.parent().unwrap().parent().unwrap();
     p.cargo("check -v")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .env("CARGO_HOME", &cargo_home)
@@ -1433,6 +1493,7 @@ fn skip_checksum_check_in_selected_cargo_home_subdirs() {
         .run();
     p.change_file("src/lib.rs", "illegal syntax");
     p.cargo("check -v")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .env("CARGO_HOME", &cargo_home)
@@ -1454,6 +1515,7 @@ fn use_checksum_cache_in_cargo_home() {
     let project_root = p.root();
     let cargo_home = project_root.parent().unwrap();
     p.cargo("check -v")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .env("CARGO_HOME", &cargo_home)
@@ -1466,6 +1528,7 @@ fn use_checksum_cache_in_cargo_home() {
         .run();
     p.change_file("src/lib.rs", "illegal syntax");
     p.cargo("check -v")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .env("CARGO_HOME", &cargo_home)
@@ -1494,6 +1557,7 @@ fn incremental_build_script_execution_got_new_mtime_and_cargo_check() {
         .build();
 
     p.cargo("check")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .env("CARGO_INCREMENTAL", "1")
@@ -1508,6 +1572,7 @@ fn incremental_build_script_execution_got_new_mtime_and_cargo_check() {
 
     // The first one is expected to rerun build script
     p.cargo("check -v")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .env("CARGO_INCREMENTAL", "1")
@@ -1523,6 +1588,7 @@ fn incremental_build_script_execution_got_new_mtime_and_cargo_check() {
 
     // subsequent cargo check gets stuck...
     p.cargo("check -v")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .env("CARGO_INCREMENTAL", "1")
@@ -1534,6 +1600,7 @@ fn incremental_build_script_execution_got_new_mtime_and_cargo_check() {
         .run();
 
     p.cargo("check -v")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .env("CARGO_INCREMENTAL", "1")
@@ -1593,6 +1660,7 @@ fn symlink_to_package() {
         .symlink_dir("bar1", "bar")
         .build();
     p.cargo("check")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stderr_data(str![[r#"
@@ -1608,6 +1676,7 @@ fn symlink_to_package() {
     p.symlink("bar2", "bar");
     // Checksums detect the changed source behind the symlink.
     p.cargo("check")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stderr_data(str![[r#"
