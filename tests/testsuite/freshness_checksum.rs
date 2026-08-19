@@ -33,6 +33,26 @@ See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more inform
         .run();
 }
 
+#[cargo_test]
+fn warn_on_missing_feature() {
+    let p = project().file("src/main.rs", "fn main() {}").build();
+    p.cargo("check")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+    p.cargo("check")
+        .env("CARGO_BUILD_FINGERPRINT", "mtime")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
 #[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn checksum_actually_uses_checksum() {
     let p = project()
