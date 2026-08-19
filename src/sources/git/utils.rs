@@ -1462,7 +1462,11 @@ fn maybe_gc_repo(repo: &mut git2::Repository, gctx: &GlobalContext) -> CargoResu
     if let Ok(limit) = gctx.get_env("__CARGO_PACKFILE_LIMIT") {
         cmd.arg(format!("-c gc.autoPackLimit={}", limit));
     }
-    cmd.arg("gc").arg("--auto").current_dir(repo.path());
+    cmd.arg("gc")
+        .arg("--auto")
+        // Explicitly set `GIT_DIR` so `safe.bareRepository=explicit` doesn't reject it.
+        .env("GIT_DIR", repo.path())
+        .current_dir(repo.path());
 
     match cmd.output() {
         Ok(out) => {
