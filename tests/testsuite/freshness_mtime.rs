@@ -1,4 +1,6 @@
 //! Tests for fingerprinting (rebuild detection).
+//!
+//! This must be kept in-sync with `freshness_checksum.rs`
 
 use std::fs::{self, OpenOptions};
 use std::io;

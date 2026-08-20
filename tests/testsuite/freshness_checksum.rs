@@ -1,4 +1,6 @@
 //! Tests for checksum-based fingerprinting (rebuild detection).
+//!
+//! This must be kept in-sync with `freshness_mtime.rs`
 
 use std::fs::{self, OpenOptions};
 use std::io;
