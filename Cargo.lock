@@ -533,7 +533,7 @@ version = "0.4.14"
 
 [[package]]
 name = "cargo-test-support"
-version = "0.11.5"
+version = "0.11.6"
 dependencies = [
  "anyhow",
  "cargo-test-macro",
