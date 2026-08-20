@@ -30,7 +30,7 @@ Cargo has several types of documentation that contributors work with:
 Building the book requires [mdBook]. To get it:
 
 ```console
-$ cargo install mdbook
+$ cargo install --locked mdbook
 ```
 
 To build the book:

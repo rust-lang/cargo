@@ -122,7 +122,7 @@ made up of a set of `*.crate` files and an index like the normal registry is.
 The primary way to manage and create local registry sources is through the
 [`cargo-local-registry`][cargo-local-registry] subcommand,
 [available on crates.io][cargo-local-registry] and can be installed with
-`cargo install cargo-local-registry`.
+`cargo install --locked cargo-local-registry`.
 
 [cargo-local-registry]: https://crates.io/crates/cargo-local-registry
 
