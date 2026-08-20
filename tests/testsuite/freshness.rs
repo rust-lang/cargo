@@ -16,6 +16,47 @@ use cargo_test_support::{basic_manifest, project, rustc_host, rustc_host_env, st
 
 use super::death;
 
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
+fn checksum_build_compatible_with_mtime_build() {
+    let p = project()
+        .file("src/main.rs", "mod a; fn main() {}")
+        .file("src/a.rs", "")
+        .build();
+
+    p.cargo("check")
+        .arg("-Zchecksum-freshness")
+        .masquerade_as_nightly_cargo(&["checksum-freshness"])
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+    p.cargo("check")
+        .arg("-Zchecksum-freshness")
+        .masquerade_as_nightly_cargo(&["checksum-freshness"])
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
 #[cargo_test]
 fn changing_lib_features_caches_targets() {
     let p = project()
