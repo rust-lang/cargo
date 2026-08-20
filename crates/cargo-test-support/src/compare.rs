@@ -667,7 +667,6 @@ impl_from_tuples_for_inmemorydir!(
 #[cfg(test)]
 mod test {
     use snapbox::assert_data_eq;
-    use snapbox::prelude::*;
     use snapbox::str;
 
     use super::*;
