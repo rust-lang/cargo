@@ -250,6 +250,8 @@ fn to_run_error(gctx: &GlobalContext, err: anyhow::Error) -> CliError {
     if is_quiet {
         CliError::code(exit_code)
     } else {
+        // Ensure a newline between user and cargo's output, especially with trailing "\r"
+        let _ = writeln!(gctx.shell().err());
         CliError::new(err, exit_code)
     }
 }
