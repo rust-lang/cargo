@@ -1,7 +1,9 @@
 use crate::context;
 use crate::sources::registry::CRATES_IO_HTTP_INDEX;
 use crate::sources::source::Source;
-use crate::sources::{CRATES_IO_DOMAIN, CRATES_IO_INDEX, CRATES_IO_REGISTRY, DirectorySource};
+use crate::sources::{
+    BuiltinSource, CRATES_IO_DOMAIN, CRATES_IO_INDEX, CRATES_IO_REGISTRY, DirectorySource,
+};
 use crate::sources::{GitSource, PathSource, RegistrySource};
 use crate::util::data_structures::HashSet;
 use crate::util::interning::InternedString;
@@ -395,6 +397,11 @@ impl SourceId {
         matches!(self.inner.kind, SourceKind::Git(_))
     }
 
+    /// Returns `true` if this source is builtin.
+    pub fn is_builtin(self) -> bool {
+        matches!(self.inner.kind, SourceKind::Builtin)
+    }
+
     /// Creates an implementation of `Source` corresponding to this ID.
     pub fn load<'a>(self, gctx: &'a GlobalContext) -> CargoResult<Box<dyn Source + 'a>> {
         trace!("loading SourceId; {}", self);
@@ -411,7 +418,7 @@ impl SourceId {
                 }
                 Ok(Box::new(PathSource::new(&path, self, gctx)))
             }
-            SourceKind::Builtin => todo!("builtin source"),
+            SourceKind::Builtin => Ok(Box::new(BuiltinSource::new(self, gctx)?)),
             SourceKind::Registry | SourceKind::SparseRegistry => {
                 Ok(Box::new(RegistrySource::remote(self, gctx)?))
             }

@@ -661,7 +661,8 @@ pub fn encodable_package_id(
 }
 
 fn encodable_source_id(id: SourceId, version: ResolveVersion) -> Option<TomlLockfileSourceId> {
-    if id.is_path() {
+    // Lockfile support for builtins isn't yet implemented.
+    if id.is_path() || id.is_builtin() {
         None
     } else {
         Some(
