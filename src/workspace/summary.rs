@@ -97,6 +97,31 @@ impl Summary {
         })
     }
 
+    /// Creates a dummy Summary to satisfy an opaque dependency
+    ///
+    /// The summary has no dependencies and is artificial - it is used purely guide the resolver
+    /// by satisfying opaque dependencies and is discarded during Unit generation. The real
+    /// packages that are converted into `Unit`s come from a different invocation of the resolver.
+    pub fn new_opaque(pkg_id: PackageId, sid: SourceId) -> Self {
+        // Currently only builtin packages can be opaque
+        assert!(sid.is_builtin());
+        Summary {
+            inner: Arc::new(Inner {
+                package_id: pkg_id,
+                // opaque dependencies - the real deps are inserted during unit generation
+                dependencies: vec![],
+                // Features are currently ignored during unit generation. May need to be changed
+                // when implementing feature specification for explicit builtin dependencies
+                features: Arc::new(BTreeMap::new()),
+                checksum: None,
+                links: None,
+                // Builtins are always valid for our current toolchain
+                rust_version: None,
+                pubtime: None,
+            }),
+        }
+    }
+
     pub fn package_id(&self) -> PackageId {
         self.inner.package_id
     }

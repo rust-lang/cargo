@@ -26,6 +26,7 @@
 //!
 //! [source replacement]: https://doc.rust-lang.org/nightly/cargo/reference/source-replacement.html
 
+pub use self::builtin::BuiltinSource;
 pub use self::config::SourceConfigMap;
 pub use self::directory::DirectorySource;
 pub use self::git::GitSource;
