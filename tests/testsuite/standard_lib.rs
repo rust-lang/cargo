@@ -432,6 +432,51 @@ version = "0.1.0"
 }
 
 #[cargo_test(build_std_mock)]
+fn builtins_do_not_show_in_package_diff_status_messages() {
+    let setup = setup();
+    let p = project()
+        .file("src/lib.rs", "#![no_std]")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+
+                [dependencies]
+                registry-dep-using-core = "1.0"
+            "#,
+        )
+        .build();
+
+    // New lockfile
+    p.cargo("generate-lockfile")
+        .build_std_arg(&setup, "std")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package [..]
+"#]])
+        .run();
+
+    // Updating lockfile
+    p.cargo("add registry-dep-using-alloc")
+        .build_std_arg(&setup, "core")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ADDING] registry-dep-using-alloc v1.0.0 to dependencies
+             Features:
+             - mockbuild
+             - rustc-std-workspace-alloc
+             - rustc-std-workspace-core
+[LOCKING] 1 package to highest compatible version
+[ADDING] registry-dep-using-alloc v1.0.0
+
+"#]])
+        .run();
+}
+
+#[cargo_test(build_std_mock)]
 fn build_std_with_no_arg_for_core_only_target() {
     let target = "aarch64-unknown-none";
     if !cross_compile::requires_target_installed(target) {
