@@ -133,6 +133,10 @@ pub fn path_args(ws: &Workspace<'_>, unit: &Unit) -> (PathBuf, PathBuf) {
     let src = match unit.target.src_path() {
         TargetSourcePath::Path(path) => path.to_path_buf(),
         TargetSourcePath::Metabuild => unit.pkg.manifest().metabuild_path(ws.build_dir()),
+        TargetSourcePath::Synthetic => panic!(
+            "synthetic package `{}` cannot be built",
+            unit.pkg.package_id()
+        ),
     };
     assert!(src.is_absolute());
     if unit.pkg.package_id().source_id().is_path() {

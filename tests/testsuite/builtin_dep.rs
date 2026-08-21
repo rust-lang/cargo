@@ -7,7 +7,7 @@ use cargo_test_support::{project, str};
 #[cargo_test]
 fn builtin_dep_accepted() {
     let p = project()
-        .file("src/lib.rs", "use core;")
+        .file("src/lib.rs", "#![no_std]")
         .file(
             "Cargo.toml",
             r#"
@@ -28,12 +28,10 @@ fn builtin_dep_accepted() {
     p.cargo("check")
         .masquerade_as_nightly_cargo(&["builtin-dependencies"])
         .env("__CARGO_TESTS_ONLY_SRC_ROOT", &root)
-        .with_status(101)
         .with_stderr_data(str![[r#"
-
-thread [..] panicked at [..]
-not yet implemented: builtin source
-[NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+[LOCKING] 1 package to highest compatible version
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -99,14 +97,136 @@ fn resolve_contents() {
 
     p.cargo("metadata --format-version=1")
         .masquerade_as_nightly_cargo(&["builtin-dependencies"])
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-
-thread [..] panicked at [..]
-not yet implemented: builtin source
-[NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
-
-"#]])
+        .with_stdout_data(
+            str![[r#"
+{
+  "build_directory": "[ROOT]/foo/target",
+  "metadata": null,
+  "packages": [
+    {
+      "authors": [],
+      "categories": [],
+      "default_run": null,
+      "dependencies": [],
+      "description": null,
+      "documentation": null,
+      "edition": "2024",
+      "features": {},
+      "homepage": null,
+      "id": "builtin://.#core",
+      "keywords": [],
+      "license": null,
+      "license_file": null,
+      "links": null,
+      "manifest_path": "/rustc/library/core/Cargo.toml",
+      "metadata": null,
+      "name": "core",
+      "publish": null,
+      "readme": null,
+      "repository": null,
+      "rust_version": null,
+      "source": "builtin://.",
+      "targets": [],
+      "version": "0.0.0"
+    },
+    {
+      "authors": [],
+      "categories": [],
+      "default_run": null,
+      "dependencies": [
+        {
+          "features": [],
+          "kind": null,
+          "name": "core",
+          "optional": false,
+          "registry": null,
+          "rename": null,
+          "req": "*",
+          "source": "builtin://.",
+          "target": null,
+          "uses_default_features": true
+        }
+      ],
+      "description": null,
+      "documentation": null,
+      "edition": "2021",
+      "features": {},
+      "homepage": null,
+      "id": "path+[ROOTURL]/foo#0.1.0",
+      "keywords": [],
+      "license": null,
+      "license_file": null,
+      "links": null,
+      "manifest_path": "[ROOT]/foo/Cargo.toml",
+      "metadata": null,
+      "name": "foo",
+      "publish": null,
+      "readme": null,
+      "repository": null,
+      "rust_version": null,
+      "source": null,
+      "targets": [
+        {
+          "crate_types": [
+            "lib"
+          ],
+          "doc": true,
+          "doctest": true,
+          "edition": "2021",
+          "kind": [
+            "lib"
+          ],
+          "name": "foo",
+          "src_path": "[ROOT]/foo/src/lib.rs",
+          "test": true
+        }
+      ],
+      "version": "0.1.0"
+    }
+  ],
+  "resolve": {
+    "nodes": [
+      {
+        "dependencies": [],
+        "deps": [],
+        "features": [],
+        "id": "builtin://.#core"
+      },
+      {
+        "dependencies": [
+          "builtin://.#core"
+        ],
+        "deps": [
+          {
+            "dep_kinds": [
+              {
+                "kind": null,
+                "target": null
+              }
+            ],
+            "name": "core",
+            "pkg": "builtin://.#core"
+          }
+        ],
+        "features": [],
+        "id": "path+[ROOTURL]/foo#0.1.0"
+      }
+    ],
+    "root": "path+[ROOTURL]/foo#0.1.0"
+  },
+  "target_directory": "[ROOT]/foo/target",
+  "version": 1,
+  "workspace_default_members": [
+    "path+[ROOTURL]/foo#0.1.0"
+  ],
+  "workspace_members": [
+    "path+[ROOTURL]/foo#0.1.0"
+  ],
+  "workspace_root": "[ROOT]/foo"
+}
+"#]]
+            .is_json(),
+        )
         .run();
 }
 

@@ -10,6 +10,7 @@ use crate::compiler::{CompileKind, CompileMode, CompileTarget};
 use crate::util::GlobalContext;
 use crate::util::interning::InternedString;
 use crate::workspace::Package;
+use crate::workspace::manifest::TargetSourcePath;
 use crate::workspace::manifest::{Target, TargetKind};
 use crate::workspace::profiles::Profile;
 use cargo_util::collections::HashSet;
@@ -284,7 +285,7 @@ impl UnitInterner {
         skip_non_compile_time_dep: bool,
     ) -> Unit {
         assert!(
-            pkg.manifest_path().is_some(),
+            pkg.manifest_path().is_some() && target.src_path() != &TargetSourcePath::Synthetic,
             "compilation units must exist on the filesystem"
         );
 

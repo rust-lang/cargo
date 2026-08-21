@@ -36,7 +36,8 @@ use crate::workspace::{
 };
 use crate::workspace::{Summary, Workspace};
 
-/// Information about a package that is available somewhere in the file system.
+/// Information about a package. Usually this package is available on the filesystem, but cargo
+/// creates "synthetic" in-memory packages to satisfy the resolver in the case of builtin packages.
 ///
 /// A package is a `Cargo.toml` file plus all the files that are part of it.
 #[derive(Clone)]
@@ -116,6 +117,17 @@ impl Package {
                 manifest_path: Some(manifest_path.to_path_buf()),
             }),
         }
+    }
+
+    /// Creates an in-memory package that does not exist on the filesystem. The package should not
+    /// be built and so cannot be turned into a Unit.
+    pub fn synthetic(id: PackageId) -> CargoResult<Package> {
+        Ok(Package {
+            inner: Rc::new(PackageInner {
+                manifest: Manifest::synthetic(id)?,
+                manifest_path: None,
+            }),
+        })
     }
 
     /// Gets the manifest dependencies.
@@ -220,9 +232,9 @@ impl Package {
                 .iter()
                 .collect(),
         };
-        // Filter out metabuild targets. They are an internal implementation
-        // detail that is probably not relevant externally. There's also not a
-        // real path to show in `src_path`, and this avoids changing the format.
+        // Filter out metabuild and synthetic targets. They are an internal implementation detail
+        // that is probably not relevant externally. There's also not a real path to show in
+        // `src_path`, and this avoids changing the format.
         let targets: Vec<Target> = self
             .manifest()
             .targets()

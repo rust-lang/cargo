@@ -9,8 +9,8 @@ use std::sync::Arc;
 
 use anyhow::Context as _;
 use cargo_util_schemas::core::CrateType;
-use cargo_util_schemas::manifest::RustVersion;
 use cargo_util_schemas::manifest::{Hints, TomlManifest, TomlProfiles};
+use cargo_util_schemas::manifest::{InheritableField, RustVersion, TomlPackage, VecStringOrBool};
 use semver::Version;
 use serde::Serialize;
 use serde::ser;
@@ -343,13 +343,14 @@ struct TargetInner {
 pub enum TargetSourcePath {
     Path(PathBuf),
     Metabuild,
+    Synthetic,
 }
 
 impl TargetSourcePath {
     pub fn path(&self) -> Option<&Path> {
         match self {
             TargetSourcePath::Path(path) => Some(path.as_ref()),
-            TargetSourcePath::Metabuild => None,
+            TargetSourcePath::Metabuild | TargetSourcePath::Synthetic => None,
         }
     }
 
@@ -369,6 +370,7 @@ impl fmt::Debug for TargetSourcePath {
         match self {
             TargetSourcePath::Path(path) => path.fmt(f),
             TargetSourcePath::Metabuild => "metabuild".fmt(f),
+            TargetSourcePath::Synthetic => "synthetic".fmt(f),
         }
     }
 }
@@ -407,7 +409,7 @@ impl ser::Serialize for Target {
             TargetSourcePath::Path(p) => Some(p),
             // Unfortunately getting the correct path would require access to
             // target_dir, which is not available here.
-            TargetSourcePath::Metabuild => None,
+            TargetSourcePath::Metabuild | TargetSourcePath::Synthetic => None,
         };
         SerializedTarget {
             kind: self.kind(),
@@ -437,6 +439,11 @@ compact_debug! {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             let (default, default_name) = {
                 match &self.kind {
+                    TargetKind::Lib(kinds) if matches!(self.src_path, TargetSourcePath::Synthetic) => {
+                        let mut target = Target::new(TargetSourcePath::Synthetic, self.edition);
+                        target.set_kind(TargetKind::Lib(kinds.clone())).set_name(&self.name);
+                        (target.inner, format!("synthetic_target({:?})", self.name))
+                    }
                     TargetKind::Lib(kinds) => {
                         (
                             Target::lib_target(
@@ -462,6 +469,7 @@ compact_debug! {
                                             self.name, path, self.edition),
                                 )
                             }
+                            TargetSourcePath::Synthetic => unreachable!("custom build targets require source files"),
                             TargetSourcePath::Metabuild => {
                                 (
                                     Target::metabuild_target(&self.name).inner,
@@ -559,6 +567,93 @@ impl Manifest {
             hints,
             embedded,
         }
+    }
+
+    /// Creates an opaque manifest with a library target and no files.
+    pub fn synthetic(id: PackageId) -> CargoResult<Self> {
+        let contents = None;
+        let document = None;
+        let original_toml = None;
+        let normalized_toml = Rc::new(TomlManifest {
+            package: Some(Box::new(TomlPackage {
+                name: Some(id.name().as_str().parse()?),
+                version: Some(InheritableField::Value(id.version().clone())),
+                edition: Some(InheritableField::Value("2024".to_string())),
+                publish: Some(InheritableField::Value(VecStringOrBool::Bool(false))),
+                ..Default::default()
+            })),
+            ..Default::default()
+        });
+        let summary = Summary::new(id, Vec::new(), &BTreeMap::new(), None::<String>, None)?;
+        let default_kind = None;
+        let forced_kind = None;
+        let mut target = Target::new(TargetSourcePath::Synthetic, Edition::Edition2024);
+        target
+            .set_kind(TargetKind::Lib(vec![CrateType::Rlib]))
+            .set_name(id.name().as_str());
+        let targets = vec![target];
+        let exclude = vec![];
+        let include = vec![];
+        let links = None;
+        let metadata = ManifestMetadata {
+            authors: Vec::new(),
+            keywords: Vec::new(),
+            categories: Vec::new(),
+            license: None,
+            license_file: None,
+            description: None,
+            readme: None,
+            homepage: None,
+            repository: None,
+            documentation: None,
+            badges: BTreeMap::new(),
+            links: None,
+            rust_version: None,
+        };
+        let custom_metadata = None;
+        let publish = None;
+        let replace = vec![];
+        let patch = HashMap::default();
+        let workspace = WorkspaceConfig::Member { root: None };
+        let unstable_features = Features::default();
+        let edition = Edition::Edition2024;
+        let rust_version = None;
+        let im_a_teapot = None;
+        let default_run = None;
+        let metabuild = None;
+        let resolve_behavior = None;
+        let lint_rustflags = vec![];
+        let hints = None;
+        let embedded = false;
+        Ok(Manifest::new(
+            contents,
+            document,
+            original_toml,
+            normalized_toml,
+            summary,
+            default_kind,
+            forced_kind,
+            targets,
+            exclude,
+            include,
+            links,
+            metadata,
+            custom_metadata,
+            publish,
+            replace,
+            patch,
+            workspace,
+            unstable_features,
+            edition,
+            rust_version,
+            im_a_teapot,
+            default_run,
+            metabuild,
+            resolve_behavior,
+            lint_rustflags,
+            hints,
+            embedded,
+        ))
     }
 
     /// The raw contents of the original TOML
@@ -1217,5 +1312,28 @@ impl Warnings {
 
     pub fn warnings(&self) -> &[DelayedWarning] {
         &self.0
+    }
+}
+
+#[cfg(test)]
+mod synthetic_tests {
+    use super::*;
+
+    #[test]
+    fn synthetic_manifest_has_library_without_source_file() {
+        let id = PackageId::new(
+            "core".into(),
+            Version::new(0, 0, 0),
+            SourceId::for_builtin().unwrap(),
+        );
+        let manifest = Manifest::synthetic(id).unwrap();
+        assert_eq!(manifest.targets().len(), 1);
+        let target = &manifest.targets()[0];
+        assert!(target.is_lib());
+        assert_eq!(target.name(), "core");
+        assert_eq!(target.rustc_crate_types(), vec![CrateType::Rlib]);
+        assert!(target.src_path().path().is_none());
+        // Formatting a synthetic target must not require a source path either.
+        let _ = format!("{target:?}");
     }
 }
