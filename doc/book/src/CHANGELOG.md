@@ -1,5 +1,54 @@
 # Changelog
 
+## Cargo 1.100 (2026-11-12)
+[eb98b54b...HEAD](https://github.com/rust-lang/cargo/compare/eb98b54b...HEAD)
+
+### Added
+
+- 🎉 Stabilize the new `build.build-dir` layout!
+  This changes how Cargo organizes intermediate build artifacts inside the build directory,
+  unblocking feature development such as artifact garbage collection and cross-workspace caching.
+  To locate intermediate build artifacts reliably and stay unaffected by future layout changes,
+  use [Cargo's JSON messages](https://doc.rust-lang.org/nightly/cargo/reference/external-tools.html#json-messages).
+  ([build cache doc](https://doc.rust-lang.org/nightly/cargo/reference/build-cache.html))
+  [#17354](https://github.com/rust-lang/cargo/pull/17354)
+
+### Changed
+
+### Fixed
+
+- The automatic `git gc` run no longer fails
+  when Git is configured with `safe.bareRepository=explicit`.
+  [#17370](https://github.com/rust-lang/cargo/pull/17370)
+
+### Nightly only
+
+- `update-breaking`: Remove unstable `--breaking` option entirely.
+  The experiment uncovered challenges with the current model of `cargo update`.
+  We want to step back and rethink the user experience of upgrading dependencies.
+  [#17333](https://github.com/rust-lang/cargo/pull/17333)
+- `-Zembed-metadata`: Enable `-Zembed-metadata=no` by default on nightly Cargo
+  [#17267](https://github.com/rust-lang/cargo/pull/17267)
+  [#17374](https://github.com/rust-lang/cargo/pull/17374)
+- `-Zmin-publish-age`: remove `registry.min-publish-age` support
+  [#17353](https://github.com/rust-lang/cargo/pull/17353)
+- `-Zscript`: Don't panic on a short closing fence before a non-ASCII char
+  [#17274](https://github.com/rust-lang/cargo/pull/17274)
+- `-Ztrim-paths`: Remove unremap file when running `cargo clean -p` in new build-dir layout
+  [#17356](https://github.com/rust-lang/cargo/pull/17356)
+
+### Documentation
+
+- Adopt rust-lang/rust's LLM usage policy
+  [#17330](https://github.com/rust-lang/cargo/pull/17330)
+- cargo-clean: Improve descriptions for clean options
+  [#17365](https://github.com/rust-lang/cargo/pull/17365)
+
+### Internal
+
+- Update dependencies.
+  [#17364](https://github.com/rust-lang/cargo/pull/17364)
+
 ## Cargo 1.99 (2026-10-01)
 [f40cc7a1...rust-1.99.0](https://github.com/rust-lang/cargo/compare/f40cc7a1...rust-1.99.0)
 
