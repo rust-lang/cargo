@@ -104,6 +104,7 @@ mod fix;
 mod fix_n_times;
 mod freshness;
 mod freshness_checksum;
+mod freshness_mtime;
 mod future_incompat_report;
 mod generate_lockfile;
 mod git;
