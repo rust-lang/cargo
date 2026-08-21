@@ -46,6 +46,120 @@ src/lib.rs:3:13: [WARNING] type `FromPriv` from private dependency 'priv_dep' in
 }
 
 #[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
+fn fix_exported_private_dependency() {
+    Package::new("priv_dep", "0.1.0")
+        .file("src/lib.rs", "pub struct FromPriv;")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+
+                [dependencies]
+                priv_dep = "0.1.0"
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            "
+            extern crate priv_dep;
+            pub fn use_priv(_: priv_dep::FromPriv) {}
+        ",
+        )
+        .build();
+
+    p.cargo("fix --lib -Zpublic-dependency --allow-no-vcs")
+        .masquerade_as_nightly_cargo(&["public-dependency"])
+        .with_stderr_contains("[FIXED] [..]Cargo.toml (1 fix)")
+        .run();
+
+    assert!(
+        p.read_file("Cargo.toml")
+            .contains(r#"priv_dep = { version = "0.1.0", public = true }"#)
+    );
+}
+
+#[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
+fn fix_exported_private_renamed_dependency() {
+    Package::new("priv_dep", "0.1.0")
+        .file("src/lib.rs", "pub struct FromPriv;")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+
+                [dependencies]
+                renamed_dep = {version = "0.1.0", package = "priv_dep" }
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            "
+            extern crate renamed_dep;
+            pub fn use_priv(_: renamed_dep::FromPriv) {}
+        ",
+        )
+        .build();
+
+    p.cargo("fix --lib -Zpublic-dependency --allow-no-vcs")
+        .masquerade_as_nightly_cargo(&["public-dependency"])
+        .with_stderr_contains("[FIXED] [..]Cargo.toml (1 fix)")
+        .run();
+
+    assert!(
+        p.read_file("Cargo.toml")
+            .contains(r#"renamed_dep = {version = "0.1.0", package = "priv_dep", public = true }"#)
+    );
+}
+
+#[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
+fn check_exported_private_dependency_mentions_cargo_fix() {
+    Package::new("priv_dep", "0.1.0")
+        .file("src/lib.rs", "pub struct FromPriv;")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+
+                [dependencies]
+                priv_dep = "0.1.0"
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            "
+            extern crate priv_dep;
+            pub fn use_priv(_: priv_dep::FromPriv) {}
+        ",
+        )
+        .build();
+
+    p.cargo("check -Zpublic-dependency")
+        .masquerade_as_nightly_cargo(&["public-dependency"])
+        .with_stderr_contains(
+            "[WARNING] `foo` (lib) generated 1 warning (run `cargo fix --lib -p foo` to apply 1 suggestion)",
+        )
+        .run();
+}
+
+#[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
 fn exported_pub_dep() {
     Package::new("pub_dep", "0.1.0")
         .file("src/lib.rs", "pub struct FromPub;")
@@ -746,7 +860,7 @@ src/lib.rs:3:13: [WARNING] type `FromDep` from private dependency 'dep' in publi
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 src/lib.rs:3:13: [WARNING] type `FromDep` from private dependency 'dep' in public interface
-[WARNING] `foo` (lib) generated 1 warning
+[WARNING] `foo` (lib) generated 1 warning (run `cargo fix --lib -p foo` to apply 1 suggestion)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
