@@ -6525,6 +6525,32 @@ fn embed_metadata_no_dylib_dep() {
         .run();
 }
 
+// With `-Zembed-metadata=no`, the `.rmeta` file is the only metadata output
+// and must be uplifted along with the rlib (#17359).
+#[cargo_test(nightly, reason = "-Zembed-metadata is nightly only")]
+fn embed_metadata_no_uplifts_rmeta() {
+    let p = project()
+        .file("Cargo.toml", &basic_lib_manifest("foo"))
+        .file("src/lib.rs", "pub fn foo() {}")
+        .build();
+
+    p.cargo("build -Z embed-metadata=no")
+        .masquerade_as_nightly_cargo(&["-Z embed-metadata"])
+        .run();
+
+    assert!(p.root().join("target/debug/libfoo.rlib").is_file());
+    assert!(p.root().join("target/debug/libfoo.rmeta").is_file());
+
+    // The `.rmeta` should not be uplifted when the metadata is embedded in
+    // the rlib.
+    p.root().join("target").rm_rf();
+    p.cargo("build -Z embed-metadata=yes")
+        .masquerade_as_nightly_cargo(&["-Z embed-metadata"])
+        .run();
+    assert!(p.root().join("target/debug/libfoo.rlib").is_file());
+    assert!(!p.root().join("target/debug/libfoo.rmeta").is_file());
+}
+
 #[cargo_test(nightly, reason = "-Zembed-metadata is nightly only")]
 fn embed_metadata_no_invalidate() {
     // Invalidate all deps when -Zembed-metadata is toggled

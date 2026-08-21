@@ -457,7 +457,17 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         bcx: &BuildContext<'_, '_>,
     ) -> Option<PathBuf> {
         // Tests, check, doc, etc. should not be uplifted.
-        if unit.mode != CompileMode::Build || file_type.flavor == FileFlavor::Rmeta {
+        if unit.mode != CompileMode::Build {
+            return None;
+        }
+        // `.rmeta` files are normally not uplifted because the metadata is
+        // also embedded inside the rlib. However, when `-Zembed-metadata=no`
+        // is used the metadata is no longer embedded in the rlib, so the
+        // `.rmeta` becomes the only metadata output and has to be uplifted
+        // along with the rlib to remain accessible to external tooling.
+        if file_type.flavor == FileFlavor::Rmeta
+            && bcx.target_data.info(unit.kind).should_embed_metadata()
+        {
             return None;
         }
 
