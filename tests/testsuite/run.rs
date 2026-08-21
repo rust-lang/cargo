@@ -326,6 +326,38 @@ fn exit_code_verbose() {
 }
 
 #[cargo_test]
+fn exit_code_with_carriage_return() {
+    let p = project()
+        .file(
+            "src/main.rs",
+            r#"fn main() { print!("hello\r"); std::process::exit(1); }"#,
+        )
+        .build();
+
+    let expected = if !cfg!(unix) {
+        str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo[EXE]`
+[ERROR] process didn't exit successfully: `target/debug/foo[EXE]` ([EXIT_STATUS]: 1)
+
+"#]]
+    } else {
+        str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo`
+
+"#]]
+    };
+    p.cargo("run")
+        .with_status(1)
+        .with_stderr_data(expected)
+        .with_stdout_data("hello\r")
+        .run();
+}
+
+#[cargo_test]
 fn no_main_file() {
     let p = project().file("src/lib.rs", "").build();
 
