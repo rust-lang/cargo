@@ -94,7 +94,7 @@ re-executed. The paths in the file are absolute by default. See the
 A third party tool, [sccache], can be used to share built dependencies across
 different workspaces.
 
-To setup `sccache`, install it with `cargo install sccache` and set
+To setup `sccache`, install it with `cargo install --locked sccache` and set
 `RUSTC_WRAPPER` environment variable to `sccache` before invoking Cargo. If
 you use bash, it makes sense to add `export RUSTC_WRAPPER=sccache` to
 `.bashrc`. Alternatively, you can set [`build.rustc-wrapper`] in the [Cargo
