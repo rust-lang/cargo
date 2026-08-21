@@ -1,37 +1,255 @@
 # Changelog
 
-## Cargo 1.99 (2026-10-01)
-[f40cc7a1...HEAD](https://github.com/rust-lang/cargo/compare/f40cc7a1...HEAD)
+## Cargo 1.100 (2026-11-12)
+[eb98b54b...HEAD](https://github.com/rust-lang/cargo/compare/eb98b54b...HEAD)
 
 ### Added
 
+- 🎉 Stabilize the new `build.build-dir` layout!
+  This changes how Cargo organizes intermediate build artifacts inside the build directory,
+  unblocking feature development such as artifact garbage collection and cross-workspace caching.
+  To locate intermediate build artifacts reliably and stay unaffected by future layout changes,
+  use [Cargo's JSON messages](https://doc.rust-lang.org/nightly/cargo/reference/external-tools.html#json-messages).
+  ([build cache doc](https://doc.rust-lang.org/nightly/cargo/reference/build-cache.html))
+  [#17354](https://github.com/rust-lang/cargo/pull/17354)
+
 ### Changed
 
+### Fixed
+
+- The automatic `git gc` run no longer fails
+  when Git is configured with `safe.bareRepository=explicit`.
+  [#17370](https://github.com/rust-lang/cargo/pull/17370)
+
+### Nightly only
+
+- `update-breaking`: Remove unstable `--breaking` option entirely.
+  The experiment uncovered challenges with the current model of `cargo update`.
+  We want to step back and rethink the user experience of upgrading dependencies.
+  [#17333](https://github.com/rust-lang/cargo/pull/17333)
+- `-Zembed-metadata`: Enable `-Zembed-metadata=no` by default on nightly Cargo
+  [#17267](https://github.com/rust-lang/cargo/pull/17267)
+  [#17374](https://github.com/rust-lang/cargo/pull/17374)
+- `-Zmin-publish-age`: remove `registry.min-publish-age` support
+  [#17353](https://github.com/rust-lang/cargo/pull/17353)
+- `-Zscript`: Don't panic on a short closing fence before a non-ASCII char
+  [#17274](https://github.com/rust-lang/cargo/pull/17274)
+- `-Ztrim-paths`: Remove unremap file when running `cargo clean -p` in new build-dir layout
+  [#17356](https://github.com/rust-lang/cargo/pull/17356)
+
+### Documentation
+
+- Adopt rust-lang/rust's LLM usage policy
+  [#17330](https://github.com/rust-lang/cargo/pull/17330)
+- cargo-clean: Improve descriptions for clean options
+  [#17365](https://github.com/rust-lang/cargo/pull/17365)
+
+### Internal
+
+- Update dependencies.
+  [#17364](https://github.com/rust-lang/cargo/pull/17364)
+
+## Cargo 1.99 (2026-10-01)
+[f40cc7a1...rust-1.99.0](https://github.com/rust-lang/cargo/compare/f40cc7a1...rust-1.99.0)
+
+### Added
+
+- 🎉 Add a new built-in profile `debug`.
+  This is a preparation for transitioning the `dev` profile away from debugging
+  to give a saner default for faster development iterations.
+  Currently there is no difference between `dev` and `debug` profiles.
+  [docs](https://doc.rust-lang.org/nightly/cargo/reference/profiles.html#debug-1)
+  [#17214](https://github.com/rust-lang/cargo/pull/17214)
+
+### Changed
+
+- ❗️ Incremental compilation is now disabled by default when running in CI.
+  CI is detected via the `CI` environment variable.
+  [#17220](https://github.com/rust-lang/cargo/pull/17220)
+- ❗️ Workspace members on edition 2024 or later can now override an inherited
+  workspace dependency's `default-features` field.
+  For example, `serde = { workspace = true, default-features = false }`
+  now turns off default features even when the workspace definition enables them.
+  On earlier editions, `default-features = false` is ignored with a warning.
+  ([RFC 3945](https://github.com/rust-lang/rfcs/pull/3945))
+  [#17126](https://github.com/rust-lang/cargo/pull/17126)
+- Cargo now warns on hyphenated lint names in the `[lints]` table,
+  e.g. `unexpected-cfgs` is deprecated in favor of `unexpected_cfgs`.
+  Hyphenated names will not work in a future edition.
+  [#17051](https://github.com/rust-lang/cargo/pull/17051)
+- Use `LIBRARY_PATH` as the dynamic library search path env var on Haiku.
+  [#17248](https://github.com/rust-lang/cargo/pull/17248)
 - Various performance improvements,
   including using `FxHasher` for hash maps and sets,
-  and avoid redundant allocations for manifest and registry index parsing.
+  and avoiding redundant allocations for manifest and registry index parsing.
   [#17167](https://github.com/rust-lang/cargo/pull/17167)
   [#17169](https://github.com/rust-lang/cargo/pull/17169)
   [#17176](https://github.com/rust-lang/cargo/pull/17176)
   [#17177](https://github.com/rust-lang/cargo/pull/17177)
   [#17178](https://github.com/rust-lang/cargo/pull/17178)
   [#17180](https://github.com/rust-lang/cargo/pull/17180)
-- Reduce rustc command-line length pressure by stop passing lint rustflags
+  [#17301](https://github.com/rust-lang/cargo/pull/17301)
+- Git fetch transports are now initialized only when used.
+  This speeds up Cargo startup.
+  [#17226](https://github.com/rust-lang/cargo/pull/17226)
+- When fetching with `net.git-fetch-with-cli` fails,
+  Cargo now suggests disabling it to fall back to built-in git support.
+  [#17252](https://github.com/rust-lang/cargo/pull/17252)
+- Make Git dependency checkout names independent of the user's `core.abbrev` git config.
+  [#17289](https://github.com/rust-lang/cargo/pull/17289)
+- When `net.git-fetch-with-cli` is set,
+  git's fetch output is now hidden unless progress is being shown.
+  [#17243](https://github.com/rust-lang/cargo/pull/17243)
+- Add a suggestion when adding `[lints]` to a virtual workspace to use `[workspace.lints]` instead
+  [#17300](https://github.com/rust-lang/cargo/pull/17300)
+- Cargo now uses the more accurate 'highest' rather than 'latest'
+  when reporting dependency changes.
+  [#17317](https://github.com/rust-lang/cargo/pull/17317)
+- Clarify the error message when a path dependency has a wrong or missing package
+  [#16927](https://github.com/rust-lang/cargo/pull/16927)
+- Reduce rustc command-line length pressure by no longer passing lint rustflags
   when `--cap-lints=allow` is set.
   [#17174](https://github.com/rust-lang/cargo/pull/17174)
 
 ### Fixed
 
+- Add `-p` and `--package` flags for `cargo add` zsh completion
+  [#17247](https://github.com/rust-lang/cargo/pull/17247)
+- Avoid use of git's `core.fsmonitor` when `net.git-fetch-with-cli` is set.
+  [#17306](https://github.com/rust-lang/cargo/pull/17306)
+- Cargo timing only reports units the job queue actually ran.
+  [#17238](https://github.com/rust-lang/cargo/pull/17238)
+- Prevent panic when `package.build` is empty
+  [#17268](https://github.com/rust-lang/cargo/pull/17268)
+- Prevent incorrect duplicate package warning
+  when `CARGO_HOME` contains relative `..` path segments.
+  [#17204](https://github.com/rust-lang/cargo/pull/17204)
+- cargo-clean: Fixed `cargo clean --doc` not cleaning `target/<triple>/doc/`
+  directory when a target platform is explicitly requested.
+  [#17322](https://github.com/rust-lang/cargo/pull/17322)
+
 ### Nightly only
 
+- `native-completions`: complete paths for cargo run arguments
+  [#17284](https://github.com/rust-lang/cargo/pull/17284)
+- `native-completions`: don't panic during completions when rustup is unavailable
+  [#17263](https://github.com/rust-lang/cargo/pull/17263)
+- `rustdoc-output-format`: document the `--output-format` for `cargo doc`.
+  [#17325](https://github.com/rust-lang/cargo/pull/17325)
+- `update-breaking`: remove stray `directory` metavar from `cargo update --breaking` option
+  [#17319](https://github.com/rust-lang/cargo/pull/17319)
 - `-Zbindeps`: Fixed panics by registering transitive artifact dependency targets
   [#17135](https://github.com/rust-lang/cargo/pull/17135)
+- `-Zbuild-analysis`: emit build-started JSON message with run_id
+  [#16632](https://github.com/rust-lang/cargo/pull/16632)
+- `-Zbuild-dir-new-layout`: Reworked how we enable the new build-dir layout on nightly
+  [#17272](https://github.com/rust-lang/cargo/pull/17272)
+- `-Zbuild-dir-new-layout`: Enable build-dir layout v2 on nightly by default
+  [#17258](https://github.com/rust-lang/cargo/pull/17258)
+- `-Zbuild-dir-new-layout`: Reduce rustc `-L` args used in the new `build-dir` layout
+  [#17168](https://github.com/rust-lang/cargo/pull/17168)
+- `-Zbuild-dir-new-layout`: Do not include proc-macro deps in rustc search path args
+  [#17236](https://github.com/rust-lang/cargo/pull/17236)
+- `-Zcargo-lints`: Remove complexity, perf, and nursery lint groups
+  [#17307](https://github.com/rust-lang/cargo/pull/17307)
+- `-Zcargo-lints`: Ensure diagnostic titles work without snippets
+  [#17304](https://github.com/rust-lang/cargo/pull/17304)
+- `-Zcargo-lints`: bound transitive unused dependency traversal
+  [#17251](https://github.com/rust-lang/cargo/pull/17251)
+- `-Zcargo-lints`: Rename redundant_readme to manual_readme
+  [#17288](https://github.com/rust-lang/cargo/pull/17288)
+- `-Zcargo-lints`: Fix manual_readme lint for lower-priority README files
+  [#17208](https://github.com/rust-lang/cargo/pull/17208)
+- `-Zcargo-lints`: Remove `new_implicit_minimum_version_req` (#16321)
+  [#17249](https://github.com/rust-lang/cargo/pull/17249)
+- `-Zcargo-lints`: Gate blanket_hint_mostly_unused with -Zprofile-hint-mostly-unused
+  [#17313](https://github.com/rust-lang/cargo/pull/17313)
+- `-Zcargo-lints`: add context to lints documentation
+  [#17273](https://github.com/rust-lang/cargo/pull/17273)
+- `-Zcargo-lints`: Better match clippy in lint section titles
+  [#17190](https://github.com/rust-lang/cargo/pull/17190)
+- `-Zcargo-lints`: Clarify MSRV for lints
+  [#17184](https://github.com/rust-lang/cargo/pull/17184)
+- `-Zembed-metadata`: Allow setting `-Zembed-metadata` value from the config
+  [#17266](https://github.com/rust-lang/cargo/pull/17266)
+- `-Zembed-metadata`: Rename `-Zno-embed-metadata` to `-Zembed-metadata=no`
+  [#17149](https://github.com/rust-lang/cargo/pull/17149)
+- `-Zmin-publish-age`: Report the min-publish-age in the lock message
+  [#17328](https://github.com/rust-lang/cargo/pull/17328)
+- `-Zmin-publish-age`: Make min-publish-age relative to `--publish-time`
+  [#17327](https://github.com/rust-lang/cargo/pull/17327)
+- `-Zrustdoc-mergeable-info`: don't use mergeable info and json together
+  [#17336](https://github.com/rust-lang/cargo/pull/17336)
+- `-Zrustdoc-mergeable-info`: Pass rustdoc flags to the final CCI merge step
+  [#17269](https://github.com/rust-lang/cargo/pull/17269)
+- `-Zrustdoc-mergeable-info`: rename the doc parts metadata params
+  [#17234](https://github.com/rust-lang/cargo/pull/17234)
+- `-Zsbom`: Include SBOM outputs in fingerprints
+  [#17216](https://github.com/rust-lang/cargo/pull/17216)
+- `-Ztrim-paths`: honor workspace prefix override from env
+  [#17349](https://github.com/rust-lang/cargo/pull/17349)
+- `-Ztrim-paths`: workspace remap under `-Zroot-dir`
+  [#17337](https://github.com/rust-lang/cargo/pull/17337)
+- `-Ztrim-paths`: unambiguous and reversible remap rules
+  [#17302](https://github.com/rust-lang/cargo/pull/17302)
+  [#17338](https://github.com/rust-lang/cargo/pull/17338)
+- `-Ztrim-paths`: emit unremap files for final artifacts
+  [#17303](https://github.com/rust-lang/cargo/pull/17303)
+  [#17326](https://github.com/rust-lang/cargo/pull/17326)
+- `-Ztrim-paths`: gate trim-paths tests on split debuginfo support
+  [#17256](https://github.com/rust-lang/cargo/pull/17256)
+- `-Ztrim-paths`: re-enable lldb debugger tests
+  [#17223](https://github.com/rust-lang/cargo/pull/17223)
+- `-Ztrim-paths`: exercise GDB on windows-gnu
+  [#17221](https://github.com/rust-lang/cargo/pull/17221)
+
+### Documentation
+
+- Add recommended structure to members field in workspace chapter.
+  [#17166](https://github.com/rust-lang/cargo/pull/17166)
+- Make room for the new `debug` profile by clarifying the behavior around `test` and `bench` profiles.
+  [#17213](https://github.com/rust-lang/cargo/pull/17213)
+- Add missing config env variables
+  [#17345](https://github.com/rust-lang/cargo/pull/17345)
+- cargo-fetch: remove cargo-prefetch reference
+  [#16568](https://github.com/rust-lang/cargo/pull/16568)
+- cargo-install: Move `--debug` to Compilation options
+  [#17199](https://github.com/rust-lang/cargo/pull/17199)
+- cargo-report: Add missing entry for `cargo report future-incompatibilities`
+  [#17188](https://github.com/rust-lang/cargo/pull/17188)
 
 ### Internal
 
-- test: Separate bindeps no-deps coverage for cargo-metadata
-  [#17068](https://github.com/rust-lang/cargo/pull/17068)
-
+- Clarify the name of the remote git registry
+  [#17240](https://github.com/rust-lang/cargo/pull/17240)
+- Move sysroot lookup to GlobalContext
+  [#17276](https://github.com/rust-lang/cargo/pull/17276)
+- Flatten Cargo's own package layout
+  [#17230](https://github.com/rust-lang/cargo/pull/17230)
+  [#17231](https://github.com/rust-lang/cargo/pull/17231)
+  [#17233](https://github.com/rust-lang/cargo/pull/17233)
+- Make `__CARGO_TEST_FORCE_ARGFILE` available in distributed builds
+  [#17293](https://github.com/rust-lang/cargo/pull/17293)
+- cargo-util-schemas: Fix `TomlDebugInfo` enum variants not being renamed
+  [#17202](https://github.com/rust-lang/cargo/pull/17202)
+- ci: Use a 3-day minimum release age
+  [#17346](https://github.com/rust-lang/cargo/pull/17346)
+- ci: remove stale libsecret packages
+  [#17229](https://github.com/rust-lang/cargo/pull/17229)
+- ci: dogfood `build.warnings`
+  [#17195](https://github.com/rust-lang/cargo/pull/17195)
+- test: exercise multi git revision lockfile
+  [#17279](https://github.com/rust-lang/cargo/pull/17279)
+- test: Explicitly test for git injection attacks
+  [#17253](https://github.com/rust-lang/cargo/pull/17253)
+- Update dependencies.
+  [#17192](https://github.com/rust-lang/cargo/pull/17192)
+  [#17225](https://github.com/rust-lang/cargo/pull/17225)
+  [#17237](https://github.com/rust-lang/cargo/pull/17237)
+  [#17259](https://github.com/rust-lang/cargo/pull/17259)
+  [#17290](https://github.com/rust-lang/cargo/pull/17290)
+  [#17291](https://github.com/rust-lang/cargo/pull/17291)
+  [#17297](https://github.com/rust-lang/cargo/pull/17297)
 
 ## Cargo 1.98 (2026-08-20)
 [c25859fa...rust-1.98.0](https://github.com/rust-lang/cargo/compare/c25859fa...rust-1.98.0)
@@ -64,7 +282,7 @@
   [#17106](https://github.com/rust-lang/cargo/pull/17106)
 - `-Zbindeps`: Remove compat mode from artifacts
   [#17016](https://github.com/rust-lang/cargo/pull/17016)
-- `-Zbuild-dir-new-layout`: - Fixed `Compilation::deps_output` keeping only the
+- `-Zbuild-dir-new-layout`: Fixed `Compilation::deps_output` keeping only the
   last dependency, which could miss search paths when depending on multiple dylibs.
   [#17164](https://github.com/rust-lang/cargo/pull/17164)
 - rustdoc-output-format: Add `--output-format=json` to `cargo doc` as an unstable option
@@ -99,6 +317,8 @@
   [#17128](https://github.com/rust-lang/cargo/pull/17128)
 - `-Zhost-config`: Don't apply `[target.'cfg(...)']` config to host artifacts
   [#17123](https://github.com/rust-lang/cargo/pull/17123)
+  [#17198](https://github.com/rust-lang/cargo/pull/17198)
+  [#17211](https://github.com/rust-lang/cargo/pull/17211)
 - `-Ztrim-paths`: Emit `CARGO_TRIM_PATHS_REMAP` env var for build scripts,
   so they can forward remap pairs to compilers embedding local paths
   [#17104](https://github.com/rust-lang/cargo/pull/17104)
