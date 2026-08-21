@@ -64,7 +64,7 @@
   [#17106](https://github.com/rust-lang/cargo/pull/17106)
 - `-Zbindeps`: Remove compat mode from artifacts
   [#17016](https://github.com/rust-lang/cargo/pull/17016)
-- `-Zbuild-dir-new-layout`: - Fixed `Compilation::deps_output` keeping only the
+- `-Zbuild-dir-new-layout`: Fixed `Compilation::deps_output` keeping only the
   last dependency, which could miss search paths when depending on multiple dylibs.
   [#17164](https://github.com/rust-lang/cargo/pull/17164)
 - rustdoc-output-format: Add `--output-format=json` to `cargo doc` as an unstable option
@@ -99,6 +99,8 @@
   [#17128](https://github.com/rust-lang/cargo/pull/17128)
 - `-Zhost-config`: Don't apply `[target.'cfg(...)']` config to host artifacts
   [#17123](https://github.com/rust-lang/cargo/pull/17123)
+  [#17198](https://github.com/rust-lang/cargo/pull/17198)
+  [#17211](https://github.com/rust-lang/cargo/pull/17211)
 - `-Ztrim-paths`: Emit `CARGO_TRIM_PATHS_REMAP` env var for build scripts,
   so they can forward remap pairs to compilers embedding local paths
   [#17104](https://github.com/rust-lang/cargo/pull/17104)
