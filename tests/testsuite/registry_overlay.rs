@@ -64,6 +64,9 @@ fn registry_version_wins() {
 
                 [dependencies]
                 baz = "0.1.0"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -106,6 +109,9 @@ fn overlay_version_wins() {
 
                 [dependencies]
                 baz = "0.1.0"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -147,6 +153,9 @@ fn version_precedence() {
 
                 [dependencies]
                 baz = "0.1.0"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -222,6 +231,9 @@ fn registry_dep_depends_on_new_local_package() {
                 [dependencies]
                 registry-package = "0.1.0"
                 workspace-package = "0.0.1"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")

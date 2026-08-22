@@ -85,7 +85,7 @@ pub fn read_manifest(
         let cargo_features = original_toml.cargo_features.as_ref().unwrap_or(&empty);
         let features = Features::new(cargo_features, gctx, &mut warnings, source_id.is_path())?;
         let workspace_config =
-            to_workspace_config(&original_toml, path, is_embedded, gctx, &mut warnings)?;
+            to_workspace_config(&original_toml, path, is_embedded, &mut warnings)?;
         if let WorkspaceConfig::Root(ws_root_config) = &workspace_config {
             let package_root = path.parent().unwrap();
             gctx.ws_roots()
@@ -233,7 +233,6 @@ fn to_workspace_config(
     original_toml: &manifest::TomlManifest,
     manifest_file: &Path,
     is_embedded: bool,
-    gctx: &GlobalContext,
     warnings: &mut Vec<String>,
 ) -> CargoResult<WorkspaceConfig> {
     if is_embedded {
@@ -245,7 +244,7 @@ fn to_workspace_config(
         original_toml.package().and_then(|p| p.workspace.as_ref()),
     ) {
         (Some(toml_config), None) => {
-            verify_lints(toml_config.lints.as_ref(), gctx, warnings)?;
+            verify_lints(toml_config.lints.as_ref(), warnings)?;
             if let Some(ws_deps) = &toml_config.dependencies {
                 for (name, dep) in ws_deps {
                     if dep.is_optional() {
@@ -1664,7 +1663,6 @@ pub fn to_real_manifest(
         normalized_toml
             .normalized_lints()
             .expect("previously normalized"),
-        gctx,
         warnings,
     )?;
     let default = manifest::TomlLints::default();
@@ -2676,7 +2674,6 @@ fn validate_profile_override(profile: &manifest::TomlProfile, which: &str) -> Ca
 
 fn verify_lints(
     lints: Option<&manifest::TomlLints>,
-    gctx: &GlobalContext,
     warnings: &mut Vec<String>,
 ) -> CargoResult<()> {
     let Some(lints) = lints else {
@@ -2693,9 +2690,6 @@ supported tools: {}",
             );
             warnings.push(message);
             continue;
-        }
-        if tool == "cargo" && !gctx.cli_unstable().cargo_lints {
-            warn_for_cargo_lint_feature(gctx, warnings);
         }
         let mut seen_normalized: HashMap<String, String> = HashMap::default();
         for (name, config) in lints {
@@ -2748,38 +2742,6 @@ static EXPECTED_LINT_CONFIG: &[(&str, &str, &str)] = &[
     // forwarded to rustc/rustdoc
     ("rust", "unexpected_cfgs", "check-cfg"),
 ];
-
-fn warn_for_cargo_lint_feature(gctx: &GlobalContext, warnings: &mut Vec<String>) {
-    use std::fmt::Write as _;
-
-    let key_name = "lints.cargo";
-    let feature_name = "cargo-lints";
-
-    let mut message = String::new();
-
-    let _ = write!(
-        message,
-        "unused manifest key `{key_name}` (may be supported in a future version)"
-    );
-    if gctx.nightly_features_allowed {
-        let _ = write!(
-            message,
-            "
-
-consider passing `-Z{feature_name}` to enable this feature."
-        );
-    } else {
-        let _ = write!(
-            message,
-            "
-
-this Cargo does not support nightly features, but if you
-switch to nightly channel you can pass
-`-Z{feature_name}` to enable this feature.",
-        );
-    }
-    warnings.push(message);
-}
 
 fn lints_to_rustflags(lints: &manifest::TomlLints) -> CargoResult<Vec<String>> {
     let mut rustflags = lints

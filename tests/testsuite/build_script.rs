@@ -1291,6 +1291,9 @@ fn custom_build_script_rustc_flags() {
 
                 [dependencies.foo]
                 path = "foo"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -1304,6 +1307,9 @@ fn custom_build_script_rustc_flags() {
                 edition = "2015"
                 authors = ["wycats@example.com"]
                 build = "build.rs"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("foo/src/lib.rs", "")
@@ -1351,6 +1357,9 @@ fn custom_build_script_rustc_flags_no_space() {
 
                 [dependencies.foo]
                 path = "foo"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -1364,6 +1373,9 @@ fn custom_build_script_rustc_flags_no_space() {
                 edition = "2015"
                 authors = ["wycats@example.com"]
                 build = "build.rs"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("foo/src/lib.rs", "")
@@ -1654,6 +1666,9 @@ fn overrides_and_links() {
 
                 [dependencies.a]
                 path = "a"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1691,6 +1706,9 @@ fn overrides_and_links() {
                 authors = []
                 links = "foo"
                 build = "build.rs"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("a/src/lib.rs", "")
@@ -1845,6 +1863,9 @@ fn main() {
 name = "links"
 edition = "2024"
 links = "foo"
+
+[lints.cargo]
+default = "allow"
 "#,
         )
         .file("links/src/lib.rs", "")
@@ -1858,6 +1879,9 @@ edition = "2024"
 
 [dependencies]
 links.path = "../links"
+
+[lints.cargo]
+default = "allow"
 "#,
         )
         .file("n/src/lib.rs", "")
@@ -1871,6 +1895,9 @@ edition = "2024"
 
 [build-dependencies]
 links.path = "../links"
+
+[lints.cargo]
+default = "allow"
 "#,
         )
         .file("b/src/lib.rs", "")
@@ -1884,6 +1911,9 @@ edition = "2024"
 
 [dev-dependencies]
 links.path = "../links"
+
+[lints.cargo]
+default = "allow"
 "#,
         )
         .file("d/src/lib.rs", "")
@@ -2206,6 +2236,9 @@ fn with_patch() {
 
             [patch.crates-io]
             cxx = { path = "cxx" }
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -2218,6 +2251,9 @@ fn with_patch() {
             version = "1.0.0"
             edition = "2021"
             links = "cxx"
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file("cxx/src/lib.rs", "")
@@ -2434,6 +2470,9 @@ fn propagation_of_l_flags() {
                 authors = []
                 [dependencies.a]
                 path = "a"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -2450,6 +2489,9 @@ fn propagation_of_l_flags() {
 
                 [dependencies.b]
                 path = "../b"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("a/src/lib.rs", "")
@@ -2467,6 +2509,9 @@ fn propagation_of_l_flags() {
                 authors = []
                 links = "foo"
                 build = "build.rs"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("b/src/lib.rs", "")
@@ -2509,6 +2554,9 @@ fn propagation_of_l_flags_new() {
                 authors = []
                 [dependencies.a]
                 path = "a"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -2525,6 +2573,9 @@ fn propagation_of_l_flags_new() {
 
                 [dependencies.b]
                 path = "../b"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("a/src/lib.rs", "")
@@ -2546,6 +2597,9 @@ fn propagation_of_l_flags_new() {
                 authors = []
                 links = "foo"
                 build = "build.rs"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("b/src/lib.rs", "")
@@ -2723,11 +2777,11 @@ fn build_cmd_with_a_build_cmd() {
 [COMPILING] a v0.5.0 ([ROOT]/foo/a)
 [RUNNING] `rustc --crate-name build_script_build [..] a/build.rs [..] --extern b=[ROOT]/foo/target/debug/build/b/[HASH]/out/libb-[HASH].rlib[..]`
 [RUNNING] `[ROOT]/foo/target/debug/build/a/[HASH]/out/build_script_build`
-[RUNNING] `rustc --crate-name a [..]a/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C metadata=[..] --out-dir [ROOT]/foo/target/debug/build/a/[HASH]/out`
+[RUNNING] `rustc --crate-name a [..]a/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C metadata=[..] --out-dir [ROOT]/foo/target/debug/build/a/[HASH]/out --force-warn=unused_crate_dependencies`
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name build_script_build --edition=2015 build.rs [..]--crate-type bin --emit=[..]link[..]-C metadata=[..] --out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out [..] --extern a=[ROOT]/foo/target/debug/build/a/[HASH]/out/liba-[HASH].rlib[..]`
 [RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/build_script_build`
-[RUNNING] `rustc --crate-name foo [..]src/lib.rs [..]--crate-type lib --emit=[..]-C debuginfo=2 [..]-C metadata=[..] --out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out`
+[RUNNING] `rustc --crate-name foo [..]src/lib.rs [..]--crate-type lib --emit=[..]-C debuginfo=2 [..]-C metadata=[..] --out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out --force-warn=unused_crate_dependencies`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]]).run();
@@ -3939,6 +3993,9 @@ fn diamond_passes_args_only_once() {
                 [dependencies]
                 a = { path = "a" }
                 b = { path = "b" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -3954,6 +4011,9 @@ fn diamond_passes_args_only_once() {
                 [dependencies]
                 b = { path = "../b" }
                 c = { path = "../c" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("a/src/lib.rs", "")
@@ -3967,6 +4027,9 @@ fn diamond_passes_args_only_once() {
                 authors = []
                 [dependencies]
                 c = { path = "../c" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("b/src/lib.rs", "")
@@ -3979,6 +4042,9 @@ fn diamond_passes_args_only_once() {
                 edition = "2015"
                 authors = []
                 build = "build.rs"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file(
@@ -4841,6 +4907,9 @@ fn warnings_emitted_from_path_dep() {
 
                 [dependencies]
                 a = { path = "a" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -4853,6 +4922,9 @@ fn warnings_emitted_from_path_dep() {
                 edition = "2015"
                 authors = []
                 build = "build.rs"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("a/src/lib.rs", "")
@@ -5084,6 +5156,9 @@ fn warnings_hidden_for_upstream() {
                 edition = "2015"
                 authors = []
                 build = "build.rs"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -5101,6 +5176,9 @@ fn warnings_hidden_for_upstream() {
 
                 [dependencies]
                 bar = "*"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -5145,6 +5223,9 @@ fn warnings_printed_on_vv() {
                 edition = "2015"
                 authors = []
                 build = "build.rs"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -5162,6 +5243,9 @@ fn warnings_printed_on_vv() {
 
                 [dependencies]
                 bar = "*"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -6317,6 +6401,9 @@ fn rerun_if_published_directory() {
 
                 [dependencies]
                 mylib-sys = "1.0.0"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")

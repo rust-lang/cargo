@@ -1105,7 +1105,7 @@ fn example_with_release_flag() {
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
-[RUNNING] `rustc --crate-name bar --edition=2015 bar/src/bar.rs [..]--crate-type lib --emit=[..]link[..] -C opt-level=3[..] -C metadata=[..] --out-dir [ROOT]/foo/target/release/build/bar/[HASH]/out -C strip=debuginfo`
+[RUNNING] `rustc --crate-name bar --edition=2015 bar/src/bar.rs [..]--crate-type lib --emit=[..]link[..] -C opt-level=3[..] -C metadata=[..] --out-dir [ROOT]/foo/target/release/build/bar/[HASH]/out -C strip=debuginfo[..]`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name a --edition=2015 examples/a.rs [..]--crate-type bin --emit=[..]link[..] -C opt-level=3[..] -C metadata=[..] --out-dir [ROOT]/foo/target/release/build/foo/[HASH]/out -C strip=debuginfo -L dependency=[ROOT]/foo/target/release/build/bar/[HASH]/out --extern bar=[ROOT]/foo/target/release/build/bar/[HASH]/out/libbar-[HASH].rlib[..]`
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
@@ -1122,7 +1122,7 @@ fast2
     p.cargo("run -v --example a")
         .with_stderr_data(str![[r#"
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
-[RUNNING] `rustc --crate-name bar --edition=2015 bar/src/bar.rs [..]--crate-type lib --emit=[..]link [..]-C debuginfo=2 [..]-C metadata=[..] --out-dir [ROOT]/foo/target/debug/build/bar/[HASH]/out`
+[RUNNING] `rustc --crate-name bar --edition=2015 bar/src/bar.rs [..]--crate-type lib --emit=[..]link [..]-C debuginfo=2 [..]-C metadata=[..] --out-dir [ROOT]/foo/target/debug/build/bar/[HASH]/out --force-warn=unused_crate_dependencies`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name a --edition=2015 examples/a.rs [..]--crate-type bin --emit=[..]link [..]-C debuginfo=2 [..]-C metadata=[..] --out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out -L dependency=[ROOT]/foo/target/debug/build/bar/[HASH]/out --extern bar=[ROOT]/foo/target/debug/build/bar/[HASH]/out/libbar-[HASH].rlib[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s

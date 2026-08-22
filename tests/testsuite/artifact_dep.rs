@@ -1974,6 +1974,9 @@ fn show_no_lib_warning_with_artifact_dependencies_that_have_no_lib_but_lib_true(
 
                 [dependencies]
                 bar = { path = "bar/", artifact = "bin", lib = true }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -2854,6 +2857,9 @@ fn decouple_same_target_transitive_dep_from_artifact_dep() {
                 [dependencies]
                 a = {{ path = "a" }}
                 bar = {{ path = "bar", artifact = "bin", target = "{target}" }}
+
+                [lints.cargo]
+                default = "allow"
             "#
             ),
         )
@@ -2873,6 +2879,9 @@ fn decouple_same_target_transitive_dep_from_artifact_dep() {
 
                 [dependencies]
                 a = { path = "../a", features = ["feature"] }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file(
@@ -2895,6 +2904,9 @@ fn decouple_same_target_transitive_dep_from_artifact_dep() {
 
                 [features]
                 feature = ["c/feature"]
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file(
@@ -2917,6 +2929,9 @@ fn decouple_same_target_transitive_dep_from_artifact_dep() {
 
                 [dependencies]
                 c = { path = "../c" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file(
@@ -2939,6 +2954,9 @@ fn decouple_same_target_transitive_dep_from_artifact_dep() {
 
                 [features]
                 feature = []
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file(
@@ -2981,6 +2999,9 @@ fn decouple_same_target_transitive_dep_from_artifact_dep_lib() {
                 a = {{ path = "a" }}
                 b = {{ path = "b", features = ["feature"] }}
                 bar = {{ path = "bar", artifact = "bin", lib = true, target = "{target}" }}
+
+                [lints.cargo]
+                default = "allow"
             "#
             ),
         )
@@ -2996,6 +3017,9 @@ fn decouple_same_target_transitive_dep_from_artifact_dep_lib() {
                 [dependencies]
                 a = { path = "../a", features = ["b"] }
                 b = { path = "../b" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("bar/src/lib.rs", "")
@@ -3019,6 +3043,9 @@ fn decouple_same_target_transitive_dep_from_artifact_dep_lib() {
 
                 [dependencies]
                 b = { path = "../b", optional = true }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file(
@@ -3040,6 +3067,9 @@ fn decouple_same_target_transitive_dep_from_artifact_dep_lib() {
 
                 [features]
                 feature = []
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file(
@@ -3081,6 +3111,9 @@ fn decouple_same_target_transitive_dep_from_artifact_dep_and_proc_macro() {
                 [dependencies]
                 c = {{ path = "c" }}
                 bar = {{ path = "bar", artifact = "bin", target = "{target}" }}
+
+                [lints.cargo]
+                default = "allow"
             "#
             ),
         )
@@ -3095,6 +3128,9 @@ fn decouple_same_target_transitive_dep_from_artifact_dep_and_proc_macro() {
 
             [dependencies]
             b = { path = "../b" }
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file("bar/src/main.rs", "fn main() {}")
@@ -3111,6 +3147,9 @@ fn decouple_same_target_transitive_dep_from_artifact_dep_and_proc_macro() {
 
             [lib]
             proc-macro = true
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file("b/src/lib.rs", "")
@@ -3128,6 +3167,9 @@ fn decouple_same_target_transitive_dep_from_artifact_dep_and_proc_macro() {
 
             [lib]
             proc-macro = true
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file(
@@ -3150,6 +3192,9 @@ fn decouple_same_target_transitive_dep_from_artifact_dep_and_proc_macro() {
 
             [dependencies]
             d = { path = "../d" }
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file(
@@ -3172,6 +3217,9 @@ fn decouple_same_target_transitive_dep_from_artifact_dep_and_proc_macro() {
 
             [features]
             feature = []
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file("d/src/lib.rs", "pub struct D;")

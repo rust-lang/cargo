@@ -22,8 +22,8 @@ non_snake_case_packages = "warn"
         .file("src/lib.rs", "")
         .build();
 
-    foo.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints", "test-dummy-unstable"])
+    foo.cargo("fetch")
+        .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
         .with_stderr_data(str![[r#"
 [WARNING] package `foo-bar` should have a snake-case name
  --> Cargo.toml:3:8
@@ -58,8 +58,8 @@ fn main() {}"#,
         )
         .build();
 
-    p.cargo("fetch -Zcargo-lints -Zscript --manifest-path foo-bar")
-        .masquerade_as_nightly_cargo(&["cargo-lints", "script"])
+    p.cargo("fetch -Zscript --manifest-path foo-bar")
+        .masquerade_as_nightly_cargo(&["script"])
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/foo-bar`

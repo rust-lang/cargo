@@ -43,6 +43,9 @@ fn unknown_hints_warn() {
 
             [hints]
             this-is-an-unknown-hint = true
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -61,6 +64,9 @@ fn unknown_hints_warn() {
 
             [hints]
             this-is-an-unknown-hint = true
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -96,6 +102,9 @@ fn hint_unknown_type_warn() {
 
             [hints]
             mostly-unused = 1
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -114,6 +123,9 @@ fn hint_unknown_type_warn() {
 
             [hints]
             mostly-unused = "string"
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -149,6 +161,9 @@ fn hints_mostly_unused_warn_without_gate() {
 
             [hints]
             mostly-unused = true
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -167,6 +182,9 @@ fn hints_mostly_unused_warn_without_gate() {
 
             [hints]
             mostly-unused = true
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -202,6 +220,9 @@ fn hints_mostly_unused_nightly() {
 
             [hints]
             mostly-unused = true
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -217,6 +238,9 @@ fn hints_mostly_unused_nightly() {
 
             [dependencies]
             bar = "1.0"
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -254,6 +278,9 @@ fn mostly_unused_profile_overrides_hints_nightly() {
 
             [hints]
             mostly-unused = true
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -272,6 +299,9 @@ fn mostly_unused_profile_overrides_hints_nightly() {
 
             [profile.dev.package.bar]
             hint-mostly-unused = false
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")

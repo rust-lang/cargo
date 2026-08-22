@@ -114,7 +114,6 @@ Each new feature described below should explain how to use it.
     * [per-package-target](#per-package-target) --- Sets the `--target` to use for each individual package.
     * [artifact dependencies](#artifact-dependencies) --- Allow build artifacts to be included into other build artifacts and build them for different targets.
     * [Profile `trim-paths` option](#profile-trim-paths-option) --- Control the sanitization of file paths in build outputs.
-    * [`[lints.cargo]`](#lintscargo) --- Allows configuring lints for Cargo.
     * [path bases](#path-bases) --- Named base directories for path dependencies.
     * [`unstable-editions`](#unstable-editions) --- Allows use of editions that are not yet stable.
 * Information and metadata
@@ -1757,6 +1756,7 @@ panic = "immediate-abort"
 
 Use fine grain locking instead of locking the entire build cache.
 
+<<<<<<< HEAD
 ## `[lints.cargo]`
 
 * Tracking Issue: [#12235](https://github.com/rust-lang/cargo/issues/12235)
@@ -1778,6 +1778,34 @@ implicit-features = "warn"
 workspace = true
 ```
 
+||||||| parent of a49194588 (feat(diag): Stabilize cargo-lints)
+Note: Fine grain locking implicitly enables [build-dir-new-layout](#build-dir-new-layout) as fine grain locking builds on that directory reoganization.
+
+## `[lints.cargo]`
+
+* Tracking Issue: [#12235](https://github.com/rust-lang/cargo/issues/12235)
+
+A new `lints` tool table for `cargo` that can be used to configure lints emitted
+by `cargo` itself when `-Zcargo-lints` is used
+```toml
+[lints.cargo]
+implicit-features = "warn"
+```
+
+This will work with
+[RFC 2906 `workspace-deduplicate`](https://rust-lang.github.io/rfcs/2906-cargo-workspace-deduplicate.html):
+```toml
+[workspace.lints.cargo]
+implicit-features = "warn"
+
+[lints]
+workspace = true
+```
+
+=======
+Note: Fine grain locking implicitly enables [build-dir-new-layout](#build-dir-new-layout) as fine grain locking builds on that directory reoganization.
+
+>>>>>>> a49194588 (feat(diag): Stabilize cargo-lints)
 ## Path Bases
 
 * Tracking Issue: [#14355](https://github.com/rust-lang/cargo/issues/14355)
@@ -2481,3 +2509,9 @@ See <https://github.com/rust-lang/cargo/pull/17333> fopr the reason for its remo
 ## build-dir-new-layout
 
 The new build-dir filesystem layout was stabilized in the 1.100.0 release.
+
+## `[lints.cargo]`
+
+Cargo's linting system and the `[lints.cargo]` table have been stabilized in Rust 1.100.
+See the [lints chapter](lints.md) and [the lints section](manifest.md#the-lints-section)
+for information about configuring Cargo lints.

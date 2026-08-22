@@ -24,6 +24,9 @@ fn profile_override_basic() {
 
                 [profile.dev.package.bar]
                 opt-level = 3
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -66,6 +69,9 @@ fn profile_override_warnings() {
 
                 [profile.dev.package."bar:1.2.3"]
                 opt-level = 3
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")

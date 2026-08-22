@@ -32,10 +32,8 @@ workspace = true
         .build();
 
     snapbox::cmd::Command::cargo_ui()
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
         .current_dir(p.root())
         .arg("check")
-        .arg("-Zcargo-lints")
         .assert()
         .code(101)
         .stdout_eq(str![""])

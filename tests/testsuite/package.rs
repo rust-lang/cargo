@@ -1908,6 +1908,9 @@ fn package_should_use_build_cache() {
 
                 [dependencies]
                 other = "1.0"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -3417,6 +3420,9 @@ fn workspace_noconflict_readme() {
                 description = "bar"
                 readme = "../README.md"
                 workspace = ".."
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("bar/src/main.rs", "fn main() {}")
@@ -3459,6 +3465,9 @@ fn workspace_conflict_readme() {
                 description = "bar"
                 readme = "../README.md"
                 workspace = ".."
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("bar/src/main.rs", "fn main() {}")
@@ -5760,6 +5769,9 @@ fn workspace_with_local_deps_project() -> Project {
             [dependencies]
             # Let one dependency also specify features, for the added test coverage when generating package files.
             level2 = { workspace = true, features = ["foo"] }
+
+            [lints.cargo]
+            default = "allow"
         "#,
             )
             .file("level1/src/main.rs", "fn main() {}")
@@ -5780,6 +5792,9 @@ fn workspace_with_local_deps_project() -> Project {
 
             [dependencies]
             level3 = { path = "../level3", version = "0.0.1" }
+
+            [lints.cargo]
+            default = "allow"
         "#
             )
             .file("level2/src/lib.rs", "")
@@ -5794,6 +5809,9 @@ fn workspace_with_local_deps_project() -> Project {
             license = "MIT"
             description = "level3"
             repository = "bar"
+
+            [lints.cargo]
+            default = "allow"
         "#,
             )
             .file("level3/src/lib.rs", "")
@@ -5897,6 +5915,9 @@ path = "src/main.rs"
 [dependencies.level2]
 version = "0.0.1"
 features = ["foo"]
+
+[lints.cargo]
+default = "allow"
 
 "##]];
 
@@ -6144,6 +6165,9 @@ fn workspace_with_local_deps_packaging_one_with_needed_deps() {
 
             [dependencies]
             level2 = { path = "../level2", version = "0.0.1" }
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("level1/src/main.rs", "fn main() {}")
@@ -6161,6 +6185,9 @@ fn workspace_with_local_deps_packaging_one_with_needed_deps() {
 
             [dependencies]
             level3 = { path = "../level3", version = "0.0.1" }
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("level2/src/lib.rs", "")
@@ -6175,6 +6202,9 @@ fn workspace_with_local_deps_packaging_one_with_needed_deps() {
             license = "MIT"
             description = "level3"
             repository = "bar"
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("level3/src/lib.rs", "")
@@ -6363,6 +6393,9 @@ fn workspace_with_local_deps_alternative_index() {
 
             [dependencies]
             level2 = { path = "../level2", version = "0.0.1", registry = "alternative" }
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("level1/src/main.rs", "fn main() {}")
@@ -6377,6 +6410,9 @@ fn workspace_with_local_deps_alternative_index() {
             license = "MIT"
             description = "level2"
             repository = "bar"
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("level2/src/lib.rs", "")
@@ -6459,6 +6495,9 @@ fn workspace_with_local_dep_already_published_project() -> Project {
 
             [dependencies]
             dep = { path = "../dep", version = "0.1.0" }
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("main/src/main.rs", "fn main() {}")
@@ -6473,6 +6512,9 @@ fn workspace_with_local_dep_already_published_project() -> Project {
             license = "MIT"
             description = "dep"
             repository = "bar"
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("dep/src/lib.rs", "")
@@ -6537,6 +6579,9 @@ fn workspace_with_local_and_remote_deps() {
             [dependencies]
             dep = { path = "../dep", version = "0.1.0" }
             old_dep = { package = "dep", version = "0.0.1" }
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("main/src/main.rs", "fn main() {}")
@@ -6551,6 +6596,9 @@ fn workspace_with_local_and_remote_deps() {
             license = "MIT"
             description = "dep"
             repository = "bar"
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("dep/src/lib.rs", "")
@@ -6771,6 +6819,9 @@ fn workspace_with_dot_rs_dir() {
             repository = "bar"
 
             [dependencies]
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("crates/foo.rs/src/lib.rs", "pub fn foo() {}")
@@ -6788,6 +6839,9 @@ fn workspace_with_dot_rs_dir() {
 
             [dependencies]
             foo = { path = "../foo.rs", version = "0.16.2" }
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("crates/bar.rs/src/lib.rs", "pub fn foo() {}")
@@ -6889,6 +6943,9 @@ fn registry_inferred_from_unique_option() {
 
             [dependencies]
             dep = { path = "../dep", version = "0.1.0", registry = "alternative" }
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("main/src/main.rs", "fn main() {}")
@@ -6904,6 +6961,9 @@ fn registry_inferred_from_unique_option() {
             description = "dep"
             repository = "bar"
             publish = ["alternative"]
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("dep/src/lib.rs", "")
@@ -6961,6 +7021,9 @@ fn registry_not_inferred_because_of_conflict() {
 
             [dependencies]
             dep = { path = "../dep", version = "0.1.0", registry = "alternative" }
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("main/src/main.rs", "fn main() {}")
@@ -6976,6 +7039,9 @@ fn registry_not_inferred_because_of_conflict() {
             description = "dep"
             repository = "bar"
             publish = ["alternative2"]
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("dep/src/lib.rs", "")
@@ -7076,6 +7142,9 @@ fn registry_inference_ignores_unpublishable() {
 
             [dependencies]
             dep = { path = "../dep", version = "0.1.0", registry = "alternative" }
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("main/src/main.rs", "fn main() {}")
@@ -7091,6 +7160,9 @@ fn registry_inference_ignores_unpublishable() {
             description = "dep"
             repository = "bar"
             publish = ["alternative"]
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("dep/src/lib.rs", "")
@@ -7166,6 +7238,9 @@ fn registry_not_inferred_because_of_multiple_options() {
 
             [dependencies]
             dep = { path = "../dep", version = "0.1.0", registry = "alternative" }
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("main/src/main.rs", "fn main() {}")
@@ -7181,6 +7256,9 @@ fn registry_not_inferred_because_of_multiple_options() {
             description = "dep"
             repository = "bar"
             publish = ["alternative", "alternative2"]
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("dep/src/lib.rs", "")
@@ -7272,6 +7350,9 @@ fn registry_not_inferred_because_of_mismatch() {
 
             [dependencies]
             dep = { path = "../dep", version = "0.1.0", registry = "alternative" }
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("main/src/main.rs", "fn main() {}")
@@ -7288,6 +7369,9 @@ fn registry_not_inferred_because_of_mismatch() {
             license = "MIT"
             description = "dep"
             repository = "bar"
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("dep/src/lib.rs", "")

@@ -645,7 +645,7 @@ fn cargo_compile_with_bin_and_crate_type() {
                 edition = "2015"
 
                 [[bin]]
-                name = "the_foo_bin"
+                name = "the-foo-bin"
                 path = "src/foo.rs"
                 crate-type = ["cdylib", "rlib"]
             "#,
@@ -656,7 +656,7 @@ fn cargo_compile_with_bin_and_crate_type() {
     p.cargo("build")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] Cargo.toml: the target `the_foo_bin` is a binary and can't have any crate-types set (currently "cdylib, rlib")
+[ERROR] Cargo.toml: the target `the-foo-bin` is a binary and can't have any crate-types set (currently "cdylib, rlib")
 [ERROR] could not parse `foo` (manifest) due to 1 previous error
 
 "#]])
@@ -731,7 +731,7 @@ fn cargo_compile_with_bin_and_proc() {
                 edition = "2015"
 
                 [[bin]]
-                name = "the_foo_bin"
+                name = "the-foo-bin"
                 path = "src/foo.rs"
                 proc-macro = true
             "#,
@@ -742,7 +742,7 @@ fn cargo_compile_with_bin_and_proc() {
     p.cargo("build")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] Cargo.toml: the target `the_foo_bin` is a binary and can't have `proc-macro` set `true`
+[ERROR] Cargo.toml: the target `the-foo-bin` is a binary and can't have `proc-macro` set `true`
 [ERROR] could not parse `foo` (manifest) due to 1 previous error
 
 "#]])
@@ -1564,7 +1564,7 @@ fn cargo_default_env_metadata_env_var() {
                 path = "bar"
             "#,
         )
-        .file("src/lib.rs", "// hi")
+        .file("src/lib.rs", "extern crate bar;")
         .file(
             "bar/Cargo.toml",
             r#"
@@ -1590,7 +1590,7 @@ fn cargo_default_env_metadata_env_var() {
         .with_stderr_data(format!(
             "\
 ...
-[RUNNING] `rustc --crate-name foo [..]--extern bar=[ROOT]/foo/target/debug/build/bar/[HASH]/out/{dll_prefix}bar{dll_suffix}[..]`
+[RUNNING] `rustc --crate-name foo [..]--extern bar=[ROOT]/foo/target/debug/build/bar/[HASH]/out/{dll_prefix}bar{dll_suffix}[..] --force-warn=unused_crate_dependencies`
 ...
 "))
         .run();
@@ -1603,7 +1603,7 @@ fn cargo_default_env_metadata_env_var() {
         .with_stderr_data(format!(
             "\
 ...
-[RUNNING] `rustc --crate-name foo [..]--extern bar=[ROOT]/foo/target/debug/build/bar/[HASH]/out/{dll_prefix}bar-[..]{dll_suffix}[..]`
+[RUNNING] `rustc --crate-name foo [..]--extern bar=[ROOT]/foo/target/debug/build/bar/[HASH]/out/{dll_prefix}bar-[..]{dll_suffix}[..] --force-warn=unused_crate_dependencies`
 ...
 "))
         .run();
@@ -3866,6 +3866,9 @@ fn build_all_workspace() {
                 bar = { path = "bar" }
 
                 [workspace]
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -4347,6 +4350,9 @@ fn build_all_member_dependency_same_name() {
 
                 [dependencies]
                 a = "0.1.0"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("a/src/lib.rs", "pub fn a() {}")
@@ -4633,6 +4639,9 @@ fn rustc_wrapper_relative() {
 
                 [dependencies]
                 bar = "1.0"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -5924,7 +5933,7 @@ fn build_lib_only() {
     p.cargo("build --lib -v")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..] --out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out`
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..] --out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out --force-warn=unused_crate_dependencies`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -6594,7 +6603,7 @@ fn should_not_include_current_build_unit_path_in_rustc_args() {
         // Don't pass any `-L` args if there are no dependencies (including our own `out` dir)
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo [..] --out-dir [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out`
+[RUNNING] `rustc --crate-name foo [..] --out-dir [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out --force-warn=unused_crate_dependencies`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -6624,7 +6633,7 @@ fn should_not_include_build_script_out_dir_path_in_rustc_args() {
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name build_script_build [..]`
 [RUNNING] `[ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/build_script_build`
-[RUNNING] `rustc --crate-name foo [..] --out-dir [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out`
+[RUNNING] `rustc --crate-name foo [..] --out-dir [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out --force-warn=unused_crate_dependencies`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -6769,6 +6778,9 @@ fn should_not_include_proc_macro_deps_paths_in_rustc_args() {
 
                 [dependencies]
                 my-proc-macro = { path = "my-proc-macro" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -6783,6 +6795,9 @@ fn should_not_include_proc_macro_deps_paths_in_rustc_args() {
 
                 [lib]
                 crate-type = ["dylib"]
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file(
@@ -6797,6 +6812,9 @@ fn should_not_include_proc_macro_deps_paths_in_rustc_args() {
                 version = "0.1.0"
                 edition = "2021"
                 authors = []
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file(
@@ -6818,6 +6836,9 @@ fn should_not_include_proc_macro_deps_paths_in_rustc_args() {
                 [dependencies]
                 my-dylib = { path = "../my-dylib" }
                 my-rlib = { path = "../my-rlib" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file(
@@ -6849,7 +6870,7 @@ fn should_not_include_proc_macro_deps_paths_in_rustc_args() {
 [COMPILING] my-proc-macro v0.1.0 ([ROOT]/foo/my-proc-macro)
 [RUNNING] `rustc --crate-name my_proc_macro [..]`
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo [..] --out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out -L dependency=[ROOT]/foo/target/debug/build/my-proc-macro/[HASH]/out --extern my_proc_macro=[ROOT]/foo/target/debug/build/my-proc-macro/[HASH]/out/[..]`
+[RUNNING] `rustc --crate-name foo [..] --out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out -L dependency=[ROOT]/foo/target/debug/build/my-proc-macro/[HASH]/out --extern my_proc_macro=[ROOT]/foo/target/debug/build/my-proc-macro/[HASH]/out/[..] --force-warn=unused_crate_dependencies`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]].unordered())

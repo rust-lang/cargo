@@ -597,6 +597,9 @@ fn publish_clean() {
                 documentation = "foo"
                 homepage = "foo"
                 repository = "foo"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -645,6 +648,9 @@ fn publish_in_sub_repo() {
                 documentation = "foo"
                 homepage = "foo"
                 repository = "foo"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("bar/src/main.rs", "fn main() {}")
@@ -694,6 +700,9 @@ fn publish_when_ignored() {
                 documentation = "foo"
                 homepage = "foo"
                 repository = "foo"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -744,6 +753,9 @@ fn ignore_when_crate_ignored() {
                 documentation = "foo"
                 homepage = "foo"
                 repository = "foo"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .nocommit_file("bar/src/main.rs", "fn main() {}");
@@ -933,6 +945,9 @@ fn publish_allowed_registry() {
                 homepage = "foo"
                 repository = "foo"
                 publish = ["alternative"]
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -993,6 +1008,9 @@ fn publish_implicitly_to_only_allowed_registry() {
                 homepage = "foo"
                 repository = "foo"
                 publish = ["alternative"]
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -1054,6 +1072,9 @@ fn publish_when_both_publish_and_index_specified() {
                 homepage = "foo"
                 repository = "foo"
                 publish = ["registry"]
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -3914,6 +3935,9 @@ fn workspace_with_local_deps_project() -> Project {
             [dependencies]
             # Let one dependency also specify features, for the added test coverage when generating package files.
             level2 = { workspace = true, features = ["foo"] }
+
+            [lints.cargo]
+            default = "allow"
         "#,
             )
             .file("level1/src/main.rs", "fn main() {}")
@@ -3934,6 +3958,9 @@ fn workspace_with_local_deps_project() -> Project {
 
             [dependencies]
             level3 = { path = "../level3", version = "0.0.1" }
+
+            [lints.cargo]
+            default = "allow"
         "#
             )
             .file("level2/src/lib.rs", "")
@@ -3948,6 +3975,9 @@ fn workspace_with_local_deps_project() -> Project {
             license = "MIT"
             description = "level3"
             repository = "bar"
+
+            [lints.cargo]
+            default = "allow"
         "#,
             )
             .file("level3/src/lib.rs", "")
@@ -4028,6 +4058,9 @@ fn workspace_parallel() {
             license = "MIT"
             description = "a"
             repository = "bar"
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("a/src/lib.rs", "")
@@ -4042,6 +4075,9 @@ fn workspace_parallel() {
             license = "MIT"
             description = "b"
             repository = "bar"
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("b/src/lib.rs", "")
@@ -4060,6 +4096,9 @@ fn workspace_parallel() {
             [dependencies]
             a = { path = "../a", version = "0.0.1" }
             b = { path = "../b", version = "0.0.1" }
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("c/src/lib.rs", "")
@@ -4595,6 +4634,9 @@ fn checksum_changed() {
                 [dependencies]
                 dep = { path = "./dep", version = "1.0.0" }
                 transitive = "1.0.0"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -4605,6 +4647,9 @@ fn checksum_changed() {
                 name = "dep"
                 version = "1.0.0"
                 edition = "2015"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("dep/src/lib.rs", "")

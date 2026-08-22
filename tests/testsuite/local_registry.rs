@@ -125,6 +125,9 @@ fn depend_on_yanked() {
 
                 [dependencies]
                 bar = "0.0.1"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")

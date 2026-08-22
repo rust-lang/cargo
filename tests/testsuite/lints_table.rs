@@ -19,6 +19,9 @@ fn dependency_warning_ignored() {
 
                 [dependencies]
                 bar.path = "../bar"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -37,6 +40,9 @@ fn dependency_warning_ignored() {
 
                 [lints.rust]
                 unsafe_code = "forbid"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -98,6 +104,9 @@ fn fail_on_invalid_tool() {
 
                 [workspace.lints.super-awesome-linter]
                 unsafe_code = "forbid"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -737,39 +746,6 @@ pub const Ĕ: i32 = 2;
 }
 
 #[cargo_test]
-fn cargo_lints_nightly_required() {
-    let foo = project()
-        .file(
-            "Cargo.toml",
-            r#"
-[package]
-name = "foo"
-version = "0.0.1"
-edition = "2015"
-authors = []
-
-[lints.cargo]
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
-
-    foo.cargo("check")
-        .with_stderr_data(str![[r#"
-[WARNING] Cargo.toml: unused manifest key `lints.cargo` (may be supported in a future version)
-
-this Cargo does not support nightly features, but if you
-switch to nightly channel you can pass
-`-Zcargo-lints` to enable this feature.
-[WARNING] `foo` (manifest) generated 1 warning
-[CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-
-"#]])
-        .run();
-}
-
-#[cargo_test]
 fn cargo_lints_no_z_flag() {
     let foo = project()
         .file(
@@ -791,12 +767,8 @@ im-a-teapot = true
         .build();
 
     foo.cargo("check")
-        .masquerade_as_nightly_cargo(&["cargo-lints", "test-dummy-unstable"])
+        .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
         .with_stderr_data(str![[r#"
-[WARNING] Cargo.toml: unused manifest key `lints.cargo` (may be supported in a future version)
-
-consider passing `-Zcargo-lints` to enable this feature.
-[WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -826,8 +798,8 @@ im_a_teapot = "warn"
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints", "test-dummy-unstable"])
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
         .with_stderr_data(str![[r#"
 [WARNING] `im_a_teapot` is specified
  --> Cargo.toml:9:1

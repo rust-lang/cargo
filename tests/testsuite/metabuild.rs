@@ -267,6 +267,9 @@ fn metabuild_fresh() {
 
                 [build-dependencies]
                 mb = {path="mb"}
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
