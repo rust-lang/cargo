@@ -33,7 +33,7 @@ the helper the initial username/password before running Cargo. One way to do
 this is to run `git clone` of the private git repo and enter the
 username/password.
 
-> **Tip:**<br>
+> [!TIP]
 > macOS users may want to consider using the osxkeychain helper.<br>
 > Windows users may want to consider using the [GCM] helper.
 

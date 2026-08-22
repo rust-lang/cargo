@@ -130,7 +130,8 @@ typically finish in under 30 minutes.
 The reviewer might point out changes deemed necessary. Large or tricky changes
 may require several passes of review and changes.
 
-> **tip:** Prefer atomic commits where each commit is a single, complete, and coherent unit of work.
+> [!TIP]
+> Prefer atomic commits where each commit is a single, complete, and coherent unit of work.
 > For example, if your feature work leads to renaming a module, make the rename its own commit.
 > However, adding an internal function that is unused is not complete or coherent.
 >

@@ -76,7 +76,8 @@ What Rust versions to support is a trade off between
 > [!NOTE]
 > [Changing `rust-version`](semver.md#env-new-rust) is assumed to be a minor incompatibility
 
-> **Recommendation:** Choose a policy for what Rust versions to support and when that is changed so users can compare it with their own policy and,
+> [!TIP]
+> Choose a policy for what Rust versions to support and when that is changed so users can compare it with their own policy and,
 > if it isn't compatible,
 > decide whether the loss of general improvements or the risk of a blocking bug that won't be fixed is acceptable or not.
 >

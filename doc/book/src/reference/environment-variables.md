@@ -385,7 +385,8 @@ let out_dir = env::var("OUT_DIR").unwrap();
   >
   > Some cfg values like `test` are not available.
   <!-- Keep alerts separate -->
-  > **Tip:** For a typed API to read these values, consider using the [`build-rs`]
+  > [!TIP]
+  > For a typed API to read these values, consider using the [`build-rs`]
   > crate instead of parsing environment variables manually. Also note that
   > `CARGO_CFG_*` variables should be used instead of the `cfg!` macro or `#[cfg]`
   > attribute in build scripts, those check the *host* platform, not the *target*.

@@ -136,7 +136,8 @@ In order to release a new version, change [the `version` value](manifest.md#the-
 Keep in mind [the SemVer rules](semver.md) which provide guidelines on what is a compatible change.
 Then run [`cargo publish`] as described above to upload the new version.
 
-> **Recommendation:** Consider the full release process and automate what you can.
+> [!TIP]
+> Consider the full release process and automate what you can.
 >
 > Each version should include:
 > - A changelog entry, preferably [manually curated](https://keepachangelog.com/en/1.0.0/) though a generated one is better than nothing
