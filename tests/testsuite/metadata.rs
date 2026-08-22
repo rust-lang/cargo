@@ -2130,6 +2130,428 @@ fn cargo_metadata_with_invalid_artifact_deps() {
 }
 
 #[cargo_test]
+fn cargo_metadata_with_one_artifact_only_alias_to_lib_package() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+
+                [dependencies]
+                bar-alias = { package = "bar", path = "bar", artifact = "bin" }
+           "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.5.0"
+
+                [lib]
+                name = "bar"
+
+                [[bin]]
+                name = "bar"
+           "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("metadata --format-version 1 -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_stdout_data(
+            str![[r#"
+{
+  "packages": "{...}",
+  "resolve": {
+    "nodes": [
+      "{...}",
+      {
+        "deps": [
+          {
+            "dep_kinds": [
+              {
+                "artifact": "bin",
+                "bin_name": "bar",
+                "extern_name": "bar_alias",
+                "kind": null,
+                "target": null
+              }
+            ],
+            "name": "",
+            "pkg": "path+[ROOTURL]/foo/bar#0.5.0"
+          }
+        ],
+        "id": "path+[ROOTURL]/foo#0.5.0",
+        "...": "{...}"
+      }
+    ],
+    "root": "path+[ROOTURL]/foo#0.5.0"
+  },
+  "...": "{...}"
+}
+"#]]
+            .is_json(),
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cargo_metadata_rejects_artifact_lib_aliases_across_dependency_kinds() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+
+                [dependencies]
+                bar = { path = "bar", artifact = "bin", lib = true }
+
+                [build-dependencies]
+                bar-alt = { package = "bar", path = "bar", artifact = "bin", lib = true }
+           "#,
+        )
+        .file("src/lib.rs", "")
+        .file("build.rs", "fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.5.0"
+
+                [lib]
+                name = "bar"
+
+                [[bin]]
+                name = "bar"
+           "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("metadata -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
+[LOCKING] 1 package to highest compatible version
+[ERROR] the crate `foo v0.5.0 ([ROOT]/foo)` depends on crate `bar v0.5.0 ([ROOT]/foo/bar)` multiple times with different names
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn cargo_metadata_with_one_artifact_lib_alias_to_same_package() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+
+                [dependencies]
+                bar-lib = { package = "bar", path = "bar", artifact = "bin", lib = true }
+                bar-bin = { package = "bar", path = "bar", artifact = "bin" }
+           "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.5.0"
+
+                [lib]
+                name = "bar"
+
+                [[bin]]
+                name = "bar"
+           "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("metadata --format-version 1 -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_stdout_data(
+            str![[r#"
+{
+  "packages": "{...}",
+  "resolve": {
+    "nodes": [
+      "{...}",
+      {
+        "deps": [
+          {
+            "dep_kinds": [
+              {
+                "artifact": "bin",
+                "bin_name": "bar",
+                "extern_name": "bar_bin",
+                "kind": null,
+                "target": null
+              },
+              {
+                "extern_name": "bar_lib",
+                "kind": null,
+                "target": null
+              },
+              {
+                "artifact": "bin",
+                "bin_name": "bar",
+                "extern_name": "bar_lib",
+                "kind": null,
+                "target": null
+              }
+            ],
+            "name": "bar_lib",
+            "pkg": "path+[ROOTURL]/foo/bar#0.5.0"
+          }
+        ],
+        "id": "path+[ROOTURL]/foo#0.5.0",
+        "...": "{...}"
+      }
+    ],
+    "root": "path+[ROOTURL]/foo#0.5.0"
+  },
+  "...": "{...}"
+}
+"#]]
+            .is_json(),
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cargo_metadata_with_multiple_bin_only_artifact_aliases_to_lib_package() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+
+                [dependencies]
+                bar-a = { package = "bar", path = "bar", artifact = "bin" }
+                bar-b = { package = "bar", path = "bar", artifact = "bin" }
+           "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.5.0"
+
+                [lib]
+                name = "bar"
+
+                [[bin]]
+                name = "bar"
+           "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("metadata --format-version 1 -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_stdout_data(
+            str![[r#"
+{
+  "packages": "{...}",
+  "resolve": {
+    "nodes": [
+      "{...}",
+      {
+        "deps": [
+          {
+            "dep_kinds": [
+              {
+                "artifact": "bin",
+                "bin_name": "bar",
+                "extern_name": "bar_a",
+                "kind": null,
+                "target": null
+              },
+              {
+                "artifact": "bin",
+                "bin_name": "bar",
+                "extern_name": "bar_b",
+                "kind": null,
+                "target": null
+              }
+            ],
+            "name": "",
+            "pkg": "path+[ROOTURL]/foo/bar#0.5.0"
+          }
+        ],
+        "id": "path+[ROOTURL]/foo#0.5.0",
+        "...": "{...}"
+      }
+    ],
+    "root": "path+[ROOTURL]/foo#0.5.0"
+  },
+  "...": "{...}"
+}
+"#]]
+            .is_json(),
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cargo_metadata_allows_mixed_artifact_and_no_artifact_dep_to_same_package() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+
+                [dependencies]
+                bar = { path = "bar", artifact = "bin" }
+                bar_stable = { path = "bar", package = "bar" }
+           "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.5.0"
+
+                [lib]
+                name = "bar"
+
+                [[bin]]
+                name = "bar"
+           "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("metadata --format-version 1 -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_stdout_data(
+            str![[r#"
+{
+  "packages": "{...}",
+  "resolve": {
+    "nodes": [
+      "{...}",
+      {
+        "deps": [
+          {
+            "dep_kinds": [
+              {
+                "kind": null,
+                "target": null
+              },
+              {
+                "artifact": "bin",
+                "bin_name": "bar",
+                "extern_name": "bar",
+                "kind": null,
+                "target": null
+              }
+            ],
+            "name": "bar_stable",
+            "pkg": "path+[ROOTURL]/foo/bar#0.5.0"
+          }
+        ],
+        "id": "path+[ROOTURL]/foo#0.5.0",
+        "...": "{...}"
+      }
+    ],
+    "root": "path+[ROOTURL]/foo#0.5.0"
+  },
+  "...": "{...}"
+}
+"#]]
+            .is_json(),
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cargo_metadata_allows_mixed_artifact_and_no_artifact_dep_to_bin_only_package() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+
+                [dependencies]
+                bar = { path = "bar", artifact = "bin" }
+                bar_stable = { path = "bar", package = "bar" }
+           "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_bin_manifest("bar"))
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("metadata --format-version 1 -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_stdout_data(
+            str![[r#"
+{
+  "packages": "{...}",
+  "resolve": {
+    "nodes": [
+      "{...}",
+      {
+        "deps": [
+          {
+            "dep_kinds": [
+              {
+                "artifact": "bin",
+                "bin_name": "bar",
+                "extern_name": "bar",
+                "kind": null,
+                "target": null
+              }
+            ],
+            "name": "",
+            "pkg": "path+[ROOTURL]/foo/bar#0.5.0"
+          }
+        ],
+        "id": "path+[ROOTURL]/foo#0.5.0",
+        "...": "{...}"
+      }
+    ],
+    "root": "path+[ROOTURL]/foo#0.5.0"
+  },
+  "...": "{...}"
+}
+"#]]
+            .is_json(),
+        )
+        .run();
+}
+
+#[cargo_test]
 fn cargo_metadata_with_invalid_duplicate_renamed_deps() {
     let p = project()
         .file(
@@ -2142,6 +2564,39 @@ fn cargo_metadata_with_invalid_duplicate_renamed_deps() {
                 [dependencies]
                 bar = { path = "bar" }
                 baz = { path = "bar", package = "bar" }
+           "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("metadata")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
+[LOCKING] 1 package to highest compatible version
+[ERROR] the crate `foo v0.5.0 ([ROOT]/foo)` depends on crate `bar v0.5.0 ([ROOT]/foo/bar)` multiple times with different names
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn cargo_metadata_with_invalid_cross_kind_renamed_deps() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+
+                [dependencies]
+                bar-normal = { path = "bar", package = "bar" }
+
+                [build-dependencies]
+                bar-build = { path = "bar", package = "bar" }
            "#,
         )
         .file("src/lib.rs", "")
