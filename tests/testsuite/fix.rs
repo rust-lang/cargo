@@ -1436,7 +1436,7 @@ fn fix_to_broken_code() {
            explicit panic
            [NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 [HELP] to report this as a bug, open an issue at https://github.com/rust-lang/rust/issues, quoting the full output of this command
-[HELP] to possibly apply more fixes, pass in the `--broken-code` flag
+[HELP] the broken code has been saved as requested via `--broken-code`
 [NOTE] original diagnostics will follow:
 ...
 
@@ -2381,6 +2381,9 @@ fn fix_in_rust_src() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
+[ERROR] cargo fix could not apply any fixes to crate `foo`
+[HELP] no fixes were applicable; the code already had errors prior to cargo fix
+[NOTE] original diagnostics will follow:
 error[E0308]: mismatched types
  --> lib.rs:5:9
   |
