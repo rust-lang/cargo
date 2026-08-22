@@ -158,11 +158,17 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     if args.flag("workspace") {
         spec.extend(ws.members().map(|package| package.name().to_string()))
     };
+    let default_profile = gctx
+        .build_config()?
+        .profile
+        .as_ref()
+        .map(|p| p.as_ref())
+        .unwrap_or_else(|| "dev");
     let opts = CleanOptions {
         gctx,
         spec,
         targets: args.targets()?,
-        requested_profile: args.get_profile_name("dev", ProfileChecking::Custom)?,
+        requested_profile: args.get_profile_name(default_profile, ProfileChecking::Custom)?,
         profile_specified: args.contains_id("profile") || args.flag("release"),
         doc: args.flag("doc"),
         dry_run: args.dry_run(),

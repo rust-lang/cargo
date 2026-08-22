@@ -97,6 +97,7 @@ In summary, the supported environment variables are:
 * `CARGO_BUILD_TARGET` --- The default target platform, see [`build.target`].
 * `CARGO_BUILD_TARGET_DIR` --- The default output directory, see [`build.target-dir`].
 * `CARGO_BUILD_BUILD_DIR` --- The default build directory, see [`build.build-dir`].
+* `CARGO_BUILD_PROFILE` --- The default profile, see [`build.profile`].
 * `CARGO_BUILD_RUSTFLAGS` --- Extra `rustc` flags, see [`build.rustflags`].
 * `CARGO_BUILD_RUSTDOCFLAGS` --- Extra `rustdoc` flags, see [`build.rustdocflags`].
 * `CARGO_BUILD_INCREMENTAL` --- Incremental compilation, see [`build.incremental`].
@@ -116,6 +117,7 @@ In summary, the supported environment variables are:
 * `CARGO_HTTP_MULTIPLEXING` --- Whether HTTP/2 multiplexing is used, see [`http.multiplexing`].
 * `CARGO_HTTP_USER_AGENT` --- The HTTP user-agent header, see [`http.user-agent`].
 * `CARGO_INSTALL_ROOT` --- The default directory for [`cargo install`], see [`install.root`].
+* `CARGO_INSTALL_PROFILE` --- The default profile, see [`install.profile`].
 * `CARGO_NET_RETRY` --- Number of times to retry network errors, see [`net.retry`].
 * `CARGO_NET_GIT_FETCH_WITH_CLI` --- Enables the use of the `git` executable to fetch, see [`net.git-fetch-with-cli`].
 * `CARGO_NET_OFFLINE` --- Offline mode, see [`net.offline`].
@@ -172,6 +174,7 @@ In summary, the supported environment variables are:
 [`build.target`]: config.md#buildtarget
 [`build.target-dir`]: config.md#buildtarget-dir
 [`build.build-dir`]: config.md#buildbuild-dir
+[`build.profile`]: config.md#buildprofile
 [`build.rustflags`]: config.md#buildrustflags
 [`build.rustdocflags`]: config.md#buildrustdocflags
 [`build.incremental`]: config.md#buildincremental
@@ -194,6 +197,7 @@ In summary, the supported environment variables are:
 [`http.multiplexing`]: config.md#httpmultiplexing
 [`http.user-agent`]: config.md#httpuser-agent
 [`install.root`]: config.md#installroot
+[`install.profile`]: config.md#installprofile
 [`net.retry`]: config.md#netretry
 [`net.git-fetch-with-cli`]: config.md#netgit-fetch-with-cli
 [`net.offline`]: config.md#netoffline
