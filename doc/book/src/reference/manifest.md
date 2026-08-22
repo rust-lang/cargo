@@ -121,7 +121,12 @@ This field is optional and defaults to `0.0.0`.  The field is required for publi
 
 ### The `authors` field
 
-> **Warning**: This field is deprecated
+> **Warning**: This field is deprecated and may be considered for removal in
+> the future. The definition of "author" has subjective and context-dependent
+> nuances, listing significant contributors does not scale to projects with
+> many contributors, and the immutability of published releases required by
+> registries such as crates.io makes it impossible to rename or remove authors
+> from published packages. See [Cargo PR #15068] for more details.
 
 The optional `authors` field lists in an array the people or organizations that are considered
 the "authors" of the package. An optional email address may be included within angled brackets at
@@ -135,6 +140,8 @@ authors = ["Graydon Hoare", "Fnu Lnu <no-reply@rust-lang.org>"]
 
 This field is surfaced in package metadata and in the `CARGO_PKG_AUTHORS`
 environment variable within `build.rs` for backwards compatibility.
+
+[Cargo PR #15068]: https://github.com/rust-lang/cargo/pull/15068
 
 ### The `edition` field
 
