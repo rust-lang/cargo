@@ -199,8 +199,9 @@ pub fn write_atomic<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) -> Res
     // Check if the path is a symlink and follow it if it is
     let resolved_path;
     let path = if path.is_symlink() {
-        resolved_path = fs::read_link(path)
+        let target = fs::read_link(path)
             .with_context(|| format!("failed to read symlink at `{}`", path.display()))?;
+        resolved_path = path.parent().unwrap().join(target);
         &resolved_path
     } else {
         path
@@ -1031,6 +1032,30 @@ mod tests {
         // Verify symlink still exists and points to the same target
         assert!(symlink_path.is_symlink());
         assert_eq!(std::fs::read_link(&symlink_path).unwrap(), target_path);
+    }
+
+    #[test]
+    fn write_atomic_relative_symlink() {
+        let tmpdir = tempfile::tempdir().unwrap();
+        let link_dir = tmpdir.path().join("project");
+        let target_dir = link_dir.join("generated");
+        let target_path = target_dir.join("target.txt");
+        let symlink_path = link_dir.join("symlink.txt");
+        let relative_target = std::path::Path::new("generated/target.txt");
+
+        std::fs::create_dir_all(&target_dir).unwrap();
+        write(&target_path, "initial").unwrap();
+
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(relative_target, &symlink_path).unwrap();
+        #[cfg(windows)]
+        std::os::windows::fs::symlink_file(relative_target, &symlink_path).unwrap();
+
+        write_atomic(&symlink_path, "updated").unwrap();
+
+        assert_eq!(std::fs::read_to_string(&target_path).unwrap(), "updated");
+        assert!(symlink_path.is_symlink());
+        assert_eq!(std::fs::read_link(&symlink_path).unwrap(), relative_target);
     }
 
     #[test]
