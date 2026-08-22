@@ -34,7 +34,8 @@ The sections below describe how build scripts work, and the [examples
 chapter](build-script-examples.md) shows a variety of examples on how to write
 scripts.
 
-> Note: The [`package.build` manifest key](manifest.md#the-build-field) can be
+> [!NOTE]
+> The [`package.build` manifest key](manifest.md#the-build-field) can be
 > used to change the name of the build script, or disable it entirely.
 
 ## Life Cycle of a Build Script
@@ -67,7 +68,8 @@ the root directory of the build script’s package.
 
 [build-env]: environment-variables.md#environment-variables-cargo-sets-for-build-scripts
 
-> **Note:** When checking [configuration options] like `target_os` or `target_arch`
+> [!NOTE]
+> When checking [configuration options] like `target_os` or `target_arch`
 > in a build script, do not use the `cfg!` macro or `#[cfg]` attribute, these
 > check the **host** machine (where the build script runs), not the **target**
 > platform you're compiling for. This distinction matters when cross-compiling.
@@ -86,7 +88,8 @@ Build scripts may save any output files or intermediate artifacts in the
 directory specified in the [`OUT_DIR` environment variable][build-env]. Scripts
 should not modify any files outside of that directory.
 
-> **Note:** Cargo does not clean or reset `OUT_DIR` between builds. The contents
+> [!NOTE]
+> Cargo does not clean or reset `OUT_DIR` between builds. The contents
 > of this directory may persist across rebuilds, even if the build script is
 > re-run. This behavior is intentional to support incremental builds, such as
 > native code compilation.
@@ -333,7 +336,8 @@ unique identifier of a continuous integration server.
 See also the [environment variables automatically included by
 Cargo][env-cargo].
 
-> **Note**: These environment variables are also set when running an
+> [!NOTE]
+> These environment variables are also set when running an
 > executable with `cargo run` or `cargo test`. However, this usage is
 > discouraged since it ties the executable to Cargo's execution environment.
 > Normally, these environment variables should only be checked at compile-time
@@ -347,7 +351,8 @@ Cargo][env-cargo].
 The `error` instruction tells Cargo to display an error after the build script
 has finished running, and then fail the build.
 
- > Note: Build script libraries should carefully consider if they want to
+ > [!NOTE]
+ > Build script libraries should carefully consider if they want to
  > use `cargo::error` versus returning a `Result`. It may be better to return
  > a `Result`, and allow the caller to decide if the error is fatal or not.
  > The caller can then decide whether or not to display the `Err` variant

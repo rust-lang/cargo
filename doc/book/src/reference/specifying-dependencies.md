@@ -90,7 +90,8 @@ positioned.
 1.2.* := >=1.2.0, <1.3.0
 ```
 
-> **Note**: [crates.io] does not allow bare `*` versions.
+> [!NOTE]
+> [crates.io] does not allow bare `*` versions.
 
 ### Comparison requirements
 
@@ -200,7 +201,8 @@ some-crate = { version = "1.0", registry = "my-registry" }
 where `my-registry` is the registry name configured in `.cargo/config.toml` file.
 See the [registries documentation] for more information.
 
-> **Note**: [crates.io] does not allow packages to be published with
+> [!NOTE]
+> [crates.io] does not allow packages to be published with
 > dependencies on code published outside of [crates.io].
 
 [registries documentation]: registries.md
@@ -297,7 +299,8 @@ regex = { version = "1.10.3", git = "https://github.com/rust-lang/regex.git", br
 `version`, `git`, and `path` keys are considered separate locations for resolving the dependency.
 See [Multiple locations](#multiple-locations) section below for detailed explanations.
 
-> **Note**: [crates.io] does not allow packages to be published with
+> [!NOTE]
+> [crates.io] does not allow packages to be published with
 > dependencies on code published outside of [crates.io] itself
 > ([dev-dependencies] are ignored). See the [Multiple
 > locations](#multiple-locations) section for a fallback alternative for `git`
@@ -382,7 +385,8 @@ hello_utils = { path = "hello_utils", version = "0.1.0" }
 
 The use of `path` and `version` keys together is explained in the [Multiple locations](#multiple-locations) section.
 
-> **Note**: [crates.io] does not allow packages to be published with
+> [!NOTE]
+> [crates.io] does not allow packages to be published with
 > dependencies on code outside of [crates.io], except for [dev-dependencies].
 > See the [Multiple locations](#multiple-locations) section
 > for a fallback alternative for `git` and `path` dependencies.
@@ -489,7 +493,8 @@ openssl = "1.0.1"
 native = { path = "native/i686" }
 ```
 
-> **Note**: Custom target specifications are not usable on the stable channel.
+> [!NOTE]
+> Custom target specifications are not usable on the stable channel.
 
 ## Development dependencies
 
@@ -517,7 +522,8 @@ example:
 mio = "0.0.1"
 ```
 
-> **Note**: When a package is published, only dev-dependencies that specify a
+> [!NOTE]
+> When a package is published, only dev-dependencies that specify a
 > `version` will be included in the published crate. For most use cases,
 > dev-dependencies are not needed when published, though some users (like OS
 > packagers) may want to run tests within a crate, so providing a `version` if
