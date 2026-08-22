@@ -156,16 +156,16 @@ defining them in the member package with `{key}.workspace = true`.
 
 Keys that are supported:
 
-|                |                 |
-|----------------|-----------------|
-| `authors`      | `categories`    |
-| `description`  | `documentation` |
-| `edition`      | `exclude`       |
-| `homepage`     | `include`       |
-| `keywords`     | `license`       |
-| `license-file` | `publish`       |
-| `readme`       | `repository`    |
-| `rust-version` | `version`       |
+|                         |                 |
+|-------------------------|-----------------|
+| `authors` (deprecated)  | `categories`    |
+| `description`           | `documentation` |
+| `edition`               | `exclude`       |
+| `homepage`              | `include`       |
+| `keywords`              | `license`       |
+| `license-file`          | `publish`       |
+| `readme`                | `repository`    |
+| `rust-version`          | `version`       |
 
 - `license-file` and `readme` are relative to the workspace root
 - `include` and `exclude` are relative to your package root
@@ -178,7 +178,6 @@ members = ["bar"]
 
 [workspace.package]
 version = "1.2.3"
-authors = ["Nice Folks"]
 description = "A short description of my package"
 documentation = "https://example.com/bar"
 ```
@@ -188,7 +187,6 @@ documentation = "https://example.com/bar"
 [package]
 name = "bar"
 version.workspace = true
-authors.workspace = true
 description.workspace = true
 documentation.workspace = true
 ```
