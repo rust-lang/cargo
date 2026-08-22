@@ -100,7 +100,7 @@ enables the listed features. This behavior can be changed by:
 * The `default-features = false` option can be specified in a [dependency
   declaration](#dependency-features).
 
-> [!NOTE]
+> [!IMPORTANT]
 > Be careful about choosing the default feature set. The default
 > features are a convenience that make it easier to use a package without
 > forcing the user to carefully select which features to enable for common

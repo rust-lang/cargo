@@ -239,7 +239,7 @@ explaining the format of the entry.
 The JSON objects should not be modified after they are added except for the
 `yanked` field whose value may change at any time.
 
-> [!NOTE]
+> [!IMPORTANT]
 > The index JSON format has subtle differences from the JSON format of the [Publish API] and [`cargo metadata`].
 > If you are using one of those as a source to generate index entries, you are encouraged to carefully inspect the documentation differences between them.
 >

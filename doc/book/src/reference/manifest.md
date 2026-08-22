@@ -121,7 +121,8 @@ This field is optional and defaults to `0.0.0`.  The field is required for publi
 
 ### The `authors` field
 
-> **Warning**: This field is deprecated
+> [!IMPORTANT]
+> This field is deprecated.
 
 The optional `authors` field lists in an array the people or organizations that are considered
 the "authors" of the package. An optional email address may be included within angled brackets at

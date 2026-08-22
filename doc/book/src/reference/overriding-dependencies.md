@@ -299,7 +299,7 @@ ignored.
 
 ## The `[replace]` section
 
-> [!NOTE]
+> [!IMPORTANT]
 > `[replace]` is deprecated. You should use the
 > [`[patch]`](#the-patch-section) table instead.
 

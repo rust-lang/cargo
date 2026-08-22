@@ -68,7 +68,7 @@ the root directory of the build script’s package.
 
 [build-env]: environment-variables.md#environment-variables-cargo-sets-for-build-scripts
 
-> [!NOTE]
+> [!WARNING]
 > When checking [configuration options] like `target_os` or `target_arch`
 > in a build script, do not use the `cfg!` macro or `#[cfg]` attribute, these
 > check the **host** machine (where the build script runs), not the **target**
@@ -88,7 +88,7 @@ Build scripts may save any output files or intermediate artifacts in the
 directory specified in the [`OUT_DIR` environment variable][build-env]. Scripts
 should not modify any files outside of that directory.
 
-> [!NOTE]
+> [!IMPORTANT]
 > Cargo does not clean or reset `OUT_DIR` between builds. The contents
 > of this directory may persist across rebuilds, even if the build script is
 > re-run. This behavior is intentional to support incremental builds, such as

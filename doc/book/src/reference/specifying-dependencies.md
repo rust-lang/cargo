@@ -150,7 +150,7 @@ pre-release update causes issues.
 [Version metadata](manifest.md#the-version-field), such as `1.0.0+21AF26D3`,
 is ignored and should not be used in version requirements.
 
-> [!TIP]
+> [!CAUTION]
 > When in doubt, use the default version requirement operator.
 >
 > In rare circumstances, a package with a "public dependency"
