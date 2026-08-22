@@ -7,7 +7,7 @@
 #![allow(clippy::disallowed_methods)]
 
 pub use self::read2::read2;
-pub use du::du;
+pub use du::{du, du_each};
 pub use process_builder::ProcessBuilder;
 pub use process_error::{ProcessError, exit_status_to_string, is_simple_exit_code};
 pub use sha256::Sha256;
