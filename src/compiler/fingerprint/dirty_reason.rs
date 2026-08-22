@@ -6,6 +6,7 @@ use serde::Serialize;
 
 use super::*;
 use crate::compiler::UnitIndex;
+use crate::context::FingerprintMethod;
 use cargo_util_terminal::Shell;
 
 /// Tells a better story of why a build is considered "dirty" that leads
@@ -38,8 +39,9 @@ pub enum DirtyReason {
         old: String,
         new: String,
     },
-    ChecksumUseChanged {
-        old: bool,
+    FingerprintMethodChanged {
+        old: FingerprintMethod,
+        new: FingerprintMethod,
     },
     DepInfoOutputChanged {
         old: PathBuf,
@@ -188,16 +190,10 @@ impl DirtyReason {
             DirtyReason::PrecalculatedComponentsChanged { .. } => {
                 s.dirty_because(unit, "the precalculated components changed")
             }
-            DirtyReason::ChecksumUseChanged { old } => {
-                if *old {
-                    s.dirty_because(
-                        unit,
-                        "the prior compilation used checksum freshness and this one does not",
-                    )
-                } else {
-                    s.dirty_because(unit, "checksum freshness requested, prior compilation did not use checksum freshness")
-                }
-            }
+            DirtyReason::FingerprintMethodChanged { old, new } => s.dirty_because(
+                unit,
+                format_args!("the prior compilation fingerprinted build inputs using `{old}` and this one used `{new}`"),
+            ),
             DirtyReason::DepInfoOutputChanged { .. } => {
                 s.dirty_because(unit, "the dependency info output changed")
             }
@@ -793,14 +789,18 @@ mod json_schema {
     }
 
     #[test]
-    fn checksum_use_changed() {
-        let reason = DirtyReason::ChecksumUseChanged { old: false };
+    fn fingerprint_method_changed() {
+        let reason = DirtyReason::FingerprintMethodChanged {
+            old: FingerprintMethod::Mtime,
+            new: FingerprintMethod::Content,
+        };
         assert_data_eq!(
             to_json(&reason),
             str![[r#"
 {
-  "dirty_reason": "checksum-use-changed",
-  "old": false
+  "dirty_reason": "fingerprint-method-changed",
+  "new": "content",
+  "old": "mtime"
 }
 "#]]
             .is_json()

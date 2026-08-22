@@ -501,12 +501,8 @@ fn format_dirty_reason(
         DirtyReason::PrecalculatedComponentsChanged { old, new } => {
             format!("precalculated components changed: {old} -> {new}")
         }
-        DirtyReason::ChecksumUseChanged { old } => {
-            if *old {
-                "checksum use changed: enabled -> disabled".to_string()
-            } else {
-                "checksum use changed: disabled -> enabled".to_string()
-            }
+        DirtyReason::FingerprintMethodChanged { old, new } => {
+            format!("fingerprinty changed: {old} -> {new}")
         }
         DirtyReason::DepInfoOutputChanged { old, new } => {
             let old = old.strip_prefix(ws_root).unwrap_or(old).display();

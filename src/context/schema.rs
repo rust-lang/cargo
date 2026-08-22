@@ -16,6 +16,7 @@ use std::ffi::OsStr;
 
 use cargo_credential::Secret;
 use serde::Deserialize;
+use serde::Serialize;
 use serde_untagged::UntaggedEnumVisitor;
 
 use std::path::Path;
@@ -218,6 +219,8 @@ pub struct CargoBuildConfig {
     pub sbom: Option<bool>,
     /// Unstable feature `-Zbuild-analysis`.
     pub analysis: Option<CargoBuildAnalysis>,
+    /// Unstable feature `-Zchecksum-freshness`.
+    pub fingerprint: Option<FingerprintMethod>,
 }
 
 /// Metrics collection for build analysis.
@@ -238,6 +241,29 @@ pub enum WarningHandling {
     Allow,
     /// Error if  warnings are emitted.
     Deny,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Deserialize, Serialize, Default)]
+#[serde(rename_all = "kebab-case")]
+pub enum FingerprintMethod {
+    #[default]
+    Mtime,
+    Content,
+}
+
+impl FingerprintMethod {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Mtime => "mtime",
+            Self::Content => "content",
+        }
+    }
+}
+
+impl std::fmt::Display for FingerprintMethod {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.as_str().fmt(f)
+    }
 }
 
 /// Configuration for `build.target`.

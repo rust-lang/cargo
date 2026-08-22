@@ -403,6 +403,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, info};
 
 use crate::compiler::unit_graph::UnitDep;
+use crate::context::FingerprintMethod;
 use crate::util;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
@@ -833,7 +834,10 @@ enum LocalFingerprint {
     ///
     /// If the `checksum` bool is true then the `dep_info` file is expected to
     /// contain file checksums instead of file mtimes.
-    CheckDepInfo { dep_info: PathBuf, checksum: bool },
+    CheckDepInfo {
+        dep_info: PathBuf,
+        fingerprint: FingerprintMethod,
+    },
 
     /// This represents a nonempty set of `rerun-if-changed` annotations printed
     /// out by a build script. The `output` file is a relative file anchored at
@@ -948,7 +952,10 @@ impl LocalFingerprint {
             // matches, and for each file we see if any of them are newer than
             // the `dep_info` file itself whose mtime represents the start of
             // rustc.
-            LocalFingerprint::CheckDepInfo { dep_info, checksum } => {
+            LocalFingerprint::CheckDepInfo {
+                dep_info,
+                fingerprint,
+            } => {
                 let dep_info = build_root.join(dep_info);
                 let Some(info) = parse_dep_info(pkg_root, build_root, &dep_info)? else {
                     return Ok(Some(StaleItem::MissingFile { path: dep_info }));
@@ -983,22 +990,21 @@ impl LocalFingerprint {
                         current: current.map(Into::into),
                     }));
                 }
-                if *checksum {
-                    Ok(find_stale_file(
+                match fingerprint {
+                    FingerprintMethod::Content => Ok(find_stale_file(
                         mtime_cache,
                         checksum_cache,
                         &dep_info,
                         info.files.iter().map(|(file, checksum)| (file, *checksum)),
-                        *checksum,
-                    ))
-                } else {
-                    Ok(find_stale_file(
+                        *fingerprint,
+                    )),
+                    FingerprintMethod::Mtime => Ok(find_stale_file(
                         mtime_cache,
                         checksum_cache,
                         &dep_info,
                         info.files.into_keys().map(|p| (p, None)),
-                        *checksum,
-                    ))
+                        *fingerprint,
+                    )),
                 }
             }
 
@@ -1009,7 +1015,7 @@ impl LocalFingerprint {
                 checksum_cache,
                 &build_root.join(output),
                 paths.iter().map(|p| (pkg_root.join(p), None)),
-                false,
+                FingerprintMethod::Mtime,
             )),
 
             // These have no dependencies on the filesystem, and their values
@@ -1130,11 +1136,11 @@ impl Fingerprint {
                 (
                     LocalFingerprint::CheckDepInfo {
                         dep_info: a_dep,
-                        checksum: checksum_a,
+                        fingerprint: fingerprint_a,
                     },
                     LocalFingerprint::CheckDepInfo {
                         dep_info: b_dep,
-                        checksum: checksum_b,
+                        fingerprint: fingerprint_b,
                     },
                 ) => {
                     if a_dep != b_dep {
@@ -1143,8 +1149,11 @@ impl Fingerprint {
                             new: a_dep.clone(),
                         };
                     }
-                    if checksum_a != checksum_b {
-                        return DirtyReason::ChecksumUseChanged { old: *checksum_b };
+                    if fingerprint_a != fingerprint_b {
+                        return DirtyReason::FingerprintMethodChanged {
+                            old: *fingerprint_b,
+                            new: *fingerprint_a,
+                        };
                     }
                 }
                 (
@@ -1604,9 +1613,19 @@ fn calculate_normal(
     } else {
         let dep_info = dep_info_loc(build_runner, unit);
         let dep_info = dep_info.strip_prefix(&build_root).unwrap().to_path_buf();
+        let fingerprint = if build_runner.bcx.gctx.cli_unstable().checksum_freshness {
+            build_runner
+                .bcx
+                .gctx
+                .build_config()?
+                .fingerprint
+                .unwrap_or_default()
+        } else {
+            FingerprintMethod::Mtime
+        };
         vec![LocalFingerprint::CheckDepInfo {
             dep_info,
-            checksum: build_runner.bcx.gctx.cli_unstable().checksum_freshness,
+            fingerprint,
         }]
     };
 
@@ -2086,7 +2105,7 @@ fn find_stale_file<I, P>(
     checksum_cache: &mut HashMap<PathBuf, Checksum>,
     reference: &Path,
     paths: I,
-    use_checksums: bool,
+    fingerprint: FingerprintMethod,
 ) -> Option<StaleItem>
 where
     I: IntoIterator<Item = (P, Option<(u64, Checksum)>)>,
@@ -2122,91 +2141,94 @@ where
                 continue;
             }
         }
-        if use_checksums {
-            let Some((file_len, prior_checksum)) = prior_checksum else {
-                return Some(StaleItem::MissingChecksum {
-                    path: path.to_path_buf(),
-                });
-            };
-            let path_buf = path.to_path_buf();
+        match fingerprint {
+            FingerprintMethod::Content => {
+                let Some((file_len, prior_checksum)) = prior_checksum else {
+                    return Some(StaleItem::MissingChecksum {
+                        path: path.to_path_buf(),
+                    });
+                };
+                let path_buf = path.to_path_buf();
 
-            let path_checksum = match checksum_cache.entry(path_buf) {
-                Entry::Occupied(o) => *o.get(),
-                Entry::Vacant(v) => {
-                    let Ok(current_file_len) = fs::metadata(&path).map(|m| m.len()) else {
-                        return Some(StaleItem::FailedToReadMetadata {
-                            path: path.to_path_buf(),
-                        });
-                    };
-                    if current_file_len != file_len {
-                        return Some(StaleItem::FileSizeChanged {
-                            path: path.to_path_buf(),
-                            new_size: current_file_len,
-                            old_size: file_len,
-                        });
+                let path_checksum = match checksum_cache.entry(path_buf) {
+                    Entry::Occupied(o) => *o.get(),
+                    Entry::Vacant(v) => {
+                        let Ok(current_file_len) = fs::metadata(&path).map(|m| m.len()) else {
+                            return Some(StaleItem::FailedToReadMetadata {
+                                path: path.to_path_buf(),
+                            });
+                        };
+                        if current_file_len != file_len {
+                            return Some(StaleItem::FileSizeChanged {
+                                path: path.to_path_buf(),
+                                new_size: current_file_len,
+                                old_size: file_len,
+                            });
+                        }
+                        let Ok(file) = File::open(path) else {
+                            return Some(StaleItem::MissingFile {
+                                path: path.to_path_buf(),
+                            });
+                        };
+                        let Ok(checksum) = Checksum::compute(prior_checksum.algo(), file) else {
+                            return Some(StaleItem::UnableToReadFile {
+                                path: path.to_path_buf(),
+                            });
+                        };
+                        *v.insert(checksum)
                     }
-                    let Ok(file) = File::open(path) else {
-                        return Some(StaleItem::MissingFile {
-                            path: path.to_path_buf(),
-                        });
-                    };
-                    let Ok(checksum) = Checksum::compute(prior_checksum.algo(), file) else {
-                        return Some(StaleItem::UnableToReadFile {
-                            path: path.to_path_buf(),
-                        });
-                    };
-                    *v.insert(checksum)
+                };
+                if path_checksum == prior_checksum {
+                    continue;
                 }
-            };
-            if path_checksum == prior_checksum {
-                continue;
+                return Some(StaleItem::ChangedChecksum {
+                    source: path.to_path_buf(),
+                    stored_checksum: prior_checksum,
+                    new_checksum: path_checksum,
+                });
             }
-            return Some(StaleItem::ChangedChecksum {
-                source: path.to_path_buf(),
-                stored_checksum: prior_checksum,
-                new_checksum: path_checksum,
-            });
-        } else {
-            let path_mtime = match mtime_cache.entry(path.to_path_buf()) {
-                Entry::Occupied(o) => *o.get(),
-                Entry::Vacant(v) => {
-                    let Ok(mtime) = paths::mtime_recursive(path) else {
-                        return Some(StaleItem::MissingFile {
-                            path: path.to_path_buf(),
-                        });
-                    };
-                    *v.insert(mtime)
+            FingerprintMethod::Mtime => {
+                let path_mtime = match mtime_cache.entry(path.to_path_buf()) {
+                    Entry::Occupied(o) => *o.get(),
+                    Entry::Vacant(v) => {
+                        let Ok(mtime) = paths::mtime_recursive(path) else {
+                            return Some(StaleItem::MissingFile {
+                                path: path.to_path_buf(),
+                            });
+                        };
+                        *v.insert(mtime)
+                    }
+                };
+
+                // TODO: fix #5918.
+                // Note that equal mtimes should be considered "stale". For filesystems with
+                // not much timestamp precision like 1s this is would be a conservative approximation
+                // to handle the case where a file is modified within the same second after
+                // a build starts. We want to make sure that incremental rebuilds pick that up!
+                //
+                // For filesystems with nanosecond precision it's been seen in the wild that
+                // its "nanosecond precision" isn't really nanosecond-accurate. It turns out that
+                // kernels may cache the current time so files created at different times actually
+                // list the same nanosecond precision. Some digging on #5919 picked up that the
+                // kernel caches the current time between timer ticks, which could mean that if
+                // a file is updated at most 10ms after a build starts then Cargo may not
+                // pick up the build changes.
+                //
+                // All in all, an equality check here would be a conservative assumption that,
+                // if equal, files were changed just after a previous build finished.
+                // Unfortunately this became problematic when (in #6484) cargo switch to more accurately
+                // measuring the start time of builds.
+                if path_mtime <= reference_mtime {
+                    continue;
                 }
-            };
 
-            // TODO: fix #5918.
-            // Note that equal mtimes should be considered "stale". For filesystems with
-            // not much timestamp precision like 1s this is would be a conservative approximation
-            // to handle the case where a file is modified within the same second after
-            // a build starts. We want to make sure that incremental rebuilds pick that up!
-            //
-            // For filesystems with nanosecond precision it's been seen in the wild that
-            // its "nanosecond precision" isn't really nanosecond-accurate. It turns out that
-            // kernels may cache the current time so files created at different times actually
-            // list the same nanosecond precision. Some digging on #5919 picked up that the
-            // kernel caches the current time between timer ticks, which could mean that if
-            // a file is updated at most 10ms after a build starts then Cargo may not
-            // pick up the build changes.
-            //
-            // All in all, an equality check here would be a conservative assumption that,
-            // if equal, files were changed just after a previous build finished.
-            // Unfortunately this became problematic when (in #6484) cargo switch to more accurately
-            // measuring the start time of builds.
-            if path_mtime <= reference_mtime {
-                continue;
+                return Some(StaleItem::ChangedFile {
+                    reference: reference.to_path_buf(),
+                    reference_mtime,
+                    stale: path.to_path_buf(),
+                    stale_mtime: path_mtime,
+                });
             }
-
-            return Some(StaleItem::ChangedFile {
-                reference: reference.to_path_buf(),
-                reference_mtime,
-                stale: path.to_path_buf(),
-                stale_mtime: path_mtime,
-            });
         }
     }
 

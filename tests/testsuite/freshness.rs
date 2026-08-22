@@ -24,6 +24,7 @@ fn checksum_build_compatible_with_mtime_build() {
         .build();
 
     p.cargo("check")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stderr_data(str![[r#"
@@ -40,6 +41,7 @@ fn checksum_build_compatible_with_mtime_build() {
 "#]])
         .run();
     p.cargo("check")
+        .env("CARGO_BUILD_FINGERPRINT", "content")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stderr_data(str![[r#"
