@@ -114,7 +114,9 @@ use crate::util::interning::InternedString;
 use crate::util::machine_message::{self, Message};
 use crate::util::{add_path_args, internal, path_args};
 use crate::workspace::manifest::TargetSourcePath;
-use crate::workspace::profiles::{PanicStrategy, Profile, StripInner};
+use crate::workspace::profiles::{
+    MinOptLevelHintError, PanicStrategy, Profile, StripInner, parse_min_opt_level_hint,
+};
 use crate::workspace::{Feature, PackageId, Target};
 
 use cargo_util::{ProcessBuilder, ProcessError, paths};
@@ -1519,6 +1521,27 @@ fn build_base_args(
         add_codegen_incremental(cmd, build_runner, unit)
     }
 
+    let pkg_hint_min_opt_level = match parse_min_opt_level_hint(hints.min_opt_level.as_ref()) {
+        Ok(level) => level,
+        Err(MinOptLevelHintError::OutOfRange(level)) => {
+            unit_capped_warn(&format!(
+                "ignoring unsupported value ({level}) for 'hints.min-opt-level', which only supports integers from 0 to 3"
+            ))?;
+            None
+        }
+        Err(MinOptLevelHintError::WrongType(value_type)) => {
+            unit_capped_warn(&format!(
+                "ignoring unsupported value type ({value_type}) for 'hints.min-opt-level', which expects an integer"
+            ))?;
+            None
+        }
+    };
+    if matches!(pkg_hint_min_opt_level, Some(1..=3)) && !bcx.gctx.cli_unstable().hint_min_opt_level
+    {
+        unit_capped_warn(
+            "ignoring 'hints.min-opt-level', pass `-Zhint-min-opt-level` to enable it",
+        )?;
+    }
     let pkg_hint_mostly_unused = match hints.mostly_unused {
         None => None,
         Some(toml::Value::Boolean(b)) => Some(b),
