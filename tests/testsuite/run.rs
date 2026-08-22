@@ -277,6 +277,7 @@ fn exit_code() {
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/foo[EXE]`
+
 [ERROR] process didn't exit successfully: `target/debug/foo[EXE]` ([EXIT_STATUS]: 2)
 
 "#]]
@@ -306,6 +307,7 @@ fn exit_code_verbose() {
 [RUNNING] `rustc [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/foo[EXE]`
+
 [ERROR] process didn't exit successfully: `target/debug/foo[EXE]` ([EXIT_STATUS]: 2)
 
 "#]]
@@ -322,6 +324,39 @@ fn exit_code_verbose() {
     p.cargo("run -v")
         .with_status(2)
         .with_stderr_data(expected)
+        .run();
+}
+
+#[cargo_test]
+fn exit_code_with_carriage_return() {
+    let p = project()
+        .file(
+            "src/main.rs",
+            r#"fn main() { print!("hello\r"); std::process::exit(1); }"#,
+        )
+        .build();
+
+    let expected = if !cfg!(unix) {
+        str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo[EXE]`
+
+[ERROR] process didn't exit successfully: `target/debug/foo[EXE]` ([EXIT_STATUS]: 1)
+
+"#]]
+    } else {
+        str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo`
+
+"#]]
+    };
+    p.cargo("run")
+        .with_status(1)
+        .with_stderr_data(expected)
+        .with_stdout_data("hello\r")
         .run();
 }
 
