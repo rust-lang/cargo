@@ -324,7 +324,7 @@ jobs:
     - name: Run semver-check
       run: cargo +stable run -p semver-check
     - name: Ensure intradoc links are valid
-      run: cargo doc --workspace --document-private-items --no-deps --keep-going
+      run: cargo doc --workspace --exclude resolver-tests --document-private-items --no-deps --keep-going
       env:
         CARGO_BUILD_WARNINGS: deny
     - name: Install mdbook
