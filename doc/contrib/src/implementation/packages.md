@@ -28,10 +28,11 @@ If needed to be published with `cargo`,
 add the package to `publish.py` in the repo root,
 in dependency order.
 
-Note: by adding the package to the workspace, you automatically get
-- CI running `cargo test`
-- CI verifying MSRV
-- CI checking for `cargo doc` warnings
+> [!NOTE]
+> By adding the package to the workspace, you automatically get
+> - CI running `cargo test`
+> - CI verifying MSRV
+> - CI checking for `cargo doc` warnings
 
 ## MSRV Policy
 

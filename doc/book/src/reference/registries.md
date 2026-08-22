@@ -5,7 +5,8 @@ registry is [crates.io]. A registry contains an "index" which contains a
 searchable list of available crates. A registry may also provide a web API to
 support publishing new crates directly from Cargo.
 
-> Note: If you are interested in mirroring or vendoring an existing registry,
+> [!NOTE]
+> If you are interested in mirroring or vendoring an existing registry,
 > take a look at [Source Replacement].
 
 If you are implementing a registry server, see [Running a Registry] for more
@@ -52,7 +53,8 @@ environment variable will accomplish the same thing as defining a config file:
 CARGO_REGISTRIES_MY_REGISTRY_INDEX=https://my-intranet:8080/git/index
 ```
 
-> Note: [crates.io] does not accept packages that depend on crates from other
+> [!NOTE]
+> [crates.io] does not accept packages that depend on crates from other
 > registries.
 
 ## Publishing to an Alternate Registry

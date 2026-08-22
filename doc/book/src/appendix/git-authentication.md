@@ -10,7 +10,8 @@ handle fetching remote repositories instead of using the built-in support.
 This can be enabled with the `CARGO_NET_GIT_FETCH_WITH_CLI=true` environment
 variable.
 
-> **Note:** Cargo does not require authentication for public git dependencies
+> [!NOTE]
+> Cargo does not require authentication for public git dependencies
 > so if you see an authentication failure in that context, ensure that the
 > URL is correct.
 
@@ -36,7 +37,8 @@ username/password.
 > macOS users may want to consider using the osxkeychain helper.<br>
 > Windows users may want to consider using the [GCM] helper.
 
-> **Note:** Windows users will need to make sure that the `sh` shell is
+> [!NOTE]
+> Windows users will need to make sure that the `sh` shell is
 > available in your `PATH`. This typically is available with the Git for
 > Windows installation.
 
@@ -54,11 +56,13 @@ More information about installing with Windows can be found at the [Microsoft
 installation documentation] and the page on [key management] has instructions
 on how to start `ssh-agent` and to add keys.
 
-> **Note:** Cargo does not support git's shorthand SSH URLs like
+> [!NOTE]
+> Cargo does not support git's shorthand SSH URLs like
 > `git@example.com:user/repo.git`. Use a full SSH URL like
 > `ssh://git@example.com/user/repo.git`.
 
-> **Note:** SSH configuration files (like OpenSSH's `~/.ssh/config`) are not
+> [!NOTE]
+> SSH configuration files (like OpenSSH's `~/.ssh/config`) are not
 > used by Cargo's built-in SSH library. More advanced requirements should use
 > [`net.git-fetch-with-cli`].
 
@@ -85,7 +89,8 @@ publish their fingerprints on the web; for example GitHub posts theirs at
 Cargo comes with the host keys for [github.com](https://github.com) built-in.
 If those ever change, you can add the new keys to the config or known_hosts file.
 
-> **Note:** Cargo doesn't support the `@cert-authority` or `@revoked`
+> [!NOTE]
+> Cargo doesn't support the `@cert-authority` or `@revoked`
 > markers in `known_hosts` files. To make use of this functionality, use
 > [`net.git-fetch-with-cli`]. This is also a good tip if Cargo's SSH client
 > isn't behaving the way you expect it to.

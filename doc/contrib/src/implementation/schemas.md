@@ -30,9 +30,10 @@ When changing a schema for data that is read, some options include:
   - Unstable values should fail on stable Cargo
 - Version the structure and interpretation of the data (e.g. the `edition` field or `package.resolver` which has an `edition` fallback)
 
-Note: some formats that are read are also written back out
-(e.g. `cargo package` generating a `Cargo.toml` file)
-and those strategies need to be considered as well.
+> [!NOTE]
+> Some formats that are read are also written back out
+> (e.g. `cargo package` generating a `Cargo.toml` file)
+> and those strategies need to be considered as well.
 
 When changing a schema for data that is written, some options include:
 - Add new fields if the presence can be ignored
@@ -42,6 +43,7 @@ When changing a schema for data that is written, some options include:
   - Defaulting to the first version, eventually warning the user of the implicit stale behavior (e.g. `package.edition` in `Cargo.toml`)
   - Without a default (e.g. `package.rust-version`, or a command-line flag like `--format-version`)
 
-Note: While `serde` makes it easy to support data formats that add new fields,
-new data types or supported values for a field are more difficult to future-proof
-against.
+> [!NOTE]
+> While `serde` makes it easy to support data formats that add new fields,
+> new data types or supported values for a field are more difficult to future-proof
+> against.

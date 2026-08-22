@@ -65,7 +65,8 @@ These tests are disabled by default,
 but you can run them by setting the `CARGO_CONTAINER_TESTS=1` environment variable.
 You will need to have Docker installed and running to use these.
 
-> Note: Container tests mostly do not work on Windows.
+> [!NOTE]
+> Container tests mostly do not work on Windows.
 > * The SSH tests require ssh-agent, but the two versions of ssh-agent
 > on Windows are not suitable for testing.
 >     * The Microsoft version of ssh-agent runs as a global service, and can't be isolated per test.

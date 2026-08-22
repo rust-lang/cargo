@@ -195,7 +195,8 @@ generated if dev-dependencies are skipped.
 * Original Issue: [#4100](https://github.com/rust-lang/cargo/issues/4100)
 * Tracking Issue: [#5657](https://github.com/rust-lang/cargo/issues/5657)
 
-> Note: It is not recommended to use this feature. Because it enforces minimal
+> [!NOTE]
+> It is not recommended to use this feature. Because it enforces minimal
 > versions for all transitive dependencies, its usefulness is limited since
 > not all external dependencies declare proper lower version bounds. It is
 > intended that it will be changed in the future to only enforce minimal

@@ -35,7 +35,8 @@ This command will inform Cargo of your API token and store it locally in your
 shared with anyone else. If it leaks for any reason, you should revoke it
 immediately.
 
-> **Note**: The [`cargo logout`] command can be used to remove the token from
+> [!NOTE]
+> The [`cargo logout`] command can be used to remove the token from
 > `credentials.toml`. This can be useful if you no longer need it stored on
 > the local machine.
 
