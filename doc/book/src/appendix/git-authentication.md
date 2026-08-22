@@ -89,7 +89,7 @@ publish their fingerprints on the web; for example GitHub posts theirs at
 Cargo comes with the host keys for [github.com](https://github.com) built-in.
 If those ever change, you can add the new keys to the config or known_hosts file.
 
-> [!NOTE]
+> [!WARNING]
 > Cargo doesn't support the `@cert-authority` or `@revoked`
 > markers in `known_hosts` files. To make use of this functionality, use
 > [`net.git-fetch-with-cli`]. This is also a good tip if Cargo's SSH client

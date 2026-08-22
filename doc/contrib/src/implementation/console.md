@@ -44,7 +44,7 @@ The binary side of Cargo uses the `CliError` struct to wrap the process exit
 code. Usually Cargo exits with 101 for an error, but some commands like `cargo
 test` will exit with different codes.
 
-> [!NOTE]
+> [!IMPORTANT]
 > When using any low-level routines,
 > such as `std::fs`, *always* add error context about what it is doing.
 > For example, reading from a file should include context about which file is being read if there is an error.

@@ -315,7 +315,7 @@ The `edition` field defines the [Rust edition] the target will use. If not
 specified, it defaults to the [`edition` field][package-edition] for the
 `[package]`.
 
-> [!NOTE]
+> [!IMPORTANT]
 > This field is deprecated and will be removed in a future Edition
 
 ## Target auto-discovery

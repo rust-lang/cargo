@@ -340,7 +340,7 @@ In particular, rules are:
   no matter those files are from either the [hierarchical probing](#hierarchical-structure)
   or the [`--config <path>`](#command-line-overrides) option.
 
-> [!NOTE]
+> [!IMPORTANT]
 > To maintain consistency with existing `.cargo/config.toml` probing behavior,
 > it is by design that a path in a config file passed via `--config <path>`
 > is also relative to two levels up from the config file itself.
@@ -609,7 +609,8 @@ It is not recommended to pass in flags that Cargo itself usually manages. For
 example, the flags driven by [profiles](profiles.md) are best handled by setting the
 appropriate profile setting.
 
-> **Caution**: Due to the low-level nature of passing flags directly to the
+> [!CAUTION]
+> Due to the low-level nature of passing flags directly to the
 > compiler, this may cause a conflict with future versions of Cargo which may
 > issue the same or similar flags on its own which may interfere with the
 > flags you specify. This is an area where Cargo may not always be backwards
@@ -634,7 +635,8 @@ order, with the first one being used:
 
 Additional flags may also be passed with the [`cargo rustdoc`] command.
 
-> **Caution**: Due to the low-level nature of passing flags directly to the
+> [!CAUTION]
+> Due to the low-level nature of passing flags directly to the
 > compiler, this may cause a conflict with future versions of Cargo which may
 > issue the same or similar flags on its own which may interfere with the
 > flags you specify. This is an area where Cargo may not always be backwards
