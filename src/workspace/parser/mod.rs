@@ -2604,6 +2604,15 @@ pub fn validate_profile(
         }
     }
 
+    if let Some(frame_pointers) = &root.frame_pointers {
+        if frame_pointers != "on" && frame_pointers != "default" {
+            bail!(
+                "`frame-pointers` setting of `{frame_pointers}` is not a valid setting, \
+                     must be `\"on\"` or `\"default\"`.",
+            );
+        }
+    }
+
     Ok(())
 }
 
