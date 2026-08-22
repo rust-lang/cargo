@@ -58,7 +58,10 @@
 //! that we're implementing something that probably shouldn't be allocating all
 //! over the place.
 
+use crate::compiler::standard_lib::{detect_sysroot_src_path, std_crates};
 use crate::util::data_structures::{HashMap, HashSet};
+use crate::util::interning::InternedString;
+use crate::workspace::dependency::DepKind;
 use rustc_hash::FxBuildHasher;
 use std::collections::BTreeMap;
 use std::rc::Rc;
@@ -134,7 +137,31 @@ pub fn resolve(
         .cli_unstable()
         .direct_minimal_versions
         .then_some(VersionOrdering::MinimumVersionsFirst);
-    let mut registry = RegistryQueryer::new(registry, replacements, version_prefs);
+
+    let implicit_builtin_deps: Vec<Dependency> = if summaries
+        .iter()
+        .any(|(_, opts)| opts.inject_builtins)
+    {
+        let crates = gctx.cli_unstable().build_std.as_deref().unwrap_or_default();
+        // We default to "std" here as we don't yet know the default crates for any of the targets
+        // we're building for. Unit generation will discard any builtin Summaries that are not
+        // required for each target
+        let crates = std_crates(crates, "std", &[]);
+        let sysroot_src = detect_sysroot_src_path(gctx, None)?;
+        crates
+            .iter()
+            .map(|&name| Dependency::new_implicit_builtin(InternedString::from(name), &sysroot_src))
+            .collect::<CargoResult<Vec<_>>>()?
+    } else {
+        vec![]
+    };
+
+    let mut registry = RegistryQueryer::new(
+        registry,
+        replacements,
+        version_prefs,
+        &implicit_builtin_deps,
+    );
 
     // Global cache of the reasons for each time we backtrack.
     let mut past_conflicting_activations = conflict_cache::ConflictCache::new();
@@ -240,7 +267,7 @@ fn activate_deps_loop(
     while let Some((just_here_for_the_error_messages, frame)) =
         remaining_deps.pop_most_constrained()
     {
-        let (mut parent, (mut dep, candidates, mut features)) = frame;
+        let (mut parent, parent_inject_builtins, (mut dep, candidates, mut features)) = frame;
 
         // If we spend a lot of time here (we shouldn't in most cases) then give
         // a bit of a visual indicator as to what we're doing.
@@ -393,12 +420,20 @@ fn activate_deps_loop(
             };
 
             let pid = candidate.package_id();
+            // The deps frame inject_builtins field is inherited from the parent, and is a baseline
+            // for all siblings. We override that baseline to false for a dep that's already builtin
+            // or for the host
+            let inject_builtins = parent_inject_builtins
+                && !dep.source_id().is_builtin()
+                && dep.kind() != DepKind::Build;
+
             let opts = ResolveOpts {
                 dev_deps: false,
                 features: RequestedFeatures::DepFeatures {
                     features: Rc::clone(&features),
                     uses_default_features: dep.uses_default_features(),
                 },
+                inject_builtins,
             };
             trace!(
                 "{}[{}]>{} trying {}",
@@ -689,6 +724,7 @@ fn activate(
     let frame = DepsFrame {
         parent: candidate,
         just_for_error_messages: false,
+        inject_builtins: opts.inject_builtins,
         remaining_siblings: RcVecIter::new(Rc::clone(deps)),
     };
     Ok(Some((frame, now.elapsed())))
