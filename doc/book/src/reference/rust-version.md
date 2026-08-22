@@ -35,7 +35,8 @@ The [resolver](resolver.md#rust-version) may take Rust version into account when
 Other tools may also take advantage of it, like `cargo clippy`'s
 [`incompatible_msrv` lint](https://rust-lang.github.io/rust-clippy/stable/index.html#incompatible_msrv).
 
-> **Note:** The `rust-version` may be ignored using the `--ignore-rust-version` option.
+> [!NOTE]
+> The `rust-version` may be ignored using the `--ignore-rust-version` option.
 
 ## Support Expectations
 
@@ -72,9 +73,11 @@ What Rust versions to support is a trade off between
 - Costs to users who would benefit from a package using newer features of a toolchain, e.g. reducing build times by migrating to a feature in the standard library from a polyfill
 - Availability of a package to users supporting older Rust versions
 
-> **Note:** [Changing `rust-version`](semver.md#env-new-rust) is assumed to be a minor incompatibility
+> [!NOTE]
+> [Changing `rust-version`](semver.md#env-new-rust) is assumed to be a minor incompatibility
 
-> **Recommendation:** Choose a policy for what Rust versions to support and when that is changed so users can compare it with their own policy and,
+> [!TIP]
+> Choose a policy for what Rust versions to support and when that is changed so users can compare it with their own policy and,
 > if it isn't compatible,
 > decide whether the loss of general improvements or the risk of a blocking bug that won't be fixed is acceptable or not.
 >
@@ -96,7 +99,8 @@ Example version policies:
 - Every even release with a 2 release grace window for updating
 - Every version from this calendar year with a one year grace window for updating
 
-> **Note:** To find the minimum `rust-version` compatible with your project as-is, you can use third-party tools like [`cargo-msrv`](https://crates.io/crates/cargo-msrv).
+> [!NOTE]
+> To find the minimum `rust-version` compatible with your project as-is, you can use third-party tools like [`cargo-msrv`](https://crates.io/crates/cargo-msrv).
 
 ### Update timeline
 

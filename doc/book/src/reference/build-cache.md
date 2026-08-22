@@ -42,7 +42,8 @@ Directory | Example
 <code style="white-space: nowrap">target/&lt;triple&gt;/debug/</code> | <code style="white-space: nowrap">target/thumbv7em-none-eabihf/debug/</code>
 <code style="white-space: nowrap">target/&lt;triple&gt;/release/</code> | <code style="white-space: nowrap">target/thumbv7em-none-eabihf/release/</code>
 
-> **Note**: When not using `--target`, this has a consequence that Cargo will
+> [!NOTE]
+> When not using `--target`, this has a consequence that Cargo will
 > share your dependencies with build scripts and proc macros. [`RUSTFLAGS`]
 > will be shared with every `rustc` invocation. With the `--target` flag,
 > build scripts and proc macros are built separately (for the host
@@ -73,7 +74,8 @@ Directory | Description
 <code style="white-space: nowrap">\<build-dir>/debug/incremental/</code> | `rustc` [incremental output], a cache used to speed up subsequent builds.
 <code style="white-space: nowrap">\<build-dir>/debug/build/</code> | Build step results including compilation artifacts and [build script] output.
 
-> **Note**: The build-dir layout was changed in Cargo 1.100.0, thus prior versions use a different layout. (see [#15010](https://github.com/rust-lang/cargo/issues/15010))
+> [!NOTE]
+> The build-dir layout was changed in Cargo 1.100.0, thus prior versions use a different layout. (see [#15010](https://github.com/rust-lang/cargo/issues/15010))
 
 ## Dep-info files
 

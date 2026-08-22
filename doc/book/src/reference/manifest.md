@@ -121,7 +121,8 @@ This field is optional and defaults to `0.0.0`.  The field is required for publi
 
 ### The `authors` field
 
-> **Warning**: This field is deprecated
+> [!IMPORTANT]
+> This field is deprecated.
 
 The optional `authors` field lists in an array the people or organizations that are considered
 the "authors" of the package. An optional email address may be included within angled brackets at
@@ -175,7 +176,8 @@ this with your package. This should be plain text (not Markdown).
 description = "A short description of my package"
 ```
 
-> **Note**: [crates.io] requires the `description` to be set.
+> [!NOTE]
+> [crates.io] requires the `description` to be set.
 
 ### The `documentation` field
 
@@ -274,7 +276,8 @@ be specified in lieu of the `license` field.
 license-file = "LICENSE.txt"
 ```
 
-> **Note**: [crates.io] requires either `license` or `license-file` to be set.
+> [!NOTE]
+> [crates.io] requires either `license` or `license-file` to be set.
 
 [^slash]: Previously multiple licenses could be separated with a `/`, but that
 usage is deprecated.
@@ -291,7 +294,8 @@ words that would help someone find this crate.
 keywords = ["gamedev", "graphics"]
 ```
 
-> **Note**: [crates.io] allows a maximum of 5 keywords. Each keyword must be
+> [!NOTE]
+> [crates.io] allows a maximum of 5 keywords. Each keyword must be
 > ASCII text, have at most 20 characters, start with an alphanumeric character,
 > and only contain letters, numbers, `_`, `-` or `+`.
 
@@ -304,7 +308,8 @@ belongs to.
 categories = ["command-line-utilities", "development-tools::cargo-plugins"]
 ```
 
-> **Note**: [crates.io] has a maximum of 5 categories. Each category should
+> [!NOTE]
+> [crates.io] has a maximum of 5 categories. Each category should
 > match one of the strings available at <https://crates.io/category_slugs>, and
 > must match exactly.
 
@@ -385,7 +390,8 @@ exclude = ["/ci", "images/", ".*"]
 include = ["/src", "COPYRIGHT", "/examples", "!/examples/big_example"]
 ```
 
-> **Note:** Run [`cargo package --list`][`cargo package`]
+> [!NOTE]
+> Run [`cargo package --list`][`cargo package`]
 > to verify which files will be included in the package.
 
 The default if neither field is specified is to include all files from the
@@ -595,7 +601,8 @@ on an unstable hint.
 The `[badges]` section is for specifying status badges that can be displayed
 on a registry website when the package is published.
 
-> Note: [crates.io] previously displayed badges next to a crate on its
+> [!NOTE]
+> [crates.io] previously displayed badges next to a crate on its
 > website, but that functionality has been removed. Packages should place
 > badges in its README file which will be displayed on [crates.io] (see [the
 > `readme` field](#the-readme-field)).

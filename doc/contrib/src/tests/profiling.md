@@ -18,7 +18,8 @@ $ # Output first three levels of profiling info
 $ CARGO_LOG_PROFILE=true cargo generate-lockfile
 ```
 
-**Note:** This is intended for the development of cargo and there are no compatibility guarantees on this functionality.
+> [!NOTE]
+> This is intended for the development of cargo and there are no compatibility guarantees on this functionality.
 
 ## Benchmarking
 

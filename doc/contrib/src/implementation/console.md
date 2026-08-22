@@ -16,9 +16,10 @@ Messages written during compilation should handle errors, and abort the build
 if they are unable to be displayed. This is generally automatically handled in
 the [`JobQueue`] as it processes each message.
 
-**Note:** keep the normal output brief.
-Cargo is already fairly noisy,
-so try to keep the output as brief and clean as possible.
+> [!NOTE]
+> Keep the normal output brief.
+> Cargo is already fairly noisy,
+> so try to keep the output as brief and clean as possible.
 
 [`Shell`]: https://github.com/rust-lang/cargo/blob/master/src/workspace/shell.rs
 [`GlobalContext`]: https://github.com/rust-lang/cargo/blob/master/src/context/mod.rs
@@ -43,9 +44,10 @@ The binary side of Cargo uses the `CliError` struct to wrap the process exit
 code. Usually Cargo exits with 101 for an error, but some commands like `cargo
 test` will exit with different codes.
 
-**Note:** When using any low-level routines,
-such as `std::fs`, *always* add error context about what it is doing.
-For example, reading from a file should include context about which file is being read if there is an error.
+> [!IMPORTANT]
+> When using any low-level routines,
+> such as `std::fs`, *always* add error context about what it is doing.
+> For example, reading from a file should include context about which file is being read if there is an error.
 
 [`anyhow`]: https://docs.rs/anyhow
 [Errors and lints]: https://rustc-dev-guide.rust-lang.org/diagnostics.html

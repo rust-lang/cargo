@@ -48,9 +48,10 @@ indicates CPU usage. The three lines are:
 
 ![cargo-concurrency-over-time](../images/cargo-concurrency-over-time.png)
 
-Note: This does not show the concurrency in the compiler itself. `rustc`
-coordinates with Cargo via the "job server" to stay within the concurrency
-limit. This currently mostly applies to the code generation phase.
+> [!NOTE]
+> This does not show the concurrency in the compiler itself. `rustc`
+> coordinates with Cargo via the "job server" to stay within the concurrency
+> limit. This currently mostly applies to the code generation phase.
 
 Tips for addressing compile times:
 - Look for slow dependencies.

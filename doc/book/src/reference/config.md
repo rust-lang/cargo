@@ -39,7 +39,8 @@ and `/projects/foo/bar/baz/mybin/.cargo/config.toml`, Cargo does not read
 those configuration files if it is invoked from the workspace root
 (`/projects/foo/bar/baz/`).
 
-> **Note:** Cargo also reads config files without the `.toml` extension, such as
+> [!NOTE]
+> Cargo also reads config files without the `.toml` extension, such as
 > `.cargo/config`. Support for the `.toml` extension was added in version 1.39
 > and is the preferred form. If both files exist, Cargo will use the file
 > without the extension.
@@ -303,7 +304,8 @@ include = [
 ]
 ```
 
-> **Note:** For better readability and to avoid confusion, it is recommended to:
+> [!NOTE]
+> For better readability and to avoid confusion, it is recommended to:
 > - Place `include` at the top of the configuration file
 > - Put one include per line for clearer version control diffs
 > - Use inline table syntax when optional includes are needed
@@ -338,7 +340,8 @@ In particular, rules are:
   no matter those files are from either the [hierarchical probing](#hierarchical-structure)
   or the [`--config <path>`](#command-line-overrides) option.
 
-> **Note:** To maintain consistency with existing `.cargo/config.toml` probing behavior,
+> [!IMPORTANT]
+> To maintain consistency with existing `.cargo/config.toml` probing behavior,
 > it is by design that a path in a config file passed via `--config <path>`
 > is also relative to two levels up from the config file itself.
 >
@@ -401,7 +404,8 @@ be specified with environment variables of the form
 `CARGO_REGISTRIES_<name>_TOKEN` where `<name>` is the name of the registry in
 all capital letters.
 
-> **Note:** Cargo also reads and writes credential files without the `.toml`
+> [!NOTE]
+> Cargo also reads and writes credential files without the `.toml`
 > extension, such as `.cargo/credentials`. Support for the `.toml` extension
 > was added in version 1.39. In version 1.68, Cargo writes to the file with the
 > extension by default. However, for backward compatibility reason, when both
@@ -605,7 +609,8 @@ It is not recommended to pass in flags that Cargo itself usually manages. For
 example, the flags driven by [profiles](profiles.md) are best handled by setting the
 appropriate profile setting.
 
-> **Caution**: Due to the low-level nature of passing flags directly to the
+> [!CAUTION]
+> Due to the low-level nature of passing flags directly to the
 > compiler, this may cause a conflict with future versions of Cargo which may
 > issue the same or similar flags on its own which may interfere with the
 > flags you specify. This is an area where Cargo may not always be backwards
@@ -630,7 +635,8 @@ order, with the first one being used:
 
 Additional flags may also be passed with the [`cargo rustdoc`] command.
 
-> **Caution**: Due to the low-level nature of passing flags directly to the
+> [!CAUTION]
+> Due to the low-level nature of passing flags directly to the
 > compiler, this may cause a conflict with future versions of Cargo which may
 > issue the same or similar flags on its own which may interfere with the
 > flags you specify. This is an area where Cargo may not always be backwards
@@ -776,7 +782,8 @@ The automatic deletion of files only occurs when running commands that are alrea
 
 Automatic deletion is disabled if cargo is offline such as with `--offline` or `--frozen` to avoid deleting artifacts that may need to be used if you are offline for a long period of time.
 
-> **Note**: This tracking is currently only implemented for the global cache in Cargo's home directory.
+> [!NOTE]
+> This tracking is currently only implemented for the global cache in Cargo's home directory.
 > This includes registry indexes and source files downloaded from registries and git dependencies.
 > Support for tracking build artifacts is not yet implemented, and tracked in [cargo#13136](https://github.com/rust-lang/cargo/issues/13136).
 >

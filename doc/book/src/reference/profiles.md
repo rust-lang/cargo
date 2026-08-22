@@ -464,7 +464,8 @@ dependencies, use the `build-override` table:
 opt-level = 3
 ```
 
-> Note: When a dependency is both a normal dependency and a build dependency,
+> [!NOTE]
+> When a dependency is both a normal dependency and a build dependency,
 > Cargo will try to only build it once when `--target` is not specified. When
 > using `build-override`, the dependency may need to be built twice, once as a
 > normal dependency and once with the overridden build settings. This may
