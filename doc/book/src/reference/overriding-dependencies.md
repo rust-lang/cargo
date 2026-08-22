@@ -33,7 +33,8 @@ on the different ways to override a dependency.
     * [The `[replace]` section](#the-replace-section)
     * [`paths` overrides](#paths-overrides)
 
-> **Note**: See also specifying a dependency with [multiple locations], which
+> [!NOTE]
+> See also specifying a dependency with [multiple locations], which
 > can be used to override the source for a single dependency declaration in a
 > local package.
 
@@ -266,7 +267,8 @@ git = 'https://github.com/example/baz.git'
 baz = { git = 'https://github.com/example/patched-baz.git', branch = 'my-branch' }
 ```
 
-> **Note**: The `[patch]` table can also be specified as a [configuration
+> [!NOTE]
+> The `[patch]` table can also be specified as a [configuration
 > option](config.md), such as in a `.cargo/config.toml` file or a CLI option
 > like `--config 'patch.crates-io.rand.path="rand"'`. This can be useful for
 > local-only changes that you don't want to commit, or temporarily testing a
@@ -297,7 +299,8 @@ ignored.
 
 ## The `[replace]` section
 
-> **Note**: `[replace]` is deprecated. You should use the
+> [!IMPORTANT]
+> `[replace]` is deprecated. You should use the
 > [`[patch]`](#the-patch-section) table instead.
 
 This section of Cargo.toml can be used to override dependencies with other
@@ -349,7 +352,8 @@ crate. Instead, `[patch]` must be used in that situation. As a result, usage of 
 path override is typically isolated to quick bug fixes rather than larger
 changes.
 
-> **Note**: using a local configuration to override paths will only work for
+> [!NOTE]
+> Using a local configuration to override paths will only work for
 > crates that have been published to [crates.io]. You cannot use this feature
 > to tell Cargo how to find local unpublished crates.
 

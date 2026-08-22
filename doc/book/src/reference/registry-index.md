@@ -66,7 +66,8 @@ directories:
   fourth characters of the package name. For example, `cargo` would be stored
   in a file named `ca/rg/cargo`.
 
-> Note: Although the index filenames are in lowercase, the fields that contain
+> [!NOTE]
+> Although the index filenames are in lowercase, the fields that contain
 > package names in `Cargo.toml` and the index JSON data are case-sensitive and
 > may contain upper and lower case characters.
 
@@ -238,7 +239,8 @@ explaining the format of the entry.
 The JSON objects should not be modified after they are added except for the
 `yanked` field whose value may change at any time.
 
-> **Note**: The index JSON format has subtle differences from the JSON format of the [Publish API] and [`cargo metadata`].
+> [!IMPORTANT]
+> The index JSON format has subtle differences from the JSON format of the [Publish API] and [`cargo metadata`].
 > If you are using one of those as a source to generate index entries, you are encouraged to carefully inspect the documentation differences between them.
 >
 > For the [Publish API], the differences are:

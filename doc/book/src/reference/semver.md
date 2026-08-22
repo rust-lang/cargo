@@ -210,7 +210,8 @@ It is a breaking change to change the alignment, layout, or size of a type that 
 In general, types that use the [the default representation] do not have a well-defined alignment, layout, or size.
 The compiler is free to alter the alignment, layout, or size, so code should not make any assumptions about it.
 
-> **Note**: It may be possible for external crates to break if they make assumptions about the alignment, layout, or size of a type even if it is not well-defined.
+> [!NOTE]
+> It may be possible for external crates to break if they make assumptions about the alignment, layout, or size of a type even if it is not well-defined.
 > This is not considered a SemVer breaking change since those assumptions should not be made.
 
 Some examples of changes that are not a breaking change are (assuming no other rules in this guide are violated):
@@ -1654,7 +1655,8 @@ See the [edition guide][rpit-capture-guide] and the [reference][rpit-reference] 
 
 It is a minor change to capture fewer generic parameters in an RPIT.
 
-> Note: All in-scope type and const generic parameters must be either implicitly captured (no `+ use<…>` specified) or explicitly captured (must be listed in `+ use<…>`), and thus currently it is not allowed to change what is captured of those kinds of generics.
+> [!NOTE]
+> All in-scope type and const generic parameters must be either implicitly captured (no `+ use<…>` specified) or explicitly captured (must be listed in `+ use<…>`), and thus currently it is not allowed to change what is captured of those kinds of generics.
 
 [RPIT]: ../../reference/types/impl-trait.md#abstract-return-types
 [rpit-capture-guide]: ../../edition-guide/rust-2024/rpit-lifetime-capture.html

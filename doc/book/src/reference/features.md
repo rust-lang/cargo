@@ -7,7 +7,8 @@ either be enabled or disabled. Features for the package being built can be
 enabled on the command-line with flags such as `--features`. Features for
 dependencies can be enabled in the dependency declaration in `Cargo.toml`.
 
-> **Note**: New crates or versions published on crates.io are now limited to
+> [!NOTE]
+> New crates or versions published on crates.io are now limited to
 > a maximum of 300 features. Exceptions are granted on a case-by-case basis.
 > See this [blog post] for details. Participation in solution discussions is
 > encouraged via the crates.io Zulip stream.
@@ -64,7 +65,8 @@ includes most letters), and additionally allows starting with `_` or digits
 `0` through `9`, and after the first character may also contain `-`, `+`, or
 `.`.
 
-> **Note**: [crates.io] imposes additional constraints on feature name syntax
+> [!NOTE]
+> [crates.io] imposes additional constraints on feature name syntax
 > that they must only be [ASCII alphanumeric] characters or `_`, `-`, or `+`.
 
 [crates.io]: https://crates.io/
@@ -98,7 +100,8 @@ enables the listed features. This behavior can be changed by:
 * The `default-features = false` option can be specified in a [dependency
   declaration](#dependency-features).
 
-> **Note**: Be careful about choosing the default feature set. The default
+> [!IMPORTANT]
+> Be careful about choosing the default feature set. The default
 > features are a convenience that make it easier to use a package without
 > forcing the user to carefully select which features to enable for common
 > use, but there are some drawbacks. Dependencies automatically enable default
@@ -145,7 +148,8 @@ a better name.
 If you specify the optional dependency with the `dep:` prefix anywhere
 in the `[features]` table, that disables the implicit feature.
 
-> **Note**: The `dep:` syntax is only available starting with Rust 1.60.
+> [!NOTE]
+> The `dep:` syntax is only available starting with Rust 1.60.
 > Previous versions can only use the implicit feature name.
 
 For example, let's say in order to support the AVIF image format, our library
@@ -165,7 +169,8 @@ This also avoids creating the implicit `ravif` and `rgb` features, since we
 don't want users to enable those individually as they are internal details to
 our crate.
 
-> **Note**: Another way to optionally include a dependency is to use
+> [!NOTE]
+> Another way to optionally include a dependency is to use
 > [platform-specific dependencies]. Instead of using features, these are
 > conditional based on the target platform.
 
@@ -190,7 +195,8 @@ The [`default` features](#the-default-feature) can be disabled using
 flate2 = { version = "1.0.3", default-features = false, features = ["zlib-rs"] }
 ```
 
-> **Note**: This may not ensure the default features are disabled. If another
+> [!NOTE]
+> This may not ensure the default features are disabled. If another
 > dependency includes `flate2` without specifying `default-features = false`,
 > then the default features will be enabled. See [feature
 > unification](#feature-unification) below for more details.
@@ -212,7 +218,8 @@ if it is an optional dependency. Often this is not what you want.
 You can add a `?` as in `"package-name?/feature-name"` which will only enable
 the given feature if something else enables the optional dependency.
 
-> **Note**: The `?` syntax is only available starting with Rust 1.60.
+> [!NOTE]
+> The `?` syntax is only available starting with Rust 1.60.
 
 For example, let's say we have added some serialization support to our
 library, and it requires enabling a corresponding feature in some optional
@@ -248,7 +255,8 @@ enabled:
 * `--no-default-features`: Does not activate the [`default`
   feature](#the-default-feature) of the selected packages.
 
-**NOTE**: check the individual subcommand documentation for details. Not all flags are available for all subcommands.
+> [!NOTE]
+> Check the individual subcommand documentation for details. Not all flags are available for all subcommands.
 
 [workspace]: workspaces.md
 
@@ -493,7 +501,8 @@ Documentation published on [docs.rs] can use metadata in `Cargo.toml` to
 control which features are enabled when the documentation is built. See
 [docs.rs metadata documentation] for more details.
 
-> **Note**: Rustdoc has experimental support for annotating the documentation
+> [!NOTE]
+> Rustdoc has experimental support for annotating the documentation
 > to indicate which features are required to use certain APIs. See the
 > `doc_cfg` documentation for more details. An example is the [`syn`
 > documentation], where you can see colored boxes which note which features

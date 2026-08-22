@@ -105,9 +105,10 @@ should be an array of strings containing directories with `Cargo.toml` files.
 The `members` list also supports [globs] to match multiple paths, using
 typical filename glob patterns like `*` and `?`.
 
-**Recommendation:** Keep all member packages in a flat directory (commonly `crates/`)
-and use a glob pattern for the `members` field, e.g.
-`members = ["crates/*"]`. This minimizes churn in maintaining the `members` list.
+> [!TIP]
+> Keep all member packages in a flat directory (commonly `crates/`)
+> and use a glob pattern for the `members` field, e.g.
+> `members = ["crates/*"]`. This minimizes churn in maintaining the `members` list.
 
 The `exclude` key can be used to prevent paths from being included in a
 workspace. This can be useful if some path dependencies aren't desired to be
@@ -141,7 +142,8 @@ members = ["path/to/member1", "path/to/member2", "path/to/member3/*"]
 default-members = ["path/to/member2", "path/to/member3/foo"]
 ```
 
-> Note: when a [root package](#root-package) is present,
+> [!NOTE]
+> When a [root package](#root-package) is present,
 > you can only operate on it using `--package` and `--workspace` flags.
 
 When unspecified, the [root package](#root-package) will be used.
