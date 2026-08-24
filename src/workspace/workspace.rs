@@ -111,10 +111,6 @@ pub struct Workspace<'gctx> {
     /// `packages` up above, used in the `load` method down below.
     loaded_packages: RefCell<HashMap<PathBuf, Package>>,
 
-    /// If `true`, then the resolver will ignore any existing `Cargo.lock`
-    /// file. This is set for `cargo install` without `--locked`.
-    ignore_lock: bool,
-
     /// Requested path of the lockfile (i.e. passed as the cli flag)
     requested_lockfile_path: Option<PathBuf>,
 
@@ -262,7 +258,6 @@ impl<'gctx> Workspace<'gctx> {
             is_ephemeral: false,
             require_optional_deps: true,
             loaded_packages: RefCell::new(HashMap::default()),
-            ignore_lock: false,
             requested_lockfile_path: None,
             resolve_behavior: ResolveBehavior::V1,
             resolve_honors_rust_version: false,
@@ -712,15 +707,6 @@ impl<'gctx> Workspace<'gctx> {
         require_optional_deps: bool,
     ) -> &mut Workspace<'gctx> {
         self.require_optional_deps = require_optional_deps;
-        self
-    }
-
-    pub fn ignore_lock(&self) -> bool {
-        self.ignore_lock
-    }
-
-    pub fn set_ignore_lock(&mut self, ignore_lock: bool) -> &mut Workspace<'gctx> {
-        self.ignore_lock = ignore_lock;
         self
     }
 

@@ -640,7 +640,7 @@ impl<'gctx> InstallablePackage<'gctx> {
     }
 
     fn check_yanked_install(&self) -> CargoResult<()> {
-        if self.ws.ignore_lock() || !self.ws.root().join("Cargo.lock").exists() {
+        if !self.ws.root().join("Cargo.lock").exists() {
             return Ok(());
         }
         // It would be best if `source` could be passed in here to avoid a
@@ -926,7 +926,6 @@ fn make_ws_rustc_target<'gctx>(
         ws
     };
     ws.set_resolve_feature_unification(FeatureUnification::Selected);
-    ws.set_ignore_lock(false);
     ws.set_requested_lockfile_path(None);
     ws.set_require_optional_deps(false);
 
