@@ -5,15 +5,16 @@
 
 ### Added
 
-- 🎉 Stabilize the new `build.build-dir` layout!
-  This changes how Cargo organizes intermediate build artifacts inside the build directory,
-  unblocking feature development such as artifact garbage collection and cross-workspace caching.
-  To locate intermediate build artifacts reliably and stay unaffected by future layout changes,
-  use [Cargo's JSON messages](https://doc.rust-lang.org/nightly/cargo/reference/external-tools.html#json-messages).
+### Changed
+
+- ❗️ Cargo now uses a new directory layout for intermediate build artifacts.
+  This unblocks feature development such as artifact garbage collection and cross-workspace caching.
+  Tools that inspect the build directory may need to use
+  [Cargo's JSON messages](https://doc.rust-lang.org/nightly/cargo/reference/external-tools.html#json-messages)
+  to locate build artifacts instead of relying on the build directory layout.
+  The layout is not a stable interface and is subject to change.
   ([build cache doc](https://doc.rust-lang.org/nightly/cargo/reference/build-cache.html))
   [#17354](https://github.com/rust-lang/cargo/pull/17354)
-
-### Changed
 
 ### Fixed
 
