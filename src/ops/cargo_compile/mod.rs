@@ -473,18 +473,6 @@ pub fn create_bcx<'a, 'gctx>(
         // Should be fine as the loop iterate is independent of target selection
         selected_dep_kinds = curr_selected_dep_kinds;
 
-        if let Some(args) = target_rustc_crate_types {
-            override_rustc_crate_types(&mut targeted_root_units, args, interner)?;
-        }
-
-        let should_scrape =
-            build_config.intent.is_doc() && gctx.cli_unstable().rustdoc_scrape_examples;
-        let targeted_scrape_units = if should_scrape {
-            generator.generate_scrape_units(&targeted_root_units)?
-        } else {
-            Vec::new()
-        };
-
         let std_roots = if let Some(crates) = gctx.cli_unstable().build_std.as_ref() {
             let (std_resolve, std_features) = std_resolve_features.as_ref().unwrap();
             standard_lib::generate_std_roots(
@@ -500,6 +488,31 @@ pub fn create_bcx<'a, 'gctx>(
             )?
         } else {
             Default::default()
+        };
+
+        // Replace any builtin roots with real std roots
+        for root in targeted_root_units.iter_mut() {
+            if root.pkg.package_id().source_id().is_builtin() {
+                let unit = std_roots
+                    .get(&root.kind)
+                    .expect("standard library was resolved for all required targets")
+                    .iter()
+                    .find(|&u| u.pkg.name() == root.pkg.name())
+                    .expect("no std root found for requested package");
+                *root = unit.clone();
+            }
+        }
+
+        if let Some(args) = target_rustc_crate_types {
+            override_rustc_crate_types(&mut targeted_root_units, args, interner)?;
+        }
+
+        let should_scrape =
+            build_config.intent.is_doc() && gctx.cli_unstable().rustdoc_scrape_examples;
+        let targeted_scrape_units = if should_scrape {
+            generator.generate_scrape_units(&targeted_root_units)?
+        } else {
+            Vec::new()
         };
 
         unit_graph.extend(build_unit_dependencies(
