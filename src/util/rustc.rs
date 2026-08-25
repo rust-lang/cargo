@@ -168,6 +168,8 @@ impl Rustc {
         cmd.env(crate::CARGO_ENV, gctx.cargo_exe()?);
         if let Some(rustflags) = get_rustflags_from_env(gctx, "RUSTFLAGS") {
             cmd.args(&rustflags);
+        } else if let Some(rustflags) = get_rustflags_from_build_config(gctx, false)? {
+            cmd.args(&rustflags);
         }
         cmd.arg("--print=sysroot");
 
@@ -497,6 +499,6 @@ mod tests {
 
         let rustc = gctx.load_global_rustc(None).unwrap();
         let sysroot = rustc.sysroot(&gctx).unwrap();
-        assert_ne!(sysroot, Path::new("."));
+        assert_eq!(sysroot, Path::new("."));
     }
 }

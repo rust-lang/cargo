@@ -417,7 +417,7 @@ fn build_rustflags_normal_source() {
     p.cargo("check --lib")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to run `rustc` to learn about target-specific information
+[ERROR] failed to run `rustc` to find the sysroot location
 
 Caused by:
   [..]bogus[..]
@@ -427,7 +427,7 @@ Caused by:
     p.cargo("check --bin=a")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to run `rustc` to learn about target-specific information
+[ERROR] failed to run `rustc` to find the sysroot location
 
 Caused by:
   [..]bogus[..]
@@ -437,7 +437,7 @@ Caused by:
     p.cargo("check --example=b")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to run `rustc` to learn about target-specific information
+[ERROR] failed to run `rustc` to find the sysroot location
 
 Caused by:
   [..]bogus[..]
@@ -447,7 +447,7 @@ Caused by:
     p.cargo("test")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to run `rustc` to learn about target-specific information
+[ERROR] failed to run `rustc` to find the sysroot location
 
 Caused by:
   [..]bogus[..]
@@ -457,7 +457,7 @@ Caused by:
     p.cargo("bench")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to run `rustc` to learn about target-specific information
+[ERROR] failed to run `rustc` to find the sysroot location
 
 Caused by:
   [..]bogus[..]
@@ -574,7 +574,7 @@ fn build_rustflags_normal_source_with_target() {
         .arg(host)
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to run `rustc` to learn about target-specific information
+[ERROR] failed to run `rustc` to find the sysroot location
 
 Caused by:
   [..]bogus[..]
@@ -585,7 +585,7 @@ Caused by:
         .arg(host)
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to run `rustc` to learn about target-specific information
+[ERROR] failed to run `rustc` to find the sysroot location
 
 Caused by:
   [..]bogus[..]
@@ -596,7 +596,7 @@ Caused by:
         .arg(host)
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to run `rustc` to learn about target-specific information
+[ERROR] failed to run `rustc` to find the sysroot location
 
 Caused by:
   [..]bogus[..]
@@ -607,7 +607,7 @@ Caused by:
         .arg(host)
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to run `rustc` to learn about target-specific information
+[ERROR] failed to run `rustc` to find the sysroot location
 
 Caused by:
   [..]bogus[..]
@@ -618,7 +618,7 @@ Caused by:
         .arg(host)
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to run `rustc` to learn about target-specific information
+[ERROR] failed to run `rustc` to find the sysroot location
 
 Caused by:
   [..]bogus[..]
@@ -724,7 +724,7 @@ fn build_rustflags_recompile() {
     p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to run `rustc` to learn about target-specific information
+[ERROR] failed to run `rustc` to find the sysroot location
 
 Caused by:
   [..]bogus[..]
@@ -751,7 +751,7 @@ fn build_rustflags_recompile2() {
     p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to run `rustc` to learn about target-specific information
+[ERROR] failed to run `rustc` to find the sysroot location
 
 Caused by:
   [..]bogus[..]
