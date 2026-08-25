@@ -444,6 +444,7 @@ pub(crate) fn get_rustflags_from_env(
 #[cfg(test)]
 mod tests {
     use crate::GlobalContext;
+    use crate::context::{ConfigValue, Definition};
     use crate::util::data_structures::HashMap;
     use std::path::Path;
 
@@ -457,5 +458,30 @@ mod tests {
         let rustc = gctx.load_global_rustc(None).unwrap();
         let sysroot = rustc.sysroot(&gctx).unwrap();
         assert_eq!(sysroot, Path::new("."));
+    }
+
+    #[test]
+    fn sysroot_fetch_respects_build_rustflags() {
+        let mut gctx = GlobalContext::default().unwrap();
+        gctx.set_env(HashMap::default());
+
+        let definition = Definition::Cli(None);
+        let rustflags = ConfigValue::List(
+            vec![ConfigValue::String(
+                "--sysroot=.".to_string(),
+                definition.clone(),
+            )],
+            definition.clone(),
+        );
+        let build = ConfigValue::Table(
+            HashMap::from_iter([("rustflags".to_string(), rustflags)]),
+            definition,
+        );
+        gctx.set_values(HashMap::from_iter([("build".to_string(), build)]))
+            .unwrap();
+
+        let rustc = gctx.load_global_rustc(None).unwrap();
+        let sysroot = rustc.sysroot(&gctx).unwrap();
+        assert_ne!(sysroot, Path::new("."));
     }
 }
