@@ -407,3 +407,22 @@ fn process_fingerprint(cmd: &ProcessBuilder, extra_fingerprint: u64) -> u64 {
     env.hash(&mut hasher);
     Hasher::finish(&hasher)
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::GlobalContext;
+    use crate::util::data_structures::HashMap;
+    use std::path::Path;
+
+    #[test]
+    fn sysroot_fetch_respects_env_rustflags() {
+        let mut gctx = GlobalContext::default().unwrap();
+
+        let rustflags = HashMap::from_iter([("RUSTFLAGS".to_string(), "--sysroot=.".to_string())]);
+        gctx.set_env(rustflags);
+
+        let rustc = gctx.load_global_rustc(None).unwrap();
+        let sysroot = rustc.sysroot(&gctx).unwrap();
+        assert_ne!(sysroot, Path::new("."));
+    }
+}
