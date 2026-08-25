@@ -3610,9 +3610,9 @@ dependencies = [
 
 [[package]]
 name = "partial_ref"
-version = "0.3.3"
+version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f728bc9b1479656e40cba507034904a8c44027c0efdbbaf6a4bdc5f2d3a910c"
+checksum = "a6223a0b76d36dfb9583a3e0e8b01d7ba1674f663352b522d950e07db40e5075"
 dependencies = [
  "partial_ref_derive",
 ]
