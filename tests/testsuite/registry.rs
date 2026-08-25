@@ -86,6 +86,9 @@ fn simple(pre_clean_expected: impl IntoData, post_clean_expected: impl IntoData)
 
                 [dependencies]
                 bar = ">= 0.0.0"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -149,6 +152,9 @@ fn deps(expected: impl IntoData) {
 
                 [dependencies]
                 bar = ">= 0.0.0"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -524,6 +530,9 @@ fn update_registry(pre_publish_expected: impl IntoData, post_publish_expected: i
 
                 [dependencies]
                 notyet = ">= 0.0.0"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -622,6 +631,9 @@ fn package_with_path_deps(
                 [dependencies.notyet]
                 version = "0.0.1"
                 path = "notyet"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -695,6 +707,9 @@ fn lockfile_locks(pre_publish_expected: impl IntoData, post_publish_expected: im
 
                 [dependencies]
                 bar = "*"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -775,6 +790,9 @@ fn lockfile_locks_transitively(
 
                 [dependencies]
                 bar = "*"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -842,6 +860,9 @@ fn yanks_are_not_used(expected: impl IntoData) {
 
                 [dependencies]
                 bar = "*"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -963,6 +984,9 @@ fn yanks_in_lockfiles_are_ok(expected_check: impl IntoData, expected_update: imp
 
                 [dependencies]
                 bar = "*"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -1051,6 +1075,9 @@ fn yanks_in_lockfiles_are_ok_for_other_update(
                 [dependencies]
                 bar = "*"
                 baz = "*"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -1124,6 +1151,9 @@ fn yanks_in_lockfiles_are_ok_with_new_dep(expected: impl IntoData) {
 
                 [dependencies]
                 bar = "*"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -1150,6 +1180,9 @@ fn yanks_in_lockfiles_are_ok_with_new_dep(expected: impl IntoData) {
             [dependencies]
             bar = "*"
             baz = "*"
+
+            [lints.cargo]
+            default = "allow"
         "#,
     );
 
@@ -1192,6 +1225,9 @@ fn update_with_lockfile_if_packages_missing(expected: impl IntoData) {
 
                 [dependencies]
                 bar = "*"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -1320,6 +1356,9 @@ fn update_lockfile(
 
                 [dependencies]
                 bar = "*"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -1406,6 +1445,9 @@ fn dev_dependency_not_used(expected: impl IntoData) {
 
                 [dependencies]
                 bar = "*"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -1540,6 +1582,9 @@ fn updating_a_dep(pre_update_expected: impl IntoData, post_update_expected: impl
 
                 [dependencies.a]
                 path = "a"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -1554,6 +1599,9 @@ fn updating_a_dep(pre_update_expected: impl IntoData, post_update_expected: impl
 
                 [dependencies]
                 bar = "*"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("a/src/lib.rs", "")
@@ -1581,6 +1629,9 @@ fn updating_a_dep(pre_update_expected: impl IntoData, post_update_expected: impl
 
         [dependencies]
         bar = "0.1.0"
+
+        [lints.cargo]
+        default = "allow"
         "#,
     );
     Package::new("bar", "0.1.0").publish();
@@ -1654,6 +1705,9 @@ fn git_and_registry_dep(pre_move_expected: impl IntoData, post_move_expected: im
 
                 [dependencies]
                 a = "0.0.1"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1674,6 +1728,9 @@ fn git_and_registry_dep(pre_move_expected: impl IntoData, post_move_expected: im
 
                     [dependencies.b]
                     git = '{}'
+
+                    [lints.cargo]
+                    default = "allow"
                 "#,
                 b.url()
             ),
@@ -1733,6 +1790,9 @@ fn update_publish_then_update(expected: impl IntoData) {
 
                 [dependencies]
                 a = "0.1.0"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -1762,6 +1822,9 @@ fn update_publish_then_update(expected: impl IntoData) {
 
                 [dependencies]
                 a = "0.1.1"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -1882,6 +1945,9 @@ fn update_transitive_dependency(expected_update: impl IntoData, expected_check: 
 
                 [dependencies]
                 a = "0.1.0"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -2047,6 +2113,9 @@ fn update_multiple_packages(
                 a = "*"
                 b = "*"
                 c = "*"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -2316,6 +2385,9 @@ fn only_download_relevant(expected: impl IntoData) {
                 bar = "*"
                 [dependencies]
                 baz = "*"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -2507,6 +2579,9 @@ fn add_dep_dont_update_registry(expected: impl IntoData) {
 
                 [dependencies]
                 baz = { path = "baz" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -2521,6 +2596,9 @@ fn add_dep_dont_update_registry(expected: impl IntoData) {
 
                 [dependencies]
                 remote = "0.3"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("baz/src/lib.rs", "")
@@ -2542,6 +2620,9 @@ fn add_dep_dont_update_registry(expected: impl IntoData) {
         [dependencies]
         baz = { path = "baz" }
         remote = "0.3"
+
+        [lints.cargo]
+        default = "allow"
         "#,
     );
 
@@ -2580,6 +2661,9 @@ fn bump_version_dont_update_registry(expected: impl IntoData) {
 
                 [dependencies]
                 baz = { path = "baz" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -2594,6 +2678,9 @@ fn bump_version_dont_update_registry(expected: impl IntoData) {
 
                 [dependencies]
                 remote = "0.3"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("baz/src/lib.rs", "")
@@ -2614,6 +2701,9 @@ fn bump_version_dont_update_registry(expected: impl IntoData) {
 
         [dependencies]
         baz = { path = "baz" }
+
+        [lints.cargo]
+        default = "allow"
         "#,
     );
 
@@ -3105,6 +3195,9 @@ fn inaccessible_registry_cache_still_works() {
                 [dependencies]
                 foo = '0.1.0'
                 fo2 = '0.1.0'
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -3487,6 +3580,9 @@ fn reach_max_unpack_size() {
 
                 [dependencies]
                 bar = ">= 0.0.0"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -3632,6 +3728,9 @@ fn sparse_retry_single() {
 
                 [dependencies]
                 bar = ">= 0.0.0"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -3927,6 +4026,9 @@ fn retry_too_many_requests() {
 
                 [dependencies]
                 bar = ">= 0.0.0"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -4519,6 +4621,9 @@ fn differ_only_by_metadata() {
 
                 [dependencies]
                 baz = "=0.0.1"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -4567,6 +4672,9 @@ fn differ_only_by_metadata_with_lockfile() {
 
                 [dependencies]
                 baz = "=0.0.1"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/main.rs", "fn main() {}")

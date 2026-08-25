@@ -284,6 +284,9 @@ fn transitive() {
 
                     [replace]
                     "bar:0.1.0" = {{ git = '{}' }}
+
+                    [lints.cargo]
+                    default = "allow"
                 "#,
                 foo.url()
             ),
@@ -507,6 +510,9 @@ fn override_adds_some_deps() {
 
                 [dependencies]
                 baz = "0.1"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -528,6 +534,9 @@ fn override_adds_some_deps() {
 
                     [replace]
                     "bar:0.1.0" = {{ git = '{}' }}
+
+                    [lints.cargo]
+                    default = "allow"
                 "#,
                 foo.url()
             ),
@@ -604,6 +613,9 @@ fn locked_means_locked_yes_no_seriously_i_mean_locked() {
 
                 [dependencies]
                 baz = "*"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -626,6 +638,9 @@ fn locked_means_locked_yes_no_seriously_i_mean_locked() {
 
                     [replace]
                     "bar:0.1.0" = {{ git = '{}' }}
+
+                    [lints.cargo]
+                    default = "allow"
                 "#,
                 foo.url()
             ),
@@ -1098,6 +1113,9 @@ fn overriding_nonexistent_no_spurious() {
 
                 [dependencies]
                 baz = { path = "baz" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "pub fn bar() {}")
@@ -1122,6 +1140,9 @@ fn overriding_nonexistent_no_spurious() {
                     [replace]
                     "bar:0.1.0" = {{ git = '{url}' }}
                     "baz:0.1.0" = {{ git = '{url}' }}
+
+                    [lints.cargo]
+                    default = "allow"
                 "#,
                 url = bar.url()
             ),
@@ -1166,6 +1187,9 @@ fn no_warnings_when_replace_is_used_in_another_workspace_member() {
 
                 [dependencies]
                 bar = "0.1.0"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("first_crate/src/lib.rs", "")
@@ -1535,6 +1559,9 @@ fn yanked_candidates_are_skipped() {
 
                 [replace]
                 "bar:1.0.0" = { path = "../bar" }
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")

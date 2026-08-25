@@ -312,6 +312,9 @@ fn overrides_with_custom() {
 
                 [profile.other.package.yyy]
                 codegen-units = 6
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")

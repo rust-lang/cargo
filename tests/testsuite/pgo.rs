@@ -104,7 +104,7 @@ fn pgo_works() {
         )
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
-[RUNNING] `rustc [..]-Cprofile-use=[ROOT]/foo/target/merged.profdata -Cllvm-args=-pgo-warn-missing-function`
+[RUNNING] `rustc [..]-Cprofile-use=[ROOT]/foo/target/merged.profdata -Cllvm-args=-pgo-warn-missing-function[..]`
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 
 "#]])

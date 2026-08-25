@@ -861,6 +861,9 @@ fn install_multiple_required_features() {
                 name = "foo_4"
                 path = "src/foo_4.rs"
                 required-features = ["a"]
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/foo_1.rs", "fn main() {}")
@@ -1286,6 +1289,9 @@ fn test_skips_compiling_bin_with_missing_required_features() {
                 name = "bin_foo"
                 path = "src/bin/foo.rs"
                 required-features = ["a"]
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/bin/foo.rs", "extern crate bar; fn main() {}")

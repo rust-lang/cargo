@@ -178,7 +178,7 @@ fn not_affected_by_target_rustflags() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 ...
-[RUNNING] `rustc [..] -D missing-docs`
+[RUNNING] `rustc [..] -D missing-docs[..]`
 ...
 "#]])
         .run();

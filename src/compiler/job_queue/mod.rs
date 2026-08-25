@@ -841,15 +841,13 @@ impl<'gctx> DrainState<'gctx> {
         }
         self.progress.clear();
 
-        if build_runner.bcx.gctx.cli_unstable().cargo_lints {
-            let mut global_stats = GlobalDiagnosticStats::new();
-            drop(unused_dependencies::lint_build_results(
-                build_runner,
-                &mut global_stats,
-            ));
-            errors.count += global_stats.error_count();
-            build_runner.compilation.lint_warning_count += global_stats.lint_warning_count();
-        }
+        let mut global_stats = GlobalDiagnosticStats::new();
+        drop(unused_dependencies::lint_build_results(
+            build_runner,
+            &mut global_stats,
+        ));
+        errors.count += global_stats.error_count();
+        build_runner.compilation.lint_warning_count += global_stats.lint_warning_count();
 
         let profile_name = build_runner.bcx.build_config.requested_profile;
         // NOTE: this may be a bit inaccurate, since this may not display the

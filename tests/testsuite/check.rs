@@ -1208,6 +1208,9 @@ fn git_manifest_package_and_project() {
             name = "bar"
             version = "0.0.1"
             edition = "2015"
+
+            [lints.cargo]
+            default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1227,6 +1230,9 @@ fn git_manifest_package_and_project() {
                 version = "0.0.1"
                 git  = '{}'
 
+
+                [lints.cargo]
+                default = "allow"
             "#,
                 git_project.url()
             ),
@@ -1276,6 +1282,9 @@ fn git_manifest_with_project() {
                 version = "0.0.1"
                 git  = '{}'
 
+
+                [lints.cargo]
+                default = "allow"
             "#,
                 git_project.url()
             ),
@@ -1633,6 +1642,9 @@ fn check_unused_manifest_keys() {
 
             [target.bar.build-dependencies]
             foo = { version = "0.1.0", wxz = "wxz" }
+
+            [lints.cargo]
+            default = "allow"
         "#,
         )
         .file("src/main.rs", "fn main() {}")

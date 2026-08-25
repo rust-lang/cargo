@@ -26,8 +26,8 @@ non_kebab_case_features = "warn"
         .file("src/lib.rs", "")
         .build();
 
-    foo.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints", "test-dummy-unstable"])
+    foo.cargo("fetch")
+        .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
         .with_stderr_data(str![[r#"
 [WARNING] feature `foo_bar` should have a kebab-case name
  --> Cargo.toml:9:1
@@ -72,8 +72,8 @@ non_kebab_case_features = "warn"
         .file("src/lib.rs", "")
         .build();
 
-    foo.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints", "test-dummy-unstable"])
+    foo.cargo("fetch")
+        .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
         .with_stderr_data(str![[r#"
 [WARNING] feature `foo_bar` should have a kebab-case name
  --> Cargo.toml:9:1

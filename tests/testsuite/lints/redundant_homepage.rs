@@ -24,8 +24,7 @@ redundant_homepage = "warn"
         .file("README.md", "")
         .build();
 
-    p.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("fetch")
         .with_stderr_data(str![[r#"
 [WARNING] `package.homepage` is redundant with `package.repository`
  --> Cargo.toml:7:12
@@ -65,8 +64,7 @@ redundant_homepage = "warn"
         .file("README.md", "")
         .build();
 
-    p.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("fetch")
         .with_stderr_data(str![[r#"
 [WARNING] `package.homepage` is redundant with `package.documentation`
  --> Cargo.toml:7:12
@@ -110,8 +108,7 @@ redundant_homepage = "warn"
         .file("README.md", "")
         .build();
 
-    p.cargo("fetch -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+    p.cargo("fetch")
         .with_stderr_data(str![[r#"
 [WARNING] `package.homepage` is redundant with `package.documentation`
   --> Cargo.toml:11:1

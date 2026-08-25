@@ -197,6 +197,9 @@ fn publish_with_replacement() {
 
                 [dependencies]
                 bar = "1.0"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")
@@ -277,6 +280,9 @@ fn source_replacement_with_registry_url() {
                 edition = "2015"
                 [dependencies.bar]
                 version = "0.0.1"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "")

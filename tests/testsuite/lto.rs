@@ -730,6 +730,9 @@ fn test_profile() {
 
                 [dependencies]
                 bar = "*"
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file(
@@ -888,6 +891,9 @@ fn fresh_swapping_commands() {
 
                 [profile.release]
                 lto = true
+
+                [lints.cargo]
+                default = "allow"
             "#,
         )
         .file("src/lib.rs", "pub fn foo() { println!(\"hi!\"); }")

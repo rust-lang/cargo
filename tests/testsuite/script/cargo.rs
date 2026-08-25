@@ -613,6 +613,7 @@ args: []
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/s-h.w§c!.rs`
+...
 [COMPILING] s-h-w-c- v0.0.0 ([ROOT]/foo/s-h.w§c!.rs)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/s-h-w-c-[EXE]`
@@ -927,6 +928,9 @@ fn test_name_same_as_dependency() {
 ---
 [dependencies]
 script = "1.0.0"
+
+[lints.cargo]
+default = "allow"
 ---
 
 fn main() {
@@ -964,6 +968,9 @@ fn test_path_dep() {
 ---
 [dependencies]
 bar.path = "./bar"
+
+[lints.cargo]
+default = "allow"
 ---
 
 fn main() {
