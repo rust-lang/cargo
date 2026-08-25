@@ -14,7 +14,7 @@ use crate::compiler::CrateType;
 use crate::compiler::apply_env_config;
 use crate::context::{GlobalContext, StringList, TargetConfig};
 use crate::util::interning::InternedString;
-use crate::util::rustc::get_rustflags_from_env;
+use crate::util::rustc::{get_rustflags_from_build_config, get_rustflags_from_env};
 use crate::util::{CargoResult, Rustc};
 use crate::workspace::{Dependency, Package, Target, TargetKind, Workspace};
 
@@ -895,13 +895,7 @@ fn rustflags_from_host(
 /// Gets compiler flags from `[build]` section in the config.
 /// See [`extra_args`] for more.
 fn rustflags_from_build(gctx: &GlobalContext, flag: Flags) -> CargoResult<Option<Vec<String>>> {
-    // Then the `build.rustflags` value.
-    let build = gctx.build_config()?;
-    let list = match flag {
-        Flags::Rust => &build.rustflags,
-        Flags::Rustdoc => &build.rustdocflags,
-    };
-    Ok(list.as_ref().map(|l| l.as_slice().to_vec()))
+    get_rustflags_from_build_config(gctx, matches!(flag, Flags::Rustdoc))
 }
 
 /// Whether a host artifact must take its configuration solely from `[host]` and ignore `[target]`.

@@ -441,6 +441,21 @@ pub(crate) fn get_rustflags_from_env(
     None
 }
 
+/// Gets compiler flags from `[build]` section in the config.
+pub(crate) fn get_rustflags_from_build_config(
+    gctx: &GlobalContext,
+    is_rustdoc: bool,
+) -> CargoResult<Option<Vec<String>>> {
+    // Then the `build.rustflags` value.
+    let build = gctx.build_config()?;
+    let list = if is_rustdoc {
+        &build.rustdocflags
+    } else {
+        &build.rustflags
+    };
+    Ok(list.as_ref().map(|l| l.as_slice().to_vec()))
+}
+
 #[cfg(test)]
 mod tests {
     use crate::GlobalContext;
