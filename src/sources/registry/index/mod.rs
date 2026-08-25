@@ -118,9 +118,9 @@ struct Summaries {
 
 /// A lazily parsed [`IndexSummary`].
 enum MaybeIndexSummary {
-    /// A summary which has not been parsed, The `start` and `end` are pointers
+    /// A summary which has not been parsed, The range are pointers
     /// into [`Summaries::raw_data`] which this is an entry of.
-    Unparsed { start: usize, end: usize },
+    Unparsed(std::range::Range<usize>),
 
     /// An actually parsed summary.
     Parsed(IndexSummary),
@@ -635,29 +635,15 @@ impl Summaries {
         let index_version = cache.index_version.into();
         let mut versions = Vec::with_capacity(cache.versions.len());
         for (version, summary) in cache.versions {
-            let (start, end) = subslice_bounds(&contents, summary);
-            versions.push((
-                version,
-                RefCell::new(MaybeIndexSummary::Unparsed { start, end }),
-            ));
+            let range = contents.subslice_range(summary).unwrap();
+            versions.push((version, RefCell::new(MaybeIndexSummary::Unparsed(range))));
         }
         let ret = Summaries {
             raw_data: contents,
             versions,
         };
-        return Ok((ret, index_version));
 
-        // Returns the start/end offsets of `inner` with `outer`. Asserts that
-        // `inner` is a subslice of `outer`.
-        fn subslice_bounds(outer: &[u8], inner: &[u8]) -> (usize, usize) {
-            let outer_start = outer.as_ptr() as usize;
-            let outer_end = outer_start + outer.len();
-            let inner_start = inner.as_ptr() as usize;
-            let inner_end = inner_start + inner.len();
-            assert!(inner_start >= outer_start);
-            assert!(inner_end <= outer_end);
-            (inner_start - outer_start, inner_end - outer_start)
-        }
+        Ok((ret, index_version))
     }
 }
 
@@ -673,14 +659,14 @@ impl MaybeIndexSummary {
         source_id: SourceId,
         cli_unstable: &CliUnstable,
     ) -> CargoResult<&IndexSummary> {
-        let (start, end) = match self {
-            MaybeIndexSummary::Unparsed { start, end } => (*start, *end),
+        let range = match self {
+            MaybeIndexSummary::Unparsed(range) => *range,
             MaybeIndexSummary::Parsed(summary) => return Ok(summary),
         };
-        let summary = IndexSummary::parse(&raw_data[start..end], source_id, cli_unstable)?;
+        let summary = IndexSummary::parse(&raw_data[range], source_id, cli_unstable)?;
         *self = MaybeIndexSummary::Parsed(summary);
         match self {
-            MaybeIndexSummary::Unparsed { .. } => unreachable!(),
+            MaybeIndexSummary::Unparsed(_) => unreachable!(),
             MaybeIndexSummary::Parsed(summary) => Ok(summary),
         }
     }
