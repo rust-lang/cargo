@@ -14,6 +14,7 @@ use crate::compiler::CrateType;
 use crate::compiler::apply_env_config;
 use crate::context::{GlobalContext, StringList, TargetConfig};
 use crate::util::interning::InternedString;
+use crate::util::rustc::get_rustflags_from_env;
 use crate::util::{CargoResult, Rustc};
 use crate::workspace::{Dependency, Package, Target, TargetKind, Workspace};
 
@@ -823,27 +824,7 @@ fn extra_args(
 /// Gets compiler flags from environment variables.
 /// See [`extra_args`] for more.
 fn rustflags_from_env(gctx: &GlobalContext, flags: Flags) -> Option<Vec<String>> {
-    // First try CARGO_ENCODED_RUSTFLAGS from the environment.
-    // Prefer this over RUSTFLAGS since it's less prone to encoding errors.
-    if let Ok(a) = gctx.get_env(format!("CARGO_ENCODED_{}", flags.as_env())) {
-        if a.is_empty() {
-            return Some(Vec::new());
-        }
-        return Some(a.split('\x1f').map(str::to_string).collect());
-    }
-
-    // Then try RUSTFLAGS from the environment
-    if let Ok(a) = gctx.get_env(flags.as_env()) {
-        let args = a
-            .split(' ')
-            .map(str::trim)
-            .filter(|s| !s.is_empty())
-            .map(str::to_string);
-        return Some(args.collect());
-    }
-
-    // No rustflags to be collected from the environment
-    None
+    get_rustflags_from_env(gctx, flags.as_env())
 }
 
 /// Gets compiler flags from `[target]` section in the config.

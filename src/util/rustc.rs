@@ -408,6 +408,34 @@ fn process_fingerprint(cmd: &ProcessBuilder, extra_fingerprint: u64) -> u64 {
     Hasher::finish(&hasher)
 }
 
+/// Gets compiler flags from environment variables.
+pub(crate) fn get_rustflags_from_env(
+    gctx: &GlobalContext,
+    env_name: &'static str,
+) -> Option<Vec<String>> {
+    // First try CARGO_ENCODED_RUSTFLAGS from the environment.
+    // Prefer this over RUSTFLAGS since it's less prone to encoding errors.
+    if let Ok(a) = gctx.get_env(format!("CARGO_ENCODED_{}", env_name)) {
+        if a.is_empty() {
+            return Some(Vec::new());
+        }
+        return Some(a.split('\x1f').map(str::to_string).collect());
+    }
+
+    // Then try RUSTFLAGS from the environment
+    if let Ok(a) = gctx.get_env(env_name) {
+        let args = a
+            .split(' ')
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_string);
+        return Some(args.collect());
+    }
+
+    // No rustflags to be collected from the environment
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use crate::GlobalContext;
