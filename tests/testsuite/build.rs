@@ -5924,7 +5924,7 @@ fn build_lib_only() {
     p.cargo("build --lib -v")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..] --out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out`
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])

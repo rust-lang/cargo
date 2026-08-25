@@ -29,7 +29,7 @@ fn profile_overrides() {
         .build();
     p.cargo("build -v").with_stderr_data(str![[r#"
 [COMPILING] test v0.0.0 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name test --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..] -C opt-level=1[..] -C debug-assertions=on[..] -C metadata=[..] -C rpath --out-dir [ROOT]/foo/target/debug/build/test/[HASH]/out [..]`
+[RUNNING] `rustc --crate-name test --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..] -C opt-level=1[..] -C debug-assertions=on[..] -C metadata=[..] -C rpath --out-dir [..]`
 [FINISHED] `dev` profile [optimized] target(s) in [ELAPSED]s
 
 "#]]).run();
@@ -56,7 +56,7 @@ fn opt_level_override_0() {
         .build();
     p.cargo("build -v").with_stderr_data(str![[r#"
 [COMPILING] test v0.0.0 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name test --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=2 [..] -C metadata=[..] --out-dir [ROOT]/foo/target/debug/build/test/[HASH]/out`
+[RUNNING] `rustc --crate-name test --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=2 [..] -C metadata=[..] --out-dir [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]]).run();
@@ -82,7 +82,7 @@ fn debug_override_1() {
         .build();
     p.cargo("build -v").with_stderr_data(str![[r#"
 [COMPILING] test v0.0.0 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name test --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=1 [..]-C metadata=[..] --out-dir [ROOT]/foo/target/debug/build/test/[HASH]/out`
+[RUNNING] `rustc --crate-name test --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=1 [..]-C metadata=[..] --out-dir [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]]).run();
