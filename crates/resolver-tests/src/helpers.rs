@@ -87,6 +87,16 @@ impl<T: AsRef<str>, U: AsRef<str>> ToPkgId for (T, U) {
     }
 }
 
+pub struct BuiltinPid {
+    pub name: &'static str,
+}
+
+impl ToPkgId for BuiltinPid {
+    fn to_pkgid(&self) -> PackageId {
+        PackageId::try_new(self.name, "0.0.0", builtin_loc()).unwrap()
+    }
+}
+
 #[macro_export]
 macro_rules! pkg {
     ($pkgid:expr => [$($deps:expr),* $(,)? ]) => ({
@@ -106,6 +116,13 @@ fn registry_loc() -> SourceId {
         SourceId::for_registry(&"https://example.com".into_url().unwrap()).unwrap()
     });
     *example_dot
+}
+
+fn builtin_loc() -> SourceId {
+    static LOCAL_PATH: OnceLock<SourceId> = OnceLock::new();
+    let local_path = LOCAL_PATH
+        .get_or_init(|| SourceId::for_builtin(&std::env::current_dir().unwrap()).unwrap());
+    *local_path
 }
 
 pub fn pkg<T: ToPkgId>(name: T) -> Summary {
