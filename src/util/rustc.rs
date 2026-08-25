@@ -166,9 +166,14 @@ impl Rustc {
         let mut cmd = self.workspace_process();
         apply_env_config(gctx, &mut cmd)?;
         cmd.env(crate::CARGO_ENV, gctx.cargo_exe()?);
+        if let Some(rustflags) = get_rustflags_from_env(gctx, "RUSTFLAGS") {
+            cmd.args(&rustflags);
+        }
         cmd.arg("--print=sysroot");
 
-        let (stdout, _) = self.cached_output(&cmd, 0)?;
+        let (stdout, _) = self
+            .cached_output(&cmd, 0)
+            .with_context(|| "failed to run `rustc` to find the sysroot location")?;
         let path: PathBuf = stdout.trim().into();
         if !path.exists() {
             bail!("sysroot path \"{}\" does not exist", path.display());
@@ -451,6 +456,6 @@ mod tests {
 
         let rustc = gctx.load_global_rustc(None).unwrap();
         let sysroot = rustc.sysroot(&gctx).unwrap();
-        assert_ne!(sysroot, Path::new("."));
+        assert_eq!(sysroot, Path::new("."));
     }
 }

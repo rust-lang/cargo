@@ -31,7 +31,7 @@ fn env_rustflags_normal_source() {
         .env("RUSTFLAGS", "-Z bogus")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to run `rustc` to learn about target-specific information
+[ERROR] failed to run `rustc` to find the sysroot location
 
 Caused by:
   [..]bogus[..]
@@ -42,7 +42,7 @@ Caused by:
         .env("RUSTFLAGS", "-Z bogus")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to run `rustc` to learn about target-specific information
+[ERROR] failed to run `rustc` to find the sysroot location
 
 Caused by:
   [..]bogus[..]
@@ -53,7 +53,7 @@ Caused by:
         .env("RUSTFLAGS", "-Z bogus")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to run `rustc` to learn about target-specific information
+[ERROR] failed to run `rustc` to find the sysroot location
 
 Caused by:
   [..]bogus[..]
@@ -64,7 +64,7 @@ Caused by:
         .env("RUSTFLAGS", "-Z bogus")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to run `rustc` to learn about target-specific information
+[ERROR] failed to run `rustc` to find the sysroot location
 
 Caused by:
   [..]bogus[..]
@@ -75,7 +75,7 @@ Caused by:
         .env("RUSTFLAGS", "-Z bogus")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to run `rustc` to learn about target-specific information
+[ERROR] failed to run `rustc` to find the sysroot location
 
 Caused by:
   [..]bogus[..]
@@ -172,7 +172,7 @@ fn env_rustflags_normal_source_with_target() {
         .env("RUSTFLAGS", "-Z bogus")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to run `rustc` to learn about target-specific information
+[ERROR] failed to run `rustc` to find the sysroot location
 
 Caused by:
   [..]bogus[..]
@@ -184,7 +184,7 @@ Caused by:
         .env("RUSTFLAGS", "-Z bogus")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to run `rustc` to learn about target-specific information
+[ERROR] failed to run `rustc` to find the sysroot location
 
 Caused by:
   [..]bogus[..]
@@ -196,7 +196,7 @@ Caused by:
         .env("RUSTFLAGS", "-Z bogus")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to run `rustc` to learn about target-specific information
+[ERROR] failed to run `rustc` to find the sysroot location
 
 Caused by:
   [..]bogus[..]
@@ -208,7 +208,7 @@ Caused by:
         .env("RUSTFLAGS", "-Z bogus")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to run `rustc` to learn about target-specific information
+[ERROR] failed to run `rustc` to find the sysroot location
 
 Caused by:
   [..]bogus[..]
@@ -220,7 +220,7 @@ Caused by:
         .env("RUSTFLAGS", "-Z bogus")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to run `rustc` to learn about target-specific information
+[ERROR] failed to run `rustc` to find the sysroot location
 
 Caused by:
   [..]bogus[..]
@@ -348,7 +348,7 @@ fn env_rustflags_recompile() {
         .env("RUSTFLAGS", "-Z bogus")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to run `rustc` to learn about target-specific information
+[ERROR] failed to run `rustc` to find the sysroot location
 
 Caused by:
   [..]bogus[..]
@@ -367,7 +367,7 @@ fn env_rustflags_recompile2() {
         .env("RUSTFLAGS", "-Z bogus")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to run `rustc` to learn about target-specific information
+[ERROR] failed to run `rustc` to find the sysroot location
 
 Caused by:
   [..]bogus[..]
