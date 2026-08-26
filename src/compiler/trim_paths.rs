@@ -189,21 +189,47 @@ fn workspace_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> Vec<Remap
     // We may need to remap to that otherwise debuginfo like `DW_AT_comp_dir`
     // would point to rustc working directory,
     // and won't be remapped by workspace root.
-    let (_, rustc_workdir) = path_args(build_runner.bcx.ws, unit);
+    let (src, rustc_workdir) = path_args(build_runner.bcx.ws, unit);
+
+    let custom_prefix = build_runner
+        .bcx
+        .gctx
+        .get_env(WS_REMAP_ENV)
+        .ok()
+        .filter(|prefix| !prefix.is_empty());
+
+    // When custom prefix for workspace remap is set via `WS_REMAP_ENV`,
+    // an extra remap rule for relative member paths is required
+    // for correctly adding prefix to member paths.
+    //
+    // For more, see <https://github.com/rust-lang/cargo/pull/17366>
+    let relative_remap = if let Some(prefix) = custom_prefix
+        && src.is_relative()
+        && let Ok(rel) = unit.pkg.root().strip_prefix(&rustc_workdir)
+        && !rel.is_empty()
+    {
+        let mut rel_to = prefix.to_owned();
+        for comp in rel.components() {
+            // e.g., library -> <custom-prefix>/library
+            rel_to.push('/');
+            rel_to.push_str(&comp.as_os_str().to_string_lossy());
+        }
+        Some((rel.to_path_buf(), rel_to))
+    } else {
+        None
+    };
+
     let from = if ws_root.starts_with(&rustc_workdir) {
         rustc_workdir
     } else {
         ws_root.to_path_buf()
     };
-    let to = build_runner
-        .bcx
-        .gctx
-        .get_env(WS_REMAP_ENV)
-        .ok()
-        .filter(|prefix| !prefix.is_empty())
-        .unwrap_or(".")
-        .to_owned();
-    vec![(from, to)]
+
+    let absolute_remap = (from, custom_prefix.unwrap_or(".").to_owned());
+
+    let mut remaps = vec![absolute_remap];
+    remaps.extend(relative_remap);
+    remaps
 }
 
 /// Finds the checkout root and revision directory name of a git dependency.
@@ -314,8 +340,13 @@ pub(crate) fn write_unremap_file(
         for dep in build_runner.unit_deps(&unit) {
             stack.push(dep.unit.clone());
         }
-        for pair in package_remap(build_runner, &unit) {
-            insert(pair);
+        for (from, to) in package_remap(build_runner, &unit) {
+            // No need to emit records for relative rules as
+            // the absolute workspace record already covers their prefixes.
+            if from.is_relative() {
+                continue;
+            }
+            insert((from, to));
         }
     }
 
