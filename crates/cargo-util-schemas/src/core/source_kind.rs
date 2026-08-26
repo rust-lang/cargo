@@ -42,7 +42,8 @@ impl SourceKind {
             SourceKind::SparseRegistry => None,
             SourceKind::LocalRegistry => Some("local-registry"),
             SourceKind::Directory => Some("directory"),
-            SourceKind::Builtin => Some("builtin"),
+            // The protocol is not required for builtins so we don't emit it
+            SourceKind::Builtin => None,
         }
     }
 }
