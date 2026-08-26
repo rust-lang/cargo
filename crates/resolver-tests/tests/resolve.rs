@@ -10,7 +10,7 @@ use resolver_tests::{
         BuiltinPid, ToDep, ToPkgId, assert_contains, assert_same, dep, dep_kind, dep_loc, dep_req,
         loc_names, names, pkg, pkg_dep, pkg_dep_with, pkg_id, pkg_loc, registry,
     },
-    pkg, resolve, resolve_with_global_context,
+    names, pkg, resolve, resolve_with_global_context,
 };
 
 #[test]
@@ -1045,8 +1045,7 @@ fn test_builtin_dependency() {
 
     let builtin_dep = dep_builtin("core");
 
-    // Fails
-    //let res = resolve(vec![builtin_dep], &reg).unwrap();
+    let res = resolve(vec![builtin_dep], &reg).unwrap();
 
-    //assert_same(&res, &names(&["root", "core"]));
+    assert_same(&res, &names!("root", core));
 }

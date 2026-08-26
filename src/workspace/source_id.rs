@@ -353,6 +353,11 @@ impl SourceId {
         self.inner.kind == SourceKind::Path
     }
 
+    /// Returns `true` if this source is built into Cargo
+    pub fn is_builtin(self) -> bool {
+        self.inner.kind == SourceKind::Builtin
+    }
+
     /// Returns the local path if this is a path dependency.
     pub fn local_path(self) -> Option<PathBuf> {
         if self.inner.kind != SourceKind::Path {
