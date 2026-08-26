@@ -2046,6 +2046,94 @@ dependencies = [
 }
 
 #[cargo_test]
+fn locked_install_honors_lock_file() {
+    // Verify `--locked` uses the packaged lock file.
+    Package::new("bar", "0.1.0").publish();
+    Package::new("bar", "0.1.1")
+        .file("src/lib.rs", "not rust")
+        .publish();
+    Package::new("foo", "0.1.0")
+        .dep("bar", "0.1")
+        .file("src/lib.rs", "")
+        .file(
+            "src/main.rs",
+            "extern crate foo; extern crate bar; fn main() {}",
+        )
+        .file(
+            "Cargo.lock",
+            r#"
+[[package]]
+name = "bar"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "foo"
+version = "0.1.0"
+dependencies = [
+ "bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+"#,
+        )
+        .publish();
+
+    cargo_process("install --locked foo")
+        .with_stderr_data(str![[r#"
+...
+[COMPILING] bar v0.1.0
+...
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn locked_install_path_honors_lock_file() {
+    // Verify `--locked` uses Cargo.lock when installing from a path.
+    Package::new("bar", "0.1.0").publish();
+    Package::new("bar", "0.1.1")
+        .file("src/lib.rs", "not rust")
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+             [package]
+             name = "foo"
+             version = "0.1.0"
+
+             [dependencies]
+             bar = "0.1"
+             "#,
+        )
+        .file("src/main.rs", "extern crate bar; fn main() {}")
+        .file(
+            "Cargo.lock",
+            r#"
+ [[package]]
+ name = "bar"
+ version = "0.1.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+
+ [[package]]
+ name = "foo"
+ version = "0.1.0"
+ dependencies = [
+  "bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ ]
+ "#,
+        )
+        .build();
+
+    p.cargo("install --path . --locked")
+        .with_stderr_data(str![[r#"
+...
+[COMPILING] bar v0.1.0
+...
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn lock_file_path_deps_ok() {
     Package::new("bar", "0.1.0").publish();
 
@@ -2467,6 +2555,26 @@ workspace: [ROOT]/foo/Cargo.toml
 
 "#]]).run();
     assert_has_installed_exe(paths::cargo_home(), "foo");
+}
+
+#[cargo_test]
+fn install_without_published_lockfile() {
+    Package::new("foo", "0.1.0")
+        .file("src/main.rs", "//! Some docs\nfn main() {}")
+        .publish();
+
+    cargo_process("install foo").with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.1.0 (registry `dummy-registry`)
+[INSTALLING] foo v0.1.0
+[COMPILING] foo v0.1.0
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.1.0` (executable `foo[EXE]`)
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]]).run();
 }
 
 #[cargo_test]
