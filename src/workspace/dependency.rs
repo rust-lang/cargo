@@ -51,6 +51,10 @@ struct Inner {
     // This dependency should be used only for this platform.
     // `None` means *all platforms*.
     platform: Option<Platform>,
+    // Opaque dependencies should not be traversed any deeper by the resolver. Required packages should
+    // be resolved as roots of a separate resolver run and the dependency handled during unit
+    // generation.
+    opaque: bool,
 }
 
 #[derive(Serialize)]
@@ -162,6 +166,8 @@ impl Dependency {
                 platform: None,
                 explicit_name_in_toml: None,
                 artifact: None,
+                // All deps on builtin packages are opaque, and vice versa
+                opaque: source_id.is_builtin(),
             }),
         }
     }
@@ -185,6 +191,7 @@ impl Dependency {
                 platform: None,
                 explicit_name_in_toml: None,
                 artifact: None,
+                opaque: true,
             }),
         })
     }
@@ -433,6 +440,10 @@ impl Dependency {
 
     pub fn is_optional(&self) -> bool {
         self.inner.optional
+    }
+
+    pub fn is_opaque(&self) -> bool {
+        self.inner.opaque
     }
 
     /// Returns `true` if the default features of the dependency are requested.

@@ -1096,7 +1096,11 @@ fn injected_builtins() {
 
     let root_deps = resolve
         .deps(pkg_id("root"))
-        .map(|(pkg_id, _)| pkg_id)
+        .map(|(pkg_id, deps)| {
+            assert_eq!(deps.len(), 1);
+            assert!(deps.iter().all(Dependency::is_opaque));
+            pkg_id
+        })
         .collect::<Vec<_>>();
     assert_same(
         &root_deps,
