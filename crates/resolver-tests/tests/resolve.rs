@@ -1,6 +1,7 @@
 use cargo::util::GlobalContext;
 use cargo::workspace::Dependency;
 use cargo::workspace::dependency::DepKind;
+use resolver_tests::helpers::dep_builtin;
 use snapbox::assert_data_eq;
 use snapbox::str;
 
@@ -1042,8 +1043,10 @@ fn test_builtin_dependency() {
     let core = BuiltinPid { name: "core" };
     let reg = registry(vec![pkg!(core)]);
 
-    // No way to specify builtin deps - fails
-    //let res = resolve(vec![dep("core")], &reg).unwrap();
+    let builtin_dep = dep_builtin("core");
+
+    // Fails
+    //let res = resolve(vec![builtin_dep], &reg).unwrap();
 
     //assert_same(&res, &names(&["root", "core"]));
 }
