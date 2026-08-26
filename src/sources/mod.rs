@@ -37,6 +37,7 @@ pub use self::registry::{
 };
 pub use self::replaced::ReplacedSource;
 
+pub mod builtin;
 pub mod config;
 pub mod directory;
 pub mod git;
