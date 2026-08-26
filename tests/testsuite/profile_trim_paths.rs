@@ -1658,7 +1658,7 @@ fn workspace_prefix_override_from_env() {
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to highest compatible version
 [COMPILING] member v0.0.1 ([ROOT]/foo/member)
-[RUNNING] `rustc [..]--remap-path-prefix=[ROOT]/foo=/rustc-dev/1111111 --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir [..]`
+[RUNNING] `rustc [..]--remap-path-prefix=[ROOT]/foo=/rustc-dev/1111111 --remap-path-prefix=member=/rustc-dev/1111111/member --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir [..]`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..]--remap-path-prefix=[ROOT]/foo=/rustc-dev/1111111 --remap-path-prefix=[ROOT]/foo/target=/cargo/build-dir [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
