@@ -88,19 +88,14 @@ specified by setting the \fBCARGO_TARGET_DIR\fR environment variable to a
 path. In particular, this can be useful for caching build artifacts on
 continuous integration systems.
 .SS "Dealing with the Lockfile"
-By default, the \fBCargo.lock\fR file that is included with the package will be
-ignored. This means that Cargo will recompute which versions of dependencies
-to use, possibly using newer versions that have been released since the
-package was published. The \fB\-\-locked\fR flag can be used to force Cargo to use
-the packaged \fBCargo.lock\fR file if it is available. This may be useful for
-ensuring reproducible builds, to use the exact same set of dependencies that
-were available when the package was published. It may also be useful if a
-newer version of a dependency is published that no longer builds on your
-system, or has other problems. The downside to using \fB\-\-locked\fR is that you
-will not receive any fixes or updates to any dependency. Note that Cargo did
-not start publishing \fBCargo.lock\fR files until version 1.37, which means
-packages published with prior versions will not have a \fBCargo.lock\fR file
-available.
+By default, Cargo uses the \fBCargo.lock\fR file included with the package if it is
+available. This ensures that the installed executable uses the dependency versions
+selected when the package was published. If no lockfile is available, including for
+packages published with versions of Cargo before 1.37, Cargo resolves the dependencies
+normally.
+.sp
+The \fB\-\-locked\fR flag does not currently change dependency resolution for \fBcargo install\fR\&.
+If no \fBCargo.lock\fR is available, using \fB\-\-locked\fR emits a warning.
 .SS "Configuration Discovery"
 This command operates on system or user level, not project level.
 This means that the local \fIconfiguration discovery\fR <https://doc.rust\-lang.org/cargo/reference/config.html#hierarchical\-structure> is ignored.

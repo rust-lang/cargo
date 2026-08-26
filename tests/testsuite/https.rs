@@ -173,7 +173,6 @@ fn github_works_cargo_install() {
 [INSTALLING] bitflags-smoke-test [..]
 [WARNING] Cargo.toml: unused manifest key: dependencies.bitflags.all-features
 [WARNING] `bitflags-smoke-test` (manifest) generated 1 warning
-[LOCKING] 1 package to highest compatible version
 ...
 [INSTALLED] package [..]
 ...

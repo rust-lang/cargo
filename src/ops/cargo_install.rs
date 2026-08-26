@@ -648,12 +648,7 @@ impl<'gctx> InstallablePackage<'gctx> {
         // wouldn't be available for `compile_with_exec`.
         let dry_run = false;
         let (pkg_set, resolve) = ops::resolve_ws(&self.ws, dry_run)?;
-        ops::check_yanked(
-            self.ws.gctx(),
-            &pkg_set,
-            &resolve,
-            Some("consider running without --locked"),
-        )
+        ops::check_yanked(self.ws.gctx(), &pkg_set, &resolve, None)
     }
 }
 
@@ -931,7 +926,7 @@ fn make_ws_rustc_target<'gctx>(
         ws
     };
     ws.set_resolve_feature_unification(FeatureUnification::Selected);
-    ws.set_ignore_lock(gctx.lock_update_allowed());
+    ws.set_ignore_lock(false);
     ws.set_requested_lockfile_path(None);
     ws.set_require_optional_deps(false);
 

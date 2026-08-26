@@ -390,8 +390,6 @@ dependencies = [
 [DOWNLOADED] foo v0.1.0 (registry `dummy-registry`)
 [INSTALLING] foo v0.1.0
 [WARNING] package `bar v0.1.0` in Cargo.lock is yanked in registry `crates-io`
-  |
-  = [HELP] consider running without --locked
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
 [COMPILING] bar v0.1.0
@@ -404,15 +402,13 @@ dependencies = [
 "#]])
         .run();
 
-    // Try again without --locked, make sure it uses 0.1.1 and does not warn.
+    // Try again without `--locked` to make sure it still uses the locked version.
     cargo_process("install --force foo")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [INSTALLING] foo v0.1.0
-[LOCKING] 1 package to highest compatible version
-[DOWNLOADING] crates ...
-[DOWNLOADED] bar v0.1.1 (registry `dummy-registry`)
-[COMPILING] bar v0.1.1
+[WARNING] package `bar v0.1.0` in Cargo.lock is yanked in registry `crates-io`
+[COMPILING] bar v0.1.0
 [COMPILING] foo v0.1.0
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [REPLACING] [ROOT]/home/.cargo/bin/foo[EXE]
@@ -457,8 +453,6 @@ dependencies = [
         .with_stderr_data(str![[r#"
 ...
 [WARNING] package `bar v0.1.0` in Cargo.lock is yanked in registry `crates-io`
-  |
-  = [HELP] consider running without --locked
 ...
 
 "#]])

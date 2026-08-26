@@ -1954,7 +1954,7 @@ fn custom_target_dir_for_git_source() {
 
 #[cargo_test]
 fn install_respects_lock_file() {
-    // `cargo install` now requires --locked to use a Cargo.lock.
+    // Verify `cargo install` uses the packaged Cargo.lock by default.
     Package::new("bar", "0.1.0").publish();
     Package::new("bar", "0.1.1")
         .file("src/lib.rs", "not rust")
@@ -1987,18 +1987,15 @@ dependencies = [
     cargo_process("install foo")
         .with_stderr_data(str![[r#"
 ...
-[..]not rust[..]
+[COMPILING] bar v0.1.0
 ...
 "#]])
-        .with_status(101)
         .run();
-    cargo_process("install --locked foo").run();
 }
 
 #[cargo_test]
 fn install_path_respects_lock_file() {
-    // --path version of install_path_respects_lock_file, --locked is required
-    // to use Cargo.lock.
+    // Verify `cargo install --path` uses Cargo.lock by default.
     Package::new("bar", "0.1.0").publish();
     Package::new("bar", "0.1.1")
         .file("src/lib.rs", "not rust")
@@ -2037,12 +2034,10 @@ dependencies = [
     p.cargo("install --path .")
         .with_stderr_data(str![[r#"
 ...
-[..]not rust[..]
+[COMPILING] bar v0.1.0
 ...
 "#]])
-        .with_status(101)
         .run();
-    p.cargo("install --path . --locked").run();
 }
 
 #[cargo_test]
@@ -2857,8 +2852,6 @@ fn self_referential() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.2 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.2
-[LOCKING] 1 package to highest compatible version
-[ADDING] foo v0.0.1 (available: v0.0.2)
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [COMPILING] foo v0.0.1
@@ -2905,7 +2898,6 @@ fn ambiguous_registry_vs_local_package() {
         .with_stderr_data(str![[r#"
 [INSTALLING] foo v0.1.0 ([ROOT]/foo)
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [COMPILING] foo v0.0.1
@@ -3179,7 +3171,6 @@ fn dry_run_incompatible_package_dependency() {
 [INSTALLING] foo v0.1.0 ([ROOT]/foo)
 [WARNING] Cargo.toml: `package.edition` is unspecified, defaulting to `2015` while the latest is `2024`
 [WARNING] `foo` (manifest) generated 1 warning
-[LOCKING] 1 package to highest compatible version
 [ERROR] failed to compile `foo v0.1.0 ([ROOT]/foo)`, intermediate artifacts can be found at `[ROOT]/foo/target`.
 To reuse those artifacts with a future compilation, set the environment variable `CARGO_BUILD_BUILD_DIR` to that path.
 
