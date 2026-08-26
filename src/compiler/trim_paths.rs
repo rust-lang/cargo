@@ -34,6 +34,9 @@ pub(crate) const UNREMAP_SUFFIX: &str = ".trim-paths.jsonl";
 /// See <https://github.com/rust-lang/cargo/issues/17309>.
 pub(crate) const WS_REMAP_ENV: &str = "__CARGO_RUSTC_BOOTSTRAP_WS_REMAP";
 
+/// A single `<from>=<to>` remap rule.
+type RemapPair = (PathBuf, String);
+
 /// Like [`trim_paths_args`] but for rustdoc invocations.
 pub(crate) fn trim_paths_args_rustdoc(
     cmd: &mut ProcessBuilder,
@@ -111,7 +114,7 @@ pub(crate) fn trim_paths_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) 
     ]
 }
 
-fn join_remap((from, to): (PathBuf, String)) -> OsString {
+fn join_remap((from, to): RemapPair) -> OsString {
     let mut remap = OsString::with_capacity(from.as_os_str().len() + 1 + to.len());
     remap.push(from);
     remap.push("=");
@@ -123,7 +126,7 @@ fn join_remap((from, to): (PathBuf, String)) -> OsString {
 ///
 /// This remap logic aligns with rustc:
 /// <https://github.com/rust-lang/rust/blob/c2ef3516/src/bootstrap/src/lib.rs#L1113-L1116>
-fn sysroot_remap(build_runner: &BuildRunner<'_, '_>) -> (PathBuf, String) {
+fn sysroot_remap(build_runner: &BuildRunner<'_, '_>) -> RemapPair {
     // See also `detect_sysroot_src_path()`.
     let sysroot = build_runner
         .bcx
@@ -142,7 +145,7 @@ fn sysroot_remap(build_runner: &BuildRunner<'_, '_>) -> (PathBuf, String) {
 }
 
 /// Path prefix remap rules for dependencies.
-fn package_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> (PathBuf, String) {
+fn package_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> RemapPair {
     let pkg_root = unit.pkg.root();
     let ws_root = build_runner.bcx.ws.root();
     let source_id = unit.pkg.package_id().source_id();
@@ -175,7 +178,7 @@ fn package_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> (PathBuf, S
 }
 
 /// Path prefix remap rules for dependencies within workspaces.
-fn workspace_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> (PathBuf, String) {
+fn workspace_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> RemapPair {
     let ws_root = build_runner.bcx.ws.root();
     // rustc working directory is usually workspace root.
     // However, when `-Zroot-dir` is set, it may not be.
@@ -231,7 +234,7 @@ fn git_checkout<'a>(
 ///   [`file!`] macro in-place via the `OUT_DIR` environment.
 /// * On Linux, `DW_AT_GNU_dwo_name` that contains paths to split debuginfo
 ///   files (dwp and dwo).
-fn build_dir_remap(build_runner: &BuildRunner<'_, '_>) -> (PathBuf, String) {
+fn build_dir_remap(build_runner: &BuildRunner<'_, '_>) -> RemapPair {
     let from = build_runner.bcx.ws.build_dir().into_path_unlocked();
     let to = "/cargo/build-dir".to_owned();
     (from, to)
@@ -280,7 +283,7 @@ pub(crate) fn write_unremap_file(
 ) -> CargoResult<()> {
     let mut remaps = BTreeMap::new();
 
-    let mut insert = |(from, to): (PathBuf, String)| match remaps.entry(to) {
+    let mut insert = |(from, to): RemapPair| match remaps.entry(to) {
         Entry::Vacant(entry) => {
             entry.insert(from);
         }
