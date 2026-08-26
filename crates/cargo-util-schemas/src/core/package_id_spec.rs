@@ -145,14 +145,26 @@ impl PackageIdSpec {
                 }
                 kind => return Err(ErrorKind::UnsupportedProtocol(kind.into()).into()),
             }
-        } else {
-            if url.query().is_some() {
-                return Err(ErrorKind::UnexpectedQueryString(url).into());
-            }
+        } else if url.scheme() == "builtin" {
+            kind = Some(SourceKind::Builtin)
+        } else if url.query().is_some() {
+            return Err(ErrorKind::UnexpectedQueryString(url).into());
         }
 
         let frag = url.fragment().map(|s| s.to_owned());
         url.set_fragment(None);
+
+        if kind == Some(SourceKind::Builtin) {
+            // Builtins cannot have path segments, so handle them early
+            let name = frag.unwrap();
+            PackageName::new(&name)?;
+            return Ok(PackageIdSpec {
+                name,
+                version: None,
+                url: Some(url),
+                kind,
+            });
+        }
 
         let (name, version) = {
             let Some(path_name) = url.path_segments().and_then(|mut p| p.next_back()) else {
@@ -239,7 +251,7 @@ impl fmt::Display for PackageIdSpec {
         let mut printed_name = false;
         match self.url {
             Some(ref url) => {
-                if let Some(protocol) = self.kind.as_ref().and_then(|k| k.protocol()) {
+                if let Some(protocol) = self.kind.as_ref().and_then(SourceKind::protocol) {
                     write!(f, "{protocol}+")?;
                 }
                 write!(f, "{}", url)?;
@@ -248,7 +260,9 @@ impl fmt::Display for PackageIdSpec {
                         write!(f, "?{}", pretty)?;
                     }
                 }
-                if url.path_segments().unwrap().next_back().unwrap() != &*self.name {
+                if self.kind() == Some(&SourceKind::Builtin)
+                    || url.path_segments().unwrap().next_back().unwrap() != &*self.name
+                {
                     printed_name = true;
                     write!(f, "#{}", self.name)?;
                 }
@@ -734,7 +748,16 @@ mod tests {
             },
             "path+file:///path/to/my/project/foo#foo::bar@1.1.8",
         );
-        err!("builtin://.#core", ErrorKind::MissingUrlPath(_));
+        ok(
+            "builtin://.#core",
+            PackageIdSpec {
+                name: String::from("core"),
+                version: None,
+                url: Some(Url::parse("builtin://.").unwrap()),
+                kind: Some(SourceKind::Builtin),
+            },
+            "builtin://.#core",
+        )
     }
 
     #[test]
