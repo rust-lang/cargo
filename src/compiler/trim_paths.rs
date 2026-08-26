@@ -106,12 +106,16 @@ pub(crate) fn trim_paths_args(
 /// **†**: path dependencies outside the workspace and other uncategorized dependencies.
 ///
 /// [RFC 3127]: https://rust-lang.github.io/rfcs/3127-trim-paths.html
-pub(crate) fn trim_paths_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> [OsString; 3] {
-    [
-        join_remap(package_remap(build_runner, unit)),
-        join_remap(build_dir_remap(build_runner)),
-        join_remap(sysroot_remap(build_runner)),
-    ]
+pub(crate) fn trim_paths_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> Vec<OsString> {
+    let mut remaps = Vec::with_capacity(4);
+    remaps.extend(
+        package_remap(build_runner, unit)
+            .into_iter()
+            .map(join_remap),
+    );
+    remaps.push(join_remap(build_dir_remap(build_runner)));
+    remaps.push(join_remap(sysroot_remap(build_runner)));
+    remaps
 }
 
 fn join_remap((from, to): RemapPair) -> OsString {
@@ -145,7 +149,7 @@ fn sysroot_remap(build_runner: &BuildRunner<'_, '_>) -> RemapPair {
 }
 
 /// Path prefix remap rules for dependencies.
-fn package_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> RemapPair {
+fn package_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> Vec<RemapPair> {
     let pkg_root = unit.pkg.root();
     let ws_root = build_runner.bcx.ws.root();
     let source_id = unit.pkg.package_id().source_id();
@@ -155,7 +159,7 @@ fn package_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> RemapPair {
             const GIT_OID_LEN: usize = 7; // This matches MIN_ABBREV_LEN in git source
             let repo = hex::short_hash(source_id.canonical_url());
             let rev = &rev[..rev.len().min(GIT_OID_LEN)];
-            return (from.to_path_buf(), format!("/cargo/git/{repo}/{rev}"));
+            return vec![(from.to_path_buf(), format!("/cargo/git/{repo}/{rev}"))];
         }
     } else if source_id.is_registry() {
         let registry_src = build_runner.bcx.gctx.registry_source_path();
@@ -163,7 +167,7 @@ fn package_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> RemapPair {
         let from = pkg_root.parent().unwrap();
         if from.starts_with(registry_src) {
             let registry = hex::short_hash(&source_id);
-            return (from.to_path_buf(), format!("/cargo/registry/{registry}"));
+            return vec![(from.to_path_buf(), format!("/cargo/registry/{registry}"))];
         }
     }
 
@@ -173,12 +177,12 @@ fn package_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> RemapPair {
     } else {
         let from = pkg_root.to_path_buf();
         let to = format!("/cargo/deps/{}-{}", unit.pkg.name(), unit.pkg.version());
-        (from, to)
+        vec![(from, to)]
     }
 }
 
 /// Path prefix remap rules for dependencies within workspaces.
-fn workspace_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> RemapPair {
+fn workspace_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> Vec<RemapPair> {
     let ws_root = build_runner.bcx.ws.root();
     // rustc working directory is usually workspace root.
     // However, when `-Zroot-dir` is set, it may not be.
@@ -199,7 +203,7 @@ fn workspace_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> RemapPair
         .filter(|prefix| !prefix.is_empty())
         .unwrap_or(".")
         .to_owned();
-    (from, to)
+    vec![(from, to)]
 }
 
 /// Finds the checkout root and revision directory name of a git dependency.
@@ -310,7 +314,9 @@ pub(crate) fn write_unremap_file(
         for dep in build_runner.unit_deps(&unit) {
             stack.push(dep.unit.clone());
         }
-        insert(package_remap(build_runner, &unit));
+        for pair in package_remap(build_runner, &unit) {
+            insert(pair);
+        }
     }
 
     serde_json::to_writer(
