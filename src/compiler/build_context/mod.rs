@@ -1,7 +1,5 @@
 //! [`BuildContext`] is a (mostly) static information about a build task.
 
-use std::path::Path;
-
 use crate::compiler::BuildConfig;
 use crate::compiler::CompileKind;
 use crate::compiler::Unit;
@@ -163,15 +161,6 @@ impl<'a, 'gctx> BuildContext<'a, 'gctx> {
     /// `cargo rustc` or `cargo rustdoc`.
     pub fn extra_args_for(&self, unit: &Unit) -> Option<&Vec<String>> {
         self.extra_compiler_args.get(unit)
-    }
-
-    /// Gets the path to the sysroot.
-    ///
-    /// Helper function that uses GlobalContext.
-    pub fn get_sysroot(&self) -> &'gctx Path {
-        self.gctx
-            .get_sysroot(Some(self.ws))
-            .expect("able to invoke rustc")
     }
 }
 
