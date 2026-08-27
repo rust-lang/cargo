@@ -169,12 +169,9 @@ impl<'a, 'gctx> BuildContext<'a, 'gctx> {
     ///
     /// Helper function that uses GlobalContext.
     pub fn get_sysroot(&self) -> &'gctx Path {
-        // cfg::bad_cfg_discovery tests that these panics aren't reachable
-        let rustc = self
-            .gctx
-            .load_global_rustc(Some(self.ws))
-            .expect("rustc load ok");
-        self.gctx.get_sysroot(&rustc).expect("sysroot fetch ok")
+        self.gctx
+            .get_sysroot(Some(self.ws))
+            .expect("able to invoke rustc")
     }
 }
 
