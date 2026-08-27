@@ -1131,6 +1131,24 @@ fn has_shallow_lock_file(err: &crate::sources::git::fetch::Error) -> bool {
     )
 }
 
+fn is_git_cli_present() -> bool {
+    #[tracing::instrument(skip_all)]
+    fn is_git_cli_present() -> bool {
+        use std::process::Stdio;
+
+        std::process::Command::new("git")
+            .arg("--version")
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .is_ok()
+    }
+
+    static CACHE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *CACHE.get_or_init(is_git_cli_present)
+}
+
 /// Attempts to use `git` CLI installed on the system to fetch a repository,
 /// when the config value [`net.git-fetch-with-cli`][1] is set.
 ///
@@ -1152,6 +1170,15 @@ fn fetch_with_cli(
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     debug!(target: "git-fetch", backend = "git-cli");
+
+    if !is_git_cli_present() {
+        anyhow::bail!(
+            "`git` is not available
+help: to still use `git` for fetching, please install it
+help: to use Cargo's native git support, re-try with `net.git-fetch-with-cli = false`
+https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli"
+        );
+    }
 
     let mut cmd = ProcessBuilder::new("git");
     // Avoid potential for unused work that may also hang (#15775)
