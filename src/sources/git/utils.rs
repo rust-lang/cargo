@@ -1306,6 +1306,7 @@ https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli"
 
     cmd.arg("--force") // handle force pushes
         .arg("--update-head-ok") // see discussion in #2078
+        .arg("--recurse-submodules=no") // we handle this, incompatible with `--porcelain`
         .arg(url)
         .args(refspecs)
         // If cargo is run by git (for example, the `exec` command in `git
