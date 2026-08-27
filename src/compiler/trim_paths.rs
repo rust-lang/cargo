@@ -114,7 +114,7 @@ pub(crate) fn trim_paths_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) 
             .map(join_remap),
     );
     remaps.push(join_remap(build_dir_remap(build_runner)));
-    remaps.push(join_remap(sysroot_remap(build_runner)));
+    remaps.push(join_remap(sysroot_remap(build_runner, unit)));
     remaps
 }
 
@@ -130,15 +130,13 @@ fn join_remap((from, to): RemapPair) -> OsString {
 ///
 /// This remap logic aligns with rustc:
 /// <https://github.com/rust-lang/rust/blob/c2ef3516/src/bootstrap/src/lib.rs#L1113-L1116>
-fn sysroot_remap(build_runner: &BuildRunner<'_, '_>) -> RemapPair {
+fn sysroot_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> RemapPair {
     // See also `detect_sysroot_src_path()`.
-    let sysroot = build_runner
-        .bcx
-        .get_sysroot()
-        .join("lib")
-        .join("rustlib")
-        .join("src")
-        .join("rust");
+    let mut sysroot = build_runner.bcx.target_data.info(unit.kind).sysroot.clone();
+    sysroot.push("lib");
+    sysroot.push("rustlib");
+    sysroot.push("src");
+    sysroot.push("rust");
 
     let rustc = build_runner.bcx.rustc();
     let to = match rustc.commit_hash.as_ref() {
@@ -328,7 +326,7 @@ pub(crate) fn write_unremap_file(
         Entry::Occupied(_) => {}
     };
 
-    insert(sysroot_remap(build_runner));
+    insert(sysroot_remap(build_runner, unit));
     insert(build_dir_remap(build_runner));
 
     let mut seen = HashSet::default();
