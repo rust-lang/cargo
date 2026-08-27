@@ -57,11 +57,12 @@ pub fn resolve_and_validated_raw(
     root_pkg_id: PackageId,
     sat_resolver: &mut SatResolver,
 ) -> CargoResult<Vec<(PackageId, Vec<InternedString>)>> {
-    let resolve = resolve_with_global_context_raw(
+    let resolve = resolve_with_raw(
         deps.clone(),
         registry,
         root_pkg_id,
         &GlobalContext::default().unwrap(),
+        ResolveOpts::everything(),
     );
 
     match resolve {
@@ -120,15 +121,31 @@ pub fn resolve_with_global_context(
     registry: &[Summary],
     gctx: &GlobalContext,
 ) -> CargoResult<Vec<(PackageId, Vec<InternedString>)>> {
-    let resolve = resolve_with_global_context_raw(deps, registry, pkg_id("root"), gctx)?;
+    let resolve = resolve_with_raw(
+        deps,
+        registry,
+        pkg_id("root"),
+        gctx,
+        ResolveOpts::everything(),
+    )?;
     Ok(collect_features(&resolve))
 }
 
-pub fn resolve_with_global_context_raw(
+pub fn resolve_with_gctx_opts(
+    deps: Vec<Dependency>,
+    registry: &[Summary],
+    gctx: &GlobalContext,
+    opts: ResolveOpts,
+) -> CargoResult<Resolve> {
+    resolve_with_raw(deps, registry, pkg_id("root"), gctx, opts)
+}
+
+pub fn resolve_with_raw(
     deps: Vec<Dependency>,
     registry: &[Summary],
     root_pkg_id: PackageId,
     gctx: &GlobalContext,
+    opts: ResolveOpts,
 ) -> CargoResult<Resolve> {
     struct MyRegistry<'a> {
         list: &'a [Summary],
@@ -189,8 +206,6 @@ pub fn resolve_with_global_context_raw(
 
     let root_summary =
         Summary::new(root_pkg_id, deps, &BTreeMap::new(), None::<&String>, None).unwrap();
-
-    let opts = ResolveOpts::everything();
 
     let start = Instant::now();
     let mut version_prefs = VersionPreferences::default();

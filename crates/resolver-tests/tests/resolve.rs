@@ -1,15 +1,18 @@
+use cargo::resolver::ResolveOpts;
 use cargo::util::GlobalContext;
 use cargo::workspace::Dependency;
 use cargo::workspace::dependency::DepKind;
+use resolver_tests::helpers::gctx_for_build_std;
+use resolver_tests::helpers::{BuiltinPidWithGctx, dep_builtin};
 use snapbox::assert_data_eq;
 use snapbox::str;
 
 use resolver_tests::{
     helpers::{
-        ToDep, ToPkgId, assert_contains, assert_same, dep, dep_kind, dep_loc, dep_req, loc_names,
-        names, pkg, pkg_dep, pkg_dep_with, pkg_id, pkg_loc, registry,
+        BuiltinPid, ToDep, ToPkgId, assert_contains, assert_same, dep, dep_kind, dep_loc, dep_req,
+        loc_names, names, pkg, pkg_dep, pkg_dep_with, pkg_id, pkg_loc, registry,
     },
-    pkg, resolve, resolve_with_global_context,
+    names, pkg, resolve, resolve_with_gctx_opts, resolve_with_global_context,
 };
 
 #[test]
@@ -1035,4 +1038,55 @@ all possible versions conflict with previously selected packages
 failed to select a version for `F` which could resolve this conflict
 "#]]
     );
+}
+
+#[test]
+fn test_builtin_dependency() {
+    let core = BuiltinPid { name: "core" };
+    let reg = registry(vec![pkg!(core)]);
+
+    let builtin_dep = dep_builtin("core");
+    // All dependencies on Builtins are opaque
+    assert!(builtin_dep.is_opaque());
+    let res = resolve(vec![builtin_dep], &reg).unwrap();
+
+    assert_same(&res, &names!("root", core));
+}
+
+#[test]
+fn normal_dependency_is_not_satisfied_by_builtin_package() {
+    let core = BuiltinPid { name: "core" };
+    let reg = registry(vec![pkg!(core)]);
+
+    assert!(resolve(vec![dep("core")], &reg).is_err());
+}
+
+#[test]
+fn missing_builtin_dependency_errors() {
+    assert!(resolve(vec![dep_builtin("core")], &registry(vec![])).is_err());
+}
+
+#[test]
+fn injects_builtins_when_required() {
+    let gctx = gctx_for_build_std();
+
+    let core = BuiltinPidWithGctx {
+        name: "core",
+        gctx: &gctx,
+    };
+    let compiler_builtins = BuiltinPidWithGctx {
+        name: "compiler_builtins",
+        gctx: &gctx,
+    };
+    let reg = registry(vec![pkg!(core), pkg!(compiler_builtins)]);
+
+    let mut opts = ResolveOpts::everything();
+    opts.inject_builtins = true;
+    let resolve = resolve_with_gctx_opts(Vec::new(), &reg, &gctx, opts).unwrap();
+
+    let root_deps = resolve
+        .deps(pkg_id("root"))
+        .map(|(pkg_id, _)| pkg_id)
+        .collect::<Vec<_>>();
+    assert_same(&root_deps, names!(core, compiler_builtins))
 }

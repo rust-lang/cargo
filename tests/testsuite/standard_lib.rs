@@ -17,7 +17,7 @@ struct Setup {
     real_sysroot: String,
 }
 
-fn setup() -> Setup {
+pub(crate) fn publish_mock_std_registry_packages() {
     // Our mock sysroot requires a few packages from crates.io, so make sure
     // they're "published" to crates.io. Also edit their code a bit to make sure
     // that they have access to our custom crates with custom apis.
@@ -83,6 +83,10 @@ fn setup() -> Setup {
         .add_dep(Dependency::new("rustc-std-workspace-std", "*").optional(true))
         .feature("mockbuild", &["rustc-std-workspace-std"])
         .publish();
+}
+
+fn setup() -> Setup {
+    publish_mock_std_registry_packages();
 
     let p = ProjectBuilder::new(paths::root().join("rustc-wrapper"))
         .file(
@@ -261,7 +265,11 @@ fn shared_std_dependency_rebuild() {
 
                 [build-dependencies]
                 dep_test = {{ path = \"{}/tests/testsuite/mock-std/dep_test\" }}
+
+                [dependencies]
+                dep_test = {{ path = \"{}/tests/testsuite/mock-std/dep_test\" }}
             ",
+                manifest_dir.replace('\\', "/"),
                 manifest_dir.replace('\\', "/")
             )
             .as_str(),
@@ -284,27 +292,78 @@ fn shared_std_dependency_rebuild() {
         )
         .build();
 
+    // The key assertion here is that dep_test is built 3 times, once each for:
+    //  - build-std build
+    //  - build-dependency (for the host, with the sysroot std)
+    //  - dependency (for the host, with build-std std)
     p.cargo("build -v")
         .build_std(&setup)
-        .target_host()
         .with_stderr_data(str![[r#"
-...
+[LOCKING] 1 package to highest compatible version
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] registry-dep-using-alloc v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] registry-dep-using-core v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] registry-dep-using-std v1.0.0 (registry `dummy-registry`)
+[COMPILING] core v0.1.0 ([..]/tests/testsuite/mock-std/library/core)
+[RUNNING] `[..] rustc --crate-name core [..]`
+[COMPILING] rustc-std-workspace-core v1.9.0 ([..]/tests/testsuite/mock-std/library/rustc-std-workspace-core)
+[RUNNING] `[..] rustc --crate-name rustc_std_workspace_core [..]`
+[COMPILING] registry-dep-using-core v1.0.0
+[RUNNING] `[..] rustc --crate-name registry_dep_using_core [..]`
+[COMPILING] alloc v0.1.0 ([..]/tests/testsuite/mock-std/library/alloc)
+[RUNNING] `[..] rustc --crate-name alloc [..]`
+[COMPILING] compiler_builtins v0.1.0 ([..]/tests/testsuite/mock-std/library/compiler_builtins)
+[RUNNING] `[..] rustc --crate-name build_script_build [..]`
+[RUNNING] `[..]build_script_build`
+[COMPILING] rustc-std-workspace-alloc v1.9.0 ([..]/tests/testsuite/mock-std/library/rustc-std-workspace-alloc)
+[RUNNING] `[..] rustc --crate-name rustc_std_workspace_alloc [..]`
+[COMPILING] registry-dep-using-alloc v1.0.0
+[RUNNING] `[..] rustc --crate-name registry_dep_using_alloc [..]`
+[COMPILING] dep_test v0.1.0 ([..]/tests/testsuite/mock-std/dep_test)
 [RUNNING] `[..] rustc --crate-name dep_test [..]`
-...
 [RUNNING] `[..] rustc --crate-name dep_test [..]`
-...
-"#]])
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `[..] rustc --crate-name build_script_build [..]`
+[COMPILING] std v0.1.0 ([..]/tests/testsuite/mock-std/library/std)
+[RUNNING] `[..] rustc --crate-name std [..]`
+[RUNNING] `[..] rustc --crate-name compiler_builtins [..]`
+[COMPILING] proc_macro v0.1.0 ([..]/tests/testsuite/mock-std/library/proc_macro)
+[RUNNING] `[..] rustc --crate-name proc_macro [..]`
+[COMPILING] panic_unwind v0.1.0 ([..]/tests/testsuite/mock-std/library/panic_unwind)
+[RUNNING] `[..] rustc --crate-name panic_unwind [..]`
+[RUNNING] `[..] rustc --crate-name dep_test [..]`
+[RUNNING] `[..]build_script_build`
+[RUNNING] `[..] rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered())
         .run();
 
+    // Sanity check that all artifacts are reused.
+    // TODO: This test used to test that the build-dependency would be shared between `--target=host` and
+    // non-`--target` invocations, but that isn't currently testable as RUSTFLAGS set in this file's
+    // test harness apply to the non-cross-compile mode.
     p.cargo("build -v")
         .build_std(&setup)
-        .with_stderr_does_not_contain(str![[r#"
-    ...
-    [RUNNING] `[..] rustc --crate-name dep_test [..]`
-    ...
-    [RUNNING] `[..] rustc --crate-name dep_test [..]`
-    ...
-    "#]])
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[FRESH] core v0.1.0 ([..]/tests/testsuite/mock-std/library/core)
+[FRESH] rustc-std-workspace-core v1.9.0 ([..]/tests/testsuite/mock-std/library/rustc-std-workspace-core)
+[FRESH] proc_macro v0.1.0 ([..]/tests/testsuite/mock-std/library/proc_macro)
+[FRESH] panic_unwind v0.1.0 ([..]/tests/testsuite/mock-std/library/panic_unwind)
+[FRESH] registry-dep-using-core v1.0.0
+[FRESH] alloc v0.1.0 ([..]/tests/testsuite/mock-std/library/alloc)
+[FRESH] compiler_builtins v0.1.0 ([..]/tests/testsuite/mock-std/library/compiler_builtins)
+[FRESH] rustc-std-workspace-alloc v1.9.0 ([..]/tests/testsuite/mock-std/library/rustc-std-workspace-alloc)
+[FRESH] registry-dep-using-alloc v1.0.0
+[FRESH] std v0.1.0 ([..]/tests/testsuite/mock-std/library/std)
+[FRESH] dep_test v0.1.0 ([..]/tests/testsuite/mock-std/dep_test)
+[FRESH] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]].unordered())
         .run();
 }
 
@@ -382,6 +441,342 @@ fn check_core() {
 ...
 "#]])
         .run();
+}
+
+#[cargo_test(build_std_mock)]
+fn build_std_does_not_change_lockfile() {
+    let setup = setup();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {
+                    std::custom_api();
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("generate-lockfile").build_std(&setup).run();
+    let gen_lockfile = p.read_lockfile();
+
+    p.cargo("build").build_std(&setup).run();
+    let build_lockfile = p.read_lockfile();
+
+    assert_eq!(gen_lockfile, build_lockfile);
+    assert_eq!(
+        gen_lockfile,
+        r##"# This file is automatically @generated by Cargo.
+# It is not intended for manual editing.
+version = 4
+
+[[package]]
+name = "foo"
+version = "0.1.0"
+"##
+    );
+}
+
+#[cargo_test(build_std_mock)]
+fn builtins_do_not_show_in_package_diff_status_messages() {
+    let setup = setup();
+    let p = project()
+        .file("src/lib.rs", "#![no_std]")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+
+                [dependencies]
+                registry-dep-using-core = "1.0"
+            "#,
+        )
+        .build();
+
+    // New lockfile
+    p.cargo("generate-lockfile")
+        .build_std_arg(&setup, "std")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package [..]
+"#]])
+        .run();
+
+    // Updating lockfile
+    p.cargo("add registry-dep-using-alloc")
+        .build_std_arg(&setup, "core")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ADDING] registry-dep-using-alloc v1.0.0 to dependencies
+             Features:
+             - mockbuild
+             - rustc-std-workspace-alloc
+             - rustc-std-workspace-core
+[LOCKING] 1 package to highest compatible version
+[ADDING] registry-dep-using-alloc v1.0.0
+
+"#]])
+        .run();
+}
+
+#[cargo_test(build_std_mock)]
+fn builtins_do_not_show_in_metadata() {
+    let setup = setup();
+    let p = project()
+        .file("src/lib.rs", "#![no_std]")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                registry-dep-using-core = "1.0"
+            "#,
+        )
+        .build();
+
+    p.cargo("metadata")
+        .build_std_arg(&setup, "core")
+        .with_stdout_data(
+            str![[r#"
+{
+  "packages": [
+    {
+      "name": "foo",
+      "version": "0.1.0",
+      "id": "path+[ROOTURL]/foo#0.1.0",
+      "license": null,
+      "license_file": null,
+      "description": null,
+      "source": null,
+      "dependencies": [
+        {
+          "name": "registry-dep-using-core",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "req": "^1.0",
+          "kind": null,
+          "rename": null,
+          "optional": false,
+          "uses_default_features": true,
+          "features": [],
+          "target": null,
+          "registry": null
+        }
+      ],
+      "targets": [
+        {
+          "kind": [
+            "lib"
+          ],
+          "crate_types": [
+            "lib"
+          ],
+          "name": "foo",
+          "src_path": "[ROOT]/foo/src/lib.rs",
+          "edition": "2015",
+          "doc": true,
+          "doctest": true,
+          "test": true
+        }
+      ],
+      "features": {},
+      "manifest_path": "[ROOT]/foo/Cargo.toml",
+      "metadata": null,
+      "publish": null,
+      "authors": [],
+      "categories": [],
+      "keywords": [],
+      "readme": null,
+      "repository": null,
+      "homepage": null,
+      "documentation": null,
+      "edition": "2015",
+      "links": null,
+      "default_run": null,
+      "rust_version": null
+    },
+    {
+      "name": "registry-dep-using-core",
+      "version": "1.0.0",
+      "id": "registry+https://github.com/rust-lang/crates.io-index#registry-dep-using-core@1.0.0",
+      "license": null,
+      "license_file": null,
+      "description": null,
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "dependencies": [
+        {
+          "name": "rustc-std-workspace-core",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "req": "*",
+          "kind": null,
+          "rename": null,
+          "optional": true,
+          "uses_default_features": true,
+          "features": [],
+          "target": null,
+          "registry": null
+        }
+      ],
+      "targets": [
+        {
+          "kind": [
+            "lib"
+          ],
+          "crate_types": [
+            "lib"
+          ],
+          "name": "registry_dep_using_core",
+          "src_path": "[ROOT]/home/.cargo/registry/src/-[HASH]/registry-dep-using-core-1.0.0/src/lib.rs",
+          "edition": "2015",
+          "doc": true,
+          "doctest": true,
+          "test": true
+        }
+      ],
+      "features": {
+        "mockbuild": [
+          "rustc-std-workspace-core"
+        ],
+        "rustc-std-workspace-core": [
+          "dep:rustc-std-workspace-core"
+        ]
+      },
+      "manifest_path": "[ROOT]/home/.cargo/registry/src/-[HASH]/registry-dep-using-core-1.0.0/Cargo.toml",
+      "metadata": null,
+      "publish": null,
+      "authors": [],
+      "categories": [],
+      "keywords": [],
+      "readme": null,
+      "repository": null,
+      "homepage": null,
+      "documentation": null,
+      "edition": "2015",
+      "links": null,
+      "default_run": null,
+      "rust_version": null
+    }
+  ],
+  "workspace_members": [
+    "path+[ROOTURL]/foo#0.1.0"
+  ],
+  "workspace_default_members": [
+    "path+[ROOTURL]/foo#0.1.0"
+  ],
+  "resolve": {
+    "nodes": [
+      {
+        "id": "path+[ROOTURL]/foo#0.1.0",
+        "dependencies": [
+          "registry+https://github.com/rust-lang/crates.io-index#registry-dep-using-core@1.0.0"
+        ],
+        "deps": [
+          {
+            "name": "registry_dep_using_core",
+            "pkg": "registry+https://github.com/rust-lang/crates.io-index#registry-dep-using-core@1.0.0",
+            "dep_kinds": [
+              {
+                "kind": null,
+                "target": null
+              }
+            ]
+          }
+        ],
+        "features": []
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#registry-dep-using-core@1.0.0",
+        "dependencies": [
+        ],
+        "deps": [],
+        "features": []
+      }
+    ],
+    "root": "path+[ROOTURL]/foo#0.1.0"
+  },
+  "target_directory": "[ROOT]/foo/target",
+  "build_directory": "[ROOT]/foo/target",
+  "version": 1,
+  "workspace_root": "[ROOT]/foo",
+  "metadata": null
+}
+"#]].is_json(),
+        )
+        .run();
+}
+
+#[cargo_test(build_std_mock)]
+fn builtins_do_not_show_in_tree() {
+    let setup = setup();
+    let p = project()
+        .file("src/lib.rs", "#![no_std]")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                registry-dep-using-core = "1.0"
+            "#,
+        )
+        .build();
+
+    p.cargo("tree")
+        .build_std_arg(&setup, "core")
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
+└── registry-dep-using-core v1.0.0
+
+"#]])
+        .run();
+}
+
+#[cargo_test(build_std_mock)]
+fn builtins_are_not_vendored() {
+    let setup = setup();
+    let p = project()
+        .file("src/lib.rs", "#![no_std]")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                registry-dep-using-core = "1.0"
+            "#,
+        )
+        .build();
+
+    // --respect-source-config is required to use the crates.io replacement in the test harness
+    p.cargo("vendor --respect-source-config")
+        .build_std_arg(&setup, "core")
+        .run();
+
+    assert!(
+        p.root()
+            .join("vendor/registry-dep-using-core/Cargo.toml")
+            .is_file()
+    );
+    assert!(!p.root().join("vendor/core").exists());
+    assert!(!p.root().join("vendor/compiler_builtins").exists());
 }
 
 #[cargo_test(build_std_mock)]
@@ -889,4 +1284,115 @@ fn std_build_script_metadata_propagate_to_user() {
         .build();
 
     p.cargo("check").build_std(&setup).target_host().run();
+}
+
+#[cargo_test(build_std_mock)]
+fn std_build_dash_p() {
+    let setup = setup();
+
+    let p = project().file("src/main.rs", "fn main() {}").build();
+    p.cargo("b -v -p std")
+        .build_std(&setup)
+        .with_stderr_data(
+            str![[r#"
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] registry-dep-using-alloc v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] registry-dep-using-core v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] registry-dep-using-std v1.0.0 (registry `dummy-registry`)
+[COMPILING] core v0.1.0 ([..]/library/core)
+[COMPILING] dep_test v0.1.0 ([..]/tests/testsuite/mock-std/dep_test)
+[COMPILING] rustc-std-workspace-core v1.9.0 ([..]/library/rustc-std-workspace-core)
+[COMPILING] registry-dep-using-core v1.0.0
+[COMPILING] alloc v0.1.0 ([..]/library/alloc)
+[COMPILING] rustc-std-workspace-alloc v1.9.0 ([..]/library/rustc-std-workspace-alloc)
+[COMPILING] registry-dep-using-alloc v1.0.0
+[COMPILING] std v0.1.0 ([..]/library/std)
+[RUNNING] `[..] rustc --crate-name core [..]`
+[RUNNING] `[..] rustc --crate-name dep_test [..]`
+[RUNNING] `[..] rustc --crate-name rustc_std_workspace_core [..]`
+[RUNNING] `[..] rustc --crate-name registry_dep_using_core [..]`
+[RUNNING] `[..] rustc --crate-name alloc [..]`
+[RUNNING] `[..] rustc --crate-name rustc_std_workspace_alloc [..]`
+[RUNNING] `[..] rustc --crate-name registry_dep_using_alloc [..]`
+[RUNNING] `[..] rustc --crate-name std [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered(),
+        )
+        .run();
+
+    // The key assertion here is that foo is built, but not crates that were already built in the
+    // previous build.
+    p.cargo("b -v -p foo")
+        .build_std(&setup)
+        .with_stderr_data(
+            str![[r#"
+[UPDATING] `dummy-registry` index
+[FRESH] core v0.1.0 ([..]/tests/testsuite/mock-std/library/core)
+[FRESH] rustc-std-workspace-core v1.9.0 ([..]/tests/testsuite/mock-std/library/rustc-std-workspace-core)
+[FRESH] registry-dep-using-core v1.0.0
+[FRESH] alloc v0.1.0 ([..]/library/alloc)
+[FRESH] rustc-std-workspace-alloc v1.9.0 ([..]/library/rustc-std-workspace-alloc)
+[FRESH] registry-dep-using-alloc v1.0.0
+[FRESH] std v0.1.0 ([..]/library/std)
+[FRESH] dep_test v0.1.0 ([..]/tests/testsuite/mock-std/dep_test)
+[COMPILING] compiler_builtins v0.1.0 ([..]/library/compiler_builtins)
+[COMPILING] panic_unwind v0.1.0 ([..]/library/panic_unwind)
+[COMPILING] proc_macro v0.1.0 ([..]/library/proc_macro)
+[RUNNING] `[..] rustc --crate-name build_script_build [..]`
+[RUNNING] `[..]build_script_build`
+[RUNNING] `[..] rustc --crate-name compiler_builtins [..]`
+[RUNNING] `[..] rustc --crate-name panic_unwind [..]`
+[RUNNING] `[..] rustc --crate-name proc_macro [..]`
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `[..]rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered(),
+        )
+        .run();
+
+    p.cargo("clean -v -p std")
+        .build_std(&setup)
+        .with_stderr_data(
+            str![[r#"
+[REMOVING] [ROOT]/foo/target/debug/build/std
+[REMOVING] [ROOT]/foo/target/debug/libstd.d
+[REMOVING] [ROOT]/foo/target/debug/libstd.rlib
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
+"#]]
+            .unordered(),
+        )
+        .run();
+
+    p.cargo("b -v -p foo")
+        .build_std(&setup)
+        .with_stderr_data(
+            str![[r#"
+[UPDATING] `dummy-registry` index
+[FRESH] core v0.1.0 ([..]/library/core)
+[FRESH] rustc-std-workspace-core v1.9.0 ([..]/library/rustc-std-workspace-core)
+[FRESH] registry-dep-using-core v1.0.0
+[FRESH] alloc v0.1.0 ([..]/library/alloc)
+[FRESH] rustc-std-workspace-alloc v1.9.0 ([..]/library/rustc-std-workspace-alloc)
+[FRESH] registry-dep-using-alloc v1.0.0
+[FRESH] dep_test v0.1.0 ([..]/tests/testsuite/mock-std/dep_test)
+[FRESH] proc_macro v0.1.0 ([..]/library/proc_macro)
+[FRESH] panic_unwind v0.1.0 ([..]/library/panic_unwind)
+[FRESH] compiler_builtins v0.1.0 ([..]/library/compiler_builtins)
+[COMPILING] std v0.1.0 ([..]/library/std)
+[RUNNING] `[..] rustc --crate-name std [..]`
+[DIRTY] foo v0.0.1 ([ROOT]/foo): the dependency `std` was rebuilt
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `[..] rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered(),
+        )
+        .run();
 }

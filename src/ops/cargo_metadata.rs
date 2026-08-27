@@ -231,8 +231,12 @@ fn build_resolve_graph_r(
 
     let deps = {
         let mut dep_metadatas = Vec::new();
-        let iter = resolve.deps(pkg_id).filter(|(_dep_id, deps)| {
-            if requested_kinds == [CompileKind::Host] {
+        let iter = resolve.deps(pkg_id).filter(|(dep_id, deps)| {
+            if dep_id.source_id().is_builtin() {
+                //TODO: cargo metadata behaviour is an unresolved question on the explicit builtin
+                //dependencies RFC
+                false
+            } else if requested_kinds == [CompileKind::Host] {
                 true
             } else {
                 requested_kinds.iter().any(|kind| {

@@ -1,7 +1,9 @@
 use crate::context;
 use crate::sources::registry::CRATES_IO_HTTP_INDEX;
 use crate::sources::source::Source;
-use crate::sources::{CRATES_IO_DOMAIN, CRATES_IO_INDEX, CRATES_IO_REGISTRY, DirectorySource};
+use crate::sources::{
+    BuiltinSource, CRATES_IO_DOMAIN, CRATES_IO_INDEX, CRATES_IO_REGISTRY, DirectorySource,
+};
 use crate::sources::{GitSource, PathSource, RegistrySource};
 use crate::util::data_structures::HashSet;
 use crate::util::interning::InternedString;
@@ -204,6 +206,14 @@ impl SourceId {
         SourceId::new(SourceKind::Path, url, None)
     }
 
+    /// Creates a `SourceId` from a filesystem path representing a builtin package.
+    ///
+    /// `path`: an absolute path.
+    pub fn for_builtin(path: &Path) -> CargoResult<SourceId> {
+        let url = path.into_url()?;
+        SourceId::new(SourceKind::Builtin, url, None)
+    }
+
     /// Creates a `SourceId` from a filesystem path.
     ///
     /// `path`: an absolute path.
@@ -345,6 +355,11 @@ impl SourceId {
         self.inner.kind == SourceKind::Path
     }
 
+    /// Returns `true` if this source is built into Cargo
+    pub fn is_builtin(self) -> bool {
+        self.inner.kind == SourceKind::Builtin
+    }
+
     /// Returns the local path if this is a path dependency.
     pub fn local_path(self) -> Option<PathBuf> {
         if self.inner.kind != SourceKind::Path {
@@ -402,6 +417,14 @@ impl SourceId {
                     anyhow::bail!("single file packages cannot be used as dependencies")
                 }
                 Ok(Box::new(PathSource::new(&path, self, gctx)))
+            }
+            SourceKind::Builtin => {
+                let path = self
+                    .inner
+                    .url
+                    .to_file_path()
+                    .expect("builtin sources cannot be remote");
+                Ok(Box::new(BuiltinSource::new(&path, self, gctx)))
             }
             SourceKind::Registry | SourceKind::SparseRegistry => {
                 Ok(Box::new(RegistrySource::remote(self, gctx)?))
@@ -663,6 +686,7 @@ impl fmt::Display for SourceId {
                 Ok(())
             }
             SourceKind::Path => write!(f, "{}", url_display(&self.inner.url)),
+            SourceKind::Builtin => write!(f, "builtin {}", url_display(&self.inner.url)),
             SourceKind::Registry | SourceKind::SparseRegistry => {
                 write!(f, "registry `{}`", self.display_registry_name())
             }

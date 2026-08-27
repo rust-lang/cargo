@@ -219,6 +219,8 @@ pub struct RegistryQueryer<'a, T: Registry> {
         (Option<PackageId>, Summary, ResolveOpts),
         (Rc<(HashSet<InternedString>, Rc<Vec<DepInfo>>)>, bool),
     >,
+    /// The set of builtin dependencies to inject when appropriate
+    implicit_builtin_deps: &'a [Dependency],
 }
 
 impl<'a, T: Registry> RegistryQueryer<'a, T> {
@@ -226,6 +228,7 @@ impl<'a, T: Registry> RegistryQueryer<'a, T> {
         registry: &'a T,
         replacements: &'a [(PackageIdSpec, Dependency)],
         version_prefs: &'a VersionPreferences,
+        implicit_builtin_deps: &'a [Dependency],
     ) -> Self {
         let inner = Rc::new(RegistryQueryerAsync::new(
             registry,
@@ -236,6 +239,7 @@ impl<'a, T: Registry> RegistryQueryer<'a, T> {
             inner: inner.clone(),
             poller: LocalPollAdapter::new(inner),
             summary_cache: HashMap::default(),
+            implicit_builtin_deps,
         }
     }
 
@@ -308,7 +312,13 @@ impl<'a, T: Registry> RegistryQueryer<'a, T> {
         // First, figure out our set of dependencies based on the requested set
         // of features. This also calculates what features we're going to enable
         // for our own dependencies.
-        let (used_features, deps) = resolve_features(parent, candidate, opts)?;
+        let (used_features, mut deps) = resolve_features(parent, candidate, opts)?;
+
+        if opts.inject_builtins {
+            for dep in self.implicit_builtin_deps {
+                deps.push((dep.clone(), Rc::new(BTreeSet::default())));
+            }
+        }
 
         // Next, transform all dependencies into a list of possible candidates
         // which can satisfy that dependency.
