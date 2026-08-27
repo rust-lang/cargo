@@ -225,8 +225,6 @@ pub struct GlobalContext {
     cargo_exe: OnceLock<PathBuf>,
     /// The location of the rustdoc executable
     rustdoc: OnceLock<PathBuf>,
-    /// The path to the sysroot
-    sysroot: OnceLock<PathBuf>,
     /// Whether we are printing extra verbose messages
     extra_verbose: bool,
     /// `frozen` is the same as `locked`, but additionally will not access the
@@ -381,7 +379,6 @@ impl GlobalContext {
             cli_config: None,
             cargo_exe: Default::default(),
             rustdoc: Default::default(),
-            sysroot: Default::default(),
             extra_verbose: false,
             frozen: false,
             locked: false,
@@ -611,14 +608,6 @@ impl GlobalContext {
                 Ok(exe)
             })
             .map(AsRef::as_ref)
-    }
-
-    /// Get the sysroot path.
-    pub fn get_sysroot<'gctx>(&'gctx self, ws: Option<&Workspace<'gctx>>) -> CargoResult<&PathBuf> {
-        self.sysroot.try_borrow_with(|| {
-            let rustc = self.load_global_rustc(ws)?;
-            rustc.sysroot(self)
-        })
     }
 
     /// Which package sources have been updated, used to ensure it is only done once.
