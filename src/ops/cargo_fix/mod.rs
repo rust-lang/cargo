@@ -53,6 +53,7 @@ use semver::Version;
 use tracing::{debug, trace, warn};
 
 pub use self::fix_edition::fix_edition;
+use crate::compiler::CompileKind;
 use crate::compiler::RustcTargetData;
 use crate::ops::resolve::WorkspaceResolve;
 use crate::ops::{self, CompileOptions};
@@ -184,8 +185,7 @@ pub fn fix(
         wrapper.env(IDIOMS_ENV_INTERNAL, "1");
     }
 
-    let rustc = gctx.load_global_rustc(Some(original_ws))?;
-    let sysroot = gctx.get_sysroot(&rustc).expect("able to invoke rustc");
+    let sysroot = &target_data.info(CompileKind::Host).sysroot;
     if sysroot.is_dir() {
         wrapper.env(SYSROOT_INTERNAL, sysroot);
     }

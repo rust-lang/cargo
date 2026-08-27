@@ -53,6 +53,8 @@ pub struct TargetInfo {
     pub supports_std: Option<bool>,
     /// Supported values for `-Csplit-debuginfo=` flag, queried from rustc
     support_split_debuginfo: Vec<String>,
+    /// Path to the sysroot.
+    pub sysroot: PathBuf,
     /// Path to the "lib" directory in the sysroot which rustc uses for linking
     /// target libraries.
     pub sysroot_target_libdir: PathBuf,
@@ -168,8 +170,6 @@ impl TargetInfo {
     /// invocation is cached by [`Rustc::cached_output`].
     ///
     /// Search `Tricky` to learn why querying `rustc` several times is needed.
-    ///
-    /// When a Workspace is provided,
     #[tracing::instrument(skip_all)]
     pub fn new(
         gctx: &GlobalContext,
@@ -179,25 +179,15 @@ impl TargetInfo {
     ) -> CargoResult<TargetInfo> {
         let mut rustflags =
             extra_args(gctx, requested_kinds, &rustc.host, None, kind, Flags::Rust)?;
-
-        let sysroot = gctx.get_sysroot(rustc)?;
-        let sysroot_target_libdir = sysroot
-            .join("lib")
-            .join("rustlib")
-            .join(match &kind {
-                CompileKind::Host => rustc.host.as_str(),
-                CompileKind::Target(target) => target.short_name(),
-            })
-            .join("lib");
-
         let mut turn = 0;
         loop {
             let extra_fingerprint = kind.fingerprint_hash();
 
             // Query rustc for several kinds of info from each line of output:
             // 0) file-names (to determine output file prefix/suffix for given crate type)
-            // 1) split-debuginfo
-            // 2) cfg
+            // 1) sysroot
+            // 2) split-debuginfo
+            // 3) cfg
             //
             // Search `--print` to see what we query so far.
             let mut process = rustc.workspace_process();
@@ -231,6 +221,7 @@ impl TargetInfo {
                 process.arg("--crate-type").arg(crate_type.as_str());
             }
 
+            process.arg("--print=sysroot");
             process.arg("--print=split-debuginfo");
             process.arg("--print=crate-name"); // `___` as a delimiter.
             process.arg("--print=cfg");
@@ -251,6 +242,22 @@ impl TargetInfo {
                 let out = parse_crate_type(crate_type, &process, &output, &error, &mut lines)?;
                 map.insert(crate_type.clone(), out);
             }
+
+            let Some(line) = lines.next() else {
+                return error_missing_print_output("sysroot", &process, &output, &error);
+            };
+            let sysroot = PathBuf::from(line);
+            let sysroot_target_libdir = {
+                let mut libdir = sysroot.clone();
+                libdir.push("lib");
+                libdir.push("rustlib");
+                libdir.push(match &kind {
+                    CompileKind::Host => rustc.host.as_str(),
+                    CompileKind::Target(target) => target.short_name(),
+                });
+                libdir.push("lib");
+                libdir
+            };
 
             let support_split_debuginfo = {
                 // HACK: abuse `--print=crate-name` to use `___` as a delimiter.
@@ -365,6 +372,7 @@ impl TargetInfo {
             return Ok(TargetInfo {
                 crate_type_process,
                 crate_types: RefCell::new(map),
+                sysroot,
                 sysroot_target_libdir,
                 rustflags: rustflags.into(),
                 rustdocflags: extra_args(
