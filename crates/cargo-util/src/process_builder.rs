@@ -13,7 +13,7 @@ use std::fmt;
 use std::io::{self, Write};
 use std::iter::once;
 use std::path::Path;
-use std::process::{Command, ExitStatus, Output, Stdio};
+use std::process::{Command, ExitStatus, Output};
 
 /// A builder object for an external process, similar to [`std::process::Command`].
 #[derive(Clone, Debug)]
@@ -566,6 +566,8 @@ fn debug_force_argfile(retry_enabled: bool) -> bool {
 
 /// Creates new pipes for stderr, stdout, and optionally stdin.
 fn piped(cmd: &mut Command, pipe_stdin: bool) -> &mut Command {
+    use std::process::Stdio;
+
     cmd.stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .stdin(if pipe_stdin {
