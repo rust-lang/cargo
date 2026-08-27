@@ -43,6 +43,8 @@ pub struct ProcessBuilder {
     retry_with_argfile: bool,
     /// Data to write to stdin.
     stdin: Option<Vec<u8>>,
+    stdout: Option<Stdio>,
+    stderr: Option<Stdio>,
 }
 
 impl fmt::Display for ProcessBuilder {
@@ -86,6 +88,8 @@ impl ProcessBuilder {
             display_env_vars: false,
             retry_with_argfile: false,
             stdin: None,
+            stdout: None,
+            stderr: None,
         }
     }
 
@@ -143,6 +147,22 @@ impl ProcessBuilder {
     /// (chainable) Unsets an environment variable for the process.
     pub fn env_remove(&mut self, key: &str) -> &mut ProcessBuilder {
         self.env.insert(key.to_string(), None);
+        self
+    }
+
+    /// (chainable) Configure the process's stdout handle
+    ///
+    /// Only applies when used with [`Self::status`] and [`Self::exec`]
+    pub fn stdout<T: Into<Stdio>>(&mut self, cfg: T) -> &mut ProcessBuilder {
+        self.stdout = Some(cfg.into());
+        self
+    }
+
+    /// (chainable) Configure the process's stderr handle
+    ///
+    /// Only applies when used with [`Self::status`] and [`Self::exec`]
+    pub fn stderr<T: Into<Stdio>>(&mut self, cfg: T) -> &mut ProcessBuilder {
+        self.stderr = Some(cfg.into());
         self
     }
 
@@ -243,6 +263,12 @@ impl ProcessBuilder {
     fn _status(&self) -> io::Result<ExitStatus> {
         if !debug_force_argfile(self.retry_with_argfile) {
             let mut cmd = self.build_command();
+            if let Some(stdout) = &self.stdout {
+                cmd.stdout(stdout.to_std());
+            }
+            if let Some(stderr) = &self.stderr {
+                cmd.stderr(stderr.to_std());
+            }
             match cmd.spawn() {
                 Err(ref e) if self.should_retry_with_argfile(e) => {}
                 Err(e) => return Err(e),
@@ -250,6 +276,12 @@ impl ProcessBuilder {
             }
         }
         let (mut cmd, argfile) = self.build_command_with_argfile()?;
+        if let Some(stdout) = &self.stdout {
+            cmd.stdout(stdout.to_std());
+        }
+        if let Some(stderr) = &self.stderr {
+            cmd.stderr(stderr.to_std());
+        }
         let status = cmd.spawn()?.wait();
         close_tempfile_and_log_error(argfile);
         status
@@ -554,6 +586,23 @@ impl ProcessBuilder {
             }
         }
         self
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum Stdio {
+    Piped,
+    Inherit,
+    Null,
+}
+
+impl Stdio {
+    fn to_std(&self) -> std::process::Stdio {
+        match self {
+            Self::Piped => std::process::Stdio::piped(),
+            Self::Inherit => std::process::Stdio::inherit(),
+            Self::Null => std::process::Stdio::null(),
+        }
     }
 }
 

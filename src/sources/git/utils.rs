@@ -15,7 +15,7 @@ use crate::util::{GlobalContext, IntoUrl, MetricsCounter, Progress, network};
 use crate::workspace::{GitReference, SourceId};
 
 use anyhow::{Context as _, anyhow};
-use cargo_util::{ProcessBuilder, paths};
+use cargo_util::{ProcessBuilder, Stdio, paths};
 use cargo_util_terminal::Verbosity;
 use git2::{ErrorClass, ObjectType, Oid};
 use http::{Request, StatusCode};
@@ -1160,7 +1160,7 @@ fn git_version() -> Option<GitVersion> {
     *CACHE.get_or_init(git_version)
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[allow(unused)]
 struct GitVersion {
     major: usize,
@@ -1251,14 +1251,14 @@ fn fetch_with_cli(
 ) -> CargoResult<()> {
     debug!(target: "git-fetch", backend = "git-cli");
 
-    if git_version().is_some() {
+    let Some(git_version) = git_version() else {
         anyhow::bail!(
             "`git` is not available
 help: to still use `git` for fetching, please install it
 help: to use Cargo's native git support, re-try with `net.git-fetch-with-cli = false`
 https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli"
         );
-    }
+    };
 
     let mut cmd = ProcessBuilder::new("git");
     // Avoid potential for unused work that may also hang (#15775)
@@ -1289,7 +1289,18 @@ https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli"
     };
     if gctx.shell().verbosity() == Verbosity::Verbose {
         cmd.arg("--verbose");
-    } else if !progress {
+    } else if progress {
+        cmd.arg("--progress");
+        let min_porcelain_version = GitVersion {
+            major: 2,
+            minor: 41,
+            patch: 0,
+        };
+        if min_porcelain_version <= git_version {
+            // Move ref update status to `stdout` and silence it
+            cmd.arg("--porcelain").stdout(Stdio::Null);
+        }
+    } else {
         cmd.arg("--quiet");
     }
 
