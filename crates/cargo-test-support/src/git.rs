@@ -144,6 +144,17 @@ pub fn init(path: &Path) -> git2::Repository {
     repo
 }
 
+/// *(`git2`)* Initialize a new SHA256 repository at the given path.
+pub fn init_sha256(path: &Path) -> git2::Repository {
+    default_search_path();
+    let mut opts = git2::RepositoryInitOptions::new();
+    opts.external_template(false)
+        .object_format(git2::ObjectFormat::Sha256);
+    let repo = t!(git2::Repository::init_opts(path, &opts));
+    default_repo_cfg(&repo);
+    repo
+}
+
 fn default_search_path() {
     use crate::paths::global_root;
     use git2::{ConfigLevel, opts::set_search_path};
@@ -182,6 +193,21 @@ where
     let git_project = git_project.build();
 
     let repo = init(&git_project.root());
+    add(&repo);
+    commit(&repo);
+    (git_project, repo)
+}
+
+/// Create a new [`Project`] in a SHA256 git [`Repository`]
+pub fn new_sha256_repo<F>(name: &str, callback: F) -> (Project, git2::Repository)
+where
+    F: FnOnce(ProjectBuilder) -> ProjectBuilder,
+{
+    let mut git_project = project().at(name);
+    git_project = callback(git_project);
+    let git_project = git_project.build();
+
+    let repo = init_sha256(&git_project.root());
     add(&repo);
     commit(&repo);
     (git_project, repo)
