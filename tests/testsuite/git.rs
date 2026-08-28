@@ -10,7 +10,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 
 use crate::prelude::*;
-use cargo_test_support::git::{add_submodule, cargo_uses_gitoxide};
+use cargo_test_support::git::add_submodule;
 use cargo_test_support::paths;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{Project, sleep_ms, str, t};
@@ -2149,19 +2149,12 @@ fn fetch_downloads() {
 }
 
 #[cargo_test]
-fn fetch_downloads_with_git2_first_then_with_gitoxide_and_vice_versa() {
+fn fetch_downloads_with_gitoxide_then_git2() {
     let bar = git::new("bar", |project| {
         project
             .file("Cargo.toml", &basic_manifest("bar", "0.5.0"))
             .file("src/lib.rs", "pub fn bar() -> i32 { 1 }")
     });
-    let feature_configuration = if cargo_uses_gitoxide() {
-        // When we are always using `gitoxide` by default, create the registry with git2 as well as the download…
-        "-Zgitoxide=internal-use-git2"
-    } else {
-        // …otherwise create the registry and the git download with `gitoxide`.
-        "-Zgitoxide=fetch"
-    };
 
     let p = project()
         .file(
@@ -2182,7 +2175,7 @@ fn fetch_downloads_with_git2_first_then_with_gitoxide_and_vice_versa() {
         .file("src/main.rs", "fn main() {}")
         .build();
     p.cargo("fetch")
-        .arg(feature_configuration)
+        .arg("-Zgitoxide=fetch")
         .masquerade_as_nightly_cargo(&["unstable features must be available for -Z gitoxide"])
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `[ROOTURL]/bar`
