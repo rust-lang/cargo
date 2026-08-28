@@ -2112,7 +2112,7 @@ fn gitoxide_features() {
 error in environment variable `CARGO_UNSTABLE_GITOXIDE`: could not load config key `unstable.gitoxide`
 
 Caused by:
-  unstable 'gitoxide' only takes `fetch` and `checkout` and `internal-use-git2` as valid inputs, for shallow fetches see `-Zgit=shallow-index,shallow-deps`
+  unstable 'gitoxide' only takes `fetch` and `checkout` as valid inputs, for shallow fetches see `-Zgit=shallow-index,shallow-deps`
 "#]],
     );
 
@@ -2152,7 +2152,6 @@ gitoxide = \"fetch\"
     [unstable.gitoxide]
     fetch = true
     checkout = false
-    internal_use_git2 = false
     ",
     );
     let gctx = GlobalContextBuilder::new().build();
@@ -2161,7 +2160,6 @@ gitoxide = \"fetch\"
         Some(GitoxideFeatures {
             fetch: true,
             checkout: false,
-            internal_use_git2: false,
         }),
     ));
 

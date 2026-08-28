@@ -1,7 +1,6 @@
 //! Tests for some invalid .cargo/config files.
 
 use crate::prelude::*;
-use cargo_test_support::git::cargo_uses_gitoxide;
 use cargo_test_support::registry::{self, Package};
 use cargo_test_support::{Project, basic_bin_manifest, basic_manifest, project, rustc_host, str};
 
@@ -423,8 +422,7 @@ fn bad_git_dependency() {
     let p = project()
         .file(
             "Cargo.toml",
-            &format!(
-                r#"
+            r#"
                 [package]
                 name = "foo"
                 version = "0.0.0"
@@ -432,43 +430,15 @@ fn bad_git_dependency() {
                 authors = []
 
                 [dependencies]
-                foo = {{ git = "{url}" }}
+                foo = { git = "file:.." }
             "#,
-                url = if cargo_uses_gitoxide() {
-                    "git://host.xz"
-                } else {
-                    "file:.."
-                }
-            ),
         )
         .file("src/lib.rs", "")
         .build();
 
-    if cargo_uses_gitoxide() {
-        p.cargo("check -v")
-            .with_status(101)
-            .with_stderr_data(str![[r#"
-[UPDATING] git repository `git://host.xz`
-[ERROR] failed to get `foo` as a dependency of package `foo v0.0.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `foo`
-
-Caused by:
-  unable to update git://host.xz
-
-Caused by:
-  failed to clone into: [ROOT]/home/.cargo/git/db/_empty-[HASH]
-
-Caused by:
-  URL "git://host.xz" does not specify a path to a repository
-
-"#]])
-            .run();
-    } else {
-        p.cargo("check -v")
-            .with_status(101)
-            .with_stderr_data(str![[r#"
+    p.cargo("check -v")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
 [UPDATING] git repository `file:///`
 [ERROR] failed to get `foo` as a dependency of package `foo v0.0.0 ([ROOT]/foo)`
 
@@ -485,8 +455,7 @@ Caused by:
   'file:///' is not a valid local file URI; class=Config (7)
 
 "#]])
-            .run();
-    };
+        .run();
 }
 
 #[cargo_test]
@@ -2429,9 +2398,6 @@ fn fragment_in_git_url() {
 
     p.cargo("check -v")
         .with_status(101)
-        // the following is needed as gitoxide has a different error message
-        // ...
-        // [..]127.0.0.1[..]
         .with_stderr_data(str![[r#"
 [WARNING] Cargo.toml: URL fragment `#foo` in git URL is ignored for dependency (bar). If you were trying to specify a specific git revision, use `rev = "foo"` in the dependency declaration.
 [WARNING] `foo` (manifest) generated 1 warning

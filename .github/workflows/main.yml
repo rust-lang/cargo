@@ -34,7 +34,6 @@ jobs:
       - schema
       - spellcheck
       - test
-      - test_gitoxide
     permissions:
       contents: none
     # We need to ensure this job does *not* get skipped if its dependencies fail,
@@ -241,14 +240,7 @@ jobs:
       run: echo CARGO_CONTAINER_TESTS=1 >> $GITHUB_ENV
       if: matrix.os == 'ubuntu-latest'
     - run: cargo test -p cargo
-    - name: Clear intermediate test output
-      run: ci/clean-test-output.sh
-
-    - name: gitoxide tests (all git-related tests)
-      run: cargo test -p cargo git
-      env:
-        __CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2: 1
-      # The testsuite generates a huge amount of data, and fetch-smoke-test was
+    # The testsuite generates a huge amount of data, and fetch-smoke-test was
     # running out of disk space.
     - name: Clear test output
       run: ci/clean-test-output.sh
@@ -287,19 +279,6 @@ jobs:
     - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
     - run: rustup update stable && rustup default stable
     - run: cargo test -p resolver-tests
-
-  test_gitoxide:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
-      - run: rustup update --no-self-update stable && rustup default stable
-      - run: rustup target add i686-unknown-linux-gnu
-      - run: rustup target add wasm32-unknown-unknown
-      - run: sudo apt update -y && sudo apt install gcc-multilib -y
-      - run: rustup component add rustfmt || echo "rustfmt not available"
-      - run: cargo test -p cargo
-        env:
-          __CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2: 1
 
   build_std:
     runs-on: ubuntu-latest

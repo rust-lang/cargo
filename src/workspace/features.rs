@@ -1146,10 +1146,6 @@ pub struct GitoxideFeatures {
     /// Checkout git dependencies using `gitoxide` (submodules are still handled by git2 ATM, and filters
     /// like linefeed conversions are unsupported).
     pub checkout: bool,
-    /// A feature flag which doesn't have any meaning except for preventing
-    /// `__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2=1` builds to enable all safe `gitoxide` features.
-    /// That way, `gitoxide` isn't actually used even though it's enabled.
-    pub internal_use_git2: bool,
 }
 
 impl GitoxideFeatures {
@@ -1157,22 +1153,11 @@ impl GitoxideFeatures {
         GitoxideFeatures {
             fetch: true,
             checkout: true,
-            internal_use_git2: false,
-        }
-    }
-
-    /// Features we deem safe for everyday use - typically true when all tests pass with them
-    /// AND they are backwards compatible.
-    fn safe() -> Self {
-        GitoxideFeatures {
-            fetch: true,
-            checkout: true,
-            internal_use_git2: false,
         }
     }
 
     fn expecting() -> String {
-        let fields = ["`fetch`", "`checkout`", "`internal-use-git2`"];
+        let fields = ["`fetch`", "`checkout`"];
         format!(
             "unstable 'gitoxide' only takes {} as valid inputs, for shallow fetches see `-Zgit=shallow-index,shallow-deps`",
             fields.join(" and ")
@@ -1237,17 +1222,12 @@ fn parse_gitoxide(
     it: impl Iterator<Item = impl AsRef<str>>,
 ) -> CargoResult<Option<GitoxideFeatures>> {
     let mut out = GitoxideFeatures::default();
-    let GitoxideFeatures {
-        fetch,
-        checkout,
-        internal_use_git2,
-    } = &mut out;
+    let GitoxideFeatures { fetch, checkout } = &mut out;
 
     for e in it {
         match e.as_ref() {
             "fetch" => *fetch = true,
             "checkout" => *checkout = true,
-            "internal-use-git2" => *internal_use_git2 = true,
             _ => {
                 bail!(GitoxideFeatures::expecting())
             }
@@ -1283,10 +1263,6 @@ impl CliUnstable {
         }
         for flag in flags {
             self.add(flag, &mut warnings)?;
-        }
-
-        if self.gitoxide.is_none() && cargo_use_gitoxide_instead_of_git2() {
-            self.gitoxide = GitoxideFeatures::safe().into();
         }
 
         self.implicitly_enable_features_if_needed();
@@ -1607,17 +1583,6 @@ pub fn channel() -> String {
     crate::version()
         .release_channel
         .unwrap_or_else(|| String::from("dev"))
-}
-
-/// Only for testing and developing. See ["Running with gitoxide as default git backend in tests"][1].
-///
-/// [1]: https://doc.crates.io/contrib/tests/running.html#running-with-gitoxide-as-default-git-backend-in-tests
-#[expect(
-    clippy::disallowed_methods,
-    reason = "testing only, no reason for config support"
-)]
-fn cargo_use_gitoxide_instead_of_git2() -> bool {
-    std::env::var_os("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2").map_or(false, |value| value == "1")
 }
 
 #[expect(
