@@ -1263,6 +1263,8 @@ https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli"
     let mut cmd = ProcessBuilder::new("git");
     // Avoid potential for unused work that may also hang (#15775)
     cmd.arg("-c").arg("core.fsmonitor=false");
+    // Avoid warnings with `--no-show-forced-updates`
+    cmd.arg("-c").arg("advice.fetchShowForcedUpdates=false");
 
     cmd.arg("fetch");
     if tags {
@@ -1302,6 +1304,16 @@ https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli"
         }
     } else {
         cmd.arg("--quiet");
+    }
+
+    let min_no_show_forced_update = GitVersion {
+        major: 2,
+        minor: 23,
+        patch: 0,
+    };
+    if min_no_show_forced_update <= git_version {
+        // skip unneeded expensive calculations
+        cmd.arg("--no-show-forced-updates");
     }
 
     cmd.arg("--force") // handle force pushes
