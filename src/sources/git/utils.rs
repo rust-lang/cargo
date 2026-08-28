@@ -1131,22 +1131,102 @@ fn has_shallow_lock_file(err: &crate::sources::git::fetch::Error) -> bool {
     )
 }
 
-fn is_git_cli_present() -> bool {
+fn git_version() -> Option<GitVersion> {
     #[tracing::instrument(skip_all)]
-    fn is_git_cli_present() -> bool {
+    fn git_version() -> Option<GitVersion> {
         use std::process::Stdio;
 
-        std::process::Command::new("git")
+        let output = std::process::Command::new("git")
             .arg("--version")
             .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status()
-            .is_ok()
+            .output()
+            .ok()?;
+        if !output.status.success() {
+            return None;
+        }
+        let Ok(stdout) = String::from_utf8(output.stdout) else {
+            return None;
+        };
+        // All else fails, we can at least report the lowest common denominator of what we support
+        let default_version = GitVersion {
+            major: 2,
+            minor: 0,
+            patch: 0,
+        };
+        Some(GitVersion::from_version_stdout(&stdout).unwrap_or(default_version))
     }
 
-    static CACHE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
-    *CACHE.get_or_init(is_git_cli_present)
+    static CACHE: std::sync::OnceLock<Option<GitVersion>> = std::sync::OnceLock::new();
+    *CACHE.get_or_init(git_version)
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[allow(unused)]
+struct GitVersion {
+    major: usize,
+    minor: usize,
+    patch: usize,
+}
+
+impl GitVersion {
+    fn from_version_stdout(stdout: &str) -> Result<Self, anyhow::Error> {
+        // See https://github.com/git/git/blob/f78ce2f7b6df702f93d40b85d6bda92a3f65da79/help.c#L779-L784
+        let Some(version) = stdout.strip_prefix("git version ") else {
+            anyhow::bail!("unrecognized `git --version` output: {stdout}")
+        };
+        let (version, _) = version.split_once(" ").unwrap_or((version, ""));
+        let (version, _) = version.split_once("\n").unwrap_or((version, ""));
+        version.parse()
+    }
+}
+
+impl std::str::FromStr for GitVersion {
+    type Err = anyhow::Error;
+
+    fn from_str(version: &str) -> Result<Self, Self::Err> {
+        let unreleased = "GIT";
+
+        let s = version;
+        let (major, s) = s.split_once(".").unwrap_or((s, ""));
+        let mut major: usize = major.parse().map_err(|_err| {
+            anyhow::format_err!("unrecognized major version `{major}` in `{version}`")
+        })?;
+        let (minor, s) = s.split_once(".").unwrap_or((s, ""));
+        let mut minor: usize = if minor == unreleased {
+            0
+        } else {
+            minor.parse().map_err(|_err| {
+                anyhow::format_err!("unrecognized minor version `{minor}` in `{version}`")
+            })?
+        };
+        let (patch, s) = s.split_once(".").unwrap_or((s, ""));
+        let mut patch: usize = if patch == unreleased {
+            0
+        } else {
+            patch.parse().map_err(|_err| {
+                anyhow::format_err!("unrecognized patch version `{patch}` in `{version}`")
+            })?
+        };
+
+        let more = s;
+        if !more.is_empty() {
+            // `more` can be either pre-release or post-release.
+            // The difference should be minimal, so be conservative and assume they are pre-release
+            if let Some(sub) = patch.checked_sub(1) {
+                patch = sub;
+            } else if let Some(sub) = minor.checked_sub(1) {
+                minor = sub;
+            } else if let Some(sub) = major.checked_sub(1) {
+                major = sub;
+            }
+        }
+
+        Ok(Self {
+            major,
+            minor,
+            patch,
+        })
+    }
 }
 
 /// Attempts to use `git` CLI installed on the system to fetch a repository,
@@ -1171,7 +1251,7 @@ fn fetch_with_cli(
 ) -> CargoResult<()> {
     debug!(target: "git-fetch", backend = "git-cli");
 
-    if !is_git_cli_present() {
+    if git_version().is_some() {
         anyhow::bail!(
             "`git` is not available
 help: to still use `git` for fetching, please install it
@@ -1899,4 +1979,87 @@ pub(super) fn rev_to_oid(rev: &str) -> Option<Oid> {
     Oid::from_str(rev)
         .ok()
         .filter(|oid| oid.as_bytes().len() * 2 == rev.len())
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn git_version_empty() {
+        let input = "";
+        GitVersion::from_version_stdout(input).unwrap_err();
+    }
+
+    #[test]
+    fn git_version_version() {
+        let input = "git version 2.19.0";
+        let actual = GitVersion::from_version_stdout(input).unwrap();
+        let expected = GitVersion {
+            major: 2,
+            minor: 19,
+            patch: 0,
+        };
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn git_version_version_nl() {
+        let input = "git version 2.19.0\n";
+        let actual = GitVersion::from_version_stdout(input).unwrap();
+        let expected = GitVersion {
+            major: 2,
+            minor: 19,
+            patch: 0,
+        };
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn git_version_version_platform() {
+        let input = "git version 2.19.0 (Apple Git-117)";
+        let actual = GitVersion::from_version_stdout(input).unwrap();
+        let expected = GitVersion {
+            major: 2,
+            minor: 19,
+            patch: 0,
+        };
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn git_version_version_vendor() {
+        let input = "git version 2.19.0.windows.1";
+        let actual = GitVersion::from_version_stdout(input).unwrap();
+        let expected = GitVersion {
+            major: 2,
+            minor: 18,
+            patch: 0,
+        };
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn git_version_version_rc() {
+        let input = "git version 2.19.0.rc0";
+        let actual = GitVersion::from_version_stdout(input).unwrap();
+        let expected = GitVersion {
+            major: 2,
+            minor: 18,
+            patch: 0,
+        };
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn git_version_version_unreleased() {
+        let input = "git version 2.55.GIT";
+        let actual = GitVersion::from_version_stdout(input).unwrap();
+        let expected = GitVersion {
+            major: 2,
+            minor: 55,
+            patch: 0,
+        };
+        assert_eq!(actual, expected);
+    }
 }
