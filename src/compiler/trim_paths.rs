@@ -34,6 +34,9 @@ pub(crate) const UNREMAP_SUFFIX: &str = ".trim-paths.jsonl";
 /// See <https://github.com/rust-lang/cargo/issues/17309>.
 pub(crate) const WS_REMAP_ENV: &str = "__CARGO_RUSTC_BOOTSTRAP_WS_REMAP";
 
+/// A single `<from>=<to>` remap rule.
+type RemapPair = (PathBuf, String);
+
 /// Like [`trim_paths_args`] but for rustdoc invocations.
 pub(crate) fn trim_paths_args_rustdoc(
     cmd: &mut ProcessBuilder,
@@ -103,15 +106,19 @@ pub(crate) fn trim_paths_args(
 /// **†**: path dependencies outside the workspace and other uncategorized dependencies.
 ///
 /// [RFC 3127]: https://rust-lang.github.io/rfcs/3127-trim-paths.html
-pub(crate) fn trim_paths_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> [OsString; 3] {
-    [
-        join_remap(package_remap(build_runner, unit)),
-        join_remap(build_dir_remap(build_runner)),
-        join_remap(sysroot_remap(build_runner)),
-    ]
+pub(crate) fn trim_paths_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> Vec<OsString> {
+    let mut remaps = Vec::with_capacity(4);
+    remaps.extend(
+        package_remap(build_runner, unit)
+            .into_iter()
+            .map(join_remap),
+    );
+    remaps.push(join_remap(build_dir_remap(build_runner)));
+    remaps.push(join_remap(sysroot_remap(build_runner, unit)));
+    remaps
 }
 
-fn join_remap((from, to): (PathBuf, String)) -> OsString {
+fn join_remap((from, to): RemapPair) -> OsString {
     let mut remap = OsString::with_capacity(from.as_os_str().len() + 1 + to.len());
     remap.push(from);
     remap.push("=");
@@ -123,15 +130,13 @@ fn join_remap((from, to): (PathBuf, String)) -> OsString {
 ///
 /// This remap logic aligns with rustc:
 /// <https://github.com/rust-lang/rust/blob/c2ef3516/src/bootstrap/src/lib.rs#L1113-L1116>
-fn sysroot_remap(build_runner: &BuildRunner<'_, '_>) -> (PathBuf, String) {
+fn sysroot_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> RemapPair {
     // See also `detect_sysroot_src_path()`.
-    let sysroot = build_runner
-        .bcx
-        .get_sysroot()
-        .join("lib")
-        .join("rustlib")
-        .join("src")
-        .join("rust");
+    let mut sysroot = build_runner.bcx.target_data.info(unit.kind).sysroot.clone();
+    sysroot.push("lib");
+    sysroot.push("rustlib");
+    sysroot.push("src");
+    sysroot.push("rust");
 
     let rustc = build_runner.bcx.rustc();
     let to = match rustc.commit_hash.as_ref() {
@@ -142,7 +147,7 @@ fn sysroot_remap(build_runner: &BuildRunner<'_, '_>) -> (PathBuf, String) {
 }
 
 /// Path prefix remap rules for dependencies.
-fn package_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> (PathBuf, String) {
+fn package_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> Vec<RemapPair> {
     let pkg_root = unit.pkg.root();
     let ws_root = build_runner.bcx.ws.root();
     let source_id = unit.pkg.package_id().source_id();
@@ -152,7 +157,7 @@ fn package_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> (PathBuf, S
             const GIT_OID_LEN: usize = 7; // This matches MIN_ABBREV_LEN in git source
             let repo = hex::short_hash(source_id.canonical_url());
             let rev = &rev[..rev.len().min(GIT_OID_LEN)];
-            return (from.to_path_buf(), format!("/cargo/git/{repo}/{rev}"));
+            return vec![(from.to_path_buf(), format!("/cargo/git/{repo}/{rev}"))];
         }
     } else if source_id.is_registry() {
         let registry_src = build_runner.bcx.gctx.registry_source_path();
@@ -160,7 +165,7 @@ fn package_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> (PathBuf, S
         let from = pkg_root.parent().unwrap();
         if from.starts_with(registry_src) {
             let registry = hex::short_hash(&source_id);
-            return (from.to_path_buf(), format!("/cargo/registry/{registry}"));
+            return vec![(from.to_path_buf(), format!("/cargo/registry/{registry}"))];
         }
     }
 
@@ -170,33 +175,59 @@ fn package_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> (PathBuf, S
     } else {
         let from = pkg_root.to_path_buf();
         let to = format!("/cargo/deps/{}-{}", unit.pkg.name(), unit.pkg.version());
-        (from, to)
+        vec![(from, to)]
     }
 }
 
 /// Path prefix remap rules for dependencies within workspaces.
-fn workspace_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> (PathBuf, String) {
+fn workspace_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> Vec<RemapPair> {
     let ws_root = build_runner.bcx.ws.root();
     // rustc working directory is usually workspace root.
     // However, when `-Zroot-dir` is set, it may not be.
     // We may need to remap to that otherwise debuginfo like `DW_AT_comp_dir`
     // would point to rustc working directory,
     // and won't be remapped by workspace root.
-    let (_, rustc_workdir) = path_args(build_runner.bcx.ws, unit);
+    let (src, rustc_workdir) = path_args(build_runner.bcx.ws, unit);
+
+    let custom_prefix = build_runner
+        .bcx
+        .gctx
+        .get_env(WS_REMAP_ENV)
+        .ok()
+        .filter(|prefix| !prefix.is_empty());
+
+    // When custom prefix for workspace remap is set via `WS_REMAP_ENV`,
+    // an extra remap rule for relative member paths is required
+    // for correctly adding prefix to member paths.
+    //
+    // For more, see <https://github.com/rust-lang/cargo/pull/17366>
+    let relative_remap = if let Some(prefix) = custom_prefix
+        && src.is_relative()
+        && let Ok(rel) = unit.pkg.root().strip_prefix(&rustc_workdir)
+        && !rel.as_os_str().is_empty()
+    {
+        let mut rel_to = prefix.to_owned();
+        for comp in rel.components() {
+            // e.g., library -> <custom-prefix>/library
+            rel_to.push('/');
+            rel_to.push_str(&comp.as_os_str().to_string_lossy());
+        }
+        Some((rel.to_path_buf(), rel_to))
+    } else {
+        None
+    };
+
     let from = if ws_root.starts_with(&rustc_workdir) {
         rustc_workdir
     } else {
         ws_root.to_path_buf()
     };
-    let to = build_runner
-        .bcx
-        .gctx
-        .get_env(WS_REMAP_ENV)
-        .ok()
-        .filter(|prefix| !prefix.is_empty())
-        .unwrap_or(".")
-        .to_owned();
-    (from, to)
+
+    let absolute_remap = (from, custom_prefix.unwrap_or(".").to_owned());
+
+    let mut remaps = vec![absolute_remap];
+    remaps.extend(relative_remap);
+    remaps
 }
 
 /// Finds the checkout root and revision directory name of a git dependency.
@@ -231,7 +262,7 @@ fn git_checkout<'a>(
 ///   [`file!`] macro in-place via the `OUT_DIR` environment.
 /// * On Linux, `DW_AT_GNU_dwo_name` that contains paths to split debuginfo
 ///   files (dwp and dwo).
-fn build_dir_remap(build_runner: &BuildRunner<'_, '_>) -> (PathBuf, String) {
+fn build_dir_remap(build_runner: &BuildRunner<'_, '_>) -> RemapPair {
     let from = build_runner.bcx.ws.build_dir().into_path_unlocked();
     let to = "/cargo/build-dir".to_owned();
     (from, to)
@@ -280,7 +311,7 @@ pub(crate) fn write_unremap_file(
 ) -> CargoResult<()> {
     let mut remaps = BTreeMap::new();
 
-    let mut insert = |(from, to): (PathBuf, String)| match remaps.entry(to) {
+    let mut insert = |(from, to): RemapPair| match remaps.entry(to) {
         Entry::Vacant(entry) => {
             entry.insert(from);
         }
@@ -295,7 +326,7 @@ pub(crate) fn write_unremap_file(
         Entry::Occupied(_) => {}
     };
 
-    insert(sysroot_remap(build_runner));
+    insert(sysroot_remap(build_runner, unit));
     insert(build_dir_remap(build_runner));
 
     let mut seen = HashSet::default();
@@ -307,7 +338,14 @@ pub(crate) fn write_unremap_file(
         for dep in build_runner.unit_deps(&unit) {
             stack.push(dep.unit.clone());
         }
-        insert(package_remap(build_runner, &unit));
+        for (from, to) in package_remap(build_runner, &unit) {
+            // No need to emit records for relative rules as
+            // the absolute workspace record already covers their prefixes.
+            if from.is_relative() {
+                continue;
+            }
+            insert((from, to));
+        }
     }
 
     serde_json::to_writer(
