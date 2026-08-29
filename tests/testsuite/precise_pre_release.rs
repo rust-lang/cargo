@@ -235,14 +235,13 @@ fn pin_prereleases_in_separate_updates() {
         .masquerade_as_nightly_cargo(&["prerelease"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[DOWNGRADING] first-dep v0.1.2-pre.0 -> v0.1.1
 [UPDATING] second-dep v0.1.1 -> v0.1.2-pre.0
 
 "#]])
         .run();
 
     let lockfile = p.read_lockfile();
-    assert!(lockfile.contains("\nname = \"first-dep\"\nversion = \"0.1.1\""));
+    assert!(lockfile.contains("\nname = \"first-dep\"\nversion = \"0.1.2-pre.0\""));
     assert!(lockfile.contains("\nname = \"second-dep\"\nversion = \"0.1.2-pre.0\""));
 }
 
@@ -313,11 +312,12 @@ fn pin_prerelease_and_check() {
     p.cargo("check --locked")
         .arg("-Zprerelease")
         .masquerade_as_nightly_cargo(&["prerelease"])
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[UPDATING] `dummy-registry` index
-[ERROR] cannot update the lock file [ROOT]/foo/Cargo.lock because --locked was passed to prevent this
-[HELP] to generate the lock file without accessing the network, remove the --locked flag and use --offline instead.
+[DOWNLOADING] crates ...
+[DOWNLOADED] my-dependency v0.1.2-pre.0 (registry `dummy-registry`)
+[CHECKING] my-dependency v0.1.2-pre.0
+[CHECKING] package v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -326,20 +326,13 @@ fn pin_prerelease_and_check() {
         .arg("-Zprerelease")
         .masquerade_as_nightly_cargo(&["prerelease"])
         .with_stderr_data(str![[r#"
-[UPDATING] `dummy-registry` index
-[LOCKING] 1 package to highest compatible version
-[DOWNGRADING] my-dependency v0.1.2-pre.0 -> v0.1.1
-[DOWNLOADING] crates ...
-[DOWNLOADED] my-dependency v0.1.1 (registry `dummy-registry`)
-[CHECKING] my-dependency v0.1.1
-[CHECKING] package v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
 
     let lockfile = p.read_lockfile();
-    assert!(lockfile.contains("\nname = \"my-dependency\"\nversion = \"0.1.1\""));
+    assert!(lockfile.contains("\nname = \"my-dependency\"\nversion = \"0.1.2-pre.0\""));
 }
 
 /// Like [`pin_prerelease_and_check`] but without `-Zprerelease`.
@@ -448,12 +441,10 @@ fn pin_prerelease_for_transitive_dep_and_check() {
         .arg("-Zprerelease")
         .masquerade_as_nightly_cargo(&["prerelease"])
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to highest compatible version
-[DOWNGRADING] my-dependency v0.1.2-pre.0 -> v0.1.1
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
-[DOWNLOADED] my-dependency v0.1.1 (registry `dummy-registry`)
-[CHECKING] my-dependency v0.1.1
+[DOWNLOADED] my-dependency v0.1.2-pre.0 (registry `dummy-registry`)
+[CHECKING] my-dependency v0.1.2-pre.0
 [CHECKING] bar v1.0.0
 [CHECKING] package v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -462,7 +453,7 @@ fn pin_prerelease_for_transitive_dep_and_check() {
         .run();
 
     let lockfile = p.read_lockfile();
-    assert!(lockfile.contains("\nname = \"my-dependency\"\nversion = \"0.1.1\""));
+    assert!(lockfile.contains("\nname = \"my-dependency\"\nversion = \"0.1.2-pre.0\""));
 }
 
 /// Like [`pin_prerelease_and_check`]
@@ -522,19 +513,14 @@ fn pin_prerelease_for_shared_direct_transitive_dep_and_check() {
     p.cargo("check")
         .arg("-Zprerelease")
         .masquerade_as_nightly_cargo(&["prerelease"])
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to select a version for `my-dependency`.
-    ... required by package `bar v1.0.0`
-    ... which satisfies dependency `bar = "^1.0.0"` (locked to 1.0.0) of package `package v0.0.0 ([ROOT]/foo)`
-versions that meet the requirements `^0.1.1` are: 0.1.1
-
-all possible versions conflict with previously selected packages
-
-  previously selected package `my-dependency v0.1.2-pre.0`
-    ... which satisfies dependency `my-dependency = "^0.1.2-pre.0"` (locked to 0.1.2-pre.0) of package `package v0.0.0 ([ROOT]/foo)`
-
-failed to select a version for `my-dependency` which could resolve this conflict
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] my-dependency v0.1.2-pre.0 (registry `dummy-registry`)
+[CHECKING] my-dependency v0.1.2-pre.0
+[CHECKING] bar v1.0.0
+[CHECKING] package v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
