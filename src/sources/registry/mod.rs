@@ -688,7 +688,13 @@ impl<'gctx> Source for RegistrySource<'gctx> {
             .source_id
             .precise_registry_version(dep.package_name().as_str())
             .filter(|(c, to)| {
-                let mode = if to.is_prerelease() && self.gctx.cli_unstable().prerelease {
+                // We use prerelease match mode for `--precise` when either
+                // "update to" or locked version is pre-release.
+                // Otherwise the entire `--precise` will be ignored
+                // because default mode doesn't match the locked prerelease version.
+                let mode = if (c.is_prerelease() || to.is_prerelease())
+                    && self.gctx.cli_unstable().prerelease
+                {
                     VersionReqMatchMode::Prerelease
                 } else {
                     VersionReqMatchMode::Default

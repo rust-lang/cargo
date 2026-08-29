@@ -711,11 +711,11 @@ fn pin_prerelease_and_update() {
         .masquerade_as_nightly_cargo(&["prerelease"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[DOWNGRADING] my-dependency v0.1.2-pre.0 -> v0.1.1
+[DOWNGRADING] my-dependency v0.1.2-pre.0 -> v0.1.0
 
 "#]])
         .run();
 
     let lockfile = p.read_lockfile();
-    assert!(lockfile.contains("\nname = \"my-dependency\"\nversion = \"0.1.1\""));
+    assert!(lockfile.contains("\nname = \"my-dependency\"\nversion = \"0.1.0\""));
 }
