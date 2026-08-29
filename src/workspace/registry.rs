@@ -501,10 +501,12 @@ impl<'gctx> PackageRegistry<'gctx> {
     /// making them available to resolution via [`Registry::query`].
     pub fn lock_patches(&mut self) {
         assert!(!self.patches_locked);
+
+        let mode = VersionReqMatchMode::Default;
         for summaries in self.patches.values_mut() {
             for summary in summaries {
                 debug!("locking patch {:?}", summary);
-                *summary = lock(&self.locked, &self.patches_available, summary.clone());
+                *summary = lock(&self.locked, &self.patches_available, summary.clone(), mode);
             }
         }
         self.patches_locked = true;
@@ -594,7 +596,12 @@ impl<'gctx> PackageRegistry<'gctx> {
     /// through.
     pub fn lock(&self, summary: Summary) -> Summary {
         assert!(self.patches_locked);
-        lock(&self.locked, &self.patches_available, summary)
+        let mode = if self.gctx.cli_unstable().prerelease {
+            VersionReqMatchMode::Prerelease
+        } else {
+            VersionReqMatchMode::Default
+        };
+        lock(&self.locked, &self.patches_available, summary, mode)
     }
 
     fn warn_bad_override(
@@ -760,6 +767,11 @@ impl<'gctx> Registry for PackageRegistry<'gctx> {
                 // then we skip this `summary`.
                 let locked = &self.locked;
                 let all_patches = &self.patches_available;
+                let mode = if self.gctx.cli_unstable().prerelease {
+                    VersionReqMatchMode::Prerelease
+                } else {
+                    VersionReqMatchMode::Default
+                };
                 let callback = &mut |summary: IndexSummary| {
                     for patch in patches.iter() {
                         let patch = patch.package_id().version();
@@ -767,7 +779,8 @@ impl<'gctx> Registry for PackageRegistry<'gctx> {
                             return;
                         }
                     }
-                    let summary = summary.map_summary(|summary| lock(locked, all_patches, summary));
+                    let summary =
+                        summary.map_summary(|summary| lock(locked, all_patches, summary, mode));
                     f(summary)
                 };
                 return query_with_context(&*source, dep, kind, callback).await;
@@ -828,11 +841,11 @@ fn lock(
     locked: &LockedMap,
     patches: &HashMap<CanonicalUrl, Vec<PackageId>>,
     summary: Summary,
+    mode: VersionReqMatchMode,
 ) -> Summary {
     let pair = locked
         .get(&(summary.source_id(), summary.name()))
         .and_then(|vec| vec.iter().find(|&&(id, _)| id == summary.package_id()));
-    let mode = VersionReqMatchMode::Default;
 
     trace!("locking summary of {}", summary.package_id());
 
@@ -884,7 +897,7 @@ fn lock(
                 // If the name/version doesn't match, then we definitely don't
                 // have a match whatsoever. Otherwise we need to check
                 // `[patch]`...
-                if !dep.matches_ignoring_source(id, mode) {
+                if !dep.matches_ignoring_source(id, VersionReqMatchMode::Default) {
                     return false;
                 }
 
