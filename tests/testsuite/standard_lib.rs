@@ -892,3 +892,387 @@ fn std_build_script_metadata_propagate_to_user() {
 
     p.cargo("check").build_std(&setup).target_host().run();
 }
+
+#[cargo_test(build_std_mock)]
+fn panic_unwind_no_std_build() {
+    // If panic is set to unwind and Cargo is not building std
+    // 1) neither of the panic runtimes is built
+    // 2) rustc throw an error (for targets that aren't rlibs)
+    let setup = setup();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2024"
+                [lib]
+                crate-type = ["dylib"]
+                [profile.dev]
+                panic = 'unwind'
+            "#,
+        )
+        .file("src/lib.rs", "#![no_std]")
+        .build();
+
+    p.cargo("check")
+        .build_std_arg(&setup, "core")
+        .target_host()
+        .with_stderr_data(str![[r#"
+...
+[ERROR] unwinding panics are not supported without std
+...
+"#]])
+        .with_stderr_does_not_contain("[COMPILING] panic_abort [..]")
+        .with_stderr_does_not_contain("[COMPILING] panic_unwind [..]")
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test(build_std_mock)]
+fn panic_not_set_build_std() {
+    // If Cargo is building std and panic is not specified in the profile
+    // 1) enable the `panic-unwind` feature to build `panic_unwind`
+    // 2) build `panic_abort`
+    let setup = setup();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2024"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check -v")
+        .build_std_arg(&setup, "std")
+        .with_stderr_data(
+            str![[r#"
+[COMPILING] panic_abort [..]
+[COMPILING] panic_unwind [..]
+[RUNNING] `[..]rustc --crate-name std [..]panic-unwind[..]`
+...
+"#]]
+            .unordered(),
+        )
+        .with_status(0)
+        .run();
+}
+
+#[cargo_test(build_std_mock)]
+fn panic_unwind_build_std() {
+    // If Cargo is building std and panic is set to unwind
+    // 1) enable the `panic-unwind` feature to build `panic_unwind`
+    // 2) build `panic_abort`
+    let setup = setup();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2024"
+                [profile.dev]
+                panic = 'unwind'
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check -v")
+        .build_std_arg(&setup, "std")
+        .with_stderr_data(
+            str![[r#"
+[COMPILING] panic_abort [..]
+[COMPILING] panic_unwind [..]
+[RUNNING] `[..]rustc --crate-name std [..]panic-unwind[..]`
+...
+"#]]
+            .unordered(),
+        )
+        .run();
+}
+
+#[cargo_test(build_std_mock)]
+fn panic_abort_build_std() {
+    // If Cargo is building std and panic is set to abort
+    // 1) build `panic_abort` only
+    // 2) pass `-Cpanic=abort`
+    let setup = setup();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2024"
+                [profile.dev]
+                panic = 'abort'
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check -v")
+        .build_std_arg(&setup, "std")
+        .target_host()
+        .with_stderr_data(
+            str![[r#"
+[COMPILING] panic_abort [..]
+[COMPILING] panic_unwind [..]
+[RUNNING] `[..]rustc --crate-name foo [..] -C panic=abort [..]
+...
+"#]]
+            .unordered(),
+        )
+        .run();
+}
+
+#[cargo_test(build_std_mock)]
+fn panic_immediate_abort_build_std() {
+    // If Cargo is building std and panic is set to immediate-abort
+    // 1) build `panic_abort` only
+    // 2) pass `-Cpanic=immediate-abort`
+    let setup = setup();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["panic-immediate-abort"]
+                [package]
+                name = "foo"
+                edition = "2024"
+                [profile.dev]
+                panic = 'immediate-abort'
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check -v")
+        .build_std_arg(&setup, "std")
+        .target_host()
+        .with_stderr_data(
+            str![[r#"
+[COMPILING] panic_abort [..]
+[COMPILING] panic_unwind [..]
+[RUNNING] `[..]rustc --crate-name foo [..] -C panic=immediate-abort [..]
+...
+"#]]
+            .unordered(),
+        )
+        .run();
+}
+
+#[cargo_test(build_std_mock)]
+fn panic_abort_test() {
+    // tests ignore the “panic” setting
+    let setup = setup();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2024"
+
+                [profile.test]
+                panic = 'abort'
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("tests/hello.rs", "")
+        .build();
+
+    p.cargo("test")
+        .build_std_arg(&setup, "std")
+        .target_host()
+        .with_stderr_data(
+            str![[r#"
+[COMPILING] panic_abort [..]
+[COMPILING] panic_unwind [..]
+[WARNING] Cargo.toml: `panic` setting is ignored for `test` profile
+[ERROR] the crate `std` requires panic strategy `abort` which is incompatible with this crate's strategy of `unwind`
+...
+"#]]
+            .unordered(),
+        )
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test(build_std_mock)]
+fn panic_abort_bench() {
+    // benchmarks ignore the “panic” setting
+    let setup = setup();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2024"
+                [profile.bench]
+                panic = 'abort'
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("bench")
+        .build_std_arg(&setup, "std")
+        .target_host()
+        .with_stderr_data(
+            str![[r#"
+[COMPILING] panic_abort [..]
+[COMPILING] panic_unwind [..]
+[WARNING] Cargo.toml: `panic` setting is ignored for `bench` profile
+[ERROR] the crate `std` requires panic strategy `abort` which is incompatible with this crate's strategy of `unwind`
+...
+"#]]
+            .unordered(),
+        )
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test(build_std_mock)]
+fn panic_abort_proc_macro() {
+    // Procedural macros always use the pre-built standard library.
+    // It doesn't matter whether we build `panic_unwind` or not.
+    let setup = setup();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2024"
+
+                [profile.dev]
+                panic = 'abort'
+
+                [dependencies]
+                my-proc-macro = { path = "my-proc-macro" }
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "my-proc-macro/Cargo.toml",
+            r#"
+                [package]
+                name = "my-proc-macro"
+                version = "0.1.0"
+                edition = "2024"
+
+                [lib]
+                proc-macro = true
+            "#,
+        )
+        .file("my-proc-macro/src/lib.rs", "")
+        .build();
+
+    p.cargo("check -v")
+        .build_std_arg(&setup, "std")
+        .target_host()
+        .with_stderr_data(
+            str![[r#"
+[COMPILING] panic_unwind v0.1.0 ([..]/library/panic_unwind)
+[COMPILING] panic_abort v0.1.0 ([..]/library/panic_abort)
+[RUNNING] `[..]rustc --crate-name foo [..]panic=abort[..]`
+[RUNNING] `[..]rustc --crate-name my_proc_macro [..]`
+...
+"#]]
+            .unordered(),
+        )
+        .with_stderr_does_not_contain("[..]rustc --crate-name my_proc_macro [..]panic=abort[..]")
+        .run();
+}
+
+#[cargo_test(build_std_mock)]
+fn panic_abort_build_script() {
+    // Build scripts always use the pre-built standard library.
+    // It doesn't matter whether we build `panic_unwind` or not.
+    let setup = setup();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2024"
+                build = "build.rs"
+                [profile.dev]
+                panic = 'abort'
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("build.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check -v")
+        .build_std_arg(&setup, "std")
+        .target_host()
+        .with_stderr_data(
+            str![[r#"
+[COMPILING] panic_unwind v0.1.0 ([..]/library/panic_unwind)
+[COMPILING] panic_abort v0.1.0 ([..]/library/panic_abort)
+[RUNNING] `[..]rustc --crate-name build_script_build [..]`
+[RUNNING] `[..]rustc --crate-name foo [..]panic=abort[..]`
+...
+"#]]
+            .unordered(),
+        )
+        .with_stderr_does_not_contain(
+            "[..]rustc --crate-name build_script_build [..]panic=abort[..]",
+        )
+        .run();
+}
+
+#[cargo_test(build_std_mock)]
+fn abort_in_profile_and_unwind_in_rustflags() {
+    // RUSTFLAGS are not checked. Compilation may fail if they conflict with the profile.
+    let setup = setup();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2024"
+                [profile.dev]
+                panic = 'abort'
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check -v")
+        .build_std_arg(&setup, "std")
+        .env("RUSTFLAGS", "-Cpanic=unwind")
+        .with_stderr_data(
+            str![[r#"
+[COMPILING] panic_abort [..]
+[COMPILING] panic_unwind [..]
+[RUNNING] `[..]rustc --crate-name std [..]panic-unwind[..]`
+...
+"#]]
+            .unordered(),
+        )
+        .run();
+}
