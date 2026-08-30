@@ -165,9 +165,27 @@ pub fn build_unit_dependencies<'a, 'gctx>(
             list.sort();
         }
     }
-    trace!("ALL UNIT DEPENDENCIES {:#?}", state.unit_dependencies);
+
+    log_unit_deps_graph(ws.gctx(), &state.unit_dependencies);
 
     Ok(state.unit_dependencies)
+}
+
+fn log_unit_deps_graph(gctx: &GlobalContext, graph: &UnitGraph) {
+    // For workspaces with large dependency graphs, the act of logging graph can actually take
+    // hundreds of milliseconds, skewing the profiling timings. By default, we do not dump the
+    // entire graph to avoid skewing the timings.
+    let graph_to_log = if gctx.get_env("__CARGO_DUMP_UNIT_DEP_GRAPH").unwrap_or("0") == "1" {
+        Some(graph)
+    } else {
+        None
+    };
+
+    trace!(
+        count = graph.len(),
+        graph = format!("{graph_to_log:#?}"),
+        "ALL UNIT DEPENDENCIES",
+    );
 }
 
 /// Compute all the dependencies for the standard library.
