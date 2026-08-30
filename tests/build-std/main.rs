@@ -507,6 +507,33 @@ fn default_features_still_included_with_extra_build_std_features() {
         .run();
 }
 
+#[cargo_test(build_std_real)]
+fn build_std_features_without_panic_unwind() {
+    // This is a regression test for rust-lang/cargo#17404. Make sure that
+    // the `panic-unwind` feature is passed based on the profile setting,
+    // regardless of `build-std-features`.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2024"
+                [profile.dev]
+                panic = 'unwind'
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check -v")
+        .build_std_arg("std")
+        .arg("-Zbuild-std-features=optimize_for_size")
+        .with_stderr_contains("error[E0152]: duplicate lang item in crate `core`: `sized`")
+        .with_status(101)
+        .run();
+}
+
 pub trait CargoProjectExt {
     /// Creates a `ProcessBuilder` to run cargo.
     ///
