@@ -165,12 +165,6 @@ fn build_sbom_graph<'a>(
                     true => SbomDependencyType::Build,
                 };
                 dependencies.insert((dep, dep_type));
-                tracing::trace!(
-                    "adding sbom edge {} -> {} ({:?})",
-                    parent.pkg.package_id(),
-                    dep.pkg.package_id(),
-                    dep_type,
-                );
                 (dep, false)
             };
             if visited.insert(dep) {
