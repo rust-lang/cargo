@@ -307,6 +307,7 @@ fn make_failed_scrape_diagnostic(
 }
 
 /// Creates a unit of work invoking `rustc` for building the `unit`.
+#[tracing::instrument(skip_all)]
 fn rustc(
     build_runner: &mut BuildRunner<'_, '_>,
     unit: &Unit,
@@ -818,6 +819,7 @@ where
 /// This builds a static view of the invocation. Flags depending on the
 /// completion of other units will be added later in runtime, such as flags
 /// from build scripts.
+#[tracing::instrument(skip_all)]
 fn prepare_rustc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<ProcessBuilder> {
     let gctx = build_runner.bcx.gctx;
     let is_primary = build_runner.is_primary_package(unit);
@@ -894,6 +896,7 @@ fn prepare_rustc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResult
 /// This builds a static view of the invocation. Flags depending on the
 /// completion of other units will be added later in runtime, such as flags
 /// from build scripts.
+#[tracing::instrument(skip_all)]
 fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<ProcessBuilder> {
     let bcx = build_runner.bcx;
     // script_metadata is not needed here, it is only for tests.
@@ -1035,6 +1038,7 @@ fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResu
 }
 
 /// Creates a unit of work invoking `rustdoc` for documenting the `unit`.
+#[tracing::instrument(skip_all)]
 fn rustdoc(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<Work> {
     let mut rustdoc = prepare_rustdoc(build_runner, unit)?;
 
@@ -1803,6 +1807,7 @@ fn add_custom_flags(
 }
 
 /// Generate a list of `-L` arguments
+#[tracing::instrument(skip_all)]
 pub fn lib_search_paths(
     build_runner: &BuildRunner<'_, '_>,
     unit: &Unit,

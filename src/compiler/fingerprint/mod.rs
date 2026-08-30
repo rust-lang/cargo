@@ -1539,6 +1539,7 @@ impl StaleItem {
 ///
 /// Information like file modification time is only calculated for path
 /// dependencies.
+#[tracing::instrument(skip_all)]
 fn calculate(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<Arc<Fingerprint>> {
     // This function is slammed quite a lot, so the result is memoized.
     if let Some(s) = build_runner.fingerprints.get(unit) {
