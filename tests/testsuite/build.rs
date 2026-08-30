@@ -6640,10 +6640,7 @@ fn should_not_include_build_script_out_dir_path_in_rustc_args() {
         .run();
 }
 
-#[cargo_test(
-    nightly,
-    reason = "Depends on https://github.com/rust-lang/rust/pull/155439/changes/61f3e086acc1c187bb262ab43cac71f44018c397"
-)]
+#[cargo_test]
 fn should_only_include_dylibs_on_lib_search_path() {
     let envvar = dylib_path_envvar();
     let p = project()
@@ -6760,10 +6757,7 @@ qux (cdylib) on search path: true
         .run();
 }
 
-#[cargo_test(
-    nightly,
-    reason = "Depends on https://github.com/rust-lang/rust/pull/155439/changes/61f3e086acc1c187bb262ab43cac71f44018c397"
-)]
+#[cargo_test]
 fn should_not_include_proc_macro_deps_paths_in_rustc_args() {
     let p = project()
         .file(

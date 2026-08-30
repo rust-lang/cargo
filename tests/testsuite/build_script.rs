@@ -7206,10 +7206,7 @@ fn target_linker_does_not_apply_to_build_script_with_host_config() {
         .run();
 }
 
-#[cargo_test(
-    nightly,
-    reason = "Depends on https://github.com/rust-lang/rust/pull/155439/changes/61f3e086acc1c187bb262ab43cac71f44018c397"
-)]
+#[cargo_test]
 fn build_script_dylib_search_path_excludes_target_dylibs() {
     if cross_compile_disabled() {
         return;
