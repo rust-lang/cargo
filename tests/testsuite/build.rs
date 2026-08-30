@@ -6870,3 +6870,85 @@ fn should_not_include_proc_macro_deps_paths_in_rustc_args() {
 "#]].unordered())
         .run();
 }
+
+#[cargo_test]
+fn should_not_include_direct_deps_paths_in_rustc_args() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                edition = "2021"
+                authors = []
+                resolver = "2"
+
+                [dependencies]
+                my-direct-dep = { path = "my-direct-dep" }
+
+                [lints.cargo]
+                default = "allow"
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            "fn main() { let _v = my_direct_dep::value_from_direct(); }",
+        )
+        .file(
+            "my-direct-dep/Cargo.toml",
+            r#"
+                [package]
+                name = "my-direct-dep"
+                version = "0.1.0"
+                edition = "2021"
+                authors = []
+
+                [dependencies]
+                my-indirect-dep = { path = "../my-indirect-dep" }
+
+                [lints.cargo]
+                default = "allow"
+            "#,
+        )
+        .file(
+            "my-direct-dep/src/lib.rs",
+            r#"pub fn value_from_direct() -> i32 { my_indirect_dep::value_from_indirect() }"#,
+        )
+        .file(
+            "my-indirect-dep/Cargo.toml",
+            r#"
+                [package]
+                name = "my-indirect-dep"
+                version = "0.1.0"
+                edition = "2021"
+                authors = []
+
+                [lints.cargo]
+                default = "allow"
+            "#,
+        )
+        .file(
+            "my-indirect-dep/src/lib.rs",
+            r#"pub fn value_from_indirect() -> i32 { 200 }"#,
+        )
+        .build();
+
+    // Graph: foo -> my-direct-dep -> my-indirect-dep
+    // We want to make sure `-L .../my-indirect-dep` is passed but not `-L .../my-direct-dep`
+    //
+    // FIXME: Remove the `-L dependency=[ROOT]/foo/target/debug/build/my-direct-dep/[HASH]/out` once fixed
+    p.cargo("-v build")
+        .with_stderr_data(str![[r#"
+[LOCKING] 2 packages to highest compatible versions
+[COMPILING] my-indirect-dep v0.1.0 ([ROOT]/foo/my-indirect-dep)
+[RUNNING] `rustc --crate-name my_indirect_dep [..]`
+[COMPILING] my-direct-dep v0.1.0 ([ROOT]/foo/my-direct-dep)
+[RUNNING] `rustc --crate-name my_direct_dep [..]`
+[COMPILING] foo v0.0.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..] --out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out -L dependency=[ROOT]/foo/target/debug/build/my-direct-dep/[HASH]/out -L dependency=[ROOT]/foo/target/debug/build/my-indirect-dep/[HASH]/out --extern my_direct_dep=[ROOT]/foo/target/debug/build/my-direct-dep/[HASH]/out/[..] --force-warn=unused_crate_dependencies`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]].unordered())
+        .run();
+}
