@@ -97,6 +97,7 @@ pub struct Sbom {
 }
 
 /// Build an [`Sbom`] for the given [`Unit`].
+#[tracing::instrument(skip_all)]
 pub fn build_sbom(build_runner: &BuildRunner<'_, '_>, root: &Unit) -> CargoResult<Sbom> {
     let bcx = build_runner.bcx;
     let rustc: SbomRustc = bcx.rustc().into();
@@ -139,6 +140,7 @@ pub fn build_sbom(build_runner: &BuildRunner<'_, '_>, root: &Unit) -> CargoResul
 /// if it's using different settings, e.g. profile, features or crate versions.
 ///
 /// Returns a graph of dependencies.
+#[tracing::instrument(skip_all)]
 fn build_sbom_graph<'a>(
     build_runner: &'a BuildRunner<'_, '_>,
     root: &'a Unit,
