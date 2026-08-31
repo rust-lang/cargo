@@ -423,7 +423,8 @@ im_a_teapot = { level = "warn", priority = 10 }
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("fetch -Zrustc-unicode")
+    p.cargo("fetch")
+        .arg("-Zrustc-unicode")
         .masquerade_as_nightly_cargo(&["rustc-unicode", "test-dummy-unstable"])
         .with_stderr_data(str![[r#"
 [WARNING] `im_a_teapot` is specified

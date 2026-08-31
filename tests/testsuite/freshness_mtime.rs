@@ -363,7 +363,8 @@ fn update_dependency_mtime_does_not_rebuild() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("build -Z mtime-on-use")
+    p.cargo("build")
+        .arg("-Zmtime-on-use")
         .masquerade_as_nightly_cargo(&["mtime-on-use"])
         .env("RUSTFLAGS", "-C linker=cc")
         .with_stderr_data(str![[r#"
@@ -375,7 +376,8 @@ fn update_dependency_mtime_does_not_rebuild() {
 "#]])
         .run();
     // This does not make new files, but it does update the mtime of the dependency.
-    p.cargo("build -p bar -Z mtime-on-use")
+    p.cargo("build -p bar")
+        .arg("-Zmtime-on-use")
         .masquerade_as_nightly_cargo(&["mtime-on-use"])
         .env("RUSTFLAGS", "-C linker=cc")
         .with_stderr_data(str![[r#"
@@ -384,7 +386,8 @@ fn update_dependency_mtime_does_not_rebuild() {
 "#]])
         .run();
     // This should not recompile!
-    p.cargo("build -Z mtime-on-use")
+    p.cargo("build")
+        .arg("-Zmtime-on-use")
         .masquerade_as_nightly_cargo(&["mtime-on-use"])
         .env("RUSTFLAGS", "-C linker=cc")
         .with_stderr_data(str![[r#"
@@ -454,10 +457,12 @@ fn fingerprint_cleaner_does_not_rebuild() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("build -Z mtime-on-use")
+    p.cargo("build")
+        .arg("-Zmtime-on-use")
         .masquerade_as_nightly_cargo(&["mtime-on-use"])
         .run();
-    p.cargo("build -Z mtime-on-use --features a")
+    p.cargo("build --features a")
+        .arg("-Zmtime-on-use")
         .masquerade_as_nightly_cargo(&["mtime-on-use"])
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
@@ -473,7 +478,8 @@ fn fingerprint_cleaner_does_not_rebuild() {
         sleep_ms(1000);
     }
     // This does not make new files, but it does update the mtime.
-    p.cargo("build -Z mtime-on-use --features a")
+    p.cargo("build --features a")
+        .arg("-Zmtime-on-use")
         .masquerade_as_nightly_cargo(&["mtime-on-use"])
         .with_stderr_data(str![[r#"
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -482,7 +488,8 @@ fn fingerprint_cleaner_does_not_rebuild() {
         .run();
     fingerprint_cleaner(p.target_debug_dir(), timestamp);
     // This should not recompile!
-    p.cargo("build -Z mtime-on-use --features a")
+    p.cargo("build --features a")
+        .arg("-Zmtime-on-use")
         .masquerade_as_nightly_cargo(&["mtime-on-use"])
         .with_stderr_data(str![[r#"
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -490,7 +497,8 @@ fn fingerprint_cleaner_does_not_rebuild() {
 "#]])
         .run();
     // But this should be cleaned and so need a rebuild
-    p.cargo("build -Z mtime-on-use")
+    p.cargo("build")
+        .arg("-Zmtime-on-use")
         .masquerade_as_nightly_cargo(&["mtime-on-use"])
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)

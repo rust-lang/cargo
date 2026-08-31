@@ -46,7 +46,8 @@ fn simple() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build --features a/feata --unit-graph -Zunstable-options")
+    p.cargo("build --features a/feata --unit-graph")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["unit-graph"])
         .with_stdout_data(
             str![[r#"

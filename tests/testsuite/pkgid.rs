@@ -404,8 +404,9 @@ fn pkgid_json_message_metadata_consistency() {
         )
         .run();
 
-    p.cargo("build -Zsbom")
+    p.cargo("build")
         .env("CARGO_BUILD_SBOM", "true")
+        .arg("-Zsbom")
         .masquerade_as_nightly_cargo(&["sbom"])
         .run();
 

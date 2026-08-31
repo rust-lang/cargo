@@ -260,8 +260,9 @@ fn relative_depinfo_paths_ws() {
         .build();
 
     let host = rustc_host();
-    p.cargo("build -Z binary-dep-depinfo --target")
+    p.cargo("build --target")
         .arg(&host)
+        .arg("-Zbinary-dep-depinfo")
         .masquerade_as_nightly_cargo(&["binary-dep-depinfo"])
         .with_stderr_data(str![[r#"
 ...
@@ -310,8 +311,9 @@ fn relative_depinfo_paths_ws() {
     );
 
     // Make sure it stays fresh.
-    p.cargo("build -Z binary-dep-depinfo --target")
+    p.cargo("build --target")
         .arg(&host)
+        .arg("-Zbinary-dep-depinfo")
         .masquerade_as_nightly_cargo(&["binary-dep-depinfo"])
         .with_stderr_data(str![[r#"
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -406,7 +408,8 @@ fn relative_depinfo_paths_no_ws() {
         .file("bar/src/lib.rs", "pub fn f() {}")
         .build();
 
-    p.cargo("build -Z binary-dep-depinfo")
+    p.cargo("build")
+        .arg("-Zbinary-dep-depinfo")
         .masquerade_as_nightly_cargo(&["binary-dep-depinfo"])
         .with_stderr_data(str![[r#"
 ...
@@ -452,7 +455,8 @@ fn relative_depinfo_paths_no_ws() {
     );
 
     // Make sure it stays fresh.
-    p.cargo("build -Z binary-dep-depinfo")
+    p.cargo("build")
+        .arg("-Zbinary-dep-depinfo")
         .masquerade_as_nightly_cargo(&["binary-dep-depinfo"])
         .with_stderr_data(str![[r#"
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -529,7 +533,8 @@ fn canonical_path() {
     real.mkdir_p();
     p.symlink(real, "target");
 
-    p.cargo("check -Z binary-dep-depinfo")
+    p.cargo("check")
+        .arg("-Zbinary-dep-depinfo")
         .masquerade_as_nightly_cargo(&["binary-dep-depinfo"])
         .run();
 

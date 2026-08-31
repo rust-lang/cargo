@@ -703,7 +703,8 @@ fn rustc_with_print_cfg_single_target() {
         .file("src/main.rs", r#"fn main() {} "#)
         .build();
 
-    p.cargo("rustc -Z unstable-options --target x86_64-pc-windows-msvc --print cfg")
+    p.cargo("rustc --target x86_64-pc-windows-msvc --print cfg")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["print"])
         .with_stdout_data(
             str![[r#"
@@ -730,9 +731,11 @@ fn rustc_with_print_cfg_multiple_targets() {
         .file("src/main.rs", r#"fn main() {} "#)
         .build();
 
-    p.cargo("rustc -Z unstable-options --target x86_64-pc-windows-msvc --target i686-unknown-linux-gnu --print cfg")
+    p.cargo("rustc --target x86_64-pc-windows-msvc --target i686-unknown-linux-gnu --print cfg")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["print"])
-        .with_stdout_data(str![[r#"
+        .with_stdout_data(
+            str![[r#"
 debug_assertions
 target_arch="x86"
 target_endian="little"
@@ -752,7 +755,9 @@ target_pointer_width="64"
 target_vendor="pc"
 windows
 ...
-"#]].unordered())
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
@@ -763,7 +768,8 @@ fn rustc_with_print_cfg_rustflags_env_var() {
         .file("src/main.rs", r#"fn main() {} "#)
         .build();
 
-    p.cargo("rustc -Z unstable-options --target x86_64-pc-windows-msvc --print cfg")
+    p.cargo("rustc --target x86_64-pc-windows-msvc --print cfg")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["print"])
         .env("RUSTFLAGS", "-C target-feature=+crt-static")
         .with_stdout_data(
@@ -799,7 +805,8 @@ rustflags = ["-C", "target-feature=+crt-static"]
         .file("src/main.rs", r#"fn main() {} "#)
         .build();
 
-    p.cargo("rustc -Z unstable-options --target x86_64-pc-windows-msvc --print cfg")
+    p.cargo("rustc --target x86_64-pc-windows-msvc --print cfg")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["print"])
         .env("RUSTFLAGS", "-C target-feature=+crt-static")
         .with_stdout_data(
@@ -838,7 +845,8 @@ RUST_TARGET_PATH = { value = "./targets", relative = true }
         .file("src/main.rs", r#"fn main() {} "#)
         .build();
 
-    p.cargo("rustc -Z unstable-options --print cfg")
+    p.cargo("rustc --print cfg")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["print"])
         .with_stdout_data(str!["..."].unordered())
         .env("RUSTFLAGS", "-Z unstable-options")

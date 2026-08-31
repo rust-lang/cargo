@@ -947,7 +947,8 @@ fn profile_hint_mostly_unused_nightly() {
         )
         .file("src/main.rs", "fn main() {}")
         .build();
-    p.cargo("check -Zprofile-hint-mostly-unused -v")
+    p.cargo("check -v")
+        .arg("-Zprofile-hint-mostly-unused")
         .masquerade_as_nightly_cargo(&["profile-hint-mostly-unused"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index

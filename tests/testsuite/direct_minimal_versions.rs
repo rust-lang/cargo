@@ -28,7 +28,8 @@ fn simple() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("generate-lockfile -Zdirect-minimal-versions")
+    p.cargo("generate-lockfile")
+        .arg("-Zdirect-minimal-versions")
         .masquerade_as_nightly_cargo(&["direct-minimal-versions"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
@@ -75,7 +76,8 @@ fn mixed_dependencies() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("generate-lockfile -Zdirect-minimal-versions")
+    p.cargo("generate-lockfile")
+        .arg("-Zdirect-minimal-versions")
         .masquerade_as_nightly_cargo(&["direct-minimal-versions"])
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -117,7 +119,8 @@ fn yanked() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("generate-lockfile -Zdirect-minimal-versions")
+    p.cargo("generate-lockfile")
+        .arg("-Zdirect-minimal-versions")
         .masquerade_as_nightly_cargo(&["direct-minimal-versions"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
@@ -171,7 +174,8 @@ fn indirect() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("generate-lockfile -Zdirect-minimal-versions")
+    p.cargo("generate-lockfile")
+        .arg("-Zdirect-minimal-versions")
         .masquerade_as_nightly_cargo(&["direct-minimal-versions"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
@@ -234,7 +238,8 @@ fn indirect_conflict() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("generate-lockfile -Zdirect-minimal-versions")
+    p.cargo("generate-lockfile")
+        .arg("-Zdirect-minimal-versions")
         .masquerade_as_nightly_cargo(&["direct-minimal-versions"])
         .with_status(101)
         .with_stderr_data(str![[r#"

@@ -109,7 +109,8 @@ fn cli_gate_works() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build --verbose -Z panic-immediate-abort")
+    p.cargo("build --verbose")
+        .arg("-Zpanic-immediate-abort")
         .masquerade_as_nightly_cargo(&["panic-immediate-abort"])
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)

@@ -58,7 +58,8 @@ fn main() {}"#,
         )
         .build();
 
-    p.cargo("fetch -Zscript --manifest-path foo-bar")
+    p.cargo("fetch --manifest-path foo-bar")
+        .arg("-Zscript")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)

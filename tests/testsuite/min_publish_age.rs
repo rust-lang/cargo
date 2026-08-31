@@ -1575,17 +1575,16 @@ fn generate_lockfile_with_publish_time_and_min_publish_age() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo(&format!(
-        "generate-lockfile --publish-time {NOW} -Zunstable-options"
-    ))
-    .masquerade_as_nightly_cargo(&["publish-time"])
-    .with_stderr_data(str![[r#"
+    p.cargo(&format!("generate-lockfile --publish-time {NOW}"))
+        .arg("-Zunstable-options")
+        .masquerade_as_nightly_cargo(&["publish-time"])
+        .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to highest compatible version as of 7 days before 2006-08-08T00:00:00Z
 [ADDING] bar v1.0.0 (available: v1.1.0, published 2 days ago)
 
 "#]])
-    .run();
+        .run();
 
     let lock = p.read_lockfile();
     assert_e2e().eq(

@@ -113,7 +113,8 @@ fn no_index_update(expected: impl IntoData, expected_unstable_option: impl IntoD
         .with_stderr_data(expected)
         .run();
 
-    p.cargo("generate-lockfile -Zno-index-update")
+    p.cargo("generate-lockfile")
+        .arg("-Zno-index-update")
         .masquerade_as_nightly_cargo(&["no-index-update"])
         .with_stdout_data("")
         .with_stderr_data(expected_unstable_option)
@@ -338,7 +339,8 @@ fn publish_time() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("generate-lockfile --publish-time 2025-03-01T06:00:00Z -Zunstable-options")
+    p.cargo("generate-lockfile --publish-time 2025-03-01T06:00:00Z")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["publish-time"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
@@ -400,7 +402,8 @@ fn publish_time_no_candidates() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("generate-lockfile --publish-time 2025-03-01T06:00:00Z -Zunstable-options")
+    p.cargo("generate-lockfile --publish-time 2025-03-01T06:00:00Z")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["publish-time"])
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -434,7 +437,8 @@ fn publish_time_invalid() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("generate-lockfile --publish-time 2025-03-01T06:00:00Z -Zunstable-options")
+    p.cargo("generate-lockfile --publish-time 2025-03-01T06:00:00Z")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["publish-time"])
         .with_status(101)
         .with_stderr_data(str![[r#"

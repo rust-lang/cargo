@@ -46,7 +46,8 @@ fn ignores_on_stable() {
 fn simple() {
     // Basic test that it works with crates.io.
     let p = basic_project();
-    p.cargo("doc -v --no-deps -Zrustdoc-map")
+    p.cargo("doc -v --no-deps")
+        .arg("-Zrustdoc-map")
         .masquerade_as_nightly_cargo(&["rustdoc-map"])
         .with_stderr_data(str![[r#"
 ...
@@ -87,7 +88,8 @@ fn std_docs() {
             std = "local"
         "#,
     );
-    p.cargo("doc -v --no-deps -Zrustdoc-map")
+    p.cargo("doc -v --no-deps")
+        .arg("-Zrustdoc-map")
         .masquerade_as_nightly_cargo(&["rustdoc-map"])
         .with_stderr_contains("[RUNNING] `rustdoc [..]--crate-name foo [..]std=file://[..]")
         .run();
@@ -101,7 +103,8 @@ fn std_docs() {
             std = "https://example.com/rust/"
         "#,
     );
-    p.cargo("doc -v --no-deps -Zrustdoc-map")
+    p.cargo("doc -v --no-deps")
+        .arg("-Zrustdoc-map")
         .masquerade_as_nightly_cargo(&["rustdoc-map"])
         .with_stderr_contains(
             "[RUNNING] `rustdoc [..]--crate-name foo [..]std=https://example.com/rust/[..]",
@@ -140,7 +143,8 @@ fn renamed_dep() {
             "#,
         )
         .build();
-    p.cargo("doc -v --no-deps -Zrustdoc-map")
+    p.cargo("doc -v --no-deps")
+        .arg("-Zrustdoc-map")
         .masquerade_as_nightly_cargo(&["rustdoc-map"])
         .with_stderr_data(str![[r#"
 ...
@@ -193,7 +197,8 @@ fn lib_name() {
             "#,
         )
         .build();
-    p.cargo("doc -v --no-deps -Zrustdoc-map")
+    p.cargo("doc -v --no-deps")
+        .arg("-Zrustdoc-map")
         .masquerade_as_nightly_cargo(&["rustdoc-map"])
         .with_stderr_data(str![[r#"
 ...
@@ -264,7 +269,8 @@ fn alt_registry() {
             "#,
         )
         .build();
-    p.cargo("doc -v --no-deps -Zrustdoc-map")
+    p.cargo("doc -v --no-deps")
+        .arg("-Zrustdoc-map")
         .masquerade_as_nightly_cargo(&["rustdoc-map"])
         .with_stderr_data(str![[r#"
 ...
@@ -317,7 +323,8 @@ fn multiple_versions() {
             ",
         )
         .build();
-    p.cargo("doc -v --no-deps -Zrustdoc-map")
+    p.cargo("doc -v --no-deps")
+        .arg("-Zrustdoc-map")
         .masquerade_as_nightly_cargo(&["rustdoc-map"])
         .with_stderr_data(str![[r#"
 ...
@@ -339,7 +346,8 @@ fn multiple_versions() {
 fn rebuilds_when_changing() {
     // Make sure it rebuilds if the map changes.
     let p = basic_project();
-    p.cargo("doc -v --no-deps -Zrustdoc-map")
+    p.cargo("doc -v --no-deps")
+        .arg("-Zrustdoc-map")
         .masquerade_as_nightly_cargo(&["rustdoc-map"])
         .with_stderr_data(str![[r#"
 ...
@@ -358,7 +366,8 @@ fn rebuilds_when_changing() {
             crates-io = "https://example.com/"
         "#,
     );
-    p.cargo("doc -v --no-deps -Zrustdoc-map")
+    p.cargo("doc -v --no-deps")
+        .arg("-Zrustdoc-map")
         .masquerade_as_nightly_cargo(&["rustdoc-map"])
         .with_stderr_data(str![[r#"
 ...
@@ -431,7 +440,8 @@ fn alt_sparse_registry() {
             "#,
         )
         .build();
-    p.cargo("doc -v --no-deps -Zrustdoc-map")
+    p.cargo("doc -v --no-deps")
+        .arg("-Zrustdoc-map")
         .masquerade_as_nightly_cargo(&["rustdoc-map"])
         .with_stderr_data(str![[r#"
 ...
@@ -484,7 +494,8 @@ fn same_deps_multi_occurrence_in_dep_tree() {
             "#,
         )
         .build();
-    p.cargo("doc -v --no-deps -Zrustdoc-map")
+    p.cargo("doc -v --no-deps")
+        .arg("-Zrustdoc-map")
         .masquerade_as_nightly_cargo(&["rustdoc-map"])
         .with_stderr_does_not_contain(
             "[..]--extern-html-root-url[..]bar=https://docs.rs\

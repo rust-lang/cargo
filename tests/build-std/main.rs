@@ -313,7 +313,8 @@ fn cross_custom() {
         .file("custom-target.json", target_spec_json())
         .build();
 
-    p.cargo("build --target custom-target.json -v -Zjson-target-spec")
+    p.cargo("build --target custom-target.json -v")
+        .arg("-Zjson-target-spec")
         .masquerade_as_nightly_cargo(&["json_target_spec"])
         .build_std_arg("core")
         .run();
@@ -354,7 +355,8 @@ fn custom_test_framework() {
     paths.insert(0, sysroot_bin);
     let new_path = env::join_paths(paths).unwrap();
 
-    p.cargo("test --target target.json --no-run -v -Zjson-target-spec")
+    p.cargo("test --target target.json --no-run -v")
+        .arg("-Zjson-target-spec")
         .masquerade_as_nightly_cargo(&["json_target_spec"])
         .env("PATH", new_path)
         .build_std_arg("core")
@@ -385,7 +387,8 @@ fn remap_path_scope() {
         )
         .build();
 
-    p.cargo("run --release -Ztrim-paths")
+    p.cargo("run --release")
+        .arg("-Ztrim-paths")
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
         .env("RUST_BACKTRACE", "1")
         .build_std()

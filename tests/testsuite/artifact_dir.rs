@@ -15,7 +15,8 @@ fn binary_with_debug() {
         .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
         .build();
 
-    p.cargo("build -Z unstable-options --artifact-dir out")
+    p.cargo("build --artifact-dir out")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["artifact-dir"])
         .enable_mac_dsym()
         .run();
@@ -52,7 +53,8 @@ fn static_library_with_debug() {
         )
         .build();
 
-    p.cargo("build -Z unstable-options --artifact-dir out")
+    p.cargo("build --artifact-dir out")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["artifact-dir"])
         .run();
     check_dir_contents(
@@ -88,7 +90,8 @@ fn dynamic_library_with_debug() {
         )
         .build();
 
-    p.cargo("build -Z unstable-options --artifact-dir out")
+    p.cargo("build --artifact-dir out")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["artifact-dir"])
         .enable_mac_dsym()
         .run();
@@ -124,7 +127,8 @@ fn rlib_with_debug() {
         )
         .build();
 
-    p.cargo("build -Z unstable-options --artifact-dir out")
+    p.cargo("build --artifact-dir out")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["artifact-dir"])
         .run();
     check_dir_contents(
@@ -168,7 +172,8 @@ fn include_only_the_binary_from_the_current_package() {
         .file("utils/src/lib.rs", "")
         .build();
 
-    p.cargo("build -Z unstable-options --bin foo --artifact-dir out")
+    p.cargo("build --bin foo --artifact-dir out")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["artifact-dir"])
         .enable_mac_dsym()
         .run();
@@ -188,7 +193,8 @@ fn artifact_dir_is_a_file() {
         .file("out", "")
         .build();
 
-    p.cargo("build -Z unstable-options --artifact-dir out")
+    p.cargo("build --artifact-dir out")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["artifact-dir"])
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -208,7 +214,8 @@ fn replaces_artifacts() {
         .file("src/main.rs", r#"fn main() { println!("foo") }"#)
         .build();
 
-    p.cargo("build -Z unstable-options --artifact-dir out")
+    p.cargo("build --artifact-dir out")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["artifact-dir"])
         .run();
     p.process(
@@ -224,7 +231,8 @@ foo
     sleep_ms(1000);
     p.change_file("src/main.rs", r#"fn main() { println!("bar") }"#);
 
-    p.cargo("build -Z unstable-options --artifact-dir out")
+    p.cargo("build --artifact-dir out")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["artifact-dir"])
         .run();
     p.process(
@@ -256,7 +264,8 @@ fn avoid_build_scripts() {
         .file("b/build.rs", r#"fn main() { println!("hello-build-b"); }"#)
         .build();
 
-    p.cargo("build -Z unstable-options --artifact-dir out -vv")
+    p.cargo("build --artifact-dir out -vv")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["artifact-dir"])
         .enable_mac_dsym()
         .with_stdout_data(
@@ -290,7 +299,8 @@ fn cargo_build_artifact_dir() {
         )
         .build();
 
-    p.cargo("build -Z unstable-options")
+    p.cargo("build")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["artifact-dir"])
         .enable_mac_dsym()
         .run();
@@ -309,7 +319,8 @@ fn unsupported_short_artifact_dir_flag() {
         .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
         .build();
 
-    p.cargo("build -Z unstable-options -O")
+    p.cargo("build -O")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["artifact-dir"])
         .with_stderr_data(str![[r#"
 [ERROR] unexpected argument '-O' found
@@ -331,7 +342,8 @@ fn removed_out_dir_flag() {
         .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
         .build();
 
-    p.cargo("build -Z unstable-options --out-dir out")
+    p.cargo("build --out-dir out")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["out-dir"])
         .with_status(1)
         .enable_mac_dsym()

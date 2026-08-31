@@ -35,8 +35,9 @@ fn one_logfile_per_invocation() {
         .build();
 
     // First invocation
-    p.cargo("check -Zbuild-analysis")
+    p.cargo("check")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
@@ -48,8 +49,9 @@ fn one_logfile_per_invocation() {
     let _ = get_log(0);
 
     // Second invocation
-    p.cargo("check -Zbuild-analysis")
+    p.cargo("check")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .with_stderr_data(str![[r#"
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -67,8 +69,9 @@ fn log_msg_build_started() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zbuild-analysis")
+    p.cargo("check")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
 
@@ -119,8 +122,9 @@ fn log_msg_timing_info() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zbuild-analysis")
+    p.cargo("check")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
 
@@ -201,8 +205,10 @@ fn log_msg_timing_info_section_timings() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zbuild-analysis -Zsection-timings")
+    p.cargo("check")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
+        .arg("-Zsection-timings")
         .masquerade_as_nightly_cargo(&["build-analysis", "section-timings"])
         .run();
 
@@ -334,8 +340,9 @@ fn log_rebuild_reason_fresh_build() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zbuild-analysis")
+    p.cargo("check")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
@@ -380,8 +387,9 @@ fn log_rebuild_reason_file_changed() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zbuild-analysis")
+    p.cargo("check")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
 
@@ -415,8 +423,9 @@ fn log_rebuild_reason_file_changed() {
     // Change source file
     p.change_file("src/lib.rs", "//! comment");
 
-    p.cargo("check -Zbuild-analysis")
+    p.cargo("check")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
@@ -471,8 +480,9 @@ fn log_rebuild_reason_no_rebuild() {
         .build();
 
     // First build
-    p.cargo("check -Zbuild-analysis")
+    p.cargo("check")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
 
@@ -504,8 +514,9 @@ fn log_rebuild_reason_no_rebuild() {
     );
 
     // Second build without changes
-    p.cargo("check -Zbuild-analysis")
+    p.cargo("check")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .with_stderr_data(str![[r#"
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -564,8 +575,9 @@ fn log_msg_unit_graph() {
     // * run foo build.rs
     // * doc foo
     // * doc bar
-    p.cargo("doc -Zbuild-analysis")
+    p.cargo("doc")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis", "section-timings"])
         .run();
 
@@ -689,8 +701,9 @@ fn log_msg_resolution_events() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("doc -Zbuild-analysis")
+    p.cargo("doc")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis", "section-timings"])
         .run();
 
@@ -726,8 +739,9 @@ fn json_message_build_started_with_run_id() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zbuild-analysis --message-format=json")
+    p.cargo("check --message-format=json")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .with_stdout_data(
             str![[r#"

@@ -341,7 +341,8 @@ fn chdir_gated() {
         .with_status(101)
         .run();
     // No masquerade should also fail.
-    p.cargo("-C foo -Z unstable-options build")
+    p.cargo("-C foo build")
+        .arg("-Zunstable-options")
         .cwd(p.root().parent().unwrap())
         .with_stderr_data(str![[r#"
 [ERROR] the `-C` flag is unstable, pass `-Z unstable-options` on the nightly channel to enable it
@@ -359,7 +360,8 @@ fn cargo_compile_directory_not_cwd() {
         .file(".cargo/config.toml", &"")
         .build();
 
-    p.cargo("-Zunstable-options -C foo build")
+    p.cargo("-C foo build")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["chdir"])
         .cwd(p.root().parent().unwrap())
         .run();
@@ -400,7 +402,8 @@ fn cargo_compile_directory_not_cwd_with_invalid_config() {
         .file(".cargo/config.toml", &"!")
         .build();
 
-    p.cargo("-Zunstable-options -C foo build")
+    p.cargo("-C foo build")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["chdir"])
         .cwd(p.root().parent().unwrap())
         .with_status(101)
@@ -5486,7 +5489,8 @@ required by package `bar v0.1.0 ([ROOT]/foo)`
 
 "#]])
         .run();
-    p.cargo("build -Zavoid-dev-deps")
+    p.cargo("build")
+        .arg("-Zavoid-dev-deps")
         .masquerade_as_nightly_cargo(&["avoid-dev-deps"])
         .run();
 }
@@ -6474,7 +6478,8 @@ fn embed_metadata_no() {
         )
         .build();
 
-    p.cargo("build -Z embed-metadata=no")
+    p.cargo("build")
+        .arg("-Zembed-metadata=no")
         .masquerade_as_nightly_cargo(&["-Z embed-metadata"])
         .arg("-v")
         .with_stderr_contains("[RUNNING] `[..]-Z embed-metadata=no[..]`")
@@ -6524,7 +6529,8 @@ fn embed_metadata_no_dylib_dep() {
         )
         .build();
 
-    p.cargo("build -Z embed-metadata=no")
+    p.cargo("build")
+        .arg("-Zembed-metadata=no")
         .masquerade_as_nightly_cargo(&["-Z embed-metadata"])
         .arg("-v")
         .with_stderr_contains("[RUNNING] `[..]-Z embed-metadata=no[..]`")
@@ -6563,7 +6569,8 @@ fn embed_metadata_no_invalidate() {
         )
         .build();
 
-    p.cargo("build -Z embed-metadata=no")
+    p.cargo("build")
+        .arg("-Zembed-metadata=no")
         .masquerade_as_nightly_cargo(&["-Z embed-metadata"])
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to highest compatible version
@@ -6573,7 +6580,8 @@ fn embed_metadata_no_invalidate() {
 
 "#]])
         .run();
-    p.cargo("build -Z embed-metadata=yes")
+    p.cargo("build")
+        .arg("-Zembed-metadata=yes")
         .masquerade_as_nightly_cargo(&["-Z embed-metadata"])
         .with_stderr_data(str![[r#"
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)

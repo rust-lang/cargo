@@ -758,7 +758,8 @@ fn cargo_metadata_public_private_dependencies_enabled() {
     Package::new("foobar", "0.0.2").publish();
     Package::new("baz", "0.0.3").publish();
 
-    p.cargo("metadata -q --format-version 1 -Zpublic-dependency")
+    p.cargo("metadata -q --format-version 1")
+        .arg("-Zpublic-dependency")
         .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_stdout_data(
             str![[r#"
@@ -1453,7 +1454,8 @@ fn workspace_metadata_with_dependencies_and_resolve() {
         .file("non-artifact/src/lib.rs", "")
         .build();
 
-    p.cargo("metadata -Z bindeps")
+    p.cargo("metadata")
+        .arg("-Zbindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stdout_data(
             str![[r#"
@@ -2117,7 +2119,8 @@ fn cargo_metadata_with_invalid_artifact_deps() {
         .file("artifact/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("metadata -Z bindeps")
+    p.cargo("metadata")
+        .arg("-Zbindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -4349,7 +4352,8 @@ fn workspace_metadata_with_dependencies_no_deps_artifact() {
         .file("artifact/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("metadata --no-deps -Z bindeps")
+    p.cargo("metadata --no-deps")
+        .arg("-Zbindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stdout_data(
             str![[r#"

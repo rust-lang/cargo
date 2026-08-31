@@ -1483,8 +1483,9 @@ fn doc_extern_map_local() {
         .file(".cargo/config.toml", "doc.extern-map.std = 'local'")
         .build();
 
-    p.cargo("doc -v --no-deps -Zrustdoc-map --open")
+    p.cargo("doc -v --no-deps --open")
         .env("BROWSER", tools::echo())
+        .arg("-Zrustdoc-map")
         .masquerade_as_nightly_cargo(&["rustdoc-map"])
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.1.0 ([ROOT]/foo)
@@ -2702,7 +2703,8 @@ fn doc_fingerprint_unusual_behavior() {
     // Change file to trigger a new build.
     p.change_file("src/lib.rs", "// changed2");
     fs::write(real_doc.join("somefile"), "test").unwrap();
-    p.cargo("doc -Z skip-rustdoc-fingerprint")
+    p.cargo("doc")
+        .arg("-Zskip-rustdoc-fingerprint")
         .masquerade_as_nightly_cargo(&["skip-rustdoc-fingerprint"])
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
@@ -2927,7 +2929,8 @@ fn rustdoc_depinfo_gated() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("doc -Zrustdoc-depinfo")
+    p.cargo("doc")
+        .arg("-Zrustdoc-depinfo")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] the `-Z` flag is only accepted on the nightly channel of Cargo, but this is the `stable` channel
@@ -2953,7 +2956,8 @@ fn rebuild_tracks_target_src_outside_package_root() {
         .file("../lib.rs", "//! # depinfo-before")
         .build();
 
-    p.cargo("doc -Zrustdoc-depinfo")
+    p.cargo("doc")
+        .arg("-Zrustdoc-depinfo")
         .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.0.0 ([ROOT]/parent/foo)
@@ -2968,7 +2972,8 @@ fn rebuild_tracks_target_src_outside_package_root() {
 
     p.change_file("../lib.rs", "//! # depinfo-after");
 
-    p.cargo("doc --verbose -Zrustdoc-depinfo")
+    p.cargo("doc --verbose")
+        .arg("-Zrustdoc-depinfo")
         .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
         .with_stderr_data(str![[r#"
 [DIRTY] foo v0.0.0 ([ROOT]/parent/foo): the file `../lib.rs` has changed ([TIME_DIFF_AFTER_LAST_BUILD])
@@ -2992,7 +2997,8 @@ fn rebuild_tracks_include_str() {
         .file("../README", "# depinfo-before")
         .build();
 
-    p.cargo("doc -Zrustdoc-depinfo")
+    p.cargo("doc")
+        .arg("-Zrustdoc-depinfo")
         .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.5.0 ([ROOT]/parent/foo)
@@ -3007,7 +3013,8 @@ fn rebuild_tracks_include_str() {
 
     p.change_file("../README", "# depinfo-after");
 
-    p.cargo("doc --verbose -Zrustdoc-depinfo")
+    p.cargo("doc --verbose")
+        .arg("-Zrustdoc-depinfo")
         .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
         .with_stderr_data(str![[r#"
 [DIRTY] foo v0.5.0 ([ROOT]/parent/foo): the file `src/../../README` has changed ([TIME_DIFF_AFTER_LAST_BUILD])
@@ -3031,7 +3038,8 @@ fn rebuild_tracks_path_attr() {
         .file("../bar.rs", "//! # depinfo-before")
         .build();
 
-    p.cargo("doc -Zrustdoc-depinfo")
+    p.cargo("doc")
+        .arg("-Zrustdoc-depinfo")
         .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.5.0 ([ROOT]/parent/foo)
@@ -3046,7 +3054,8 @@ fn rebuild_tracks_path_attr() {
 
     p.change_file("../bar.rs", "//! # depinfo-after");
 
-    p.cargo("doc --verbose -Zrustdoc-depinfo")
+    p.cargo("doc --verbose")
+        .arg("-Zrustdoc-depinfo")
         .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
         .with_stderr_data(str![[r#"
 [DIRTY] foo v0.5.0 ([ROOT]/parent/foo): the file `src/../../bar.rs` has changed ([TIME_DIFF_AFTER_LAST_BUILD])
@@ -3070,8 +3079,9 @@ fn rebuild_tracks_env() {
         .file("src/lib.rs", &format!(r#"#![doc = env!("{env}")]"#))
         .build();
 
-    p.cargo("doc -Zrustdoc-depinfo")
+    p.cargo("doc")
         .env(env, "# depinfo-before")
+        .arg("-Zrustdoc-depinfo")
         .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.5.0 ([ROOT]/foo)
@@ -3084,8 +3094,9 @@ fn rebuild_tracks_env() {
     let doc_html = p.read_file("target/doc/foo/index.html");
     assert!(doc_html.contains("depinfo-before"));
 
-    p.cargo("doc --verbose -Zrustdoc-depinfo")
+    p.cargo("doc --verbose")
         .env(env, "# depinfo-after")
+        .arg("-Zrustdoc-depinfo")
         .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
         .with_stderr_data(str![[r#"
 [DIRTY] foo v0.5.0 ([ROOT]/foo): the environment variable __RUSTDOC_INJECTED changed
@@ -3123,8 +3134,9 @@ fn rebuild_tracks_env_in_dep() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("doc -Zrustdoc-depinfo")
+    p.cargo("doc")
         .env(env, "# depinfo-before")
+        .arg("-Zrustdoc-depinfo")
         .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
         .with_stderr_data(
             str![[r#"
@@ -3146,8 +3158,9 @@ fn rebuild_tracks_env_in_dep() {
     let doc_html = p.read_file("target/doc/bar/index.html");
     assert!(doc_html.contains("depinfo-before"));
 
-    p.cargo("doc --verbose -Zrustdoc-depinfo")
+    p.cargo("doc --verbose")
         .env(env, "# depinfo-after")
+        .arg("-Zrustdoc-depinfo")
         .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
         .with_stderr_data(
             str![[r#"
@@ -3183,8 +3196,10 @@ fn rebuild_tracks_checksum() {
         .file("../README", "# depinfo-before")
         .build();
 
-    p.cargo("doc -Zrustdoc-depinfo -Zchecksum-freshness")
+    p.cargo("doc")
         .env("CARGO_BUILD_FINGERPRINT", "content")
+        .arg("-Zrustdoc-depinfo")
+        .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["rustdoc-depinfo", "checksum-freshness"])
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.5.0 ([ROOT]/parent/foo)
@@ -3201,8 +3216,10 @@ fn rebuild_tracks_checksum() {
     // Change mtime into the future
     p.root().move_into_the_future();
 
-    p.cargo("doc --verbose -Zrustdoc-depinfo -Zchecksum-freshness")
+    p.cargo("doc --verbose")
         .env("CARGO_BUILD_FINGERPRINT", "content")
+        .arg("-Zrustdoc-depinfo")
+        .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
         .with_stderr_data(str![[r#"
 [DIRTY] foo v0.5.0 ([ROOT]/parent/foo): file size changed (16 != 15) for `src/../../README`
@@ -3225,7 +3242,8 @@ fn mergeable_info_gated() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("doc -Zrustdoc-mergeable-info")
+    p.cargo("doc")
+        .arg("-Zrustdoc-mergeable-info")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] the `-Z` flag is only accepted on the nightly channel of Cargo, but this is the `stable` channel
@@ -3254,7 +3272,8 @@ fn mergeable_info_with_deps() {
         .file("dep/src/lib.rs", "pub fn bar() {}")
         .build();
 
-    p.cargo("doc -v -Zrustdoc-mergeable-info")
+    p.cargo("doc -v")
+        .arg("-Zrustdoc-mergeable-info")
         .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
         .with_stderr_data(
             str![[r#"
@@ -3302,11 +3321,12 @@ fn mergeable_info_with_rustdocflags() {
         .file("src/lib.rs", "pub fn foo() {}")
         .build();
 
-    p.cargo("doc -v -Zrustdoc-mergeable-info")
+    p.cargo("doc -v")
         .env(
             "RUSTDOCFLAGS",
             "--markdown-playground-url=example.com",
         )
+        .arg("-Zrustdoc-mergeable-info")
         .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.5.0 ([ROOT]/foo)
@@ -3340,7 +3360,8 @@ fn mergeable_info_no_deps() {
         .file("dep/src/lib.rs", "pub fn dep() {}")
         .build();
 
-    p.cargo("doc -v --no-deps -Zrustdoc-mergeable-info")
+    p.cargo("doc -v --no-deps")
+        .arg("-Zrustdoc-mergeable-info")
         .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
         .with_stderr_data(
             str![[r#"
@@ -3407,7 +3428,8 @@ fn mergeable_info_workspace() {
         .file("dep/src/lib.rs", "pub fn dep() {}")
         .build();
 
-    p.cargo("doc -v --workspace -Zrustdoc-mergeable-info")
+    p.cargo("doc -v --workspace")
+        .arg("-Zrustdoc-mergeable-info")
         .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
         .with_stderr_data(
             str![[r#"
@@ -3475,8 +3497,9 @@ fn mergeable_info_multi_targets() {
         .file("src/lib.rs", "pub fn foo() {}")
         .build();
 
-    p.cargo("doc -v --target host-tuple -Zrustdoc-mergeable-info")
+    p.cargo("doc -v --target host-tuple")
         .args(&["--target", target])
+        .arg("-Zrustdoc-mergeable-info")
         .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
         .with_stderr_data(
             str![[r#"
@@ -3548,7 +3571,8 @@ fn mergeable_info_rebuild_detection() {
         .file("src/lib.rs", "pub fn foo() {}")
         .build();
 
-    p.cargo("doc -v -Zrustdoc-mergeable-info")
+    p.cargo("doc -v")
+        .arg("-Zrustdoc-mergeable-info")
         .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
         .with_stderr_data(
             str![[r#"
@@ -3581,7 +3605,8 @@ fn mergeable_info_rebuild_detection() {
     );
 
     // Make sure it doesn't recompile.
-    p.cargo("doc -v -Zrustdoc-mergeable-info")
+    p.cargo("doc -v")
+        .arg("-Zrustdoc-mergeable-info")
         .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
         .with_stderr_data(str![[r#"
 [FRESH] foo v0.0.0 ([ROOT]/foo)
@@ -3611,7 +3636,8 @@ fn mergeable_info_rebuild_detection() {
     p.change_file("src/lib.rs", "pub fn foo2() {}");
 
     // Make sure it recompiles
-    p.cargo("doc -v -Zrustdoc-mergeable-info")
+    p.cargo("doc -v")
+        .arg("-Zrustdoc-mergeable-info")
         .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
         .with_stderr_data(
             str![[r#"
@@ -3629,7 +3655,8 @@ fn mergeable_info_rebuild_detection() {
         .run();
 
     // Make sure it doesn't recompile.
-    p.cargo("doc -v -Zrustdoc-mergeable-info")
+    p.cargo("doc -v")
+        .arg("-Zrustdoc-mergeable-info")
         .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
         .with_stderr_data(str![[r#"
 [FRESH] foo v0.0.0 ([ROOT]/foo)
@@ -3642,7 +3669,8 @@ fn mergeable_info_rebuild_detection() {
         .run();
 
     // Make sure it doesn't recompile after previous no-op build.
-    p.cargo("doc -v -Zrustdoc-mergeable-info")
+    p.cargo("doc -v")
+        .arg("-Zrustdoc-mergeable-info")
         .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
         .with_stderr_data(str![[r#"
 [FRESH] foo v0.0.0 ([ROOT]/foo)
@@ -3686,7 +3714,9 @@ fn mergeable_info_rebuild_with_depinfo() {
         .file("src/lib.rs", "pub fn foo() {}")
         .build();
 
-    p.cargo("doc -v -Zrustdoc-mergeable-info -Zrustdoc-depinfo")
+    p.cargo("doc -v")
+        .arg("-Zrustdoc-mergeable-info")
+        .arg("-Zrustdoc-depinfo")
         .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info", "-Zrustdoc-depinfo"])
         .with_stderr_data(
             str![[r#"
@@ -3719,7 +3749,9 @@ fn mergeable_info_rebuild_with_depinfo() {
     );
 
     // Make sure it doesn't recompile.
-    p.cargo("doc -v -Zrustdoc-mergeable-info -Zrustdoc-depinfo")
+    p.cargo("doc -v")
+        .arg("-Zrustdoc-mergeable-info")
+        .arg("-Zrustdoc-depinfo")
         .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info", "-Zrustdoc-depinfo"])
         .with_stderr_data(str![[r#"
 [FRESH] foo v0.0.0 ([ROOT]/foo)
@@ -3749,7 +3781,9 @@ fn mergeable_info_rebuild_with_depinfo() {
     p.change_file("src/lib.rs", "pub fn foo2() {}");
 
     // Make sure it recompiles
-    p.cargo("doc -v -Zrustdoc-mergeable-info -Zrustdoc-depinfo")
+    p.cargo("doc -v")
+        .arg("-Zrustdoc-mergeable-info")
+        .arg("-Zrustdoc-depinfo")
         .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info", "-Zrustdoc-depinfo"])
         .with_stderr_data(
             str![[r#"
@@ -3767,7 +3801,9 @@ fn mergeable_info_rebuild_with_depinfo() {
         .run();
 
     // Make sure it doesn't recompile.
-    p.cargo("doc -v -Zrustdoc-mergeable-info -Zrustdoc-depinfo")
+    p.cargo("doc -v")
+        .arg("-Zrustdoc-mergeable-info")
+        .arg("-Zrustdoc-depinfo")
         .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info", "-Zrustdoc-depinfo"])
         .with_stderr_data(str![[r#"
 [FRESH] foo v0.0.0 ([ROOT]/foo)
@@ -3780,7 +3816,9 @@ fn mergeable_info_rebuild_with_depinfo() {
         .run();
 
     // Make sure it doesn't recompile after previous no-op build
-    p.cargo("doc -v -Zrustdoc-mergeable-info -Zrustdoc-depinfo")
+    p.cargo("doc -v")
+        .arg("-Zrustdoc-mergeable-info")
+        .arg("-Zrustdoc-depinfo")
         .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info", "-Zrustdoc-depinfo"])
         .with_stderr_data(str![[r#"
 [FRESH] foo v0.0.0 ([ROOT]/foo)
@@ -3836,7 +3874,8 @@ fn mergeable_info_additive() {
         .file("dep/src/lib.rs", "pub fn dep() {}")
         .build();
 
-    p.cargo("doc -v -p foo --no-deps -Zrustdoc-mergeable-info")
+    p.cargo("doc -v -p foo --no-deps")
+        .arg("-Zrustdoc-mergeable-info")
         .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
         .with_stderr_data(
             str![[r#"
@@ -3874,7 +3913,8 @@ fn mergeable_info_additive() {
         .is_json(),
     );
 
-    p.cargo("doc -v -p dep --no-deps -Zrustdoc-mergeable-info")
+    p.cargo("doc -v -p dep --no-deps")
+        .arg("-Zrustdoc-mergeable-info")
         .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
         .with_stderr_data(
             str![[r#"
@@ -3911,7 +3951,8 @@ fn mergeable_info_additive() {
         .is_json(),
     );
 
-    p.cargo("doc -v -p bar --no-deps -Zrustdoc-mergeable-info")
+    p.cargo("doc -v -p bar --no-deps")
+        .arg("-Zrustdoc-mergeable-info")
         .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
         .with_stderr_data(
             str![[r#"
@@ -3981,7 +4022,8 @@ fn mergeable_info_dep_collision() {
         .build();
 
     // First document dep@0.1.0
-    p.cargo("doc -v -Zrustdoc-mergeable-info -p dep@0.1.0")
+    p.cargo("doc -v -p dep@0.1.0")
+        .arg("-Zrustdoc-mergeable-info")
         .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
         .with_stderr_data(
             str![[r#"
@@ -4026,7 +4068,8 @@ fn mergeable_info_dep_collision() {
     );
 
     // Now selectively document dep@0.2.0
-    p.cargo("doc -v -Zrustdoc-mergeable-info -p dep@0.2.0")
+    p.cargo("doc -v -p dep@0.2.0")
+        .arg("-Zrustdoc-mergeable-info")
         .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
         .with_stderr_data(
             str![[r#"
@@ -4087,7 +4130,8 @@ See https://github.com/rust-lang/cargo/issues/13283 for more information about t
 fn doc_invalid_output_format() {
     let p = project().file("src/lib.rs", "").build();
 
-    p.cargo("doc -Z unstable-options --output-format pdf -v")
+    p.cargo("doc --output-format pdf -v")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["rustdoc-output-format"])
         .with_status(1)
         .with_stderr_data(str![[r#"
@@ -4143,7 +4187,8 @@ fn doc_output_format_json_no_deps() {
         .file("bar/src/lib.rs", "pub fn bar_fn() {}")
         .build();
 
-    p.cargo("doc --no-deps -Z unstable-options --output-format json -v")
+    p.cargo("doc --no-deps --output-format json -v")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["rustdoc-output-format"])
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to highest compatible version
@@ -4193,7 +4238,8 @@ fn doc_output_format_json_with_deps() {
         .file("bar/src/lib.rs", "pub fn bar_fn() {}")
         .build();
 
-    p.cargo("doc -Z unstable-options --output-format json -v")
+    p.cargo("doc --output-format json -v")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["rustdoc-output-format"])
         .with_stderr_data(
             str![[r#"
@@ -4258,7 +4304,9 @@ fn doc_output_format_json_with_deps_and_mergeable_info() {
         .file("bar/src/lib.rs", "pub fn bar_fn() {}")
         .build();
 
-    p.cargo("doc -Z unstable-options --output-format json -Zrustdoc-mergeable-info -v")
+    p.cargo("doc --output-format json -v")
+        .arg("-Zunstable-options")
+        .arg("-Zrustdoc-mergeable-info")
         .masquerade_as_nightly_cargo(&["rustdoc-output-format"])
         .with_stderr_data(
             str![[r#"

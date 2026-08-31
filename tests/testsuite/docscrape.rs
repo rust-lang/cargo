@@ -21,7 +21,9 @@ fn basic() {
         .file("src/lib.rs", "pub fn foo() {}\npub fn bar() { foo(); }")
         .build();
 
-    p.cargo("doc -Zunstable-options -Zrustdoc-scrape-examples")
+    p.cargo("doc")
+        .arg("-Zunstable-options")
+        .arg("-Zrustdoc-scrape-examples")
         .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
@@ -33,7 +35,9 @@ fn basic() {
 "#]])
         .run();
 
-    p.cargo("doc -Zunstable-options -Z rustdoc-scrape-examples")
+    p.cargo("doc")
+        .arg("-Zunstable-options")
+        .arg("-Zrustdoc-scrape-examples")
         .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .with_stderr_data(str![[r#"
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -112,7 +116,9 @@ impl Foo {
         )
         .build();
 
-    p.cargo("doc -Zunstable-options -Zrustdoc-scrape-examples --no-deps")
+    p.cargo("doc --no-deps")
+        .arg("-Zunstable-options")
+        .arg("-Zrustdoc-scrape-examples")
         .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .with_stderr_data(
             str![[r#"
@@ -172,7 +178,9 @@ fn avoid_build_script_cycle() {
         .file("bar/build.rs", "fn main(){}")
         .build();
 
-    p.cargo("doc --workspace -Zunstable-options -Zrustdoc-scrape-examples")
+    p.cargo("doc --workspace")
+        .arg("-Zunstable-options")
+        .arg("-Zrustdoc-scrape-examples")
         .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .run();
 }
@@ -232,7 +240,9 @@ fn complex_reverse_dependencies() {
         .file("b/src/lib.rs", "")
         .build();
 
-    p.cargo("doc --workspace --examples -Zunstable-options -Zrustdoc-scrape-examples")
+    p.cargo("doc --workspace --examples")
+        .arg("-Zunstable-options")
+        .arg("-Zrustdoc-scrape-examples")
         .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .run();
 }
@@ -254,7 +264,9 @@ fn crate_with_dash() {
         .file("examples/a.rs", "fn main() { da_sh::foo(); }")
         .build();
 
-    p.cargo("doc -Zunstable-options -Zrustdoc-scrape-examples")
+    p.cargo("doc")
+        .arg("-Zunstable-options")
+        .arg("-Zrustdoc-scrape-examples")
         .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .run();
 
@@ -300,7 +312,9 @@ fn configure_target() {
         )
         .build();
 
-    p.cargo("doc -Zunstable-options -Zrustdoc-scrape-examples")
+    p.cargo("doc")
+        .arg("-Zunstable-options")
+        .arg("-Zrustdoc-scrape-examples")
         .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .run();
 
@@ -330,7 +344,9 @@ fn configure_profile_issue_10500() {
         .file("src/lib.rs", "pub fn foo() {}\npub fn bar() { foo(); }")
         .build();
 
-    p.cargo("doc -Zunstable-options -Zrustdoc-scrape-examples")
+    p.cargo("doc")
+        .arg("-Zunstable-options")
+        .arg("-Zrustdoc-scrape-examples")
         .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .run();
 
@@ -380,7 +396,9 @@ fn issue_10545() {
         .file("b/src/lib.rs", "")
         .build();
 
-    p.cargo("doc --workspace -Zunstable-options -Zrustdoc-scrape-examples")
+    p.cargo("doc --workspace")
+        .arg("-Zunstable-options")
+        .arg("-Zrustdoc-scrape-examples")
         .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .run();
 }
@@ -402,7 +420,9 @@ fn cache() {
         .file("src/lib.rs", "pub fn foo() {}\npub fn bar() { foo(); }")
         .build();
 
-    p.cargo("doc -Zunstable-options -Zrustdoc-scrape-examples")
+    p.cargo("doc")
+        .arg("-Zunstable-options")
+        .arg("-Zrustdoc-scrape-examples")
         .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
@@ -414,7 +434,9 @@ fn cache() {
 "#]])
         .run();
 
-    p.cargo("doc -Zunstable-options -Zrustdoc-scrape-examples")
+    p.cargo("doc")
+        .arg("-Zunstable-options")
+        .arg("-Zrustdoc-scrape-examples")
         .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .with_stderr_data(str![[r#"
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -442,7 +464,9 @@ fn no_fail_bad_lib() {
         .file("examples/ex2.rs", "fn main() { foo::foo(); }")
         .build();
 
-    p.cargo("doc -Zunstable-options -Z rustdoc-scrape-examples")
+    p.cargo("doc")
+        .arg("-Zunstable-options")
+        .arg("-Zrustdoc-scrape-examples")
         .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
@@ -496,7 +520,9 @@ fn fail_bad_build_script() {
         .run();
 
     // scrape examples should fail whenever `cargo doc` fails.
-    p.cargo("doc -Zunstable-options -Z rustdoc-scrape-examples")
+    p.cargo("doc")
+        .arg("-Zunstable-options")
+        .arg("-Zrustdoc-scrape-examples")
         .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -525,7 +551,9 @@ fn no_fail_bad_example() {
         .file("src/lib.rs", "pub fn foo(){}")
         .build();
 
-    p.cargo("doc -Zunstable-options -Z rustdoc-scrape-examples")
+    p.cargo("doc")
+        .arg("-Zunstable-options")
+        .arg("-Zrustdoc-scrape-examples")
         .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
@@ -543,7 +571,9 @@ fn no_fail_bad_example() {
 
     p.cargo("clean").run();
 
-    p.cargo("doc -v -Zunstable-options -Z rustdoc-scrape-examples")
+    p.cargo("doc -v")
+        .arg("-Zunstable-options")
+        .arg("-Zrustdoc-scrape-examples")
         .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .with_stderr_data(
             str![[r#"
@@ -609,7 +639,9 @@ fn no_scrape_with_dev_deps() {
 
     // If --examples is not provided, then the example is not scanned, and a warning
     // should be raised.
-    p.cargo("doc -Zunstable-options -Z rustdoc-scrape-examples")
+    p.cargo("doc")
+        .arg("-Zunstable-options")
+        .arg("-Zrustdoc-scrape-examples")
         .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to highest compatible version
@@ -624,7 +656,9 @@ fn no_scrape_with_dev_deps() {
         .run();
 
     // If --examples is provided, then the example is scanned.
-    p.cargo("doc --examples -Zunstable-options -Z rustdoc-scrape-examples")
+    p.cargo("doc --examples")
+        .arg("-Zunstable-options")
+        .arg("-Zrustdoc-scrape-examples")
         .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .with_stderr_data(
             str![[r#"
@@ -678,7 +712,9 @@ fn use_dev_deps_if_explicitly_enabled() {
         .build();
 
     // If --examples is not provided, then the example is never scanned.
-    p.cargo("doc -Zunstable-options -Z rustdoc-scrape-examples")
+    p.cargo("doc")
+        .arg("-Zunstable-options")
+        .arg("-Zrustdoc-scrape-examples")
         .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .with_stderr_data(
             str![[r#"
@@ -736,7 +772,9 @@ fn only_scrape_documented_targets() {
         .file("foo/src/lib.rs", "pub fn foo() {}")
         .build();
 
-    p.cargo("doc --workspace -Zunstable-options -Zrustdoc-scrape-examples")
+    p.cargo("doc --workspace")
+        .arg("-Zunstable-options")
+        .arg("-Zrustdoc-scrape-examples")
         .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .run();
 
@@ -764,7 +802,9 @@ fn issue_11496() {
         .file("examples/ex.rs", "fn main(){}")
         .build();
 
-    p.cargo("doc -Zunstable-options -Zrustdoc-scrape-examples")
+    p.cargo("doc")
+        .arg("-Zunstable-options")
+        .arg("-Zrustdoc-scrape-examples")
         .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .run();
 }

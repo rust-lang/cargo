@@ -627,7 +627,8 @@ fn verify_mix_cargo_feature_z() {
         )
         .build();
 
-    p.cargo("check -Zpublic-dependency --message-format=short")
+    p.cargo("check --message-format=short")
+        .arg("-Zpublic-dependency")
         .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_stderr_data(str![[r#"
 ...
@@ -677,7 +678,8 @@ fn verify_z_public_dependency() {
         )
         .build();
 
-    p.cargo("check -Zpublic-dependency --message-format=short")
+    p.cargo("check --message-format=short")
+        .arg("-Zpublic-dependency")
         .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_stderr_data(
             str![[r#"
@@ -719,7 +721,8 @@ fn z_public_dependency_invalidates_fingerprint() {
         )
         .build();
 
-    p.cargo("check -Zpublic-dependency --message-format=short")
+    p.cargo("check --message-format=short")
+        .arg("-Zpublic-dependency")
         .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_stderr_data(str![[r#"
 ...
@@ -744,7 +747,8 @@ src/lib.rs:3:13: [WARNING] type `FromDep` from private dependency 'dep' in publi
 "#]])
         .run();
 
-    p.cargo("check -Zpublic-dependency --message-format=short")
+    p.cargo("check --message-format=short")
+        .arg("-Zpublic-dependency")
         .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
@@ -789,7 +793,8 @@ fn manifest_location() {
         )
         .build();
 
-    p.cargo("check -Zpublic-dependency")
+    p.cargo("check")
+        .arg("-Zpublic-dependency")
         .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_stderr_data(
             str![[r#"
@@ -857,7 +862,8 @@ fn renamed_dependency() {
         )
         .build();
 
-    p.cargo("check -Zpublic-dependency")
+    p.cargo("check")
+        .arg("-Zpublic-dependency")
         .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_stderr_data(
             str![[r#"
@@ -928,7 +934,8 @@ fn duplicate_renamed_dependency() {
         )
         .build();
 
-    p.cargo("check -Zpublic-dependency")
+    p.cargo("check")
+        .arg("-Zpublic-dependency")
         .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_stderr_data(
             str![[r#"
@@ -1002,7 +1009,8 @@ fn dependency_location_in_target_table() {
         )
         .build();
 
-    p.cargo("check -Zpublic-dependency")
+    p.cargo("check")
+        .arg("-Zpublic-dependency")
         .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_stderr_data(
             str![[r#"
@@ -1036,7 +1044,8 @@ fn dependency_location_in_target_table() {
         )
         .run();
 
-    p.cargo(&format!("check -Zpublic-dependency --target={alt}"))
+    p.cargo(&format!("check --target={alt}"))
+        .arg("-Zpublic-dependency")
         .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_stderr_data(
             str![[r#"
@@ -1120,7 +1129,8 @@ fn dependency_location_in_target_table_with_cfg() {
         )
         .build();
 
-    p.cargo("check -Zpublic-dependency")
+    p.cargo("check")
+        .arg("-Zpublic-dependency")
         .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_stderr_data(
             str![[r#"
@@ -1154,7 +1164,8 @@ fn dependency_location_in_target_table_with_cfg() {
         )
         .run();
 
-    p.cargo(&format!("check -Zpublic-dependency --target={alt}"))
+    p.cargo(&format!("check --target={alt}"))
+        .arg("-Zpublic-dependency")
         .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_stderr_data(
             str![[r#"
@@ -1225,7 +1236,8 @@ fn dependency_location_in_workspace() {
         )
     });
     git::commit(&repo);
-    p.cargo(&format!("check -Zpublic-dependency"))
+    p.cargo("check")
+        .arg("-Zpublic-dependency")
         .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_stderr_data(str![[r#"
 ...
@@ -1274,8 +1286,9 @@ fn relative_display_path() {
         ",
         )
         .build();
-    p.cargo("check -Zpublic-dependency")
+    p.cargo("check")
         .cwd("foo")
+        .arg("-Zpublic-dependency")
         .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_stderr_data(str![[r#"
 ...

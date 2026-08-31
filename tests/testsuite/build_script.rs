@@ -563,8 +563,9 @@ fn custom_build_env_var_rustc_linker_host_target() {
 
     // no crate type set => linker never called => build succeeds if and
     // only if build.rs succeeds, despite linker binary not existing.
-    p.cargo("build -Z target-applies-to-host --target")
+    p.cargo("build --target")
         .arg(&target)
+        .arg("-Ztarget-applies-to-host")
         .masquerade_as_nightly_cargo(&["target-applies-to-host"])
         .run();
 }
@@ -598,9 +599,10 @@ fn custom_build_env_var_rustc_linker_host_target_env() {
 
     // no crate type set => linker never called => build succeeds if and
     // only if build.rs succeeds, despite linker binary not existing.
-    p.cargo("build -Z target-applies-to-host --target")
+    p.cargo("build --target")
         .env("CARGO_TARGET_APPLIES_TO_HOST", "false")
         .arg(&target)
+        .arg("-Ztarget-applies-to-host")
         .masquerade_as_nightly_cargo(&["target-applies-to-host"])
         .run();
 }
@@ -624,8 +626,9 @@ fn custom_build_invalid_host_config_feature_flag() {
         .build();
 
     // build.rs should fail due to -Zhost-config being set without -Ztarget-applies-to-host
-    p.cargo("build -Z host-config --target")
+    p.cargo("build --target")
         .arg(&target)
+        .arg("-Zhost-config")
         .masquerade_as_nightly_cargo(&["host-config"])
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -656,8 +659,10 @@ fn custom_build_linker_host_target_with_bad_host_config() {
         .build();
 
     // build.rs should fail due to bad host linker being set
-    p.cargo("build -Z target-applies-to-host -Z host-config --verbose --target")
+    p.cargo("build --verbose --target")
         .arg(&target)
+        .arg("-Ztarget-applies-to-host")
+        .arg("-Zhost-config")
         .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -690,8 +695,10 @@ fn custom_build_linker_bad_host() {
         .build();
 
     // build.rs should fail due to bad host linker being set
-    p.cargo("build -Z target-applies-to-host -Z host-config --verbose --target")
+    p.cargo("build --verbose --target")
         .arg(&target)
+        .arg("-Ztarget-applies-to-host")
+        .arg("-Zhost-config")
         .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -726,8 +733,10 @@ fn custom_build_linker_bad_host_with_arch() {
         .build();
 
     // build.rs should fail due to bad host linker being set
-    p.cargo("build -Z target-applies-to-host -Z host-config --verbose --target")
+    p.cargo("build --verbose --target")
         .arg(&target)
+        .arg("-Ztarget-applies-to-host")
+        .arg("-Zhost-config")
         .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -771,8 +780,10 @@ fn custom_build_env_var_rustc_linker_cross_arch_host() {
 
     // build.rs should be built fine since cross target != host target.
     // assertion should succeed since it's still passed the target linker
-    p.cargo("build -Z target-applies-to-host -Z host-config --verbose --target")
+    p.cargo("build --verbose --target")
         .arg(&target)
+        .arg("-Ztarget-applies-to-host")
+        .arg("-Zhost-config")
         .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
         .run();
 }
@@ -801,8 +812,10 @@ fn custom_build_linker_bad_cross_arch_host() {
         .build();
 
     // build.rs should fail due to bad host linker being set
-    p.cargo("build -Z target-applies-to-host -Z host-config --verbose --target")
+    p.cargo("build --verbose --target")
         .arg(&target)
+        .arg("-Ztarget-applies-to-host")
+        .arg("-Zhost-config")
         .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -824,9 +837,11 @@ fn host_runner_wraps_build_script() {
         .build();
 
     // Build should succeed with the host runner wrapping the build script
-    p.cargo("build -Z target-applies-to-host -Z host-config -v --target")
+    p.cargo("build -v --target")
         .arg(&target)
         .env("CARGO_HOST_RUNNER", &wrapper)
+        .arg("-Ztarget-applies-to-host")
+        .arg("-Zhost-config")
         .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
@@ -859,8 +874,10 @@ fn host_runner_does_not_apply_to_target() {
         .build();
 
     // build.rs execution should fail due to the host runner, not the target runner
-    p.cargo("build -Z target-applies-to-host -Z host-config --target")
+    p.cargo("build --target")
         .arg(&target)
+        .arg("-Ztarget-applies-to-host")
+        .arg("-Zhost-config")
         .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -897,8 +914,10 @@ fn host_runner_arch_takes_precedence() {
         .build();
 
     // host.<triple>.runner should take precedence over host.runner
-    p.cargo("build -Z target-applies-to-host -Z host-config --target")
+    p.cargo("build --target")
         .arg(&target)
+        .arg("-Ztarget-applies-to-host")
+        .arg("-Zhost-config")
         .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -949,8 +968,10 @@ fn host_runner_with_args() {
         .build();
 
     // Runner args should be passed correctly before the build script path
-    p.cargo("build -Z target-applies-to-host -Z host-config --target")
+    p.cargo("build --target")
         .arg(&target)
+        .arg("-Ztarget-applies-to-host")
+        .arg("-Zhost-config")
         .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -983,8 +1004,10 @@ fn host_runner_does_not_apply_to_cargo_run() {
         .build();
 
     // with --target
-    p.cargo("run -Z target-applies-to-host -Z host-config --target")
+    p.cargo("run --target")
         .arg(&target)
+        .arg("-Ztarget-applies-to-host")
+        .arg("-Zhost-config")
         .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
@@ -999,7 +1022,9 @@ hello
         .run();
 
     // without --target
-    p.cargo("run -Z target-applies-to-host -Z host-config")
+    p.cargo("run")
+        .arg("-Ztarget-applies-to-host")
+        .arg("-Zhost-config")
         .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
@@ -1089,8 +1114,10 @@ fn target_cfg_runner_build_script_with_host_config_and_target() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -v -Ztarget-applies-to-host -Zhost-config --target")
+    p.cargo("check -v --target")
         .arg(&target)
+        .arg("-Ztarget-applies-to-host")
+        .arg("-Zhost-config")
         .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
@@ -1117,7 +1144,9 @@ fn host_runner_build_script_without_target() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Ztarget-applies-to-host -Zhost-config")
+    p.cargo("check")
+        .arg("-Ztarget-applies-to-host")
+        .arg("-Zhost-config")
         .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -1230,8 +1259,10 @@ fn target_cfg_linker_build_script_with_host_config_and_target() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build -v -Ztarget-applies-to-host -Zhost-config --target")
+    p.cargo("build -v --target")
         .arg(&target)
+        .arg("-Ztarget-applies-to-host")
+        .arg("-Zhost-config")
         .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
@@ -1920,7 +1951,8 @@ default = "allow"
         .file("d/build.rs", get_metadata)
         .build();
 
-    p.cargo("check --all-targets -Zany-build-script-metadata")
+    p.cargo("check --all-targets")
+        .arg("-Zany-build-script-metadata")
         .masquerade_as_nightly_cargo(&["any-build-script-metadata"])
         .with_stderr_data(
             str![[r#"
@@ -2000,7 +2032,8 @@ fn links_passes_env_vars_with_any_build_script_unstable_feature() {
         )
         .build();
 
-    p.cargo("check -v -Zany-build-script-metadata")
+    p.cargo("check -v")
+        .arg("-Zany-build-script-metadata")
         .masquerade_as_nightly_cargo(&["any-build-script-metadata"])
         .run();
 }
@@ -2064,7 +2097,8 @@ fn non_links_can_pass_env_vars() {
         )
         .build();
 
-    p.cargo("check -v -Zany-build-script-metadata")
+    p.cargo("check -v")
+        .arg("-Zany-build-script-metadata")
         .masquerade_as_nightly_cargo(&["any-build-script-metadata"])
         .run();
 }
@@ -2129,7 +2163,8 @@ fn non_links_can_pass_env_vars_with_dep_renamed() {
         )
         .build();
 
-    p.cargo("check -v -Zany-build-script-metadata")
+    p.cargo("check -v")
+        .arg("-Zany-build-script-metadata")
         .masquerade_as_nightly_cargo(&["any-build-script-metadata"])
         .run();
 }
@@ -2213,7 +2248,8 @@ fn non_links_can_pass_env_vars_direct_deps_only() {
         )
         .build();
 
-    p.cargo("check -v -Zany-build-script-metadata")
+    p.cargo("check -v")
+        .arg("-Zany-build-script-metadata")
         .masquerade_as_nightly_cargo(&["any-build-script-metadata"])
         .run();
 }
@@ -7164,7 +7200,9 @@ fn target_runner_does_not_apply_to_build_script_with_host_config() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build -Z target-applies-to-host --verbose -Z host-config")
+    p.cargo("build --verbose")
+        .arg("-Ztarget-applies-to-host")
+        .arg("-Zhost-config")
         .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
@@ -7193,7 +7231,9 @@ fn target_linker_does_not_apply_to_build_script_with_host_config() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("build -Z target-applies-to-host --verbose -Z host-config")
+    p.cargo("build --verbose")
+        .arg("-Ztarget-applies-to-host")
+        .arg("-Zhost-config")
         .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
@@ -7296,8 +7336,9 @@ fn build_script_dylib_search_path_excludes_target_dylibs() {
         )
         .build();
 
-    p.cargo("build -Zbuild-dir-new-layout -v --target")
+    p.cargo("build -v --target")
         .arg(&target)
+        .arg("-Zbuild-dir-new-layout")
         .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .enable_mac_dsym()
         .run();

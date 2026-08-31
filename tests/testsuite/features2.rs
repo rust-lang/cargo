@@ -2239,7 +2239,8 @@ fn minimal_download() {
 
     // none
     // Should be the same as `-Zfeatures=all`
-    p.cargo("check -Zfeatures=compare")
+    p.cargo("check")
+        .arg("-Zfeatures=compare")
         .masquerade_as_nightly_cargo(&["features=compare"])
         .with_stderr_data(
             str![[r#"

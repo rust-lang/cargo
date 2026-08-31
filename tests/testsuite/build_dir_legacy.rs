@@ -520,7 +520,8 @@ fn cargo_rustdoc_json_should_output_to_target_dir() {
         )
         .build();
 
-    p.cargo("rustdoc -Zunstable-options --output-format json")
+    p.cargo("rustdoc --output-format json")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["rustdoc-output-format"])
         .env("__CARGO_TEMPORARY_BUILD_DIR_NEW_LAYOUT_OPT_OUT", "1")
         .enable_mac_dsym()
@@ -560,7 +561,8 @@ fn cargo_doc_json_should_output_to_target_dir() {
         )
         .build();
 
-    p.cargo("doc --no-deps -Zunstable-options --output-format json")
+    p.cargo("doc --no-deps --output-format json")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["rustdoc-output-format"])
         .env("__CARGO_TEMPORARY_BUILD_DIR_NEW_LAYOUT_OPT_OUT", "1")
         .enable_mac_dsym()
@@ -1260,7 +1262,8 @@ fn artifact_deps() {
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("run -Z bindeps")
+    p.cargo("run")
+        .arg("-Zbindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .env("__CARGO_TEMPORARY_BUILD_DIR_NEW_LAYOUT_OPT_OUT", "1")
         .enable_mac_dsym()

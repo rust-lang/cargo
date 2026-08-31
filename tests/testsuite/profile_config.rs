@@ -39,7 +39,8 @@ Caused by:
 "#]])
         .run();
 
-    p.cargo("check -v -Zprofile-rustflags")
+    p.cargo("check -v")
+        .arg("-Zprofile-rustflags")
         .masquerade_as_nightly_cargo(&["profile-rustflags"])
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)

@@ -114,7 +114,8 @@ fn collision_export() {
 
     // -j1 to avoid issues with two processes writing to the same file at the
     // same time.
-    p.cargo("build -j1 --artifact-dir=out -Z unstable-options --bins --examples")
+    p.cargo("build -j1 --artifact-dir=out --bins --examples")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["artifact-dir"])
         .with_stderr_data(str![[r#"
 [WARNING] `--artifact-dir` filename collision at [ROOT]/foo/out/foo[EXE]

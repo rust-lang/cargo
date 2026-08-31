@@ -166,9 +166,10 @@ fn binary_depinfo_correctly_encoded() {
         .build();
 
     let host = rustc_host();
-    p.cargo("build -Zbinary-dep-depinfo --target")
+    p.cargo("build --target")
         .arg(&host)
         .env("CARGO_BUILD_FINGERPRINT", "content")
+        .arg("-Zbinary-dep-depinfo")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["binary-dep-depinfo", "checksum-freshness"])
         .with_stderr_data(str![[r#"
@@ -193,9 +194,10 @@ fn binary_depinfo_correctly_encoded() {
     );
 
     // Make sure it stays fresh.
-    p.cargo("build -Zbinary-dep-depinfo --target")
+    p.cargo("build --target")
         .arg(&host)
         .env("CARGO_BUILD_FINGERPRINT", "content")
+        .arg("-Zbinary-dep-depinfo")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["binary-dep-depinfo", "checksum-freshness"])
         .with_stderr_data(str![[r#"
@@ -603,8 +605,9 @@ fn update_dependency_mtime_does_not_rebuild() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("build -Z mtime-on-use")
+    p.cargo("build")
         .env("CARGO_BUILD_FINGERPRINT", "content")
+        .arg("-Zmtime-on-use")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["mtime-on-use", "checksum-freshness"])
         .env("RUSTFLAGS", "-C linker=cc")
@@ -617,8 +620,9 @@ fn update_dependency_mtime_does_not_rebuild() {
 "#]])
         .run();
     // This does not make new files, but it does update the mtime of the dependency.
-    p.cargo("build -p bar -Z mtime-on-use")
+    p.cargo("build -p bar")
         .env("CARGO_BUILD_FINGERPRINT", "content")
+        .arg("-Zmtime-on-use")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["mtime-on-use", "checksum-freshness"])
         .env("RUSTFLAGS", "-C linker=cc")
@@ -628,8 +632,9 @@ fn update_dependency_mtime_does_not_rebuild() {
 "#]])
         .run();
     // This should not recompile!
-    p.cargo("build -Z mtime-on-use")
+    p.cargo("build")
         .env("CARGO_BUILD_FINGERPRINT", "content")
+        .arg("-Zmtime-on-use")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["mtime-on-use", "checksum-freshness"])
         .env("RUSTFLAGS", "-C linker=cc")
@@ -700,13 +705,15 @@ fn fingerprint_cleaner_does_not_rebuild() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("build -Z mtime-on-use")
+    p.cargo("build")
         .env("CARGO_BUILD_FINGERPRINT", "content")
+        .arg("-Zmtime-on-use")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["mtime-on-use", "checksum-freshness"])
         .run();
-    p.cargo("build -Z mtime-on-use --features a")
+    p.cargo("build --features a")
         .env("CARGO_BUILD_FINGERPRINT", "content")
+        .arg("-Zmtime-on-use")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["mtime-on-use", "checksum-freshness"])
         .with_stderr_data(str![[r#"
@@ -723,8 +730,9 @@ fn fingerprint_cleaner_does_not_rebuild() {
         sleep_ms(1000);
     }
     // This does not make new files, but it does update the mtime.
-    p.cargo("build -Z mtime-on-use --features a")
+    p.cargo("build --features a")
         .env("CARGO_BUILD_FINGERPRINT", "content")
+        .arg("-Zmtime-on-use")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["mtime-on-use", "checksum-freshness"])
         .with_stderr_data(str![[r#"
@@ -734,8 +742,9 @@ fn fingerprint_cleaner_does_not_rebuild() {
         .run();
     fingerprint_cleaner(p.target_debug_dir(), timestamp);
     // This should not recompile!
-    p.cargo("build -Z mtime-on-use --features a")
+    p.cargo("build --features a")
         .env("CARGO_BUILD_FINGERPRINT", "content")
+        .arg("-Zmtime-on-use")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["mtime-on-use", "checksum-freshness"])
         .with_stderr_data(str![[r#"
@@ -744,8 +753,9 @@ fn fingerprint_cleaner_does_not_rebuild() {
 "#]])
         .run();
     // But this should be cleaned and so need a rebuild
-    p.cargo("build -Z mtime-on-use")
+    p.cargo("build")
         .env("CARGO_BUILD_FINGERPRINT", "content")
+        .arg("-Zmtime-on-use")
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["mtime-on-use", "checksum-freshness"])
         .with_stderr_data(str![[r#"
