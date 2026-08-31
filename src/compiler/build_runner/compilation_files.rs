@@ -252,7 +252,13 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         };
         let name = unit.pkg.package_id().name();
         let hash = self.unit_hash(unit);
-        format!("{name}{separator}{hash}")
+        // This function can be somewhat hot, so try to not cause unnecessary allocations here.
+        // Sadly, format! does not currently pre-allocate the correct size.
+        let mut pkg = String::with_capacity(name.len() + separator.len() + hash.len());
+        pkg.push_str(&name);
+        pkg.push_str(&separator);
+        pkg.push_str(&hash);
+        pkg
     }
 
     /// The directory hash to use for a given unit
