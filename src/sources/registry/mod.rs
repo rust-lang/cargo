@@ -687,7 +687,7 @@ impl<'gctx> Source for RegistrySource<'gctx> {
             .source_id
             .precise_registry_version(dep.package_name().as_str())
             .filter(|(c, to)| {
-                if to.is_prerelease() && self.gctx.cli_unstable().unstable_options {
+                if to.is_prerelease() && self.gctx.cli_unstable().prerelease {
                     req.matches_prerelease(c)
                 } else {
                     req.matches(c)
@@ -746,7 +746,7 @@ impl<'gctx> Source for RegistrySource<'gctx> {
                             | IndexSummary::Unsupported(s, _)
                             | IndexSummary::Invalid(s) => s,
                         };
-                        if req.is_precise() && self.gctx.cli_unstable().unstable_options {
+                        if req.is_precise() && self.gctx.cli_unstable().prerelease {
                             dep.matches_prerelease(&s)
                         } else {
                             dep.matches(&s)
