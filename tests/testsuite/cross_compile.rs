@@ -1321,8 +1321,10 @@ fn host_linker_does_not_apply_to_binary_build() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build -Z target-applies-to-host -Z host-config --target")
+    p.cargo("build --target")
         .arg(&target)
+        .arg("-Ztarget-applies-to-host")
+        .arg("-Zhost-config")
         .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
         .with_status(101)
         // Need to omit some MSVC-specific diagnostics
@@ -1339,7 +1341,9 @@ fn host_linker_does_not_apply_to_binary_build() {
 
     // with target-applies-to-host=false,
     // host.linker should not be applied but target.linker
-    p.cargo("build -Z target-applies-to-host -Z host-config")
+    p.cargo("build")
+        .arg("-Ztarget-applies-to-host")
+        .arg("-Zhost-config")
         .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
         .env("CARGO_TARGET_APPLIES_TO_HOST", "false")
         .with_status(101)
@@ -1366,8 +1370,10 @@ fn cross_with_host_config() {
 
     let p = project().file("src/main.rs", "fn main() {}").build();
 
-    p.cargo("build -Z target-applies-to-host -Z host-config --target")
+    p.cargo("build --target")
         .arg(&target)
+        .arg("-Ztarget-applies-to-host")
+        .arg("-Zhost-config")
         .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
         .with_status(0)
         .run();

@@ -427,7 +427,8 @@ fn custom_runner_target_applies_to_host() {
         )
         .build();
 
-    p.cargo("run -Z target-applies-to-host")
+    p.cargo("run")
+        .arg("-Ztarget-applies-to-host")
         .masquerade_as_nightly_cargo(&["target-applies-to-host"])
         .env("CARGO_TARGET_APPLIES_TO_HOST", "false")
         .with_status(101)
@@ -581,8 +582,10 @@ fn custom_runner_proc_macro_test_with_host_config() {
         ),
     );
 
-    p.cargo("test --lib -v -Ztarget-applies-to-host -Zhost-config --target")
+    p.cargo("test --lib -v --target")
         .arg(&target)
+        .arg("-Ztarget-applies-to-host")
+        .arg("-Zhost-config")
         .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -614,8 +617,10 @@ fn custom_runner_cfg_proc_macro_test_with_host_config() {
         "#,
     );
 
-    p.cargo("test --lib -v -Ztarget-applies-to-host -Zhost-config --target")
+    p.cargo("test --lib -v --target")
         .arg(&target)
+        .arg("-Ztarget-applies-to-host")
+        .arg("-Zhost-config")
         .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -646,7 +651,9 @@ fn custom_runner_cfg_proc_macro_test_with_host_config_no_target() {
         "#,
     );
 
-    p.cargo("test --lib -v -Ztarget-applies-to-host -Zhost-config")
+    p.cargo("test --lib -v")
+        .arg("-Ztarget-applies-to-host")
+        .arg("-Zhost-config")
         .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -676,8 +683,10 @@ fn host_runner_proc_macro_test() {
         "#,
     );
 
-    p.cargo("test --lib -v -Ztarget-applies-to-host -Zhost-config --target")
+    p.cargo("test --lib -v --target")
         .arg(&target)
+        .arg("-Ztarget-applies-to-host")
+        .arg("-Zhost-config")
         .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
         .with_stderr_data(str![[r#"
 ...
@@ -691,7 +700,9 @@ running 1 test
 "#]])
         .run();
 
-    p.cargo("test --lib -v -Ztarget-applies-to-host -Zhost-config")
+    p.cargo("test --lib -v")
+        .arg("-Ztarget-applies-to-host")
+        .arg("-Zhost-config")
         .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
         .with_stderr_data(str![[r#"
 ...
@@ -766,8 +777,10 @@ fn custom_runner_proc_macro_test_with_cross_target_host_config() {
         ),
     );
 
-    p.cargo("test --lib -v -Ztarget-applies-to-host -Zhost-config --target")
+    p.cargo("test --lib -v --target")
         .arg(alternate)
+        .arg("-Ztarget-applies-to-host")
+        .arg("-Zhost-config")
         .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
         .with_stderr_data(str![[r#"
 ...
@@ -822,8 +835,10 @@ fn host_linker_proc_macro() {
         ),
     );
 
-    p.cargo("build -v -Ztarget-applies-to-host -Zhost-config --target")
+    p.cargo("build -v --target")
         .arg(&target)
+        .arg("-Ztarget-applies-to-host")
+        .arg("-Zhost-config")
         .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -948,8 +963,10 @@ fn host_linker_proc_macro_test() {
         ),
     );
 
-    p.cargo("test --lib -v -Ztarget-applies-to-host -Zhost-config --target")
+    p.cargo("test --lib -v --target")
         .arg(&target)
+        .arg("-Ztarget-applies-to-host")
+        .arg("-Zhost-config")
         .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -975,8 +992,10 @@ fn target_cfg_linker_proc_macro_test_with_host_config() {
         "#,
     );
 
-    p.cargo("test --lib -v -Ztarget-applies-to-host -Zhost-config --target")
+    p.cargo("test --lib -v --target")
         .arg(&target)
+        .arg("-Ztarget-applies-to-host")
+        .arg("-Zhost-config")
         .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -1040,8 +1059,10 @@ fn target_linker_proc_macro_test_with_cross_target_host_config() {
         ),
     );
 
-    p.cargo("test --lib -v -Ztarget-applies-to-host -Zhost-config --target")
+    p.cargo("test --lib -v --target")
         .arg(alternate)
+        .arg("-Ztarget-applies-to-host")
+        .arg("-Zhost-config")
         .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
         .with_status(101)
         .with_stderr_data(str![[r#"

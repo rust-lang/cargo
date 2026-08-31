@@ -2630,7 +2630,8 @@ fn doctest_dep_new_layout() {
         .file("b/src/lib.rs", "pub fn bar() {}")
         .build();
 
-    p.cargo("-Zbuild-dir-new-layout test")
+    p.cargo("test")
+        .arg("-Zbuild-dir-new-layout")
         .masquerade_as_nightly_cargo(&["new build-dir layout"])
         .run();
 }
@@ -5054,7 +5055,7 @@ fn panic_abort_tests() {
     // two copies of `foo` in parallel, and which one is first is random. If
     // `--test` is first, then the first line with `[..]` will match, and the
     // second line with `--test` will fail.
-    p.cargo("test -Z panic-abort-tests -v -j1")
+    p.cargo("test -v -j1")
         .with_stderr_data(
             str![[r#"
 [RUNNING] `[..]--crate-name a [..]-C panic=abort[..]`
@@ -5064,6 +5065,7 @@ fn panic_abort_tests() {
 "#]]
             .unordered(),
         )
+        .arg("-Zpanic-abort-tests")
         .masquerade_as_nightly_cargo(&["panic-abort-tests"])
         .run();
 }
@@ -5093,7 +5095,7 @@ fn panic_abort_doc_tests() {
         )
         .build();
 
-    p.cargo("test --doc -Z panic-abort-tests -v")
+    p.cargo("test --doc -v")
         .with_stderr_data(
             str![[r#"
 [RUNNING] `[..]rustc[..] --crate-name foo [..]-C panic=abort[..]`
@@ -5102,6 +5104,7 @@ fn panic_abort_doc_tests() {
 "#]]
             .unordered(),
         )
+        .arg("-Zpanic-abort-tests")
         .masquerade_as_nightly_cargo(&["panic-abort-tests"])
         .run();
 }
@@ -5137,11 +5140,12 @@ fn panic_abort_only_test() {
         .file("a/src/lib.rs", "pub fn foo() {}")
         .build();
 
-    p.cargo("test -Z panic-abort-tests -v")
+    p.cargo("test -v")
         .with_stderr_data(str![[r#"
 [WARNING] Cargo.toml: `panic` setting is ignored for `test` profile
 ...
 "#]])
+        .arg("-Zpanic-abort-tests")
         .masquerade_as_nightly_cargo(&["panic-abort-tests"])
         .run();
 }
@@ -5177,7 +5181,8 @@ fn panic_abort_test_profile_inherits() {
         .file("a/src/lib.rs", "pub fn foo() {}")
         .build();
 
-    p.cargo("test -Z panic-abort-tests -v")
+    p.cargo("test -v")
+        .arg("-Zpanic-abort-tests")
         .masquerade_as_nightly_cargo(&["panic-abort-tests"])
         .with_status(0)
         .run();

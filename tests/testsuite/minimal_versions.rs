@@ -30,7 +30,8 @@ fn minimal_version_cli() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("generate-lockfile -Zminimal-versions")
+    p.cargo("generate-lockfile")
+        .arg("-Zminimal-versions")
         .masquerade_as_nightly_cargo(&["minimal-versions"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index

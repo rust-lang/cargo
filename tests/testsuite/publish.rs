@@ -298,7 +298,8 @@ fn simple_publish_with_asymmetric() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("publish --no-verify -Zasymmetric-token --registry dummy-registry")
+    p.cargo("publish --no-verify --registry dummy-registry")
+        .arg("-Zasymmetric-token")
         .masquerade_as_nightly_cargo(&["asymmetric-token"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
@@ -3409,8 +3410,9 @@ fn skip_wait_for_publish() {
         )
         .build();
 
-    p.cargo("publish --no-verify -Zpublish-timeout")
+    p.cargo("publish --no-verify")
         .replace_crates_io(registry.index_url())
+        .arg("-Zpublish-timeout")
         .masquerade_as_nightly_cargo(&["publish-timeout"])
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
@@ -3457,8 +3459,9 @@ fn timeout_waiting_for_publish() {
         )
         .build();
 
-    p.cargo("publish --no-verify -Zpublish-timeout")
+    p.cargo("publish --no-verify")
         .replace_crates_io(registry.index_url())
+        .arg("-Zpublish-timeout")
         .masquerade_as_nightly_cargo(&["publish-timeout"])
         .with_status(0)
         .with_stderr_data(str![[r#"
@@ -3656,8 +3659,9 @@ fn timeout_waiting_for_dependency_publish() {
         )
         .build();
 
-    p.cargo("publish --no-verify -Zpublish-timeout")
+    p.cargo("publish --no-verify")
         .replace_crates_io(registry.index_url())
+        .arg("-Zpublish-timeout")
         .masquerade_as_nightly_cargo(&["publish-timeout"])
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -4847,7 +4851,8 @@ fn workspace_circular_publish_dependency() {
         .build();
 
     // Ensure the circular dependency is caught and reported clearly.
-    p.cargo("publish --workspace --no-verify -Zpublish-timeout --config publish.timeout=1")
+    p.cargo("publish --workspace --no-verify --config publish.timeout=1")
+        .arg("-Zpublish-timeout")
         .masquerade_as_nightly_cargo(&["publish-timeout"])
         .replace_crates_io(registry.index_url())
         .with_status(101)
@@ -4938,7 +4943,8 @@ fn workspace_circular_publish_dependency_with_non_cycle_package() {
         .file("c/src/lib.rs", "")
         .build();
 
-    p.cargo("publish --workspace --no-verify -Zpublish-timeout --config publish.timeout=1")
+    p.cargo("publish --workspace --no-verify --config publish.timeout=1")
+        .arg("-Zpublish-timeout")
         .masquerade_as_nightly_cargo(&["publish-timeout"])
         .replace_crates_io(registry.index_url())
         .with_status(101)

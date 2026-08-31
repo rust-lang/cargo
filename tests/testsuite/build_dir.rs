@@ -496,7 +496,9 @@ fn cargo_rustdoc_json_should_output_to_target_dir() {
         )
         .build();
 
-    p.cargo("-Zbuild-dir-new-layout -Zunstable-options rustdoc --output-format json")
+    p.cargo("rustdoc --output-format json")
+        .arg("-Zbuild-dir-new-layout")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["new build-dir layout", "rustdoc-output-format"])
         .enable_mac_dsym()
         .run();
@@ -535,7 +537,9 @@ fn cargo_doc_json_should_output_to_target_dir() {
         )
         .build();
 
-    p.cargo("-Zbuild-dir-new-layout -Zunstable-options doc --no-deps --output-format json")
+    p.cargo("doc --no-deps --output-format json")
+        .arg("-Zbuild-dir-new-layout")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["new build-dir layout", "rustdoc-output-format"])
         .enable_mac_dsym()
         .run();
@@ -1199,7 +1203,8 @@ fn artifact_deps() {
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("run -Z bindeps")
+    p.cargo("run")
+        .arg("-Zbindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .enable_mac_dsym()
         .with_stderr_data(str![[r#"

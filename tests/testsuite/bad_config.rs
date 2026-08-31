@@ -3264,7 +3264,8 @@ fn bad_trim_paths() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Ztrim-paths")
+    p.cargo("check")
+        .arg("-Ztrim-paths")
         .masquerade_as_nightly_cargo(&["trim-paths"])
         .with_status(101)
         .with_stderr_data(str![[r#"

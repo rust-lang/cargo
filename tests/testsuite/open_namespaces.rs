@@ -275,7 +275,8 @@ fn main() {}
         )
         .build();
 
-    p.cargo("read-manifest -Zscript --manifest-path foo::bar.rs")
+    p.cargo("read-manifest --manifest-path foo::bar.rs")
+        .arg("-Zscript")
         .masquerade_as_nightly_cargo(&["script", "open-namespaces"])
         .with_stdout_data(
             str![[r#"

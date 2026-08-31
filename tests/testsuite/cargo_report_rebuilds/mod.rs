@@ -66,8 +66,9 @@ fn no_log_for_the_current_workspace() {
         .file("src/lib.rs", "")
         .build();
 
-    foo.cargo("check -Zbuild-analysis")
+    foo.cargo("check")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
 
@@ -80,7 +81,8 @@ fn no_log_for_the_current_workspace() {
         .file("src/lib.rs", "")
         .build();
 
-    bar.cargo("report rebuilds -Zbuild-analysis")
+    bar.cargo("report rebuilds")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -99,12 +101,14 @@ fn no_rebuild_data() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zbuild-analysis")
+    p.cargo("check")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
 
-    p.cargo("report rebuilds -Zbuild-analysis")
+    p.cargo("report rebuilds")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .with_stderr_data(str![[r#"
 Session: [..]
@@ -122,19 +126,22 @@ fn basic_rebuild() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zbuild-analysis")
+    p.cargo("check")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
 
     p.change_file("src/lib.rs", "// touched");
 
-    p.cargo("check -Zbuild-analysis")
+    p.cargo("check")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
 
-    p.cargo("report rebuilds -Zbuild-analysis")
+    p.cargo("report rebuilds")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .with_stderr_data(str![[r#"
 Session: [..]
@@ -159,18 +166,21 @@ fn all_fresh() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zbuild-analysis")
+    p.cargo("check")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
 
     // Second build without changes
-    p.cargo("check -Zbuild-analysis")
+    p.cargo("check")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
 
-    p.cargo("report rebuilds -Zbuild-analysis")
+    p.cargo("report rebuilds")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .with_stderr_data(str![[r#"
 Session: [..]
@@ -236,19 +246,22 @@ fn with_dependencies() {
         .file("deeper/src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zbuild-analysis")
+    p.cargo("check")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
 
     p.change_file("deeper/src/lib.rs", "// touched");
 
-    p.cargo("check -Zbuild-analysis")
+    p.cargo("check")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
 
-    p.cargo("report rebuilds -Zbuild-analysis")
+    p.cargo("report rebuilds")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .with_stderr_data(str![[r#"
 Session: [..]
@@ -267,7 +280,8 @@ Root rebuilds:
 "#]])
         .run();
 
-    p.cargo("report rebuilds -Zbuild-analysis -vv")
+    p.cargo("report rebuilds -vv")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .with_stderr_data(str![[r#"
 Session: [..]
@@ -317,8 +331,9 @@ fn multiple_root_causes() {
         .file("pkg6/src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zbuild-analysis")
+    p.cargo("check")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
 
@@ -345,13 +360,15 @@ fn multiple_root_causes() {
     p.change_file("pkg5/src/lib.rs", "// touched");
     p.change_file("pkg6/src/lib.rs", "// touched");
 
-    p.cargo("check -Zbuild-analysis")
+    p.cargo("check")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
         .env("__CARGO_TEST_MY_FOO", "1")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
 
-    p.cargo("report rebuilds -Zbuild-analysis")
+    p.cargo("report rebuilds")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .with_stderr_data(str![[r#"
 Session: [..]
@@ -378,7 +395,8 @@ Root rebuilds: (top 5 of 6 by impact)
 "#]])
         .run();
 
-    p.cargo("report rebuilds -Zbuild-analysis --verbose")
+    p.cargo("report rebuilds --verbose")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .with_stderr_data(str![[r#"
 Session: [..]
@@ -448,19 +466,22 @@ fn shared_dep_cascading() {
         .file("common/src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zbuild-analysis")
+    p.cargo("check")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
 
     p.change_file("common/src/lib.rs", "// touched");
 
-    p.cargo("check -Zbuild-analysis")
+    p.cargo("check")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
 
-    p.cargo("report rebuilds -Zbuild-analysis")
+    p.cargo("report rebuilds")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .with_stderr_data(str![[r#"
 Session: [..]
@@ -487,14 +508,16 @@ fn outside_workspace() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zbuild-analysis")
+    p.cargo("check")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
 
     p.change_file("src/lib.rs", "// touched");
-    p.cargo("check -Zbuild-analysis")
+    p.cargo("check")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
 
@@ -524,8 +547,9 @@ fn with_manifest_path() {
         .file("src/lib.rs", "")
         .build();
 
-    foo.cargo("check -Zbuild-analysis")
+    foo.cargo("check")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
 
@@ -535,18 +559,21 @@ fn with_manifest_path() {
         .file("src/lib.rs", "")
         .build();
 
-    bar.cargo("check -Zbuild-analysis")
+    bar.cargo("check")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
 
     bar.change_file("src/lib.rs", "// touched");
-    bar.cargo("check -Zbuild-analysis")
+    bar.cargo("check")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
 
-    foo.cargo("report rebuilds --manifest-path ../bar/Cargo.toml -Zbuild-analysis")
+    foo.cargo("report rebuilds --manifest-path ../bar/Cargo.toml")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .with_stderr_data(str![[r#"
 Session: [..]
@@ -572,8 +599,9 @@ fn with_session_id() {
         .build();
 
     // First session: fresh build (1 new unit)
-    p.cargo("check -Zbuild-analysis")
+    p.cargo("check")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
 
@@ -583,25 +611,25 @@ fn with_session_id() {
     p.change_file("src/lib.rs", "// touched");
 
     // Second session: rebuild (1 unit rebuilt)
-    p.cargo("check -Zbuild-analysis")
+    p.cargo("check")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
 
     let _ = paths::log_file(1);
 
     // With --id, should use the first session (not the most recent second)
-    p.cargo(&format!(
-        "report rebuilds --id {first_session_id} -Zbuild-analysis"
-    ))
-    .masquerade_as_nightly_cargo(&["build-analysis"])
-    .with_stderr_data(str![[r#"
+    p.cargo(&format!("report rebuilds --id {first_session_id}"))
+        .arg("-Zbuild-analysis")
+        .masquerade_as_nightly_cargo(&["build-analysis"])
+        .with_stderr_data(str![[r#"
 Session: [..]
 Status: 0 units rebuilt, 0 cached, 1 new
 
 
 "#]])
-    .run();
+        .run();
 }
 
 #[cargo_test]
@@ -611,12 +639,14 @@ fn session_id_not_found() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zbuild-analysis")
+    p.cargo("check")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
 
-    p.cargo("report rebuilds --id 20260101T000000000Z-0000000000000000 -Zbuild-analysis")
+    p.cargo("report rebuilds --id 20260101T000000000Z-0000000000000000")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -635,7 +665,8 @@ fn invalid_session_id_format() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("report rebuilds --id invalid-session-id -Zbuild-analysis")
+    p.cargo("report rebuilds --id invalid-session-id")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .with_status(101)
         .with_stderr_data(str![[r#"

@@ -42,7 +42,8 @@ See https://github.com/rust-lang/cargo/issues/12103 for more information about t
 fn rustdoc_simple_json() {
     let p = project().file("src/lib.rs", "").build();
 
-    p.cargo("rustdoc -Z unstable-options --output-format json -v")
+    p.cargo("rustdoc --output-format json -v")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["rustdoc-output-format"])
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
@@ -59,7 +60,8 @@ fn rustdoc_simple_json() {
 fn rustdoc_invalid_output_format() {
     let p = project().file("src/lib.rs", "").build();
 
-    p.cargo("rustdoc -Z unstable-options --output-format pdf -v")
+    p.cargo("rustdoc --output-format pdf -v")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["rustdoc-output-format"])
         .with_status(1)
         .with_stderr_data(str![[r#"
@@ -76,7 +78,8 @@ For more information, try '--help'.
 fn rustdoc_json_stable() {
     let p = project().file("src/lib.rs", "").build();
 
-    p.cargo("rustdoc -Z unstable-options --output-format json -v")
+    p.cargo("rustdoc --output-format json -v")
+        .arg("-Zunstable-options")
         .with_status(101)
         .with_stderr_data(
             str![[r#"
@@ -373,7 +376,8 @@ fn rustdoc_json_same_crate_different_version() {
         .build();
 
     entry
-        .cargo("rustdoc -v -Z unstable-options --output-format json -p dep@1.0.0")
+        .cargo("rustdoc -v --output-format json -p dep@1.0.0")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["rustdoc-output-format"])
         .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to highest compatible versions
@@ -390,7 +394,8 @@ fn rustdoc_json_same_crate_different_version() {
     assert!(!dep_json.contains("dep_v2_fn"));
 
     entry
-        .cargo("rustdoc -v -Z unstable-options --output-format json -p dep@2.0.0")
+        .cargo("rustdoc -v --output-format json -p dep@2.0.0")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["rustdoc-output-format"])
         .with_stderr_data(str![[r#"
 [DOCUMENTING] dep v2.0.0 ([ROOT]/dep_v2)
@@ -406,7 +411,8 @@ fn rustdoc_json_same_crate_different_version() {
     assert!(dep_json.contains("dep_v2_fn"));
 
     entry
-        .cargo("rustdoc -v -Z unstable-options --output-format json -p dep@1.0.0")
+        .cargo("rustdoc -v --output-format json -p dep@1.0.0")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["rustdoc-output-format"])
         .with_stderr_data(str![[r#"
 [FRESH] dep v1.0.0 ([ROOT]/dep_v1)

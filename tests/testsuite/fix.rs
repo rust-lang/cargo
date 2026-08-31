@@ -2595,7 +2595,8 @@ fn main() {
         )
         .build();
 
-    p.cargo("-Zscript fix --edition --allow-no-vcs --manifest-path foo.rs")
+    p.cargo("fix --edition --allow-no-vcs --manifest-path foo.rs")
+        .arg("-Zscript")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stderr_data(str![[r#"
 [MIGRATING] foo.rs from 2021 edition to 2024
@@ -3063,7 +3064,8 @@ fn fix_edition_skips_old_editions() {
         .build();
 
     // Doing the whole workspace should skip since there is a 2021 in the mix.
-    p.cargo("fix -Zfix-edition=start=2024 -v")
+    p.cargo("fix -v")
+        .arg("-Zfix-edition=start=2024")
         .masquerade_as_nightly_cargo(&["fix-edition"])
         .with_stderr_data(str![[r#"
 [SKIPPING] not all packages are at edition 2024
@@ -3072,7 +3074,8 @@ fn fix_edition_skips_old_editions() {
         .run();
 
     // Same with `end`.
-    p.cargo("fix -Zfix-edition=end=2024,future -v")
+    p.cargo("fix -v")
+        .arg("-Zfix-edition=end=2024,future")
         .masquerade_as_nightly_cargo(&["fix-edition"])
         .with_stderr_data(str![[r#"
 [SKIPPING] not all packages are at edition 2024
@@ -3081,7 +3084,8 @@ fn fix_edition_skips_old_editions() {
         .run();
 
     // Doing an individual package at the correct edition should check it.
-    p.cargo("fix -Zfix-edition=start=2024 -p e2024")
+    p.cargo("fix -p e2024")
+        .arg("-Zfix-edition=start=2024")
         .masquerade_as_nightly_cargo(&["fix-edition"])
         .with_stderr_data(str![[r#"
 [CHECKING] e2024 v0.0.0 ([ROOT]/foo/e2024)
@@ -3105,7 +3109,8 @@ fn fix_edition_future() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("fix -Zfix-edition=end=2024,future")
+    p.cargo("fix")
+        .arg("-Zfix-edition=end=2024,future")
         .masquerade_as_nightly_cargo(&["fix-edition"])
         .with_stderr_data(str![[r#"
 [MIGRATING] Cargo.toml from 2024 edition to future
@@ -3137,7 +3142,8 @@ fn script_without_frontmatter() {
         .file("echo.rs", "fn main() {}")
         .build();
 
-    p.cargo("fix -Zscript --allow-no-vcs --manifest-path echo.rs")
+    p.cargo("fix --allow-no-vcs --manifest-path echo.rs")
+        .arg("-Zscript")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![""])
         .with_stderr_data(str![[r#"
@@ -3176,7 +3182,8 @@ fn main() {}",
         )
         .build();
 
-    p.cargo("fix -Zscript --allow-no-vcs --manifest-path echo.rs")
+    p.cargo("fix --allow-no-vcs --manifest-path echo.rs")
+        .arg("-Zscript")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![""])
         .with_stderr_data(str![[r#"
@@ -3217,7 +3224,8 @@ fn main() {}"#,
         )
         .build();
 
-    p.cargo("fix -Zscript --allow-no-vcs --manifest-path echo.rs")
+    p.cargo("fix --allow-no-vcs --manifest-path echo.rs")
+        .arg("-Zscript")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![""])
         .with_stderr_data(str![[r#"
@@ -3257,7 +3265,8 @@ fn main() {}"#,
         )
         .build();
 
-    p.cargo("fix -Zscript --allow-no-vcs --manifest-path echo.rs")
+    p.cargo("fix --allow-no-vcs --manifest-path echo.rs")
+        .arg("-Zscript")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![""])
         .with_stderr_data(str![[r#"
@@ -3296,7 +3305,8 @@ fn main() {}"#,
         )
         .build();
 
-    p.cargo("fix -Zscript --allow-no-vcs --manifest-path echo.rs")
+    p.cargo("fix --allow-no-vcs --manifest-path echo.rs")
+        .arg("-Zscript")
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data(str![""])
         .with_stderr_data(str![[r#"

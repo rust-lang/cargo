@@ -191,7 +191,8 @@ mod tests {
         )
         .build();
 
-    foo.cargo("check -v -Zrustc-unicode")
+    foo.cargo("check -v")
+        .arg("-Zrustc-unicode")
         .masquerade_as_nightly_cargo(&["rustc-unicode"])
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)

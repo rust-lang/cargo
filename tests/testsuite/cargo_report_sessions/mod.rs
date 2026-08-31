@@ -56,7 +56,8 @@ fn no_logs_in_workspace() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("report sessions -Zbuild-analysis")
+    p.cargo("report sessions")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -75,12 +76,14 @@ fn in_workspace() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zbuild-analysis")
+    p.cargo("check")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
 
-    p.cargo("report sessions -Zbuild-analysis")
+    p.cargo("report sessions")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .with_stderr_data(str![[r#"
 Session IDs for `[ROOT]/foo` (most recent first):
@@ -98,8 +101,9 @@ fn outside_workspace() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zbuild-analysis")
+    p.cargo("check")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
 
@@ -125,13 +129,15 @@ fn with_limit_1_and_extra_logs() {
     // Generate 3 sessions
     for i in 0..3 {
         p.change_file("src/lib.rs", &format!("pub fn foo{i}() {{}}"));
-        p.cargo("check -Zbuild-analysis")
+        p.cargo("check")
             .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+            .arg("-Zbuild-analysis")
             .masquerade_as_nightly_cargo(&["build-analysis"])
             .run();
     }
 
-    p.cargo("report sessions --limit 1 -Zbuild-analysis")
+    p.cargo("report sessions --limit 1")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .with_stderr_data(str![[r#"
 Session IDs for `[ROOT]/foo` (most recent first):
@@ -154,13 +160,15 @@ fn with_limit_5_but_not_enough_logs() {
     // Generate 2 sessions
     for i in 0..2 {
         p.change_file("src/lib.rs", &format!("pub fn foo{i}() {{}}"));
-        p.cargo("check -Zbuild-analysis")
+        p.cargo("check")
             .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+            .arg("-Zbuild-analysis")
             .masquerade_as_nightly_cargo(&["build-analysis"])
             .run();
     }
 
-    p.cargo("report sessions --limit 5 -Zbuild-analysis")
+    p.cargo("report sessions --limit 5")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .with_stderr_data(str![[r#"
 Session IDs for `[ROOT]/foo` (most recent first):
@@ -180,8 +188,9 @@ fn existing_logs_from_other_workspaces() {
         .file("src/lib.rs", "")
         .build();
 
-    foo.cargo("check -Zbuild-analysis")
+    foo.cargo("check")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
 
@@ -191,13 +200,15 @@ fn existing_logs_from_other_workspaces() {
         .file("src/lib.rs", "")
         .build();
 
-    bar.cargo("check -Zbuild-analysis")
+    bar.cargo("check")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
 
     // In foo workspace, should only show foo sessions by default
-    foo.cargo("report sessions -Zbuild-analysis")
+    foo.cargo("report sessions")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .with_stderr_data(str![[r#"
 Session IDs for `[ROOT]/foo` (most recent first):
@@ -216,8 +227,9 @@ fn with_manifest_path() {
         .file("src/lib.rs", "")
         .build();
 
-    foo.cargo("check -Zbuild-analysis")
+    foo.cargo("check")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
 
@@ -227,12 +239,14 @@ fn with_manifest_path() {
         .file("src/lib.rs", "")
         .build();
 
-    bar.cargo("check -Zbuild-analysis")
+    bar.cargo("check")
         .env("CARGO_BUILD_ANALYSIS_ENABLED", "true")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .run();
 
-    foo.cargo("report sessions --manifest-path ../bar/Cargo.toml -Zbuild-analysis")
+    foo.cargo("report sessions --manifest-path ../bar/Cargo.toml")
+        .arg("-Zbuild-analysis")
         .masquerade_as_nightly_cargo(&["build-analysis"])
         .with_stderr_data(str![[r#"
 Session IDs for `[ROOT]/bar` (most recent first):

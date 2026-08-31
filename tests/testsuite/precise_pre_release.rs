@@ -63,7 +63,8 @@ fn update_pre_release() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("update my-dependency --precise 0.1.2-pre.0 -Zunstable-options")
+    p.cargo("update my-dependency --precise 0.1.2-pre.0")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["precise-pre-release"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
@@ -98,7 +99,8 @@ fn pre_release_should_unmatched() {
 
     // 0.1.2-pre.0 < 0.1.2 so it doesn't match
     cargo_test_support::registry::Package::new("my-dependency", "0.1.2-pre.0").publish();
-    p.cargo("update -p my-dependency --precise 0.1.2-pre.0 -Zunstable-options")
+    p.cargo("update -p my-dependency --precise 0.1.2-pre.0")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["precise-pre-release"])
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -116,7 +118,8 @@ required by package `package v0.0.0 ([ROOT]/foo)`
 
     cargo_test_support::registry::Package::new("my-dependency", "0.2.0-0").publish();
     // 0.2.0-0 is the upper bound we exclude, so it doesn't match
-    p.cargo("update -p my-dependency --precise 0.2.0-0 -Zunstable-options")
+    p.cargo("update -p my-dependency --precise 0.2.0-0")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["precise-pre-release"])
         .with_status(101)
         .with_stderr_data(str![[r#"
@@ -160,7 +163,8 @@ fn pre_release_should_matched() {
     // Test upgrade
     // 0.1.3 is in the range, so it match
     cargo_test_support::registry::Package::new("my-dependency", "0.1.3").publish();
-    p.cargo("update -p my-dependency --precise 0.1.3 -Zunstable-options")
+    p.cargo("update -p my-dependency --precise 0.1.3")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["precise-pre-release"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
@@ -175,7 +179,8 @@ fn pre_release_should_matched() {
     // Test downgrade
     // v0.1.3-pre.1 is in the range, so it match
     cargo_test_support::registry::Package::new("my-dependency", "0.1.3-pre.1").publish();
-    p.cargo("update -p my-dependency --precise 0.1.3-pre.1 -Zunstable-options")
+    p.cargo("update -p my-dependency --precise 0.1.3-pre.1")
+        .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["precise-pre-release"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
