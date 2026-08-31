@@ -1,9 +1,9 @@
 //! Tests for --unit-graph option.
 
 use crate::prelude::*;
-use cargo_test_support::project;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
+use cargo_test_support::{basic_bin_manifest, project};
 
 #[cargo_test]
 fn gated() {
@@ -189,6 +189,133 @@ fn simple() {
       "dependencies": [
         {
           "extern_crate_name": "a",
+          "index": 0,
+          "noprelude": false,
+          "nounused": false,
+          "public": false
+        }
+      ],
+      "features": [],
+      "mode": "build",
+      "pkg_id": "path+[ROOTURL]/foo#0.1.0",
+      "platform": null,
+      "profile": {
+        "codegen_backend": null,
+        "codegen_units": null,
+        "debug_assertions": true,
+        "debuginfo": 2,
+        "incremental": false,
+        "lto": "false",
+        "name": "dev",
+        "opt_level": "0",
+        "overflow_checks": true,
+        "panic": "unwind",
+        "rpath": false,
+        "split_debuginfo": "{...}",
+        "strip": "{...}"
+      },
+      "target": {
+        "crate_types": [
+          "lib"
+        ],
+        "doc": true,
+        "doctest": true,
+        "edition": "2015",
+        "kind": [
+          "lib"
+        ],
+        "name": "foo",
+        "src_path": "[ROOT]/foo/src/lib.rs",
+        "test": true
+      }
+    }
+  ],
+  "version": 1
+}
+"#]]
+            .is_json(),
+        )
+        .run();
+}
+
+#[cargo_test]
+fn artifact_alias_edges() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2015"
+            authors = []
+
+            [dependencies]
+            bar = { path = "bar/", artifact = "bin" }
+            bar-alt = { package = "bar", path = "bar/", artifact = "bin" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("bar/Cargo.toml", &basic_bin_manifest("bar"))
+        .file("bar/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build --unit-graph -Zunstable-options -Z bindeps")
+        .masquerade_as_nightly_cargo(&["unit-graph", "bindeps"])
+        .with_stdout_data(
+            str![[r#"
+{
+  "roots": [
+    1
+  ],
+  "units": [
+    {
+      "dependencies": [],
+      "features": [],
+      "mode": "build",
+      "pkg_id": "path+[ROOTURL]/foo/bar#0.5.0",
+      "platform": null,
+      "profile": {
+        "codegen_backend": null,
+        "codegen_units": null,
+        "debug_assertions": true,
+        "debuginfo": 2,
+        "incremental": false,
+        "lto": "false",
+        "name": "dev",
+        "opt_level": "0",
+        "overflow_checks": true,
+        "panic": "unwind",
+        "rpath": false,
+        "split_debuginfo": "{...}",
+        "strip": "{...}"
+      },
+      "target": {
+        "crate_types": [
+          "bin"
+        ],
+        "doc": true,
+        "doctest": false,
+        "edition": "2015",
+        "kind": [
+          "bin"
+        ],
+        "name": "bar",
+        "src_path": "[ROOT]/foo/bar/src/main.rs",
+        "test": true
+      }
+    },
+    {
+      "dependencies": [
+        {
+          "extern_crate_name": "bar",
+          "index": 0,
+          "noprelude": false,
+          "nounused": false,
+          "public": false
+        },
+        {
+          "extern_crate_name": "bar_alt",
           "index": 0,
           "noprelude": false,
           "nounused": false,
