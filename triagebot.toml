@@ -64,6 +64,7 @@ new_pr = true
 
 [assign]
 contributing_url = "https://rust-lang.github.io/cargo/contrib/"
+llm_policy_url = "https://doc.crates.io/contrib/process/llm-usage.html"
 warn_non_default_branch = true
 
 [assign.owners]
