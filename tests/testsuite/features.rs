@@ -1,6 +1,9 @@
 //! Tests for `[features]` table.
 
+use std::fs::File;
+
 use crate::prelude::*;
+use cargo_test_support::publish::validate_crate_contents;
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::{basic_manifest, project};
 use cargo_test_support::{rustc_host, str};
@@ -2457,4 +2460,224 @@ required-features = ["feat"]
     p.cargo(&format!("fetch --target={host}")).run();
     p.cargo(&format!("check --target={host} --examples --frozen"))
         .run();
+}
+
+#[cargo_test]
+fn feature_metadata() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["feature-metadata"]
+
+                [package]
+                name = "foo"
+                edition = "2015"
+
+                [features]
+                a = []
+                b = []
+                c = { enables = ["a", "b"] }
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {
+                    #[cfg(not(all(feature = "a", feature = "b")))]
+                    compile_error!("Cargo features `a` and `b` must be enabled");
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("check --features c")
+        .masquerade_as_nightly_cargo(&["feature-metadata"])
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn feature_metadata_is_unstable() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2015"
+
+                [features]
+                a = { enables = [] }
+            "#,
+        )
+        .file("src/main.rs", "")
+        .build();
+
+    p.cargo("check --features a")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  feature `feature-metadata` is required
+
+  The package requires the Cargo feature called `feature-metadata`, but that feature is not stabilized in this version of Cargo ([..]).
+  Consider trying a newer version of Cargo (this may require the nightly release).
+  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#feature_metadata for more information about the status of this feature.
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn feature_metadata_missing_enables() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["feature-metadata"]
+
+                [package]
+                name = "foo"
+                edition = "2015"
+
+                [features]
+                foo = {}
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["feature-metadata"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] missing field `enables`
+ --> Cargo.toml:9:23
+  |
+9 |                 foo = {}
+  |                       ^^
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn feature_metadata_empty_enables() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["feature-metadata"]
+
+                [package]
+                name = "foo"
+                edition = "2015"
+
+                [features]
+                foo = { enables = [] }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["feature-metadata"])
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn unused_keys_in_feature_metadata() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["feature-metadata"]
+
+                [package]
+                name = "foo"
+                edition = "2015"
+
+                [features]
+                foo = { enables = ["bar"], a = false, b = true }
+                bar = []
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["feature-metadata"])
+        .with_stderr_data(str![[r#"
+[WARNING] Cargo.toml: unused manifest key: `features.foo.a`
+[WARNING] Cargo.toml: unused manifest key: `features.foo.b`
+[WARNING] `foo` (manifest) generated 2 warnings
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn normalize_feature_metadata() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["feature-metadata"]
+
+                [package]
+                name = "foo"
+                edition = "2015"
+
+                [features]
+                a = []
+                b = []
+                c = { enables = ["a", "b"] }
+            "#,
+        )
+        .file("src/main.rs", "")
+        .build();
+
+    p.cargo("package --no-verify")
+        .masquerade_as_nightly_cargo(&["feature-metadata"])
+        .with_stderr_data(str![[r#"
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository
+  |
+  = [NOTE] see https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info
+[PACKAGING] foo v0.0.0 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+
+"#]])
+        .run();
+    let f = File::open(&p.root().join("target/package/foo-0.0.0.crate")).unwrap();
+    let normalized_manifest = str![[r#"
+...
+[features]
+a = []
+b = []
+c = [
+    "a",
+    "b",
+]
+
+...
+"#]];
+    validate_crate_contents(
+        f,
+        "foo-0.0.0.crate",
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        [("Cargo.toml", normalized_manifest)],
+    );
 }
