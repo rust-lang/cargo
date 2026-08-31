@@ -1869,8 +1869,22 @@ fn dep_paths_for_args(unit: &Unit, build_runner: &BuildRunner<'_, '_>) -> Vec<Pa
         .into_iter()
         .map(|u| build_runner.files().deps_dir(&u))
         .collect();
-    paths.sort_unstable();
-    paths.dedup();
+
+    // We are in the hot path that needs to always run (even for rebuilds)
+    // There could be a potentially large amount of paths for large workspaces.
+    // We want to sort and dedup the paths but doing so is a bit expsensive when comparing PathBufs
+    // directly. So instead we only sort valid Utf8 paths as &str's which is a bit faster.
+    // We do not allow non utf8 paths when building, so we take advantage of that by treating them
+    // as a single value when sorting/deduplicating.
+    //
+    // For reference this saves about ~30ms on Zed
+    paths.sort_unstable_by(|a, b| match (a.to_str(), b.to_str()) {
+        (Some(a), Some(b)) => a.cmp(b),
+        (Some(_), None) => std::cmp::Ordering::Less,
+        (None, Some(_)) => std::cmp::Ordering::Greater,
+        (None, None) => std::cmp::Ordering::Less,
+    });
+    paths.dedup_by(|a, b| matches!((a.to_str(), b.to_str()), (Some(x), Some(y)) if x == y));
 
     paths
 }
