@@ -444,7 +444,11 @@ impl BuildDirLayout {
     ///
     /// New features should consider using this so we can avoid their migrations.
     pub fn out_force_new_layout(&self, pkg_dir: &str) -> PathBuf {
-        self.build_unit(pkg_dir).join("out")
+        let mut build_dir = self.build_unit(pkg_dir);
+        // This function can be somewhat hot for packages with many dependencies, so reuse the
+        // PathBuf allocation here.
+        build_dir.push("out");
+        build_dir
     }
     /// Fetch the deps path. (old layout)
     pub fn legacy_deps(&self) -> &Path {
