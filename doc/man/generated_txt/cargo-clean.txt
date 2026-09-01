@@ -47,10 +47,10 @@ OPTIONS
            <https://doc.rust-lang.org/cargo/reference/config.html>. Defaults to
            target in the root of the workspace.
 
-       --target triple
+       --target tuple
            Clean for the specified target architecture. Flag may be specified
            multiple times. The default is the host architecture. The general
-           format of the triple is <arch><sub>-<vendor>-<sys>-<abi>.
+           format of the tuple is <arch><sub>-<vendor>-<sys>-<abi>.
 
            Possible values:
 

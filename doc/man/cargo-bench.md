@@ -108,7 +108,7 @@ for more information on per-target settings.
 
 {{#options}}
 
-{{> options-target-triple }}
+{{> options-target-tuple }}
 
 {{> options-profile }}
 

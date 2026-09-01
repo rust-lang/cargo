@@ -29,7 +29,7 @@ If `--target` is not specified, then all target dependencies are fetched.
 ### Fetch options
 
 {{#options}}
-{{> options-target-triple }}
+{{> options-target-tuple }}
 {{/options}}
 
 ### Display Options

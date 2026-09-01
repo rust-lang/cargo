@@ -140,8 +140,8 @@ The `normal`, `build`, `dev`, and `all` dependency kinds cannot be mixed with
 The default is `normal,build,dev`.
 {{/option}}
 
-{{#option "`--target` _triple_" }}
-Filter dependencies matching the given [target triple](../appendix/glossary.html#target). 
+{{#option "`--target` _tuple_" }}
+Filter dependencies matching the given [target tuple](../appendix/glossary.html#target).
 The default is the host platform. Use the value `all` to include *all* targets.
 {{/option}}
 

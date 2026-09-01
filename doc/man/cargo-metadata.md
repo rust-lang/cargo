@@ -265,7 +265,7 @@ The JSON output has the following format:
     //
     // By default, this includes all dependencies for all target platforms.
     // The `--filter-platform` flag may be used to narrow to a specific
-    // target triple.
+    // target tuple.
     "resolve": {
         /* Array of nodes within the dependency graph.
            Each node is a package.
@@ -359,9 +359,9 @@ Specify the version of the output format to use. Currently `1` is the only
 possible value.
 {{/option}}
 
-{{#option "`--filter-platform` _triple_" }}
+{{#option "`--filter-platform` _tuple_" }}
 This filters the `resolve` output to only include dependencies for the
-given [target triple](../appendix/glossary.html#target).
+given [target tuple](../appendix/glossary.html#target).
 A literal `"host-tuple"` can be used, which will internally be substituted by the host's target.
 Without this flag, the resolve includes all targets.
 

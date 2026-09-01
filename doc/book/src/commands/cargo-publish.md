@@ -120,8 +120,8 @@ single quotes or double quotes around each pattern.</p>
 
 <dl>
 
-<dt class="option-term" id="option-cargo-publish---target"><a class="option-anchor" href="#option-cargo-publish---target"><code>--target</code> <em>triple</em></a></dt>
-<dd class="option-desc"><p>Publish for the specified target architecture. Flag may be specified multiple times. The default is the host architecture. The general format of the triple is
+<dt class="option-term" id="option-cargo-publish---target"><a class="option-anchor" href="#option-cargo-publish---target"><code>--target</code> <em>tuple</em></a></dt>
+<dd class="option-desc"><p>Publish for the specified target architecture. Flag may be specified multiple times. The default is the host architecture. The general format of the tuple is
 <code>&lt;arch&gt;&lt;sub&gt;-&lt;vendor&gt;-&lt;sys&gt;-&lt;abi&gt;</code>.</p>
 <p>Possible values:</p>
 <ul>

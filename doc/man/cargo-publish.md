@@ -73,7 +73,7 @@ which defaults to `crates-io`.
 
 {{#options}}
 
-{{> options-target-triple }}
+{{> options-target-tuple }}
 
 {{> options-target-dir }}
 

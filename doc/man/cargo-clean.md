@@ -62,7 +62,7 @@ Remove artifacts only in the directory with the given profile name.
 
 {{> options-target-dir }}
 
-{{> options-target-triple }}
+{{> options-target-tuple }}
 
 {{/options}}
 

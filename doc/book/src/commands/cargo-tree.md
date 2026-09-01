@@ -141,8 +141,8 @@ kind given, then it will automatically include the other dependency kinds.</li>
 </dd>
 
 
-<dt class="option-term" id="option-cargo-tree---target"><a class="option-anchor" href="#option-cargo-tree---target"><code>--target</code> <em>triple</em></a></dt>
-<dd class="option-desc"><p>Filter dependencies matching the given <a href="../appendix/glossary.html#target">target triple</a>.
+<dt class="option-term" id="option-cargo-tree---target"><a class="option-anchor" href="#option-cargo-tree---target"><code>--target</code> <em>tuple</em></a></dt>
+<dd class="option-desc"><p>Filter dependencies matching the given <a href="../appendix/glossary.html#target">target tuple</a>.
 The default is the host platform. Use the value <code>all</code> to include <em>all</em> targets.</p>
 </dd>
 

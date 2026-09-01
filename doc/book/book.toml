@@ -15,6 +15,12 @@ use-boolean-and = true
 "CHANGELOG.md" = { enable = false }
 
 [output.html.redirect]
+"/reference/config.html#targettriplear" = "#targettuplear"
+"/reference/config.html#targettriplelinker" = "#targettuplelinker"
+"/reference/config.html#targettriplerunner" = "#targettuplerunner"
+"/reference/config.html#targettriplerustflags" = "#targettuplerustflags"
+"/reference/config.html#targettriplerustdocflags" = "#targettuplerustdocflags"
+"/reference/config.html#targettriplelinks" = "#targettuplelinks"
 "/commands/cargo-git-checkout.html" = "./deprecated-and-removed.html"
 "/commands/cargo-read-manifest.html" = "./deprecated-and-removed.html"
 "/commands/cargo-verify-project.html" = "./deprecated-and-removed.html"

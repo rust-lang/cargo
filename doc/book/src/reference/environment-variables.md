@@ -144,10 +144,10 @@ In summary, the supported environment variables are:
 * `CARGO_RESOLVER_INCOMPATIBLE_PUBLISH_AGE` --- How recently published versions are treated during dependency resolution, see [`resolver.incompatible-publish-age`].
 * `CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS` --- How incompatible Rust versions are treated during dependency resolution, see [`resolver.incompatible-rust-versions`].
 * `CARGO_RESOLVER_LOCKFILE_PATH` --- The path to the lockfile, see [`resolver.lockfile-path`].
-* `CARGO_TARGET_<triple>_LINKER` --- The linker to use, see [`target.<triple>.linker`]. The triple must be [converted to uppercase and underscores](config.md#environment-variables).
-* `CARGO_TARGET_<triple>_RUNNER` --- The executable runner, see [`target.<triple>.runner`].
-* `CARGO_TARGET_<triple>_RUSTFLAGS` --- Extra `rustc` flags for a target, see [`target.<triple>.rustflags`].
-* `CARGO_TARGET_<triple>_RUSTDOCFLAGS` --- Extra `rustdoc` flags for a target, see [`target.<triple>.rustdocflags`].
+* `CARGO_TARGET_<tuple>_LINKER` --- The linker to use, see [`target.<tuple>.linker`]. The tuple must be [converted to uppercase and underscores](config.md#environment-variables).
+* `CARGO_TARGET_<tuple>_RUNNER` --- The executable runner, see [`target.<tuple>.runner`].
+* `CARGO_TARGET_<tuple>_RUSTFLAGS` --- Extra `rustc` flags for a target, see [`target.<tuple>.rustflags`].
+* `CARGO_TARGET_<tuple>_RUSTDOCFLAGS` --- Extra `rustdoc` flags for a target, see [`target.<tuple>.rustdocflags`].
 * `CARGO_TERM_QUIET` --- Quiet mode, see [`term.quiet`].
 * `CARGO_TERM_VERBOSE` --- The default terminal verbosity, see [`term.verbose`].
 * `CARGO_TERM_COLOR` --- The default color mode, see [`term.color`].
@@ -226,10 +226,10 @@ In summary, the supported environment variables are:
 [`registry.global-min-publish-age`]: config.md#registryglobal-min-publish-age
 [`registry.min-publish-age`]: config.md#registrymin-publish-age
 [`registry.token`]: config.md#registrytoken
-[`target.<triple>.linker`]: config.md#targettriplelinker
-[`target.<triple>.runner`]: config.md#targettriplerunner
-[`target.<triple>.rustflags`]: config.md#targettriplerustflags
-[`target.<triple>.rustdocflags`]: config.md#targettriplerustdocflags
+[`target.<tuple>.linker`]: config.md#targettuplelinker
+[`target.<tuple>.runner`]: config.md#targettuplerunner
+[`target.<tuple>.rustflags`]: config.md#targettuplerustflags
+[`target.<tuple>.rustdocflags`]: config.md#targettuplerustdocflags
 [`term.quiet`]: config.md#termquiet
 [`term.verbose`]: config.md#termverbose
 [`term.color`]: config.md#termcolor
@@ -387,8 +387,8 @@ let out_dir = env::var("OUT_DIR").unwrap();
     * `CARGO_CFG_TARGET_ENDIAN=little` --- The CPU [target endianness].
     * `CARGO_CFG_TARGET_FEATURE=mmx,sse` --- List of CPU [target features] enabled.
   > [!NOTE]
-  > Different [target triples][Target Triple] have different sets of `cfg` values,
-  > hence variables present in one target triple might not be available in the other.
+  > Different [target tuples][Target Tuple] have different sets of `cfg` values,
+  > hence variables present in one target tuple might not be available in the other.
   >
   > Some cfg values like `test` are not available.
   <!-- Keep alerts separate -->
@@ -403,9 +403,9 @@ let out_dir = env::var("OUT_DIR").unwrap();
   directory between builds, and its contents may persist across rebuilds. Build
   scripts should not assume that `OUT_DIR` is empty, and are responsible for
   managing or cleaning up any files they create.
-* `TARGET` --- the target triple that is being compiled for. Native code should be
-  compiled for this triple. See the [Target Triple] description for more information.
-* `HOST` --- the host triple of the Rust compiler.
+* `TARGET` --- the target tuple that is being compiled for. Native code should be
+  compiled for this tuple. See the [Target Tuple] description for more information.
+* `HOST` --- the host tuple of the Rust compiler.
 * `NUM_JOBS` --- the parallelism specified as the top-level parallelism. This can
   be useful to pass a `-j` parameter to a system like `make`. Note that care
   should be taken when interpreting this environment variable. For historical
@@ -454,7 +454,7 @@ let out_dir = env::var("OUT_DIR").unwrap();
 [configuration]: ../../reference/conditional-compilation.html
 [jobserver]: https://www.gnu.org/software/make/manual/html_node/Job-Slots.html
 [cargo-config]: config.md
-[Target Triple]: ../appendix/glossary.md#target
+[Target Tuple]: ../appendix/glossary.md#target
 [variables set for crates]: #environment-variables-cargo-sets-for-crates
 [profile]: profiles.md
 [`dev`]: profiles.md#dev

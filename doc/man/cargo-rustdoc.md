@@ -61,7 +61,7 @@ if its name is the same as the lib target. Binaries are skipped if they have
 
 {{#options}}
 
-{{> options-target-triple }}
+{{> options-target-tuple }}
 
 {{> options-release }}
 

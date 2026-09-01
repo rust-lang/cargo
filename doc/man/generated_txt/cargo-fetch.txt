@@ -19,10 +19,10 @@ DESCRIPTION
 
 OPTIONS
    Fetch options
-       --target triple
+       --target tuple
            Fetch for the specified target architecture. Flag may be specified
            multiple times. The default is all architectures. The general format
-           of the triple is <arch><sub>-<vendor>-<sys>-<abi>.
+           of the tuple is <arch><sub>-<vendor>-<sys>-<abi>.
 
            Possible values:
 

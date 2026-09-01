@@ -183,8 +183,8 @@ be specified multiple times, which enables all specified features.</p>
 
 <dl>
 
-<dt class="option-term" id="option-cargo-check---target"><a class="option-anchor" href="#option-cargo-check---target"><code>--target</code> <em>triple</em></a></dt>
-<dd class="option-desc"><p>Check for the specified target architecture. Flag may be specified multiple times. The default is the host architecture. The general format of the triple is
+<dt class="option-term" id="option-cargo-check---target"><a class="option-anchor" href="#option-cargo-check---target"><code>--target</code> <em>tuple</em></a></dt>
+<dd class="option-desc"><p>Check for the specified target architecture. Flag may be specified multiple times. The default is the host architecture. The general format of the tuple is
 <code>&lt;arch&gt;&lt;sub&gt;-&lt;vendor&gt;-&lt;sys&gt;-&lt;abi&gt;</code>.</p>
 <p>Possible values:</p>
 <ul>

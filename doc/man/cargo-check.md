@@ -38,7 +38,7 @@ they have `required-features` that are missing.
 
 {{#options}}
 
-{{> options-target-triple }}
+{{> options-target-tuple }}
 
 {{> options-release }}
 
