@@ -57,7 +57,6 @@ pub mod unused_deps;
 use crate::util::data_structures::{HashMap, HashSet};
 use std::borrow::Cow;
 use std::cell::OnceCell;
-use std::collections::BTreeMap;
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fmt::Display;
@@ -70,7 +69,6 @@ use std::sync::{Arc, LazyLock};
 use anyhow::{Context as _, Error};
 use cargo_platform::{Cfg, Platform};
 use cargo_util_terminal::report::{AnnotationKind, Group, Level, Renderer, Snippet};
-use itertools::Itertools;
 use regex::Regex;
 use tracing::{debug, instrument, trace};
 
@@ -1760,31 +1758,6 @@ fn build_deps_args(
     Ok(())
 }
 
-fn add_dep_arg<'a, 'b: 'a>(
-    map: &mut BTreeMap<&'a Unit, PathBuf>,
-    build_runner: &'b BuildRunner<'b, '_>,
-    unit: &'a Unit,
-) {
-    for dep in build_runner.unit_deps(unit) {
-        // Don't include build script out dir in the args to reduce rustc command bloat.
-        if dep.unit.target.is_custom_build() {
-            continue;
-        }
-        if map.contains_key(&dep.unit) {
-            continue;
-        }
-        map.insert(&dep.unit, build_runner.files().deps_dir(&dep.unit));
-
-        // Proc macros are statically linked, so when including a proc-macro dependency we can skip
-        // adding it's dependencies. Note that we still do add them when we are compiling the
-        // proc-macro itself.
-        if dep.unit.target.proc_macro() {
-            continue;
-        }
-        add_dep_arg(map, build_runner, &dep.unit);
-    }
-}
-
 /// Adds extra rustc flags and environment variables collected from the output
 /// of a build-script to the command to execute, include custom environment
 /// variables and `cfg`.
@@ -1820,12 +1793,8 @@ pub fn lib_search_paths(
 ) -> CargoResult<Vec<OsString>> {
     let mut lib_search_paths = Vec::new();
     if build_runner.bcx.gctx.cli_unstable().build_dir_new_layout {
-        let mut map = BTreeMap::new();
-
-        // Recursively add all dependency args to rustc process
-        add_dep_arg(&mut map, build_runner, unit);
-
-        let paths = map.into_iter().map(|(_, path)| path).sorted_unstable();
+        // Add all dependency args to rustc process
+        let paths = dep_paths_for_args(unit, build_runner);
 
         for path in paths {
             let mut deps = OsString::from("dependency=");
@@ -1847,6 +1816,77 @@ pub fn lib_search_paths(
     }
 
     Ok(lib_search_paths)
+}
+
+/// Generate a list of paths for the rustc `-L` args.
+///
+/// To generate the list of paths we walk the dependency graph using DFS with a stack.
+///
+/// We try to avoid bloating the amount of args passed rustc as it can cause issues with OS limits
+/// for large projects. (and generally just makes the rustc command ugly!).
+/// Below are the rules for excluding build units from the args.
+/// 1. Don't include build script out dir in the args to reduce rustc command bloat.
+/// 2. Proc macros are statically linked, so when including a proc-macro dependency we can skip
+///    adding it's dependencies. Note that we still do add them when we are compiling the
+///    proc-macro itself.
+/// 3. Don't include direct dependencies because they are passed with `--extern` and rustc does not
+///    need `-L` if it was already passed as `--extern`
+fn dep_paths_for_args(unit: &Unit, build_runner: &BuildRunner<'_, '_>) -> Vec<PathBuf> {
+    let direct = build_runner.unit_deps(unit);
+    if direct.is_empty() {
+        return Vec::new();
+    }
+    let mut indirect = HashSet::default();
+    let mut visited = HashSet::default();
+    let mut stack: Vec<&Unit> = direct
+        .iter()
+        .filter(|d| !d.unit.target.is_custom_build())
+        .map(|d| &d.unit)
+        .collect();
+    while let Some(u) = stack.pop() {
+        if !visited.insert(u.clone()) {
+            continue;
+        }
+        if u.target.proc_macro() {
+            continue;
+        }
+        for dep in build_runner.unit_deps(u) {
+            let v = &dep.unit;
+            if v.target.is_custom_build() {
+                continue;
+            }
+            indirect.insert(v.clone());
+            if v.target.proc_macro() {
+                continue;
+            }
+            if !visited.contains(v) {
+                stack.push(v);
+            }
+        }
+    }
+
+    let mut paths: Vec<PathBuf> = indirect
+        .into_iter()
+        .map(|u| build_runner.files().deps_dir(&u))
+        .collect();
+
+    // We are in the hot path that needs to always run (even for rebuilds)
+    // There could be a potentially large amount of paths for large workspaces.
+    // We want to sort and dedup the paths but doing so is a bit expsensive when comparing PathBufs
+    // directly. So instead we only sort valid Utf8 paths as &str's which is a bit faster.
+    // We do not allow non utf8 paths when building, so we take advantage of that by treating them
+    // as a single value when sorting/deduplicating.
+    //
+    // For reference this saves about ~30ms on Zed
+    paths.sort_unstable_by(|a, b| match (a.to_str(), b.to_str()) {
+        (Some(a), Some(b)) => a.cmp(b),
+        (Some(_), None) => std::cmp::Ordering::Less,
+        (None, Some(_)) => std::cmp::Ordering::Greater,
+        (None, None) => std::cmp::Ordering::Less,
+    });
+    paths.dedup_by(|a, b| matches!((a.to_str(), b.to_str()), (Some(x), Some(y)) if x == y));
+
+    paths
 }
 
 fn is_public_dependency_enabled(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> bool {
