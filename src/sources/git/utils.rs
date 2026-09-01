@@ -1293,12 +1293,12 @@ https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli"
         cmd.arg("--verbose");
     } else if progress {
         cmd.arg("--progress");
-        let min_porcelain_version = GitVersion {
+        let min_version_porcelain = GitVersion {
             major: 2,
             minor: 41,
             patch: 0,
         };
-        if min_porcelain_version <= git_version {
+        if min_version_porcelain <= git_version {
             // Move ref update status to `stdout` and silence it
             cmd.arg("--porcelain").stdout(Stdio::Null);
         }
@@ -1306,12 +1306,12 @@ https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli"
         cmd.arg("--quiet");
     }
 
-    let min_no_show_forced_update = GitVersion {
+    let min_version_no_show_forced_update = GitVersion {
         major: 2,
         minor: 23,
         patch: 0,
     };
-    if min_no_show_forced_update <= git_version {
+    if min_version_no_show_forced_update <= git_version {
         // skip unneeded expensive calculations
         cmd.arg("--no-show-forced-updates");
     }
