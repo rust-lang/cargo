@@ -3448,7 +3448,7 @@ Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/missing-[HASH]
 
 Caused by:
-  process didn't exit successfully: `git[..] fetch [..]` ([EXIT_STATUS]: 128)
+  `git fetch` failed for [ROOTURL]/dep1/missing
 
   [HELP] re-try with `net.git-fetch-with-cli = false` to see if it resolves the problem
   https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
@@ -3618,7 +3618,7 @@ Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/dep1-[HASH]
 
 Caused by:
-  process didn't exit successfully: `git[..] fetch [..]` ([EXIT_STATUS]: 128)
+  `git fetch` failed for [ROOTURL]/dep1
 
   [HELP] re-try with `net.git-fetch-with-cli = false` to see if it resolves the problem
   https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
@@ -4620,7 +4620,7 @@ Caused by:
   revision 11111b376b93484341c68fbca3ca110ae5cd2790 not found
 
 Caused by:
-  process didn't exit successfully: `git[..] fetch --no-tags --quiet[..] --force --update-head-ok [..]
+  `git fetch` failed for https://github.com/rust-lang/bitflags.git
 
   [HELP] re-try with `net.git-fetch-with-cli = false` to see if it resolves the problem
   https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
