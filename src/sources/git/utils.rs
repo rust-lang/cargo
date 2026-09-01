@@ -1293,6 +1293,7 @@ https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli"
         cmd.arg("--verbose");
     } else if progress {
         cmd.arg("--progress");
+        // https://github.com/git/git/blob/1630431f326e15fcde608827b5ff38422528eb59/Documentation/RelNotes/2.41.0.adoc?plain=1#L113-L114
         let min_version_porcelain = GitVersion {
             major: 2,
             minor: 41,
@@ -1306,6 +1307,7 @@ https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli"
         cmd.arg("--quiet");
     }
 
+    // https://github.com/git/git/blob/1630431f326e15fcde608827b5ff38422528eb59/Documentation/RelNotes/2.23.0.adoc?plain=1#L56-L59
     let min_version_no_show_forced_update = GitVersion {
         major: 2,
         minor: 23,
