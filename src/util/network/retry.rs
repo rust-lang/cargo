@@ -78,8 +78,12 @@ pub enum RetryResult<T> {
     Retry(u64),
 }
 
+/// Default for `net.retry`
+const MAX_RETRY_DEFAULT: u32 = 3;
+/// Maximum amount of time a single retry can be delayed (seconds).
+const MAX_RETRY_SLEEP_S: u64 = 10;
 /// Maximum amount of time a single retry can be delayed (milliseconds).
-const MAX_RETRY_SLEEP_MS: u64 = 10 * 1000;
+const MAX_RETRY_SLEEP_MS: u64 = MAX_RETRY_SLEEP_S * 1000;
 /// The minimum initial amount of time a retry will be delayed (milliseconds).
 ///
 /// The actual amount of time will be a random value above this.
@@ -95,7 +99,7 @@ impl<'a> Retry<'a> {
         Ok(Retry {
             gctx,
             retries: 0,
-            max_retries: gctx.net_config()?.retry.unwrap_or(3) as u64,
+            max_retries: gctx.net_config()?.retry.unwrap_or(MAX_RETRY_DEFAULT) as u64,
         })
     }
 
