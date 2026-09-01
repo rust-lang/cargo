@@ -1265,6 +1265,17 @@ https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli"
     cmd.arg("-c").arg("core.fsmonitor=false");
     // Avoid warnings with `--no-show-forced-updates`
     cmd.arg("-c").arg("advice.fetchShowForcedUpdates=false");
+    // Have 429's retried in git, where supported
+    let max_retries = gctx
+        .net_config()?
+        .retry
+        .unwrap_or(network::retry::MAX_RETRY_DEFAULT);
+    cmd.arg("-c").arg(format!("http.maxRetries={max_retries}"));
+    cmd.arg("-c").arg("http.retryAfter=1"); // `network::retry` has a growing value starting with 500ms, so choosing 1s
+    cmd.arg("-c").arg(format!(
+        "http.maxRetryTime={}",
+        network::retry::MAX_RETRY_SLEEP_S
+    ));
 
     cmd.arg("fetch");
     if tags {
@@ -1336,10 +1347,17 @@ https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli"
         .cwd(repo.path());
     gctx.shell()
         .verbose(|s| s.status("Running", &cmd.to_string()))?;
+    // https://github.com/git/git/blob/1630431f326e15fcde608827b5ff38422528eb59/Documentation/RelNotes/2.54.0.adoc?plain=1#L107
+    let min_version_max_retries = GitVersion {
+        major: 2,
+        minor: 54,
+        patch: 0,
+    };
     network::retry::with_retry(gctx, || {
         cmd.exec().map_err(|error| {
+            let spurious = git_version < min_version_max_retries;
             GitCliError::new(error)
-                .spurious(true)
+                .spurious(spurious)
                 .workaround(
                     "help: re-try with `net.git-fetch-with-cli = false` to see if it resolves the problem
 https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli",

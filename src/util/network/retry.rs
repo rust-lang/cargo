@@ -79,9 +79,9 @@ pub enum RetryResult<T> {
 }
 
 /// Default for `net.retry`
-const MAX_RETRY_DEFAULT: u32 = 3;
+pub const MAX_RETRY_DEFAULT: u32 = 3;
 /// Maximum amount of time a single retry can be delayed (seconds).
-const MAX_RETRY_SLEEP_S: u64 = 10;
+pub const MAX_RETRY_SLEEP_S: u64 = 10;
 /// Maximum amount of time a single retry can be delayed (milliseconds).
 const MAX_RETRY_SLEEP_MS: u64 = MAX_RETRY_SLEEP_S * 1000;
 /// The minimum initial amount of time a retry will be delayed (milliseconds).
