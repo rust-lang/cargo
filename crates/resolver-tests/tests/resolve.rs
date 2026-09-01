@@ -1,4 +1,5 @@
 use cargo::util::GlobalContext;
+use cargo::util::interning::InternedString;
 use cargo::workspace::Dependency;
 use cargo::workspace::dependency::DepKind;
 use resolver_tests::helpers::dep_builtin;
@@ -1073,13 +1074,32 @@ fn injected_builtins() {
     };
     let compiler_builtins = pkg!(compiler_builtins);
 
-    let reg = registry(vec![core, compiler_builtins]);
+    let reg = registry(vec![core.clone(), compiler_builtins.clone()]);
 
-    let resolve = resolve_with_implicit_builtins(Vec::new(), &reg, &[]).unwrap();
+    let mut deps = vec![];
+    deps.push(
+        Dependency::new_implicit_builtin(
+            InternedString::new("core"),
+            &core.source_id().local_path().unwrap(),
+        )
+        .unwrap(),
+    );
+    deps.push(
+        Dependency::new_implicit_builtin(
+            InternedString::new("compiler_builtins"),
+            &core.source_id().local_path().unwrap(),
+        )
+        .unwrap(),
+    );
+
+    let resolve = resolve_with_implicit_builtins(Vec::new(), &reg, &deps).unwrap();
 
     let root_deps = resolve
         .deps(pkg_id("root"))
         .map(|(pkg_id, _)| pkg_id)
         .collect::<Vec<_>>();
-    assert_same(&root_deps, &[]);
+    assert_same(
+        &root_deps,
+        &[core.package_id(), compiler_builtins.package_id()],
+    );
 }

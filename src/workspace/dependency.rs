@@ -166,6 +166,29 @@ impl Dependency {
         }
     }
 
+    pub fn new_implicit_builtin(name: InternedString, path: &Path) -> CargoResult<Dependency> {
+        Ok(Dependency {
+            inner: Arc::new(Inner {
+                name,
+                source_id: SourceId::for_builtin(path)?,
+                registry_id: None,
+                req: OptVersionReq::Any,
+                kind: DepKind::Normal,
+                only_match_name: false,
+                optional: false,
+                public: true,
+                // Build-std does not currently resolve features - any feature specifications here
+                // will be thrown away during Unit generation
+                features: Vec::new(),
+                default_features: false,
+                specified_req: false,
+                platform: None,
+                explicit_name_in_toml: None,
+                artifact: None,
+            }),
+        })
+    }
+
     pub fn serialized(
         &self,
         unstable_flags: &CliUnstable,

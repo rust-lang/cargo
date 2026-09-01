@@ -528,6 +528,9 @@ pub fn resolve_with_previous<'gctx>(
 
     let replace = lock_replacements(ws, previous, &keep);
 
+    //TODO: Enable implicit builtin dependencies for `-Zbuild-std` once builtins are fully implemented
+    let implicit_builtin_deps = &[];
+
     let mut resolved = resolver::resolve(
         &summaries,
         &replace,
@@ -535,6 +538,7 @@ pub fn resolve_with_previous<'gctx>(
         &version_prefs,
         ResolveVersion::with_rust_version(ws.lowest_rust_version()),
         ws.gctx(),
+        implicit_builtin_deps,
     )?;
 
     let patches = registry.patches().values().flat_map(|v| v.iter());

@@ -140,12 +140,12 @@ pub fn resolve_with_global_context(
     Ok(collect_features(&resolve))
 }
 
-pub fn resolve_with_gctx_implicit_deps_raw(
+fn resolve_with_gctx_implicit_deps_raw(
     deps: Vec<Dependency>,
     registry: &[Summary],
     root_pkg_id: PackageId,
     gctx: &GlobalContext,
-    _implicit_builtin_deps: &[Dependency],
+    implicit_builtin_deps: &[Dependency],
 ) -> CargoResult<Resolve> {
     struct MyRegistry<'a> {
         list: &'a [Summary],
@@ -222,6 +222,7 @@ pub fn resolve_with_gctx_implicit_deps_raw(
         &version_prefs,
         ResolveVersion::with_rust_version(None),
         gctx,
+        implicit_builtin_deps,
     );
 
     // The largest test in our suite takes less then 30 secs.

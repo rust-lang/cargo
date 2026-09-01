@@ -360,11 +360,11 @@ impl SourceId {
 
     /// Returns the local path if this is a path dependency.
     pub fn local_path(self) -> Option<PathBuf> {
-        if self.inner.kind != SourceKind::Path {
-            return None;
+        if let SourceKind::Path | SourceKind::Builtin = self.inner.kind {
+            Some(self.inner.url.to_file_path().unwrap())
+        } else {
+            None
         }
-
-        Some(self.inner.url.to_file_path().unwrap())
     }
 
     pub fn kind(&self) -> &SourceKind {
