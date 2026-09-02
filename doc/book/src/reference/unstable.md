@@ -1589,6 +1589,12 @@ Cargo writes an unremap file beside each final artifact.
 The file is aimed at helping debuggers substitute sanitized paths back to local ones,
 e.g., via GDB's `set substitute-path` or LLDB's `target.source-map`.
 
+The Rust toolchain provides `rust-gdb` and `rust-lldb` wrappers,
+which can load unremap files automatically.
+This integration is currently unstable and available only in nightly toolchains.
+To enable it,
+set `RUST_GDB_TRIM_PATHS=unstable` or `RUST_LLDB_TRIM_PATHS=unstable` respectively.
+
 The unremap file name ends with `.trim-paths.jsonl`.
 For example,
 your `my-app` executable would come with an unremap file named
