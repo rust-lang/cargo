@@ -32,7 +32,7 @@ pub fn cli() -> Command {
         )
         .arg_features()
         .arg_parallel()
-        .arg_target_triple("Build for the target triple")
+        .arg_target_triple("Build for the target tuple")
         .arg_target_dir()
         .arg_manifest_path()
         .after_help(color_print::cstr!(

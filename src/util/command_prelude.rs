@@ -344,7 +344,7 @@ pub trait CommandExt: Sized {
                 .hide(true)
         };
         self._arg(
-            optional_multi_opt("target", "TRIPLE", target)
+            optional_multi_opt("target", "TUPLE", target)
                 .help_heading(heading::COMPILATION_OPTIONS)
                 .add(target_completion),
         )

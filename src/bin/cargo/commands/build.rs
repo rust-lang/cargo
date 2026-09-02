@@ -32,7 +32,7 @@ pub fn cli() -> Command {
         .arg_redundant_default_mode("debug", "build", "release")
         .arg_profile("Build artifacts with the specified profile")
         .arg_parallel()
-        .arg_target_triple("Build for the target triple")
+        .arg_target_triple("Build for the target tuple")
         .arg_target_dir()
         .arg_artifact_dir()
         .arg_unit_graph()

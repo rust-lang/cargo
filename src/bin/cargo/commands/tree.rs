@@ -109,7 +109,7 @@ pub fn cli() -> Command {
         .arg_features()
         .arg(flag("all-targets", "Deprecated, use --target=all instead").hide(true))
         .arg_target_triple_with_candidates(
-            "Filter dependencies matching the given target triple (default host platform). \
+            "Filter dependencies matching the given target tuple (default host platform). \
             Pass `all` to include all targets.",
             ArgValueCandidates::new(get_target_triples_with_all),
         )

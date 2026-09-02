@@ -31,7 +31,7 @@ pub fn cli() -> Command {
         .arg_parallel()
         .arg_release("Check artifacts in release mode, with optimizations")
         .arg_profile("Check artifacts with the specified profile")
-        .arg_target_triple("Check for the target triple")
+        .arg_target_triple("Check for the target tuple")
         .arg_target_dir()
         .arg_unit_graph()
         .arg_timings()

@@ -48,7 +48,7 @@
 </tspan>
     <tspan x="10px" y="262px"><tspan class="fg-bright-green bold">Compilation Options:</tspan>
 </tspan>
-    <tspan x="10px" y="280px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--target</tspan><tspan class="fg-cyan"> [</tspan><tspan class="fg-cyan">&lt;TRIPLE&gt;</tspan><tspan class="fg-cyan">]</tspan><tspan>  Fetch dependencies for the target triple</tspan>
+    <tspan x="10px" y="280px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--target</tspan><tspan class="fg-cyan"> [</tspan><tspan class="fg-cyan">&lt;TUPLE&gt;</tspan><tspan class="fg-cyan">]</tspan><tspan>  Fetch dependencies for the target tuple</tspan>
 </tspan>
     <tspan x="10px" y="298px">
 </tspan>

@@ -45,7 +45,7 @@ pub fn cli() -> Command {
         .arg_jobs()
         .arg_unsupported_keep_going()
         .arg_profile("Build artifacts with the specified profile")
-        .arg_target_triple("Build for the target triple")
+        .arg_target_triple("Build for the target tuple")
         .arg_target_dir()
         .arg_unit_graph()
         .arg_timings()
