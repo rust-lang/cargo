@@ -1539,11 +1539,10 @@ trim-paths = "all"
 trim-paths = ["object", "diagnostics"]
 ```
 
-The `object` setting sanitizes only the paths in emitted executable or library files.
-It always affects paths from macros such as panic messages, and in debug information only if they will be embedded together with the binary
-(the default on platforms with ELF binaries, such as Linux and windows-gnu),
-but will not touch them if they are in separate files (the default on Windows MSVC and macOS).
-But the paths to these separate files are sanitized.
+For more information about each scope,
+see rustc's documentation on [`--remap-path-scope`].
+
+[`--remap-path-scope`]: ../../rustc/remap-source-paths.html#--remap-path-scope
 
 If `trim-paths` is not `none` or `false`, then the following paths are sanitized if they appear in a selected scope:
 
