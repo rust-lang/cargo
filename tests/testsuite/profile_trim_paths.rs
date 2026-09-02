@@ -67,7 +67,7 @@ Caused by:
 }
 
 #[cargo_test]
-fn release_profile_default_to_object() {
+fn release_profile_default() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -79,17 +79,22 @@ fn release_profile_default_to_object() {
            "#,
         )
         .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+                fn main() {
+                    assert!(std::env::var_os("CARGO_TRIM_PATHS_SCOPE").is_none());
+                    assert!(std::env::var_os("CARGO_TRIM_PATHS_REMAP").is_none());
+                }
+            "#,
+        )
         .build();
 
     p.cargo("build --release --verbose")
         .arg("-Ztrim-paths")
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
-        .with_stderr_data(str![[r#"
-[COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
-[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-
-"#]])
+        .with_stderr_does_not_contain("[..]--remap-path-scope=[..]")
+        .with_stderr_does_not_contain("[..]--remap-path-prefix=[..]")
         .run();
 }
 
