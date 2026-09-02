@@ -1539,13 +1539,21 @@ trim-paths = "all"
 trim-paths = ["object", "diagnostics"]
 ```
 
-The `object` setting sanitizes only the paths in emitted executable or library files.
-It always affects paths from macros such as panic messages, and in debug information only if they will be embedded together with the binary
-(the default on platforms with ELF binaries, such as Linux and windows-gnu),
-but will not touch them if they are in separate files (the default on Windows MSVC and macOS).
-But the paths to these separate files are sanitized.
+For more information about each scope,
+see rustc's documentation on [`--remap-path-scope`].
 
-If `trim-paths` is not `none` or `false`, then the following paths are sanitized if they appear in a selected scope:
+[`--remap-path-scope`]: ../../rustc/remap-source-paths.html#--remap-path-scope
+
+##### Remapping rules
+
+The exact remap path prefixes are unspecified and may change across Cargo versions.
+Tools that map paths embedded in artifacts back to local sources
+should consume [unremap files] instead of interpreting these prefixes.
+
+[unremap files]: #unremap-files
+
+If `trim-paths` is not `"none"` or `false`,
+then the following paths are sanitized if they appear in a selected scope:
 
 1. Path to the source files of the standard and core library (sysroot) will begin with `/rustc/<rustc commit hash>`,
    e.g. `/home/username/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/result.rs` ->
@@ -1574,25 +1582,18 @@ are sanitized by their file location instead,
 like workspace paths when inside the workspace directory,
 otherwise like path dependencies.
 
-When a path to the source files of the standard and core library is *not* in scope for sanitization,
-the emitted path will depend on if `rust-src` component is present.
-If it is, then some paths will point to the copy of the source files on your file system;
-if it isn't, then they will show up as `/rustc/[rustc commit hash]/library/...`
-(just like when it is selected for sanitization).
-Paths to all other source files will not be affected.
-
-This will not affect any hard-coded paths in the source code, such as in strings.
-
-The exact remap path prefixes are not stable across Cargo versions.
-Tools that map paths embedded in artifacts back to local sources
-should consume unremap files instead of interpreting these prefixes.
-
 ##### Unremap files
 
 When the `object` scope is active and debuginfo is enabled,
 Cargo writes an unremap file beside each final artifact.
 The file is aimed at helping debuggers substitute sanitized paths back to local ones,
 e.g., via GDB's `set substitute-path` or LLDB's `target.source-map`.
+
+The Rust toolchain provides `rust-gdb` and `rust-lldb` wrappers,
+which can load unremap files automatically.
+This integration is currently unstable and available only in nightly toolchains.
+To enable it,
+set `RUST_GDB_TRIM_PATHS=unstable` or `RUST_LLDB_TRIM_PATHS=unstable` respectively.
 
 The unremap file name ends with `.trim-paths.jsonl`.
 For example,
@@ -1625,6 +1626,31 @@ Since it is meant to be a debugging aid,
 it includes absolute paths of your system,
 so there is no artifact privacy guarantee.
 You might want to exclude `*.trim-paths.jsonl` files when distributing artifacts.
+
+##### Limitations
+
+`trim-paths` supports remapping source path prefixes as a best effort.
+Linkers may add paths that rustc cannot remap.
+See [the limitations section][remap-limitation] on rustc's documentation for more.
+
+For example, on macOS,
+linkers generate OSO entries containing absolute paths to object files
+when debuginfo is enabled.
+The following profile settings keep these paths out of the executable
+while preserving debuginfo in a separate dSYM bundle:
+
+```toml
+[profile.release]
+debug = true
+trim-paths = "object"
+split-debuginfo = "packed"
+strip = "debuginfo"
+```
+
+The dSYM bundle can be used for debugging,
+but it still contains absolute paths.
+
+[remap-limitation]: ../../rustc/remap-source-paths.html#caveats-and-limitations
 
 #### Environment variable
 
