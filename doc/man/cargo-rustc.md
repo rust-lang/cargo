@@ -48,7 +48,7 @@ binary and library targets of the selected package.
 
 {{#options}}
 
-{{> options-target-triple }}
+{{> options-target-tuple }}
 
 {{> options-release }}
 

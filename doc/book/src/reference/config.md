@@ -71,7 +71,7 @@ rustc = "rustc"               # the rust compiler tool
 rustc-wrapper = "…"           # run this wrapper instead of `rustc`
 rustc-workspace-wrapper = "…" # run this wrapper instead of `rustc` for workspace members
 rustdoc = "rustdoc"           # the doc generator tool
-target = "triple"             # build for the target triple (ignored by `cargo install`)
+target = "tuple"              # build for the target tuple (ignored by `cargo install`)
 target-dir = "target"         # path of where to place generated artifacts
 build-dir = "target"          # path of where to place intermediate build artifacts
 rustflags = ["…", "…"]        # custom flags to pass to all compiler invocations
@@ -181,7 +181,7 @@ branch = "…"         # branch name for the git repository
 tag = "…"            # tag name for the git repository
 rev = "…"            # revision for the git repository
 
-[target.<triple>]
+[target.<tuple>]
 linker = "…"              # linker to use
 runner = "…"              # wrapper to run executables
 rustflags = ["…", "…"]    # custom flags for `rustc`
@@ -192,7 +192,7 @@ linker = "…"            # linker to use
 runner = "…"            # wrapper to run executables
 rustflags = ["…", "…"]  # custom flags for `rustc`
 
-[target.<triple>.<links>] # `links` build script override
+[target.<tuple>.<links>] # `links` build script override
 rustc-link-lib = ["foo"]
 rustc-link-search = ["/path/to/foo"]
 rustc-flags = "-L /some/path"
@@ -417,8 +417,8 @@ all capital letters.
 ## Configuration keys
 
 This section documents all configuration keys. The description for keys with
-variable parts are annotated with angled brackets like `target.<triple>` where
-the `<triple>` part can be any [target triple] like
+variable parts are annotated with angled brackets like `target.<tuple>` where
+the `<tuple>` part can be any [target tuple] like
 `target.x86_64-pc-windows-msvc`.
 
 ### `paths`
@@ -537,7 +537,7 @@ Sets the executable to use for `rustdoc`.
 * Default: host platform
 * Environment: `CARGO_BUILD_TARGET`
 
-The default [target platform triples][target triple] to compile to.
+The default [target platform tuples][target tuple] to compile to.
 
 Possible values:
 - Any supported target in `rustc --print target-list`.
@@ -594,7 +594,7 @@ order, with the first one being used:
 
 1. `CARGO_ENCODED_RUSTFLAGS` environment variable.
 2. `RUSTFLAGS` environment variable.
-3. All matching `target.<triple>.rustflags` and `target.<cfg>.rustflags`
+3. All matching `target.<tuple>.rustflags` and `target.<cfg>.rustflags`
    config entries joined together.
 4. `build.rustflags` config value.
 
@@ -606,7 +606,7 @@ for the host, such as build scripts or proc macros, will not receive the args.
 Without `--target`, the flags will be passed to all compiler invocations
 (including build scripts and proc macros) because dependencies are shared. If
 you have args that you do not want to pass to build scripts or proc macros and
-are building for the host, pass `--target` with the [host triple][target triple].
+are building for the host, pass `--target` with the [host tuple][target tuple].
 
 It is not recommended to pass in flags that Cargo itself usually manages. For
 example, the flags driven by [profiles](profiles.md) are best handled by setting the
@@ -632,7 +632,7 @@ order, with the first one being used:
 
 1. `CARGO_ENCODED_RUSTDOCFLAGS` environment variable.
 2. `RUSTDOCFLAGS` environment variable.
-3. All matching `target.<triple>.rustdocflags` and `target.<cfg>.rustdocflags`
+3. All matching `target.<tuple>.rustdocflags` and `target.<cfg>.rustdocflags`
   config entries joined together.
 4. `build.rustdocflags` config value.
 
@@ -1407,9 +1407,9 @@ If none of `branch`, `tag`, or `rev` is set, defaults to the `master` branch.
 ### `[target]`
 
 The `[target]` table is used for specifying settings for specific platform
-targets. It consists of a sub-table which is either a [platform triple][target triple]
+targets. It consists of a sub-table which is either a [platform tuple][target tuple]
 or a [`cfg()` expression]. The given values will be used if the target platform
-matches either the `<triple>` value or the `<cfg>` expression.
+matches either the `<tuple>` value or the `<cfg>` expression.
 
 ```toml
 [target.thumbv7m-none-eabi]
@@ -1427,50 +1427,50 @@ to view) and extra `--cfg` flags passed to `rustc` (such as those defined in
 `RUSTFLAGS`). Do not try to match on `debug_assertions`, `test`, Cargo features
 like `feature="foo"`, or values set by [build scripts].
 
-If using a target spec JSON file, the [`<triple>`] value is the filename stem.
+If using a target spec JSON file, the [`<tuple>`] value is the filename stem.
 For example `--target foo/bar.json` would match `[target.bar]`.
 
-#### `target.<triple>.ar`
+#### `target.<tuple>.ar`
 
 This option is deprecated and unused.
 
-#### `target.<triple>.linker`
+#### `target.<tuple>.linker`
 * Type: string (program path)
 * Default: none
-* Environment: `CARGO_TARGET_<triple>_LINKER`
+* Environment: `CARGO_TARGET_<tuple>_LINKER`
 
 Specifies the linker which is passed to `rustc` (via [`-C linker`]) when the
-[`<triple>`] is being compiled for. By default, the linker is not overridden.
+[`<tuple>`] is being compiled for. By default, the linker is not overridden.
 
 #### `target.<cfg>.linker`
-This is similar to the [target linker](#targettriplelinker), but using
-a [`cfg()` expression]. If both a [`<triple>`] and `<cfg>` linker match,
-the `<triple>` will take precedence. It is an error if more than one
+This is similar to the [target linker](#targettuplelinker), but using
+a [`cfg()` expression]. If both a [`<tuple>`] and `<cfg>` linker match,
+the `<tuple>` will take precedence. It is an error if more than one
 `<cfg>` linker matches the current target.
 
-#### `target.<triple>.runner`
+#### `target.<tuple>.runner`
 * Type: string or array of strings ([program path with args])
 * Default: none
-* Environment: `CARGO_TARGET_<triple>_RUNNER`
+* Environment: `CARGO_TARGET_<tuple>_RUNNER`
 
-If a runner is provided, executables for the target [`<triple>`] will be
+If a runner is provided, executables for the target [`<tuple>`] will be
 executed by invoking the specified runner with the actual executable passed as
 an argument. This applies to [`cargo run`], [`cargo test`] and [`cargo bench`]
 commands. By default, compiled executables are executed directly.
 
 #### `target.<cfg>.runner`
 
-This is similar to the [target runner](#targettriplerunner), but using
-a [`cfg()` expression]. If both a [`<triple>`] and `<cfg>` runner match,
-the `<triple>` will take precedence. It is an error if more than one
+This is similar to the [target runner](#targettuplerunner), but using
+a [`cfg()` expression]. If both a [`<tuple>`] and `<cfg>` runner match,
+the `<tuple>` will take precedence. It is an error if more than one
 `<cfg>` runner matches the current target.
 
-#### `target.<triple>.rustflags`
+#### `target.<tuple>.rustflags`
 * Type: string or array of strings
 * Default: none
-* Environment: `CARGO_TARGET_<triple>_RUSTFLAGS`
+* Environment: `CARGO_TARGET_<tuple>_RUSTFLAGS`
 
-Passes a set of custom flags to the compiler for this [`<triple>`].
+Passes a set of custom flags to the compiler for this [`<tuple>`].
 The value may be an array of strings or a space-separated string.
 
 See [`build.rustflags`](#buildrustflags) for more details on the different
@@ -1478,16 +1478,16 @@ ways to specific extra flags.
 
 #### `target.<cfg>.rustflags`
 
-This is similar to the [target rustflags](#targettriplerustflags), but
-using a [`cfg()` expression]. If several `<cfg>` and [`<triple>`] entries
+This is similar to the [target rustflags](#targettuplerustflags), but
+using a [`cfg()` expression]. If several `<cfg>` and [`<tuple>`] entries
 match the current target, the flags are joined together.
 
-#### `target.<triple>.rustdocflags`
+#### `target.<tuple>.rustdocflags`
 * Type: string or array of strings
 * Default: none
-* Environment: `CARGO_TARGET_<triple>_RUSTDOCFLAGS`
+* Environment: `CARGO_TARGET_<tuple>_RUSTDOCFLAGS`
 
-Passes a set of custom flags to the compiler for this [`<triple>`].
+Passes a set of custom flags to the compiler for this [`<tuple>`].
 The value may be an array of strings or a space-separated string.
 
 See [`build.rustdocflags`](#buildrustdocflags) for more details on the different
@@ -1495,11 +1495,11 @@ ways to specific extra flags.
 
 #### `target.<cfg>.rustdocflags`
 
-This is similar to the [target rustdocflags](#targettriplerustdocflags), but
-using a [`cfg()` expression]. If several `<cfg>` and [`<triple>`] entries
+This is similar to the [target rustdocflags](#targettuplerustdocflags), but
+using a [`cfg()` expression]. If several `<cfg>` and [`<tuple>`] entries
 match the current target, the flags are joined together.
 
-#### `target.<triple>.<links>`
+#### `target.<tuple>.<links>`
 
 The links sub-table provides a way to [override a build script]. When
 specified, the build script for the given `links` library will not be
@@ -1619,6 +1619,6 @@ Report progress to the terminal emulator for display in places like the task bar
 [registries]: registries.md
 [`cargo:token`]: registry-authentication.md#cargotoken
 [crates.io]: https://crates.io/
-[target triple]: ../appendix/glossary.md#target '"target" (glossary)'
-[`<triple>`]: ../appendix/glossary.md#target '"target" (glossary)'
+[target tuple]: ../appendix/glossary.md#target '"target" (glossary)'
+[`<tuple>`]: ../appendix/glossary.md#target '"target" (glossary)'
 [`resolver.incompatible-publish-age`]: config.md#resolverincompatible-publish-age

@@ -13,7 +13,7 @@ use crate::workspace::{PackageSet, Workspace};
 
 pub struct FetchOptions<'a> {
     pub gctx: &'a GlobalContext,
-    /// The target arch triple to fetch dependencies for
+    /// The target arch tuple to fetch dependencies for
     pub targets: Vec<String>,
 }
 

@@ -279,7 +279,7 @@ mod cfg {
     }
 
     /// The CPU [target architecture](https://doc.rust-lang.org/stable/reference/conditional-compilation.html#target_arch).
-    /// This is similar to the first element of the platform's target triple, but not identical.
+    /// This is similar to the first element of the platform's target tuple, but not identical.
     #[track_caller]
     pub fn cargo_cfg_target_arch() -> String {
         to_string(var_or_panic("CARGO_CFG_TARGET_ARCH"))
@@ -292,7 +292,7 @@ mod cfg {
     }
 
     /// The [target environment](https://doc.rust-lang.org/stable/reference/conditional-compilation.html#target_env) ABI.
-    /// This value is similar to the fourth element of the platform's target triple.
+    /// This value is similar to the fourth element of the platform's target tuple.
     ///
     /// For historical reasons, this value is only defined as not the empty-string when
     /// actually needed for disambiguation. Thus, for example, on many GNU platforms,
@@ -343,7 +343,7 @@ mod cfg {
     }
 
     /// The [target operating system](https://doc.rust-lang.org/stable/reference/conditional-compilation.html#target_os).
-    /// This value is similar to the second and third element of the platform's target triple.
+    /// This value is similar to the second and third element of the platform's target tuple.
     #[track_caller]
     pub fn cargo_cfg_target_os() -> String {
         to_string(var_or_panic("CARGO_CFG_TARGET_OS"))
@@ -405,16 +405,16 @@ pub fn out_dir() -> PathBuf {
     to_path(var_or_panic("OUT_DIR"))
 }
 
-/// The [target triple] that is being compiled for. Native code should be compiled
-///  for this triple.
+/// The [target tuple] that is being compiled for. Native code should be compiled
+///  for this tuple.
 ///
-/// [target triple]: https://doc.rust-lang.org/stable/cargo/appendix/glossary.html#target
+/// [target tuple]: https://doc.rust-lang.org/stable/cargo/appendix/glossary.html#target
 #[track_caller]
 pub fn target() -> String {
     to_string(var_or_panic("TARGET"))
 }
 
-/// The host triple of the Rust compiler.
+/// The host tuple of the Rust compiler.
 #[track_caller]
 pub fn host() -> String {
     to_string(var_or_panic("HOST"))

@@ -140,7 +140,7 @@ impl<'a, 'gctx> BuildContext<'a, 'gctx> {
         &self.target_data.rustc
     }
 
-    /// Gets the host architecture triple.
+    /// Gets the host architecture tuple.
     ///
     /// For example, `x86_64-unknown-linux-gnu`, would be
     /// - machine: `x86_64`,

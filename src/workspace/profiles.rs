@@ -1043,7 +1043,7 @@ pub struct UnitFor {
     root_compile_kind: CompileKind,
 
     /// This is only set for artifact dependencies which have their
-    /// `<target-triple>|target` set.
+    /// `<target-tuple>|target` set.
     /// If so, this information is used as part of the key for resolving their features,
     /// allowing for target-dependent feature resolution within the entire dependency tree.
     /// Note that this target corresponds to the target used to build the units in that

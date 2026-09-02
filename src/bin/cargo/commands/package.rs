@@ -48,7 +48,7 @@ pub fn cli() -> Command {
             ArgValueCandidates::new(get_ws_member_candidates),
         )
         .arg_features()
-        .arg_target_triple("Build for the target triple")
+        .arg_target_triple("Build for the target tuple")
         .arg_target_dir()
         .arg_parallel()
         .arg_manifest_path()

@@ -262,7 +262,7 @@ fn env_rustflags_build_script_with_target() {
 #[cargo_test]
 fn env_rustflags_build_script_with_target_doesnt_apply_to_host_kind() {
     // RUSTFLAGS should *not* be passed to rustc for build scripts when --target is specified as the
-    // host triple even if target-applies-to-host-kind is enabled, to match legacy Cargo behavior.
+    // host tuple even if target-applies-to-host-kind is enabled, to match legacy Cargo behavior.
     let p = project()
         .file(
             "Cargo.toml",

@@ -541,10 +541,10 @@ impl Artifact {
 #[derive(PartialEq, Eq, Hash, Copy, Clone, Ord, PartialOrd, Debug)]
 pub enum ArtifactTarget {
     /// Only applicable to build-dependencies, causing them to be built
-    /// for the given target (i.e. via `--target <triple>`) instead of for the host.
+    /// for the given target (i.e. via `--target <tuple>`) instead of for the host.
     /// Has no effect on non-build dependencies.
     BuildDependencyAssumeTarget,
-    /// The name of the platform triple, like `x86_64-apple-darwin`, that this
+    /// The name of the platform tuple, like `x86_64-apple-darwin`, that this
     /// artifact will always be built for, no matter if it is a build,
     /// normal or dev dependency.
     Force(CompileTarget),

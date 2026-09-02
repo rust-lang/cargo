@@ -205,7 +205,7 @@
 //! ```
 //!
 //! When cross-compiling, the layout is the same, except it appears in
-//! `target/$TRIPLE`.
+//! `target/$TUPLE`.
 
 use crate::compiler::CompileTarget;
 use crate::util::flock::is_on_nfs_mount;
@@ -394,7 +394,7 @@ impl ArtifactDirLayout {
 
 pub struct BuildDirLayout {
     /// The root directory: `/path/to/build-dir`.
-    /// If cross compiling: `/path/to/build-dir/$TRIPLE`.
+    /// If cross compiling: `/path/to/build-dir/$TUPLE`.
     root: PathBuf,
     /// The directory with rustc artifacts
     deps: PathBuf,

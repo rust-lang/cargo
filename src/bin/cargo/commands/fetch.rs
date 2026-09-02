@@ -7,7 +7,7 @@ pub fn cli() -> Command {
     subcommand("fetch")
         .about("Fetch dependencies of a package from the network")
         .arg_silent_suggestion()
-        .arg_target_triple("Fetch dependencies for the target triple")
+        .arg_target_triple("Fetch dependencies for the target tuple")
         .arg_manifest_path()
         .after_help(color_print::cstr!(
             "Run `<bright-cyan,bold>cargo help fetch</>` for more detailed information.\n"

@@ -121,7 +121,7 @@ pub struct Compilation<'gctx> {
     /// Extra flags to pass to rustdoc for each host or target.
     pub rustdocflags: HashMap<CompileKind, Rc<[String]>>,
 
-    /// The target host triple.
+    /// The target host tuple.
     pub host: String,
 
     gctx: &'gctx GlobalContext,
@@ -294,7 +294,7 @@ impl<'gctx> Compilation<'gctx> {
     pub fn target_runner(&self, kind: CompileKind) -> Option<&(PathBuf, Vec<String>)> {
         let target_applies_to_host = self.gctx.target_applies_to_host().unwrap_or(true);
         let kind = if !target_applies_to_host && kind.is_host() {
-            // Use explicit host target triple when `target-applies-to-host=false`
+            // Use explicit host target tuple when `target-applies-to-host=false`
             // This ensures `host.runner` won't be accidentally applied to `cargo run` / `cargo test`.
             explicit_host_kind(&self.host)
         } else {
@@ -315,7 +315,7 @@ impl<'gctx> Compilation<'gctx> {
     pub fn target_linker(&self, kind: CompileKind) -> Option<&Path> {
         let target_applies_to_host = self.gctx.target_applies_to_host().unwrap_or(true);
         let kind = if !target_applies_to_host && kind.is_host() {
-            // Use explicit host target triple when `target-applies-to-host=false`
+            // Use explicit host target tuple when `target-applies-to-host=false`
             // This ensures `host.linker` won't be accidentally applied to normal builds
             explicit_host_kind(&self.host)
         } else {

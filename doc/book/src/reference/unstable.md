@@ -493,7 +493,7 @@ that are uplifted into the target or artifact directories.
     "workspace_wrapper": null,
     // Commit hash for rustc
     "commit_hash": "bef3c3b01f690de16738b1c9f36470fbfc6ac623",
-    // Host target triple
+    // Host target tuple
     "host": "x86_64-pc-windows-msvc",
     // Verbose version string: `rustc -vV`
     "verbose_version": "rustc 1.86.0-nightly (bef3c3b01 2025-02-04)\nbinary: rustc\ncommit-hash: bef3c3b01f690de16738b1c9f36470fbfc6ac623\ncommit-date: 2025-02-04\nhost: x86_64-pc-windows-msvc\nrelease: 1.86.0-nightly\nLLVM version: 19.1.7\n"
@@ -659,10 +659,10 @@ been somewhat inconsistent.
 When `--target` is _not_ passed, Cargo respects the same `linker` and
 `rustflags` for build scripts as for all other compile artifacts. When
 `--target` _is_ passed, however, Cargo respects `linker` from
-[`[target.<host triple>]`](config.md#targettriplelinker), and does not
+[`[target.<host tuple>]`](config.md#targettuplelinker), and does not
 pick up any `rustflags` configuration.
 This dual behavior is confusing, but also makes it difficult to correctly
-configure builds where the host triple and the [target triple] happen to
+configure builds where the host tuple and the [target tuple] happen to
 be the same, but artifacts intended to run on the build host should still
 be configured differently.
 
@@ -672,7 +672,7 @@ allows users to opt into different (and more consistent) behavior for
 these properties. When `target-applies-to-host` is unset, or set to
 `true`, in the configuration file, the existing Cargo behavior is
 preserved (though see `-Zhost-config`, which changes that default). When
-it is set to `false`, no options from `[target.<host triple>]`,
+it is set to `false`, no options from `[target.<host tuple>]`,
 `RUSTFLAGS`, or `[build]` are respected for host artifacts regardless of
 whether `--target` is passed to Cargo. To customize artifacts intended
 to be run on the host, use `[host]` ([`host-config`](#host-config)).
@@ -716,7 +716,7 @@ linker = "/path/to/target/linker"
 ```
 
 The `host.runner` setting wraps execution of host build targets such as build
-scripts, similar to how `target.<triple>.runner` wraps `cargo run`/`test`/`bench`.
+scripts, similar to how `target.<tuple>.runner` wraps `cargo run`/`test`/`bench`.
 
 The generic `host` table above will be entirely ignored when building on an
 `x86_64-unknown-linux-gnu` host as the `host.x86_64-unknown-linux-gnu` table
@@ -813,7 +813,7 @@ The following is a description of the JSON structure:
       },
       /* Which platform this target is being built for.
          A value of `null` indicates it is for the host.
-         Otherwise it is a string of the target triple (such as
+         Otherwise it is a string of the target tuple (such as
          "x86_64-unknown-linux-gnu").
       */
       "platform": null,
@@ -2261,7 +2261,7 @@ information.
 
 The `-Z multitarget` option has been stabilized in the 1.64 release.
 See [`build.target`](config.md#buildtarget) for more information about
-setting the default [target platform triples][target triple].
+setting the default [target platform tuples][target tuple].
 
 ## crate-type
 
@@ -2293,7 +2293,7 @@ See [Registry Protocols](registries.md#registry-protocols) for more information.
 
 The [`cargo logout`] command has been stabilized in the 1.70 release.
 
-[target triple]: ../appendix/glossary.md#target '"target" (glossary)'
+[target tuple]: ../appendix/glossary.md#target '"target" (glossary)'
 [`cargo logout`]: ../commands/cargo-logout.md
 
 ## `doctest-in-workspace`

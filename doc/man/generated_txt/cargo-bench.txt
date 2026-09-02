@@ -220,10 +220,10 @@ OPTIONS
            Do not activate the default feature of the selected packages.
 
    Compilation Options
-       --target triple
+       --target tuple
            Benchmark for the specified target architecture. Flag may be
            specified multiple times. The default is the host architecture. The
-           general format of the triple is <arch><sub>-<vendor>-<sys>-<abi>.
+           general format of the tuple is <arch><sub>-<vendor>-<sys>-<abi>.
 
            Possible values:
 

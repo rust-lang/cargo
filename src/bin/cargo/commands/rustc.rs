@@ -46,7 +46,7 @@ pub fn cli() -> Command {
         .arg_parallel()
         .arg_release("Build artifacts in release mode, with optimizations")
         .arg_profile("Build artifacts with the specified profile")
-        .arg_target_triple("Target triple which compiles will be for")
+        .arg_target_triple("Target tuple which compiles will be for")
         .arg_target_dir()
         .arg_unit_graph()
         .arg_timings()

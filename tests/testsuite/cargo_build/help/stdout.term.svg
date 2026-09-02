@@ -110,7 +110,7 @@
 </tspan>
     <tspan x="10px" y="820px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--keep-going</tspan><tspan>              Do not abort the build as soon as there is an error</tspan>
 </tspan>
-    <tspan x="10px" y="838px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--target</tspan><tspan class="fg-cyan"> [</tspan><tspan class="fg-cyan">&lt;TRIPLE&gt;</tspan><tspan class="fg-cyan">]</tspan><tspan>       Build for the target triple</tspan>
+    <tspan x="10px" y="838px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--target</tspan><tspan class="fg-cyan"> [</tspan><tspan class="fg-cyan">&lt;TUPLE&gt;</tspan><tspan class="fg-cyan">]</tspan><tspan>        Build for the target tuple</tspan>
 </tspan>
     <tspan x="10px" y="856px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--target-dir</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;DIRECTORY&gt;</tspan><tspan>  Directory for all generated artifacts</tspan>
 </tspan>

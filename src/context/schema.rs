@@ -314,7 +314,7 @@ impl BuildTargetConfig {
                     .expect("must be utf-8 in toml")
                     .to_string()
             } else {
-                // A string. Probably a target triple.
+                // A string. Probably a target tuple.
                 s.to_string()
             }
         };

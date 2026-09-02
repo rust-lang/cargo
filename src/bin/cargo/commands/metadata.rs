@@ -11,8 +11,8 @@ pub fn cli() -> Command {
         )
         .arg(multi_opt(
             "filter-platform",
-            "TRIPLE",
-            "Only include resolve dependencies matching the given target-triple",
+            "TUPLE",
+            "Only include resolve dependencies matching the given target tuple",
         ))
         .arg(flag(
             "no-deps",

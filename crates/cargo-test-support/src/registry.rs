@@ -1833,7 +1833,7 @@ impl Dependency {
     }
 
     /// Change the artifact to be of the given kind, like "bin", or "staticlib",
-    /// along with a specific target triple if provided.
+    /// along with a specific target tuple if provided.
     pub fn artifact(&mut self, kind: &str, target: Option<String>) -> &mut Self {
         self.artifact = Some(kind.to_string());
         self.bindep_target = target;

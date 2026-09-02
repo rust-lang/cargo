@@ -23,7 +23,7 @@ pub struct CleanOptions<'gctx> {
     pub gctx: &'gctx GlobalContext,
     /// A list of packages to clean. If empty, everything is cleaned.
     pub spec: IndexSet<String>,
-    /// The target arch triple to clean, or None for the host arch
+    /// The target arch tuple to clean, or None for the host arch
     pub targets: Vec<String>,
     /// Whether to clean the release directory
     pub profile_specified: bool,

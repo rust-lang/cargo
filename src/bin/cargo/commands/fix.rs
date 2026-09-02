@@ -50,7 +50,7 @@ pub fn cli() -> Command {
         .arg_parallel()
         .arg_release("Fix artifacts in release mode, with optimizations")
         .arg_profile("Build artifacts with the specified profile")
-        .arg_target_triple("Fix for the target triple")
+        .arg_target_triple("Fix for the target tuple")
         .arg_target_dir()
         .arg_timings()
         .arg_manifest_path()

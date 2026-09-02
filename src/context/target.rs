@@ -96,7 +96,7 @@ pub(super) fn get_target_applies_to_host(gctx: &GlobalContext) -> CargoResult<bo
     }
 }
 
-/// Loads a single `[host]` table for the given triple.
+/// Loads a single `[host]` table for the given tuple.
 pub(super) fn load_host_triple(gctx: &GlobalContext, triple: &str) -> CargoResult<TargetConfig> {
     if gctx.cli_unstable().host_config {
         let host_triple_prefix = format!("host.{}", triple);
@@ -111,7 +111,7 @@ pub(super) fn load_host_triple(gctx: &GlobalContext, triple: &str) -> CargoResul
     }
 }
 
-/// Loads a single `[target]` table for the given triple.
+/// Loads a single `[target]` table for the given tuple.
 pub(super) fn load_target_triple(gctx: &GlobalContext, triple: &str) -> CargoResult<TargetConfig> {
     load_config_table(gctx, &format!("target.{}", triple))
 }

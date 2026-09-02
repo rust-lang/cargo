@@ -39,8 +39,8 @@ directory with the name of the [target]:
 
 Directory | Example
 ----------|--------
-<code style="white-space: nowrap">target/&lt;triple&gt;/debug/</code> | <code style="white-space: nowrap">target/thumbv7em-none-eabihf/debug/</code>
-<code style="white-space: nowrap">target/&lt;triple&gt;/release/</code> | <code style="white-space: nowrap">target/thumbv7em-none-eabihf/release/</code>
+<code style="white-space: nowrap">target/&lt;tuple&gt;/debug/</code> | <code style="white-space: nowrap">target/thumbv7em-none-eabihf/debug/</code>
+<code style="white-space: nowrap">target/&lt;tuple&gt;/release/</code> | <code style="white-space: nowrap">target/thumbv7em-none-eabihf/release/</code>
 
 > [!NOTE]
 > When not using `--target`, this has a consequence that Cargo will

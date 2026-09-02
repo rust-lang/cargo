@@ -59,7 +59,7 @@ fn custom_linker_cfg() {
         .run();
 }
 
-// custom linker set via `target.$triple.linker` have precede over `target.'cfg(..)'.linker`
+// custom linker set via `target.$tuple.linker` have precede over `target.'cfg(..)'.linker`
 #[cargo_test]
 fn custom_linker_cfg_precedence() {
     let target = rustc_host();
@@ -275,7 +275,7 @@ fn custom_runner_cfg() {
         .run();
 }
 
-// custom runner set via `target.$triple.runner` have precedence over `target.'cfg(..)'.runner`
+// custom runner set via `target.$tuple.runner` have precedence over `target.'cfg(..)'.runner`
 #[cargo_test]
 fn custom_runner_cfg_precedence() {
     let target = rustc_host();

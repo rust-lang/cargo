@@ -265,7 +265,7 @@ fn target_triple_rustdocflags_works() {
     let host_env = rustc_host_env();
     let p = project().file("src/lib.rs", "").build();
 
-    // target.triple.rustdocflags in env works
+    // target.tuple.rustdocflags in env works
     p.cargo("doc -v")
         .env(
             &format!("CARGO_TARGET_{host_env}_RUSTDOCFLAGS"),
@@ -278,7 +278,7 @@ fn target_triple_rustdocflags_works() {
 "#]])
         .run();
 
-    // target.triple.rustdocflags in config works
+    // target.tuple.rustdocflags in config works
     p.cargo("doc -v")
         .arg("--config")
         .arg(format!("target.{host}.rustdocflags=['--cfg', 'foo']"))
@@ -305,7 +305,7 @@ fn target_triple_rustdocflags_works_through_cargo_test() {
         )
         .build();
 
-    // target.triple.rustdocflags in env works
+    // target.tuple.rustdocflags in env works
     p.cargo("test --doc -v")
         .env(
             &format!("CARGO_TARGET_{host_env}_RUSTDOCFLAGS"),
@@ -327,7 +327,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 "#]])
         .run();
 
-    // target.triple.rustdocflags in config works
+    // target.tuple.rustdocflags in config works
     p.cargo("test --doc -v")
         .arg("--config")
         .arg(format!("target.{host}.rustdocflags=['--cfg', 'foo']"))

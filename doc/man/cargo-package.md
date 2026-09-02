@@ -166,7 +166,7 @@ Valid output formats:
 
 {{#options}}
 
-{{> options-target-triple }}
+{{> options-target-tuple }}
 
 {{> options-target-dir }}
 

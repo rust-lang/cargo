@@ -285,7 +285,7 @@ pub fn resolve_ws_with_opts<'gctx>(
             .bindeps(pkg_id)
             .filter_map(|(_dep_id, dep)| dep.artifact()?.target()?.to_compile_kind())
         {
-            // Best effort: an invalid target triple is reported later,
+            // Best effort: an invalid target tuple is reported later,
             // with proper context, while building the unit graph, so
             // any error here is intentionally ignored.
             let _ = target_data.merge_compile_kind(kind);

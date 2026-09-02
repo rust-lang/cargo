@@ -173,7 +173,7 @@ Directory to install packages into.
 
 {{#options}}
 
-{{> options-target-triple }}
+{{> options-target-tuple }}
 
 {{> options-target-dir }}
 

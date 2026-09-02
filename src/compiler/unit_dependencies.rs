@@ -557,7 +557,7 @@ fn compute_deps_custom_build(
     //
     // Computing the compile target for artifact units is more involved as it has to handle
     // various target configurations specific to artifacts, like `target = "target"` and
-    // `target = "<triple>"`, which makes knowing the root units compile target
+    // `target = "<tuple>"`, which makes knowing the root units compile target
     // `root_unit_compile_target` necessary.
     let root_unit_compile_target = unit_for.root_compile_kind();
     let unit_for = UnitFor::new_host(/*host_features*/ true, root_unit_compile_target);

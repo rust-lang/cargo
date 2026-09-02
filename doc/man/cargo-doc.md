@@ -74,7 +74,7 @@ and supports common Unix glob patterns.
 
 {{#options}}
 
-{{> options-target-triple }}
+{{> options-target-tuple }}
 
 {{> options-release }}
 

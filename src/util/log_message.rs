@@ -25,7 +25,7 @@ pub enum LogMessage {
         command: Vec<String>,
         /// Current working directory.
         cwd: PathBuf,
-        /// Host triple.
+        /// Host tuple.
         host: String,
         /// Number of parallel jobs.
         jobs: u32,
@@ -74,10 +74,10 @@ pub enum LogMessage {
         mode: CompileMode,
         /// The target platform this unit builds for.
         ///
-        /// It is either a [target triple] the compiler accepts,
+        /// It is either a [target tuple] the compiler accepts,
         /// or a file name with the `json` extension for a [custom target].
         ///
-        /// [target triple]: https://doc.rust-lang.org/nightly/rustc/platform-support.html
+        /// [target tuple]: https://doc.rust-lang.org/nightly/rustc/platform-support.html
         /// [custom target]: https://doc.rust-lang.org/nightly/rustc/targets/custom.html
         platform: String,
         /// Unit index for compact reference in subsequent events.

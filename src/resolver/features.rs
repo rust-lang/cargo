@@ -118,7 +118,7 @@ pub enum FeaturesFor {
     HostDep,
     /// Any dependency with both artifact and target specified.
     ///
-    /// That is, `dep = { …, artifact = <crate-type>, target = <triple> }`
+    /// That is, `dep = { …, artifact = <crate-type>, target = <tuple> }`
     ArtifactDep(CompileTarget),
 }
 
@@ -898,7 +898,7 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
                         // which could be built either
                         //
                         //  - for a specified (aka 'forced') target, specified by
-                        //    `dep = { …, target = <triple>` }`
+                        //    `dep = { …, target = <tuple>` }`
                         //  - as an artifact for use in build dependencies that should
                         //    build for whichever `--target`s are specified
                         //  - like a library would be built

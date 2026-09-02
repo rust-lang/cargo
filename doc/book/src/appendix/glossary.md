@@ -196,12 +196,12 @@ The meaning of the term *target* depends on the context:
   For more information see the [build cache] documentation.
 - **Target Architecture** --- The OS and machine architecture for the built
   artifacts are typically referred to as a *target*.
-- **Target Triple** --- A triple is a specific format for specifying a target
-  architecture. Triples may be referred to as a *target triple* which is the
-  architecture for the artifact produced, and the *host triple* which is the
-  architecture that the compiler is running on. The target triple can be
+- **Target Tuple** --- A tuple is a specific format for specifying a target
+  architecture. Tuples may be referred to as a *target tuple* which is the
+  architecture for the artifact produced, and the *host tuple* which is the
+  architecture that the compiler is running on. The target tuple can be
   specified with the `--target` command-line option or the `build.target`
-  [config option]. The general format of the triple is
+  [config option]. The general format of the tuple is
   `<arch><sub>-<vendor>-<sys>-<abi>` where:
 
   - `arch` = The base CPU architecture, for example `x86_64`, `i686`, `arm`,

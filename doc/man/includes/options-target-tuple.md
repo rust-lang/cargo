@@ -1,8 +1,8 @@
-{{#option "`--target` _triple_"}}
+{{#option "`--target` _tuple_"}}
 {{actionverb}} for the specified target architecture. {{~#if multitarget }} Flag may be specified multiple times. {{~/if}}
 {{~#if target-default-to-all-arch}} The default is all architectures.
 {{~else}} The default is the host architecture.
-{{~/if}} The general format of the triple is
+{{~/if}} The general format of the tuple is
 `<arch><sub>-<vendor>-<sys>-<abi>`.
 
 Possible values:

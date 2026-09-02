@@ -118,7 +118,7 @@ When no target selection options are given, `cargo fix` will fix all targets
 
 {{#options}}
 
-{{> options-target-triple }}
+{{> options-target-tuple }}
 
 {{> options-release }}
 

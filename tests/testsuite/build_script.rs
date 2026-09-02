@@ -913,7 +913,7 @@ fn host_runner_arch_takes_precedence() {
         .file("src/lib.rs", "")
         .build();
 
-    // host.<triple>.runner should take precedence over host.runner
+    // host.<tuple>.runner should take precedence over host.runner
     p.cargo("build --target")
         .arg(&target)
         .arg("-Ztarget-applies-to-host")

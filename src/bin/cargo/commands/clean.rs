@@ -28,7 +28,7 @@ pub fn cli() -> Command {
         )
         .arg_release("Clean only release artifacts")
         .arg_profile("Clean only artifacts of the specified profile")
-        .arg_target_triple("Target triple to clean output for")
+        .arg_target_triple("Target tuple to clean output for")
         .arg_target_dir()
         .arg_manifest_path()
         .arg_dry_run("Display what would be deleted without deleting anything")
