@@ -92,7 +92,7 @@
 </tspan>
     <tspan x="10px" y="658px"><tspan class="fg-bright-green bold">Compilation Options:</tspan>
 </tspan>
-    <tspan x="10px" y="676px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--target</tspan><tspan class="fg-cyan"> [</tspan><tspan class="fg-cyan">&lt;TRIPLE&gt;</tspan><tspan class="fg-cyan">]</tspan><tspan>  Filter dependencies matching the given target-triple (default host</tspan>
+    <tspan x="10px" y="676px"><tspan>      </tspan><tspan class="fg-bright-cyan bold">--target</tspan><tspan class="fg-cyan"> [</tspan><tspan class="fg-cyan">&lt;TRIPLE&gt;</tspan><tspan class="fg-cyan">]</tspan><tspan>  Filter dependencies matching the given target triple (default host</tspan>
 </tspan>
     <tspan x="10px" y="694px"><tspan>                           platform). Pass `all` to include all targets.</tspan>
 </tspan>
