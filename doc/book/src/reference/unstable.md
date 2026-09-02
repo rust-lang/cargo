@@ -1544,7 +1544,16 @@ see rustc's documentation on [`--remap-path-scope`].
 
 [`--remap-path-scope`]: ../../rustc/remap-source-paths.html#--remap-path-scope
 
-If `trim-paths` is not `none` or `false`, then the following paths are sanitized if they appear in a selected scope:
+##### Remapping rules
+
+The exact remap path prefixes are unspecified and may change across Cargo versions.
+Tools that map paths embedded in artifacts back to local sources
+should consume [unremap files] instead of interpreting these prefixes.
+
+[unremap files]: #unremap-files
+
+If `trim-paths` is not `"none"` or `false`,
+then the following paths are sanitized if they appear in a selected scope:
 
 1. Path to the source files of the standard and core library (sysroot) will begin with `/rustc/<rustc commit hash>`,
    e.g. `/home/username/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/result.rs` ->
@@ -1576,15 +1585,11 @@ otherwise like path dependencies.
 When a path to the source files of the standard and core library is *not* in scope for sanitization,
 the emitted path will depend on if `rust-src` component is present.
 If it is, then some paths will point to the copy of the source files on your file system;
-if it isn't, then they will show up as `/rustc/[rustc commit hash]/library/...`
+if it isn't, then they will show up as `/rustc/<rustc commit hash>/library/...`
 (just like when it is selected for sanitization).
 Paths to all other source files will not be affected.
 
 This will not affect any hard-coded paths in the source code, such as in strings.
-
-The exact remap path prefixes are not stable across Cargo versions.
-Tools that map paths embedded in artifacts back to local sources
-should consume unremap files instead of interpreting these prefixes.
 
 ##### Unremap files
 
