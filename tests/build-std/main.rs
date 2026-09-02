@@ -529,8 +529,6 @@ fn build_std_features_without_panic_unwind() {
     p.cargo("check -v")
         .build_std_arg("std")
         .arg("-Zbuild-std-features=optimize_for_size")
-        .with_stderr_contains("error[E0152]: duplicate lang item in crate `core`: `sized`")
-        .with_status(101)
         .run();
 }
 

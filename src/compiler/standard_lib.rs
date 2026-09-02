@@ -2,13 +2,13 @@
 
 use crate::compiler::UnitInterner;
 use crate::compiler::unit_dependencies::IsArtifact;
-use crate::compiler::{CompileKind, CompileMode, RustcTargetData, Unit};
+use crate::compiler::{CompileKind, CompileMode, RustcTargetData, Unit, UserIntent};
 use crate::ops::{self, Packages};
 use crate::resolver::HasDevUnits;
 use crate::resolver::Resolve;
 use crate::resolver::features::{CliFeatures, FeaturesFor, ResolvedFeatures};
 use crate::util::errors::CargoResult;
-use crate::workspace::profiles::{Profiles, UnitFor};
+use crate::workspace::profiles::{PanicStrategy, Profiles, UnitFor};
 use crate::workspace::{PackageId, PackageSet, Workspace};
 
 use crate::util::data_structures::{HashMap, HashSet};
@@ -52,6 +52,8 @@ pub fn resolve_std<'gctx>(
     build_config: &BuildConfig,
     crates: &[String],
     kinds: &[CompileKind],
+    profiles: &Profiles,
+    intent: UserIntent,
 ) -> CargoResult<(PackageSet<'gctx>, Resolve, ResolvedFeatures)> {
     let src_path = detect_sysroot_src_path(target_data)?;
     let std_ws_manifest_path = src_path.join("Cargo.toml");
@@ -65,7 +67,7 @@ pub fn resolve_std<'gctx>(
     std_ws.set_require_optional_deps(false);
     let specs = {
         // If there is anything looks like needing std, resolve with it.
-        // If not, we assume only `core` maye be needed, as `core the most fundamental crate.
+        // If not, we assume only `core` may be needed, as `core` is the most fundamental crate.
         //
         // This may need a UI overhaul if `build-std` wants to fully support multi-targets.
         let maybe_std = kinds
@@ -78,14 +80,27 @@ pub fn resolve_std<'gctx>(
         let specs = Packages::Packages(crates.into_iter().map(Into::into).collect());
         specs.to_package_id_specs(&std_ws)?
     };
-    let features = match &gctx.cli_unstable().build_std_features {
+    let mut features = match &gctx.cli_unstable().build_std_features {
         Some(list) => list.clone(),
-        None => vec![
-            "panic-unwind".to_string(),
-            "backtrace".to_string(),
-            "default".to_string(),
-        ],
+        None => vec!["backtrace".to_string(), "default".to_string()],
     };
+
+    // Conditionally enable the panic-unwind feature based on the user's profile settings,
+    // as specified in https://rust-lang.github.io/rfcs/3874-build-std-always.html#panic-strategies.
+    //
+    // Base profile is inaccurate for tests, benches, proc macros, build scripts and overrides.
+    // However it is enough here since
+    // 1) `panic` profile cannot be overridden.
+    // 2) We always manually enable `panic-unwind` for tests and benches. More precisely
+    //    we would need to enable it only if `libtest` is built, but this information is
+    //    unavailable at this point.
+    // 3) Procedural macros and build scripts always use the pre-built standard library.
+    //    It doesn't matter whether we build `panic_unwind` or not.
+    let profile = profiles.base_profile();
+    if profile.panic == PanicStrategy::Unwind || intent.is_any_test() {
+        features.push("panic-unwind".to_string());
+    }
+
     let cli_features = CliFeatures::from_command_line(
         &features, /*all_features*/ false, /*uses_default_features*/ false,
     )?;
@@ -125,6 +140,7 @@ pub fn generate_std_roots(
     package_set: &PackageSet<'_>,
     interner: &UnitInterner,
     profiles: &Profiles,
+    intent: UserIntent,
     target_data: &RustcTargetData<'_>,
 ) -> CargoResult<HashMap<CompileKind, Vec<Unit>>> {
     // Generate a map of Units for each kind requested.
@@ -147,6 +163,7 @@ pub fn generate_std_roots(
             package_set,
             interner,
             profiles,
+            intent,
             target_data,
         )?;
     }
@@ -165,6 +182,7 @@ fn generate_roots(
     package_set: &PackageSet<'_>,
     interner: &UnitInterner,
     profiles: &Profiles,
+    intent: UserIntent,
     target_data: &RustcTargetData<'_>,
 ) -> CargoResult<()> {
     let std_ids = std_crates(crates, default, units)
@@ -187,7 +205,16 @@ fn generate_roots(
         for kind in kinds {
             let kind = **kind;
             let list = ret.entry(kind).or_insert_with(Vec::new);
-            let unit_for = UnitFor::new_normal(kind);
+
+            let unit_for = if intent.is_any_test() {
+                // Tests and benches always use the unwind panic strategy unless `-Zpanic-abort-tests`
+                // is used. Therefore, we also disable the panic flag for std crates and their
+                // dependencies, since Rust requires all crates to be built with the unwind panic
+                // strategy if unwinding is used.
+                UnitFor::new_test(target_data.gctx, kind)
+            } else {
+                UnitFor::new_normal(kind)
+            };
             let profile = profiles.get_profile(
                 pkg.package_id(),
                 /*is_member*/ false,

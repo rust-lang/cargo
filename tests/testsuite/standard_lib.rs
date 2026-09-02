@@ -1026,12 +1026,12 @@ fn panic_abort_build_std() {
         .with_stderr_data(
             str![[r#"
 [COMPILING] panic_abort [..]
-[COMPILING] panic_unwind [..]
 [RUNNING] `[..]rustc --crate-name foo [..] -C panic=abort [..]
 ...
 "#]]
             .unordered(),
         )
+        .with_stderr_does_not_contain("[COMPILING] panic_unwind [..]")
         .run();
 }
 
@@ -1063,12 +1063,12 @@ fn panic_immediate_abort_build_std() {
         .with_stderr_data(
             str![[r#"
 [COMPILING] panic_abort [..]
-[COMPILING] panic_unwind [..]
 [RUNNING] `[..]rustc --crate-name foo [..] -C panic=immediate-abort [..]
 ...
 "#]]
             .unordered(),
         )
+        .with_stderr_does_not_contain("[COMPILING] panic_unwind [..]")
         .run();
 }
 
@@ -1101,12 +1101,10 @@ fn panic_abort_test() {
 [COMPILING] panic_abort [..]
 [COMPILING] panic_unwind [..]
 [WARNING] Cargo.toml: `panic` setting is ignored for `test` profile
-[ERROR] the crate `std` requires panic strategy `abort` which is incompatible with this crate's strategy of `unwind`
 ...
 "#]]
             .unordered(),
         )
-        .with_status(101)
         .run();
 }
 
@@ -1137,12 +1135,10 @@ fn panic_abort_bench() {
 [COMPILING] panic_abort [..]
 [COMPILING] panic_unwind [..]
 [WARNING] Cargo.toml: `panic` setting is ignored for `bench` profile
-[ERROR] the crate `std` requires panic strategy `abort` which is incompatible with this crate's strategy of `unwind`
 ...
 "#]]
             .unordered(),
         )
-        .with_status(101)
         .run();
 }
 
@@ -1189,7 +1185,6 @@ fn panic_abort_proc_macro() {
         .target_host()
         .with_stderr_data(
             str![[r#"
-[COMPILING] panic_unwind v0.1.0 ([..]/library/panic_unwind)
 [COMPILING] panic_abort v0.1.0 ([..]/library/panic_abort)
 [RUNNING] `[..]rustc --crate-name foo [..]panic=abort[..]`
 [RUNNING] `[..]rustc --crate-name my_proc_macro [..]`
@@ -1198,6 +1193,7 @@ fn panic_abort_proc_macro() {
             .unordered(),
         )
         .with_stderr_does_not_contain("[..]rustc --crate-name my_proc_macro [..]panic=abort[..]")
+        .with_stderr_does_not_contain("[COMPILING] panic_unwind [..]")
         .run();
 }
 
@@ -1229,7 +1225,6 @@ fn panic_abort_build_script() {
         .target_host()
         .with_stderr_data(
             str![[r#"
-[COMPILING] panic_unwind v0.1.0 ([..]/library/panic_unwind)
 [COMPILING] panic_abort v0.1.0 ([..]/library/panic_abort)
 [RUNNING] `[..]rustc --crate-name build_script_build [..]`
 [RUNNING] `[..]rustc --crate-name foo [..]panic=abort[..]`
@@ -1240,6 +1235,7 @@ fn panic_abort_build_script() {
         .with_stderr_does_not_contain(
             "[..]rustc --crate-name build_script_build [..]panic=abort[..]",
         )
+        .with_stderr_does_not_contain("[COMPILING] panic_unwind [..]")
         .run();
 }
 
@@ -1268,11 +1264,11 @@ fn abort_in_profile_and_unwind_in_rustflags() {
         .with_stderr_data(
             str![[r#"
 [COMPILING] panic_abort [..]
-[COMPILING] panic_unwind [..]
 [RUNNING] `[..]rustc --crate-name std [..]panic-unwind[..]`
 ...
 "#]]
             .unordered(),
         )
+        .with_stderr_does_not_contain("[COMPILING] panic_unwind [..]")
         .run();
 }
