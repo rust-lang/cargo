@@ -11,7 +11,7 @@
 
 use std::env;
 
-/// The arch triple of the test-running host.
+/// The arch tuple of the test-running host.
 pub fn native() -> &'static str {
     env!("NATIVE_ARCH")
 }
@@ -20,7 +20,7 @@ pub fn native_arch() -> &'static str {
     match native()
         .split("-")
         .next()
-        .expect("Target triple has unexpected format")
+        .expect("Target tuple has unexpected format")
     {
         "x86_64" => "x86_64",
         "aarch64" => "aarch64",
@@ -29,14 +29,14 @@ pub fn native_arch() -> &'static str {
     }
 }
 
-/// The alternate target-triple to build with.
+/// The alternate target-tuple to build with.
 ///
 /// Only use this function on tests that check `cross_compile::disabled`.
 pub fn alternate() -> &'static str {
     try_alternate().expect("This test should be gated on cross_compile::disabled.")
 }
 
-/// A possible alternate target-triple to build with.
+/// A possible alternate target-tuple to build with.
 pub(crate) fn try_alternate() -> Option<&'static str> {
     if cfg!(target_os = "macos") {
         Some("x86_64-apple-darwin")
@@ -59,10 +59,10 @@ pub fn alternate_arch() -> &'static str {
     }
 }
 
-/// A target-triple that is neither the host nor the target.
+/// A target-tuple that is neither the host nor the target.
 ///
 /// Rustc may not work with it and it's alright, apart from being a
-/// valid target triple it is supposed to be used only as a
+/// valid target tuple it is supposed to be used only as a
 /// placeholder for targets that should not be considered.
 pub fn unused() -> &'static str {
     "wasm32-unknown-unknown"

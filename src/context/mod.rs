@@ -49,7 +49,7 @@
 //! uppercased, and dashes converted to underscores).
 //!
 //! A good example is the `[target]` table. The code will request
-//! `target.$TRIPLE` and the config system can then appropriately fetch
+//! `target.$TUPLE` and the config system can then appropriately fetch
 //! environment variables like `CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER`.
 //! Conversely, it is not possible do the same thing for the `cfg()` target
 //! tables (because Cargo must fetch all of them), so those do not support
@@ -2042,12 +2042,12 @@ impl GlobalContext {
         target::get_target_applies_to_host(self)
     }
 
-    /// Returns the `[host]` table definition for the given target triple.
+    /// Returns the `[host]` table definition for the given target tuple.
     pub fn host_cfg_triple(&self, target: &str) -> CargoResult<TargetConfig> {
         target::load_host_triple(self, target)
     }
 
-    /// Returns the `[target]` table definition for the given target triple.
+    /// Returns the `[target]` table definition for the given target tuple.
     pub fn target_cfg_triple(&self, target: &str) -> CargoResult<TargetConfig> {
         target::load_target_triple(self, target)
     }

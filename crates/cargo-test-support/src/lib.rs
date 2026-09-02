@@ -445,7 +445,7 @@ impl Project {
             .join(&format!("{}{}", b, env::consts::EXE_SUFFIX))
     }
 
-    /// Path to a debug binary for a specific target triple.
+    /// Path to a debug binary for a specific target tuple.
     ///
     /// ex: `$CARGO_TARGET_TMPDIR/cit/t0/foo/target/i686-apple-darwin/debug/foo`
     pub fn target_bin(&self, target: &str, b: &str) -> PathBuf {
@@ -1325,7 +1325,7 @@ pub fn rustc_host() -> &'static str {
     &rustc_info().host
 }
 
-/// The host triple suitable for use in a cargo environment variable (uppercased).
+/// The host tuple suitable for use in a cargo environment variable (uppercased).
 pub fn rustc_host_env() -> String {
     rustc_host().to_uppercase().replace('-', "_")
 }

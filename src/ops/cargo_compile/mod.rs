@@ -27,7 +27,7 @@
 //!
 //! **Note**: "target" inside this module generally refers to ["Cargo Target"],
 //! which corresponds to artifact that will be built in a package. Not to be
-//! confused with target-triple or target architecture.
+//! confused with target-tuple or target architecture.
 //!
 //! [`unit_dependencies`]: crate::compiler::unit_dependencies
 //! [`Layout`]: crate::compiler::Layout

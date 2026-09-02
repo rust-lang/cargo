@@ -61,7 +61,7 @@ pub struct UnitInner {
     /// `Cargo.toml`.
     pub pkg: Package,
     /// Information about the specific target to build, out of the possible targets in `pkg`. Not
-    /// to be confused with *target-triple* (or *target architecture* ...), the target arch for a
+    /// to be confused with *target-tuple* (or *target architecture* ...), the target arch for a
     /// build.
     pub target: Target,
     /// The profile contains information about *how* the build should be run, including debug

@@ -491,7 +491,7 @@ fn add_pkg(
                 .and_then(|artifact| artifact.target())
                 .and_then(|target| target.to_resolved_compile_target(requested_kind))
             {
-                // Dependency has a `{ …, target = <triple> }`
+                // Dependency has a `{ …, target = <tuple> }`
                 Some(target) => FeaturesFor::ArtifactDep(target),
                 // Get the information of the dependent crate from `features_for`.
                 // If a dependent crate is

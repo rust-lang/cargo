@@ -111,7 +111,7 @@ pub struct RenderContext<'a> {
     pub cpu_usage: &'a [(f64, f64)],
     /// Compiler version info, i.e., `rustc 1.92.0-beta.2 (0a411606e 2025-10-31)`.
     pub rustc_version: String,
-    /// The host triple (arch-platform-OS).
+    /// The host tuple (arch-platform-OS).
     pub host: String,
     /// The requested target platforms of compilation for this build.
     pub requested_targets: Vec<String>,
