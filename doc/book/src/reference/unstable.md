@@ -1589,8 +1589,6 @@ if it isn't, then they will show up as `/rustc/<rustc commit hash>/library/...`
 (just like when it is selected for sanitization).
 Paths to all other source files will not be affected.
 
-This will not affect any hard-coded paths in the source code, such as in strings.
-
 ##### Unremap files
 
 When the `object` scope is active and debuginfo is enabled,
@@ -1629,6 +1627,31 @@ Since it is meant to be a debugging aid,
 it includes absolute paths of your system,
 so there is no artifact privacy guarantee.
 You might want to exclude `*.trim-paths.jsonl` files when distributing artifacts.
+
+##### Limitations
+
+`trim-paths` supports remapping source path prefixes as a best effort.
+Linkers may add paths that rustc cannot remap.
+See [the limitations section][remap-limitation] on rustc's documentation for more.
+
+For example, on macOS,
+linkers generate OSO entries containing absolute paths to object files
+when debuginfo is enabled.
+The following profile settings keep these paths out of the executable
+while preserving debuginfo in a separate dSYM bundle:
+
+```toml
+[profile.release]
+debug = true
+trim-paths = "object"
+split-debuginfo = "packed"
+strip = "debuginfo"
+```
+
+The dSYM bundle can be used for debugging,
+but it still contains absolute paths.
+
+[remap-limitation]: ../../rustc/remap-source-paths.html#caveats-and-limitations
 
 #### Environment variable
 
