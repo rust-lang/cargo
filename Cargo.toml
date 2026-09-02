@@ -112,7 +112,7 @@ tar = { version = "0.4.45", default-features = false }
 tempfile = "3.27.0"
 thiserror = "2.0.18"
 time = { version = "0.3.47", features = ["parsing", "formatting", "serde"] }
-toml = { version = "1.1.2", default-features = false }
+toml = { version = "1.1.5", default-features = false }
 toml_edit = { version = "0.25.10", features = ["serde"] }
 toml_parser = "1.1.2"
 toml_writer = "1.1.1"
