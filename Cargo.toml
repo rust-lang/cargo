@@ -24,7 +24,7 @@ anstyle-hyperlink = "1.0.2"
 anstyle-progress = "0.1.0"
 anyhow = "1.0.102"
 async-trait = "0.1.89"
-base64 = "0.22.1"
+base64 = "0.23.0"
 blake3 = "1.8.4"
 build-rs = { version = "0.3.5", path = "crates/build-rs" }
 cargo = { path = "" }
