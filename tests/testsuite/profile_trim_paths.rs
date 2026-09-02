@@ -67,7 +67,7 @@ Caused by:
 }
 
 #[cargo_test]
-fn release_profile_default_to_object() {
+fn release_profile_default() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -83,8 +83,8 @@ fn release_profile_default_to_object() {
             "build.rs",
             r#"
                 fn main() {
-                    assert!(std::env::var_os("CARGO_TRIM_PATHS_SCOPE").is_some());
-                    assert!(std::env::var_os("CARGO_TRIM_PATHS_REMAP").is_some());
+                    assert!(std::env::var_os("CARGO_TRIM_PATHS_SCOPE").is_none());
+                    assert!(std::env::var_os("CARGO_TRIM_PATHS_REMAP").is_none());
                 }
             "#,
         )
@@ -93,14 +93,8 @@ fn release_profile_default_to_object() {
     p.cargo("build --release --verbose")
         .arg("-Ztrim-paths")
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
-        .with_stderr_data(str![[r#"
-[COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name build_script_build [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
-[RUNNING] `[ROOT]/foo/target/release/build/foo/[HASH]/out/build_script_build`
-[RUNNING] `rustc --crate-name foo [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
-[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-
-"#]])
+        .with_stderr_does_not_contain("[..]--remap-path-scope=[..]")
+        .with_stderr_does_not_contain("[..]--remap-path-prefix=[..]")
         .run();
 }
 

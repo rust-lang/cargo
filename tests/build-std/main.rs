@@ -383,6 +383,7 @@ fn remap_path_scope() {
             "
                 [profile.release]
                 debug = \"line-tables-only\"
+                trim-paths = \"object\"
             ",
         )
         .build();

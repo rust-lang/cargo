@@ -1528,8 +1528,8 @@ It takes the following values:
 
 It also takes an array with the combinations of `"macro"`, `"diagnostics"`, and `"object"`.
 
-It is defaulted to `none` for the `dev` profile, and `object` for the `release` profile.
-You can manually override it by specifying this option in `Cargo.toml`:
+By default, `trim-paths` is not set and path sanitization is disabled for all profiles.
+You can enable it by specifying this option in `Cargo.toml`:
 
 ```toml
 [profile.dev]
@@ -1539,7 +1539,7 @@ trim-paths = "all"
 trim-paths = ["object", "diagnostics"]
 ```
 
-The default `release` profile setting (`object`) sanitizes only the paths in emitted executable or library files.
+The `object` setting sanitizes only the paths in emitted executable or library files.
 It always affects paths from macros such as panic messages, and in debug information only if they will be embedded together with the binary
 (the default on platforms with ELF binaries, such as Linux and windows-gnu),
 but will not touch them if they are in separate files (the default on Windows MSVC and macOS).

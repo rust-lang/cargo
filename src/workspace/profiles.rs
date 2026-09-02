@@ -28,14 +28,12 @@ use crate::resolver::features::FeaturesFor;
 use crate::util::data_structures::{HashMap, HashSet};
 use crate::util::interning::InternedString;
 use crate::util::{CargoResult, GlobalContext, closest_msg};
-use crate::workspace::Feature;
 use crate::workspace::dependency::Artifact;
 use crate::workspace::parser::validate_profile;
 use crate::workspace::{PackageId, PackageIdSpec, PackageIdSpecQuery, Target, Workspace};
 use anyhow::{Context as _, bail};
 use cargo_util::is_ci;
 use cargo_util_schemas::manifest::TomlTrimPaths;
-use cargo_util_schemas::manifest::TomlTrimPathsValue;
 use cargo_util_schemas::manifest::{
     ProfilePackageSpec, StringOrBool, TomlDebugInfo, TomlProfile, TomlProfiles,
 };
@@ -92,9 +90,7 @@ impl Profiles {
             rustc_host,
         };
 
-        let trim_paths_enabled = ws.unstable_features().is_enabled(Feature::trim_paths())
-            || gctx.cli_unstable().trim_paths;
-        Self::add_root_profiles(&mut profile_makers, &profiles, trim_paths_enabled);
+        Self::add_root_profiles(&mut profile_makers, &profiles);
 
         // Merge with predefined profiles.
         use std::collections::btree_map::Entry;
@@ -136,7 +132,6 @@ impl Profiles {
     fn add_root_profiles(
         profile_makers: &mut Profiles,
         profiles: &BTreeMap<InternedString, TomlProfile>,
-        trim_paths_enabled: bool,
     ) {
         profile_makers.by_name.insert(
             "dev".into(),
@@ -145,10 +140,7 @@ impl Profiles {
 
         profile_makers.by_name.insert(
             "release".into(),
-            ProfileMaker::new(
-                Profile::default_release(trim_paths_enabled),
-                profiles.get("release").cloned(),
-            ),
+            ProfileMaker::new(Profile::default_release(), profiles.get("release").cloned()),
         );
     }
 
@@ -676,7 +668,7 @@ compact_debug! {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             let (default, default_name) = match self.name.as_str() {
                 "dev" => (Profile::default_dev(), "default_dev()"),
-                "release" => (Profile::default_release(false), "default_release()"),
+                "release" => (Profile::default_release(), "default_release()"),
                 _ => (Profile::default(), "default()"),
             };
             [debug_the_fields(
@@ -738,13 +730,11 @@ impl Profile {
     }
 
     /// Returns a built-in `release` profile.
-    fn default_release(trim_paths_enabled: bool) -> Profile {
-        let trim_paths = trim_paths_enabled.then(|| TomlTrimPathsValue::Object.into());
+    fn default_release() -> Profile {
         Profile {
             name: "release".into(),
             root: ProfileRoot::Release,
             opt_level: "3".into(),
-            trim_paths,
             ..Profile::default()
         }
     }
