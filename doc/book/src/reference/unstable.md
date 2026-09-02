@@ -1582,13 +1582,6 @@ are sanitized by their file location instead,
 like workspace paths when inside the workspace directory,
 otherwise like path dependencies.
 
-When a path to the source files of the standard and core library is *not* in scope for sanitization,
-the emitted path will depend on if `rust-src` component is present.
-If it is, then some paths will point to the copy of the source files on your file system;
-if it isn't, then they will show up as `/rustc/<rustc commit hash>/library/...`
-(just like when it is selected for sanitization).
-Paths to all other source files will not be affected.
-
 ##### Unremap files
 
 When the `object` scope is active and debuginfo is enabled,
