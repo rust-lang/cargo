@@ -1206,8 +1206,6 @@ fn custom_build_env_var_trim_paths() {
         ("\"macro\"", "macro"),
         ("\"none\"", "none"),
         ("\"object\"", "object"),
-        ("false", "none"),
-        ("true", "all"),
         (
             r#"["diagnostics", "macro", "object"]"#,
             "diagnostics,macro,object",

@@ -1260,16 +1260,10 @@ impl<'de> de::Deserialize<'de> for TomlTrimPaths {
         D: de::Deserializer<'de>,
     {
         use serde::de::Error as _;
-        let expecting = r#"a boolean, "none", "diagnostics", "macro", "object", "all", or an array with these options"#;
+        let expecting =
+            r#""none", "diagnostics", "macro", "object", "all", or an array with these options"#;
         UntaggedEnumVisitor::new()
             .expecting(expecting)
-            .bool(|value| {
-                Ok(if value {
-                    TomlTrimPaths::All
-                } else {
-                    TomlTrimPaths::none()
-                })
-            })
             .string(|v| match v {
                 "none" => Ok(TomlTrimPaths::none()),
                 "all" => Ok(TomlTrimPaths::All),

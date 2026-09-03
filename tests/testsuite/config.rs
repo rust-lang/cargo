@@ -1892,24 +1892,6 @@ fn trim_paths_parsing() {
         assert_eq!(trim_paths, expected, "failed to parse {val}");
     }
 
-    let test_cases = [(TomlTrimPaths::none(), false), (TomlTrimPaths::All, true)];
-
-    for (expected, val) in test_cases {
-        // env
-        let gctx = GlobalContextBuilder::new()
-            .env("CARGO_PROFILE_DEV_TRIM_PATHS", format!("{val}"))
-            .build();
-        let trim_paths: TomlTrimPaths = gctx.get("profile.dev.trim-paths").unwrap();
-        assert_eq!(trim_paths, expected, "failed to parse {val}");
-
-        // config.toml
-        let gctx = GlobalContextBuilder::new()
-            .config_arg(format!("profile.dev.trim-paths={val}"))
-            .build();
-        let trim_paths: TomlTrimPaths = gctx.get("profile.dev.trim-paths").unwrap();
-        assert_eq!(trim_paths, expected, "failed to parse {val}");
-    }
-
     let expected = vec![
         TomlTrimPathsValue::Diagnostics,
         TomlTrimPathsValue::Macro,

@@ -1519,12 +1519,12 @@ trim-paths = ["diagnostics", "object"]
 `trim-paths` is a profile setting which enables and controls the sanitization of file paths in build outputs.
 It takes the following values:
 
-- `"none"` and `false` --- disable path sanitization
+- `"none"` --- disable path sanitization
 - `"macro"` --- sanitize paths in the expansion of `std::file!()` macro.
     This is where paths in embedded panic messages come from
 - `"diagnostics"` --- sanitize paths in printed compiler diagnostics
 - `"object"` --- sanitize paths in compiled executables or libraries
-- `"all"` and `true` --- sanitize paths in all possible locations
+- `"all"` --- sanitize paths in all possible locations
 
 It also takes an array with the combinations of `"macro"`, `"diagnostics"`, and `"object"`.
 
@@ -1552,7 +1552,7 @@ should consume [unremap files] instead of interpreting these prefixes.
 
 [unremap files]: #unremap-files
 
-If `trim-paths` is not `"none"` or `false`,
+If `trim-paths` is not `"none"`,
 then the following paths are sanitized if they appear in a selected scope:
 
 1. Path to the source files of the standard and core library (sysroot) will begin with `/rustc/<rustc commit hash>`,
@@ -1657,8 +1657,8 @@ but it still contains absolute paths.
 *as a new entry of ["Environment variables Cargo sets for build scripts"](./environment-variables.md#environment-variables-cargo-sets-for-crates)*
 
 * `CARGO_TRIM_PATHS_SCOPE` --- The value of `trim-paths` profile option.
-    `false`, `"none"`, and empty arrays would be converted to `none`.
-    `true` and `"all"` become `all`.
+    `"none"` and empty arrays are converted to `none`.
+    `"all"` becomes `all`.
     Values in a non-empty array would be joined into a comma-separated list.
     If the build script introduces absolute paths to built artifacts (such as by invoking a compiler),
     the user may request them to be sanitized in different types of artifacts.
