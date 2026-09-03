@@ -44,8 +44,8 @@ existing contents of the vendor directory
 {{/option}}
 
 {{#option "`--respect-source-config`" }}
-Instead of ignoring `[source]` configuration by default in `.cargo/config.toml`
-read it and use it when downloading crates from crates.io, for example
+Instead of ignoring `[source]` configuration by default in `.cargo/config.toml`,
+read it and use it when downloading crates.
 {{/option}}
 
 {{#option "`--versioned-dirs`" }}
