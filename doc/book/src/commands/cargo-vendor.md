@@ -47,8 +47,8 @@ existing contents of the vendor directory</p>
 
 
 <dt class="option-term" id="option-cargo-vendor---respect-source-config"><a class="option-anchor" href="#option-cargo-vendor---respect-source-config"><code>--respect-source-config</code></a></dt>
-<dd class="option-desc"><p>Instead of ignoring <code>[source]</code> configuration by default in <code>.cargo/config.toml</code>
-read it and use it when downloading crates from crates.io, for example</p>
+<dd class="option-desc"><p>Instead of ignoring <code>[source]</code> configuration by default in <code>.cargo/config.toml</code>,
+read it and use it when downloading crates.</p>
 </dd>
 
 
