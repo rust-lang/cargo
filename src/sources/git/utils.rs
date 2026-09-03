@@ -1873,10 +1873,9 @@ pub(crate) fn note_github_pull_request(url: &str) -> Option<String> {
             let rev = format!("refs/pull/{pr_number}/head");
             return Some(format!(
                 concat!(
-                    "\n\nnote: GitHub url {} is not a repository. \n",
-                    "help: Replace the dependency with \n",
-                    "       `git = \"{}\" rev = \"{}\"` \n",
-                    "   to specify pull requests as dependencies' revision."
+                    "\n\nnote: GitHub url {} is not a repository\n",
+                    "help: to specify a pull request as a dependency, replace the dependency with:\n",
+                    "       `git = \"{}\" rev = \"{}\"`",
                 ),
                 url, repo_url, rev
             ));

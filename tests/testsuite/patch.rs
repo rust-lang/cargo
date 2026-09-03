@@ -411,10 +411,9 @@ Caused by:
   if a proxy or similar is necessary `net.git-fetch-with-cli` may help here
   https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
 
-  [NOTE] GitHub url https://github.com/rust-lang/does-not-exist/pull/123 is not a repository. 
-  [HELP] Replace the dependency with 
-         `git = "https://github.com/rust-lang/does-not-exist.git" rev = "refs/pull/123/head"` 
-     to specify pull requests as dependencies' revision.
+  [NOTE] GitHub url https://github.com/rust-lang/does-not-exist/pull/123 is not a repository
+  [HELP] to specify a pull request as a dependency, replace the dependency with:
+         `git = "https://github.com/rust-lang/does-not-exist.git" rev = "refs/pull/123/head"`
 
 Caused by:
 ...
