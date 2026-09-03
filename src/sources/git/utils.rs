@@ -1356,12 +1356,13 @@ https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli"
     network::retry::with_retry(gctx, || {
         cmd.exec().map_err(|_error| {
             let spurious = git_version < min_version_max_retries;
+            let pr_hint = note_github_pull_request(url).unwrap_or_default();
             let with_depth = if let gix::remote::fetch::Shallow::DepthAtRemote(depth) = shallow {
                 format!(" with depth={depth}")
             } else {
                 "".to_owned()
             };
-            GitCliError::new(anyhow::format_err!("`git fetch` failed for {url}{with_depth}"))
+            GitCliError::new(anyhow::format_err!("`git fetch` failed for {url}{with_depth}{pr_hint}"))
                 .spurious(spurious)
                 .workaround(
                     "help: re-try with `net.git-fetch-with-cli = false` to see if it resolves the problem
