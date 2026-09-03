@@ -418,6 +418,8 @@ fn invalid_github_key() {
         .file("src/lib.rs", "")
         .build();
     p.cargo("fetch")
+        // fails with git-cli independent of `known_hosts`
+        .env("CARGO_NET_GIT_FETCH_WITH_CLI", "false")
         .with_status(101)
         .with_stderr_data(str![[r#"
 ...

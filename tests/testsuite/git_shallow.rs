@@ -14,8 +14,8 @@ enum Backend {
 impl Backend {
     fn to_arg(&self) -> &'static str {
         match self {
-            Backend::Git2 => "",
-            Backend::Gitoxide => "-Zgitoxide=fetch",
+            Backend::Git2 => "--config=net.git-fetch-with-cli=false",
+            Backend::Gitoxide => "--config=net.git-fetch-with-cli=false -Zgitoxide=fetch",
             Backend::GitCli => "--config=net.git-fetch-with-cli=true",
         }
     }

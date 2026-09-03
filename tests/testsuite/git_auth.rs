@@ -321,6 +321,7 @@ fn net_err_suggests_fetch_with_cli() {
         .build();
 
     p.cargo("check -v")
+        .env("CARGO_NET_GIT_FETCH_WITH_CLI", "false")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `ssh://needs-proxy.invalid/git`
