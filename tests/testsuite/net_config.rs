@@ -31,7 +31,9 @@ fn net_retry_loads_from_config() {
         )
         .build();
 
+    // Use libgit2 to ensure we exercise Cargo's retry handling
     p.cargo("check -v")
+        .env("CARGO_NET_GIT_FETCH_WITH_CLI", "false")
         .with_status(101)
         .with_stderr_data(str![[r#"
 ...
@@ -66,7 +68,9 @@ fn net_retry_git_outputs_warning() {
         .file("src/main.rs", "")
         .build();
 
+    // Use libgit2 to ensure we exercise Cargo's retry handling
     p.cargo("check -v -j 1")
+        .env("CARGO_NET_GIT_FETCH_WITH_CLI", "false")
         .with_status(101)
         .with_stderr_data(str![[r#"
 ...
