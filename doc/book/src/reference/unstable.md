@@ -1558,9 +1558,9 @@ then the following paths are sanitized if they appear in a selected scope:
 1. Path to the source files of the standard and core library (sysroot) will begin with `/rustc/<rustc commit hash>`,
    e.g. `/home/username/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/result.rs` ->
    `/rustc/fe72845f7bb6a77b9e671e6a4f32fe714962cec4/library/core/src/result.rs`
-2. Path to the current package will be stripped,
-   relatively to the current workspace root,
-   e.g. `/home/username/crate/src/lib.rs` -> `src/lib.rs`.
+2. Path to a local package within the workspace will begin with `.`,
+   which replaces the workspace root,
+   e.g. `/home/username/crate/src/lib.rs` -> `./src/lib.rs`.
    This also covers path dependencies located inside the workspace directory.
 3. Path to a registry dependency will begin with `/cargo/registry/<registry id>`,
    which replaces the registry's extraction directory,
