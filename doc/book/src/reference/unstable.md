@@ -1494,7 +1494,7 @@ cargo-features = ["trim-paths"]
 # ...
 
 [profile.release]
-trim-paths = ["diagnostics", "object"]
+trim-paths = "object"
 ```
 
 To set this in a profile in Cargo configuration,
@@ -1507,7 +1507,7 @@ For example,
 trim-paths = true
 
 [profile.release]
-trim-paths = ["diagnostics", "object"]
+trim-paths = "object"
 ```
 
 ### Documentation updates
@@ -1516,17 +1516,27 @@ trim-paths = ["diagnostics", "object"]
 
 *as a new ["Profiles settings" entry](./profiles.html#profile-settings)*
 
-`trim-paths` is a profile setting which enables and controls the sanitization of file paths in build outputs.
-It takes the following values:
+The `trim-paths` option controls the scope of path sanitization in build outputs
+Paths are sanitized according to these [remapping rules].
 
-- `"none"` --- disable path sanitization
-- `"macro"` --- sanitize paths in the expansion of `std::file!()` macro.
-    This is where paths in embedded panic messages come from
-- `"diagnostics"` --- sanitize paths in printed compiler diagnostics
-- `"object"` --- sanitize paths in compiled executables or libraries
-- `"all"` --- sanitize paths in all possible locations
+The valid options are:
 
-It also takes an array with the combinations of `"macro"`, `"diagnostics"`, and `"object"`.
+- `"none"` --- disables path sanitization.
+- `"object"` --- sanitizes paths embedded in compiled executables and libraries.
+  Useful for improving artifact reproducibility
+  with less impact on local development.
+- `"all"` --- sanitizes paths in all supported locations.
+  Useful for hermetic or remote builds that need artifacts and diagnostics
+  to be independent of the build environment.
+
+> [!WARNING]
+> The `"all"` option remaps compiler diagnostics,
+> including [compiler JSON messages](./external-tools.md#json-messages).
+> Some remapped paths may not resolve to files on the local filesystem,
+> which can affect editors and other tools that consume the diagnostic output.
+
+For details about each scope,
+see rustc's [`--remap-path-scope`] documentation.
 
 By default, `trim-paths` is not set and path sanitization is disabled for all profiles.
 You can enable it by specifying this option in `Cargo.toml`:
@@ -1536,13 +1546,11 @@ You can enable it by specifying this option in `Cargo.toml`:
 trim-paths = "all"
 
 [profile.release]
-trim-paths = ["object", "diagnostics"]
+trim-paths = "object"
 ```
 
-For more information about each scope,
-see rustc's documentation on [`--remap-path-scope`].
-
 [`--remap-path-scope`]: ../../rustc/remap-source-paths.html#--remap-path-scope
+[remapping rules]: #remapping-rules
 
 ##### Remapping rules
 
@@ -1657,13 +1665,13 @@ but it still contains absolute paths.
 *as a new entry of ["Environment variables Cargo sets for build scripts"](./environment-variables.md#environment-variables-cargo-sets-for-crates)*
 
 * `CARGO_TRIM_PATHS_SCOPE` --- The value of `trim-paths` profile option.
-    `"none"` and empty arrays are converted to `none`.
-    `"all"` becomes `all`.
-    Values in a non-empty array would be joined into a comma-separated list.
     If the build script introduces absolute paths to built artifacts (such as by invoking a compiler),
     the user may request them to be sanitized in different types of artifacts.
     Common paths requiring sanitization include `OUT_DIR`, `CARGO_MANIFEST_DIR` and `CARGO_MANIFEST_PATH`,
     plus any other introduced by the build script, such as include directories.
+    > [!NOTE]
+    > For forward compatibility,
+    > build scripts should accept a comma-separated list of scopes.
 * `CARGO_TRIM_PATHS_REMAP` --- The `<from>=<to>` path remap pairs Cargo passes to the compiler,
     joined by the platform path separator.
     Only set when `trim-paths` profile is active.
