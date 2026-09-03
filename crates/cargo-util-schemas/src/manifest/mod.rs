@@ -1233,113 +1233,30 @@ impl<'de> de::Deserialize<'de> for TomlDebugInfo {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Ord, PartialOrd, Hash, Serialize)]
-#[serde(untagged, rename_all = "kebab-case")]
+#[derive(Clone, Debug, PartialEq, Eq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub enum TomlTrimPaths {
-    Values(Vec<TomlTrimPathsValue>),
+    None,
+    Object,
     All,
 }
 
 impl TomlTrimPaths {
-    pub fn none() -> Self {
-        TomlTrimPaths::Values(Vec::new())
-    }
-
     pub fn is_none(&self) -> bool {
-        match self {
-            TomlTrimPaths::Values(v) => v.is_empty(),
-            TomlTrimPaths::All => false,
-        }
+        matches!(self, TomlTrimPaths::None)
     }
-}
 
-impl<'de> de::Deserialize<'de> for TomlTrimPaths {
-    fn deserialize<D>(d: D) -> Result<TomlTrimPaths, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        use serde::de::Error as _;
-        let expecting =
-            r#""none", "diagnostics", "macro", "object", "all", or an array with these options"#;
-        UntaggedEnumVisitor::new()
-            .expecting(expecting)
-            .string(|v| match v {
-                "none" => Ok(TomlTrimPaths::none()),
-                "all" => Ok(TomlTrimPaths::All),
-                v => {
-                    let d = v.into_deserializer();
-                    let err = |_: D::Error| {
-                        serde_untagged::de::Error::custom(format!("expected {expecting}"))
-                    };
-                    TomlTrimPathsValue::deserialize(d)
-                        .map_err(err)
-                        .map(|v| v.into())
-                }
-            })
-            .seq(|seq| {
-                let seq: Vec<String> = seq.deserialize()?;
-                let seq: Vec<_> = seq
-                    .into_iter()
-                    .map(|s| TomlTrimPathsValue::deserialize(s.into_deserializer()))
-                    .collect::<Result<_, _>>()?;
-                Ok(seq.into())
-            })
-            .deserialize(d)
+    fn as_str(&self) -> &'static str {
+        match self {
+            TomlTrimPaths::None => "none",
+            TomlTrimPaths::Object => "object",
+            TomlTrimPaths::All => "all",
+        }
     }
 }
 
 impl fmt::Display for TomlTrimPaths {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            TomlTrimPaths::All => write!(f, "all"),
-            TomlTrimPaths::Values(v) if v.is_empty() => write!(f, "none"),
-            TomlTrimPaths::Values(v) => {
-                let mut iter = v.iter();
-                if let Some(value) = iter.next() {
-                    write!(f, "{value}")?;
-                }
-                for value in iter {
-                    write!(f, ",{value}")?;
-                }
-                Ok(())
-            }
-        }
-    }
-}
-
-impl From<TomlTrimPathsValue> for TomlTrimPaths {
-    fn from(value: TomlTrimPathsValue) -> Self {
-        TomlTrimPaths::Values(vec![value])
-    }
-}
-
-impl From<Vec<TomlTrimPathsValue>> for TomlTrimPaths {
-    fn from(value: Vec<TomlTrimPathsValue>) -> Self {
-        TomlTrimPaths::Values(value)
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-pub enum TomlTrimPathsValue {
-    Diagnostics,
-    Macro,
-    Object,
-}
-
-impl TomlTrimPathsValue {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            TomlTrimPathsValue::Diagnostics => "diagnostics",
-            TomlTrimPathsValue::Macro => "macro",
-            TomlTrimPathsValue::Object => "object",
-        }
-    }
-}
-
-impl fmt::Display for TomlTrimPathsValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.as_str())
     }

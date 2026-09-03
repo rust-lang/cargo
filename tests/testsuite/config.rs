@@ -19,7 +19,6 @@ use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::str;
 use cargo_test_support::{paths, project, project_in_home, symlink_supported, t};
 use cargo_util_schemas::manifest::TomlTrimPaths;
-use cargo_util_schemas::manifest::TomlTrimPathsValue;
 use cargo_util_schemas::manifest::{self as cargo_toml, TomlDebugInfo, VecStringOrBool as VSOB};
 use cargo_util_terminal::Shell;
 use serde::Deserialize;
@@ -1872,9 +1871,9 @@ fn trim_paths_parsing() {
     assert_eq!(p.trim_paths, None);
 
     let test_cases = [
-        (TomlTrimPathsValue::Diagnostics.into(), "diagnostics"),
-        (TomlTrimPathsValue::Macro.into(), "macro"),
-        (TomlTrimPathsValue::Object.into(), "object"),
+        (TomlTrimPaths::None, "none"),
+        (TomlTrimPaths::Object, "object"),
+        (TomlTrimPaths::All, "all"),
     ];
     for (expected, val) in test_cases {
         // env
@@ -1891,20 +1890,6 @@ fn trim_paths_parsing() {
         let trim_paths: TomlTrimPaths = gctx.get("profile.dev.trim-paths").unwrap();
         assert_eq!(trim_paths, expected, "failed to parse {val}");
     }
-
-    let expected = vec![
-        TomlTrimPathsValue::Diagnostics,
-        TomlTrimPathsValue::Macro,
-        TomlTrimPathsValue::Object,
-    ]
-    .into();
-    let val = r#"["diagnostics", "macro", "object"]"#;
-    // config.toml
-    let gctx = GlobalContextBuilder::new()
-        .config_arg(format!("profile.dev.trim-paths={val}"))
-        .build();
-    let trim_paths: TomlTrimPaths = gctx.get("profile.dev.trim-paths").unwrap();
-    assert_eq!(trim_paths, expected, "failed to parse {val}");
 }
 
 #[cargo_test]

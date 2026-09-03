@@ -11,7 +11,6 @@ use std::path::PathBuf;
 
 use cargo_util::ProcessBuilder;
 use cargo_util_schemas::manifest::TomlTrimPaths;
-use cargo_util_schemas::manifest::TomlTrimPathsValue;
 use serde::Serialize;
 use tracing::debug;
 
@@ -44,12 +43,9 @@ pub(crate) fn trim_paths_args_rustdoc(
     unit: &Unit,
     trim_paths: &TomlTrimPaths,
 ) -> CargoResult<()> {
-    match trim_paths {
-        // rustdoc supports diagnostics trimming only.
-        TomlTrimPaths::Values(values) if !values.contains(&TomlTrimPathsValue::Diagnostics) => {
-            return Ok(());
-        }
-        _ => {}
+    // rustdoc supports diagnostics trimming only.
+    if !matches!(trim_paths, TomlTrimPaths::All) {
+        return Ok(());
     }
 
     for pair in trim_paths_remap(build_runner, unit) {
@@ -298,8 +294,8 @@ pub(crate) fn should_emit_unremap_file(unit: &Unit) -> bool {
 
     match unit.profile.trim_paths.as_ref() {
         None => false,
-        Some(TomlTrimPaths::All) => true,
-        Some(TomlTrimPaths::Values(values)) => values.contains(&TomlTrimPathsValue::Object),
+        Some(TomlTrimPaths::None) => false,
+        Some(TomlTrimPaths::Object | TomlTrimPaths::All) => true,
     }
 }
 

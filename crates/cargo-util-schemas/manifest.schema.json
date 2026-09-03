@@ -1473,7 +1473,11 @@
       "type": "string"
     },
     "TomlDebugInfo": {
-      "type": ["string", "integer", "boolean"],
+      "type": [
+        "string",
+        "integer",
+        "boolean"
+      ],
       "enum": [
         "none",
         "line-directives-only",
@@ -1491,24 +1495,11 @@
       "type": "string"
     },
     "TomlTrimPaths": {
-      "anyOf": [
-        {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/TomlTrimPathsValue"
-          }
-        },
-        {
-          "type": "null"
-        }
-      ]
-    },
-    "TomlTrimPathsValue": {
       "type": "string",
       "enum": [
-        "diagnostics",
-        "macro",
-        "object"
+        "none",
+        "object",
+        "all"
       ]
     }
   }

@@ -3269,7 +3269,7 @@ fn bad_trim_paths() {
         .masquerade_as_nightly_cargo(&["trim-paths"])
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] expected "none", "diagnostics", "macro", "object", "all", or an array with these options
+[ERROR] unknown variant `split-debuginfo`, expected one of `none`, `object`, `all`
  --> Cargo.toml:8:30
   |
 8 |                 trim-paths = "split-debuginfo"
