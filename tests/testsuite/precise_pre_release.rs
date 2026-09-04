@@ -1219,15 +1219,8 @@ fn prerelease_patch() {
         .masquerade_as_nightly_cargo(&["prerelease"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[WARNING] patch `my-dependency v0.1.2-pre.0 ([ROOT]/foo/my-dependency)` was not used in the crate graph
-[HELP] Check that the patched package version and available features are compatible
-      with the dependency requirements. If the patch has a different version from
-      what is locked in the Cargo.lock file, run `cargo update` to use the new
-      version. This may also occur with an optional dependency that is not enabled.
 [LOCKING] 1 package to highest compatible version
-[DOWNLOADING] crates ...
-[DOWNLOADED] my-dependency v0.1.1 (registry `dummy-registry`)
-[CHECKING] my-dependency v0.1.1
+[CHECKING] my-dependency v0.1.2-pre.0 ([ROOT]/foo/my-dependency)
 [CHECKING] package v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1243,9 +1236,7 @@ version = 4
 
 [[package]]
 name = "my-dependency"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3e66127aff576c542272631871318be119f80999d875f6f379494124c3bc710b"
+version = "0.1.2-pre.0"
 
 [[package]]
 name = "package"
@@ -1253,10 +1244,6 @@ version = "0.0.0"
 dependencies = [
  "my-dependency",
 ]
-
-[[patch.unused]]
-name = "my-dependency"
-version = "0.1.2-pre.0"
 
 "##]],
     );
@@ -1266,11 +1253,6 @@ version = "0.1.2-pre.0"
         .arg("-Zprerelease")
         .masquerade_as_nightly_cargo(&["prerelease"])
         .with_stderr_data(str![[r#"
-[WARNING] patch `my-dependency v0.1.2-pre.0 ([ROOT]/foo/my-dependency)` was not used in the crate graph
-[HELP] Check that the patched package version and available features are compatible
-      with the dependency requirements. If the patch has a different version from
-      what is locked in the Cargo.lock file, run `cargo update` to use the new
-      version. This may also occur with an optional dependency that is not enabled.
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -1463,11 +1445,6 @@ fn prerelease_patch_update() {
         .masquerade_as_nightly_cargo(&["prerelease"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[WARNING] patch `my-dependency v0.1.2-pre.0 ([ROOT]/foo/my-dependency)` was not used in the crate graph
-[HELP] Check that the patched package version and available features are compatible
-      with the dependency requirements. If the patch has a different version from
-      what is locked in the Cargo.lock file, run `cargo update` to use the new
-      version. This may also occur with an optional dependency that is not enabled.
 [LOCKING] 0 packages to highest compatible versions
 
 "#]])
@@ -1482,9 +1459,7 @@ version = 4
 
 [[package]]
 name = "my-dependency"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3e66127aff576c542272631871318be119f80999d875f6f379494124c3bc710b"
+version = "0.1.2-pre.0"
 
 [[package]]
 name = "package"
@@ -1492,10 +1467,6 @@ version = "0.0.0"
 dependencies = [
  "my-dependency",
 ]
-
-[[patch.unused]]
-name = "my-dependency"
-version = "0.1.2-pre.0"
 
 "##]],
     );
@@ -1536,16 +1507,10 @@ fn prerelease_patch_transitive() {
         .masquerade_as_nightly_cargo(&["prerelease"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[WARNING] patch `my-dependency v0.1.2-pre.0 ([ROOT]/foo/my-dependency)` was not used in the crate graph
-[HELP] Check that the patched package version and available features are compatible
-      with the dependency requirements. If the patch has a different version from
-      what is locked in the Cargo.lock file, run `cargo update` to use the new
-      version. This may also occur with an optional dependency that is not enabled.
 [LOCKING] 2 packages to highest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
-[DOWNLOADED] my-dependency v0.1.1 (registry `dummy-registry`)
-[CHECKING] my-dependency v0.1.1
+[CHECKING] my-dependency v0.1.2-pre.0 ([ROOT]/foo/my-dependency)
 [CHECKING] bar v0.1.0
 [CHECKING] package v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1571,9 +1536,7 @@ dependencies = [
 
 [[package]]
 name = "my-dependency"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3e66127aff576c542272631871318be119f80999d875f6f379494124c3bc710b"
+version = "0.1.2-pre.0"
 
 [[package]]
 name = "package"
@@ -1581,10 +1544,6 @@ version = "0.0.0"
 dependencies = [
  "bar",
 ]
-
-[[patch.unused]]
-name = "my-dependency"
-version = "0.1.2-pre.0"
 
 "##]],
     );
@@ -1594,11 +1553,6 @@ version = "0.1.2-pre.0"
         .arg("-Zprerelease")
         .masquerade_as_nightly_cargo(&["prerelease"])
         .with_stderr_data(str![[r#"
-[WARNING] patch `my-dependency v0.1.2-pre.0 ([ROOT]/foo/my-dependency)` was not used in the crate graph
-[HELP] Check that the patched package version and available features are compatible
-      with the dependency requirements. If the patch has a different version from
-      what is locked in the Cargo.lock file, run `cargo update` to use the new
-      version. This may also occur with an optional dependency that is not enabled.
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -1792,9 +1746,7 @@ version = 4
 
 [[package]]
 name = "my-dependency"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3e66127aff576c542272631871318be119f80999d875f6f379494124c3bc710b"
+version = "0.1.2-pre.0"
 
 [[package]]
 name = "package"
@@ -1802,10 +1754,6 @@ version = "0.0.0"
 dependencies = [
  "my-dependency",
 ]
-
-[[patch.unused]]
-name = "my-dependency"
-version = "0.1.2-pre.0"
 
 "##]],
     );

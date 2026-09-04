@@ -674,12 +674,11 @@ impl<'gctx> Registry for PackageRegistry<'gctx> {
         // always return false, when what we really care about is the name/version match.
         let mut patches = Vec::<Summary>::new();
         if let Some(extra) = self.patches.get(dep.source_id().canonical_url()) {
+            let mode = self.gctx.version_req_match_mode();
             patches.extend(
                 extra
                     .iter()
-                    .filter(|s| {
-                        dep.matches_ignoring_source(s.package_id(), VersionReqMatchMode::Default)
-                    })
+                    .filter(|s| dep.matches_ignoring_source(s.package_id(), mode))
                     .cloned(),
             );
         }
@@ -889,7 +888,7 @@ fn lock(
                 // If the name/version doesn't match, then we definitely don't
                 // have a match whatsoever. Otherwise we need to check
                 // `[patch]`...
-                if !dep.matches_ignoring_source(id, VersionReqMatchMode::Default) {
+                if !dep.matches_ignoring_source(id, mode) {
                     return false;
                 }
 
@@ -914,7 +913,7 @@ fn lock(
                 if locked.source_id() == dep.source_id() {
                     dep.lock_to(locked, mode);
                 } else {
-                    dep.lock_version(locked.version(), VersionReqMatchMode::Default);
+                    dep.lock_version(locked.version(), mode);
                 }
                 return dep;
             }
