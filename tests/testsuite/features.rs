@@ -2681,3 +2681,34 @@ c = [
         [("Cargo.toml", normalized_manifest)],
     );
 }
+
+#[cargo_test]
+fn feature_has_documentation() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["feature-metadata"]
+
+                [package]
+                name = "foo"
+                edition = "2015"
+
+                [features]
+                foo = { enables = [], doc = "Enables foo." }
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["feature-metadata"])
+        .with_stderr_data(str![[r#"
+[WARNING] Cargo.toml: unused manifest key: `features.foo.doc`
+[WARNING] `foo` (manifest) generated 1 warning
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
