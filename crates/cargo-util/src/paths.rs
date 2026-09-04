@@ -199,8 +199,9 @@ pub fn write_atomic<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) -> Res
     // Check if the path is a symlink and follow it if it is
     let resolved_path;
     let path = if path.is_symlink() {
-        resolved_path = fs::read_link(path)
+        let target = fs::read_link(path)
             .with_context(|| format!("failed to read symlink at `{}`", path.display()))?;
+        resolved_path = path.parent().unwrap().join(target);
         &resolved_path
     } else {
         path
@@ -1050,9 +1051,9 @@ mod tests {
         #[cfg(windows)]
         std::os::windows::fs::symlink_file(relative_target, &symlink_path).unwrap();
 
-        assert!(write_atomic(&symlink_path, "updated").is_err());
+        write_atomic(&symlink_path, "updated").unwrap();
 
-        assert_eq!(std::fs::read_to_string(&target_path).unwrap(), "initial");
+        assert_eq!(std::fs::read_to_string(&target_path).unwrap(), "updated");
         assert!(symlink_path.is_symlink());
         assert_eq!(std::fs::read_link(&symlink_path).unwrap(), relative_target);
     }
