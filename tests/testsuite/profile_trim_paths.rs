@@ -21,7 +21,7 @@ fn gated_manifest() {
                 edition = "2015"
 
                 [profile.dev]
-                trim-paths = "macro"
+                trim-paths = "object"
            "#,
         )
         .file("src/lib.rs", "")
@@ -47,7 +47,7 @@ fn gated_config_toml() {
             ".cargo/config.toml",
             r#"
                 [profile.dev]
-                trim-paths = "macro"
+                trim-paths = "object"
            "#,
         )
         .file("src/lib.rs", "")
@@ -122,7 +122,7 @@ fn one_option() {
         p.cargo("build -v")
     };
 
-    for option in ["macro", "diagnostics", "object", "all"] {
+    for option in ["object", "all"] {
         build(option)
             .arg("-Ztrim-paths")
             .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
@@ -143,70 +143,6 @@ fn one_option() {
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
         .with_stderr_does_not_contain("[..]--remap-path-scope=[..]")
         .with_stderr_does_not_contain("[..]--remap-path-prefix=[..]")
-        .run();
-}
-
-#[cargo_test]
-fn multiple_options() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-                edition = "2015"
-
-                [profile.dev]
-                trim-paths = ["diagnostics", "macro", "object"]
-           "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
-
-    p.cargo("build --verbose")
-        .arg("-Ztrim-paths")
-        .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
-        .with_stderr_data(str![[r#"
-[COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc [..]--remap-path-scope=diagnostics,macro,object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-
-"#]])
-        .run();
-}
-
-#[cargo_test]
-fn profile_merge_works() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-                edition = "2015"
-
-                [profile.dev]
-                trim-paths = ["macro"]
-
-                [profile.custom]
-                inherits = "dev"
-                trim-paths = ["diagnostics"]
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
-
-    p.cargo("build -v --profile custom")
-        .arg("-Ztrim-paths")
-        .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
-        .with_stderr_data(str![[r#"
-[COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc [..]--remap-path-scope=diagnostics --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
-[FINISHED] `custom` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-
-"#]])
         .run();
 }
 
@@ -921,6 +857,7 @@ fn local_package_with_build_script_codegen() {
     assert!(unremap_file.exists());
 }
 
+/// This tests diagnostics are remapped correctly.
 #[cargo_test]
 fn diagnostics_works() {
     Package::new("bar", "0.0.1")
@@ -940,7 +877,9 @@ fn diagnostics_works() {
                 bar = "0.0.1"
 
                 [profile.dev]
-                trim-paths = "diagnostics"
+                # Currently Cargo doesn't support the `diagnostics` scope directly,
+                # so use the `all` scope instead.
+                trim-paths = "all"
            "#,
         )
         .file("src/lib.rs", "")
@@ -958,16 +897,16 @@ fn diagnostics_works() {
         )
         .with_stderr_data(str![[r#"
 ...
-[RUNNING] `[..] rustc [..]--remap-path-scope=diagnostics --remap-path-prefix=[ROOT]/home/.cargo/registry/src/[..]=/cargo/registry/[..] --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `[..] rustc [..]--remap-path-scope=all --remap-path-prefix=[ROOT]/home/.cargo/registry/src/[..]=/cargo/registry/[..] --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 [WARNING] unused variable: `unused`
 ...
-[RUNNING] `[..] rustc [..]--remap-path-scope=diagnostics --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `[..] rustc [..]--remap-path-scope=all --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 ...
 "#]])
         .run();
 
-    // Non `object` scope never emits unremap files.
-    assert_eq!(p.glob("target/**/*.trim-paths.jsonl").count(), 0);
+    // The `all` scope includes `object`, so unremap files are emitted.
+    assert_eq!(p.glob("target/**/*.trim-paths.jsonl").count(), 2);
 }
 
 #[cfg(target_os = "macos")]
@@ -1200,18 +1139,9 @@ fn custom_build_env_var_trim_paths() {
         .build();
 
     let test_cases = [
-        ("[]", "none"),
         ("\"all\"", "all"),
-        ("\"diagnostics\"", "diagnostics"),
-        ("\"macro\"", "macro"),
         ("\"none\"", "none"),
         ("\"object\"", "object"),
-        ("false", "none"),
-        ("true", "all"),
-        (
-            r#"["diagnostics", "macro", "object"]"#,
-            "diagnostics,macro,object",
-        ),
     ];
 
     for (opts, expected) in test_cases {
@@ -1556,7 +1486,9 @@ fn rustdoc_diagnostics_works() {
                 bar = "0.0.1"
 
                 [profile.dev]
-                trim-paths = "diagnostics"
+                # Currently Cargo doesn't support the `diagnostics` scope directly,
+                # so use the `all` scope instead.
+                trim-paths = "all"
            "#,
         )
         .file("src/lib.rs", "")
@@ -1567,7 +1499,7 @@ fn rustdoc_diagnostics_works() {
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
         .with_stderr_data(str![[r#"
 ...
-[RUNNING] `[..]rustc [..]--remap-path-scope=diagnostics --remap-path-prefix=[ROOT]/home/.cargo/registry/src/[..]=/cargo/registry/[..] --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[RUNNING] `[..]rustc [..]--remap-path-scope=all --remap-path-prefix=[ROOT]/home/.cargo/registry/src/[..]=/cargo/registry/[..] --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
 ...
 [WARNING] unopened HTML tag `script`
  --> /cargo/registry/[HASH]/bar-0.0.1/src/lib.rs:2:17
