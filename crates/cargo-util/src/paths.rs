@@ -1034,6 +1034,30 @@ mod tests {
     }
 
     #[test]
+    fn write_atomic_relative_symlink() {
+        let tmpdir = tempfile::tempdir().unwrap();
+        let link_dir = tmpdir.path().join("project");
+        let target_dir = link_dir.join("generated");
+        let target_path = target_dir.join("target.txt");
+        let symlink_path = link_dir.join("symlink.txt");
+        let relative_target = std::path::Path::new("generated/target.txt");
+
+        std::fs::create_dir_all(&target_dir).unwrap();
+        write(&target_path, "initial").unwrap();
+
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(relative_target, &symlink_path).unwrap();
+        #[cfg(windows)]
+        std::os::windows::fs::symlink_file(relative_target, &symlink_path).unwrap();
+
+        assert!(write_atomic(&symlink_path, "updated").is_err());
+
+        assert_eq!(std::fs::read_to_string(&target_path).unwrap(), "initial");
+        assert!(symlink_path.is_symlink());
+        assert_eq!(std::fs::read_link(&symlink_path).unwrap(), relative_target);
+    }
+
+    #[test]
     #[cfg(windows)]
     fn test_remove_symlink_dir() {
         use super::*;
