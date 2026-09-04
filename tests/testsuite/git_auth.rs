@@ -19,7 +19,7 @@ fn setup_failed_auth_test() -> (SocketAddr, JoinHandle<()>, Arc<AtomicUsize>) {
     let addr = server.local_addr().unwrap();
 
     fn headers(rdr: &mut dyn BufRead) -> HashSet<String> {
-        let valid = ["GET", "Authorization", "Accept"];
+        let valid = ["GET ", "Authorization:", "Accept:"];
         rdr.lines()
             .map(|s| s.unwrap())
             .take_while(|s| s.len() > 2)
