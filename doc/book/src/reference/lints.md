@@ -2,11 +2,25 @@
 
 > [!NOTE]
 > This chapter is about lints emitted by `cargo` itself.
->
-> See [the lints section in the Manifest Format
-> chapter](manifest.md#the-lints-section) to configure lint levels for tools
-> such as `rustc` or `clippy`.
 
+## Configuring Cargo lints
+
+Cargo lints can be configured in the `[lints.cargo]` table of the `Cargo.toml` manifest.
+The key is the lint name without the `cargo::` prefix.
+For example:
+
+```toml
+[lints.cargo]
+unused_dependencies = "deny"
+```
+
+See [the `[lints]` section](manifest.md#the-lints-section)
+for details about lint levels and priorities.
+
+## Lint groups
+
+Cargo has the concept of a "lint group",
+where you can toggle several warnings through one name.
 
 
 | Group                | Description                                                                         | Default level |
