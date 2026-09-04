@@ -2396,6 +2396,26 @@ foo = { enables = [] }
 This is equivalent to the array-of-strings syntax.
 Support for other keys should be added later.
 
+### feature-documentation
+
+* Tracking Issue: [#17445](https://github.com/rust-lang/cargo/issues/17445)
+* RFC: [#3485](https://github.com/rust-lang/rfcs/blob/master/text/3485-feature-documentation.md)
+
+This allows providing documentation for the feature inside the table introduced by
+[`feature-metadata`](#feature-metadata):
+
+```toml
+[features.serde]
+enables = []
+doc = "Enables support for serialization and deserialization via serde."
+```
+
+The documentation can be consumed and displayed by tools.
+It can be a multi-line TOML string, contain multiple paragraphs, and use Markdown markup,
+similarly to Rust doc comments.
+Tools may only display the first paragraph in some contexts, which should therefore be
+relatively short and make sense without the rest of the description.
+
 ## lockfile-path
 
 Support for `resolver.lockfile-path` config field has been stabilized in Rust 1.97.0.

@@ -2683,6 +2683,39 @@ c = [
 }
 
 #[cargo_test]
+fn feature_documentation_is_unstable() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2015"
+
+                [features]
+                foo = { enables = [], doc = "Enables foo." }
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  feature `feature-metadata` is required
+
+  The package requires the Cargo feature called `feature-metadata`, but that feature is not stabilized in this version of Cargo ([..]).
+  Consider trying a newer version of Cargo (this may require the nightly release).
+  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#feature_metadata for more information about the status of this feature.
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn feature_has_documentation() {
     let p = project()
         .file(
@@ -2704,8 +2737,6 @@ fn feature_has_documentation() {
     p.cargo("check")
         .masquerade_as_nightly_cargo(&["feature-metadata"])
         .with_stderr_data(str![[r#"
-[WARNING] Cargo.toml: unused manifest key: `features.foo.doc`
-[WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
