@@ -73,8 +73,14 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     let mut compile_opts =
         args.compile_options(gctx, UserIntent::Test, Some(&ws), ProfileChecking::Custom)?;
 
+    let default_profile = gctx
+        .build_config()?
+        .profile
+        .as_ref()
+        .map(|p| p.as_ref())
+        .unwrap_or_else(|| "test");
     compile_opts.build_config.requested_profile =
-        args.get_profile_name("test", ProfileChecking::Custom)?;
+        args.get_profile_name(default_profile, ProfileChecking::Custom)?;
 
     // `TESTNAME` is actually an argument of the test binary, but it's
     // important, so we explicitly mention it and reconfigure.

@@ -72,6 +72,7 @@ rustc-wrapper = "…"           # run this wrapper instead of `rustc`
 rustc-workspace-wrapper = "…" # run this wrapper instead of `rustc` for workspace members
 rustdoc = "rustdoc"           # the doc generator tool
 target = "tuple"              # build for the target tuple (ignored by `cargo install`)
+profile = "dev"               # build using the specified profile (ignored by `cargo install`)
 target-dir = "target"         # path of where to place generated artifacts
 build-dir = "target"          # path of where to place intermediate build artifacts
 rustflags = ["…", "…"]        # custom flags to pass to all compiler invocations
@@ -120,6 +121,7 @@ user-agent = "…"            # the user-agent header
 
 [install]
 root = "/some/path"         # `cargo install` destination directory
+profile = "release"         # build using the specified profile
 
 [net]
 retry = 3                   # network retries
@@ -551,6 +553,22 @@ Can be overridden with the `--target` CLI option.
 target = ["x86_64-unknown-linux-gnu", "i686-unknown-linux-gnu"]
 ```
 
+#### `build.profile`
+* Type: string
+* Default: `"test"` if `cargo test` else `"dev"`
+* Environment: `CARGO_BUILD_PROFILE`
+
+The default [profile] to compile with.
+
+Can be overridden with the `--release` or `--profile` CLI options.
+
+```toml
+[build]
+profile = "debug"
+```
+
+> **MSRV:** Respected as of 1.100.
+
 #### `build.target-dir`
 * Type: string (path)
 * Default: `"target"`
@@ -930,6 +948,26 @@ The default if not specified is Cargo's home directory (default `.cargo` in
 your home directory).
 
 Can be overridden with the `--root` command-line option.
+
+#### `install.profile`
+* Type: string
+* Default: `"release"`
+* Environment: `CARGO_INSTALL_PROFILE`
+
+The default [profile] for `cargo install` to compile with.
+
+Can be overridden with the `--debug` or `--profile` CLI options.
+
+```toml
+[install]
+profile = "tool"
+
+[profile.tool]
+inherits = "release"
+lto = true
+```
+
+> **MSRV:** Respected as of 1.100.
 
 ### `[net]`
 
@@ -1617,6 +1655,7 @@ Report progress to the terminal emulator for display in places like the task bar
 [source replacement]: source-replacement.md
 [revision]: https://git-scm.com/docs/gitrevisions
 [registries]: registries.md
+[profile]: profiles.md
 [`cargo:token`]: registry-authentication.md#cargotoken
 [crates.io]: https://crates.io/
 [target tuple]: ../appendix/glossary.md#target '"target" (glossary)'
