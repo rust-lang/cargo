@@ -567,12 +567,17 @@ unsafe_code = "forbid"
 
 [lints.clippy]
 enum_glob_use = "deny"
+
+[lints.cargo]
+unused_dependencies = "deny"
 ```
 
 Generally, these will only affect local development of the current package.
 Cargo only applies these to the current package and not to dependencies.
 As for dependents, Cargo suppresses lints from non-path dependencies with features like
 [`--cap-lints`](../../rustc/lints/levels.html#capping-lints).
+
+See also the [lints chapter](lints.md) for the available lints emitted by Cargo itself.
 
 > **MSRV:** Respected as of 1.74
 

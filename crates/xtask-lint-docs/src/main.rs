@@ -41,11 +41,25 @@ fn main() -> anyhow::Result<()> {
     writeln!(
         buf,
         "> [!NOTE]
-> This chapter is about lints emitted by `cargo` itself.
->
-> See [the lints section in the Manifest Format
-> chapter](manifest.md#the-lints-section) to configure lint levels for tools
-> such as `rustc` or `clippy`."
+> This chapter is about lints emitted by `cargo` itself."
+    )?;
+    writeln!(buf)?;
+
+    writeln!(
+        buf,
+        r#"## Configuring Cargo lints
+
+Cargo lints can be configured in the `[lints.cargo]` table of the `Cargo.toml` manifest.
+The key is the lint name without the `cargo::` prefix.
+For example:
+
+```toml
+[lints.cargo]
+unused_dependencies = "deny"
+```
+
+See [the `[lints]` section](manifest.md#the-lints-section)
+for details about lint levels and priorities."#
     )?;
     writeln!(buf)?;
 
@@ -83,6 +97,13 @@ fn main() -> anyhow::Result<()> {
 }
 
 fn lint_groups(buf: &mut String) -> anyhow::Result<()> {
+    writeln!(
+        buf,
+        r#"## Lint groups
+
+Cargo has the concept of a "lint group",
+where you can toggle several warnings through one name."#
+    )?;
     let (max_name_len, max_desc_len) = cargo::diagnostics::LINT_GROUPS
         .iter()
         .filter(|g| !g.hidden)
