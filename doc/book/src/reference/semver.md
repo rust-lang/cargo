@@ -2132,7 +2132,7 @@ consequences of enabling the feature.
 ###########################################################
 # After
 [features]
-std = []
+std = { enables = [] }
 ```
 
 #### Major: removing a Cargo feature {#cargo-feature-remove}
@@ -2146,7 +2146,7 @@ an error for any project that enabled the feature.
 ###########################################################
 # Before
 [features]
-logging = []
+logging = { enables = [] }
 
 ###########################################################
 # After
@@ -2172,14 +2172,14 @@ they are expecting that functionality to be available through that feature.
 ###########################################################
 # Before
 [features]
-default = ["std"]
-std = []
+default = { enables = ["std"] }
+std = { enables = [] }
 
 ###########################################################
 # After
 [features]
-default = []  # This may cause packages to fail if they are expecting std to be enabled.
-std = []
+default = { enables = [] } # This may cause packages to fail if they are expecting std to be enabled.
+std = { enables = [] }
 ```
 
 #### Possibly-breaking: removing an optional dependency {#cargo-remove-opt-dep}
@@ -2219,7 +2219,7 @@ curl = { version = "0.4.31", optional = true }
 curl = { version = "0.4.31", optional = true }
 
 [features]
-networking = ["dep:curl"]
+networking = { enables = ["dep:curl"] }
 
 ###########################################################
 # After
@@ -2228,7 +2228,7 @@ networking = ["dep:curl"]
 hyper = { version = "0.14.27", optional = true }
 
 [features]
-networking = ["dep:hyper"]
+networking = { enables = ["dep:hyper"] }
 ```
 
 Mitigation strategies:
