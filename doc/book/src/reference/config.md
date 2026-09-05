@@ -944,7 +944,7 @@ Number of times to retry possibly spurious network errors.
 
 #### `net.git-fetch-with-cli`
 * Type: boolean
-* Default: false
+* Default: true if `git` is present, `false` otherwise
 * Environment: `CARGO_NET_GIT_FETCH_WITH_CLI`
 
 If this is `true`, then Cargo will use the `git` executable to fetch registry

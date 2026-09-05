@@ -19,7 +19,7 @@ fn setup_failed_auth_test() -> (SocketAddr, JoinHandle<()>, Arc<AtomicUsize>) {
     let addr = server.local_addr().unwrap();
 
     fn headers(rdr: &mut dyn BufRead) -> HashSet<String> {
-        let valid = ["GET", "Authorization", "Accept"];
+        let valid = ["GET ", "Authorization:", "Accept:"];
         rdr.lines()
             .map(|s| s.unwrap())
             .take_while(|s| s.len() > 2)
@@ -134,13 +134,12 @@ fn http_auth_offered() {
         )
         .build();
 
-    // This is a "contains" check because the last error differs by platform,
-    // may span multiple lines, and isn't relevant to this test.
     p.cargo("check")
         .with_status(101)
         .with_stderr_data(&format!(
             "\
 [UPDATING] git repository `http://{addr}/foo/bar`
+fatal: Authentication failed for 'http://{addr}/foo/bar/'
 [ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
 
 Caused by:
@@ -153,15 +152,10 @@ Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bar-[HASH]
 
 Caused by:
-  failed to authenticate when downloading repository
+  `git fetch` failed for http://{addr}/foo/bar
 
-  * attempted to find username/password via `credential.helper`, but maybe the found credentials were incorrect
-
-  if the git CLI succeeds then `net.git-fetch-with-cli` may help here
+  [HELP] re-try with `net.git-fetch-with-cli = false` to see if it resolves the problem
   https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
-
-Caused by:
-  no authentication methods succeeded
 "
         ))
         .run();
@@ -212,6 +206,8 @@ fn https_something_happens() {
         .with_stderr_data(&format!(
             "\
 [UPDATING] git repository `https://{addr}/foo/bar`
+[RUNNING] `git [..] fetch [..]`
+fatal: unable to access 'https://{addr}/foo/bar/': [..]
 [ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
 
 Caused by:
@@ -224,18 +220,11 @@ Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bar-[HASH]
 
 Caused by:
-{errmsg}
-",
-            errmsg = if cfg!(windows) {
-                "[..]failed to send request: [..]\n..."
-            } else if cfg!(target_os = "macos") {
-                // macOS is difficult to tests as some builds may use Security.framework,
-                // while others may use OpenSSL. In that case, let's just not verify the error
-                // message here.
-                "..."
-            } else {
-                "[..]SSL [ERROR][..]"
-            }
+  `git fetch` failed for https://{addr}/foo/bar
+
+  [HELP] re-try with `net.git-fetch-with-cli = false` to see if it resolves the problem
+  https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
+"
         ))
         .run();
 
@@ -274,6 +263,8 @@ fn ssh_something_happens() {
     let expected = format!(
         "\
 [UPDATING] git repository `ssh://{addr}/foo/bar`
+[RUNNING] `git [..] fetch [..]`
+...
 [ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
 
 Caused by:
@@ -286,12 +277,10 @@ Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bar-[HASH]
 
 Caused by:
-  network failure seems to have happened
-  if a proxy or similar is necessary `net.git-fetch-with-cli` may help here
-  https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
+  `git fetch` failed for ssh://{addr}/foo/bar
 
-Caused by:
-  failed to start SSH session: Failed getting banner; class=Ssh (23)
+  [HELP] re-try with `net.git-fetch-with-cli = false` to see if it resolves the problem
+  https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
 "
     );
     p.cargo("check -v")
@@ -321,6 +310,7 @@ fn net_err_suggests_fetch_with_cli() {
         .build();
 
     p.cargo("check -v")
+        .env("CARGO_NET_GIT_FETCH_WITH_CLI", "false")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `ssh://needs-proxy.invalid/git`
@@ -397,6 +387,8 @@ fn instead_of_url_printed() {
         .with_stderr_data(&format!(
             "\
 [UPDATING] git repository `https://foo.bar/foo/bar`
+fatal: Authentication failed for 'http://{addr}/foo/bar/'
+...
 [ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
 
 Caused by:
@@ -409,15 +401,10 @@ Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bar-[HASH]
 
 Caused by:
-  failed to authenticate when downloading repository: http://{addr}/foo/bar
+  `git fetch` failed for https://foo.bar/foo/bar
 
-  * attempted to find username/password via `credential.helper`, but maybe the found credentials were incorrect
-
-  if the git CLI succeeds then `net.git-fetch-with-cli` may help here
+  [HELP] re-try with `net.git-fetch-with-cli = false` to see if it resolves the problem
   https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
-
-Caused by:
-...
 "
         ))
         .run();

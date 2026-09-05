@@ -5223,6 +5223,9 @@ fn warnings_hidden_for_upstream() {
     p.cargo("check -v")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
+[RUNNING] `git [..] fetch [..]`
+From [ROOTURL]/registry
+ * [new ref]         HEAD       -> origin/HEAD
 [LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
@@ -5290,6 +5293,9 @@ fn warnings_printed_on_vv() {
     p.cargo("check -vv")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
+[RUNNING] `git [..] fetch [..]`
+From [ROOTURL]/registry
+ * [new ref]         HEAD       -> origin/HEAD
 [LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)

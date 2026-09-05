@@ -29,6 +29,9 @@ fn with_deps() {
     p.cargo("build -v --release")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
+[RUNNING] `git [..] fetch [..]`
+From [ROOTURL]/registry
+ * [new ref]         HEAD       -> origin/HEAD
 [LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
@@ -72,6 +75,9 @@ fn shared_deps() {
         .with_stderr_data(
             str![[r#"
 [UPDATING] `dummy-registry` index
+[RUNNING] `git [..] fetch [..]`
+From [ROOTURL]/registry
+ * [new ref]         HEAD       -> origin/HEAD
 [LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
@@ -116,6 +122,9 @@ fn build_dep_not_ltod() {
     p.cargo("build -v --release")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
+[RUNNING] `git [..] fetch [..]`
+From [ROOTURL]/registry
+ * [new ref]         HEAD       -> origin/HEAD
 [LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
@@ -297,6 +306,9 @@ fn off_in_manifest_works() {
     p.cargo("build -v --release")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
+[RUNNING] `git [..] fetch [..]`
+From [ROOTURL]/registry
+ * [new ref]         HEAD       -> origin/HEAD
 [LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
@@ -750,6 +762,9 @@ fn test_profile() {
         // unordered because the two `foo` builds start in parallel
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
+[RUNNING] `git [..] fetch [..]`
+From [ROOTURL]/registry
+ * [new ref]         HEAD       -> origin/HEAD
 [LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
@@ -902,6 +917,9 @@ fn fresh_swapping_commands() {
     p.cargo("build --release -v")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
+[RUNNING] `git [..] fetch [..]`
+From [ROOTURL]/registry
+ * [new ref]         HEAD       -> origin/HEAD
 [LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)

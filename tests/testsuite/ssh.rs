@@ -418,6 +418,8 @@ fn invalid_github_key() {
         .file("src/lib.rs", "")
         .build();
     p.cargo("fetch")
+        // fails with git-cli independent of `known_hosts`
+        .env("CARGO_NET_GIT_FETCH_WITH_CLI", "false")
         .with_status(101)
         .with_stderr_data(str![[r#"
 ...
@@ -458,6 +460,12 @@ fn bundled_github_works() {
         .build();
     let expected = str![[r#"
 [UPDATING] git repository `ssh://git@github.com/rust-lang/bitflags.git`
+git@github.com: Permission denied (publickey).
+fatal: Could not read from remote repository.
+
+Please make sure you have the correct access rights
+and the repository exists.
+...
 [ERROR] failed to get `bitflags` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
 
 Caused by:
@@ -470,15 +478,10 @@ Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bitflags-[HASH]
 
 Caused by:
-  failed to authenticate when downloading repository
+  `git fetch` failed for ssh://git@github.com/rust-lang/bitflags.git
 
-  * attempted ssh-agent authentication, but no usernames succeeded: `git`
-
-  if the git CLI succeeds then `net.git-fetch-with-cli` may help here
+  [HELP] re-try with `net.git-fetch-with-cli = false` to see if it resolves the problem
   https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
-
-Caused by:
-  no authentication methods succeeded
 
 "#]];
     p.cargo("fetch")
@@ -489,6 +492,12 @@ Caused by:
 
     let expected = str![[r#"
 [UPDATING] git repository `ssh://git@github.com:22/rust-lang/bitflags.git`
+git@github.com: Permission denied (publickey).
+fatal: Could not read from remote repository.
+
+Please make sure you have the correct access rights
+and the repository exists.
+...
 [ERROR] failed to get `bitflags` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
 
 Caused by:
@@ -501,15 +510,10 @@ Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bitflags-[HASH]
 
 Caused by:
-  failed to authenticate when downloading repository
+  `git fetch` failed for ssh://git@github.com:22/rust-lang/bitflags.git
 
-  * attempted ssh-agent authentication, but no usernames succeeded: `git`
-
-  if the git CLI succeeds then `net.git-fetch-with-cli` may help here
+  [HELP] re-try with `net.git-fetch-with-cli = false` to see if it resolves the problem
   https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
-
-Caused by:
-  no authentication methods succeeded
 
 "#]];
 

@@ -412,6 +412,9 @@ fn build_std_with_no_arg_for_core_only_target() {
         .with_stderr_data(
             str![[r#"
 [UPDATING] `dummy-registry` index
+[RUNNING] `git [..] fetch [..]`
+From [ROOTURL]/registry
+ * [new ref]         HEAD       -> origin/HEAD
 [DOWNLOADING] crates ...
 [DOWNLOADED] registry-dep-using-std v1.0.0 (registry `dummy-registry`)
 [DOWNLOADED] registry-dep-using-core v1.0.0 (registry `dummy-registry`)
@@ -446,6 +449,9 @@ fn build_std_with_no_arg_for_core_only_target() {
         .with_stderr_data(
             str![[r#"
 [UPDATING] `dummy-registry` index
+[RUNNING] `git [..] fetch [..]`
+From [ROOTURL]/registry
+ = [up to date]         HEAD       -> origin/HEAD
 [COMPILING] core v0.1.0 ([..]/library/core)
 [COMPILING] dep_test v0.1.0 ([..]/dep_test)
 [COMPILING] compiler_builtins v0.1.0 ([..]/library/compiler_builtins)

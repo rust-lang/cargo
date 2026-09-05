@@ -270,6 +270,9 @@ fn login_with_asymmetric_token_and_subject_on_stdin() {
         .replace_crates_io(registry.index_url())
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
+[RUNNING] `git [..] fetch [..]`
+From [ROOTURL]/registry
+ * [new ref]         HEAD       -> origin/HEAD
 [CREDENTIAL] cargo:paseto --key-subject=foo login crates-io
 k3.public.AmDwjlyf8jAV3gm5Z7Kz9xAOcsKslt_Vwp5v-emjFzBHLCtcANzTaVEghTNEMj9PkQ
 
@@ -329,6 +332,9 @@ fn login_with_asymmetric_token_on_stdin() {
         .masquerade_as_nightly_cargo(&["asymmetric-token"])
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
+[RUNNING] `git [..] fetch [..]`
+From [ROOTURL]/alternative-registry
+ * [new ref]         HEAD       -> origin/HEAD
 [CREDENTIAL] cargo:paseto login alternative
 k3.public.AmDwjlyf8jAV3gm5Z7Kz9xAOcsKslt_Vwp5v-emjFzBHLCtcANzTaVEghTNEMj9PkQ
 
