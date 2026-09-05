@@ -669,15 +669,7 @@ pub fn create_bcx<'a, 'gctx>(
                 let version = &unit.pkg.version();
                 writeln!(&mut message, "  {name}@{version} requires rustc {msrv}").unwrap();
             }
-            if ws.is_ephemeral() {
-                if ws.ignore_lock() {
-                    writeln!(
-                        &mut message,
-                        "Try re-running `cargo install` with `--locked`"
-                    )
-                    .unwrap();
-                }
-            } else if !local_incompatible {
+            if !ws.is_ephemeral() && !local_incompatible {
                 writeln!(
                     &mut message,
                     "Either upgrade rustc or select compatible dependency versions with

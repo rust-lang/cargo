@@ -1254,7 +1254,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; fini
     p.cargo("install --path .")
         .with_stderr_data(str![[r#"
 [INSTALLING] foo v0.0.1 ([ROOT]/foo)
-[LOCKING] 1 package to highest compatible version
+[WARNING] invalid feature `bar/a` in required-features of target `foo`: dependency `bar` does not exist
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [WARNING] none of the package's binaries are available for install using the selected features
   bin "foo" requires the features: `bar/a`

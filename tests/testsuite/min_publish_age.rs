@@ -638,7 +638,6 @@ fn cargo_install_allows_too_new_deps() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v1.0.0 (registry `dummy-registry`)
 [INSTALLING] foo v1.0.0
-[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.1.0 (registry `dummy-registry`)
 [COMPILING] bar v1.1.0
@@ -685,8 +684,6 @@ fn cargo_install_path_allows_too_new_deps() {
         .with_stderr_data(str![[r#"
 [INSTALLING] foo v0.0.0 ([ROOT]/foo)
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to highest compatible version as of 7 days ago
-[ADDING] bar v1.0.0 (available: v1.1.0, published 2 days ago)
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 [COMPILING] bar v1.0.0
