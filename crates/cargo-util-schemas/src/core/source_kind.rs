@@ -15,6 +15,8 @@ pub enum SourceKind {
     LocalRegistry,
     /// A directory-based registry.
     Directory,
+    /// Package sources distributed with the rust toolchain
+    Builtin,
 }
 
 // The hash here is important for what folder packages get downloaded into.
@@ -40,6 +42,7 @@ impl SourceKind {
             SourceKind::SparseRegistry => None,
             SourceKind::LocalRegistry => Some("local-registry"),
             SourceKind::Directory => Some("directory"),
+            SourceKind::Builtin => Some("builtin"),
         }
     }
 }
@@ -71,6 +74,10 @@ impl Ord for SourceKind {
             (_, SourceKind::Directory) => Ordering::Greater,
 
             (SourceKind::Git(a), SourceKind::Git(b)) => a.cmp(b),
+            (SourceKind::Git(_), _) => Ordering::Less,
+            (_, SourceKind::Git(_)) => Ordering::Greater,
+
+            (SourceKind::Builtin, SourceKind::Builtin) => Ordering::Equal,
         }
     }
 }

@@ -1,15 +1,16 @@
 use cargo::util::GlobalContext;
 use cargo::workspace::Dependency;
 use cargo::workspace::dependency::DepKind;
+use resolver_tests::helpers::dep_builtin;
 use snapbox::assert_data_eq;
 use snapbox::str;
 
 use resolver_tests::{
     helpers::{
-        ToDep, ToPkgId, assert_contains, assert_same, dep, dep_kind, dep_loc, dep_req, loc_names,
-        names, pkg, pkg_dep, pkg_dep_with, pkg_id, pkg_loc, registry,
+        BuiltinPid, ToDep, ToPkgId, assert_contains, assert_same, dep, dep_kind, dep_loc, dep_req,
+        loc_names, names, pkg, pkg_dep, pkg_dep_with, pkg_id, pkg_loc, registry,
     },
-    pkg, resolve, resolve_with_global_context,
+    names, pkg, resolve, resolve_with_global_context,
 };
 
 #[test]
@@ -1035,4 +1036,29 @@ all possible versions conflict with previously selected packages
 failed to select a version for `F` which could resolve this conflict
 "#]]
     );
+}
+
+#[test]
+fn test_builtin_dependency() {
+    let core = BuiltinPid { name: "core" };
+    let reg = registry(vec![pkg!(core)]);
+
+    let builtin_dep = dep_builtin("core");
+
+    let res = resolve(vec![builtin_dep], &reg).unwrap();
+
+    assert_same(&res, &names!("root", core));
+}
+
+#[test]
+fn normal_dependency_is_not_satisfied_by_builtin_package() {
+    let core = BuiltinPid { name: "core" };
+    let reg = registry(vec![pkg!(core)]);
+
+    assert!(resolve(vec![dep("core")], &reg).is_err());
+}
+
+#[test]
+fn missing_builtin_dependency_errors() {
+    assert!(resolve(vec![dep_builtin("core")], &registry(vec![])).is_err());
 }
