@@ -1,15 +1,18 @@
 use cargo::util::GlobalContext;
+use cargo::util::interning::InternedString;
 use cargo::workspace::Dependency;
 use cargo::workspace::dependency::DepKind;
+use resolver_tests::helpers::dep_builtin;
+use resolver_tests::resolve_with_implicit_builtins;
 use snapbox::assert_data_eq;
 use snapbox::str;
 
 use resolver_tests::{
     helpers::{
-        ToDep, ToPkgId, assert_contains, assert_same, dep, dep_kind, dep_loc, dep_req, loc_names,
-        names, pkg, pkg_dep, pkg_dep_with, pkg_id, pkg_loc, registry,
+        BuiltinPid, ToDep, ToPkgId, assert_contains, assert_same, dep, dep_kind, dep_loc, dep_req,
+        loc_names, names, pkg, pkg_dep, pkg_dep_with, pkg_id, pkg_loc, registry,
     },
-    pkg, resolve, resolve_with_global_context,
+    names, pkg, resolve, resolve_with_global_context,
 };
 
 #[test]
@@ -1034,5 +1037,69 @@ all possible versions conflict with previously selected packages
 
 failed to select a version for `F` which could resolve this conflict
 "#]]
+    );
+}
+
+#[test]
+fn test_builtin_dependency() {
+    let core = BuiltinPid { name: "core" };
+    let reg = registry(vec![pkg!(core)]);
+
+    let builtin_dep = dep_builtin("core");
+
+    let res = resolve(vec![builtin_dep], &reg).unwrap();
+
+    assert_same(&res, &names!("root", core));
+}
+
+#[test]
+fn normal_dependency_is_not_satisfied_by_builtin_package() {
+    let core = BuiltinPid { name: "core" };
+    let reg = registry(vec![pkg!(core)]);
+
+    assert!(resolve(vec![dep("core")], &reg).is_err());
+}
+
+#[test]
+fn missing_builtin_dependency_errors() {
+    assert!(resolve(vec![dep_builtin("core")], &registry(vec![])).is_err());
+}
+
+#[test]
+fn injected_builtins() {
+    let core = BuiltinPid { name: "core" };
+    let core = pkg!(core);
+    let compiler_builtins = BuiltinPid {
+        name: "compiler_builtins",
+    };
+    let compiler_builtins = pkg!(compiler_builtins);
+
+    let reg = registry(vec![core.clone(), compiler_builtins.clone()]);
+
+    let mut deps = vec![];
+    deps.push(
+        Dependency::new_implicit_builtin(
+            InternedString::new("core"),
+            &core.source_id().local_path().unwrap(),
+        )
+        .unwrap(),
+    );
+    deps.push(
+        Dependency::new_implicit_builtin(
+            InternedString::new("compiler_builtins"),
+            &core.source_id().local_path().unwrap(),
+        )
+        .unwrap(),
+    );
+
+    let resolve = resolve_with_implicit_builtins(Vec::new(), &reg, &deps).unwrap();
+
+    let root_deps = resolve
+        .deps(pkg_id("root"))
+        .map(|(pkg_id, _)| pkg_id)
+        .collect::<Vec<_>>();
+    assert_same(
+        &root_deps,
+        &[core.package_id(), compiler_builtins.package_id()],
     );
 }

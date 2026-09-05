@@ -129,12 +129,19 @@ pub fn resolve(
     version_prefs: &VersionPreferences,
     resolve_version: ResolveVersion,
     gctx: &GlobalContext,
+    implicit_builtin_deps: &[Dependency],
 ) -> CargoResult<Resolve> {
     let first_version = gctx
         .cli_unstable()
         .direct_minimal_versions
         .then_some(VersionOrdering::MinimumVersionsFirst);
-    let mut registry = RegistryQueryer::new(registry, replacements, version_prefs);
+
+    let mut registry = RegistryQueryer::new(
+        registry,
+        replacements,
+        version_prefs,
+        &implicit_builtin_deps,
+    );
 
     // Global cache of the reasons for each time we backtrack.
     let mut past_conflicting_activations = conflict_cache::ConflictCache::new();
