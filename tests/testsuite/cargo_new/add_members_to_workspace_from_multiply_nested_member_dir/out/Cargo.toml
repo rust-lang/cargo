@@ -1,2 +1,3 @@
 [workspace]
-members = ["a-crate/sub"]
+resolver = "2"
+members = ["a-crate/sub", "a-crate/sub/tool"]

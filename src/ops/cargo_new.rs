@@ -1,8 +1,7 @@
 use crate::util::errors::CargoResult;
-use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::{FossilRepo, GitRepo, HgRepo, PijulRepo, existing_vcs_repo};
 use crate::util::{GlobalContext, restricted_names};
-use crate::workspace::{Edition, Workspace};
+use crate::workspace::{Edition, Workspace, find_workspace_root};
 use anyhow::{Context as _, anyhow};
 use cargo_util::paths::{self, write_atomic};
 use cargo_util_schemas::manifest::PackageName;
@@ -835,7 +834,7 @@ fn mk(gctx: &GlobalContext, opts: &MkOptions<'_>) -> CargoResult<()> {
     }
 
     let manifest_path = paths::normalize_path(&path.join("Cargo.toml"));
-    if let Ok(root_manifest_path) = find_root_manifest_for_wd(&manifest_path) {
+    if let Ok(Some(root_manifest_path)) = find_workspace_root(&manifest_path, gctx) {
         let root_manifest = paths::read(&root_manifest_path)?;
         // Sometimes the root manifest is not a valid manifest, so we only try to parse it if it is.
         // This should not block the creation of the new project. It is only a best effort to

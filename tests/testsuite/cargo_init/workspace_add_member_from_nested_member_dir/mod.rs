@@ -5,8 +5,6 @@ use cargo_test_support::current_dir;
 use cargo_test_support::file;
 use cargo_test_support::str;
 
-// Test that `cargo init` from inside an existing nested member directory
-// fails to update the true workspace root's members array.
 #[cargo_test]
 fn case() {
     let project = Project::from_template(current_dir!().join("in"));

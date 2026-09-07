@@ -1134,6 +1134,11 @@ fn new_warning_with_corrupt_ws() {
   |
 1 | asdf
   |     ^
+[ERROR] key with no value, expected `=`
+ --> Cargo.toml:1:5
+  |
+1 | asdf
+  |     ^
 [WARNING] compiling this new package may not work due to invalid workspace configuration
 
 failed searching for potential workspace
