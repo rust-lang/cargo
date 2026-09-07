@@ -832,7 +832,7 @@ enum LocalFingerprint {
     /// for us to look at. If any of those files are newer than this file then
     /// we need to recompile.
     ///
-    /// If the `checksum` bool is true then the `dep_info` file is expected to
+    /// If the `fingerprint` is [`FingerprintMethod::Content`] then the `dep_info` file is expected to
     /// contain file checksums instead of file mtimes.
     CheckDepInfo {
         dep_info: PathBuf,
