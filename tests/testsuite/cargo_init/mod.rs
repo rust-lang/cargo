@@ -46,3 +46,4 @@ mod simple_lib;
 mod unknown_flags;
 mod with_argument;
 mod workspace_add_member;
+mod workspace_add_member_from_nested_member_dir;

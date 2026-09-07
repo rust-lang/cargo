@@ -1,0 +1,3 @@
+[workspace]
+members = ["a-crate"]
+exclude = ["a-crate/macros"]

@@ -1,0 +1,56 @@
+<svg width="1591px" height="290px" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .fg { fill: #AAAAAA }
+    .bg { fill: #000000 }
+    .fg-bright-blue { fill: #5555FF }
+    .fg-bright-green { fill: #55FF55 }
+    .fg-bright-red { fill: #FF5555 }
+    .fg-yellow { fill: #AA5500 }
+    .container {
+      padding: 0 10px;
+      line-height: 18px;
+    }
+    .bold { font-weight: bold; }
+    tspan {
+      font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+      white-space: pre;
+      line-height: 18px;
+    }
+  </style>
+
+  <rect width="100%" height="100%" y="0" rx="4.5" class="bg" />
+
+  <text xml:space="preserve" class="container fg">
+    <tspan x="10px" y="28px"><tspan class="fg-bright-green bold">    Creating</tspan><tspan> binary (application) `macros` package</tspan>
+</tspan>
+    <tspan x="10px" y="46px"><tspan class="fg-bright-red bold">error</tspan><tspan class="bold">: unquoted keys cannot be empty, expected letters, numbers, `-`, `_`</tspan>
+</tspan>
+    <tspan x="10px" y="64px"><tspan> </tspan><tspan class="fg-bright-blue bold">--&gt; </tspan><tspan>Cargo.toml:1:3</tspan>
+</tspan>
+    <tspan x="10px" y="82px"><tspan>  </tspan><tspan class="fg-bright-blue bold">|</tspan>
+</tspan>
+    <tspan x="10px" y="100px"><tspan class="fg-bright-blue bold">1</tspan><tspan> </tspan><tspan class="fg-bright-blue bold">|</tspan><tspan> [[[[[malformed toml</tspan>
+</tspan>
+    <tspan x="10px" y="118px"><tspan>  </tspan><tspan class="fg-bright-blue bold">|</tspan><tspan>   </tspan><tspan class="fg-bright-red bold">^</tspan>
+</tspan>
+    <tspan x="10px" y="136px"><tspan class="fg-yellow bold">warning</tspan><tspan>: compiling this new package may not work due to invalid workspace configuration</tspan>
+</tspan>
+    <tspan x="10px" y="154px">
+</tspan>
+    <tspan x="10px" y="172px"><tspan>failed searching for potential workspace</tspan>
+</tspan>
+    <tspan x="10px" y="190px"><tspan>package manifest: `[ROOT]/case/a-crate/macros/Cargo.toml`</tspan>
+</tspan>
+    <tspan x="10px" y="208px"><tspan>invalid potential workspace manifest: `[ROOT]/case/a-crate/Cargo.toml`</tspan>
+</tspan>
+    <tspan x="10px" y="226px">
+</tspan>
+    <tspan x="10px" y="244px"><tspan>help: to avoid searching for a non-existent workspace, add `[workspace]` to the package manifest</tspan>
+</tspan>
+    <tspan x="10px" y="262px"><tspan class="fg-bright-green bold">note</tspan><tspan>: see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html</tspan>
+</tspan>
+    <tspan x="10px" y="280px">
+</tspan>
+  </text>
+
+</svg>
