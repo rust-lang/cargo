@@ -4,6 +4,7 @@ mod im_a_teapot;
 mod manual_readme;
 mod missing_lints_features;
 mod missing_lints_inheritance;
+pub mod mostly_unused_hint;
 mod non_kebab_case_bins;
 mod non_kebab_case_features;
 mod non_kebab_case_packages;

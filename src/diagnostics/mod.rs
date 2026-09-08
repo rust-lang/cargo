@@ -20,7 +20,7 @@
 //! - TOML syntax or manifest schema: [`passes::emit_parse_diagnostics`], [`rules::PARSE_PASS_RULES`]
 //! - Lockfile
 //!   - May be overly broad for what dependencies are checked
-//! - Pre-build unit graph
+//! - Pre-build unit graph: [`rules::mostly_unused_hint::diagnose`]
 //!   - Tailored to a specific configuration (features, targets) but requires users to enumerate every configuration
 //! - Post-build unit graph: [`rules::unused_dependencies::lint_build_results`]
 //!   - Slow feedback cycle since a build needs to happen
@@ -69,7 +69,9 @@ pub mod passes;
 pub mod rules;
 
 pub use lint::{Lint, LintGroup, LintLevel, LintLevelProduct, LintLevelSource};
-pub use report::{AsIndex, cwd_rel_path, get_key_value, get_key_value_span, workspace_rel_path};
+pub use report::{
+    AsIndex, TomlSpan, cwd_rel_path, get_key_value, get_key_value_span, workspace_rel_path,
+};
 pub use rules::{LINT_GROUPS, LINTS};
 
 pub struct PassOutput {
