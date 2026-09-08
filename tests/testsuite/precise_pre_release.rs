@@ -673,3 +673,49 @@ failed to select a version for `my-dependency` which could resolve this conflict
     let lockfile = p.read_lockfile();
     assert!(lockfile.contains("\nname = \"my-dependency\"\nversion = \"0.1.2-pre.0\""));
 }
+
+#[cargo_test]
+fn pin_prerelease_and_update() {
+    cargo_test_support::registry::init();
+
+    for version in ["0.1.0", "0.1.1", "0.1.2-pre.0"] {
+        cargo_test_support::registry::Package::new("my-dependency", version).publish();
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "package"
+            edition = "2018"
+            [dependencies]
+            my-dependency = "0.1.0"
+            "#,
+        )
+        .file("src/lib.rs", "use my_dependency as _;")
+        .build();
+
+    p.cargo("update my-dependency --precise 0.1.2-pre.0")
+        .arg("-Zprerelease")
+        .masquerade_as_nightly_cargo(&["prerelease"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[UPDATING] my-dependency v0.1.1 -> v0.1.2-pre.0
+
+"#]])
+        .run();
+
+    p.cargo("update my-dependency --precise 0.1.0")
+        .arg("-Zprerelease")
+        .masquerade_as_nightly_cargo(&["prerelease"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[DOWNGRADING] my-dependency v0.1.2-pre.0 -> v0.1.1
+
+"#]])
+        .run();
+
+    let lockfile = p.read_lockfile();
+    assert!(lockfile.contains("\nname = \"my-dependency\"\nversion = \"0.1.1\""));
+}
