@@ -14,6 +14,7 @@ use crate::context::RegistryConfig;
 use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::CargoResult;
 use crate::util::GlobalContext;
+use crate::util::VersionReqMatchMode;
 use crate::util::interning::InternedString;
 use crate::util::time_span::parse_time_span;
 use crate::workspace::Dependency;
@@ -87,7 +88,10 @@ impl VersionPreferences {
             || self
                 .prefer_patch_deps
                 .get(&pkg_id.name())
-                .map(|deps| deps.iter().any(|d| d.matches_id(*pkg_id)))
+                .map(|deps| {
+                    deps.iter()
+                        .any(|d| d.matches_id(*pkg_id, VersionReqMatchMode::Default))
+                })
                 .unwrap_or(false)
     }
 

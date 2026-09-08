@@ -17,6 +17,7 @@ use crate::sources::config::SourceConfigMap;
 use crate::sources::source::QueryKind;
 use crate::sources::source::Source;
 use crate::sources::source::SourceMap;
+use crate::util::VersionReqMatchMode;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::{CanonicalUrl, GlobalContext};
@@ -673,7 +674,9 @@ impl<'gctx> Registry for PackageRegistry<'gctx> {
             patches.extend(
                 extra
                     .iter()
-                    .filter(|s| dep.matches_ignoring_source(s.package_id()))
+                    .filter(|s| {
+                        dep.matches_ignoring_source(s.package_id(), VersionReqMatchMode::Default)
+                    })
                     .cloned(),
             );
         }
@@ -829,6 +832,7 @@ fn lock(
     let pair = locked
         .get(&(summary.source_id(), summary.name()))
         .and_then(|vec| vec.iter().find(|&&(id, _)| id == summary.package_id()));
+    let mode = VersionReqMatchMode::Default;
 
     trace!("locking summary of {}", summary.package_id());
 
@@ -873,14 +877,14 @@ fn lock(
                 // If the dependency matches the package id exactly then we've
                 // found a match, this is the id the dependency was previously
                 // locked to.
-                if dep.matches_id(id) {
+                if dep.matches_id(id, mode) {
                     return true;
                 }
 
                 // If the name/version doesn't match, then we definitely don't
                 // have a match whatsoever. Otherwise we need to check
                 // `[patch]`...
-                if !dep.matches_ignoring_source(id) {
+                if !dep.matches_ignoring_source(id, mode) {
                     return false;
                 }
 
@@ -903,7 +907,7 @@ fn lock(
                 // Otherwise we got a lock via `[patch]` so we only lock the
                 // version requirement, not the source.
                 if locked.source_id() == dep.source_id() {
-                    dep.lock_to(locked);
+                    dep.lock_to(locked, mode);
                 } else {
                     dep.lock_version(locked.version());
                 }
@@ -916,11 +920,11 @@ fn lock(
         // If anything does then we lock it to that and move on.
         let v = locked
             .get(&(dep.source_id(), dep.package_name()))
-            .and_then(|vec| vec.iter().find(|&&(id, _)| dep.matches_id(id)));
+            .and_then(|vec| vec.iter().find(|&&(id, _)| dep.matches_id(id, mode)));
         if let Some(&(id, _)) = v {
             trace!("\tsecond hit on {}", id);
             let mut dep = dep;
-            dep.lock_to(id);
+            dep.lock_to(id, mode);
             return dep;
         }
 

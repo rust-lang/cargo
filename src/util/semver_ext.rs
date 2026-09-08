@@ -44,6 +44,15 @@ impl VersionReqExt for VersionReq {
     }
 }
 
+/// Controls how a version requirement is matched.
+#[derive(Clone, Copy, Debug)]
+pub enum VersionReqMatchMode {
+    /// Use [`semver::VersionReq`] matching semantics.
+    Default,
+    /// Additionally match SemVer-compatible pre-release versions.
+    Prerelease,
+}
+
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub enum OptVersionReq {
     Any,
@@ -83,8 +92,11 @@ impl OptVersionReq {
         }
     }
 
-    pub fn lock_to(&mut self, version: &Version) {
-        assert!(self.matches(version), "cannot lock {} to {}", self, version);
+    pub fn lock_to(&mut self, version: &Version, mode: VersionReqMatchMode) {
+        assert!(
+            self.matches(version, mode),
+            "cannot lock {self} to {version}"
+        );
         use OptVersionReq::*;
         let version = version.clone();
         *self = match self {
@@ -129,20 +141,16 @@ impl OptVersionReq {
         }
     }
 
-    /// Allows to match pre-release in SemVer-Compatible way.
-    /// See [`semver_eval_ext`] for `matches_prerelease` semantics.
-    pub fn matches_prerelease(&self, version: &Version) -> bool {
-        if let OptVersionReq::Req(req) = self {
-            return req.matches_prerelease(version);
-        } else {
-            return self.matches(version);
-        }
-    }
-
-    pub fn matches(&self, version: &Version) -> bool {
+    pub fn matches(&self, version: &Version, mode: VersionReqMatchMode) -> bool {
         match self {
             OptVersionReq::Any => true,
-            OptVersionReq::Req(req) => req.matches(version),
+            OptVersionReq::Req(req) => match mode {
+                VersionReqMatchMode::Default => req.matches(version),
+                VersionReqMatchMode::Prerelease => {
+                    req.matches(version)
+                        || (version.is_prerelease() && req.matches_prerelease(version))
+                }
+            },
             OptVersionReq::Locked(v, _) => {
                 // Generally, cargo is of the opinion that semver metadata should be ignored.
                 // If your registry has two versions that only differing metadata you get the bugs you deserve.
@@ -197,6 +205,7 @@ mod matches_prerelease {
 
     use super::OptVersionReq;
     use super::Version;
+    use super::VersionReqMatchMode;
 
     #[test]
     fn prerelease() {
@@ -258,9 +267,9 @@ mod matches_prerelease {
             (">=1.2.3-2, <1.2.3-4", "1.2.3-5", false), // upper bound semantics
         ];
         for (req, ver, expected) in cases {
-            let version_req = req.parse().unwrap();
+            let version_req = OptVersionReq::Req(req.parse().unwrap());
             let version = ver.parse().unwrap();
-            let matched = OptVersionReq::Req(version_req).matches_prerelease(&version);
+            let matched = version_req.matches(&version, VersionReqMatchMode::Prerelease);
             assert_eq!(expected, matched, "req: {req}; ver: {ver}");
         }
     }
@@ -271,12 +280,12 @@ mod matches_prerelease {
         let to_ver: Version = "1.2.3-rc.0".parse().unwrap();
 
         let req = OptVersionReq::Req(req_ver.clone());
-        assert!(req.matches_prerelease(&to_ver));
+        assert!(req.matches(&to_ver, VersionReqMatchMode::Prerelease));
 
         let req = OptVersionReq::Locked(to_ver.clone(), req_ver.clone());
-        assert!(req.matches_prerelease(&to_ver));
+        assert!(req.matches(&to_ver, VersionReqMatchMode::Prerelease));
 
         let req = OptVersionReq::Precise(to_ver.clone(), req_ver.clone());
-        assert!(req.matches_prerelease(&to_ver));
+        assert!(req.matches(&to_ver, VersionReqMatchMode::Prerelease));
     }
 }
