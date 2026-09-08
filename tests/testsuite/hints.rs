@@ -146,6 +146,15 @@ fn hint_unknown_type_warn() {
 "#]])
         .with_stderr_does_not_contain("-Zhint-mostly-unused")
         .run();
+
+    p.cargo("check -vv")
+        .with_stderr_data(str![[r#"
+[FRESH] bar v1.0.0
+[FRESH] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -204,6 +213,142 @@ fn hints_mostly_unused_warn_without_gate() {
 
 "#]])
         .with_stderr_does_not_contain("-Zhint-mostly-unused")
+        .run();
+
+    p.cargo("check -vv")
+        .with_stderr_data(str![[r#"
+[FRESH] bar v1.0.0
+[FRESH] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn mostly_unused_warns_for_each_source_with_multiple_targets() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2015"
+
+            [hints]
+            mostly-unused = true
+
+            [profile.dev.build-override]
+            hint-mostly-unused = true
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("src/main.rs", "extern crate foo; fn main() {}")
+        .file("build.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[WARNING] foo@0.0.1: ignoring 'hints.mostly-unused', pass `-Zprofile-hint-mostly-unused` to enable it
+[WARNING] foo@0.0.1: ignoring 'hint-mostly-unused' profile option, pass `-Zprofile-hint-mostly-unused` to enable it
+[WARNING] foo@0.0.1: ignoring 'hints.mostly-unused', pass `-Zprofile-hint-mostly-unused` to enable it
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn mostly_unused_invalid_value_and_profile_warn_once_per_package() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2015"
+
+            [hints]
+            mostly-unused = "string"
+
+            [profile.dev]
+            hint-mostly-unused = true
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("src/main.rs", "extern crate foo; fn main() {}")
+        .build();
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[WARNING] foo@0.0.1: ignoring unsupported value type (string) for 'hints.mostly-unused', which expects a boolean
+[WARNING] foo@0.0.1: ignoring 'hint-mostly-unused' profile option, pass `-Zprofile-hint-mostly-unused` to enable it
+[WARNING] foo@0.0.1: ignoring unsupported value type (string) for 'hints.mostly-unused', which expects a boolean
+[WARNING] foo@0.0.1: ignoring 'hint-mostly-unused' profile option, pass `-Zprofile-hint-mostly-unused` to enable it
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn mostly_unused_package_hint_warns_with_mixed_profiles() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2015"
+
+            [dependencies]
+            bar = { path = "bar" }
+
+            [build-dependencies]
+            bar = { path = "bar" }
+
+            [profile.dev.build-override]
+            hint-mostly-unused = false
+            "#,
+        )
+        .file("src/main.rs", "extern crate bar; fn main() {}")
+        .file("build.rs", "extern crate bar; fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            edition = "2015"
+
+            [hints]
+            mostly-unused = true
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to highest compatible version
+[WARNING] bar@0.0.1: ignoring 'hints.mostly-unused', pass `-Zprofile-hint-mostly-unused` to enable it
+[COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
