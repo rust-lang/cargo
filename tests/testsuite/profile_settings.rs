@@ -911,7 +911,9 @@ fn profile_hint_mostly_unused_warn_without_gate() {
 [LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
-[WARNING] bar@1.0.0: ignoring 'hint-mostly-unused' profile option, pass `-Zprofile-hint-mostly-unused` to enable it
+[WARNING] ignoring `hint-mostly-unused` profile option for `bar@1.0.0`
+  |
+  = [HELP] pass `-Zprofile-hint-mostly-unused` to enable it
 [CHECKING] bar v1.0.0
 [RUNNING] `rustc --crate-name bar [..]`
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
@@ -925,7 +927,7 @@ fn profile_hint_mostly_unused_warn_without_gate() {
 
 #[cargo_test]
 fn profile_hint_mostly_unused_warns_with_mixed_profiles() {
-    for (normal_hint, build_hint) in [(false, true), (true, false)] {
+    for (normal_hint, build_hint) in [(false, true), (true, false), (true, true)] {
         let p = project()
             .file(
                 "Cargo.toml",
@@ -970,7 +972,9 @@ fn profile_hint_mostly_unused_warns_with_mixed_profiles() {
         p.cargo("check")
             .with_stderr_data(str![[r#"
 [LOCKING] 1 package to highest compatible version
-[WARNING] bar@0.0.1: ignoring 'hint-mostly-unused' profile option, pass `-Zprofile-hint-mostly-unused` to enable it
+[WARNING] ignoring `hint-mostly-unused` profile option for `bar@0.0.1`
+  |
+  = [HELP] pass `-Zprofile-hint-mostly-unused` to enable it
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1014,7 +1018,9 @@ fn profile_hint_mostly_unused_from_config_warn_without_gate() {
 [LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
-[WARNING] bar@1.0.0: ignoring 'hint-mostly-unused' profile option, pass `-Zprofile-hint-mostly-unused` to enable it
+[WARNING] ignoring `hint-mostly-unused` profile option for `bar@1.0.0`
+  |
+  = [HELP] pass `-Zprofile-hint-mostly-unused` to enable it
 [CHECKING] bar v1.0.0
 [RUNNING] `rustc --crate-name bar [..]`
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
