@@ -11,6 +11,7 @@ use crate::sources::source::MaybePackage;
 use crate::sources::source::QueryKind;
 use crate::sources::source::Source;
 use crate::util::GlobalContext;
+use crate::util::VersionReqMatchMode;
 use crate::util::errors::CargoResult;
 use crate::util::important_paths::find_project_manifest_exact;
 use crate::util::internal;
@@ -153,9 +154,11 @@ impl<'gctx> Source for PathSource<'gctx> {
         if let Some(Some(p)) = &*self.package.borrow() {
             let s = p.summary();
             let matched = match kind {
-                QueryKind::Exact | QueryKind::RejectedVersions => dep.matches(s),
+                QueryKind::Exact | QueryKind::RejectedVersions => {
+                    dep.matches(s, VersionReqMatchMode::Default)
+                }
                 QueryKind::AlternativeNames => true,
-                QueryKind::Normalized => dep.matches(s),
+                QueryKind::Normalized => dep.matches(s, VersionReqMatchMode::Default),
             };
             if matched {
                 f(IndexSummary::Candidate(s.clone()))
@@ -349,9 +352,11 @@ impl<'gctx> Source for RecursivePathSource<'gctx> {
             .map(|p| p.summary())
         {
             let matched = match kind {
-                QueryKind::Exact | QueryKind::RejectedVersions => dep.matches(s),
+                QueryKind::Exact | QueryKind::RejectedVersions => {
+                    dep.matches(s, VersionReqMatchMode::Default)
+                }
                 QueryKind::AlternativeNames => true,
-                QueryKind::Normalized => dep.matches(s),
+                QueryKind::Normalized => dep.matches(s, VersionReqMatchMode::Default),
             };
             if matched {
                 f(IndexSummary::Candidate(s.clone()))
