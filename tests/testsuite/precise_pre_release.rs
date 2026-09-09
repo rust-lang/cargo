@@ -456,6 +456,79 @@ fn pin_prerelease_for_transitive_dep_and_check() {
     assert!(lockfile.contains("\nname = \"my-dependency\"\nversion = \"0.1.2-pre.0\""));
 }
 
+/// Like [`pin_prerelease_for_transitive_dep_and_check`]
+/// but the transitive dependency comes from a patched package.
+#[cargo_test]
+fn pin_prerelease_for_transitive_dep_of_patch_and_check() {
+    cargo_test_support::registry::init();
+
+    for version in ["0.1.1", "0.1.2-pre.0"] {
+        cargo_test_support::registry::Package::new("my-dependency", version).publish();
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "package"
+            edition = "2018"
+            [dependencies]
+            bar = "1.0.0"
+            [patch.crates-io]
+            bar = { path = "bar" }
+            "#,
+        )
+        .file("src/lib.rs", "use bar as _;")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "1.0.0"
+            edition = "2018"
+            [dependencies]
+            my-dependency = "0.1.1"
+            "#,
+        )
+        .file("bar/src/lib.rs", "use my_dependency as _;")
+        .build();
+
+    p.cargo("generate-lockfile").run();
+
+    p.cargo("update my-dependency --precise 0.1.2-pre.0")
+        .arg("-Zprerelease")
+        .masquerade_as_nightly_cargo(&["prerelease"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[UPDATING] my-dependency v0.1.1 -> v0.1.2-pre.0
+
+"#]])
+        .run();
+    let lockfile = p.read_lockfile();
+    assert!(lockfile.contains("\nname = \"my-dependency\"\nversion = \"0.1.2-pre.0\""));
+
+    p.cargo("check")
+        .arg("-Zprerelease")
+        .masquerade_as_nightly_cargo(&["prerelease"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to highest compatible version
+[DOWNGRADING] my-dependency v0.1.2-pre.0 -> v0.1.1
+[DOWNLOADING] crates ...
+[DOWNLOADED] my-dependency v0.1.1 (registry `dummy-registry`)
+[CHECKING] my-dependency v0.1.1
+[CHECKING] bar v1.0.0 ([ROOT]/foo/bar)
+[CHECKING] package v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    let lockfile = p.read_lockfile();
+    assert!(lockfile.contains("\nname = \"my-dependency\"\nversion = \"0.1.1\""));
+}
+
 /// Like [`pin_prerelease_and_check`]
 /// but the pinned package is required both directly and transitively.
 #[cargo_test]
