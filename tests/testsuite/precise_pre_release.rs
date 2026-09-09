@@ -512,12 +512,9 @@ fn pin_prerelease_for_transitive_dep_of_patch_and_check() {
         .arg("-Zprerelease")
         .masquerade_as_nightly_cargo(&["prerelease"])
         .with_stderr_data(str![[r#"
-[UPDATING] `dummy-registry` index
-[LOCKING] 1 package to highest compatible version
-[DOWNGRADING] my-dependency v0.1.2-pre.0 -> v0.1.1
 [DOWNLOADING] crates ...
-[DOWNLOADED] my-dependency v0.1.1 (registry `dummy-registry`)
-[CHECKING] my-dependency v0.1.1
+[DOWNLOADED] my-dependency v0.1.2-pre.0 (registry `dummy-registry`)
+[CHECKING] my-dependency v0.1.2-pre.0
 [CHECKING] bar v1.0.0 ([ROOT]/foo/bar)
 [CHECKING] package v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -526,7 +523,7 @@ fn pin_prerelease_for_transitive_dep_of_patch_and_check() {
         .run();
 
     let lockfile = p.read_lockfile();
-    assert!(lockfile.contains("\nname = \"my-dependency\"\nversion = \"0.1.1\""));
+    assert!(lockfile.contains("\nname = \"my-dependency\"\nversion = \"0.1.2-pre.0\""));
 }
 
 /// Like [`pin_prerelease_and_check`]

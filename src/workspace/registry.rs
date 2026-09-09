@@ -502,7 +502,11 @@ impl<'gctx> PackageRegistry<'gctx> {
     pub fn lock_patches(&mut self) {
         assert!(!self.patches_locked);
 
-        let mode = VersionReqMatchMode::Default;
+        let mode = if self.gctx.cli_unstable().prerelease {
+            VersionReqMatchMode::Prerelease
+        } else {
+            VersionReqMatchMode::Default
+        };
         for summaries in self.patches.values_mut() {
             for summary in summaries {
                 debug!("locking patch {:?}", summary);
