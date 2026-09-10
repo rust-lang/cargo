@@ -914,7 +914,7 @@ fn lock(
                 if locked.source_id() == dep.source_id() {
                     dep.lock_to(locked, mode);
                 } else {
-                    dep.lock_version(locked.version());
+                    dep.lock_version(locked.version(), VersionReqMatchMode::Default);
                 }
                 return dep;
             }
