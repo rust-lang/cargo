@@ -60,7 +60,6 @@ fn features_shared_across_workspace_members_are_one_candidate() {
         .masquerade_as_nightly_cargo(&["native-completions"])
         .with_stdout_data(str![[r#"
 only-a
-shared
 only-b
 shared
 "#]])
@@ -83,9 +82,8 @@ fn features_shared_across_workspace_members_name_every_package() {
         .masquerade_as_nightly_cargo(&["native-completions"])
         .with_stdout_data(str![[r#"
 only-a	from crate-a
-shared	from crate-a
 only-b	from crate-b
-shared	from crate-b
+shared	from crate-a, crate-b
 
 "#]])
         .run();

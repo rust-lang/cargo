@@ -1153,26 +1153,40 @@ fn get_feature_candidates() -> CargoResult<Vec<clap_complete::CompletionCandidat
     let gctx = new_gctx_for_completions()?;
 
     let ws = Workspace::new(&find_root_manifest_for_wd(gctx.cwd())?, &gctx)?;
-    let mut feature_candidates = Vec::new();
+    let current_package = ws.current_opt().map(|p| p.name());
 
-    // Process all packages in the workspace
+    // More than one workspace member can define the same feature name. Candidates
+    // are deduplicated by value, so emitting one per package keeps only the first
+    // package's help and hides that the others define it too. Collect the packages
+    // defining each feature and name all of them.
+    let mut packages_by_feature: BTreeMap<InternedString, Vec<InternedString>> = BTreeMap::new();
     for package in ws.members() {
-        let package_name = package.name();
-
-        // Add direct features with package info
         for feature_name in package.summary().features().keys() {
-            let order = if ws.current_opt().map(|p| p.name()) == Some(package_name) {
+            packages_by_feature
+                .entry(*feature_name)
+                .or_default()
+                .push(package.name());
+        }
+    }
+
+    let feature_candidates = packages_by_feature
+        .into_iter()
+        .map(|(feature_name, packages)| {
+            let order = if packages.iter().any(|name| Some(*name) == current_package) {
                 0
             } else {
                 1
             };
-            feature_candidates.push(
-                clap_complete::CompletionCandidate::new(feature_name)
-                    .display_order(Some(order))
-                    .help(Some(format!("from {}", package_name).into())),
-            );
-        }
-    }
+            let from = packages
+                .iter()
+                .map(|name| name.as_str())
+                .collect::<Vec<_>>()
+                .join(", ");
+            clap_complete::CompletionCandidate::new(feature_name.as_str())
+                .display_order(Some(order))
+                .help(Some(format!("from {from}").into()))
+        })
+        .collect();
 
     Ok(feature_candidates)
 }
