@@ -175,22 +175,7 @@ pub fn resolve_ws_with_opts<'gctx>(
         .collect();
     let specs = &specs[..];
     let mut registry = ws.package_registry()?;
-    let (resolve, resolved_with_overrides) = if ws.ignore_lock() {
-        let add_patches = true;
-        let resolve = None;
-        let resolved_with_overrides = resolve_with_previous(
-            &mut registry,
-            ws,
-            cli_features,
-            has_dev_units,
-            resolve.as_ref(),
-            None,
-            specs,
-            add_patches,
-        )?;
-        ops::print_lockfile_changes(ws, None, &resolved_with_overrides, &mut registry)?;
-        (resolve, resolved_with_overrides)
-    } else if ws.require_optional_deps() {
+    let (resolve, resolved_with_overrides) = if ws.require_optional_deps() {
         // First, resolve the root_package's *listed* dependencies, as well as
         // downloading and updating all remotes and such.
         let resolve = resolve_with_registry(ws, &mut registry, dry_run)?;

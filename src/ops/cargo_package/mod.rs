@@ -37,7 +37,7 @@ use anyhow::{Context as _, bail};
 use cargo_util::paths;
 use cargo_util_schemas::index::{IndexPackage, RegistryDependency};
 use cargo_util_schemas::messages;
-use cargo_util_terminal::report::Level;
+use cargo_util_terminal::report::{Group, Level};
 use cargo_util_terminal::{Shell, Verbosity};
 use flate2::{Compression, GzBuilder};
 use futures::TryStreamExt;
@@ -794,7 +794,7 @@ fn build_lock(
         gctx,
         &pkg_set,
         &new_resolve,
-        "consider updating to a version that is not yanked",
+        Some("consider updating to a version that is not yanked"),
     )?;
 
     ops::resolve_to_string(&tmp_ws, &mut new_resolve)
@@ -1034,7 +1034,7 @@ pub fn check_yanked(
     gctx: &GlobalContext,
     pkg_set: &PackageSet<'_>,
     resolve: &Resolve,
-    hint: &str,
+    hint: Option<&str>,
 ) -> CargoResult<()> {
     // Checking the yanked status involves taking a look at the registry and
     // maybe updating files, so be sure to lock it here.
@@ -1064,15 +1064,16 @@ pub fn check_yanked(
                 .await?;
 
             if yanked {
-                gctx.shell().print_report(
-                    &[Level::WARNING
-                        .secondary_title(format!(
-                            "package `{pkg_id}` in Cargo.lock is yanked in registry `{}`",
-                            pkg_id.source_id().display_registry_name(),
-                        ))
-                        .element(Level::HELP.message(hint))],
-                    false,
-                )?;
+                let mut warning = Group::with_title(Level::WARNING.secondary_title(format!(
+                    "package `{pkg_id}` in Cargo.lock is yanked in registry `{}`",
+                    pkg_id.source_id().display_registry_name()
+                )));
+
+                if let Some(hint) = hint {
+                    warning = warning.element(Level::HELP.message(hint));
+                }
+
+                gctx.shell().print_report(&[warning], false)?;
             }
             CargoResult::Ok(())
         })

@@ -916,7 +916,6 @@ fn cargo_install_ignores_msrv_config() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.1
-[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] dep v1.1.0 (registry `dummy-registry`)
 [COMPILING] dep v1.1.0
@@ -953,7 +952,6 @@ fn cargo_install_ignores_resolver_v3_msrv_change() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.1
-[LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] dep v1.1.0 (registry `dummy-registry`)
 [COMPILING] dep v1.1.0
@@ -1001,8 +999,6 @@ fn cargo_install_path_honors_msrv_config() {
         .with_stderr_data(str![[r#"
 [INSTALLING] foo v0.0.0 ([ROOT]/foo)
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to highest Rust 1.60 compatible version
-[ADDING] dep v1.0.0 (available: v1.1.0, requires Rust 1.70)
 [DOWNLOADING] crates ...
 [DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
 [COMPILING] dep v1.0.0
