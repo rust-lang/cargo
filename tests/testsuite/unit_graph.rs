@@ -1,5 +1,7 @@
 //! Tests for --unit-graph option.
 
+use std::path::Path;
+
 use crate::prelude::*;
 use cargo_test_support::project;
 use cargo_test_support::registry::Package;
@@ -199,6 +201,246 @@ fn simple() {
       "features": [],
       "mode": "build",
       "pkg_id": "path+[ROOTURL]/foo#0.1.0",
+      "platform": null,
+      "profile": {
+        "codegen_backend": null,
+        "codegen_units": null,
+        "debug_assertions": true,
+        "debuginfo": 2,
+        "incremental": false,
+        "lto": "false",
+        "name": "dev",
+        "opt_level": "0",
+        "overflow_checks": true,
+        "panic": "unwind",
+        "rpath": false,
+        "split_debuginfo": "{...}",
+        "strip": "{...}"
+      },
+      "target": {
+        "crate_types": [
+          "lib"
+        ],
+        "doc": true,
+        "doctest": true,
+        "edition": "2015",
+        "kind": [
+          "lib"
+        ],
+        "name": "foo",
+        "src_path": "[ROOT]/foo/src/lib.rs",
+        "test": true
+      }
+    }
+  ],
+  "version": 1
+}
+"#]]
+            .is_json(),
+        )
+        .run();
+}
+
+#[cargo_test]
+fn builtins() {
+    crate::standard_lib::publish_mock_std_registry_packages();
+    let p = project().file("src/lib.rs", "#![no_std]").build();
+    let mock_std = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/testsuite/mock-std/library");
+
+    p.cargo("build --unit-graph -Zunstable-options -Zbuild-std=core")
+        .env("__CARGO_TESTS_ONLY_SRC_ROOT", mock_std)
+        .masquerade_as_nightly_cargo(&["unit-graph", "build-std"])
+        .with_stdout_data(
+            str![[r#"
+{
+  "roots": [
+    4
+  ],
+  "units": [
+    {
+      "dependencies": [
+        {
+          "extern_crate_name": "build_script_build",
+          "index": 2,
+          "noprelude": false,
+          "nounused": false,
+          "public": false
+        }
+      ],
+      "features": [],
+      "is_std": true,
+      "mode": "build",
+      "pkg_id": "path+file://[..]/tests/testsuite/mock-std/library/compiler_builtins#0.1.0",
+      "platform": null,
+      "profile": {
+        "codegen_backend": null,
+        "codegen_units": null,
+        "debug_assertions": true,
+        "debuginfo": 2,
+        "incremental": false,
+        "lto": "false",
+        "name": "dev",
+        "opt_level": "0",
+        "overflow_checks": true,
+        "panic": "unwind",
+        "rpath": false,
+        "split_debuginfo": "{...}",
+        "strip": "{...}"
+      },
+      "target": {
+        "crate_types": [
+          "lib"
+        ],
+        "doc": true,
+        "doctest": true,
+        "edition": "2018",
+        "kind": [
+          "lib"
+        ],
+        "name": "compiler_builtins",
+        "src_path": "[..]/tests/testsuite/mock-std/library/compiler_builtins/src/lib.rs",
+        "test": true
+      }
+    },
+    {
+      "dependencies": [],
+      "features": [],
+      "is_std": true,
+      "mode": "build",
+      "pkg_id": "path+file://[..]/tests/testsuite/mock-std/library/compiler_builtins#0.1.0",
+      "platform": null,
+      "profile": {
+        "codegen_backend": null,
+        "codegen_units": null,
+        "debug_assertions": true,
+        "debuginfo": 0,
+        "incremental": false,
+        "lto": "false",
+        "name": "dev",
+        "opt_level": "0",
+        "overflow_checks": true,
+        "panic": "unwind",
+        "rpath": false,
+        "split_debuginfo": "{...}",
+        "strip": "{...}"
+      },
+      "target": {
+        "crate_types": [
+          "bin"
+        ],
+        "doc": false,
+        "doctest": false,
+        "edition": "2018",
+        "kind": [
+          "custom-build"
+        ],
+        "name": "build-script-build",
+        "src_path": "[..]/tests/testsuite/mock-std/library/compiler_builtins/build.rs",
+        "test": false
+      }
+    },
+    {
+      "dependencies": [
+        {
+          "extern_crate_name": "build_script_build",
+          "index": 1,
+          "noprelude": false,
+          "nounused": false,
+          "public": false
+        }
+      ],
+      "features": [],
+      "is_std": true,
+      "mode": "run-custom-build",
+      "pkg_id": "path+file://[..]/tests/testsuite/mock-std/library/compiler_builtins#0.1.0",
+      "platform": null,
+      "profile": {
+        "codegen_backend": null,
+        "codegen_units": null,
+        "debug_assertions": true,
+        "debuginfo": 2,
+        "incremental": false,
+        "lto": "false",
+        "name": "dev",
+        "opt_level": "0",
+        "overflow_checks": false,
+        "panic": "unwind",
+        "rpath": false,
+        "split_debuginfo": "{...}",
+        "strip": "{...}"
+      },
+      "target": {
+        "crate_types": [
+          "bin"
+        ],
+        "doc": false,
+        "doctest": false,
+        "edition": "2018",
+        "kind": [
+          "custom-build"
+        ],
+        "name": "build-script-build",
+        "src_path": "[..]/tests/testsuite/mock-std/library/compiler_builtins/build.rs",
+        "test": false
+      }
+    },
+    {
+      "dependencies": [],
+      "features": [],
+      "is_std": true,
+      "mode": "build",
+      "pkg_id": "path+file://[..]/tests/testsuite/mock-std/library/core#0.1.0",
+      "platform": null,
+      "profile": {
+        "codegen_backend": null,
+        "codegen_units": null,
+        "debug_assertions": true,
+        "debuginfo": 2,
+        "incremental": false,
+        "lto": "false",
+        "name": "dev",
+        "opt_level": "0",
+        "overflow_checks": true,
+        "panic": "unwind",
+        "rpath": false,
+        "split_debuginfo": "{...}",
+        "strip": "{...}"
+      },
+      "target": {
+        "crate_types": [
+          "lib"
+        ],
+        "doc": true,
+        "doctest": true,
+        "edition": "2018",
+        "kind": [
+          "lib"
+        ],
+        "name": "core",
+        "src_path": "[..]/tests/testsuite/mock-std/library/core/src/lib.rs",
+        "test": true
+      }
+    },
+    {
+      "dependencies": [
+        {
+          "extern_crate_name": "compiler_builtins",
+          "index": 0,
+          "noprelude": true,
+          "nounused": true,
+          "public": true
+        },
+        {
+          "extern_crate_name": "core",
+          "index": 3,
+          "noprelude": true,
+          "nounused": true,
+          "public": true
+        }
+      ],
+      "features": [],
+      "mode": "build",
+      "pkg_id": "path+[ROOTURL]/foo#0.0.1",
       "platform": null,
       "profile": {
         "codegen_backend": null,
