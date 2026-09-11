@@ -12,6 +12,7 @@ use tracing::trace;
 use crate::compiler::{CompileKind, CompileTarget};
 use crate::context::Definition;
 use crate::util::OptVersionReq;
+use crate::util::VersionReqMatchMode;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::workspace::{CliUnstable, Feature, Features, PackageId, SourceId, Summary};
@@ -361,7 +362,7 @@ impl Dependency {
     }
 
     /// Locks this dependency to depending on the specified package ID.
-    pub fn lock_to(&mut self, id: PackageId) -> &mut Dependency {
+    pub fn lock_to(&mut self, id: PackageId, mode: VersionReqMatchMode) -> &mut Dependency {
         assert_eq!(self.inner.source_id, id.source_id());
         trace!(
             "locking dep from `{}` with `{}` at {} to {}",
@@ -371,7 +372,7 @@ impl Dependency {
             id
         );
         let me = Arc::make_mut(&mut self.inner);
-        me.req.lock_to(id.version());
+        me.req.lock_to(id.version(), mode);
 
         // Only update the `precise` of this source to preserve other
         // information about dependency's source which may not otherwise be
@@ -386,7 +387,7 @@ impl Dependency {
     /// doesn't need to lock the entire dependency to a specific [`PackageId`].
     pub fn lock_version(&mut self, version: &semver::Version) -> &mut Dependency {
         let me = Arc::make_mut(&mut self.inner);
-        me.req.lock_to(version);
+        me.req.lock_to(version, VersionReqMatchMode::Default);
         self
     }
 
@@ -422,28 +423,21 @@ impl Dependency {
     }
 
     /// Returns `true` if the package (`sum`) can fulfill this dependency request.
-    pub fn matches(&self, sum: &Summary) -> bool {
-        self.matches_id(sum.package_id())
+    pub fn matches(&self, sum: &Summary, mode: VersionReqMatchMode) -> bool {
+        self.matches_id(sum.package_id(), mode)
     }
 
-    pub fn matches_prerelease(&self, sum: &Summary) -> bool {
-        let id = sum.package_id();
+    /// Returns `true` if the package (`id`) can fulfill this dependency request.
+    pub fn matches_ignoring_source(&self, id: PackageId, mode: VersionReqMatchMode) -> bool {
+        self.package_name() == id.name() && self.version_req().matches(id.version(), mode)
+    }
+
+    /// Returns `true` if the package (`id`) can fulfill this dependency request.
+    pub fn matches_id(&self, id: PackageId, mode: VersionReqMatchMode) -> bool {
         self.inner.name == id.name()
             && (self.inner.only_match_name
-                || (self.inner.req.matches_prerelease(id.version())
+                || (self.inner.req.matches(id.version(), mode)
                     && self.inner.source_id == id.source_id()))
-    }
-
-    /// Returns `true` if the package (`id`) can fulfill this dependency request.
-    pub fn matches_ignoring_source(&self, id: PackageId) -> bool {
-        self.package_name() == id.name() && self.version_req().matches(id.version())
-    }
-
-    /// Returns `true` if the package (`id`) can fulfill this dependency request.
-    pub fn matches_id(&self, id: PackageId) -> bool {
-        self.inner.name == id.name()
-            && (self.inner.only_match_name
-                || (self.inner.req.matches(id.version()) && self.inner.source_id == id.source_id()))
     }
 
     pub fn map_source(mut self, to_replace: SourceId, replace_with: SourceId) -> Dependency {

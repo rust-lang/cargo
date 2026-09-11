@@ -67,6 +67,7 @@ use crate::resolver::{
 };
 use crate::sources::RecursivePathSource;
 use crate::util::CanonicalUrl;
+use crate::util::VersionReqMatchMode;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::data_structures::{HashMap, HashSet};
 use crate::util::errors::CargoResult;
@@ -188,10 +189,9 @@ pub fn resolve_ws_with_opts<'gctx>(
         add_overrides(&mut registry, ws)?;
 
         for (replace_spec, dep) in ws.root_replace() {
-            if !resolve
-                .iter()
-                .any(|r| replace_spec.matches(r) && !dep.matches_id(r))
-            {
+            if !resolve.iter().any(|r| {
+                replace_spec.matches(r) && !dep.matches_id(r, VersionReqMatchMode::Default)
+            }) {
                 ws.gctx()
                     .shell()
                     .warn(format!("package replacement is not used: {}", replace_spec))?
@@ -716,7 +716,15 @@ fn register_previous_locks(
 
                 // If we match *anything* in the dependency graph then we consider
                 // ourselves all ok, and assume that we'll resolve to that.
-                if resolve.iter().any(|id| dep.matches_ignoring_source(id)) {
+                let mode = if ws.gctx().cli_unstable().prerelease {
+                    VersionReqMatchMode::Prerelease
+                } else {
+                    VersionReqMatchMode::Default
+                };
+                if resolve
+                    .iter()
+                    .any(|id| dep.matches_ignoring_source(id, mode))
+                {
                     continue;
                 }
 
@@ -940,12 +948,14 @@ fn register_patch_entries(
                     .filter(&keep_previous)
             };
 
-            let lock = match candidates().find(|id| dep.matches_id(*id)) {
+            let lock = match candidates()
+                .find(|id| dep.matches_id(*id, VersionReqMatchMode::Default))
+            {
                 // If we found an exactly matching candidate in our list of
                 // candidates, then that's the one to use.
                 Some(package_id) => {
                     let mut locked_dep = dep.clone();
-                    locked_dep.lock_to(package_id);
+                    locked_dep.lock_to(package_id, VersionReqMatchMode::Default);
                     Some(LockedPatchDependency {
                         dependency: locked_dep,
                         package_id,
@@ -966,7 +976,7 @@ fn register_patch_entries(
                     // `DefaultBranch`). If this works and our `dep`
                     // matches that then this is something we'll lock to.
                     match candidates().find(|&id| match master_branch_git_source(id, previous) {
-                        Some(id) => dep.matches_id(id),
+                        Some(id) => dep.matches_id(id, VersionReqMatchMode::Default),
                         None => false,
                     }) {
                         Some(id_using_default) => {
@@ -976,7 +986,7 @@ fn register_patch_entries(
                             );
 
                             let mut locked_dep = dep.clone();
-                            locked_dep.lock_to(id_using_master);
+                            locked_dep.lock_to(id_using_master, VersionReqMatchMode::Default);
                             Some(LockedPatchDependency {
                                 dependency: locked_dep,
                                 package_id: id_using_master,
@@ -1006,7 +1016,9 @@ fn register_patch_entries(
             avoid_patch_ids.insert(unlock_id);
             // Also avoid the thing it is patching.
             avoid_patch_ids.extend(previous.iter().filter(|id| {
-                orig_patch.dep.matches_ignoring_source(*id)
+                orig_patch
+                    .dep
+                    .matches_ignoring_source(*id, VersionReqMatchMode::Default)
                     && *id.source_id().canonical_url() == canonical
             }));
         }
@@ -1028,9 +1040,12 @@ fn lock_replacements(
             .iter()
             .map(|(spec, dep)| {
                 for (&key, &val) in r.replacements().iter() {
-                    if spec.matches(key) && dep.matches_id(val) && keep(&val) {
+                    if spec.matches(key)
+                        && dep.matches_id(val, VersionReqMatchMode::Default)
+                        && keep(&val)
+                    {
                         let mut dep = dep.clone();
-                        dep.lock_to(val);
+                        dep.lock_to(val, VersionReqMatchMode::Default);
                         return (spec.clone(), dep);
                     }
                 }

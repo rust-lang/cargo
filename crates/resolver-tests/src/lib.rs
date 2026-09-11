@@ -19,6 +19,7 @@ use cargo::resolver::ResolveVersion;
 use cargo::resolver::{self, ResolveOpts, VersionOrdering, VersionPreferences};
 use cargo::sources::IndexSummary;
 use cargo::sources::source::QueryKind;
+use cargo::util::VersionReqMatchMode;
 use cargo::util::interning::InternedString;
 use cargo::util::{CargoResult, GlobalContext};
 use cargo::workspace::SourceId;
@@ -87,7 +88,7 @@ pub fn resolve_and_validated_raw(
                     }
                     stack.extend(resolve.deps(p).map(|(dp, deps)| {
                         for d in deps {
-                            assert!(d.matches_id(dp));
+                            assert!(d.matches_id(dp, VersionReqMatchMode::Default));
                         }
                         dp
                     }));
@@ -143,8 +144,10 @@ pub fn resolve_with_global_context_raw(
         ) -> CargoResult<()> {
             for summary in self.list.iter() {
                 let matched = match kind {
-                    QueryKind::Exact => dep.matches(summary),
-                    QueryKind::RejectedVersions => dep.matches(summary),
+                    QueryKind::Exact => dep.matches(summary, VersionReqMatchMode::Default),
+                    QueryKind::RejectedVersions => {
+                        dep.matches(summary, VersionReqMatchMode::Default)
+                    }
                     QueryKind::AlternativeNames => true,
                     QueryKind::Normalized => true,
                 };

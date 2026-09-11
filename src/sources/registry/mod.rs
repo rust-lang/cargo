@@ -205,6 +205,7 @@ use crate::sources::PathSource;
 use crate::sources::source::MaybePackage;
 use crate::sources::source::QueryKind;
 use crate::sources::source::Source;
+use crate::util::VersionReqMatchMode;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::interning::InternedString;
 use crate::util::{CargoResult, Filesystem, GlobalContext, LimitErrorReader, restricted_names};
@@ -687,11 +688,18 @@ impl<'gctx> Source for RegistrySource<'gctx> {
             .source_id
             .precise_registry_version(dep.package_name().as_str())
             .filter(|(c, to)| {
-                if to.is_prerelease() && self.gctx.cli_unstable().unstable_options {
-                    req.matches_prerelease(c)
+                // We use prerelease match mode for `--precise` when either
+                // "update to" or locked version is pre-release.
+                // Otherwise the entire `--precise` will be ignored
+                // because default mode doesn't match the locked prerelease version.
+                let mode = if (c.is_prerelease() || to.is_prerelease())
+                    && self.gctx.cli_unstable().prerelease
+                {
+                    VersionReqMatchMode::Prerelease
                 } else {
-                    req.matches(c)
-                }
+                    VersionReqMatchMode::Default
+                };
+                req.matches(c, mode)
             })
         {
             req.precise_to(&requested);
@@ -712,7 +720,9 @@ impl<'gctx> Source for RegistrySource<'gctx> {
             self.index
                 .query_inner(dep.package_name(), &req, &*self.ops, &mut |is| {
                     match &is {
-                        IndexSummary::Candidate(s) | IndexSummary::Yanked(s) if dep.matches(&s) => {
+                        IndexSummary::Candidate(s) | IndexSummary::Yanked(s)
+                            if dep.matches(&s, VersionReqMatchMode::Default) =>
+                        {
                             // We are looking for a package from a lock file so we do not care about yank
                             callback(is)
                         }
@@ -746,11 +756,12 @@ impl<'gctx> Source for RegistrySource<'gctx> {
                             | IndexSummary::Unsupported(s, _)
                             | IndexSummary::Invalid(s) => s,
                         };
-                        if req.is_precise() && self.gctx.cli_unstable().unstable_options {
-                            dep.matches_prerelease(&s)
+                        let mode = if req.is_precise() && self.gctx.cli_unstable().prerelease {
+                            VersionReqMatchMode::Prerelease
                         } else {
-                            dep.matches(&s)
-                        }
+                            VersionReqMatchMode::Default
+                        };
+                        dep.matches(&s, mode)
                     }
                     QueryKind::AlternativeNames => true,
                     QueryKind::Normalized => true,
