@@ -347,6 +347,13 @@ pub fn create_bcx<'a, 'gctx>(
         logger.log(LogMessage::ResolutionFinished { elapsed });
     }
 
+    let profiles = Profiles::new(ws, build_config.requested_profile)?;
+    profiles.validate_packages(
+        ws.profiles(),
+        &mut gctx.shell(),
+        workspace_resolve.as_ref().unwrap_or(&resolve),
+    )?;
+
     let std_resolve_features = if let Some(crates) = &gctx.cli_unstable().build_std {
         let (std_package_set, std_resolve, std_features) = standard_lib::resolve_std(
             ws,
@@ -354,6 +361,8 @@ pub fn create_bcx<'a, 'gctx>(
             &build_config,
             crates,
             &build_config.requested_kinds,
+            &profiles,
+            build_config.intent,
         )?;
         pkg_set.add_set(std_package_set);
         Some((std_resolve, std_features))
@@ -402,13 +411,6 @@ pub fn create_bcx<'a, 'gctx>(
             extra_args_name
         );
     }
-
-    let profiles = Profiles::new(ws, build_config.requested_profile)?;
-    profiles.validate_packages(
-        ws.profiles(),
-        &mut gctx.shell(),
-        workspace_resolve.as_ref().unwrap_or(&resolve),
-    )?;
 
     // If `--target` has not been specified, then the unit graph is built
     // assuming `--target $HOST` was specified. See
@@ -496,6 +498,7 @@ pub fn create_bcx<'a, 'gctx>(
                 &pkg_set,
                 interner,
                 &profiles,
+                build_config.intent,
                 &target_data,
             )?
         } else {
