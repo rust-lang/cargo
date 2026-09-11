@@ -1059,6 +1059,16 @@
     "Hints": {
       "type": "object",
       "properties": {
+        "min-opt-level": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TomlValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "mostly-unused": {
           "anyOf": [
             {
