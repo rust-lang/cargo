@@ -10,7 +10,7 @@ Every manifest file consists of the following sections:
 * [`[package]`](#the-package-section) --- Defines a package.
   * [`name`](#the-name-field) --- The name of the package.
   * [`version`](#the-version-field) --- The version of the package.
-  * [`authors`](#the-authors-field) --- The authors of the package.
+  * [`authors`](#the-authors-field) --- The authors of the package (deprecated).
   * [`edition`](#the-edition-field) --- The Rust edition.
   * [`rust-version`](rust-version.md) --- The minimal supported Rust version.
   * [`description`](#the-description-field) --- A description of the package.
