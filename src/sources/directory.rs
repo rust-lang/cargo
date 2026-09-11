@@ -213,6 +213,9 @@ impl<'gctx> Source for DirectorySource<'gctx> {
     }
 
     async fn download(&self, id: PackageId) -> CargoResult<MaybePackage> {
+        if !self.updated.get() {
+            self.update()?;
+        }
         self.packages
             .borrow()
             .get(&id)

@@ -160,6 +160,29 @@ fn simple_install() {
         .run();
 }
 
+/// Regression test for https://github.com/rust-lang/cargo/issues/17458
+#[cargo_test]
+fn simple_install_without_dependencies() {
+    setup();
+
+    VendorPackage::new("bar")
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    cargo_process("install bar")
+        .with_stderr_data(str![[r#"
+[INSTALLING] bar v0.1.0
+[COMPILING] bar v0.1.0
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[INSTALLING] [ROOT]/home/.cargo/bin/bar[EXE]
+[INSTALLED] package `bar v0.1.0` (executable `bar[EXE]`)
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
+        .run();
+}
+
 #[cargo_test]
 fn simple_install_fail() {
     setup();
