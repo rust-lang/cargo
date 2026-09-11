@@ -7,7 +7,7 @@ use crate::ops::{self, Packages};
 use crate::resolver::HasDevUnits;
 use crate::resolver::Resolve;
 use crate::resolver::features::{CliFeatures, FeaturesFor, ResolvedFeatures};
-use crate::util::errors::CargoResult;
+use crate::util::CargoResult;
 use crate::workspace::profiles::{Profiles, UnitFor};
 use crate::workspace::{PackageId, PackageSet, Workspace};
 
@@ -16,7 +16,11 @@ use std::path::PathBuf;
 
 use super::BuildConfig;
 
-fn std_crates<'a>(crates: &'a [String], default: &'static str, units: &[Unit]) -> HashSet<&'a str> {
+pub fn std_crates<'a>(
+    crates: &'a [String],
+    default: &'static str,
+    units: &[Unit],
+) -> HashSet<&'a str> {
     let mut crates = HashSet::from_iter(crates.iter().map(|s| s.as_str()));
     // This is a temporary hack until there is a more principled way to
     // declare dependencies in Cargo.toml.
@@ -217,7 +221,7 @@ fn generate_roots(
     Ok(())
 }
 
-fn detect_sysroot_src_path(target_data: &RustcTargetData<'_>) -> CargoResult<PathBuf> {
+pub(crate) fn detect_sysroot_src_path(target_data: &RustcTargetData<'_>) -> CargoResult<PathBuf> {
     if let Some(s) = target_data.gctx.get_env_os("__CARGO_TESTS_ONLY_SRC_ROOT") {
         return Ok(s.into());
     }
