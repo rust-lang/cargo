@@ -480,7 +480,17 @@ static BUILT_IN_PROVIDERS: &[&'static str] = &[
 
 /// Retrieves a cached instance of `LibSecretCredential`.
 /// Must be cached to avoid repeated load/unload cycles, which are not supported by `glib`.
-#[cfg(target_os = "linux")]
+#[cfg(all(
+    unix,
+    not(any(
+        target_os = "macos",
+        target_os = "ios",
+        target_os = "tvos",
+        target_os = "watchos",
+        target_os = "visionos",
+        target_os = "android"
+    ))
+))]
 fn get_credential_libsecret()
 -> CargoResult<&'static cargo_credential_libsecret::LibSecretCredential> {
     static CARGO_CREDENTIAL_LIBSECRET: std::sync::OnceLock<
@@ -535,7 +545,17 @@ fn credential_action(
             "cargo:wincred" => Box::new(cargo_credential_wincred::WindowsCredential {}),
             #[cfg(target_os = "macos")]
             "cargo:macos-keychain" => Box::new(cargo_credential_macos_keychain::MacKeychain {}),
-            #[cfg(target_os = "linux")]
+            #[cfg(all(
+                unix,
+                not(any(
+                    target_os = "macos",
+                    target_os = "ios",
+                    target_os = "tvos",
+                    target_os = "watchos",
+                    target_os = "visionos",
+                    target_os = "android"
+                ))
+            ))]
             "cargo:libsecret" => Box::new(get_credential_libsecret()?),
             name if BUILT_IN_PROVIDERS.contains(&name) => {
                 Box::new(cargo_credential::UnsupportedCredential {})
