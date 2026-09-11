@@ -4028,6 +4028,9 @@ fn mergeable_info_dep_collision() {
         .with_stderr_data(
             str![[r#"
 [UPDATING] `dummy-registry` index
+[RUNNING] `git[..] fetch[..]`
+From [ROOTURL]/registry
+ * [new ref]         HEAD       -> origin/HEAD
 [LOCKING] 2 packages to highest compatible versions
 [ADDING] dep v0.1.0 (available: v0.2.0)
 [DOWNLOADING] crates ...
