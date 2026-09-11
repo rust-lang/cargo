@@ -204,6 +204,14 @@ impl SourceId {
         SourceId::new(SourceKind::Path, url, None)
     }
 
+    /// Creates a `SourceId` from a filesystem path representing a builtin package.
+    ///
+    /// `path`: an absolute path.
+    pub fn for_builtin(path: &Path) -> CargoResult<SourceId> {
+        let url = path.into_url()?;
+        SourceId::new(SourceKind::Builtin, url, None)
+    }
+
     /// Creates a `SourceId` from a filesystem path.
     ///
     /// `path`: an absolute path.
@@ -345,13 +353,18 @@ impl SourceId {
         self.inner.kind == SourceKind::Path
     }
 
+    /// Returns `true` if this source is built into Cargo
+    pub fn is_builtin(self) -> bool {
+        self.inner.kind == SourceKind::Builtin
+    }
+
     /// Returns the local path if this is a path dependency.
     pub fn local_path(self) -> Option<PathBuf> {
-        if self.inner.kind != SourceKind::Path {
-            return None;
+        if let SourceKind::Path | SourceKind::Builtin = self.inner.kind {
+            Some(self.inner.url.to_file_path().unwrap())
+        } else {
+            None
         }
-
-        Some(self.inner.url.to_file_path().unwrap())
     }
 
     pub fn kind(&self) -> &SourceKind {
@@ -403,6 +416,7 @@ impl SourceId {
                 }
                 Ok(Box::new(PathSource::new(&path, self, gctx)))
             }
+            SourceKind::Builtin => todo!("builtin source"),
             SourceKind::Registry | SourceKind::SparseRegistry => {
                 Ok(Box::new(RegistrySource::remote(self, gctx)?))
             }
@@ -663,6 +677,7 @@ impl fmt::Display for SourceId {
                 Ok(())
             }
             SourceKind::Path => write!(f, "{}", url_display(&self.inner.url)),
+            SourceKind::Builtin => write!(f, "builtin {}", url_display(&self.inner.url)),
             SourceKind::Registry | SourceKind::SparseRegistry => {
                 write!(f, "registry `{}`", self.display_registry_name())
             }

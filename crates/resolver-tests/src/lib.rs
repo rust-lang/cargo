@@ -57,11 +57,12 @@ pub fn resolve_and_validated_raw(
     root_pkg_id: PackageId,
     sat_resolver: &mut SatResolver,
 ) -> CargoResult<Vec<(PackageId, Vec<InternedString>)>> {
-    let resolve = resolve_with_global_context_raw(
+    let resolve = resolve_with_gctx_implicit_deps_raw(
         deps.clone(),
         registry,
         root_pkg_id,
         &GlobalContext::default().unwrap(),
+        &[],
     );
 
     match resolve {
@@ -115,20 +116,36 @@ fn collect_features(resolve: &Resolve) -> Vec<(PackageId, Vec<InternedString>)> 
         .collect()
 }
 
+pub fn resolve_with_implicit_builtins(
+    deps: Vec<Dependency>,
+    registry: &[Summary],
+    implicit_builtin_deps: &[Dependency],
+) -> CargoResult<Resolve> {
+    let gctx = GlobalContext::default().unwrap();
+    resolve_with_gctx_implicit_deps_raw(
+        deps,
+        registry,
+        pkg_id("root"),
+        &gctx,
+        implicit_builtin_deps,
+    )
+}
+
 pub fn resolve_with_global_context(
     deps: Vec<Dependency>,
     registry: &[Summary],
     gctx: &GlobalContext,
 ) -> CargoResult<Vec<(PackageId, Vec<InternedString>)>> {
-    let resolve = resolve_with_global_context_raw(deps, registry, pkg_id("root"), gctx)?;
+    let resolve = resolve_with_gctx_implicit_deps_raw(deps, registry, pkg_id("root"), gctx, &[])?;
     Ok(collect_features(&resolve))
 }
 
-pub fn resolve_with_global_context_raw(
+fn resolve_with_gctx_implicit_deps_raw(
     deps: Vec<Dependency>,
     registry: &[Summary],
     root_pkg_id: PackageId,
     gctx: &GlobalContext,
+    implicit_builtin_deps: &[Dependency],
 ) -> CargoResult<Resolve> {
     struct MyRegistry<'a> {
         list: &'a [Summary],
@@ -205,6 +222,7 @@ pub fn resolve_with_global_context_raw(
         &version_prefs,
         ResolveVersion::with_rust_version(None),
         gctx,
+        implicit_builtin_deps,
     );
 
     // The largest test in our suite takes less then 30 secs.
