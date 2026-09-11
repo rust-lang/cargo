@@ -461,7 +461,7 @@ foo = { version = "1.0", optional = true }
 bar = { version = "1.0", optional = true }
 
 [features]
-fancy-feature = ["foo", "bar"]
+fancy-feature = { enables = ["foo", "bar"] }
 ```
 
 The same applies to `cfg(debug_assertions)`, `cfg(test)` and `cfg(proc_macro)`.
@@ -634,7 +634,7 @@ following to the above manifest:
 
 ```toml
 [features]
-log-debug = ['bar/log-debug'] # using 'foo/log-debug' would be an error!
+log-debug = { enables = ['bar/log-debug'] } # using 'foo/log-debug' would be an error!
 ```
 
 ## Inheriting a dependency from a workspace
