@@ -1393,6 +1393,53 @@ b v0.1.0 ([ROOT]/foo/b) []
 
 "#]])
         .run();
+
+    p.cargo("tree -p common --format")
+        .arg("{p} [{f}]")
+        .arg("-Zfeature-unification")
+        .masquerade_as_nightly_cargo(&["feature-unification"])
+        .env("CARGO_RESOLVER_FEATURE_UNIFICATION", "workspace")
+        .with_stdout_data(str![[r#"
+a v0.1.0 ([ROOT]/foo/a) []
+├── common v0.1.0 ([ROOT]/foo/common) [a,b]
+└── outside v0.1.0 [a,b]
+
+b v0.1.0 ([ROOT]/foo/b) []
+├── common v0.1.0 ([ROOT]/foo/common) [a,b]
+└── outside v0.1.0 [a,b]
+
+common v0.1.0 ([ROOT]/foo/common) [a,b]
+
+"#]])
+        .run();
+
+    p.cargo("tree -p a -e features")
+        .arg("-Zfeature-unification")
+        .masquerade_as_nightly_cargo(&["feature-unification"])
+        .env("CARGO_RESOLVER_FEATURE_UNIFICATION", "workspace")
+        .with_stdout_data(str![[r#"
+a v0.1.0 ([ROOT]/foo/a)
+├── common feature "a"
+│   └── common v0.1.0 ([ROOT]/foo/common)
+├── common feature "default" (command-line)
+│   └── common v0.1.0 ([ROOT]/foo/common)
+├── outside feature "a"
+│   └── outside v0.1.0
+└── outside feature "default"
+    └── outside v0.1.0
+
+b v0.1.0 ([ROOT]/foo/b)
+├── common feature "b"
+│   └── common v0.1.0 ([ROOT]/foo/common)
+├── common feature "default" (command-line) (*)
+├── outside feature "b"
+│   └── outside v0.1.0
+└── outside feature "default" (*)
+
+common v0.1.0 ([ROOT]/foo/common)
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -1695,6 +1742,15 @@ fn feature_unification_of_cli_features_within_workspace() {
         )
         .file("parent/src/lib.rs", "pub use child::a;")
         .build();
+
+    p.cargo("tree -p parent -F grandchild/a")
+        .arg("-Zfeature-unification")
+        .masquerade_as_nightly_cargo(&["feature-unification"])
+        .env("CARGO_RESOLVER_FEATURE_UNIFICATION", "workspace")
+        .with_stderr_data(str![[r#"
+
+"#]])
+        .run();
 
     p.cargo("check -p parent -F grandchild/a")
         .arg("-Zfeature-unification")
