@@ -102,8 +102,8 @@ you use bash, it makes sense to add `export RUSTC_WRAPPER=sccache` to
 `.bashrc`. Alternatively, you can set [`build.rustc-wrapper`] in the [Cargo
 configuration][config]. Refer to sccache documentation for more details.
 
-The same `RUSTC_WRAPPER` / [`build.rustc-wrapper`] setup works for other
-compiler wrappers, such as [kache].
+Other compiler wrappers use the same `RUSTC_WRAPPER` / [`build.rustc-wrapper`]
+hook. [kache] writes that Cargo config with `kache init`.
 
 [`RUSTFLAGS`]: ../reference/config.md#buildrustflags
 [`build.dep-info-basedir`]: ../reference/config.md#builddep-info-basedir
