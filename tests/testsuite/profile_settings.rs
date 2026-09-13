@@ -911,7 +911,116 @@ fn profile_hint_mostly_unused_warn_without_gate() {
 [LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
-[WARNING] bar@1.0.0: ignoring 'hint-mostly-unused' profile option, pass `-Zprofile-hint-mostly-unused` to enable it
+[WARNING] ignoring `hint-mostly-unused` profile option for `bar@1.0.0`
+  |
+  = [HELP] pass `-Zprofile-hint-mostly-unused` to enable it
+[CHECKING] bar v1.0.0
+[RUNNING] `rustc --crate-name bar [..]`
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .with_stderr_does_not_contain("-Zhint-mostly-unused")
+        .run();
+}
+
+#[cargo_test]
+fn profile_hint_mostly_unused_warns_with_mixed_profiles() {
+    for (normal_hint, build_hint) in [(false, true), (true, false), (true, true)] {
+        let p = project()
+            .file(
+                "Cargo.toml",
+                &format!(
+                    r#"
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+                    edition = "2015"
+
+                    [dependencies]
+                    bar = {{ path = "bar" }}
+
+                    [build-dependencies]
+                    bar = {{ path = "bar" }}
+
+                    [profile.dev]
+                    hint-mostly-unused = {normal_hint}
+
+                    [profile.dev.build-override]
+                    hint-mostly-unused = {build_hint}
+
+                    [profile.dev.package.foo]
+                    hint-mostly-unused = false
+                    "#,
+                ),
+            )
+            .file("src/main.rs", "extern crate bar; fn main() {}")
+            .file("build.rs", "extern crate bar; fn main() {}")
+            .file(
+                "bar/Cargo.toml",
+                r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                edition = "2015"
+                "#,
+            )
+            .file("bar/src/lib.rs", "")
+            .build();
+
+        p.cargo("check")
+            .with_stderr_data(str![[r#"
+[LOCKING] 1 package to highest compatible version
+[WARNING] ignoring `hint-mostly-unused` profile option for `bar@0.0.1`
+  |
+  = [HELP] pass `-Zprofile-hint-mostly-unused` to enable it
+[COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+            .run();
+    }
+}
+
+#[cargo_test]
+fn profile_hint_mostly_unused_from_config_warn_without_gate() {
+    Package::new("bar", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2015"
+
+            [dependencies]
+            bar = "1.0"
+
+            [lints.cargo]
+            default = "allow"
+            "#,
+        )
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [profile.dev.package.bar]
+            hint-mostly-unused = true
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+    p.cargo("check -v")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to highest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[WARNING] ignoring `hint-mostly-unused` profile option for `bar@1.0.0`
+  |
+  = [HELP] pass `-Zprofile-hint-mostly-unused` to enable it
 [CHECKING] bar v1.0.0
 [RUNNING] `rustc --crate-name bar [..]`
 [CHECKING] foo v0.0.1 ([ROOT]/foo)

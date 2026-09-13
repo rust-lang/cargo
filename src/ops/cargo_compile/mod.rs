@@ -196,6 +196,7 @@ fn compile_ws<'a>(
     }
 
     let bcx = create_bcx(ws, options, &interner, logger.as_ref())?;
+    crate::diagnostics::rules::mostly_unused_hint::diagnose(&bcx)?;
 
     if options.build_config.unit_graph {
         unit_graph::emit_serialized_unit_graph(&bcx.roots, &bcx.unit_graph, ws.gctx())?;
