@@ -85,7 +85,6 @@ use cargo_util::paths;
 use cargo_util_schemas::core::PartialVersion;
 use cargo_util_terminal::report::Group;
 use cargo_util_terminal::report::Level;
-use std::borrow::Cow;
 use std::rc::Rc;
 use tracing::{debug, trace};
 
@@ -160,20 +159,10 @@ pub fn resolve_ws_with_opts<'gctx>(
     dry_run: bool,
 ) -> CargoResult<WorkspaceResolve<'gctx>> {
     let feature_unification = ws.resolve_feature_unification();
-    let individual_specs = match feature_unification {
-        FeatureUnification::Selected => vec![specs.to_owned()],
-        FeatureUnification::Workspace => {
-            vec![ops::Packages::All(Vec::new()).to_package_id_specs(ws)?]
-        }
-        FeatureUnification::Package => specs.iter().map(|spec| vec![spec.clone()]).collect(),
+    let specs_to_resolve = match feature_unification {
+        FeatureUnification::Workspace => &ops::Packages::All(Vec::new()).to_package_id_specs(ws)?,
+        FeatureUnification::Selected | FeatureUnification::Package => specs,
     };
-    let specs: Vec<_> = individual_specs
-        .iter()
-        .map(|specs| specs.iter())
-        .flatten()
-        .cloned()
-        .collect();
-    let specs = &specs[..];
     let mut registry = ws.package_registry()?;
     let (resolve, resolved_with_overrides) = if ws.require_optional_deps() {
         // First, resolve the root_package's *listed* dependencies, as well as
@@ -228,7 +217,7 @@ pub fn resolve_ws_with_opts<'gctx>(
             has_dev_units,
             Some(&resolve),
             None,
-            specs,
+            &specs_to_resolve,
             add_patches,
         )?;
         (Some(resolve), resolved_with_overrides)
@@ -242,7 +231,7 @@ pub fn resolve_ws_with_opts<'gctx>(
             has_dev_units,
             resolve.as_ref(),
             None,
-            specs,
+            &specs_to_resolve,
             add_patches,
         )?;
         // Skipping `print_lockfile_changes` as there are cases where this prints irrelevant
@@ -252,7 +241,7 @@ pub fn resolve_ws_with_opts<'gctx>(
 
     let pkg_set = get_resolved_packages(&resolved_with_overrides, registry)?;
 
-    let members_with_features = ws.members_with_features(specs, cli_features)?;
+    let members_with_features = ws.members_with_features(&specs_to_resolve, cli_features)?;
     let member_ids = members_with_features
         .iter()
         .map(|(p, _fts)| p.package_id())
@@ -286,54 +275,59 @@ pub fn resolve_ws_with_opts<'gctx>(
         force_all_targets,
     )?;
 
-    let mut specs_and_features = Vec::new();
-
-    for specs in individual_specs {
-        let feature_opts = FeatureOpts::new(ws, has_dev_units, force_all_targets)?;
-
+    let specs_and_features = match feature_unification {
         // We want to narrow the features to the current specs so that stuff like `cargo check -p a
         // -p b -F a/a,b/b` works and the resolver does not contain that `a` does not have feature
         // `b` and vice-versa. However, resolver v1 needs to see even features of unselected
         // packages turned on if it was because of working directory being inside the unselected
         // package, because they might turn on a feature of a selected package.
-        let narrowed_features = match feature_unification {
-            FeatureUnification::Package => {
+        FeatureUnification::Package => specs_to_resolve
+            .iter()
+            .map(|package| {
                 let mut narrowed_features = cli_features.clone();
                 let enabled_features = members_with_features
                     .iter()
-                    .filter_map(|(package, cli_features)| {
-                        specs
-                            .iter()
-                            .any(|spec| spec.matches(package.package_id()))
+                    .filter_map(|(member, cli_features)| {
+                        package
+                            .matches(member.package_id())
                             .then_some(cli_features.features.iter())
                     })
                     .flatten()
                     .cloned()
                     .collect();
                 narrowed_features.features = Rc::new(enabled_features);
-                Cow::Owned(narrowed_features)
-            }
-            FeatureUnification::Selected | FeatureUnification::Workspace => {
-                Cow::Borrowed(cli_features)
-            }
-        };
 
-        let resolved_features = FeatureResolver::resolve(
-            ws,
-            target_data,
-            &resolved_with_overrides,
-            &pkg_set,
-            &*narrowed_features,
-            &specs,
-            requested_targets,
-            feature_opts,
-        )?;
-
-        specs_and_features.push(SpecsAndResolvedFeatures {
-            specs,
-            resolved_features,
-        });
-    }
+                Ok(SpecsAndResolvedFeatures {
+                    specs: vec![package.clone()],
+                    resolved_features: FeatureResolver::resolve(
+                        ws,
+                        target_data,
+                        &resolved_with_overrides,
+                        &pkg_set,
+                        &narrowed_features,
+                        std::slice::from_ref(package),
+                        requested_targets,
+                        FeatureOpts::new(ws, has_dev_units, force_all_targets)?,
+                    )?,
+                })
+            })
+            .collect::<CargoResult<Vec<SpecsAndResolvedFeatures>>>()?,
+        FeatureUnification::Selected | FeatureUnification::Workspace => {
+            vec![SpecsAndResolvedFeatures {
+                specs: specs.to_vec(),
+                resolved_features: FeatureResolver::resolve(
+                    ws,
+                    target_data,
+                    &resolved_with_overrides,
+                    &pkg_set,
+                    cli_features,
+                    specs_to_resolve,
+                    requested_targets,
+                    FeatureOpts::new(ws, has_dev_units, force_all_targets)?,
+                )?,
+            }]
+        }
+    };
 
     pkg_set.warn_no_lib_packages_and_artifact_libs_overlapping_deps(
         ws,

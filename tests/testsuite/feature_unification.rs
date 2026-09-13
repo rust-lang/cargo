@@ -1400,14 +1400,6 @@ b v0.1.0 ([ROOT]/foo/b) []
         .masquerade_as_nightly_cargo(&["feature-unification"])
         .env("CARGO_RESOLVER_FEATURE_UNIFICATION", "workspace")
         .with_stdout_data(str![[r#"
-a v0.1.0 ([ROOT]/foo/a) []
-├── common v0.1.0 ([ROOT]/foo/common) [a,b]
-└── outside v0.1.0 [a,b]
-
-b v0.1.0 ([ROOT]/foo/b) []
-├── common v0.1.0 ([ROOT]/foo/common) [a,b]
-└── outside v0.1.0 [a,b]
-
 common v0.1.0 ([ROOT]/foo/common) [a,b]
 
 "#]])
@@ -1421,22 +1413,12 @@ common v0.1.0 ([ROOT]/foo/common) [a,b]
 a v0.1.0 ([ROOT]/foo/a)
 ├── common feature "a"
 │   └── common v0.1.0 ([ROOT]/foo/common)
-├── common feature "default" (command-line)
+├── common feature "default"
 │   └── common v0.1.0 ([ROOT]/foo/common)
 ├── outside feature "a"
 │   └── outside v0.1.0
 └── outside feature "default"
     └── outside v0.1.0
-
-b v0.1.0 ([ROOT]/foo/b)
-├── common feature "b"
-│   └── common v0.1.0 ([ROOT]/foo/common)
-├── common feature "default" (command-line) (*)
-├── outside feature "b"
-│   └── outside v0.1.0
-└── outside feature "default" (*)
-
-common v0.1.0 ([ROOT]/foo/common)
 
 "#]])
         .run();
@@ -1747,7 +1729,9 @@ fn feature_unification_of_cli_features_within_workspace() {
         .arg("-Zfeature-unification")
         .masquerade_as_nightly_cargo(&["feature-unification"])
         .env("CARGO_RESOLVER_FEATURE_UNIFICATION", "workspace")
+        .with_status(101)
         .with_stderr_data(str![[r#"
+[ERROR] the package 'parent' does not contain this feature: grandchild/a
 
 "#]])
         .run();
