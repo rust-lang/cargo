@@ -649,6 +649,13 @@
           "items": {
             "type": "string"
           }
+        },
+        "doc": {
+          "description": "Documentation for the feature.",
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "required": [

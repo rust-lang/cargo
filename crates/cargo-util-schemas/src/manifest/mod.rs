@@ -1520,6 +1520,9 @@ pub struct FeatureMetadata {
     /// Features that this feature enables.
     pub enables: Vec<String>,
 
+    /// Documentation for the feature.
+    pub doc: Option<String>,
+
     /// This is here to provide a way to see the "unused manifest keys" when deserializing
     #[serde(skip_serializing)]
     #[serde(flatten)]
