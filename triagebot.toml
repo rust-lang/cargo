@@ -68,7 +68,7 @@ llm_policy_url = "https://doc.crates.io/contrib/process/llm-usage.html"
 warn_non_default_branch = true
 
 [assign.owners]
-"*" = ["@epage", "@weihanglo"]
+"*" = ["@epage", "@weihanglo", "@Muscraft"]
 
 [review-submitted]
 reviewed_label = "S-waiting-on-author"
