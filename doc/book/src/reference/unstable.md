@@ -2384,27 +2384,39 @@ The `pubtime` index field  has been stabilized in Rust 1.94.0.
 ## feature-metadata
 
 * Tracking Issue: [#14157](https://github.com/rust-lang/cargo/issues/14157)
+* RFC: [#3416](https://github.com/rust-lang/rfcs/blob/master/text/3416-feature-metadata.md)
 
-This allows to use a table when defining features, with a required `enables` key:
+This allows defining features with a metadata table.
 
 ```toml
+cargo-features = ["feature-metadata"]
+
+[package]
+# ...
+
 [features]
 # same as `foo = []`
 foo = { enables = [] }
 ```
 
-This is equivalent to the array-of-strings syntax.
-Support for other keys should be added later.
+The required `enables` field is equivalent to the array-of-strings syntax.
+
+For other metadata fields, see the subsections below.
 
 ### feature-documentation
 
 * Tracking Issue: [#17445](https://github.com/rust-lang/cargo/issues/17445)
 * RFC: [#3485](https://github.com/rust-lang/rfcs/blob/master/text/3485-feature-documentation.md)
 
-This allows providing documentation for the feature inside the table introduced by
-[`feature-metadata`](#feature-metadata):
+This adds a `doc` field to the feature table,
+which provides documentation for the feature.
 
 ```toml
+cargo-features = ["feature-metadata"]
+
+[package]
+# ...
+
 [features.serde]
 enables = []
 doc = "Enables support for serialization and deserialization via serde."
