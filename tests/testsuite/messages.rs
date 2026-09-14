@@ -19,6 +19,7 @@ pub fn raw_rustc_output(project: &Project, path: &str, extra: &[&str]) -> String
     }
     let rustc_output = match proc
         .arg("--crate-type=lib")
+        .arg("--edition=2015")
         .args(extra)
         .cwd(project.root())
         .exec_with_output()
