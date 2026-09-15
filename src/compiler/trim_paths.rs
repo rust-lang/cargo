@@ -25,7 +25,7 @@ use crate::util::path_args;
 const CURRENT_UNREMAP_VERSION: u8 = 1;
 
 /// Filename suffix of the unremap file.
-pub(crate) const UNREMAP_SUFFIX: &str = ".trim-paths.jsonl";
+pub(crate) const UNREMAP_SUFFIX: &str = ".trim-paths.json";
 
 /// This is an internal contract with rustc bootstrap,
 /// which needs workspace sources remapped to `/rust{c,-dev}/<sha>`.
@@ -264,17 +264,14 @@ fn build_dir_remap(build_runner: &BuildRunner<'_, '_>) -> RemapPair {
     (from, to)
 }
 
+/// On-disk schema of the unremap file.
 #[derive(Serialize)]
 #[serde(rename_all = "snake_case")]
-struct UnremapVersion {
+struct UnremapFile<'a> {
     v: u8,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "snake_case")]
-struct UnremapMetadata<'a> {
     rust_version: &'a str,
     workspace_root: &'a Path,
+    remaps: Vec<Remap<'a>>,
 }
 
 #[derive(Serialize)]
@@ -344,24 +341,15 @@ pub(crate) fn write_unremap_file(
         }
     }
 
-    serde_json::to_writer(
-        &mut out,
-        &UnremapVersion {
-            v: CURRENT_UNREMAP_VERSION,
-        },
-    )?;
-    out.write_all(b"\n")?;
     let rust_version = build_runner.bcx.rustc().version.to_string();
-    let metadata = UnremapMetadata {
+    let file = UnremapFile {
+        v: CURRENT_UNREMAP_VERSION,
         rust_version: &rust_version,
         workspace_root: build_runner.bcx.ws.root(),
+        remaps: remaps.iter().map(|(from, to)| Remap { from, to }).collect(),
     };
-    serde_json::to_writer(&mut out, &metadata)?;
+    serde_json::to_writer(&mut out, &file)?;
     out.write_all(b"\n")?;
-    for (from, to) in &remaps {
-        serde_json::to_writer(&mut out, &Remap { from, to })?;
-        out.write_all(b"\n")?;
-    }
 
     Ok(())
 }
