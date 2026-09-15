@@ -194,39 +194,36 @@ fn registry_dependency() {
         .run();
 
     // Unremap files for both original exe and uplifted exe.
-    assert_eq!(p.glob("target/**/*.trim-paths.jsonl").count(), 2);
+    assert_eq!(p.glob("target/**/*.trim-paths.json").count(), 2);
     let unremap_file = unremap_file_path(&p.bin("foo"));
     assert_e2e().eq(
         &std::fs::read_to_string(&unremap_file).unwrap(),
         str![[r#"
-[
-  {
-    "v": 1
-  },
-  {
-    "rust_version": "[..]",
-    "workspace_root": "[ROOT]/foo"
-  },
-  {
-    "from": ".",
-    "to": "[ROOT]/foo"
-  },
-  {
-    "from": "/cargo/build-dir",
-    "to": "[ROOT]/foo/target"
-  },
-  {
-    "from": "/cargo/registry/[..]",
-    "to": "[ROOT]/home/.cargo/registry/src/-[HASH]"
-  },
-  {
-    "from": "/rustc/[..]",
-    "to": "[..]/lib/rustlib/src/rust"
-  }
-]
+{
+  "remaps": [
+    {
+      "from": ".",
+      "to": "[ROOT]/foo"
+    },
+    {
+      "from": "/cargo/build-dir",
+      "to": "[ROOT]/foo/target"
+    },
+    {
+      "from": "/cargo/registry/[..]",
+      "to": "[ROOT]/home/.cargo/registry/src/-[HASH]"
+    },
+    {
+      "from": "/rustc/[..]",
+      "to": "[..]/lib/rustlib/src/rust"
+    }
+  ],
+  "rust_version": "[..]",
+  "v": 1,
+  "workspace_root": "[ROOT]/foo"
+}
 "#]]
-        .is_json()
-        .against_jsonlines(),
+        .is_json(),
     );
 }
 
@@ -303,7 +300,7 @@ fn registry_dependency_with_build_script_codegen() {
         .run();
 
     // Unremap files for both original exe and uplifted exe.
-    assert_eq!(p.glob("target/**/*.trim-paths.jsonl").count(), 2);
+    assert_eq!(p.glob("target/**/*.trim-paths.json").count(), 2);
     let unremap_file = unremap_file_path(&p.bin("foo"));
     assert!(unremap_file.exists());
 }
@@ -359,39 +356,36 @@ fn git_dependency() {
         .run();
 
     // Unremap files for both original exe and uplifted exe.
-    assert_eq!(p.glob("target/**/*.trim-paths.jsonl").count(), 2);
+    assert_eq!(p.glob("target/**/*.trim-paths.json").count(), 2);
     let unremap_file = unremap_file_path(&p.bin("foo"));
     assert_e2e().eq(
         &std::fs::read_to_string(&unremap_file).unwrap(),
         str![[r#"
-[
-  {
-    "v": 1
-  },
-  {
-    "rust_version": "[..]",
-    "workspace_root": "[ROOT]/foo"
-  },
-  {
-    "from": ".",
-    "to": "[ROOT]/foo"
-  },
-  {
-    "from": "/cargo/build-dir",
-    "to": "[ROOT]/foo/target"
-  },
-  {
-    "from": "/cargo/git/[..]",
-    "to": "[ROOT]/home/.cargo/git/checkouts/bar-[..]"
-  },
-  {
-    "from": "/rustc/[..]",
-    "to": "[..]/lib/rustlib/src/rust"
-  }
-]
+{
+  "remaps": [
+    {
+      "from": ".",
+      "to": "[ROOT]/foo"
+    },
+    {
+      "from": "/cargo/build-dir",
+      "to": "[ROOT]/foo/target"
+    },
+    {
+      "from": "/cargo/git/[..]",
+      "to": "[ROOT]/home/.cargo/git/checkouts/bar-[..]"
+    },
+    {
+      "from": "/rustc/[..]",
+      "to": "[..]/lib/rustlib/src/rust"
+    }
+  ],
+  "rust_version": "[..]",
+  "v": 1,
+  "workspace_root": "[ROOT]/foo"
+}
 "#]]
-        .is_json()
-        .against_jsonlines(),
+        .is_json(),
     );
 }
 
@@ -441,35 +435,32 @@ cocktail-bar/src/lib.rs
         .run();
 
     // Unremap files for both original exe and uplifted exe.
-    assert_eq!(p.glob("target/**/*.trim-paths.jsonl").count(), 2);
+    assert_eq!(p.glob("target/**/*.trim-paths.json").count(), 2);
     let unremap_file = unremap_file_path(&p.bin("foo"));
     assert_e2e().eq(
         &std::fs::read_to_string(&unremap_file).unwrap(),
         str![[r#"
-[
-  {
-    "v": 1
-  },
-  {
-    "rust_version": "[..]",
-    "workspace_root": "[ROOT]/foo"
-  },
-  {
-    "from": ".",
-    "to": "[ROOT]/foo"
-  },
-  {
-    "from": "/cargo/build-dir",
-    "to": "[ROOT]/foo/target"
-  },
-  {
-    "from": "/rustc/[..]",
-    "to": "[..]/lib/rustlib/src/rust"
-  }
-]
+{
+  "remaps": [
+    {
+      "from": ".",
+      "to": "[ROOT]/foo"
+    },
+    {
+      "from": "/cargo/build-dir",
+      "to": "[ROOT]/foo/target"
+    },
+    {
+      "from": "/rustc/[..]",
+      "to": "[..]/lib/rustlib/src/rust"
+    }
+  ],
+  "rust_version": "[..]",
+  "v": 1,
+  "workspace_root": "[ROOT]/foo"
+}
 "#]]
-        .is_json()
-        .against_jsonlines(),
+        .is_json(),
     );
 }
 
@@ -520,39 +511,36 @@ fn path_dependency_outside_workspace() {
         .run();
 
     // Unremap files for both original exe and uplifted exe.
-    assert_eq!(p.glob("target/**/*.trim-paths.jsonl").count(), 2);
+    assert_eq!(p.glob("target/**/*.trim-paths.json").count(), 2);
     let unremap_file = unremap_file_path(&p.bin("foo"));
     assert_e2e().eq(
         &std::fs::read_to_string(&unremap_file).unwrap(),
         str![[r#"
-[
-  {
-    "v": 1
-  },
-  {
-    "rust_version": "[..]",
-    "workspace_root": "[ROOT]/foo"
-  },
-  {
-    "from": ".",
-    "to": "[ROOT]/foo"
-  },
-  {
-    "from": "/cargo/build-dir",
-    "to": "[ROOT]/foo/target"
-  },
-  {
-    "from": "/cargo/deps/bar-0.0.1",
-    "to": "[ROOT]/bar"
-  },
-  {
-    "from": "/rustc/[..]",
-    "to": "[..]/lib/rustlib/src/rust"
-  }
-]
+{
+  "remaps": [
+    {
+      "from": ".",
+      "to": "[ROOT]/foo"
+    },
+    {
+      "from": "/cargo/build-dir",
+      "to": "[ROOT]/foo/target"
+    },
+    {
+      "from": "/cargo/deps/bar-0.0.1",
+      "to": "[ROOT]/bar"
+    },
+    {
+      "from": "/rustc/[..]",
+      "to": "[..]/lib/rustlib/src/rust"
+    }
+  ],
+  "rust_version": "[..]",
+  "v": 1,
+  "workspace_root": "[ROOT]/foo"
+}
 "#]]
-        .is_json()
-        .against_jsonlines(),
+        .is_json(),
     );
 }
 
@@ -638,35 +626,32 @@ fn vendored_dependencies() {
         .run();
 
     // Unremap files for both original exe and uplifted exe.
-    assert_eq!(p.glob("target/**/*.trim-paths.jsonl").count(), 2);
+    assert_eq!(p.glob("target/**/*.trim-paths.json").count(), 2);
     let unremap_file = unremap_file_path(&p.bin("foo"));
     assert_e2e().eq(
         &std::fs::read_to_string(&unremap_file).unwrap(),
         str![[r#"
-[
-  {
-    "v": 1
-  },
-  {
-    "rust_version": "[..]",
-    "workspace_root": "[ROOT]/foo"
-  },
-  {
-    "from": ".",
-    "to": "[ROOT]/foo"
-  },
-  {
-    "from": "/cargo/build-dir",
-    "to": "[ROOT]/foo/target"
-  },
-  {
-    "from": "/rustc/[..]",
-    "to": "[..]/lib/rustlib/src/rust"
-  }
-]
+{
+  "remaps": [
+    {
+      "from": ".",
+      "to": "[ROOT]/foo"
+    },
+    {
+      "from": "/cargo/build-dir",
+      "to": "[ROOT]/foo/target"
+    },
+    {
+      "from": "/rustc/[..]",
+      "to": "[..]/lib/rustlib/src/rust"
+    }
+  ],
+  "rust_version": "[..]",
+  "v": 1,
+  "workspace_root": "[ROOT]/foo"
+}
 "#]]
-        .is_json()
-        .against_jsonlines(),
+        .is_json(),
     );
 }
 
@@ -753,43 +738,40 @@ fn vendored_dependencies_outside_workspace() {
         .run();
 
     // Unremap files for both original exe and uplifted exe.
-    assert_eq!(p.glob("target/**/*.trim-paths.jsonl").count(), 2);
+    assert_eq!(p.glob("target/**/*.trim-paths.json").count(), 2);
     let unremap_file = unremap_file_path(&p.bin("foo"));
     assert_e2e().eq(
         &std::fs::read_to_string(&unremap_file).unwrap(),
         str![[r#"
-[
-  {
-    "v": 1
-  },
-  {
-    "rust_version": "[..]",
-    "workspace_root": "[ROOT]/foo"
-  },
-  {
-    "from": ".",
-    "to": "[ROOT]/foo"
-  },
-  {
-    "from": "/cargo/build-dir",
-    "to": "[ROOT]/foo/target"
-  },
-  {
-    "from": "/cargo/deps/bar-0.0.1",
-    "to": "[ROOT]/shared-vendor/bar"
-  },
-  {
-    "from": "/cargo/deps/baz-0.0.1",
-    "to": "[ROOT]/shared-vendor/baz"
-  },
-  {
-    "from": "/rustc/[..]",
-    "to": "[..]/lib/rustlib/src/rust"
-  }
-]
+{
+  "remaps": [
+    {
+      "from": ".",
+      "to": "[ROOT]/foo"
+    },
+    {
+      "from": "/cargo/build-dir",
+      "to": "[ROOT]/foo/target"
+    },
+    {
+      "from": "/cargo/deps/bar-0.0.1",
+      "to": "[ROOT]/shared-vendor/bar"
+    },
+    {
+      "from": "/cargo/deps/baz-0.0.1",
+      "to": "[ROOT]/shared-vendor/baz"
+    },
+    {
+      "from": "/rustc/[..]",
+      "to": "[..]/lib/rustlib/src/rust"
+    }
+  ],
+  "rust_version": "[..]",
+  "v": 1,
+  "workspace_root": "[ROOT]/foo"
+}
 "#]]
-        .is_json()
-        .against_jsonlines(),
+        .is_json(),
     );
 }
 
@@ -852,7 +834,7 @@ fn local_package_with_build_script_codegen() {
         .run();
 
     // Unremap files for both original exe and uplifted exe.
-    assert_eq!(p.glob("target/**/*.trim-paths.jsonl").count(), 2);
+    assert_eq!(p.glob("target/**/*.trim-paths.json").count(), 2);
     let unremap_file = unremap_file_path(&p.bin("foo"));
     assert!(unremap_file.exists());
 }
@@ -906,7 +888,7 @@ fn diagnostics_works() {
         .run();
 
     // The `all` scope includes `object`, so unremap files are emitted.
-    assert_eq!(p.glob("target/**/*.trim-paths.jsonl").count(), 2);
+    assert_eq!(p.glob("target/**/*.trim-paths.json").count(), 2);
 }
 
 #[cfg(target_os = "macos")]
@@ -1564,30 +1546,27 @@ fn workspace_remap_with_root_dir() {
     assert_e2e().eq(
         &std::fs::read_to_string(&unremap_file).unwrap(),
         str![[r#"
-[
-  {
-    "v": 1
-  },
-  {
-    "rust_version": "[..]",
-    "workspace_root": "[ROOT]/foo"
-  },
-  {
-    "from": ".",
-    "to": "[ROOT]"
-  },
-  {
-    "from": "/cargo/build-dir",
-    "to": "[ROOT]/foo/target"
-  },
-  {
-    "from": "/rustc/[..]",
-    "to": "[..]/lib/rustlib/src/rust"
-  }
-]
+{
+  "remaps": [
+    {
+      "from": ".",
+      "to": "[ROOT]"
+    },
+    {
+      "from": "/cargo/build-dir",
+      "to": "[ROOT]/foo/target"
+    },
+    {
+      "from": "/rustc/[..]",
+      "to": "[..]/lib/rustlib/src/rust"
+    }
+  ],
+  "rust_version": "[..]",
+  "v": 1,
+  "workspace_root": "[ROOT]/foo"
+}
 "#]]
-        .is_json()
-        .against_jsonlines(),
+        .is_json(),
     );
 }
 
@@ -1633,30 +1612,27 @@ fn workspace_prefix_override_from_env() {
     assert_e2e().eq(
         &std::fs::read_to_string(&unremap_file).unwrap(),
         str![[r#"
-[
-  {
-    "v": 1
-  },
-  {
-    "rust_version": "[..]",
-    "workspace_root": "[ROOT]/foo"
-  },
-  {
-    "from": "/cargo/build-dir",
-    "to": "[ROOT]/foo/target"
-  },
-  {
-    "from": "/rustc-dev/1111111",
-    "to": "[ROOT]/foo"
-  },
-  {
-    "from": "/rustc/[..]",
-    "to": "[..]/lib/rustlib/src/rust"
-  }
-]
+{
+  "remaps": [
+    {
+      "from": "/cargo/build-dir",
+      "to": "[ROOT]/foo/target"
+    },
+    {
+      "from": "/rustc-dev/1111111",
+      "to": "[ROOT]/foo"
+    },
+    {
+      "from": "/rustc/[..]",
+      "to": "[..]/lib/rustlib/src/rust"
+    }
+  ],
+  "rust_version": "[..]",
+  "v": 1,
+  "workspace_root": "[ROOT]/foo"
+}
 "#]]
-        .is_json()
-        .against_jsonlines(),
+        .is_json(),
     );
 }
 
@@ -1741,7 +1717,7 @@ fn unremap_file_rebuild() {
     // The non-uplifted copy is the one that is not `unremap_file`,
     // as its file name layout varies across platforms.
     let deps_file = p
-        .glob("target/**/*.trim-paths.jsonl")
+        .glob("target/**/*.trim-paths.json")
         .map(|f| f.unwrap())
         .find(|f| *f != unremap_file)
         .unwrap();
@@ -1750,7 +1726,7 @@ fn unremap_file_rebuild() {
         .arg("-Ztrim-paths")
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
         .with_stderr_data(str![[r#"
-[DIRTY] foo v0.0.1 ([ROOT]/foo): couldn't read metadata for file `target/debug/[..]/foo[..].trim-paths.jsonl`
+[DIRTY] foo v0.0.1 ([ROOT]/foo): couldn't read metadata for file `target/debug/[..]/foo[..].trim-paths.json`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1814,7 +1790,7 @@ fn unremap_file_with_cargo_clean() {
         .run();
 
     assert!(unremap_file_path(&p.bin("foo")).exists());
-    assert_eq!(p.glob("target/**/*.trim-paths.jsonl").count(), 2);
+    assert_eq!(p.glob("target/**/*.trim-paths.json").count(), 2);
 
     p.cargo("clean -p foo")
         .arg("-Ztrim-paths")
@@ -1822,7 +1798,7 @@ fn unremap_file_with_cargo_clean() {
         .run();
 
     assert!(!unremap_file_path(&p.bin("foo")).exists());
-    assert_eq!(p.glob("target/**/*.trim-paths.jsonl").count(), 0);
+    assert_eq!(p.glob("target/**/*.trim-paths.json").count(), 0);
 }
 
 // MSVC always emits a PDB when debuginfo is on (which the unremap file requires),
@@ -1861,7 +1837,7 @@ fn unremap_file_in_json_messages() {
     "features": [],
     "filenames": [
       "[ROOT]/foo/target/debug/foo[EXE]",
-      "[ROOT]/foo/target/debug/foo[EXE].trim-paths.jsonl"
+      "[ROOT]/foo/target/debug/foo[EXE].trim-paths.json"
     ],
     "fresh": false,
     "manifest_path": "[ROOT]/foo/Cargo.toml",
@@ -1941,12 +1917,9 @@ fn unremap_file_for_all_bin_types() {
 
     // Unit test, integration test, and example binaries are all root units
     // and receive unremap files.
-    assert_eq!(p.glob("target/**/foo-*.trim-paths.jsonl").count(), 1);
-    assert_eq!(p.glob("target/**/it-*.trim-paths.jsonl").count(), 1);
-    assert_eq!(
-        p.glob("target/debug/examples/*.trim-paths.jsonl").count(),
-        1
-    );
+    assert_eq!(p.glob("target/**/foo-*.trim-paths.json").count(), 1);
+    assert_eq!(p.glob("target/**/it-*.trim-paths.json").count(), 1);
+    assert_eq!(p.glob("target/debug/examples/*.trim-paths.json").count(), 1);
 }
 
 #[cargo_test]
@@ -1976,9 +1949,9 @@ fn unremap_file_with_multiple_crate_types() {
         .run();
 
     // Unremap files for both original cdylib/staticlib and uplifted ones.
-    assert_eq!(p.glob("target/**/*.trim-paths.jsonl").count(), 4);
+    assert_eq!(p.glob("target/**/*.trim-paths.json").count(), 4);
     let uplifted: Vec<_> = p
-        .glob("target/debug/*.trim-paths.jsonl")
+        .glob("target/debug/*.trim-paths.json")
         .map(|f| f.unwrap())
         .collect();
     assert_eq!(uplifted.len(), 2);
@@ -2124,7 +2097,7 @@ fn unremap_file_works_in_lldb() {
 
 fn unremap_file_path(artifact: &std::path::Path) -> std::path::PathBuf {
     let mut path = artifact.as_os_str().to_owned();
-    path.push(".trim-paths.jsonl");
+    path.push(".trim-paths.json");
     path.into()
 }
 
@@ -2226,38 +2199,35 @@ fn unremap_debugger_project() -> cargo_test_support::Project {
     assert_e2e().eq(
         &std::fs::read_to_string(unremap_file_path(&p.bin("foo"))).unwrap(),
         str![[r#"
-[
-  {
-    "v": 1
-  },
-  {
-    "rust_version": "[..]",
-    "workspace_root": "[ROOT]/foo"
-  },
-  {
-    "from": ".",
-    "to": "[ROOT]/foo"
-  },
-  {
-    "from": "/cargo/build-dir",
-    "to": "[ROOT]/foo/target"
-  },
-  {
-    "from": "/cargo/deps/baz-0.0.1",
-    "to": "[ROOT]/baz"
-  },
-  {
-    "from": "/cargo/registry/[..]",
-    "to": "[ROOT]/home/.cargo/registry/src/-[HASH]"
-  },
-  {
-    "from": "/rustc/[..]",
-    "to": "[..]/lib/rustlib/src/rust"
-  }
-]
+{
+  "remaps": [
+    {
+      "from": ".",
+      "to": "[ROOT]/foo"
+    },
+    {
+      "from": "/cargo/build-dir",
+      "to": "[ROOT]/foo/target"
+    },
+    {
+      "from": "/cargo/deps/baz-0.0.1",
+      "to": "[ROOT]/baz"
+    },
+    {
+      "from": "/cargo/registry/[..]",
+      "to": "[ROOT]/home/.cargo/registry/src/-[HASH]"
+    },
+    {
+      "from": "/rustc/[..]",
+      "to": "[..]/lib/rustlib/src/rust"
+    }
+  ],
+  "rust_version": "[..]",
+  "v": 1,
+  "workspace_root": "[ROOT]/foo"
+}
 "#]]
-        .is_json()
-        .against_jsonlines(),
+        .is_json(),
     );
     p
 }
@@ -2269,17 +2239,12 @@ fn unremap_debugger_project() -> cargo_test_support::Project {
 ))]
 fn unremap_substitutions(artifact: &std::path::Path) -> Vec<(String, String)> {
     let content = std::fs::read_to_string(unremap_file_path(artifact)).unwrap();
-    let mut values = serde_json::Deserializer::from_str(&content).into_iter::<serde_json::Value>();
-
-    let version = values.next().unwrap().unwrap();
-    assert_eq!(version["v"], 1);
-
-    let _metadata = values.next().unwrap().unwrap();
+    let file: serde_json::Value = serde_json::from_str(&content).unwrap();
+    assert_eq!(file["v"], 1);
 
     let mut pairs = Vec::new();
 
-    for record in values {
-        let record = record.unwrap();
+    for record in file["remaps"].as_array().unwrap() {
         pairs.push((
             record["from"].as_str().unwrap().to_owned(),
             record["to"].as_str().unwrap().to_owned(),
