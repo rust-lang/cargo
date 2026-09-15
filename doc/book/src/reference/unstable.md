@@ -1603,17 +1603,18 @@ This integration is currently unstable and available only in nightly toolchains.
 To enable it,
 set `RUST_GDB_TRIM_PATHS=unstable` or `RUST_LLDB_TRIM_PATHS=unstable` respectively.
 
-The unremap file name ends with `.trim-paths.jsonl`.
+The unremap file name ends with `.trim-paths.json`.
 For example,
 your `my-app` executable would come with an unremap file named
-`my-app.trim-paths.jsonl` beside it.
+`my-app.trim-paths.json` beside it.
 
-The unremap file is in JSONL format:
+The unremap file is in JSON format:
 
-* The first record carries the format version.
-* The second record is file-level metadata,
-  such as the toolchain version and the workspace root.
-* Each following record maps a sanitized path prefix in the artifact
+* `v` carries the format version.
+* `rust_version` and `workspace_root` are file-level metadata,
+  namely the toolchain version and the workspace root.
+* `remaps` is an array of records.
+  Each record maps a sanitized path prefix in the artifact
   (`from`) back to the local path it replaced (`to`),
   ordered by the `from` prefix.
   Note that this follows the debugger substitution direction,
@@ -1622,18 +1623,23 @@ The unremap file is in JSONL format:
 An example of the unremap file:
 
 ```json
-{"v":1}
-{"rust_version":"1.96.0-nightly","workspace_root":"/home/me/app"}
-{"from":".","to":"/home/me/app"}
-{"from":"/cargo/build-dir","to":"/home/me/app/target"}
-{"from":"/cargo/registry/6f17d22d3f0a95d1","to":"/home/me/.cargo/registry/src/index.crates.io-6f17d22d3f0a95d1"}
-{"from":"/rustc/abc123","to":"/home/me/.rustup/toolchains/nightly/lib/rustlib/src/rust"}
+{
+  "v": 1,
+  "rust_version": "1.96.0-nightly",
+  "workspace_root": "/home/me/app",
+  "remaps": [
+    { "from": ".", "to": "/home/me/app" },
+    { "from": "/cargo/build-dir", "to": "/home/me/app/target" },
+    { "from": "/cargo/registry/6f17d22d3f0a95d1", "to": "/home/me/.cargo/registry/src/index.crates.io-6f17d22d3f0a95d1" },
+    { "from": "/rustc/abc123", "to": "/home/me/.rustup/toolchains/nightly/lib/rustlib/src/rust" }
+  ]
+}
 ```
 
 Since it is meant to be a debugging aid,
 it includes absolute paths of your system,
 so there is no artifact privacy guarantee.
-You might want to exclude `*.trim-paths.jsonl` files when distributing artifacts.
+You might want to exclude `*.trim-paths.json` files when distributing artifacts.
 
 ##### Limitations
 
