@@ -226,6 +226,9 @@ pub struct WarningCount {
     /// if any errors have been seen for the current
     /// target
     pub fixable: FixableWarnings,
+    /// if any errors have been seen for the current
+    /// target
+    pub supplanted_by_errors: bool,
 }
 
 impl WarningCount {
@@ -647,6 +650,8 @@ impl<'gctx> DrainState<'gctx> {
                     let count = self.warning_count.entry(id).or_default();
                     // If there is an error, the `cargo fix` message should not show
                     count.disallow_fixable();
+                    // If there is an error, the default summary should be shown
+                    count.supplanted_by_errors = true;
                 }
             }
             Message::Warning { id, warning } => {
@@ -693,8 +698,9 @@ impl<'gctx> DrainState<'gctx> {
                                 &build_runner.bcx.rustc().workspace_wrapper,
                                 denied_warnings,
                             );
-                            let stop_on_warnings =
-                                denied_warnings && !build_runner.bcx.build_config.keep_going;
+                            let stop_on_warnings = denied_warnings
+                                && !build_runner.bcx.build_config.keep_going
+                                && !count.supplanted_by_errors;
                             if stop_on_warnings {
                                 result = Err(anyhow::format_err!(
                                     "warnings are denied by `build.warnings` configuration"

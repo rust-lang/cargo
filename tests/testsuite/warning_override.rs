@@ -777,7 +777,7 @@ error[..]
 [WARNING] [..]
 ...
 [ERROR] `foo` (bin "foo") generated 1 warning
-[ERROR] warnings are denied by `build.warnings` configuration
+[ERROR] could not compile `foo` (bin "foo") due to 1 previous error; 1 warning emitted
 
 "#]])
         .with_status(101)
