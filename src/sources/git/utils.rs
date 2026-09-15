@@ -1357,12 +1357,14 @@ https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli"
         cmd.exec().map_err(|_error| {
             let spurious = git_version < min_version_max_retries;
             let pr_hint = note_github_pull_request(url).unwrap_or_default();
+            let ssh_config_hint = note_ssh_config(gctx).unwrap_or_default().unwrap_or_default();
+            let git_config_hint = note_git_config(gctx).unwrap_or_default().unwrap_or_default();
             let with_depth = if let gix::remote::fetch::Shallow::DepthAtRemote(depth) = shallow {
                 format!(" with depth={depth}")
             } else {
                 "".to_owned()
             };
-            GitCliError::new(anyhow::format_err!("`git fetch` failed for {url}{with_depth}{pr_hint}"))
+            GitCliError::new(anyhow::format_err!("`git fetch` failed for {url}{with_depth}{pr_hint}{ssh_config_hint}{git_config_hint}"))
                 .spurious(spurious)
                 .workaround(
                     "help: re-try with `net.git-fetch-with-cli = false` to see if it resolves the problem
@@ -1884,6 +1886,59 @@ pub(crate) fn note_github_pull_request(url: &str) -> Option<String> {
     }
 
     None
+}
+
+pub(crate) fn note_ssh_config(gctx: &GlobalContext) -> CargoResult<Option<&'static str>> {
+    let net_config = gctx.net_config()?;
+    if let Some(ssh_config) = net_config.ssh.as_ref()
+        && ssh_config.known_hosts.is_some()
+    {
+        Ok(Some(
+            "
+note: `cargo`s `net.ssh.known-hosts` is not applied to `git`, check your system SSH configuration to ensure it is set there",
+        ))
+    } else {
+        Ok(None)
+    }
+}
+
+pub(crate) fn note_git_config(gctx: &GlobalContext) -> CargoResult<Option<String>> {
+    let mut fields = Vec::new();
+
+    // As this is for errors, the focus is on things that impact functionality
+    let http_config = gctx.http_config()?;
+    if http_config.proxy.is_some() {
+        fields.push("http.proxy (git: http.proxy)");
+    }
+    if http_config.low_speed_limit.is_some() {
+        fields.push("http.low-speed-limit (git: http.lowSpeedLimit)");
+    }
+    if http_config.timeout.is_some() {
+        fields.push("http.timeout (git: http.lowSpeedTime)");
+    }
+    if http_config.cainfo.is_some() {
+        fields.push("http.cainfo (git: http.sslCAInfo)");
+    }
+    if http_config.proxy_cainfo.is_some() {
+        fields.push("http.proxy-cainfo (git: http.proxySSLCAInfo)");
+    }
+    if http_config.check_revoke.is_some() {
+        fields.push("http.check-revoke (git: http.schannelCheckRevoke)");
+    }
+    if http_config.multiplexing.is_some() {
+        fields.push("http.multiplexing (git: http.version)");
+    }
+    if http_config.ssl_version.is_some() {
+        fields.push("http.ssl-version (git: http.sslVersion)");
+    }
+
+    if !fields.is_empty() {
+        Ok(Some(format!("
+note: `cargo` does not apply the following config to `git`, check your git configuration to ensure they are set there
+    {}", fields.join("\n    "))))
+    } else {
+        Ok(None)
+    }
 }
 
 /// Whether a `rev` looks like a commit hash (ASCII hex digits).
