@@ -8,7 +8,7 @@ use cargo_util_terminal::report::Patch;
 use cargo_util_terminal::report::Snippet;
 use tracing::instrument;
 
-use super::STYLE;
+use super::PEDANTIC;
 use crate::CargoResult;
 use crate::GlobalContext;
 use crate::diagnostics::AsIndex;
@@ -24,7 +24,7 @@ use crate::workspace::Workspace;
 
 pub static LINT: &Lint = &Lint {
     name: "non_kebab_case_bins",
-    primary_group: &STYLE,
+    primary_group: &PEDANTIC,
     msrv: Some(super::CARGO_LINTS_MSRV),
     feature_gate: None,
     docs: Some(

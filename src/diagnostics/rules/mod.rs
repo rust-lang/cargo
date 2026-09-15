@@ -59,10 +59,6 @@ pub const PARSE_PASS_RULES: &[ParsePassRule<'static>] = &[
         lint: missing_lints_inheritance::LINT,
     },
     ParsePassRule::LintPackage {
-        rule: non_kebab_case_bins::lint_package,
-        lint: non_kebab_case_bins::LINT,
-    },
-    ParsePassRule::LintPackage {
         rule: redundant_homepage::lint_package,
         lint: redundant_homepage::LINT,
     },
@@ -78,6 +74,10 @@ pub const PARSE_PASS_RULES: &[ParsePassRule<'static>] = &[
     ParsePassRule::LintPackage {
         rule: manual_readme::lint_package,
         lint: manual_readme::LINT,
+    },
+    ParsePassRule::LintPackage {
+        rule: non_kebab_case_bins::lint_package,
+        lint: non_kebab_case_bins::LINT,
     },
     ParsePassRule::LintPackage {
         rule: non_kebab_case_features::lint_package,
