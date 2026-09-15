@@ -9,7 +9,7 @@ use cargo_util_terminal::report::Origin;
 use cargo_util_terminal::report::Snippet;
 use tracing::instrument;
 
-use super::STYLE;
+use super::PEDANTIC;
 use crate::CargoResult;
 use crate::GlobalContext;
 use crate::diagnostics::Lint;
@@ -26,7 +26,7 @@ use crate::workspace::parser::default_readme_from_package_root;
 
 pub static LINT: &Lint = &Lint {
     name: "manual_readme",
-    primary_group: &STYLE,
+    primary_group: &PEDANTIC,
     msrv: Some(super::CARGO_LINTS_MSRV),
     feature_gate: None,
     docs: Some(
