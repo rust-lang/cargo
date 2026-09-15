@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use cargo_test_support::{project, str};
+use cargo_test_support::project;
 
 #[cargo_test]
 fn feature_gate_accepted() {
@@ -19,15 +19,6 @@ fn feature_gate_accepted() {
         .build();
 
     p.cargo("check")
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  unknown Cargo.toml feature `builtin-dependencies`
-
-  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html for more information.
-
-"#]])
+        .masquerade_as_nightly_cargo(&["builtin-dependencies"])
         .run();
 }
