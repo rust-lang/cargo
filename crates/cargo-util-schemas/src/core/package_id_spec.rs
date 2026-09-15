@@ -113,14 +113,14 @@ impl PackageIdSpec {
                     let git_ref = GitReference::from_query(url.query_pairs());
                     url.set_query(None);
                     kind = Some(SourceKind::Git(git_ref));
-                    url = strip_url_protocol(&url);
+                    url = strip_url_protocol(&url)?;
                 }
                 "registry" => {
                     if url.query().is_some() {
                         return Err(ErrorKind::UnexpectedQueryString(url).into());
                     }
                     kind = Some(SourceKind::Registry);
-                    url = strip_url_protocol(&url);
+                    url = strip_url_protocol(&url)?;
                 }
                 "sparse" => {
                     if url.query().is_some() {
@@ -138,7 +138,7 @@ impl PackageIdSpec {
                         return Err(ErrorKind::UnsupportedPathPlusScheme(scheme.into()).into());
                     }
                     kind = Some(SourceKind::Path);
-                    url = strip_url_protocol(&url);
+                    url = strip_url_protocol(&url)?;
                 }
                 kind => return Err(ErrorKind::UnsupportedProtocol(kind.into()).into()),
             }
@@ -225,10 +225,23 @@ fn parse_spec(spec: &str) -> Result<Option<(String, Option<PartialVersion>)>> {
     Ok(Some((name, Some(ver))))
 }
 
-fn strip_url_protocol(url: &Url) -> Url {
+fn strip_url_protocol(url: &Url) -> Result<Url> {
     // Ridiculous hoop because `Url::set_scheme` errors when changing to http/https
     let raw = url.to_string();
-    raw.split_once('+').unwrap().1.parse().unwrap()
+    match raw.split_once('+') {
+        Some((_, rest)) => rest.parse().map_err(|err: url::ParseError| {
+            ErrorKind::InvalidUrl {
+                url: raw.clone(),
+                msg: err.to_string(),
+            }
+            .into()
+        }),
+        None => Err(ErrorKind::InvalidUrl {
+            url: raw,
+            msg: url::ParseError::RelativeUrlWithoutBase.to_string(),
+        }
+        .into()),
+    }
 }
 
 impl fmt::Display for PackageIdSpec {
@@ -328,6 +341,9 @@ enum ErrorKind {
 
     #[error("pkgid url cannot have an empty fragment")]
     EmptyFragment,
+
+    #[error("invalid pkgid url `{url}`: {msg}")]
+    InvalidUrl { url: String, msg: String },
 
     #[error(transparent)]
     NameValidation(#[from] crate::restricted_names::NameValidationError),
@@ -772,5 +788,14 @@ mod tests {
         err!("registry+https://github.com", ErrorKind::NameValidation(_));
         err!("https://crates.io/1foo#1.2.3", ErrorKind::NameValidation(_));
         err!("https://example.com/foo#", ErrorKind::EmptyFragment);
+    }
+
+    #[test]
+    fn malformed_plus_scheme_does_not_panic() {
+        // https://github.com/rust-lang/cargo/issues/17459: a crafted pkgid spec
+        // with a second `+` before the scheme separator used to panic with
+        // `RelativeUrlWithoutBase` in `strip_url_protocol`; it must be a
+        // regular parse error instead.
+        err!("git++://x:", ErrorKind::InvalidUrl { .. });
     }
 }
