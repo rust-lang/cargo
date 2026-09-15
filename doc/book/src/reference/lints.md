@@ -36,6 +36,8 @@ where you can toggle several warnings through one name.
 ## Allowed-by-default
 
 These lints are all set to the 'allow' level by default.
+- [`manual_readme`](#manual_readme)
+- [`non_kebab_case_bins`](#non_kebab_case_bins)
 - [`non_kebab_case_features`](#non_kebab_case_features)
 - [`non_kebab_case_packages`](#non_kebab_case_packages)
 - [`non_snake_case_features`](#non_snake_case_features)
@@ -45,9 +47,7 @@ These lints are all set to the 'allow' level by default.
 
 These lints are all set to the 'warn' level by default.
 - [`blanket_hint_mostly_unused`](#blanket_hint_mostly_unused)
-- [`manual_readme`](#manual_readme)
 - [`missing_lints_inheritance`](#missing_lints_inheritance)
-- [`non_kebab_case_bins`](#non_kebab_case_bins)
 - [`redundant_homepage`](#redundant_homepage)
 - [`unknown_lints`](#unknown_lints)
 - [`unused_dependencies`](#unused_dependencies)
@@ -94,8 +94,8 @@ hint-mostly-unused = true
 
 ## `manual_readme`
 
-- Group: `style`
-- Level: `warn`
+- Group: `pedantic`
+- Level: `allow`
 - Minimal [`package.rust-version`]: `1.79.0`
 
 
@@ -172,8 +172,8 @@ or make it explicit that you don't intend to inherit by adding an empty `[lints]
 
 ## `non_kebab_case_bins`
 
-- Group: `style`
-- Level: `warn`
+- Group: `pedantic`
+- Level: `allow`
 - Minimal [`package.rust-version`]: `1.79.0`
 
 
