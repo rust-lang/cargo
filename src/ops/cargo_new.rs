@@ -18,40 +18,6 @@ use std::str::FromStr;
 use std::{fmt, slice};
 use toml_edit::{Array, Value};
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum VersionControl {
-    Git,
-    Hg,
-    Pijul,
-    Fossil,
-    NoVcs,
-}
-
-impl FromStr for VersionControl {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, anyhow::Error> {
-        match s {
-            "git" => Ok(VersionControl::Git),
-            "hg" => Ok(VersionControl::Hg),
-            "pijul" => Ok(VersionControl::Pijul),
-            "fossil" => Ok(VersionControl::Fossil),
-            "none" => Ok(VersionControl::NoVcs),
-            other => anyhow::bail!("unknown vcs specification: `{}`", other),
-        }
-    }
-}
-
-impl<'de> de::Deserialize<'de> for VersionControl {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        let s = String::deserialize(deserializer)?;
-        FromStr::from_str(&s).map_err(de::Error::custom)
-    }
-}
-
 #[derive(Debug)]
 pub struct NewOptions {
     pub version_control: Option<VersionControl>,
@@ -144,6 +110,40 @@ struct CargoNewConfig {
 
     #[serde(rename = "vcs")]
     version_control: Option<VersionControl>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum VersionControl {
+    Git,
+    Hg,
+    Pijul,
+    Fossil,
+    NoVcs,
+}
+
+impl FromStr for VersionControl {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, anyhow::Error> {
+        match s {
+            "git" => Ok(VersionControl::Git),
+            "hg" => Ok(VersionControl::Hg),
+            "pijul" => Ok(VersionControl::Pijul),
+            "fossil" => Ok(VersionControl::Fossil),
+            "none" => Ok(VersionControl::NoVcs),
+            other => anyhow::bail!("unknown vcs specification: `{}`", other),
+        }
+    }
+}
+
+impl<'de> de::Deserialize<'de> for VersionControl {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        FromStr::from_str(&s).map_err(de::Error::custom)
+    }
 }
 
 fn get_name<'a>(path: &'a Path, opts: &'a NewOptions) -> CargoResult<&'a str> {
