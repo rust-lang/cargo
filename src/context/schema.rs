@@ -36,6 +36,29 @@ use super::path::ConfigRelativePath;
 pub struct CargoCacheConfig {
     /// How often to automatically clean unused cache data.
     pub auto_clean_frequency: Option<String>,
+    /// Settings for cleaning the global cache.
+    pub global_clean: Option<GlobalCleanConfig>,
+}
+
+/// Cache cleaning settings from the `cache.global-clean` config table.
+///
+/// NOTE: Not all of these options may get stabilized. Some of them are very
+/// low-level details, and may not be something typical users need.
+///
+/// If any of these options are `None`, the built-in default is used.
+#[derive(Debug, Default, Deserialize, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub struct GlobalCleanConfig {
+    /// Anything older than this duration will be deleted in the source cache.
+    pub max_src_age: Option<String>,
+    /// Anything older than this duration will be deleted in the compressed crate cache.
+    pub max_crate_age: Option<String>,
+    /// Any index older than this duration will be deleted from the index cache.
+    pub max_index_age: Option<String>,
+    /// Any git checkout older than this duration will be deleted from the checkout cache.
+    pub max_git_co_age: Option<String>,
+    /// Any git clone older than this duration will be deleted from the git cache.
+    pub max_git_db_age: Option<String>,
 }
 
 #[derive(Deserialize)]
