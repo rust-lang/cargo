@@ -132,6 +132,9 @@ pub use target::{TargetCfgConfig, TargetConfig};
 mod environment;
 use environment::Env;
 
+mod config;
+use config::ConfigValues;
+
 mod schema;
 pub use schema::*;
 
@@ -211,7 +214,7 @@ pub struct GlobalContext {
     /// Information about how to write messages to the shell
     shell: Mutex<Shell>,
     /// A collection of configuration options
-    values: OnceLock<HashMap<String, ConfigValue>>,
+    config: OnceLock<ConfigValues>,
     /// A collection of configuration options from the credentials file
     credential_values: OnceLock<HashMap<String, ConfigValue>>,
     /// CLI config values, passed in via `configure`.
@@ -373,7 +376,7 @@ impl GlobalContext {
             shell: Mutex::new(shell),
             cwd,
             search_stop_path: None,
-            values: Default::default(),
+            config: Default::default(),
             credential_values: Default::default(),
             cli_config: None,
             cargo_exe: Default::default(),
@@ -689,7 +692,13 @@ impl GlobalContext {
     /// for checking environment variables. Callers outside of the `config`
     /// module should avoid using this.
     pub fn values(&self) -> CargoResult<&HashMap<String, ConfigValue>> {
-        self.values.try_borrow_with(|| self.load_values())
+        self.config
+            .try_borrow_with(|| {
+                Ok(ConfigValues {
+                    values: self.load_values()?,
+                })
+            })
+            .map(|c| &c.values)
     }
 
     /// Gets a mutable copy of the on-disk config values.
@@ -700,15 +709,21 @@ impl GlobalContext {
     /// using this if possible.
     pub fn values_mut(&mut self) -> CargoResult<&mut HashMap<String, ConfigValue>> {
         let _ = self.values()?;
-        Ok(self.values.get_mut().expect("already loaded config values"))
+        Ok(&mut self
+            .config
+            .get_mut()
+            .expect("already loaded config values")
+            .values)
     }
 
     // Note: this is used by RLS, not Cargo.
     pub fn set_values(&self, values: HashMap<String, ConfigValue>) -> CargoResult<()> {
-        if self.values.get().is_some() {
+        if self.config.get().is_some() {
             bail!("config values already found")
         }
-        match self.values.set(values.into()) {
+        match self.config.set(ConfigValues {
+            values: values.into(),
+        }) {
             Ok(()) => Ok(()),
             Err(_) => bail!("could not fill values"),
         }
@@ -745,7 +760,7 @@ impl GlobalContext {
     /// walking up its ancestors.
     pub fn reload_rooted_at<P: AsRef<Path>>(&mut self, path: P) -> CargoResult<()> {
         let values = self.load_values_from(path.as_ref())?;
-        self.values.replace(values);
+        self.config.replace(ConfigValues { values: values });
         self.merge_cli_args()?;
         self.load_unstable_flags_from_config()?;
         Ok(())
