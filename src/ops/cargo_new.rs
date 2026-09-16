@@ -121,6 +121,20 @@ pub enum VersionControl {
     NoVcs,
 }
 
+impl VersionControl {
+    pub const VALUES: &[Self] = &[Self::Git, Self::Hg, Self::Pijul, Self::Fossil, Self::NoVcs];
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            VersionControl::Git => "git",
+            VersionControl::Hg => "hg",
+            VersionControl::Pijul => "pijul",
+            VersionControl::Fossil => "fossil",
+            VersionControl::NoVcs => "none",
+        }
+    }
+}
+
 impl FromStr for VersionControl {
     type Err = anyhow::Error;
 

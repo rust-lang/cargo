@@ -22,6 +22,7 @@ use cargo_util_schemas::manifest::ProfileName;
 use cargo_util_schemas::manifest::RegistryName;
 use cargo_util_schemas::manifest::StringOrVec;
 use cargo_util_terminal as shell;
+use clap::builder::PossibleValuesParser;
 use clap::builder::UnknownArgumentValueParser;
 use clap_complete::ArgValueCandidates;
 use home::cargo_home_with_cwd;
@@ -425,7 +426,9 @@ pub trait CommandExt: Sized {
                  a global configuration.",
             )
             .value_name("VCS")
-            .value_parser(["git", "hg", "pijul", "fossil", "none"]),
+            .value_parser(PossibleValuesParser::new(
+                VersionControl::VALUES.iter().map(|v| v.as_str()),
+            )),
         )
         ._arg(flag("bin", "Use a binary (application) template [default]"))
         ._arg(flag("lib", "Use a library template"))
