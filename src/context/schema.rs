@@ -31,6 +31,13 @@ use super::StringList;
 use super::Value;
 use super::path::ConfigRelativePath;
 
+#[derive(Debug, Default, Deserialize, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub struct CargoCacheConfig {
+    /// How often to automatically clean unused cache data.
+    pub auto_clean_frequency: Option<String>,
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct CargoNewConfig {

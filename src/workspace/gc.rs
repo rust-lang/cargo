@@ -19,6 +19,7 @@
 //! module documentation for an in-depth explanation of how global cache
 //! tracking works.
 
+use crate::context::CargoCacheConfig;
 use crate::ops::CleanContext;
 use crate::util::cache_lock::{CacheLock, CacheLockMode};
 use crate::util::time_span::maybe_parse_time_span;
@@ -280,7 +281,8 @@ impl<'a, 'gctx> Gc<'a, 'gctx> {
     fn auto(&mut self, clean_ctx: &mut CleanContext<'gctx>) -> CargoResult<()> {
         let freq = self
             .gctx
-            .get::<Option<String>>("cache.auto-clean-frequency")?;
+            .get::<CargoCacheConfig>("cache")?
+            .auto_clean_frequency;
         let Some(freq) = parse_frequency(freq.as_deref().unwrap_or(DEFAULT_AUTO_FREQUENCY))? else {
             tracing::trace!(target: "gc", "auto gc disabled");
             return Ok(());
