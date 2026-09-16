@@ -12,7 +12,51 @@ use std::fmt;
 use std::hash;
 use url::Url;
 
+/// A map of registry names to URLs where documentations are hosted.
+/// This is for unstable feature [`-Zrustdoc-map`][1].
+///
+/// [1]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#rustdoc-map
+#[derive(serde::Deserialize, Debug)]
+#[serde(default)]
+pub struct RustdocExternMap {
+    #[serde(deserialize_with = "default_crates_io_to_docs_rs")]
+    /// * Key is the registry name in the configuration `[registries.<name>]`.
+    /// * Value is the URL where the documentation is hosted.
+    registries: HashMap<String, String>,
+    std: Option<RustdocExternMode>,
+}
+
+impl Default for RustdocExternMap {
+    fn default() -> Self {
+        Self {
+            registries: HashMap::from_iter([(CRATES_IO_REGISTRY.into(), DOCS_RS_URL.into())]),
+            std: None,
+        }
+    }
+}
+
 const DOCS_RS_URL: &'static str = "https://docs.rs/";
+
+fn default_crates_io_to_docs_rs<'de, D: serde::Deserializer<'de>>(
+    de: D,
+) -> Result<HashMap<String, String>, D::Error> {
+    use serde::Deserialize;
+    let mut registries = HashMap::deserialize(de)?;
+    if !registries.contains_key(CRATES_IO_REGISTRY) {
+        registries.insert(CRATES_IO_REGISTRY.into(), DOCS_RS_URL.into());
+    }
+    Ok(registries)
+}
+
+impl hash::Hash for RustdocExternMap {
+    fn hash<H: hash::Hasher>(&self, into: &mut H) {
+        self.std.hash(into);
+        for (key, value) in &self.registries {
+            key.hash(into);
+            value.hash(into);
+        }
+    }
+}
 
 /// Mode used for `std`. This is for unstable feature [`-Zrustdoc-map`][1].
 ///
@@ -54,50 +98,6 @@ impl<'de> serde::de::Deserialize<'de> for RustdocExternMode {
     {
         let s = String::deserialize(deserializer)?;
         Ok(s.into())
-    }
-}
-
-/// A map of registry names to URLs where documentations are hosted.
-/// This is for unstable feature [`-Zrustdoc-map`][1].
-///
-/// [1]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#rustdoc-map
-#[derive(serde::Deserialize, Debug)]
-#[serde(default)]
-pub struct RustdocExternMap {
-    #[serde(deserialize_with = "default_crates_io_to_docs_rs")]
-    /// * Key is the registry name in the configuration `[registries.<name>]`.
-    /// * Value is the URL where the documentation is hosted.
-    registries: HashMap<String, String>,
-    std: Option<RustdocExternMode>,
-}
-
-impl Default for RustdocExternMap {
-    fn default() -> Self {
-        Self {
-            registries: HashMap::from_iter([(CRATES_IO_REGISTRY.into(), DOCS_RS_URL.into())]),
-            std: None,
-        }
-    }
-}
-
-fn default_crates_io_to_docs_rs<'de, D: serde::Deserializer<'de>>(
-    de: D,
-) -> Result<HashMap<String, String>, D::Error> {
-    use serde::Deserialize;
-    let mut registries = HashMap::deserialize(de)?;
-    if !registries.contains_key(CRATES_IO_REGISTRY) {
-        registries.insert(CRATES_IO_REGISTRY.into(), DOCS_RS_URL.into());
-    }
-    Ok(registries)
-}
-
-impl hash::Hash for RustdocExternMap {
-    fn hash<H: hash::Hasher>(&self, into: &mut H) {
-        self.std.hash(into);
-        for (key, value) in &self.registries {
-            key.hash(into);
-            value.hash(into);
-        }
     }
 }
 
