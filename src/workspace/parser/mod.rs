@@ -2445,8 +2445,15 @@ fn to_dependency_source_id<P: ResolveToPath + Clone>(
                 `builtin = true` cannot be combined with any other dependency source"
             )
         }
+        if orig.version.is_some() {
+            bail!(
+                "builtin dependency `{name_in_toml}` cannot be combined with a version requirement\n\
+                 Builtin dependencies are unversioned."
+            )
+        }
         todo!("SourceKind::Builtin");
     }
+
     match (
         orig.git.as_ref(),
         orig.path.as_ref(),
