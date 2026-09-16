@@ -742,3 +742,44 @@ fn cap_lints_allow() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn warnings_and_errors() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2021"
+            "#
+            ),
+        )
+        .file(
+            "src/main.rs",
+            r#"use std::io;
+
+fn main() {
+    let _a = UnknownType;
+}"#,
+        )
+        .build();
+
+    p.cargo("check")
+        .arg("--config")
+        .arg("build.warnings='deny'")
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+error[..]
+...
+[WARNING] [..]
+...
+[ERROR] `foo` (bin "foo") generated 1 warning
+[ERROR] could not compile `foo` (bin "foo") due to 1 previous error; 1 warning emitted
+
+"#]])
+        .with_status(101)
+        .run();
+}
