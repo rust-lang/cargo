@@ -879,7 +879,6 @@ unstable_cli_options!(
     // Please keep this list lexicographically ordered.
     advanced_env: bool,
     any_build_script_metadata: bool = ("Allow any build script to specify env vars via cargo::metadata=key=value"),
-    asymmetric_token: bool = ("Allows authenticating with asymmetric tokens"),
     avoid_dev_deps: bool = ("Avoid installing dev-dependencies if possible"),
     binary_dep_depinfo: bool = ("Track changes to dependency artifacts"),
     bindeps: bool = ("Allow Cargo packages to depend on bin, cdylib, and staticlib crates, and use the artifacts built by those crates"),
@@ -1411,7 +1410,6 @@ impl CliUnstable {
             // Sorted alphabetically:
             "advanced-env" => self.advanced_env = parse_empty(k, v)?,
             "any-build-script-metadata" => self.any_build_script_metadata = parse_empty(k, v)?,
-            "asymmetric-token" => self.asymmetric_token = parse_empty(k, v)?,
             "avoid-dev-deps" => self.avoid_dev_deps = parse_empty(k, v)?,
             "binary-dep-depinfo" => self.binary_dep_depinfo = parse_empty(k, v)?,
             "bindeps" => self.bindeps = parse_empty(k, v)?,

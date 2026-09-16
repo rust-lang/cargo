@@ -105,26 +105,3 @@ fn default_registry_configured() {
 "#]])
         .run();
 }
-
-#[cargo_test]
-fn logout_asymmetric() {
-    let _registry = registry::RegistryBuilder::new()
-        .token(cargo_test_support::registry::Token::rfc_key())
-        .build();
-
-    cargo_process("logout --registry crates-io -Zasymmetric-token")
-        .masquerade_as_nightly_cargo(&["asymmetric-token"])
-        .with_stderr_data(str![[r#"
-[LOGOUT] secret-key for `crates-io` has been removed from local storage
-
-"#]])
-        .run();
-
-    cargo_process("logout --registry crates-io -Zasymmetric-token")
-        .masquerade_as_nightly_cargo(&["asymmetric-token"])
-        .with_stderr_data(str![[r#"
-[LOGOUT] not currently logged in to `crates-io`
-
-"#]])
-        .run();
-}

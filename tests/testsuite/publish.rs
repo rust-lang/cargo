@@ -238,7 +238,7 @@ fn duplicate_version() {
 fn simple_publish_with_http() {
     let _reg = registry::RegistryBuilder::new()
         .http_api()
-        .token(registry::Token::Plaintext("sekrit".to_string()))
+        .token("sekrit".to_string())
         .build();
 
     let p = project()
@@ -260,48 +260,6 @@ fn simple_publish_with_http() {
     p.cargo("publish --no-verify --token sekrit --registry dummy-registry")
         .with_stderr_data(str![[r#"
 [WARNING] `cargo publish --token` is deprecated in favor of using `cargo login` and environment variables
-[UPDATING] `dummy-registry` index
-[PACKAGING] foo v0.0.1 ([ROOT]/foo)
-[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
-[UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[UPLOADED] foo v0.0.1 to registry `dummy-registry`
-[NOTE] waiting for foo v0.0.1 to be available at registry `dummy-registry`
-[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
-[PUBLISHED] foo v0.0.1 at registry `dummy-registry`
-
-"#]])
-        .run();
-}
-
-#[cargo_test]
-fn simple_publish_with_asymmetric() {
-    let _reg = registry::RegistryBuilder::new()
-        .http_api()
-        .http_index()
-        .alternative_named("dummy-registry")
-        .token(registry::Token::rfc_key())
-        .build();
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-                edition = "2015"
-                authors = []
-                license = "MIT"
-                description = "foo"
-            "#,
-        )
-        .file("src/main.rs", "fn main() {}")
-        .build();
-
-    p.cargo("publish --no-verify --registry dummy-registry")
-        .arg("-Zasymmetric-token")
-        .masquerade_as_nightly_cargo(&["asymmetric-token"])
-        .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)

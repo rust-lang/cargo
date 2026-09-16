@@ -9,9 +9,6 @@ extend-exclude = [
 extend-ignore-re = [
   # Handles ssh keys
   "AAAA[0-9A-Za-z+/]+[=]{0,3}",
-
-  # Handles paseto from login tests
-  "k3[.](secret|public)[.][a-zA-Z0-9_-]+",
 ]
 extend-ignore-identifiers-re = [
   # Handles git short SHA-1 hashes

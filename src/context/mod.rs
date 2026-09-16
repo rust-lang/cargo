@@ -1583,26 +1583,6 @@ impl GlobalContext {
                     );
                 }
 
-                if doc
-                    .get("registry")
-                    .and_then(|v| v.as_table())
-                    .and_then(|t| t.get("secret-key"))
-                    .is_some()
-                {
-                    bail!(
-                        "registry.secret-key cannot be set through --config for security reasons"
-                    );
-                } else if let Some((k, _)) = doc
-                    .get("registries")
-                    .and_then(|v| v.as_table())
-                    .and_then(|t| t.iter().find(|(_, v)| v.get("secret-key").is_some()))
-                {
-                    bail!(
-                        "registries.{}.secret-key cannot be set through --config for security reasons",
-                        k
-                    );
-                }
-
                 CV::from_toml(Definition::Cli(None), doc)
                     .with_context(|| format!("failed to convert --config argument `{arg}`"))?
             };
@@ -2255,26 +2235,6 @@ pub fn save_credentials(
                     ("registry".into(), table)
                 }
             }
-            RegistryCredentialConfig::AsymmetricKey((secret_key, key_subject)) => {
-                // login with key
-
-                let key = "secret-key".to_string();
-                let value = ConfigValue::String(secret_key.expose(), path_def.clone());
-                let mut map = HashMap::from_iter([(key, value)]);
-                if let Some(key_subject) = key_subject {
-                    let key = "secret-key-subject".to_string();
-                    let value = ConfigValue::String(key_subject, path_def.clone());
-                    map.insert(key, value);
-                }
-                let table = CV::Table(map, path_def.clone());
-
-                if let Some(registry) = registry {
-                    let map = HashMap::from_iter([(registry.to_string(), table)]);
-                    ("registries".into(), CV::Table(map, path_def.clone()))
-                } else {
-                    ("registry".into(), table)
-                }
-            }
             _ => unreachable!(),
         };
 
@@ -2294,8 +2254,6 @@ pub fn save_credentials(
                         format_err!("expected `[registries.{}]` to be a table", registry)
                     })?;
                     rtable.remove("token");
-                    rtable.remove("secret-key");
-                    rtable.remove("secret-key-subject");
                 }
             }
         } else if let Some(registry) = toml.get_mut("registry") {
@@ -2303,8 +2261,6 @@ pub fn save_credentials(
                 .as_table_mut()
                 .ok_or_else(|| format_err!("expected `[registry]` to be a table"))?;
             reg_table.remove("token");
-            reg_table.remove("secret-key");
-            reg_table.remove("secret-key-subject");
         }
     }
 

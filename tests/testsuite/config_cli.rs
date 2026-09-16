@@ -429,20 +429,6 @@ fn no_disallowed_values() {
         gctx.unwrap_err(),
         str!["registries.crates-io.token cannot be set through --config for security reasons"],
     );
-    let gctx = GlobalContextBuilder::new()
-        .config_arg("registry.secret-key=\"hello\"")
-        .build_err();
-    assert_error(
-        gctx.unwrap_err(),
-        str!["registry.secret-key cannot be set through --config for security reasons"],
-    );
-    let gctx = GlobalContextBuilder::new()
-        .config_arg("registries.crates-io.secret-key=\"hello\"")
-        .build_err();
-    assert_error(
-        gctx.unwrap_err(),
-        str!["registries.crates-io.secret-key cannot be set through --config for security reasons"],
-    );
 }
 
 #[cargo_test]
