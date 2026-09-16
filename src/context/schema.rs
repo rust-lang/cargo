@@ -94,6 +94,28 @@ impl<'de> de::Deserialize<'de> for VersionControl {
     }
 }
 
+/// Definition of a source in a config file.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct SourceConfigDef {
+    /// Indicates this source should be replaced with another of the given name.
+    pub replace_with: OptValue<String>,
+    /// A directory source.
+    pub directory: Option<ConfigRelativePath>,
+    /// A registry source. Value is a URL.
+    pub registry: OptValue<String>,
+    /// A local registry source.
+    pub local_registry: Option<ConfigRelativePath>,
+    /// A git source. Value is a URL.
+    pub git: OptValue<String>,
+    /// The git branch.
+    pub branch: OptValue<String>,
+    /// The git tag.
+    pub tag: OptValue<String>,
+    /// The git revision.
+    pub rev: OptValue<String>,
+}
+
 /// The `[http]` table.
 ///
 /// Example configuration:
