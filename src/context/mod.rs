@@ -133,7 +133,7 @@ mod environment;
 use environment::Env;
 
 mod config;
-use config::ConfigValues;
+pub use config::ConfigValues;
 
 mod schema;
 pub use schema::*;
@@ -691,10 +691,9 @@ impl GlobalContext {
     /// This will lazy-load the values as necessary. Callers are responsible
     /// for checking environment variables. Callers outside of the `config`
     /// module should avoid using this.
-    pub fn values(&self) -> CargoResult<&HashMap<String, ConfigValue>> {
+    pub fn config(&self) -> CargoResult<&ConfigValues> {
         self.config
             .try_borrow_with(|| Ok(ConfigValues::with_values(self.load_values()?)))
-            .map(|c| c.values())
     }
 
     /// Gets a mutable copy of the on-disk config values.
@@ -704,7 +703,7 @@ impl GlobalContext {
     /// entries. This doesn't respect environment variables. You should avoid
     /// using this if possible.
     pub fn values_mut(&mut self) -> CargoResult<&mut HashMap<String, ConfigValue>> {
-        let _ = self.values()?;
+        let _ = self.config()?;
         Ok(self
             .config
             .get_mut()
@@ -894,7 +893,7 @@ impl GlobalContext {
     /// This does NOT look at environment variables. See `get_cv_with_env` for
     /// a variant that supports environment variables.
     fn get_cv(&self, key: &ConfigKey) -> CargoResult<Option<ConfigValue>> {
-        self.get_cv_helper(key, &*self.values()?)
+        self.get_cv_helper(key, self.config()?.values())
     }
 
     fn get_cv_helper(
@@ -2290,7 +2289,7 @@ fn registry_name(gctx: &GlobalContext, sid: &SourceId) -> CargoResult<Option<Str
 
         // Discover names from the configuration only if none were found in the environment.
         if names.len() == 0 {
-            if let Some(registries) = gctx.values()?.get("registries") {
+            if let Some(registries) = gctx.config()?.values().get("registries") {
                 let (registries, _) = registries.table("registries")?;
                 for (name, value) in registries {
                     if let Some(v) = value.table(&format!("registries.{name}"))?.0.get("index") {
