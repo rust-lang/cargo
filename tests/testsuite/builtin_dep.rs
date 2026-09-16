@@ -325,10 +325,10 @@ fn builtin_dependency_combined_with_sources() {
             .masquerade_as_nightly_cargo(&["builtin-dependencies"])
             .with_status(101)
             .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
-thread [..] panicked at [..]
-not yet implemented: SourceKind::Builtin
-[NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+Caused by:
+  dependency (core) specification is ambiguous. `builtin = true` cannot be combined with any other dependency source
 
 "#]])
             .run();

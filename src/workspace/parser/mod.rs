@@ -2435,6 +2435,16 @@ fn to_dependency_source_id<P: ResolveToPath + Clone>(
     manifest_ctx: &mut ManifestContext<'_, '_>,
 ) -> CargoResult<SourceId> {
     if orig.builtin {
+        if orig.git.is_some()
+            || orig.path.is_some()
+            || orig.registry.is_some()
+            || orig.registry_index.is_some()
+        {
+            bail!(
+                "dependency ({name_in_toml}) specification is ambiguous. \
+                `builtin = true` cannot be combined with any other dependency source"
+            )
+        }
         todo!("SourceKind::Builtin");
     }
     match (
