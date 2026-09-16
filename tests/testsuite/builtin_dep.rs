@@ -24,11 +24,11 @@ fn builtin_dep_accepted() {
     p.cargo("check")
         .masquerade_as_nightly_cargo(&["builtin-dependencies"])
         .with_status(101)
-                .with_stderr_data(str![[r#"
-[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+        .with_stderr_data(str![[r#"
 
-Caused by:
-  dependency (core) specified without providing a local path, Git repository, version, or workspace dependency to use
+thread [..] panicked at [..]
+not yet implemented: SourceKind::Builtin
+[NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 "#]])
         .run();

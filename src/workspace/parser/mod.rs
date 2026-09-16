@@ -2255,7 +2255,7 @@ fn dep_to_dependency<P: ResolveToPath + Clone>(
         manifest::TomlDependency::Detailed(details) => details,
     };
 
-    if orig.version.is_none() && orig.path.is_none() && orig.git.is_none() {
+    if orig.version.is_none() && orig.path.is_none() && orig.git.is_none() && !orig.builtin {
         anyhow::bail!(
             "dependency ({name_in_toml}) specified without \
                  providing a local path, Git repository, version, or \
@@ -2402,6 +2402,9 @@ fn to_dependency_source_id<P: ResolveToPath + Clone>(
     name_in_toml: &str,
     manifest_ctx: &mut ManifestContext<'_, '_>,
 ) -> CargoResult<SourceId> {
+    if orig.builtin {
+        todo!("SourceKind::Builtin");
+    }
     match (
         orig.git.as_ref(),
         orig.path.as_ref(),
