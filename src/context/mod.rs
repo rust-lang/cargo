@@ -653,9 +653,9 @@ impl GlobalContext {
         } else {
             return Ok(None);
         };
-        let has_credentials = self.get_cv_helper(&key, &credentials.values)?.is_some();
+        let has_credentials = self.get_cv_helper(&key, credentials.values())?.is_some();
         key.push("token");
-        let credentials_token = match self.get_cv_helper(&key, &credentials.values)? {
+        let credentials_token = match self.get_cv_helper(&key, credentials.values())? {
             Some(CV::String(val, definition)) => Some(Value {
                 val: Secret::from(val),
                 definition,
@@ -693,12 +693,8 @@ impl GlobalContext {
     /// module should avoid using this.
     pub fn values(&self) -> CargoResult<&HashMap<String, ConfigValue>> {
         self.config
-            .try_borrow_with(|| {
-                Ok(ConfigValues {
-                    values: self.load_values()?,
-                })
-            })
-            .map(|c| &c.values)
+            .try_borrow_with(|| Ok(ConfigValues::with_values(self.load_values()?)))
+            .map(|c| c.values())
     }
 
     /// Gets a mutable copy of the on-disk config values.
@@ -709,11 +705,11 @@ impl GlobalContext {
     /// using this if possible.
     pub fn values_mut(&mut self) -> CargoResult<&mut HashMap<String, ConfigValue>> {
         let _ = self.values()?;
-        Ok(&mut self
+        Ok(self
             .config
             .get_mut()
             .expect("already loaded config values")
-            .values)
+            .values_mut())
     }
 
     // Note: this is used by RLS, not Cargo.
@@ -721,9 +717,7 @@ impl GlobalContext {
         if self.config.get().is_some() {
             bail!("config values already found")
         }
-        match self.config.set(ConfigValues {
-            values: values.into(),
-        }) {
+        match self.config.set(ConfigValues::with_values(values.into())) {
             Ok(()) => Ok(()),
             Err(_) => bail!("could not fill values"),
         }
@@ -760,7 +754,7 @@ impl GlobalContext {
     /// walking up its ancestors.
     pub fn reload_rooted_at<P: AsRef<Path>>(&mut self, path: P) -> CargoResult<()> {
         let values = self.load_values_from(path.as_ref())?;
-        self.config.replace(ConfigValues { values: values });
+        self.config.replace(ConfigValues::with_values(values));
         self.merge_cli_args()?;
         self.load_unstable_flags_from_config()?;
         Ok(())
@@ -1847,7 +1841,7 @@ impl GlobalContext {
         let CV::Table(map, _) = value else {
             unreachable!("credentials root was checked to be a table");
         };
-        Ok(ConfigValues { values: map })
+        Ok(ConfigValues::with_values(map))
     }
 
     /// Looks for a path for `tool` in an environment variable or the given config, and returns
