@@ -949,6 +949,11 @@ fn normalize_dependencies<'a>(
                     }
                 }
             }
+            if d.builtin {
+                features
+                    .require(Feature::builtin_dependencies())
+                    .with_context(|| format!("resolving builtin dependency {name_in_toml}"))?;
+            }
             normalize_path_dependency(gctx, d, workspace_root, features)
                 .with_context(|| format!("resolving path dependency {name_in_toml}"))?;
         }

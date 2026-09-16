@@ -54,10 +54,17 @@ fn builtin_feature_gate() {
     p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
-thread [..] panicked at [..]
-not yet implemented: SourceKind::Builtin
-[NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+Caused by:
+  resolving builtin dependency core
+
+Caused by:
+  feature `builtin-dependencies` is required
+
+  The package requires the Cargo feature called `builtin-dependencies`, but that feature is not stabilized in this version of Cargo ([..]).
+  Consider trying a newer version of Cargo (this may require the nightly release).
+  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#builtin-dependencies for more information about the status of this feature.
 
 "#]])
         .run();
