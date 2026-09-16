@@ -1,7 +1,8 @@
 use crate::CargoResult;
 use crate::compiler::{BuildConfig, CompileKind, MessageFormat, RustcTargetData};
+use crate::context::VersionControl;
 use crate::ops::registry::RegistryOrIndex;
-use crate::ops::{self, CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
+use crate::ops::{self, CompileFilter, CompileOptions, NewOptions, Packages};
 use crate::resolver::{CliFeatures, ForceAllTargets, HasDevUnits};
 use crate::util::data_structures::IndexSet;
 use crate::util::data_structures::{HashMap, HashSet};

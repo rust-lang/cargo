@@ -13,10 +13,12 @@
 use crate::util::data_structures::HashMap;
 use std::borrow::Cow;
 use std::ffi::OsStr;
+use std::str::FromStr;
 
 use cargo_credential::Secret;
 use serde::Deserialize;
 use serde::Serialize;
+use serde::de;
 use serde_untagged::UntaggedEnumVisitor;
 
 use std::path::Path;
@@ -28,6 +30,69 @@ use super::PathAndArgs;
 use super::StringList;
 use super::Value;
 use super::path::ConfigRelativePath;
+
+#[derive(Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct CargoNewConfig {
+    #[deprecated = "cargo-new no longer supports adding the authors field"]
+    #[expect(dead_code, reason = "deprecated")]
+    name: Option<String>,
+
+    #[deprecated = "cargo-new no longer supports adding the authors field"]
+    #[expect(dead_code, reason = "deprecated")]
+    email: Option<String>,
+
+    #[serde(rename = "vcs")]
+    pub version_control: Option<VersionControl>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum VersionControl {
+    Git,
+    Hg,
+    Pijul,
+    Fossil,
+    NoVcs,
+}
+
+impl VersionControl {
+    pub const VALUES: &[Self] = &[Self::Git, Self::Hg, Self::Pijul, Self::Fossil, Self::NoVcs];
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            VersionControl::Git => "git",
+            VersionControl::Hg => "hg",
+            VersionControl::Pijul => "pijul",
+            VersionControl::Fossil => "fossil",
+            VersionControl::NoVcs => "none",
+        }
+    }
+}
+
+impl FromStr for VersionControl {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, anyhow::Error> {
+        match s {
+            "git" => Ok(VersionControl::Git),
+            "hg" => Ok(VersionControl::Hg),
+            "pijul" => Ok(VersionControl::Pijul),
+            "fossil" => Ok(VersionControl::Fossil),
+            "none" => Ok(VersionControl::NoVcs),
+            other => anyhow::bail!("unknown vcs specification: `{}`", other),
+        }
+    }
+}
+
+impl<'de> de::Deserialize<'de> for VersionControl {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        FromStr::from_str(&s).map_err(de::Error::custom)
+    }
+}
 
 /// The `[http]` table.
 ///
