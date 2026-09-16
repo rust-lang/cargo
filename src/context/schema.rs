@@ -10,10 +10,12 @@
 //! Schema types here should only contain data and simple accessor methods.
 //! Avoid depending on [`GlobalContext`](super::GlobalContext) directly.
 
+use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::data_structures::HashMap;
 use std::borrow::Cow;
 use std::ffi::OsStr;
 use std::str::FromStr;
+use std::{fmt, hash};
 
 use cargo_credential::Secret;
 use serde::Deserialize;
@@ -144,6 +146,94 @@ pub struct SourceConfigDef {
     pub tag: OptValue<String>,
     /// The git revision.
     pub rev: OptValue<String>,
+}
+
+/// A map of registry names to URLs where documentations are hosted.
+/// This is for unstable feature [`-Zrustdoc-map`][1].
+///
+/// [1]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#rustdoc-map
+#[derive(serde::Deserialize, Debug)]
+#[serde(default)]
+pub struct RustdocExternMap {
+    #[serde(deserialize_with = "default_crates_io_to_docs_rs")]
+    /// * Key is the registry name in the configuration `[registries.<name>]`.
+    /// * Value is the URL where the documentation is hosted.
+    pub registries: HashMap<String, String>,
+    pub std: Option<RustdocExternMode>,
+}
+
+impl Default for RustdocExternMap {
+    fn default() -> Self {
+        Self {
+            registries: HashMap::from_iter([(CRATES_IO_REGISTRY.into(), DOCS_RS_URL.into())]),
+            std: None,
+        }
+    }
+}
+
+const DOCS_RS_URL: &'static str = "https://docs.rs/";
+
+fn default_crates_io_to_docs_rs<'de, D: serde::Deserializer<'de>>(
+    de: D,
+) -> Result<HashMap<String, String>, D::Error> {
+    let mut registries = HashMap::deserialize(de)?;
+    if !registries.contains_key(CRATES_IO_REGISTRY) {
+        registries.insert(CRATES_IO_REGISTRY.into(), DOCS_RS_URL.into());
+    }
+    Ok(registries)
+}
+
+impl hash::Hash for RustdocExternMap {
+    fn hash<H: hash::Hasher>(&self, into: &mut H) {
+        self.std.hash(into);
+        for (key, value) in &self.registries {
+            key.hash(into);
+            value.hash(into);
+        }
+    }
+}
+
+/// Mode used for `std`. This is for unstable feature [`-Zrustdoc-map`][1].
+///
+/// [1]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#rustdoc-map
+#[derive(Debug, Hash)]
+pub enum RustdocExternMode {
+    /// Use a local `file://` URL.
+    Local,
+    /// Use a remote URL to <https://doc.rust-lang.org/> (default).
+    Remote,
+    /// An arbitrary URL.
+    Url(String),
+}
+
+impl From<String> for RustdocExternMode {
+    fn from(s: String) -> RustdocExternMode {
+        match s.as_ref() {
+            "local" => RustdocExternMode::Local,
+            "remote" => RustdocExternMode::Remote,
+            _ => RustdocExternMode::Url(s),
+        }
+    }
+}
+
+impl fmt::Display for RustdocExternMode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            RustdocExternMode::Local => "local".fmt(f),
+            RustdocExternMode::Remote => "remote".fmt(f),
+            RustdocExternMode::Url(s) => s.fmt(f),
+        }
+    }
+}
+
+impl<'de> serde::de::Deserialize<'de> for RustdocExternMode {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::de::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Ok(s.into())
+    }
 }
 
 /// The `[http]` table.
