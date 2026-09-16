@@ -702,13 +702,9 @@ impl GlobalContext {
     /// currently only exists for `cargo vendor` to remove the `source`
     /// entries. This doesn't respect environment variables. You should avoid
     /// using this if possible.
-    pub fn values_mut(&mut self) -> CargoResult<&mut HashMap<String, ConfigValue>> {
+    pub fn config_mut(&mut self) -> CargoResult<&mut ConfigValues> {
         let _ = self.config()?;
-        Ok(self
-            .config
-            .get_mut()
-            .expect("already loaded config values")
-            .values_mut())
+        Ok(self.config.get_mut().expect("already loaded config values"))
     }
 
     // Note: this is used by RLS, not Cargo.
@@ -1673,14 +1669,17 @@ impl GlobalContext {
         let cv_from_cli = self.cli_args_as_table()?;
         assert!(cv_from_cli.is_table(), "cv from CLI must be a table");
 
-        let root_cv = mem::take(self.values_mut()?);
+        let root_cv = mem::take(self.config_mut()?.values_mut());
         // The root config value container isn't from any external source,
         // so its definition should be built-in.
         let mut root_cv = CV::Table(root_cv, Definition::BuiltIn);
         root_cv.merge(cv_from_cli, true)?;
 
         // Put it back to gctx
-        mem::swap(self.values_mut()?, root_cv.table_mut("<root>")?.0);
+        mem::swap(
+            self.config_mut()?.values_mut(),
+            root_cv.table_mut("<root>")?.0,
+        );
 
         Ok(())
     }
