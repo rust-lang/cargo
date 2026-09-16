@@ -893,13 +893,9 @@ Run `{cmd}` to see possible targets."
     }
 
     fn new_options(&self, gctx: &GlobalContext) -> CargoResult<NewOptions> {
-        let vcs = self._value_of("vcs").map(|vcs| match vcs {
-            "git" => VersionControl::Git,
-            "hg" => VersionControl::Hg,
-            "pijul" => VersionControl::Pijul,
-            "fossil" => VersionControl::Fossil,
-            "none" => VersionControl::NoVcs,
-            vcs => panic!("Impossible vcs: {:?}", vcs),
+        let vcs = self._value_of("vcs").map(|vcs| {
+            vcs.parse::<VersionControl>()
+                .expect("clap ensures only valid values are present")
         });
         NewOptions::new(
             vcs,
