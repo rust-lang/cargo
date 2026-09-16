@@ -19,13 +19,13 @@
 //! module documentation for an in-depth explanation of how global cache
 //! tracking works.
 
+use crate::context::{CargoCacheConfig, GlobalCleanConfig};
 use crate::ops::CleanContext;
 use crate::util::cache_lock::{CacheLock, CacheLockMode};
 use crate::util::time_span::maybe_parse_time_span;
 use crate::workspace::global_cache_tracker::{self, GlobalCacheTracker};
 use crate::{CargoResult, GlobalContext};
 use anyhow::{Context as _, format_err};
-use serde::Deserialize;
 use std::time::Duration;
 
 /// Default max age to auto-clean extracted sources, which can be recovered
@@ -89,27 +89,6 @@ fn auto_gc_inner(gctx: &GlobalContext) -> CargoResult<()> {
     Ok(())
 }
 
-/// Cache cleaning settings from the `cache.global-clean` config table.
-///
-/// NOTE: Not all of these options may get stabilized. Some of them are very
-/// low-level details, and may not be something typical users need.
-///
-/// If any of these options are `None`, the built-in default is used.
-#[derive(Deserialize, Default)]
-#[serde(rename_all = "kebab-case")]
-struct GlobalCleanConfig {
-    /// Anything older than this duration will be deleted in the source cache.
-    max_src_age: Option<String>,
-    /// Anything older than this duration will be deleted in the compressed crate cache.
-    max_crate_age: Option<String>,
-    /// Any index older than this duration will be deleted from the index cache.
-    max_index_age: Option<String>,
-    /// Any git checkout older than this duration will be deleted from the checkout cache.
-    max_git_co_age: Option<String>,
-    /// Any git clone older than this duration will be deleted from the git cache.
-    max_git_db_age: Option<String>,
-}
-
 /// Options to use for garbage collection.
 #[derive(Clone, Debug, Default)]
 pub struct GcOpts {
@@ -170,7 +149,8 @@ impl GcOpts {
     /// settings from config.
     pub fn update_for_auto_gc(&mut self, gctx: &GlobalContext) -> CargoResult<()> {
         let config = gctx
-            .get::<Option<GlobalCleanConfig>>("cache.global-clean")?
+            .get::<CargoCacheConfig>("cache")?
+            .global_clean
             .unwrap_or_default();
         self.update_for_auto_gc_config(&config, gctx.cli_unstable().gc)
     }
@@ -278,9 +258,8 @@ impl<'a, 'gctx> Gc<'a, 'gctx> {
     /// This returns immediately without doing work if garbage collection has
     /// been performed recently (since `cache.auto-clean-frequency`).
     fn auto(&mut self, clean_ctx: &mut CleanContext<'gctx>) -> CargoResult<()> {
-        let freq = self
-            .gctx
-            .get::<Option<String>>("cache.auto-clean-frequency")?;
+        let cache_config = self.gctx.get::<CargoCacheConfig>("cache")?;
+        let freq = cache_config.auto_clean_frequency;
         let Some(freq) = parse_frequency(freq.as_deref().unwrap_or(DEFAULT_AUTO_FREQUENCY))? else {
             tracing::trace!(target: "gc", "auto gc disabled");
             return Ok(());
@@ -288,10 +267,7 @@ impl<'a, 'gctx> Gc<'a, 'gctx> {
         if !self.global_cache_tracker.should_run_auto_gc(freq)? {
             return Ok(());
         }
-        let config = self
-            .gctx
-            .get::<Option<GlobalCleanConfig>>("cache.global-clean")?
-            .unwrap_or_default();
+        let config = cache_config.global_clean.unwrap_or_default();
 
         let mut gc_opts = GcOpts::default();
         gc_opts.update_for_auto_gc_config(&config, self.gctx.cli_unstable().gc)?;

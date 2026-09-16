@@ -10,13 +10,17 @@
 //! Schema types here should only contain data and simple accessor methods.
 //! Avoid depending on [`GlobalContext`](super::GlobalContext) directly.
 
+use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::data_structures::HashMap;
 use std::borrow::Cow;
 use std::ffi::OsStr;
+use std::str::FromStr;
+use std::{fmt, hash};
 
 use cargo_credential::Secret;
 use serde::Deserialize;
 use serde::Serialize;
+use serde::de;
 use serde_untagged::UntaggedEnumVisitor;
 
 use std::path::Path;
@@ -28,6 +32,209 @@ use super::PathAndArgs;
 use super::StringList;
 use super::Value;
 use super::path::ConfigRelativePath;
+
+#[derive(Debug, Default, Deserialize, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub struct CargoCacheConfig {
+    /// How often to automatically clean unused cache data.
+    pub auto_clean_frequency: Option<String>,
+    /// Settings for cleaning the global cache.
+    pub global_clean: Option<GlobalCleanConfig>,
+}
+
+/// Cache cleaning settings from the `cache.global-clean` config table.
+///
+/// NOTE: Not all of these options may get stabilized. Some of them are very
+/// low-level details, and may not be something typical users need.
+///
+/// If any of these options are `None`, the built-in default is used.
+#[derive(Debug, Default, Deserialize, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub struct GlobalCleanConfig {
+    /// Anything older than this duration will be deleted in the source cache.
+    pub max_src_age: Option<String>,
+    /// Anything older than this duration will be deleted in the compressed crate cache.
+    pub max_crate_age: Option<String>,
+    /// Any index older than this duration will be deleted from the index cache.
+    pub max_index_age: Option<String>,
+    /// Any git checkout older than this duration will be deleted from the checkout cache.
+    pub max_git_co_age: Option<String>,
+    /// Any git clone older than this duration will be deleted from the git cache.
+    pub max_git_db_age: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct CargoNewConfig {
+    #[deprecated = "cargo-new no longer supports adding the authors field"]
+    #[expect(dead_code, reason = "deprecated")]
+    name: Option<String>,
+
+    #[deprecated = "cargo-new no longer supports adding the authors field"]
+    #[expect(dead_code, reason = "deprecated")]
+    email: Option<String>,
+
+    #[serde(rename = "vcs")]
+    pub version_control: Option<VersionControl>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum VersionControl {
+    Git,
+    Hg,
+    Pijul,
+    Fossil,
+    NoVcs,
+}
+
+impl VersionControl {
+    pub const VALUES: &[Self] = &[Self::Git, Self::Hg, Self::Pijul, Self::Fossil, Self::NoVcs];
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            VersionControl::Git => "git",
+            VersionControl::Hg => "hg",
+            VersionControl::Pijul => "pijul",
+            VersionControl::Fossil => "fossil",
+            VersionControl::NoVcs => "none",
+        }
+    }
+}
+
+impl FromStr for VersionControl {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, anyhow::Error> {
+        match s {
+            "git" => Ok(VersionControl::Git),
+            "hg" => Ok(VersionControl::Hg),
+            "pijul" => Ok(VersionControl::Pijul),
+            "fossil" => Ok(VersionControl::Fossil),
+            "none" => Ok(VersionControl::NoVcs),
+            other => anyhow::bail!("unknown vcs specification: `{}`", other),
+        }
+    }
+}
+
+impl<'de> de::Deserialize<'de> for VersionControl {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        FromStr::from_str(&s).map_err(de::Error::custom)
+    }
+}
+
+/// Definition of a source in a config file.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct SourceConfigDef {
+    /// Indicates this source should be replaced with another of the given name.
+    pub replace_with: OptValue<String>,
+    /// A directory source.
+    pub directory: Option<ConfigRelativePath>,
+    /// A registry source. Value is a URL.
+    pub registry: OptValue<String>,
+    /// A local registry source.
+    pub local_registry: Option<ConfigRelativePath>,
+    /// A git source. Value is a URL.
+    pub git: OptValue<String>,
+    /// The git branch.
+    pub branch: OptValue<String>,
+    /// The git tag.
+    pub tag: OptValue<String>,
+    /// The git revision.
+    pub rev: OptValue<String>,
+}
+
+/// A map of registry names to URLs where documentations are hosted.
+/// This is for unstable feature [`-Zrustdoc-map`][1].
+///
+/// [1]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#rustdoc-map
+#[derive(serde::Deserialize, Debug)]
+#[serde(default)]
+pub struct RustdocExternMap {
+    #[serde(deserialize_with = "default_crates_io_to_docs_rs")]
+    /// * Key is the registry name in the configuration `[registries.<name>]`.
+    /// * Value is the URL where the documentation is hosted.
+    pub registries: HashMap<String, String>,
+    pub std: Option<RustdocExternMode>,
+}
+
+impl Default for RustdocExternMap {
+    fn default() -> Self {
+        Self {
+            registries: HashMap::from_iter([(CRATES_IO_REGISTRY.into(), DOCS_RS_URL.into())]),
+            std: None,
+        }
+    }
+}
+
+const DOCS_RS_URL: &'static str = "https://docs.rs/";
+
+fn default_crates_io_to_docs_rs<'de, D: serde::Deserializer<'de>>(
+    de: D,
+) -> Result<HashMap<String, String>, D::Error> {
+    let mut registries = HashMap::deserialize(de)?;
+    if !registries.contains_key(CRATES_IO_REGISTRY) {
+        registries.insert(CRATES_IO_REGISTRY.into(), DOCS_RS_URL.into());
+    }
+    Ok(registries)
+}
+
+impl hash::Hash for RustdocExternMap {
+    fn hash<H: hash::Hasher>(&self, into: &mut H) {
+        self.std.hash(into);
+        for (key, value) in &self.registries {
+            key.hash(into);
+            value.hash(into);
+        }
+    }
+}
+
+/// Mode used for `std`. This is for unstable feature [`-Zrustdoc-map`][1].
+///
+/// [1]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#rustdoc-map
+#[derive(Debug, Hash)]
+pub enum RustdocExternMode {
+    /// Use a local `file://` URL.
+    Local,
+    /// Use a remote URL to <https://doc.rust-lang.org/> (default).
+    Remote,
+    /// An arbitrary URL.
+    Url(String),
+}
+
+impl From<String> for RustdocExternMode {
+    fn from(s: String) -> RustdocExternMode {
+        match s.as_ref() {
+            "local" => RustdocExternMode::Local,
+            "remote" => RustdocExternMode::Remote,
+            _ => RustdocExternMode::Url(s),
+        }
+    }
+}
+
+impl fmt::Display for RustdocExternMode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            RustdocExternMode::Local => "local".fmt(f),
+            RustdocExternMode::Remote => "remote".fmt(f),
+            RustdocExternMode::Url(s) => s.fmt(f),
+        }
+    }
+}
+
+impl<'de> serde::de::Deserialize<'de> for RustdocExternMode {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::de::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Ok(s.into())
+    }
+}
 
 /// The `[http]` table.
 ///

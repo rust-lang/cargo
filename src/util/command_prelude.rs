@@ -1,7 +1,8 @@
 use crate::CargoResult;
 use crate::compiler::{BuildConfig, CompileKind, MessageFormat, RustcTargetData};
+use crate::context::VersionControl;
 use crate::ops::registry::RegistryOrIndex;
-use crate::ops::{self, CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
+use crate::ops::{self, CompileFilter, CompileOptions, NewOptions, Packages};
 use crate::resolver::{CliFeatures, ForceAllTargets, HasDevUnits};
 use crate::util::data_structures::IndexSet;
 use crate::util::data_structures::{HashMap, HashSet};
@@ -22,6 +23,7 @@ use cargo_util_schemas::manifest::ProfileName;
 use cargo_util_schemas::manifest::RegistryName;
 use cargo_util_schemas::manifest::StringOrVec;
 use cargo_util_terminal as shell;
+use clap::builder::PossibleValuesParser;
 use clap::builder::UnknownArgumentValueParser;
 use clap_complete::ArgValueCandidates;
 use home::cargo_home_with_cwd;
@@ -425,7 +427,9 @@ pub trait CommandExt: Sized {
                  a global configuration.",
             )
             .value_name("VCS")
-            .value_parser(["git", "hg", "pijul", "fossil", "none"]),
+            .value_parser(PossibleValuesParser::new(
+                VersionControl::VALUES.iter().map(|v| v.as_str()),
+            )),
         )
         ._arg(flag("bin", "Use a binary (application) template [default]"))
         ._arg(flag("lib", "Use a library template"))
@@ -893,13 +897,9 @@ Run `{cmd}` to see possible targets."
     }
 
     fn new_options(&self, gctx: &GlobalContext) -> CargoResult<NewOptions> {
-        let vcs = self._value_of("vcs").map(|vcs| match vcs {
-            "git" => VersionControl::Git,
-            "hg" => VersionControl::Hg,
-            "pijul" => VersionControl::Pijul,
-            "fossil" => VersionControl::Fossil,
-            "none" => VersionControl::NoVcs,
-            vcs => panic!("Impossible vcs: {:?}", vcs),
+        let vcs = self._value_of("vcs").map(|vcs| {
+            vcs.parse::<VersionControl>()
+                .expect("clap ensures only valid values are present")
         });
         NewOptions::new(
             vcs,

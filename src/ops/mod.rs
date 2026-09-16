@@ -13,7 +13,7 @@ pub use self::cargo_fix::{
 };
 pub use self::cargo_install::{install, install_list};
 pub use self::cargo_metadata::{ExportInfo, OutputMetadataOptions, output_metadata};
-pub use self::cargo_new::{NewOptions, NewProjectKind, VersionControl, init, new};
+pub use self::cargo_new::{NewOptions, NewProjectKind, init, new};
 pub use self::cargo_package::PackageMessageFormat;
 pub use self::cargo_package::PackageOpts;
 pub use self::cargo_package::check_yanked;

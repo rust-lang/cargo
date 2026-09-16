@@ -1,3 +1,4 @@
+use crate::context::{CargoNewConfig, VersionControl};
 use crate::util::errors::CargoResult;
 use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::{FossilRepo, GitRepo, HgRepo, PijulRepo, existing_vcs_repo};
@@ -8,49 +9,12 @@ use cargo_util::paths::{self, write_atomic};
 use cargo_util_schemas::manifest::PackageName;
 use cargo_util_terminal::Shell;
 use home::home_dir;
-use serde::Deserialize;
-use serde::de;
 use std::collections::BTreeMap;
 use std::ffi::OsStr;
 use std::io::{BufRead, BufReader, ErrorKind};
 use std::path::{Path, PathBuf};
-use std::str::FromStr;
 use std::{fmt, slice};
 use toml_edit::{Array, Value};
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum VersionControl {
-    Git,
-    Hg,
-    Pijul,
-    Fossil,
-    NoVcs,
-}
-
-impl FromStr for VersionControl {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, anyhow::Error> {
-        match s {
-            "git" => Ok(VersionControl::Git),
-            "hg" => Ok(VersionControl::Hg),
-            "pijul" => Ok(VersionControl::Pijul),
-            "fossil" => Ok(VersionControl::Fossil),
-            "none" => Ok(VersionControl::NoVcs),
-            other => anyhow::bail!("unknown vcs specification: `{}`", other),
-        }
-    }
-}
-
-impl<'de> de::Deserialize<'de> for VersionControl {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        let s = String::deserialize(deserializer)?;
-        FromStr::from_str(&s).map_err(de::Error::custom)
-    }
-}
 
 #[derive(Debug)]
 pub struct NewOptions {
@@ -129,21 +93,6 @@ impl NewOptions {
         };
         Ok(opts)
     }
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "kebab-case")]
-struct CargoNewConfig {
-    #[deprecated = "cargo-new no longer supports adding the authors field"]
-    #[expect(dead_code, reason = "deprecated")]
-    name: Option<String>,
-
-    #[deprecated = "cargo-new no longer supports adding the authors field"]
-    #[expect(dead_code, reason = "deprecated")]
-    email: Option<String>,
-
-    #[serde(rename = "vcs")]
-    version_control: Option<VersionControl>,
 }
 
 fn get_name<'a>(path: &'a Path, opts: &'a NewOptions) -> CargoResult<&'a str> {

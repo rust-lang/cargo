@@ -6,7 +6,7 @@
 
 use crate::util::data_structures::HashMap;
 
-use crate::context::{self, ConfigRelativePath, OptValue};
+use crate::context::{self, OptValue, SourceConfigDef};
 use crate::sources::overlay::DependencyConfusionThreatOverlaySource;
 use crate::sources::source::Source;
 use crate::sources::{CRATES_IO_REGISTRY, ReplacedSource};
@@ -31,28 +31,6 @@ pub struct SourceConfigMap<'gctx> {
     /// Mapping of sources to local registries that will be overlaid on them.
     overlays: HashMap<SourceId, SourceId>,
     gctx: &'gctx GlobalContext,
-}
-
-/// Definition of a source in a config file.
-#[derive(Debug, serde::Deserialize)]
-#[serde(rename_all = "kebab-case")]
-struct SourceConfigDef {
-    /// Indicates this source should be replaced with another of the given name.
-    replace_with: OptValue<String>,
-    /// A directory source.
-    directory: Option<ConfigRelativePath>,
-    /// A registry source. Value is a URL.
-    registry: OptValue<String>,
-    /// A local registry source.
-    local_registry: Option<ConfigRelativePath>,
-    /// A git source. Value is a URL.
-    git: OptValue<String>,
-    /// The git branch.
-    branch: OptValue<String>,
-    /// The git tag.
-    tag: OptValue<String>,
-    /// The git revision.
-    rev: OptValue<String>,
 }
 
 /// Configuration for a particular source, found in TOML looking like:
