@@ -80,7 +80,6 @@ opener = "0.8.4"
 openssl = "0.10.76"
 openssl-src = "300.6.0"
 os_info = { version = "3.14.0", default-features = false }
-pasetors = { version = "0.7.8", features = ["v3", "paserk", "std", "serde"] }
 pathdiff = "0.2.3"
 portable-atomic = "1.13.1"
 percent-encoding = "2.3.2"
@@ -200,7 +199,6 @@ libgit2-sys.workspace = true
 memchr.workspace = true
 opener.workspace = true
 os_info.workspace = true
-pasetors.workspace = true
 pathdiff.workspace = true
 portable-atomic.workspace = true
 rand.workspace = true

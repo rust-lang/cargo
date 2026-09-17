@@ -18,7 +18,6 @@ use url::Url;
 
 use crate::context::Value;
 use crate::util::credential::adaptor::BasicProcessCredential;
-use crate::util::credential::paseto::PasetoCredential;
 use crate::workspace::SourceId;
 
 use super::{credential::process::CredentialProcessCredential, credential::token::TokenCredential};
@@ -43,15 +42,7 @@ fn credential_provider(
     let mut global_provider_defined = true;
     let default_providers = || {
         global_provider_defined = false;
-        if gctx.cli_unstable().asymmetric_token {
-            // Enable the PASETO provider
-            vec![
-                vec!["cargo:token".to_string()],
-                vec!["cargo:paseto".to_string()],
-            ]
-        } else {
-            vec![vec!["cargo:token".to_string()]]
-        }
+        vec![vec!["cargo:token".to_string()]]
     };
     let global_providers = gctx
         .get::<Option<Vec<Value<String>>>>("registry.global-credential-providers")?
@@ -71,7 +62,6 @@ fn credential_provider(
         Some(RegistryConfig {
             credential_provider: Some(provider),
             token,
-            secret_key,
             ..
         }) => {
             let provider = resolve_credential_alias(gctx, provider);
@@ -84,52 +74,7 @@ fn credential_provider(
                     ))?;
                 }
             }
-            if let Some(secret_key) = secret_key {
-                if provider[0] != "cargo:paseto" {
-                    warn(format!(
-                        "{sid} has a secret-key configured in {} that will be ignored \
-                        because this registry is configured to use credential-provider `{}`",
-                        secret_key.definition, provider[0],
-                    ))?;
-                }
-            }
             return Ok(vec![provider]);
-        }
-
-        // Warning for both `token` and `secret-key`, stating which will be ignored
-        Some(RegistryConfig {
-            token: Some(token),
-            secret_key: Some(secret_key),
-            ..
-        }) if gctx.cli_unstable().asymmetric_token => {
-            let token_pos = global_providers
-                .iter()
-                .position(|p| p.first().map(String::as_str) == Some("cargo:token"));
-            let paseto_pos = global_providers
-                .iter()
-                .position(|p| p.first().map(String::as_str) == Some("cargo:paseto"));
-            match (token_pos, paseto_pos) {
-                (Some(token_pos), Some(paseto_pos)) => {
-                    if token_pos < paseto_pos {
-                        warn(format!(
-                            "{sid} has a `secret_key` configured in {} that will be ignored \
-                        because a `token` is also configured, and the `cargo:token` provider is \
-                        configured with higher precedence",
-                            secret_key.definition
-                        ))?;
-                    } else {
-                        warn(format!(
-                            "{sid} has a `token` configured in {} that will be ignored \
-                        because a `secret_key` is also configured, and the `cargo:paseto` provider is \
-                        configured with higher precedence",
-                            token.definition
-                        ))?;
-                    }
-                }
-                (_, _) => {
-                    // One or both of the below individual warnings will trigger
-                }
-            }
         }
 
         // Check if a `token` is configured that will be ignored.
@@ -143,24 +88,6 @@ fn credential_provider(
                 warn(format!(
                     "{sid} has a token configured in {} that will be ignored \
                     because the `cargo:token` credential provider is not listed in \
-                    `registry.global-credential-providers`",
-                    token.definition
-                ))?;
-            }
-        }
-
-        // Check if a asymmetric token is configured that will be ignored.
-        Some(RegistryConfig {
-            secret_key: Some(token),
-            ..
-        }) if gctx.cli_unstable().asymmetric_token => {
-            if !global_providers
-                .iter()
-                .any(|p| p.first().map(String::as_str) == Some("cargo:paseto"))
-            {
-                warn(format!(
-                    "{sid} has a secret-key configured in {} that will be ignored \
-                    because the `cargo:paseto` credential provider is not listed in \
                     `registry.global-credential-providers`",
                     token.definition
                 ))?;
@@ -471,7 +398,6 @@ pub fn cache_token_from_commandline(gctx: &GlobalContext, sid: &SourceId, token:
 /// Keep in sync with the `match` in `credential_action`.
 static BUILT_IN_PROVIDERS: &[&'static str] = &[
     "cargo:token",
-    "cargo:paseto",
     "cargo:token-from-stdout",
     "cargo:wincred",
     "cargo:macos-keychain",
@@ -526,10 +452,6 @@ fn credential_action(
         // If the available built-in providers are changed, update the `BUILT_IN_PROVIDERS` list.
         let provider: Box<dyn Credential> = match process {
             "cargo:token" => Box::new(TokenCredential::new(gctx)),
-            "cargo:paseto" if gctx.cli_unstable().asymmetric_token => {
-                Box::new(PasetoCredential::new(gctx))
-            }
-            "cargo:paseto" => bail!("cargo:paseto requires -Zasymmetric-token"),
             "cargo:token-from-stdout" => Box::new(BasicProcessCredential {}),
             #[cfg(windows)]
             "cargo:wincred" => Box::new(cargo_credential_wincred::WindowsCredential {}),

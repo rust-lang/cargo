@@ -220,31 +220,6 @@ Caused by:
 }
 
 #[cargo_test]
-fn bad_asymmetric_token_args() {
-    let registry = RegistryBuilder::new()
-        .credential_provider(&["cargo:paseto"])
-        .no_configure_token()
-        .build();
-
-    // These cases are kept brief as the implementation is covered by clap, so this is only smoke testing that we have clap configured correctly.
-    cargo_process("login -Zasymmetric-token -- --key-subject")
-        .masquerade_as_nightly_cargo(&["asymmetric-token"])
-        .replace_crates_io(registry.index_url())
-        .with_stderr_data(str![[r#"
-[UPDATING] crates.io index
-[ERROR] credential provider `cargo:paseto --key-subject` failed action `login`
-
-Caused by:
-  [ERROR] a value is required for '--key-subject <SUBJECT>' but none was supplied
-
-  For more information, try '--help'.
-
-"#]])
-        .with_status(101)
-        .run();
-}
-
-#[cargo_test]
 fn login_with_no_cargo_dir() {
     // Create a config in the root directory because `login` requires the
     // index to be updated, and we don't want to hit crates.io.
@@ -256,30 +231,6 @@ fn login_with_no_cargo_dir() {
         .run();
     let credentials = fs::read_to_string(credentials_toml()).unwrap();
     assert_eq!(credentials, "[registry]\ntoken = \"foo\"\n");
-}
-
-#[cargo_test]
-fn login_with_asymmetric_token_and_subject_on_stdin() {
-    let registry = RegistryBuilder::new()
-        .credential_provider(&["cargo:paseto"])
-        .no_configure_token()
-        .build();
-    let credentials = credentials_toml();
-    cargo_process("login -v -Z asymmetric-token -- --key-subject=foo")
-        .masquerade_as_nightly_cargo(&["asymmetric-token"])
-        .replace_crates_io(registry.index_url())
-        .with_stderr_data(str![[r#"
-[UPDATING] crates.io index
-[CREDENTIAL] cargo:paseto --key-subject=foo login crates-io
-k3.public.AmDwjlyf8jAV3gm5Z7Kz9xAOcsKslt_Vwp5v-emjFzBHLCtcANzTaVEghTNEMj9PkQ
-
-"#]])
-        .with_stdin("k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36")
-        .run();
-    let credentials = fs::read_to_string(&credentials).unwrap();
-    assert!(credentials.starts_with("[registry]\n"));
-    assert!(credentials.contains("secret-key-subject = \"foo\"\n"));
-    assert!(credentials.contains("secret-key = \"k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36\"\n"));
 }
 
 #[cargo_test]
@@ -315,51 +266,6 @@ fn login_with_token_on_stdin() {
         .run();
     let credentials = fs::read_to_string(&credentials).unwrap();
     assert_eq!(credentials, "[registry]\ntoken = \"some token\"\n");
-}
-
-#[cargo_test]
-fn login_with_asymmetric_token_on_stdin() {
-    let _registry = RegistryBuilder::new()
-        .credential_provider(&["cargo:paseto"])
-        .alternative()
-        .no_configure_token()
-        .build();
-    let credentials = credentials_toml();
-    cargo_process("login -v -Z asymmetric-token --registry alternative")
-        .masquerade_as_nightly_cargo(&["asymmetric-token"])
-        .with_stderr_data(str![[r#"
-[UPDATING] `alternative` index
-[CREDENTIAL] cargo:paseto login alternative
-k3.public.AmDwjlyf8jAV3gm5Z7Kz9xAOcsKslt_Vwp5v-emjFzBHLCtcANzTaVEghTNEMj9PkQ
-
-"#]])
-        .with_stdin("k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36")
-        .run();
-    let credentials = fs::read_to_string(&credentials).unwrap();
-    assert_eq!(
-        credentials,
-        "[registries.alternative]\nsecret-key = \"k3.secret.fNYVuMvBgOlljt9TDohnaYLblghqaHoQquVZwgR6X12cBFHZLFsaU3q7X3k1Zn36\"\n"
-    );
-}
-
-#[cargo_test]
-fn login_with_generate_asymmetric_token() {
-    let _registry = RegistryBuilder::new()
-        .credential_provider(&["cargo:paseto"])
-        .alternative()
-        .no_configure_token()
-        .build();
-    let credentials = credentials_toml();
-    cargo_process("login -Z asymmetric-token --registry alternative")
-        .masquerade_as_nightly_cargo(&["asymmetric-token"])
-        .with_stderr_data(str![[r#"
-[UPDATING] `alternative` index
-k3.public.[..]
-
-"#]])
-        .run();
-    let credentials = fs::read_to_string(&credentials).unwrap();
-    assert!(credentials.contains("secret-key = \"k3.secret."));
 }
 
 #[cargo_test]
