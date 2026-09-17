@@ -400,3 +400,37 @@ Caused by:
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn patching_builtins_is_invalid() {
+    let p = project()
+        .file("src/lib.rs", "use core;")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+
+                [patch.builtin]
+                core = { path = "core" }
+                "#,
+        )
+        .build();
+
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["builtin-dependencies"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  [patch] entry `builtin` should be a URL or registry name
+
+Caused by:
+  invalid url `builtin`: relative URL without a base
+
+"#]])
+        .run();
+}
