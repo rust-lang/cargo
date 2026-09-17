@@ -925,6 +925,31 @@ fn clean_dry_run() {
         .run();
 }
 
+#[cfg(any(unix, windows))]
+#[cargo_test]
+fn clean_accounts_for_hardlinks() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file("target/debug/original.bin", &"x".repeat(1024))
+        .build();
+    let original = p.target_debug_dir().join("original.bin");
+    let linked = p.target_debug_dir().join("linked.bin");
+    std::fs::hard_link(&original, &linked).unwrap();
+
+    p.cargo("clean --dry-run")
+        // Keep .rustc_info.json out of the file count and size.
+        .env("CARGO_CACHE_RUSTC_INFO", "0")
+        .with_stderr_data(
+            str![[r#"
+     Summary 2 files, 2.0KiB total
+warning: no files deleted due to --dry-run
+
+"#]]
+            .raw(),
+        )
+        .run();
+}
+
 #[cargo_test]
 fn doc_with_package_selection() {
     // --doc with -p
