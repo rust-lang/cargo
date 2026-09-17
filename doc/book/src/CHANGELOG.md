@@ -219,6 +219,11 @@
 - cargo-report: Add missing entry for `cargo report future-incompatibilities`
   [#17188](https://github.com/rust-lang/cargo/pull/17188)
 
+### Documentation
+
+- Note `workspace.package.authors` is deprecated.
+  [#16951](https://github.com/rust-lang/cargo/pull/16951)
+
 ### Internal
 
 - Clarify the name of the remote git registry
