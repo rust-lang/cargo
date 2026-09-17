@@ -392,10 +392,10 @@ fn build_dependencies() {
         .masquerade_as_nightly_cargo(&["builtin-dependencies"])
         .with_status(101)
         .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
-thread [..] panicked at [..]
-not yet implemented: SourceKind::Builtin
-[NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+Caused by:
+  builtin dependency `core` cannot be used as a build dependency
 
 "#]])
         .run();
