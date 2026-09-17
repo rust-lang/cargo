@@ -300,9 +300,9 @@ target will be skipped. This is only relevant for the `[[bin]]`, `[[bench]]`,
 ```toml
 [features]
 # ...
-postgres = []
-sqlite = []
-tools = []
+postgres = { enables = [] }
+sqlite = { enables = [] }
+tools = { enables = [] }
 
 [[bin]]
 name = "my-pg-tool"
