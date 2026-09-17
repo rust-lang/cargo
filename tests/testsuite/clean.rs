@@ -939,9 +939,10 @@ fn clean_accounts_for_hardlinks() {
     p.cargo("clean --dry-run")
         // Keep .rustc_info.json out of the file count and size.
         .env("CARGO_CACHE_RUSTC_INFO", "0")
+        // Count both the original and hardlink, but only count the size once.
         .with_stderr_data(
             str![[r#"
-     Summary 2 files, 2.0KiB total
+     Summary 2 files, 1.0KiB total
 warning: no files deleted due to --dry-run
 
 "#]]
