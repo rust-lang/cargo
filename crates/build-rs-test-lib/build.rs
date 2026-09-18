@@ -63,6 +63,10 @@ fn smoke_test_inputs() {
     dbg!(cargo_pkg_version_minor());
     dbg!(cargo_pkg_version_patch());
     dbg!(cargo_pkg_version_pre());
+    #[cfg(feature = "unstable")]
+    dbg!(cargo_trim_paths_remap());
+    #[cfg(feature = "unstable")]
+    dbg!(cargo_trim_paths_scope());
     dbg!(debug());
     dbg!(dep_metadata("z", "include"));
     dbg!(host());

@@ -709,3 +709,23 @@ where
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn remap_pairs() {
+        let value =
+            std::env::join_paths(["/from=with=equals=.", "/sysroot=/rustc/some-hash"]).unwrap();
+        assert_eq!(
+            to_remap_pairs(value),
+            vec![
+                (PathBuf::from("/from=with=equals"), PathBuf::from(".")),
+                (PathBuf::from("/sysroot"), PathBuf::from("/rustc/some-hash")),
+            ]
+        );
+
+        assert_eq!(to_remap_pairs(std::ffi::OsString::new()), Vec::new());
+    }
+}
