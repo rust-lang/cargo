@@ -9,6 +9,7 @@ use crate::sources::source::MaybePackage;
 use crate::sources::source::QueryKind;
 use crate::sources::source::Source;
 use crate::util::GlobalContext;
+use crate::util::VersionReqMatchMode;
 use crate::util::errors::CargoResult;
 use crate::workspace::{Dependency, Package, PackageId, SourceId};
 
@@ -190,9 +191,11 @@ impl<'gctx> Source for DirectorySource<'gctx> {
         let packages = self.packages.borrow();
         let packages = packages.values().map(|p| &p.0);
         let matches = packages.filter(|pkg| match kind {
-            QueryKind::Exact | QueryKind::RejectedVersions => dep.matches(pkg.summary()),
+            QueryKind::Exact | QueryKind::RejectedVersions => {
+                dep.matches(pkg.summary(), VersionReqMatchMode::Default)
+            }
             QueryKind::AlternativeNames => true,
-            QueryKind::Normalized => dep.matches(pkg.summary()),
+            QueryKind::Normalized => dep.matches(pkg.summary(), VersionReqMatchMode::Default),
         });
         for summary in matches.map(|pkg| pkg.summary().clone()) {
             f(IndexSummary::Candidate(summary));

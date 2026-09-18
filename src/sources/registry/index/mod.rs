@@ -22,6 +22,7 @@
 //! see [the documentation of the on-disk index cache](cache).
 use crate::sources::registry::{LoadResponse, RegistryData};
 use crate::util::IntoUrl;
+use crate::util::VersionReqMatchMode;
 use crate::util::data_structures::HashMap;
 use crate::util::interning::InternedString;
 use crate::util::{CargoResult, Filesystem, GlobalContext, OptVersionReq, internal};
@@ -314,7 +315,7 @@ impl<'gctx> RegistryIndex<'gctx> {
             fn next(&mut self) -> Option<Self::Item> {
                 while let Some((v, summary)) = self.summaries.versions.get(self.i) {
                     self.i += 1;
-                    if self.req.matches(v) {
+                    if self.req.matches(v, VersionReqMatchMode::Default) {
                         match summary.borrow_mut().parse(
                             &self.summaries.raw_data,
                             self.index.source_id,

@@ -75,7 +75,7 @@ Each new feature described below should explain how to use it.
     * [direct-minimal-versions](#direct-minimal-versions) — Forces the resolver to use the lowest compatible version instead of the highest.
     * [public-dependency](#public-dependency) --- Allows dependencies to be classified as either public or private.
     * [msrv-policy](#msrv-policy) --- MSRV-aware resolver and version selection
-    * [precise-pre-release](#precise-pre-release) --- Allows pre-release versions to be selected with `update --precise`
+    * [prerelease](#prerelease) --- Allows pre-release versions to be selected with `update --precise`
     * [sbom](#sbom) --- Generates SBOM pre-cursor files for compiled artifacts
     * [feature-unification](#feature-unification) --- Enable new feature unification modes in workspaces
     * [lockfile-publish-time](#lockfile-publish-time) --- Limit resolver to packages older than the specified time
@@ -388,12 +388,12 @@ Unimplemented
 
 Unimplemented
 
-## precise-pre-release
+## prerelease
 
 * Tracking Issue: [#13290](https://github.com/rust-lang/cargo/issues/13290)
 * RFC: [#3493](https://github.com/rust-lang/rfcs/pull/3493)
 
-The `precise-pre-release` feature allows pre-release versions to be selected with `update --precise`
+The `-Zprerelease` flag allows pre-release versions to be selected with `update --precise`
 even when a pre-release is not specified by a projects `Cargo.toml`.
 
 Take for example this `Cargo.toml`.
@@ -403,9 +403,12 @@ Take for example this `Cargo.toml`.
 my-dependency = "0.1.1"
 ```
 
-It's possible to update `my-dependency` to a pre-release with `update -Zunstable-options my-dependency --precise 0.1.2-pre.0`.
+It's possible to update `my-dependency` to a pre-release with `update -Zprerelease my-dependency --precise 0.1.2-pre.0`.
 This is because `0.1.2-pre.0` is considered compatible with `0.1.1`.
 It would not be possible to upgrade to `0.2.0-pre.0` from `0.1.1` in the same way.
+Subsequent `cargo` commands must also pass `-Zprerelease` to keep the locked pre-release.
+Without the flag, Cargo considers `0.1.2-pre.0` incompatible with `0.1.1` again
+and may either downgrade `my-dependency` back to `0.1.1` or fail with a resolution error.
 
 ## sbom
 * Tracking Issue: [#13709](https://github.com/rust-lang/cargo/pull/13709)
