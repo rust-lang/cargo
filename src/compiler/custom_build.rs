@@ -46,7 +46,6 @@ use anyhow::{Context as _, bail};
 use cargo_platform::Cfg;
 use cargo_util::paths;
 use cargo_util_schemas::manifest::RustVersion;
-use cargo_util_schemas::manifest::TomlTrimPaths;
 use std::collections::BTreeSet;
 use std::collections::hash_map::Entry;
 use std::path::{Path, PathBuf};
@@ -401,11 +400,7 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
         cmd.env("CARGO_MANIFEST_LINKS", links);
     }
 
-    let trim_paths = unit
-        .profile
-        .trim_paths
-        .as_ref()
-        .unwrap_or(&TomlTrimPaths::None);
+    let trim_paths = &unit.profile.trim_paths;
     cmd.env("CARGO_TRIM_PATHS_SCOPE", trim_paths.to_string());
     let pairs = if trim_paths.is_none() {
         Vec::new()

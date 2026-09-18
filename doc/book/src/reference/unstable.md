@@ -1500,7 +1500,7 @@ The valid options are:
 For details about each scope,
 see rustc's [`--remap-path-scope`] documentation.
 
-By default, `trim-paths` is not set and path sanitization is disabled for all profiles.
+By default, `trim-paths` is `"none"` and path sanitization is disabled for all profiles.
 You can enable it by specifying this option in `Cargo.toml`:
 
 ```toml

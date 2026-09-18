@@ -983,9 +983,7 @@ fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResu
         rustdoc.arg(arg);
     }
 
-    if let Some(trim_paths) = unit.profile.trim_paths.as_ref() {
-        trim_paths_args_rustdoc(&mut rustdoc, build_runner, unit, trim_paths)?;
-    }
+    trim_paths_args_rustdoc(&mut rustdoc, build_runner, unit, &unit.profile.trim_paths)?;
 
     rustdoc.args(unit.pkg.manifest().lint_rustflags());
 
@@ -1431,9 +1429,7 @@ fn build_base_args(
         }
     }
 
-    if let Some(trim_paths) = trim_paths {
-        trim_paths_args(cmd, build_runner, unit, &trim_paths)?;
-    }
+    trim_paths_args(cmd, build_runner, unit, &trim_paths)?;
 
     match compute_cap_lints(bcx, unit) {
         None | Some(CapLints::Warn) => {

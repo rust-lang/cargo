@@ -85,7 +85,8 @@ fn simple() {
         "panic": "unwind",
         "rpath": false,
         "split_debuginfo": "{...}",
-        "strip": "{...}"
+        "strip": "{...}",
+        "trim_paths": "none"
       },
       "target": {
         "crate_types": [
@@ -131,7 +132,8 @@ fn simple() {
         "panic": "unwind",
         "rpath": false,
         "split_debuginfo": "{...}",
-        "strip": "{...}"
+        "strip": "{...}",
+        "trim_paths": "none"
       },
       "target": {
         "crate_types": [
@@ -169,7 +171,8 @@ fn simple() {
         "panic": "unwind",
         "rpath": false,
         "split_debuginfo": "{...}",
-        "strip": "{...}"
+        "strip": "{...}",
+        "trim_paths": "none"
       },
       "target": {
         "crate_types": [
@@ -213,7 +216,8 @@ fn simple() {
         "panic": "unwind",
         "rpath": false,
         "split_debuginfo": "{...}",
-        "strip": "{...}"
+        "strip": "{...}",
+        "trim_paths": "none"
       },
       "target": {
         "crate_types": [
