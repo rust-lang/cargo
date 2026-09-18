@@ -1648,7 +1648,7 @@ pub fn to_real_manifest(
         )?;
     }
     let replace = replace(&normalized_toml, &mut manifest_ctx)?;
-    let patch = patch(&normalized_toml, &mut manifest_ctx)?;
+    let patch = patch(&normalized_toml, &mut manifest_ctx, &features)?;
 
     {
         let mut names_sources = BTreeMap::new();
@@ -2022,7 +2022,7 @@ fn to_virtual_manifest(
         };
         (
             replace(&normalized_toml, &mut manifest_ctx)?,
-            patch(&normalized_toml, &mut manifest_ctx)?,
+            patch(&normalized_toml, &mut manifest_ctx, &features)?,
         )
     };
     if let Some(profiles) = &normalized_toml.profile {
@@ -2184,6 +2184,7 @@ fn replace(
 fn patch(
     me: &TomlManifest,
     manifest_ctx: &mut ManifestContext<'_, '_>,
+    features: &Features,
 ) -> CargoResult<HashMap<Url, Vec<Patch>>> {
     let mut patch = HashMap::default();
     for (toml_url, deps) in me.patch.iter().flatten() {
@@ -2209,6 +2210,14 @@ fn patch(
             url,
             deps.iter()
                 .map(|(name, dep)| {
+                    if let manifest::TomlDependency::Detailed(d) = dep {
+                        if d.builtin {
+                            features
+                                .require(Feature::builtin_dependencies())
+                                .with_context(|| format!("resolving patch for `{name}`"))?;
+                        }
+                    }
+
                     unused_dep_keys(
                         name,
                         &format!("patch.{toml_url}",),
