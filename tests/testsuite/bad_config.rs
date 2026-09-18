@@ -3264,8 +3264,6 @@ fn bad_trim_paths() {
         .build();
 
     p.cargo("check")
-        .arg("-Ztrim-paths")
-        .masquerade_as_nightly_cargo(&["trim-paths"])
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] unknown variant `split-debuginfo`, expected one of `none`, `object`, `all`
