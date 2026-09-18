@@ -436,6 +436,20 @@ let out_dir = env::var("OUT_DIR").unwrap();
   [`build.rustflags`]. Note that since Rust 1.55, `RUSTFLAGS` is removed from
   the environment; scripts should use `CARGO_ENCODED_RUSTFLAGS` instead.
 * `CARGO_PKG_<var>` --- The package information variables, with the same names and values as are [provided during crate building][variables set for crates].
+* `CARGO_TRIM_PATHS_SCOPE` --- The value of the [`trim-paths`] profile option.
+  If the build script introduces absolute paths to built artifacts (such as by invoking a compiler),
+  the user may request them to be sanitized in different types of artifacts.
+  Common paths requiring sanitization include `OUT_DIR`, `CARGO_MANIFEST_DIR` and `CARGO_MANIFEST_PATH`,
+  plus any other introduced by the build script, such as include directories.
+  > [!NOTE]
+  > For forward compatibility,
+  > build scripts should accept a comma-separated list of scopes.
+* `CARGO_TRIM_PATHS_REMAP` --- The `<from>=<to>` path remap pairs Cargo passes to the compiler,
+  joined by the platform path separator.
+  Only set when `trim-paths` profile is active.
+  Build scripts can forward these mappings to C/C++ compilers and other tools,
+  for example via `cc`'s `-ffile-prefix-map`,
+  to sanitize paths consistently with the rest of the build.
 
 [`tracing`]: https://docs.rs/tracing
 [debug logging]: https://doc.crates.io/contrib/implementation/debugging.html#logging
@@ -461,6 +475,7 @@ let out_dir = env::var("OUT_DIR").unwrap();
 [`release`]: profiles.md#release
 [`debug`]: profiles.md#debug
 [`opt-level`]: profiles.md#opt-level
+[`trim-paths`]: profiles.md#trim-paths
 [`build-rs`]: https://crates.io/crates/build-rs
 
 ## Environment variables Cargo sets for `cargo test`
