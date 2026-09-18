@@ -632,8 +632,6 @@ pub struct Profile {
     #[serde(skip_serializing_if = "Vec::is_empty")] // remove when `rustflags` is stabilized
     // Note that `rustflags` is used for the cargo-feature `profile_rustflags`
     pub rustflags: Vec<InternedString>,
-    // remove when `-Ztrim-paths` is stabilized
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub trim_paths: Option<TomlTrimPaths>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hint_mostly_unused: Option<bool>,

@@ -2657,15 +2657,6 @@ fn validate_profile_layer(
             _ => {}
         }
     }
-    if profile.trim_paths.is_some() {
-        match (
-            features.require(Feature::trim_paths()),
-            cli_unstable.trim_paths,
-        ) {
-            (Err(e), false) => return Err(e),
-            _ => {}
-        }
-    }
     if profile.panic.as_deref() == Some("immediate-abort") {
         match (
             features.require(Feature::panic_immediate_abort()),

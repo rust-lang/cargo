@@ -145,6 +145,7 @@ panic = 'unwind'         # The panic strategy.
 incremental = true       # Incremental compilation.
 codegen-units = 16       # Number of code generation units.
 rpath = false            # Sets the rpath linking option.
+trim-paths = "none"      # Sanitizes paths in build outputs.
 [profile.<name>.build-override]  # Overrides build-script settings.
 # Same keys for a normal profile.
 [profile.<name>.package.<name>]  # Override profile for a package.
@@ -1126,6 +1127,13 @@ See [rpath](profiles.md#rpath).
 * Environment: `CARGO_PROFILE_<name>_STRIP`
 
 See [strip](profiles.md#strip).
+
+#### `profile.<name>.trim-paths`
+* Type: string
+* Default: See profile docs.
+* Environment: `CARGO_PROFILE_<name>_TRIM_PATHS`
+
+See [trim-paths](profiles.md#trim-paths).
 
 ### `[resolver]`
 
