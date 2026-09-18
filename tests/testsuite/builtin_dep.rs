@@ -107,3 +107,37 @@ Caused by:
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn patching_with_builtins_in_config_requires_feature_gate() {
+    let p = project()
+        .file("src/lib.rs", "use core;")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+                "#,
+        )
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [patch.crates-io]
+                core.builtin = true
+                "#,
+        )
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+
+thread [..] panicked at [..]
+not yet implemented: SourceKind::Builtin
+[NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+"#]])
+        .run();
+}
