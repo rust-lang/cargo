@@ -83,7 +83,7 @@ fn release_profile_default() {
             "build.rs",
             r#"
                 fn main() {
-                    assert!(std::env::var_os("CARGO_TRIM_PATHS_SCOPE").is_none());
+                    assert_eq!(std::env::var("CARGO_TRIM_PATHS_SCOPE").unwrap(), "none");
                     assert!(std::env::var_os("CARGO_TRIM_PATHS_REMAP").is_none());
                 }
             "#,
