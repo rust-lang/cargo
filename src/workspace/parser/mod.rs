@@ -1647,7 +1647,7 @@ pub fn to_real_manifest(
             Some(DepKind::Development),
         )?;
     }
-    let replace = replace(&normalized_toml, &mut manifest_ctx)?;
+    let replace = replace(&normalized_toml, &mut manifest_ctx, &features)?;
     let patch = patch(&normalized_toml, &mut manifest_ctx, &features)?;
 
     {
@@ -2021,7 +2021,7 @@ fn to_virtual_manifest(
             file: manifest_file,
         };
         (
-            replace(&normalized_toml, &mut manifest_ctx)?,
+            replace(&normalized_toml, &mut manifest_ctx, &features)?,
             patch(&normalized_toml, &mut manifest_ctx, &features)?,
         )
     };
@@ -2136,12 +2136,20 @@ fn gather_dependencies(
 fn replace(
     me: &manifest::TomlManifest,
     manifest_ctx: &mut ManifestContext<'_, '_>,
+    features: &Features,
 ) -> CargoResult<Vec<(PackageIdSpec, Dependency)>> {
     if me.patch.is_some() && me.replace.is_some() {
         bail!("cannot specify both [replace] and [patch]");
     }
     let mut replace = Vec::new();
     for (spec, replacement) in me.replace.iter().flatten() {
+        if let TomlDependency::Detailed(d) = replacement {
+            if d.builtin {
+                features
+                    .require(Feature::builtin_dependencies())
+                    .with_context(|| format!("invalid replacement for `{spec}`"))?;
+            }
+        }
         let mut spec = PackageIdSpec::parse(spec).with_context(|| {
             format!(
                 "replacements must specify a valid semver \
