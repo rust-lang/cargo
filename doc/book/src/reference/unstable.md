@@ -1642,7 +1642,7 @@ but it still contains absolute paths.
     > build scripts should accept a comma-separated list of scopes.
 * `CARGO_TRIM_PATHS_REMAP` --- The `<from>=<to>` path remap pairs Cargo passes to the compiler,
     joined by the platform path separator.
-    Only set when `trim-paths` profile is active.
+    Empty when `trim-paths` is `"none"`.
     Build scripts can forward these mappings to C/C++ compilers and other tools,
     for example via `cc`'s `-ffile-prefix-map`,
     to sanitize paths consistently with the rest of the build.

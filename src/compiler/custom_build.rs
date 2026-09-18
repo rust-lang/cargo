@@ -407,13 +407,15 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
         .as_ref()
         .unwrap_or(&TomlTrimPaths::None);
     cmd.env("CARGO_TRIM_PATHS_SCOPE", trim_paths.to_string());
-    if !trim_paths.is_none() {
-        let pairs = super::trim_paths::trim_paths_remap(build_runner, unit);
-        cmd.env(
-            "CARGO_TRIM_PATHS_REMAP",
-            paths::join_paths(&pairs, "CARGO_TRIM_PATHS_REMAP")?,
-        );
-    }
+    let pairs = if trim_paths.is_none() {
+        Vec::new()
+    } else {
+        super::trim_paths::trim_paths_remap(build_runner, unit)
+    };
+    cmd.env(
+        "CARGO_TRIM_PATHS_REMAP",
+        paths::join_paths(&pairs, "CARGO_TRIM_PATHS_REMAP")?,
+    );
 
     // Be sure to pass along all enabled features for this package, this is the
     // last piece of statically known information that we have.
