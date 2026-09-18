@@ -131,12 +131,17 @@ fn patching_with_builtins_in_config_requires_feature_gate() {
         .build();
 
     p.cargo("check")
+        .masquerade_as_nightly_cargo(&["builtin-dependencies"])
         .with_status(101)
         .with_stderr_data(str![[r#"
+[ERROR] invalid patch for `core`
 
-thread [..] panicked at [..]
-not yet implemented: SourceKind::Builtin
-[NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+Caused by:
+  feature `builtin-dependencies` is required
+
+  The package requires the Cargo feature called `builtin-dependencies`, but that feature is not stabilized in this version of Cargo ([..]).
+  Consider adding `cargo-features = ["builtin-dependencies"]` to the top of Cargo.toml (above the [package] table) to tell Cargo you are opting in to use this unstable feature.
+  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#builtin-dependencies for more information about the status of this feature.
 
 "#]])
         .run();
