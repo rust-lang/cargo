@@ -2,7 +2,7 @@ use crate::compiler::trim_paths;
 use crate::compiler::{CompileKind, CompileMode, Layout, RustcTargetData};
 use crate::ops;
 use crate::util::HumanBytes;
-use crate::util::data_structures::{IndexMap, IndexSet};
+use crate::util::data_structures::{HashSet, IndexMap, IndexSet};
 use crate::util::edit_distance;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
@@ -44,6 +44,7 @@ pub struct CleanContext<'gctx> {
     num_files_removed: u64,
     num_dirs_removed: u64,
     total_bytes_removed: u64,
+    seen_file_ids: HashSet<FileId>,
 }
 
 /// Cleans various caches.
@@ -512,6 +513,7 @@ impl<'gctx> CleanContext<'gctx> {
             num_files_removed: 0,
             num_dirs_removed: 0,
             total_bytes_removed: 0,
+            seen_file_ids: HashSet::default(),
         }
     }
 
@@ -545,10 +547,7 @@ impl<'gctx> CleanContext<'gctx> {
 
         let mut rm_file = |path: &Path, meta: Result<std::fs::Metadata, _>| {
             if let Ok(meta) = meta {
-                // Note: This can over-count bytes removed for hard-linked
-                // files. It also under-counts since it only counts the exact
-                // byte sizes and not the block sizes.
-                self.total_bytes_removed += meta.len();
+                self.total_bytes_removed += count_bytes(&mut self.seen_file_ids, path, &meta);
             }
             self.num_files_removed += 1;
             if !self.dry_run {
@@ -727,5 +726,89 @@ impl<'gctx> CleaningProgressBar for CleaningPackagesBar<'gctx> {
         self.package_being_cleaned = String::from(package);
         self.bar
             .tick(self.cur_progress(), self.max, &self.format_message())
+    }
+}
+
+fn count_bytes(seen: &mut HashSet<FileId>, path: &Path, meta: &fs::Metadata) -> u64 {
+    if !meta.is_file() {
+        return meta.len();
+    }
+    // We don't follow symlinks, so the meta here for the symlink itself.
+    // So we just report the size of the symlink since that is what we
+    // are deleting it.
+    if meta.is_symlink() {
+        return meta.len();
+    }
+    match FileId::new_with_link_count(meta, path) {
+        Some((id, nlink)) => {
+            if nlink <= 1 || seen.insert(id) {
+                meta.len()
+            } else {
+                0
+            }
+        }
+        None => meta.len(),
+    }
+}
+
+/// Newtype wrapper to represent a unique file on disk
+///
+/// [`FileId`] is similar to [`same_file::Handle`] but does not require holding on
+/// to a file descriptor. This is important when dealing with tracking large
+/// amounts of files like when cleaning target-dir/build-dir.
+///
+/// NOTE: Currently works for hardlinks, but will not work for reflinks.
+///       Cargo does not current use reflinks, but may in the future.
+#[derive(PartialEq, Eq, Hash)]
+struct FileId((u64, u64));
+
+impl FileId {
+    #[cfg(unix)]
+    fn new_with_link_count(meta: &fs::Metadata, _path: &Path) -> Option<(Self, u64)> {
+        use std::os::unix::fs::MetadataExt;
+        Some((FileId((meta.dev(), meta.ino())), meta.nlink() as u64))
+    }
+
+    #[cfg(windows)]
+    fn new_with_link_count(_meta: &fs::Metadata, path: &Path) -> Option<(Self, u64)> {
+        use std::os::windows::ffi::OsStrExt;
+        use windows_sys::Win32::Foundation::{CloseHandle, INVALID_HANDLE_VALUE};
+        use windows_sys::Win32::Storage::FileSystem::{
+            BY_HANDLE_FILE_INFORMATION, CreateFileW, FILE_ATTRIBUTE_NORMAL, FILE_READ_ATTRIBUTES,
+            FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE, GetFileInformationByHandle,
+            OPEN_EXISTING,
+        };
+
+        let mut wide: Vec<u16> = path.as_os_str().encode_wide().collect();
+        wide.push(0);
+
+        let handle = unsafe {
+            CreateFileW(
+                wide.as_ptr(),
+                FILE_READ_ATTRIBUTES,
+                FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                std::ptr::null(),
+                OPEN_EXISTING,
+                FILE_ATTRIBUTE_NORMAL,
+                std::ptr::null_mut(),
+            )
+        };
+        if handle == INVALID_HANDLE_VALUE {
+            return None;
+        }
+
+        let mut info: BY_HANDLE_FILE_INFORMATION = unsafe { std::mem::zeroed() };
+        let ok = unsafe { GetFileInformationByHandle(handle, &mut info) };
+        unsafe { CloseHandle(handle) };
+
+        if ok == 0 {
+            return None;
+        }
+
+        let file_index = ((info.nFileIndexHigh as u64) << 32) | (info.nFileIndexLow as u64);
+        Some((
+            FileId((info.dwVolumeSerialNumber as u64, file_index)),
+            info.nNumberOfLinks as u64,
+        ))
     }
 }
