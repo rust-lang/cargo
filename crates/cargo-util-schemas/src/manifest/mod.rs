@@ -937,7 +937,7 @@ pub struct TomlProfile {
     // requires all non-tables to be listed first.
     pub package: Option<BTreeMap<ProfilePackageSpec, TomlProfile>>,
     pub build_override: Option<Box<TomlProfile>>,
-    /// Unstable feature `-Ztrim-paths`.
+    /// Controls the scope of path sanitization in build outputs.
     pub trim_paths: Option<TomlTrimPaths>,
     /// Unstable feature `hint-mostly-unused`
     pub hint_mostly_unused: Option<bool>,
