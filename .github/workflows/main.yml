@@ -252,6 +252,10 @@ jobs:
       env:
         __CARGO_TEST_FORCE_ARGFILE: 1
     - run: cargo test --workspace --exclude cargo --exclude benchsuite --exclude resolver-tests
+    - run: cargo test -p build-rs -F unstable
+      if: startsWith(matrix.rust, 'nightly')
+    - run: cargo test -p build-rs-test-lib -F unstable
+      if: startsWith(matrix.rust, 'nightly')
     - name: Check benchmarks
       run: |
         # This only tests one benchmark since it can take over 10 minutes to

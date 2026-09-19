@@ -4,7 +4,7 @@
 //!
 //! > This crate is maintained by the Cargo team for use by the wider
 //! > ecosystem. This crate follows semver compatibility for its APIs.
-#![cfg_attr(all(doc, feature = "unstable"), feature(doc_auto_cfg, doc_cfg))]
+#![cfg_attr(all(docsrs, feature = "unstable"), feature(doc_cfg))]
 #![allow(clippy::disallowed_methods)] // HACK: deferred resoling this
 #![allow(clippy::print_stdout)] // HACK: deferred resoling this
 

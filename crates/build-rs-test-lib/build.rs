@@ -33,9 +33,8 @@ fn smoke_test_inputs() {
     dbg!(cargo_cfg_target_feature());
     dbg!(cargo_cfg_target_has_atomic());
     #[cfg(feature = "unstable")]
-    dbg!(cargo_cfg_target_has_atomic_equal_alignment());
-    #[cfg(feature = "unstable")]
     dbg!(cargo_cfg_target_has_atomic_load_store());
+    dbg!(cargo_cfg_target_has_atomic_primitive_alignment());
     dbg!(cargo_cfg_target_os());
     dbg!(cargo_cfg_target_pointer_width());
     #[cfg(feature = "unstable")]
