@@ -320,17 +320,6 @@ mod cfg {
         to_strings(var_or_panic(&cargo_cfg_var("target_has_atomic")), ',')
     }
 
-    /// List of atomic widths that have equal alignment requirements.
-    #[doc = unstable!(cfg_target_has_atomic_equal_alignment, 93822)]
-    #[cfg(feature = "unstable")]
-    #[track_caller]
-    pub fn cargo_cfg_target_has_atomic_equal_alignment() -> Vec<String> {
-        to_strings(
-            var_or_panic(&cargo_cfg_var("target_has_atomic_equal_alignment")),
-            ',',
-        )
-    }
-
     /// List of atomic widths that have atomic load and store operations.
     #[doc = unstable!(cfg_target_has_atomic_load_store, 94039)]
     #[cfg(feature = "unstable")]
@@ -338,6 +327,16 @@ mod cfg {
     pub fn cargo_cfg_target_has_atomic_load_store() -> Vec<String> {
         to_strings(
             var_or_panic(&cargo_cfg_var("target_has_atomic_load_store")),
+            ',',
+        )
+    }
+
+    /// List of atomic widths where the [atomic type has the same alignment as the corresponding integer type](https://doc.rust-lang.org/stable/reference/conditional-compilation.html#target_has_atomic_primitive_alignment).
+    #[doc = requires_msrv!("1.97")]
+    #[track_caller]
+    pub fn cargo_cfg_target_has_atomic_primitive_alignment() -> Vec<String> {
+        to_strings(
+            var_or_panic(&cargo_cfg_var("target_has_atomic_primitive_alignment")),
             ',',
         )
     }
