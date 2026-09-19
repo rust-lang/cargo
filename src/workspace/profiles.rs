@@ -1338,10 +1338,57 @@ fn get_config_profile(ws: &Workspace<'_>, name: &str) -> CargoResult<Option<Toml
             name, profile.definition
         )
     })?;
+    warn_ignored_hint_mostly_unused(ws.gctx(), &profile, name, &mut warnings)?;
     for warning in warnings {
         ws.gctx().shell().warn(warning)?;
     }
     Ok(Some(profile.val))
+}
+
+/// Warns about each `hint-mostly-unused = true` in a config profile, which is ignored without
+/// `-Zprofile-hint-mostly-unused`. Manifest profiles are covered by the parse pass instead, see
+/// [`crate::diagnostics::rules::PARSE_PASS_RULES`].
+fn warn_ignored_hint_mostly_unused(
+    gctx: &GlobalContext,
+    profile: &context::Value<TomlProfile>,
+    name: &str,
+    warnings: &mut Vec<String>,
+) -> CargoResult<()> {
+    if gctx.cli_unstable().profile_hint_mostly_unused {
+        return Ok(());
+    }
+    let mut key = context::ConfigKey::from_str("profile");
+    key.push(name);
+    let mut tables = vec![(&profile.val, key.clone())];
+    if let Some(build_override) = &profile.val.build_override {
+        let mut key = key.clone();
+        key.push("build-override");
+        tables.push((build_override, key));
+    }
+    for (spec, package) in profile.val.package.iter().flatten() {
+        let mut key = key.clone();
+        key.push("package");
+        key.push(&spec.to_string());
+        tables.push((package, key));
+    }
+    for (table, key) in tables {
+        if table.hint_mostly_unused == Some(true) {
+            // Config sources are merged key by key, so `profile.definition` may not be where this
+            // key was set. A legacy spec like `"foo:1.0.0"` is normalized by `to_string`, so its
+            // lookup misses and the profile's definition is used instead.
+            let mut hint_key = key.clone();
+            hint_key.push("hint-mostly-unused");
+            let hint = gctx.get_cv_with_env(&hint_key)?;
+            let definition = hint
+                .as_ref()
+                .map_or(&profile.definition, |hint| hint.definition());
+            warnings.push(format!(
+                "ignoring `hint-mostly-unused` in `{key}` (defined in {definition}), \
+                 pass `-Zprofile-hint-mostly-unused` to enable it"
+            ));
+        }
+    }
+    Ok(())
 }
 
 /// Validate that a package does not match multiple package override specs.

@@ -4,6 +4,7 @@ mod im_a_teapot;
 mod manual_readme;
 mod missing_lints_features;
 mod missing_lints_inheritance;
+mod mostly_unused_hint;
 mod non_kebab_case_bins;
 mod non_kebab_case_features;
 mod non_kebab_case_packages;
@@ -28,6 +29,12 @@ pub const PARSE_PASS_RULES: &[ParsePassRule<'static>] = &[
     },
     ParsePassRule::DiagnosticManifest {
         rule: missing_lints_features::diagnose_manifest,
+    },
+    ParsePassRule::DiagnosticWorkspace {
+        rule: mostly_unused_hint::diagnose_workspace,
+    },
+    ParsePassRule::DiagnosticPackage {
+        rule: mostly_unused_hint::diagnose_package,
     },
     ParsePassRule::LintManifest {
         rule: text_direction_codepoint_in_comment::lint_manifest,

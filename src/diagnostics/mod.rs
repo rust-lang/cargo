@@ -69,7 +69,9 @@ pub mod passes;
 pub mod rules;
 
 pub use lint::{Lint, LintGroup, LintLevel, LintLevelProduct, LintLevelSource};
-pub use report::{AsIndex, cwd_rel_path, get_key_value, get_key_value_span, workspace_rel_path};
+pub use report::{
+    AsIndex, TomlSpan, cwd_rel_path, get_key_value, get_key_value_span, workspace_rel_path,
+};
 pub use rules::{LINT_GROUPS, LINTS};
 
 pub struct PassOutput {
