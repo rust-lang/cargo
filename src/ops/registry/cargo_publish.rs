@@ -287,7 +287,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         } else {
             const DEFAULT_TIMEOUT: u64 = 60;
             let timeout = if opts.gctx.cli_unstable().publish_timeout {
-                let timeout: Option<u64> = opts.gctx.get("publish.timeout")?;
+                let timeout: Option<u64> = opts.gctx.get(["publish", "timeout"])?;
                 timeout.unwrap_or(DEFAULT_TIMEOUT)
             } else {
                 DEFAULT_TIMEOUT

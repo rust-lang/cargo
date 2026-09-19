@@ -136,7 +136,7 @@ fn builtin_aliases_execs(cmd: &str) -> Option<&(&str, &str, &str)> {
 /// 3. If still cannot find any, finds one insides [`BUILTIN_ALIASES`].
 fn aliased_command(gctx: &GlobalContext, command: &str) -> CargoResult<Option<Vec<String>>> {
     let alias_name = format!("alias.{}", command);
-    let user_alias = match gctx.get_string(&alias_name) {
+    let user_alias = match gctx.get_string(["alias", command]) {
         Ok(Some(record)) => Some(
             record
                 .val
@@ -145,7 +145,7 @@ fn aliased_command(gctx: &GlobalContext, command: &str) -> CargoResult<Option<Ve
                 .collect(),
         ),
         Ok(None) => None,
-        Err(_) => gctx.get::<Option<Vec<String>>>(&alias_name)?,
+        Err(_) => gctx.get::<Option<Vec<String>>>(["alias", command])?,
     };
 
     let result = user_alias.or_else(|| {
@@ -233,7 +233,7 @@ fn third_party_subcommands(gctx: &GlobalContext) -> BTreeMap<String, CommandInfo
 
 fn user_defined_aliases(gctx: &GlobalContext) -> BTreeMap<String, CommandInfo> {
     let mut commands = BTreeMap::new();
-    if let Ok(aliases) = gctx.get::<BTreeMap<String, StringOrVec>>("alias") {
+    if let Ok(aliases) = gctx.get::<BTreeMap<String, StringOrVec>>(["alias"]) {
         for (name, target) in aliases.iter() {
             commands.insert(
                 name.to_string(),

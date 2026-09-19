@@ -15,7 +15,7 @@ use crate::context::PathAndArgs;
 /// 3. Finally system default opener
 pub fn open(path: &Path, gctx: &GlobalContext) -> CargoResult<()> {
     let config_browser = {
-        let cfg: Option<PathAndArgs> = gctx.get("doc.browser")?;
+        let cfg: Option<PathAndArgs> = gctx.get(["doc", "browser"])?;
         cfg.map(|path_args| (path_args.path.resolve_program(gctx), path_args.args))
     };
 

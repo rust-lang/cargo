@@ -486,7 +486,7 @@ impl GlobalContext {
     /// Gets the default Cargo registry.
     pub fn default_registry(&self) -> CargoResult<Option<String>> {
         Ok(self
-            .get_string("registry.default")?
+            .get_string(["registry", "default"])?
             .map(|registry| registry.val))
     }
 
@@ -867,10 +867,7 @@ impl GlobalContext {
                 | CV::String(_, def)
                 | CV::List(_, def)
                 | CV::Boolean(_, def) => {
-                    let mut key_so_far = ConfigKey::new();
-                    for part in key.parts().take(i) {
-                        key_so_far.push(part);
-                    }
+                    let key_so_far = ConfigKey::from_parts(key.parts().take(i));
                     bail!(
                         "expected table for configuration key `{}`, \
                          but found {} in {}",
@@ -1050,7 +1047,10 @@ impl GlobalContext {
     /// Get a string config value.
     ///
     /// See `get` for more details.
-    pub fn get_string(&self, key: &str) -> CargoResult<OptValue<String>> {
+    pub fn get_string(
+        &self,
+        key: impl IntoIterator<Item = impl AsRef<str>>,
+    ) -> CargoResult<OptValue<String>> {
         self.get::<OptValue<String>>(key)
     }
 
@@ -1182,7 +1182,7 @@ impl GlobalContext {
         // Ignore errors in the configuration files. We don't want basic
         // commands like `cargo version` to error out due to config file
         // problems.
-        let term = self.get::<TermConfig>("term").unwrap_or_default();
+        let term = self.get::<TermConfig>(["term"]).unwrap_or_default();
 
         // The command line takes precedence over configuration.
         let extra_verbose = verbose >= 2;
@@ -1236,7 +1236,7 @@ impl GlobalContext {
         // using the `unstable` table. Ignore that block otherwise.
         if self.nightly_features_allowed {
             self.unstable_flags = self
-                .get::<Option<CliUnstable>>("unstable")?
+                .get::<Option<CliUnstable>>(["unstable"])?
                 .unwrap_or_default();
             if let Some(unstable_flags_cli) = &self.unstable_flags_cli {
                 // NB. It's not ideal to parse these twice, but doing it again here
@@ -1698,7 +1698,7 @@ impl GlobalContext {
     /// Gets the index for a registry.
     pub fn get_registry_index(&self, registry: &str) -> CargoResult<Url> {
         RegistryName::new(registry)?;
-        if let Some(index) = self.get_string(&format!("registries.{}.index", registry))? {
+        if let Some(index) = self.get_string(["registries", registry, "index"])? {
             self.resolve_registry_index(&index).with_context(|| {
                 format!(
                     "invalid index URL for registry `{}` defined in {}",
@@ -1715,7 +1715,7 @@ impl GlobalContext {
 
     /// Returns an error if `registry.index` is set.
     pub fn check_registry_index_not_set(&self) -> CargoResult<()> {
-        if self.get_string("registry.index")?.is_some() {
+        if self.get_string(["registry", "index"])?.is_some() {
             bail!(
                 "the `registry.index` config value is no longer supported\n\
                 Use `[source]` replacement to alter the default index for crates.io."
@@ -1875,7 +1875,7 @@ impl GlobalContext {
 
     /// Get the `paths` overrides config value.
     pub fn paths_overrides(&self) -> CargoResult<OptValue<Vec<(String, Definition)>>> {
-        let key = ConfigKey::from_str("paths");
+        let key = ConfigKey::from_parts(["paths"]);
         // paths overrides cannot be set via env config, so use get_cv here.
         match self.get_cv(&key)? {
             Some(CV::List(val, definition)) => {
@@ -1919,7 +1919,7 @@ impl GlobalContext {
 
     pub fn http_config(&self) -> CargoResult<&CargoHttpConfig> {
         self.http_config.try_borrow_with(|| {
-            let mut http = self.get::<CargoHttpConfig>("http")?;
+            let mut http = self.get::<CargoHttpConfig>(["http"])?;
             let curl_v = curl::Version::get();
             disables_multiplexing_for_bad_curl(curl_v.version(), &mut http, self);
             Ok(http)
@@ -1928,17 +1928,17 @@ impl GlobalContext {
 
     pub fn future_incompat_config(&self) -> CargoResult<&CargoFutureIncompatConfig> {
         self.future_incompat_config
-            .try_borrow_with(|| self.get::<CargoFutureIncompatConfig>("future-incompat-report"))
+            .try_borrow_with(|| self.get::<CargoFutureIncompatConfig>(["future-incompat-report"]))
     }
 
     pub fn net_config(&self) -> CargoResult<&CargoNetConfig> {
         self.net_config
-            .try_borrow_with(|| self.get::<CargoNetConfig>("net"))
+            .try_borrow_with(|| self.get::<CargoNetConfig>(["net"]))
     }
 
     pub fn build_config(&self) -> CargoResult<&CargoBuildConfig> {
         self.build_config
-            .try_borrow_with(|| self.get::<CargoBuildConfig>("build"))
+            .try_borrow_with(|| self.get::<CargoBuildConfig>(["build"]))
     }
 
     pub fn progress_config(&self) -> &ProgressConfig {
@@ -1950,7 +1950,7 @@ impl GlobalContext {
     pub fn env_config(&self) -> CargoResult<&Arc<HashMap<String, OsString>>> {
         let env_config = self.env_config.try_borrow_with(|| {
             CargoResult::Ok(Arc::new({
-                let env_config = self.get::<EnvConfig>("env")?;
+                let env_config = self.get::<EnvConfig>(["env"])?;
                 // Reasons for disallowing these values:
                 //
                 // - CARGO_HOME: The initial call to cargo does not honor this value
@@ -1996,7 +1996,7 @@ impl GlobalContext {
     /// early, and in some situations (like `cargo version`) we don't want to
     /// fail if there are problems with the config file.
     pub fn validate_term_config(&self) -> CargoResult<()> {
-        drop(self.get::<TermConfig>("term")?);
+        drop(self.get::<TermConfig>(["term"])?);
         Ok(())
     }
 
@@ -2013,7 +2013,7 @@ impl GlobalContext {
         // fundamentally does not have access to the registry name, so there is
         // nothing to query. Plumbing the name into SourceId is quite challenging.
         self.doc_extern_map
-            .try_borrow_with(|| self.get::<RustdocExternMap>("doc.extern-map"))
+            .try_borrow_with(|| self.get::<RustdocExternMap>(["doc", "extern-map"]))
     }
 
     /// Returns true if the `[target]` table should be applied to host targets.
@@ -2062,19 +2062,23 @@ impl GlobalContext {
     /// This supports most serde `Deserialize` types. Examples:
     ///
     /// ```rust,ignore
-    /// let v: Option<u32> = config.get("some.nested.key")?;
-    /// let v: Option<MyStruct> = config.get("some.key")?;
-    /// let v: Option<HashMap<String, MyStruct>> = config.get("foo")?;
+    /// let v: Option<u32> = config.get(["some", "nested", "key"])?;
+    /// let v: Option<MyStruct> = config.get(["some", "key"])?;
+    /// let v: Option<HashMap<String, MyStruct>> = config.get(["foo"])?;
     /// ```
     ///
     /// The key may be a dotted key, but this does NOT support TOML key
     /// quoting. Avoid key components that may have dots. For example,
     /// `foo.'a.b'.bar" does not work if you try to fetch `foo.'a.b'". You can
     /// fetch `foo` if it is a map, though.
-    pub fn get<'de, T: serde::de::Deserialize<'de>>(&self, key: &str) -> CargoResult<T> {
+    pub fn get<'de, T: serde::de::Deserialize<'de>>(
+        &self,
+
+        key: impl IntoIterator<Item = impl AsRef<str>>,
+    ) -> CargoResult<T> {
         let d = Deserializer {
             gctx: self,
-            key: ConfigKey::from_str(key),
+            key: ConfigKey::from_parts(key),
             env_prefix_ok: true,
         };
         T::deserialize(d).map_err(|e| e.into())

@@ -28,9 +28,9 @@ fn simple() {
         ",
     );
     let gctx = GlobalContextBuilder::new().build();
-    assert_eq!(gctx.get::<i32>("key1").unwrap(), 1);
-    assert_eq!(gctx.get::<i32>("key2").unwrap(), 2);
-    assert_eq!(gctx.get::<i32>("key3").unwrap(), 4);
+    assert_eq!(gctx.get::<i32>(["key1"]).unwrap(), 1);
+    assert_eq!(gctx.get::<i32>(["key2"]).unwrap(), 2);
+    assert_eq!(gctx.get::<i32>(["key3"]).unwrap(), 4);
 }
 
 #[cargo_test]
@@ -84,12 +84,12 @@ fn mix_of_hierarchy_and_include() {
         .cwd("foo")
         .nightly_features_allowed(true)
         .build();
-    assert_eq!(gctx.get::<i32>("key1").unwrap(), 1);
-    assert_eq!(gctx.get::<i32>("key2").unwrap(), 2);
-    assert_eq!(gctx.get::<i32>("key3").unwrap(), 3);
-    assert_eq!(gctx.get::<i32>("key4").unwrap(), 4);
+    assert_eq!(gctx.get::<i32>(["key1"]).unwrap(), 1);
+    assert_eq!(gctx.get::<i32>(["key2"]).unwrap(), 2);
+    assert_eq!(gctx.get::<i32>(["key3"]).unwrap(), 3);
+    assert_eq!(gctx.get::<i32>(["key4"]).unwrap(), 4);
     assert_eq!(
-        gctx.get::<Vec<String>>("unstable.features").unwrap(),
+        gctx.get::<Vec<String>>(["unstable", "features"]).unwrap(),
         vec![
             "4".to_string(),
             "3".to_string(),
@@ -146,11 +146,11 @@ fn left_to_right_bottom_to_top() {
         ",
     );
     let gctx = GlobalContextBuilder::new().build();
-    assert_eq!(gctx.get::<i32>("top").unwrap(), 1);
-    assert_eq!(gctx.get::<i32>("right-middle").unwrap(), 0);
-    assert_eq!(gctx.get::<i32>("right-bottom").unwrap(), -1);
-    assert_eq!(gctx.get::<i32>("left-middle").unwrap(), -2);
-    assert_eq!(gctx.get::<i32>("left-bottom").unwrap(), -3);
+    assert_eq!(gctx.get::<i32>(["top"]).unwrap(), 1);
+    assert_eq!(gctx.get::<i32>(["right-middle"]).unwrap(), 0);
+    assert_eq!(gctx.get::<i32>(["right-bottom"]).unwrap(), -1);
+    assert_eq!(gctx.get::<i32>(["left-middle"]).unwrap(), -2);
+    assert_eq!(gctx.get::<i32>(["left-bottom"]).unwrap(), -3);
 }
 
 #[cargo_test]
@@ -187,8 +187,8 @@ fn nested_include_resolves_relative_to_including_file() {
 
     let gctx = GlobalContextBuilder::new().build();
 
-    assert_eq!(gctx.get::<i32>("nested").unwrap(), 42);
-    assert_eq!(gctx.get::<i32>("middle").unwrap(), 10);
+    assert_eq!(gctx.get::<i32>(["nested"]).unwrap(), 42);
+    assert_eq!(gctx.get::<i32>(["middle"]).unwrap(), 10);
 }
 
 #[cargo_test]
@@ -199,7 +199,7 @@ fn missing_file() {
     // This ensures simple commands like `cargo --version` working even when
     let gctx = GlobalContextBuilder::new().build();
     assert_error(
-        gctx.get::<bool>("foo").unwrap_err(),
+        gctx.get::<bool>(["foo"]).unwrap_err(),
         str![[r#"
 could not load Cargo configuration
 
@@ -223,7 +223,7 @@ fn wrong_file_extension() {
     // This ensures simple commands like `cargo --version` working even when
     let gctx = GlobalContextBuilder::new().build();
     assert_error(
-        gctx.get::<bool>("foo").unwrap_err(),
+        gctx.get::<bool>(["foo"]).unwrap_err(),
         str![[r#"
 could not load Cargo configuration
 
@@ -241,7 +241,7 @@ fn cycle() {
     write_config_at(".cargo/two.toml", "include=['config.toml']");
     let gctx = GlobalContextBuilder::new().build();
     assert_error(
-        gctx.get::<bool>("foo").unwrap_err(),
+        gctx.get::<bool>(["foo"]).unwrap_err(),
         str![[r#"
 could not load Cargo configuration
 
@@ -275,8 +275,8 @@ fn cli_include() {
     let gctx = GlobalContextBuilder::new()
         .config_arg("include=['.cargo/config-foo.toml']")
         .build();
-    assert_eq!(gctx.get::<i32>("foo").unwrap(), 2);
-    assert_eq!(gctx.get::<i32>("bar").unwrap(), 2);
+    assert_eq!(gctx.get::<i32>(["foo"]).unwrap(), 2);
+    assert_eq!(gctx.get::<i32>(["bar"]).unwrap(), 2);
 }
 
 #[cargo_test]
@@ -287,7 +287,7 @@ fn bad_format() {
     // This ensures simple commands like `cargo --version` working even when
     let gctx = GlobalContextBuilder::new().build();
     assert_error(
-        gctx.get::<bool>("foo").unwrap_err(),
+        gctx.get::<bool>(["foo"]).unwrap_err(),
         str![[r#"
 could not load Cargo configuration
 
@@ -351,7 +351,7 @@ fn cli_include_take_priority_over_env() {
 
     // k=env
     let gctx = GlobalContextBuilder::new().env("CARGO_K", "env").build();
-    assert_eq!(gctx.get::<String>("k").unwrap(), "env");
+    assert_eq!(gctx.get::<String>(["k"]).unwrap(), "env");
 
     // k=env
     // --config 'include=".cargo/include.toml"'
@@ -359,7 +359,7 @@ fn cli_include_take_priority_over_env() {
         .env("CARGO_K", "env")
         .config_arg("include=['.cargo/include.toml']")
         .build();
-    assert_eq!(gctx.get::<String>("k").unwrap(), "include");
+    assert_eq!(gctx.get::<String>(["k"]).unwrap(), "include");
 
     // k=env
     // --config '.cargo/foo.toml'
@@ -368,7 +368,7 @@ fn cli_include_take_priority_over_env() {
         .env("CARGO_K", "env")
         .config_arg(".cargo/foo.toml")
         .build();
-    assert_eq!(gctx.get::<String>("k").unwrap(), "include");
+    assert_eq!(gctx.get::<String>(["k"]).unwrap(), "include");
 }
 
 #[cargo_test]
@@ -397,10 +397,10 @@ fn inline_table_style() {
     );
 
     let gctx = GlobalContextBuilder::new().build();
-    assert_eq!(gctx.get::<i32>("key1").unwrap(), 1);
-    assert_eq!(gctx.get::<i32>("key2").unwrap(), 2);
-    assert_eq!(gctx.get::<i32>("key3").unwrap(), 5);
-    assert_eq!(gctx.get::<i32>("key4").unwrap(), 6);
+    assert_eq!(gctx.get::<i32>(["key1"]).unwrap(), 1);
+    assert_eq!(gctx.get::<i32>(["key2"]).unwrap(), 2);
+    assert_eq!(gctx.get::<i32>(["key3"]).unwrap(), 5);
+    assert_eq!(gctx.get::<i32>(["key4"]).unwrap(), 6);
 }
 
 #[cargo_test]
@@ -434,10 +434,10 @@ fn array_of_tables_style() {
     );
 
     let gctx = GlobalContextBuilder::new().build();
-    assert_eq!(gctx.get::<i32>("key1").unwrap(), 1);
-    assert_eq!(gctx.get::<i32>("key2").unwrap(), 2);
-    assert_eq!(gctx.get::<i32>("key3").unwrap(), 5);
-    assert_eq!(gctx.get::<i32>("key4").unwrap(), 6);
+    assert_eq!(gctx.get::<i32>(["key1"]).unwrap(), 1);
+    assert_eq!(gctx.get::<i32>(["key2"]).unwrap(), 2);
+    assert_eq!(gctx.get::<i32>(["key3"]).unwrap(), 5);
+    assert_eq!(gctx.get::<i32>(["key4"]).unwrap(), 6);
 }
 
 #[cargo_test]
@@ -462,8 +462,8 @@ fn table_with_unknown_fields() {
     );
 
     let gctx = GlobalContextBuilder::new().build();
-    assert_eq!(gctx.get::<i32>("key1").unwrap(), 1);
-    assert_eq!(gctx.get::<i32>("key2").unwrap(), 2);
+    assert_eq!(gctx.get::<i32>(["key1"]).unwrap(), 1);
+    assert_eq!(gctx.get::<i32>(["key2"]).unwrap(), 2);
 }
 
 #[cargo_test]
@@ -482,7 +482,7 @@ fn table_missing_required_field() {
     // This ensures simple commands like `cargo --version` working even when
     let gctx = GlobalContextBuilder::new().build();
     assert_error(
-        gctx.get::<bool>("foo").unwrap_err(),
+        gctx.get::<bool>(["foo"]).unwrap_err(),
         str![[r#"
 could not load Cargo configuration
 
@@ -516,8 +516,8 @@ fn optional_include_missing_and_existing() {
     );
 
     let gctx = GlobalContextBuilder::new().build();
-    assert_eq!(gctx.get::<i32>("key1").unwrap(), 1);
-    assert_eq!(gctx.get::<i32>("key2").unwrap(), 2);
+    assert_eq!(gctx.get::<i32>(["key1"]).unwrap(), 1);
+    assert_eq!(gctx.get::<i32>(["key2"]).unwrap(), 2);
 }
 
 #[cargo_test]
@@ -537,7 +537,7 @@ fn optional_false_missing_file() {
     // This ensures simple commands like `cargo --version` working even when
     let gctx = GlobalContextBuilder::new().build();
     assert_error(
-        gctx.get::<bool>("foo").unwrap_err(),
+        gctx.get::<bool>(["foo"]).unwrap_err(),
         str![[r#"
 could not load Cargo configuration
 
@@ -561,7 +561,7 @@ fn disallow_glob_syntax() {
     // This ensures simple commands like `cargo --version` working even when
     let gctx = GlobalContextBuilder::new().build();
     assert_error(
-        gctx.get::<bool>("foo").unwrap_err(),
+        gctx.get::<bool>(["foo"]).unwrap_err(),
         str![[r#"
 could not load Cargo configuration
 
@@ -579,7 +579,7 @@ fn disallow_template_syntax() {
     // This ensures simple commands like `cargo --version` working even when
     let gctx = GlobalContextBuilder::new().build();
     assert_error(
-        gctx.get::<bool>("foo").unwrap_err(),
+        gctx.get::<bool>(["foo"]).unwrap_err(),
         str![[r#"
 could not load Cargo configuration
 

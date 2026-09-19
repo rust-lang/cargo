@@ -45,6 +45,18 @@ impl ConfigKey {
         cfg
     }
 
+    /// Creates a `ConfigKey` from the `key` specified.
+    ///
+    /// The `key` specified is expected to be a period-separated toml
+    /// configuration key.
+    pub fn from_parts(parts: impl IntoIterator<Item = impl AsRef<str>>) -> ConfigKey {
+        let mut cfg = ConfigKey::new();
+        for part in parts {
+            cfg.push(part.as_ref());
+        }
+        cfg
+    }
+
     /// Pushes a new sub-key on this `ConfigKey`. This sub-key should be
     /// equivalent to accessing a sub-table in TOML.
     ///
