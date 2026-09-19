@@ -2486,12 +2486,10 @@ pub(crate) fn lookup_path_base<'a>(
 ) -> CargoResult<PathBuf> {
     features.require(Feature::path_bases())?;
 
-    // HACK: The `base` string is user controlled, but building the path is safe from injection
-    // attacks since the `PathBaseName` type restricts the characters that can be used to exclude `.`
-    let base_key = format!("path-bases.{base}");
-
     // Look up the relevant base in the Config and use that as the root.
-    if let Some(path_bases) = gctx.get::<Option<ConfigRelativePath>>(&base_key)? {
+    if let Some(path_bases) =
+        gctx.get::<Option<ConfigRelativePath>>(["path-bases", base.as_str()])?
+    {
         Ok(path_bases.resolve_path(gctx))
     } else {
         // Otherwise, check the built-in bases.

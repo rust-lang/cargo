@@ -59,7 +59,7 @@ impl<'gctx> SourceConfigMap<'gctx> {
     /// replacement configurations.
     pub fn new(gctx: &'gctx GlobalContext) -> CargoResult<SourceConfigMap<'gctx>> {
         let mut base = SourceConfigMap::empty(gctx)?;
-        let sources: Option<HashMap<String, SourceConfigDef>> = gctx.get("source")?;
+        let sources: Option<HashMap<String, SourceConfigDef>> = gctx.get(["source"])?;
         if let Some(sources) = sources {
             for (key, value) in sources.into_iter() {
                 base.add_config(key, value)?;

@@ -546,7 +546,7 @@ impl InstallInfo {
 
 /// Determines the root directory where installation is done.
 pub fn resolve_root(flag: Option<&str>, gctx: &GlobalContext) -> CargoResult<Filesystem> {
-    let config_root = match gctx.get::<Option<ConfigRelativePath>>("install.root")? {
+    let config_root = match gctx.get::<Option<ConfigRelativePath>>(["install", "root"])? {
         Some(p) => {
             let resolved = p.resolve_program(gctx);
             if resolved.is_relative() {

@@ -52,7 +52,7 @@ pub(super) fn load_target_cfgs(
     // deterministic ordering of rustflags, which affects fingerprinting and
     // rebuilds. We may perhaps one day wish to ensure a deterministic
     // ordering via the order keys were defined in files perhaps.
-    let target: BTreeMap<String, TargetCfgConfig> = gctx.get("target")?;
+    let target: BTreeMap<String, TargetCfgConfig> = gctx.get(["target"])?;
     tracing::debug!("Got all targets {:#?}", target);
     for (key, cfg) in target {
         if let Ok(platform) = key.parse::<cargo_platform::Platform>() {
@@ -82,7 +82,7 @@ pub(super) fn load_target_cfgs(
 /// Returns true if the `[target]` table should be applied to host targets.
 pub(super) fn get_target_applies_to_host(gctx: &GlobalContext) -> CargoResult<bool> {
     if gctx.cli_unstable().target_applies_to_host {
-        if let Ok(target_applies_to_host) = gctx.get::<bool>("target-applies-to-host") {
+        if let Ok(target_applies_to_host) = gctx.get::<bool>(["target-applies-to-host"]) {
             Ok(target_applies_to_host)
         } else {
             Ok(!gctx.cli_unstable().host_config)
@@ -99,13 +99,13 @@ pub(super) fn get_target_applies_to_host(gctx: &GlobalContext) -> CargoResult<bo
 /// Loads a single `[host]` table for the given tuple.
 pub(super) fn load_host_triple(gctx: &GlobalContext, triple: &str) -> CargoResult<TargetConfig> {
     if gctx.cli_unstable().host_config {
-        let host_triple_prefix = format!("host.{}", triple);
-        let host_triple_key = ConfigKey::from_str(&host_triple_prefix);
+        let host_triple_prefix = ["host", triple];
+        let host_triple_key = ConfigKey::from_parts(host_triple_prefix);
         let host_prefix = match gctx.get_cv(&host_triple_key)? {
-            Some(_) => host_triple_prefix,
-            None => "host".to_string(),
+            Some(_) => host_triple_prefix.as_slice(),
+            None => &["host"],
         };
-        load_config_table(gctx, &host_prefix)
+        load_config_table(gctx, host_prefix)
     } else {
         Ok(TargetConfig::default())
     }
@@ -113,22 +113,24 @@ pub(super) fn load_host_triple(gctx: &GlobalContext, triple: &str) -> CargoResul
 
 /// Loads a single `[target]` table for the given tuple.
 pub(super) fn load_target_triple(gctx: &GlobalContext, triple: &str) -> CargoResult<TargetConfig> {
-    load_config_table(gctx, &format!("target.{}", triple))
+    load_config_table(gctx, &["target", triple])
 }
 
 /// Loads a single table for the given prefix.
-fn load_config_table(gctx: &GlobalContext, prefix: &str) -> CargoResult<TargetConfig> {
+fn load_config_table(gctx: &GlobalContext, prefix: &[&str]) -> CargoResult<TargetConfig> {
     // This needs to get each field individually because it cannot fetch the
     // struct all at once due to `links_overrides`. Can't use `serde(flatten)`
     // because it causes serde to use `deserialize_map` which means the config
     // deserializer does not know which keys to deserialize, which means
     // environment variables would not work.
-    let runner: OptValue<PathAndArgs> = gctx.get(&format!("{prefix}.runner"))?;
-    let rustflags: OptValue<StringList> = gctx.get(&format!("{prefix}.rustflags"))?;
-    let rustdocflags: OptValue<StringList> = gctx.get(&format!("{prefix}.rustdocflags"))?;
-    let linker: OptValue<ConfigRelativePath> = gctx.get(&format!("{prefix}.linker"))?;
+    let runner: OptValue<PathAndArgs> = gctx.get(prefix.iter().copied().chain(["runner"]))?;
+    let rustflags: OptValue<StringList> = gctx.get(prefix.iter().copied().chain(["rustflags"]))?;
+    let rustdocflags: OptValue<StringList> =
+        gctx.get(prefix.iter().copied().chain(["rustdocflags"]))?;
+    let linker: OptValue<ConfigRelativePath> =
+        gctx.get(prefix.iter().copied().chain(["linker"]))?;
     // Links do not support environment variables.
-    let target_key = ConfigKey::from_str(prefix);
+    let target_key = ConfigKey::from_parts(prefix);
     let links_overrides = match gctx.get_table(&target_key)? {
         Some(links) => parse_links_overrides(&target_key, links.val)?,
         None => BTreeMap::new(),

@@ -1091,7 +1091,7 @@ pub fn get_registry_candidates() -> CargoResult<Vec<clap_complete::CompletionCan
     let gctx = new_gctx_for_completions()?;
 
     if let Ok(Some(registries)) =
-        gctx.get::<Option<HashMap<String, HashMap<String, String>>>>("registries")
+        gctx.get::<Option<HashMap<String, HashMap<String, String>>>>(["registries"])
     {
         Ok(registries
             .keys()

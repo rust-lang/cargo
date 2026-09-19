@@ -423,7 +423,7 @@ fn status_locking(
 ) -> CargoResult<()> {
     use std::fmt::Write as _;
 
-    let resolver_config = ws.gctx().get::<Option<CargoResolverConfig>>("resolver")?;
+    let resolver_config = ws.gctx().get::<Option<CargoResolverConfig>>(["resolver"])?;
     let deny_min_publish_age = resolver_config
         .and_then(|c| c.incompatible_publish_age)
         .is_none_or(|v| v == IncompatiblePublishAge::Deny);
