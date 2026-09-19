@@ -241,5 +241,19 @@ blanket_hint_mostly_unused = "warn"
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("fetch").with_stderr_data(str![""]).run();
+    p.cargo("fetch")
+        .with_stderr_data(str![[r#"
+[WARNING] ignoring `hint-mostly-unused` profile option
+ --> Cargo.toml:8:1
+  |
+7 | [profile.dev]
+  |          ---
+8 | hint-mostly-unused = true
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = [HELP] pass `-Zprofile-hint-mostly-unused` to enable it
+[WARNING] workspace (manifest) generated 1 warning
+
+"#]])
+        .run();
 }

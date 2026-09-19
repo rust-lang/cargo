@@ -907,13 +907,20 @@ fn profile_hint_mostly_unused_warn_without_gate() {
         .build();
     p.cargo("check -v")
         .with_stderr_data(str![[r#"
+[WARNING] ignoring `hint-mostly-unused` profile option
+  --> Cargo.toml:11:13
+   |
+10 |             [profile.dev.package.bar]
+   |                                  ---
+11 |             hint-mostly-unused = true
+   |             ^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = [HELP] pass `-Zprofile-hint-mostly-unused` to enable it
+[WARNING] workspace (manifest) generated 1 warning
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
-[WARNING] ignoring `hint-mostly-unused` profile option for `bar@1.0.0`
-  |
-  = [HELP] pass `-Zprofile-hint-mostly-unused` to enable it
 [CHECKING] bar v1.0.0
 [RUNNING] `rustc --crate-name bar [..]`
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
@@ -928,30 +935,60 @@ fn profile_hint_mostly_unused_warn_without_gate() {
 #[cargo_test]
 fn profile_hint_mostly_unused_warns_with_mixed_profiles() {
     let normal_only = str![[r#"
+[WARNING] ignoring `hint-mostly-unused` profile option
+  --> Cargo.toml:14:21
+   |
+13 |                     [profile.dev]
+   |                              ---
+14 |                     hint-mostly-unused = true
+   |                     ^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = [HELP] pass `-Zprofile-hint-mostly-unused` to enable it
+[WARNING] workspace (manifest) generated 1 warning
 [LOCKING] 1 package to highest compatible version
-[WARNING] ignoring `hint-mostly-unused` profile option for `bar@0.0.1`
-  |
-  = [HELP] pass `-Zprofile-hint-mostly-unused` to enable it
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]];
     let build_only = str![[r#"
+[WARNING] ignoring `hint-mostly-unused` profile option
+  --> Cargo.toml:17:21
+   |
+16 |                     [profile.dev.build-override]
+   |                                  --------------
+17 |                     hint-mostly-unused = true
+   |                     ^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = [HELP] pass `-Zprofile-hint-mostly-unused` to enable it
+[WARNING] workspace (manifest) generated 1 warning
 [LOCKING] 1 package to highest compatible version
-[WARNING] ignoring `hint-mostly-unused` profile option for `bar@0.0.1`
-  |
-  = [HELP] pass `-Zprofile-hint-mostly-unused` to enable it
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]];
     let both = str![[r#"
+[WARNING] ignoring `hint-mostly-unused` profile option
+  --> Cargo.toml:14:21
+   |
+13 |                     [profile.dev]
+   |                              ---
+14 |                     hint-mostly-unused = true
+   |                     ^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = [HELP] pass `-Zprofile-hint-mostly-unused` to enable it
+[WARNING] ignoring `hint-mostly-unused` profile option
+  --> Cargo.toml:17:21
+   |
+16 |                     [profile.dev.build-override]
+   |                                  --------------
+17 |                     hint-mostly-unused = true
+   |                     ^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = [HELP] pass `-Zprofile-hint-mostly-unused` to enable it
+[WARNING] workspace (manifest) generated 2 warnings
 [LOCKING] 1 package to highest compatible version
-[WARNING] ignoring `hint-mostly-unused` profile option for `bar@0.0.1`
-  |
-  = [HELP] pass `-Zprofile-hint-mostly-unused` to enable it
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1041,9 +1078,7 @@ fn profile_hint_mostly_unused_from_config_warn_without_gate() {
 [LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
-[WARNING] ignoring `hint-mostly-unused` profile option for `bar@1.0.0`
-  |
-  = [HELP] pass `-Zprofile-hint-mostly-unused` to enable it
+[WARNING] ignoring `hint-mostly-unused` in `profile.dev.package.bar` (defined in [ROOT]/foo/.cargo/config.toml), pass `-Zprofile-hint-mostly-unused` to enable it
 [CHECKING] bar v1.0.0
 [RUNNING] `rustc --crate-name bar [..]`
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
@@ -1084,9 +1119,7 @@ fn profile_hint_mostly_unused_from_config_only_profile_warn_without_gate() {
     p.cargo("fetch").with_stderr_data(str![""]).run();
     p.cargo("check --profile custom -v")
         .with_stderr_data(str![[r#"
-[WARNING] ignoring `hint-mostly-unused` profile option for `foo@0.0.1`
-  |
-  = [HELP] pass `-Zprofile-hint-mostly-unused` to enable it
+[WARNING] ignoring `hint-mostly-unused` in `profile.custom` (defined in [ROOT]/foo/.cargo/config.toml), pass `-Zprofile-hint-mostly-unused` to enable it
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]`
 [FINISHED] `custom` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1121,9 +1154,8 @@ fn profile_hint_mostly_unused_from_env_and_config_warn_without_gate() {
     p.cargo("check")
         .env("CARGO_PROFILE_DEV_HINT_MOSTLY_UNUSED", "true")
         .with_stderr_data(str![[r#"
-[WARNING] ignoring `hint-mostly-unused` profile option for `foo@0.0.1`
-  |
-  = [HELP] pass `-Zprofile-hint-mostly-unused` to enable it
+[WARNING] ignoring `hint-mostly-unused` in `profile.dev` (defined in environment variable `CARGO_PROFILE_DEV_HINT_MOSTLY_UNUSED`), pass `-Zprofile-hint-mostly-unused` to enable it
+[WARNING] ignoring `hint-mostly-unused` in `profile.dev.build-override` (defined in [ROOT]/foo/.cargo/config.toml), pass `-Zprofile-hint-mostly-unused` to enable it
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1157,6 +1189,17 @@ fn profile_hint_mostly_unused_in_unselected_profile_warn_without_gate() {
         .build();
     p.cargo("check")
         .with_stderr_data(str![[r#"
+[WARNING] ignoring `hint-mostly-unused` profile option
+ --> Cargo.toml:8:13
+  |
+7 |             [profile.release]
+  |                      -------
+8 |             hint-mostly-unused = true
+  |             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = [HELP] pass `-Zprofile-hint-mostly-unused` to enable it
+[WARNING] workspace (manifest) generated 1 warning
+[WARNING] ignoring `hint-mostly-unused` in `profile.bench` (defined in [ROOT]/foo/.cargo/config.toml), pass `-Zprofile-hint-mostly-unused` to enable it
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 

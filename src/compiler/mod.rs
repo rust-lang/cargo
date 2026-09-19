@@ -1511,8 +1511,8 @@ fn build_base_args(
 
     let pkg_hint_mostly_unused = match hints.mostly_unused {
         Some(toml::Value::Boolean(b)) => Some(b),
-        // Unsupported values and missing feature gates are reported by
-        // `crate::diagnostics::rules::mostly_unused_hint::diagnose` before the build starts.
+        // Unsupported values and ignored hints are reported before the build, see
+        // `crate::diagnostics::rules::PARSE_PASS_RULES`.
         _ => None,
     };
     if profile_hint_mostly_unused
