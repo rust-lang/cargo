@@ -618,9 +618,8 @@ pub fn cargo_pkg_readme() -> Option<PathBuf> {
 /// Common paths requiring sanitization include `OUT_DIR`, `CARGO_MANIFEST_DIR` and `CARGO_MANIFEST_PATH`,
 /// plus any other introduced by the build script, such as include directories.
 ///
-/// [`trim-paths`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#profile-trim-paths-option
-#[doc = unstable!(trim_paths, 111540)]
-#[cfg(feature = "unstable")]
+/// [`trim-paths`]: https://doc.rust-lang.org/stable/cargo/reference/profiles.html#trim-paths
+#[doc = respected_msrv!("1.101")]
 #[track_caller]
 pub fn cargo_trim_paths_scope() -> Option<Vec<String>> {
     ENV.get("CARGO_TRIM_PATHS_SCOPE")
@@ -634,9 +633,8 @@ pub fn cargo_trim_paths_scope() -> Option<Vec<String>> {
 /// for example via `cc`'s `-ffile-prefix-map`,
 /// to sanitize paths consistently with the rest of the build.
 ///
-/// [`trim-paths`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#profile-trim-paths-option
-#[doc = unstable!(trim_paths, 111540)]
-#[cfg(feature = "unstable")]
+/// [`trim-paths`]: https://doc.rust-lang.org/stable/cargo/reference/profiles.html#trim-paths
+#[doc = respected_msrv!("1.101")]
 #[track_caller]
 pub fn cargo_trim_paths_remap() -> Option<Vec<(PathBuf, PathBuf)>> {
     ENV.get("CARGO_TRIM_PATHS_REMAP").map(to_remap_pairs)
@@ -676,7 +674,6 @@ fn to_strings(value: std::ffi::OsString, sep: char) -> Vec<String> {
     value.split(sep).map(str::to_owned).collect()
 }
 
-#[cfg(any(test, feature = "unstable"))]
 #[track_caller]
 fn to_remap_pairs(value: std::ffi::OsString) -> Vec<(PathBuf, PathBuf)> {
     let mut pairs = Vec::new();
