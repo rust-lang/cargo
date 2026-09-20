@@ -21,6 +21,7 @@ pub use self::once::OnceExt;
 pub use self::progress::{Progress, ProgressStyle};
 pub use self::queue::Queue;
 pub use self::rustc::Rustc;
+pub use self::semver_ext::VersionReqMatchMode;
 pub use self::semver_ext::{OptVersionReq, VersionExt};
 pub use self::unhashed::Unhashed;
 pub use self::vcs::{FossilRepo, GitRepo, HgRepo, PijulRepo, existing_vcs_repo};

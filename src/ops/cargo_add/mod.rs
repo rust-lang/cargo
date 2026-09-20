@@ -25,6 +25,7 @@ use crate::resolver::PublishAgePolicy;
 use crate::sources::IndexSummary;
 use crate::sources::source::QueryKind;
 use crate::util::OptVersionReq;
+use crate::util::VersionReqMatchMode;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::edit_distance;
 use crate::util::style;
@@ -572,7 +573,9 @@ fn get_public_dependency(
             .package_ids()
             .filter(|package_id| {
                 package_id.name() == dep.package_name()
-                    && dep.version_req().matches(package_id.version())
+                    && dep
+                        .version_req()
+                        .matches(package_id.version(), VersionReqMatchMode::Default)
             })
             .max_by_key(|x| x.version())
         else {

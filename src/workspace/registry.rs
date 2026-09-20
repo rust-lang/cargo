@@ -17,6 +17,7 @@ use crate::sources::config::SourceConfigMap;
 use crate::sources::source::QueryKind;
 use crate::sources::source::Source;
 use crate::sources::source::SourceMap;
+use crate::util::VersionReqMatchMode;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::{CanonicalUrl, GlobalContext};
@@ -500,10 +501,16 @@ impl<'gctx> PackageRegistry<'gctx> {
     /// making them available to resolution via [`Registry::query`].
     pub fn lock_patches(&mut self) {
         assert!(!self.patches_locked);
+
+        let mode = if self.gctx.cli_unstable().prerelease {
+            VersionReqMatchMode::Prerelease
+        } else {
+            VersionReqMatchMode::Default
+        };
         for summaries in self.patches.values_mut() {
             for summary in summaries {
                 debug!("locking patch {:?}", summary);
-                *summary = lock(&self.locked, &self.patches_available, summary.clone());
+                *summary = lock(&self.locked, &self.patches_available, summary.clone(), mode);
             }
         }
         self.patches_locked = true;
@@ -593,7 +600,12 @@ impl<'gctx> PackageRegistry<'gctx> {
     /// through.
     pub fn lock(&self, summary: Summary) -> Summary {
         assert!(self.patches_locked);
-        lock(&self.locked, &self.patches_available, summary)
+        let mode = if self.gctx.cli_unstable().prerelease {
+            VersionReqMatchMode::Prerelease
+        } else {
+            VersionReqMatchMode::Default
+        };
+        lock(&self.locked, &self.patches_available, summary, mode)
     }
 
     fn warn_bad_override(
@@ -673,7 +685,9 @@ impl<'gctx> Registry for PackageRegistry<'gctx> {
             patches.extend(
                 extra
                     .iter()
-                    .filter(|s| dep.matches_ignoring_source(s.package_id()))
+                    .filter(|s| {
+                        dep.matches_ignoring_source(s.package_id(), VersionReqMatchMode::Default)
+                    })
                     .cloned(),
             );
         }
@@ -757,6 +771,11 @@ impl<'gctx> Registry for PackageRegistry<'gctx> {
                 // then we skip this `summary`.
                 let locked = &self.locked;
                 let all_patches = &self.patches_available;
+                let mode = if self.gctx.cli_unstable().prerelease {
+                    VersionReqMatchMode::Prerelease
+                } else {
+                    VersionReqMatchMode::Default
+                };
                 let callback = &mut |summary: IndexSummary| {
                     for patch in patches.iter() {
                         let patch = patch.package_id().version();
@@ -764,7 +783,8 @@ impl<'gctx> Registry for PackageRegistry<'gctx> {
                             return;
                         }
                     }
-                    let summary = summary.map_summary(|summary| lock(locked, all_patches, summary));
+                    let summary =
+                        summary.map_summary(|summary| lock(locked, all_patches, summary, mode));
                     f(summary)
                 };
                 return query_with_context(&*source, dep, kind, callback).await;
@@ -825,6 +845,7 @@ fn lock(
     locked: &LockedMap,
     patches: &HashMap<CanonicalUrl, Vec<PackageId>>,
     summary: Summary,
+    mode: VersionReqMatchMode,
 ) -> Summary {
     let pair = locked
         .get(&(summary.source_id(), summary.name()))
@@ -873,14 +894,14 @@ fn lock(
                 // If the dependency matches the package id exactly then we've
                 // found a match, this is the id the dependency was previously
                 // locked to.
-                if dep.matches_id(id) {
+                if dep.matches_id(id, mode) {
                     return true;
                 }
 
                 // If the name/version doesn't match, then we definitely don't
                 // have a match whatsoever. Otherwise we need to check
                 // `[patch]`...
-                if !dep.matches_ignoring_source(id) {
+                if !dep.matches_ignoring_source(id, VersionReqMatchMode::Default) {
                     return false;
                 }
 
@@ -903,7 +924,7 @@ fn lock(
                 // Otherwise we got a lock via `[patch]` so we only lock the
                 // version requirement, not the source.
                 if locked.source_id() == dep.source_id() {
-                    dep.lock_to(locked);
+                    dep.lock_to(locked, mode);
                 } else {
                     dep.lock_version(locked.version());
                 }
@@ -916,11 +937,11 @@ fn lock(
         // If anything does then we lock it to that and move on.
         let v = locked
             .get(&(dep.source_id(), dep.package_name()))
-            .and_then(|vec| vec.iter().find(|&&(id, _)| dep.matches_id(id)));
+            .and_then(|vec| vec.iter().find(|&&(id, _)| dep.matches_id(id, mode)));
         if let Some(&(id, _)) = v {
             trace!("\tsecond hit on {}", id);
             let mut dep = dep;
-            dep.lock_to(id);
+            dep.lock_to(id, mode);
             return dep;
         }
 
