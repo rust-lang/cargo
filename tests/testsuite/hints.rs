@@ -132,11 +132,16 @@ fn hint_unknown_type_warn() {
         .build();
     p.cargo("check -v")
         .with_stderr_data(str![[r#"
+[WARNING] ignoring unsupported value type (string) for `hints.mostly-unused`
+  --> Cargo.toml:11:29
+   |
+11 |             mostly-unused = "string"
+   |                             ^^^^^^^^ expected a boolean
+[WARNING] `foo` (manifest) generated 1 warning
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
-[WARNING] foo@0.0.1: ignoring unsupported value type (string) for 'hints.mostly-unused', which expects a boolean
 [CHECKING] bar v1.0.0
 [RUNNING] `rustc --crate-name bar [..]`
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
@@ -145,6 +150,22 @@ fn hint_unknown_type_warn() {
 
 "#]])
         .with_stderr_does_not_contain("-Zhint-mostly-unused")
+        .run();
+
+    // The parse pass skips registry dependencies, so not even `-vv` reports `bar`'s hint.
+    p.cargo("check -vv")
+        .with_stderr_data(str![[r#"
+[WARNING] ignoring unsupported value type (string) for `hints.mostly-unused`
+  --> Cargo.toml:11:29
+   |
+11 |             mostly-unused = "string"
+   |                             ^^^^^^^^ expected a boolean
+[WARNING] `foo` (manifest) generated 1 warning
+[FRESH] bar v1.0.0
+[FRESH] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -191,11 +212,18 @@ fn hints_mostly_unused_warn_without_gate() {
         .build();
     p.cargo("check -v")
         .with_stderr_data(str![[r#"
+[WARNING] ignoring `hints.mostly-unused`
+  --> Cargo.toml:11:13
+   |
+11 |             mostly-unused = true
+   |             ^^^^^^^^^^^^^^^^^^^^
+   |
+   = [HELP] pass `-Zprofile-hint-mostly-unused` to enable it
+[WARNING] `foo` (manifest) generated 1 warning
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
-[WARNING] foo@0.0.1: ignoring 'hints.mostly-unused', pass `-Zprofile-hint-mostly-unused` to enable it
 [CHECKING] bar v1.0.0
 [RUNNING] `rustc --crate-name bar [..]`
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
@@ -204,6 +232,196 @@ fn hints_mostly_unused_warn_without_gate() {
 
 "#]])
         .with_stderr_does_not_contain("-Zhint-mostly-unused")
+        .run();
+
+    // The parse pass skips registry dependencies, so not even `-vv` reports `bar`'s hint.
+    p.cargo("check -vv")
+        .with_stderr_data(str![[r#"
+[WARNING] ignoring `hints.mostly-unused`
+  --> Cargo.toml:11:13
+   |
+11 |             mostly-unused = true
+   |             ^^^^^^^^^^^^^^^^^^^^
+   |
+   = [HELP] pass `-Zprofile-hint-mostly-unused` to enable it
+[WARNING] `foo` (manifest) generated 1 warning
+[FRESH] bar v1.0.0
+[FRESH] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn mostly_unused_warns_for_each_source_with_multiple_targets() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2015"
+
+            [hints]
+            mostly-unused = true
+
+            [profile.dev.build-override]
+            hint-mostly-unused = true
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("src/main.rs", "extern crate foo; fn main() {}")
+        .file("build.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[WARNING] ignoring `hint-mostly-unused` profile option
+  --> Cargo.toml:11:13
+   |
+10 |             [profile.dev.build-override]
+   |                          --------------
+11 |             hint-mostly-unused = true
+   |             ^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = [HELP] pass `-Zprofile-hint-mostly-unused` to enable it
+[WARNING] workspace (manifest) generated 1 warning
+[WARNING] ignoring `hints.mostly-unused`
+ --> Cargo.toml:8:13
+  |
+8 |             mostly-unused = true
+  |             ^^^^^^^^^^^^^^^^^^^^
+  |
+  = [HELP] pass `-Zprofile-hint-mostly-unused` to enable it
+[WARNING] `foo` (manifest) generated 1 warning
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[WARNING] ignoring `hint-mostly-unused` profile option
+  --> Cargo.toml:11:13
+   |
+10 |             [profile.dev.build-override]
+   |                          --------------
+11 |             hint-mostly-unused = true
+   |             ^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = [HELP] pass `-Zprofile-hint-mostly-unused` to enable it
+[WARNING] workspace (manifest) generated 1 warning
+[WARNING] ignoring `hints.mostly-unused`
+ --> Cargo.toml:8:13
+  |
+8 |             mostly-unused = true
+  |             ^^^^^^^^^^^^^^^^^^^^
+  |
+  = [HELP] pass `-Zprofile-hint-mostly-unused` to enable it
+[WARNING] `foo` (manifest) generated 1 warning
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn mostly_unused_invalid_value_and_profile_warn_once_per_package() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2015"
+
+            [hints]
+            mostly-unused = "string"
+
+            [profile.dev]
+            hint-mostly-unused = true
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("src/main.rs", "extern crate foo; fn main() {}")
+        .build();
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[WARNING] ignoring `hint-mostly-unused` profile option
+  --> Cargo.toml:11:13
+   |
+10 |             [profile.dev]
+   |                      ---
+11 |             hint-mostly-unused = true
+   |             ^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = [HELP] pass `-Zprofile-hint-mostly-unused` to enable it
+[WARNING] workspace (manifest) generated 1 warning
+[WARNING] ignoring unsupported value type (string) for `hints.mostly-unused`
+ --> Cargo.toml:8:29
+  |
+8 |             mostly-unused = "string"
+  |                             ^^^^^^^^ expected a boolean
+[WARNING] `foo` (manifest) generated 1 warning
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn mostly_unused_package_hint_warns_with_mixed_profiles() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2015"
+
+            [dependencies]
+            bar = { path = "bar" }
+
+            [build-dependencies]
+            bar = { path = "bar" }
+
+            [profile.dev.build-override]
+            hint-mostly-unused = false
+            "#,
+        )
+        .file("src/main.rs", "extern crate bar; fn main() {}")
+        .file("build.rs", "extern crate bar; fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            edition = "2015"
+
+            [hints]
+            mostly-unused = true
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    // `bar` is a path dependency, not a workspace member, so the parse pass never visits it.
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to highest compatible version
+[COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -348,6 +566,14 @@ fn mostly_unused_profile_overrides_hints_on_self_nightly() {
         .build();
     p.cargo("check -v")
         .with_stderr_data(str![[r#"
+[WARNING] ignoring `hints.mostly-unused`
+ --> Cargo.toml:8:13
+  |
+8 |             mostly-unused = true
+  |             ^^^^^^^^^^^^^^^^^^^^
+  |
+  = [HELP] pass `-Zprofile-hint-mostly-unused` to enable it
+[WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
