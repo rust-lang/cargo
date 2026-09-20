@@ -568,7 +568,7 @@ impl GlobalArgs {
 #[tracing::instrument(skip_all)]
 pub fn cli(gctx: &GlobalContext) -> Command {
     // Don't let config errors get in the way of parsing arguments
-    let term = gctx.get::<TermConfig>("term").unwrap_or_default();
+    let term = gctx.get::<TermConfig>(["term"]).unwrap_or_default();
     let color = term
         .color
         .and_then(|c| c.parse().ok())

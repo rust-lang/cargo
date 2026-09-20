@@ -872,8 +872,7 @@ fn rustflags_from_target(
         CompileKind::Host => host_triple,
         CompileKind::Target(target) => target.short_name(),
     };
-    let key = format!("target.{}.{}", target, flag.as_key());
-    if let Some(args) = gctx.get::<Option<StringList>>(&key)? {
+    if let Some(args) = gctx.get::<Option<StringList>>(["target", target, flag.as_key()])? {
         rustflags.extend(args.as_slice().iter().cloned());
     }
     // ...including target.'cfg(...)'.rustflags

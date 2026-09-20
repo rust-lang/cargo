@@ -149,7 +149,7 @@ impl GcOpts {
     /// settings from config.
     pub fn update_for_auto_gc(&mut self, gctx: &GlobalContext) -> CargoResult<()> {
         let config = gctx
-            .get::<CargoCacheConfig>("cache")?
+            .get::<CargoCacheConfig>(["cache"])?
             .global_clean
             .unwrap_or_default();
         self.update_for_auto_gc_config(&config, gctx.cli_unstable().gc)
@@ -258,7 +258,7 @@ impl<'a, 'gctx> Gc<'a, 'gctx> {
     /// This returns immediately without doing work if garbage collection has
     /// been performed recently (since `cache.auto-clean-frequency`).
     fn auto(&mut self, clean_ctx: &mut CleanContext<'gctx>) -> CargoResult<()> {
-        let cache_config = self.gctx.get::<CargoCacheConfig>("cache")?;
+        let cache_config = self.gctx.get::<CargoCacheConfig>(["cache"])?;
         let freq = cache_config.auto_clean_frequency;
         let Some(freq) = parse_frequency(freq.as_deref().unwrap_or(DEFAULT_AUTO_FREQUENCY))? else {
             tracing::trace!(target: "gc", "auto gc disabled");

@@ -1319,8 +1319,7 @@ fn merge_config_profiles(
 
 /// Helper for fetching a profile from config.
 fn get_config_profile(ws: &Workspace<'_>, name: &str) -> CargoResult<Option<TomlProfile>> {
-    let profile: Option<context::Value<TomlProfile>> =
-        ws.gctx().get(&format!("profile.{}", name))?;
+    let profile: Option<context::Value<TomlProfile>> = ws.gctx().get(["profile", name])?;
     let Some(profile) = profile else {
         return Ok(None);
     };

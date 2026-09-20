@@ -724,7 +724,7 @@ fn init_vcs(path: &Path, vcs: VersionControl, gctx: &GlobalContext) -> CargoResu
 fn mk(gctx: &GlobalContext, opts: &MkOptions<'_>) -> CargoResult<()> {
     let path = opts.path;
     let name = opts.name;
-    let cfg = gctx.get::<CargoNewConfig>("cargo-new")?;
+    let cfg = gctx.get::<CargoNewConfig>(["cargo-new"])?;
 
     // Using the push method with multiple arguments ensures that the entries
     // for all mutually-incompatible VCS in terms of syntax are in sync.

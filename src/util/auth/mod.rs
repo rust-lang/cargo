@@ -45,7 +45,7 @@ fn credential_provider(
         vec![vec!["cargo:token".to_string()]]
     };
     let global_providers = gctx
-        .get::<Option<Vec<Value<String>>>>("registry.global-credential-providers")?
+        .get::<Option<Vec<Value<String>>>>(["registry", "global-credential-providers"])?
         .filter(|p| !p.is_empty())
         .map(|p| {
             p.iter()
@@ -139,7 +139,7 @@ fn registry_credential_config_raw_uncached(
     if sid.is_crates_io() {
         gctx.check_registry_index_not_set()?;
         return Ok(gctx
-            .get::<Option<GlobalRegistryConfig>>("registry")?
+            .get::<Option<GlobalRegistryConfig>>(["registry"])?
             .map(|c| c.to_registry_config()));
     }
 
@@ -213,7 +213,7 @@ fn registry_credential_config_raw_uncached(
 
     if let Some(name) = &name {
         tracing::debug!("found alternative registry name `{name}` for {sid}");
-        gctx.get::<Option<RegistryConfig>>(&format!("registries.{name}"))
+        gctx.get::<Option<RegistryConfig>>(["registries", name.as_str()])
     } else {
         tracing::debug!("no registry name found for {sid}");
         Ok(None)
@@ -225,7 +225,7 @@ fn resolve_credential_alias(gctx: &GlobalContext, mut provider: PathAndArgs) -> 
     if provider.args.is_empty() {
         let name = provider.path.raw_value();
         let key = format!("credential-alias.{name}");
-        if let Ok(alias) = gctx.get::<Value<PathAndArgs>>(&key) {
+        if let Ok(alias) = gctx.get::<Value<PathAndArgs>>(["credential-alias", name]) {
             tracing::debug!("resolving credential alias '{key}' -> '{alias:?}'");
             if BUILT_IN_PROVIDERS.contains(&name) {
                 let _ = gctx.shell().warn(format!(

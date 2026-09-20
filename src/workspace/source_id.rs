@@ -279,7 +279,8 @@ impl SourceId {
 
     /// Returns whether to access crates.io over the sparse protocol.
     pub fn crates_io_is_sparse(gctx: &GlobalContext) -> CargoResult<bool> {
-        let proto: Option<context::Value<String>> = gctx.get("registries.crates-io.protocol")?;
+        let proto: Option<context::Value<String>> =
+            gctx.get(["registries", "crates-io", "protocol"])?;
         let is_sparse = match proto.as_ref().map(|v| v.val.as_str()) {
             Some("sparse") => true,
             Some("git") => false,
