@@ -440,7 +440,8 @@ fn pin_prerelease_for_transitive_dep_and_check() {
     p.cargo("check")
         .arg("-Zprerelease")
         .masquerade_as_nightly_cargo(&["prerelease"])
-        .with_stderr_data(str![[r#"
+        .with_stderr_data(
+            str![[r#"
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 [DOWNLOADED] my-dependency v0.1.2-pre.0 (registry `dummy-registry`)
@@ -449,7 +450,9 @@ fn pin_prerelease_for_transitive_dep_and_check() {
 [CHECKING] package v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-"#]])
+"#]]
+            .unordered(),
+        )
         .run();
 
     let lockfile = p.read_lockfile();
@@ -583,7 +586,8 @@ fn pin_prerelease_for_shared_direct_transitive_dep_and_check() {
     p.cargo("check")
         .arg("-Zprerelease")
         .masquerade_as_nightly_cargo(&["prerelease"])
-        .with_stderr_data(str![[r#"
+        .with_stderr_data(
+            str![[r#"
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 [DOWNLOADED] my-dependency v0.1.2-pre.0 (registry `dummy-registry`)
@@ -592,7 +596,9 @@ fn pin_prerelease_for_shared_direct_transitive_dep_and_check() {
 [CHECKING] package v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-"#]])
+"#]]
+            .unordered(),
+        )
         .run();
 
     let lockfile = p.read_lockfile();
