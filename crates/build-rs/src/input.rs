@@ -611,6 +611,37 @@ pub fn cargo_pkg_readme() -> Option<PathBuf> {
     to_opt(var_or_panic("CARGO_PKG_README")).map(to_path)
 }
 
+/// The value of the [`trim-paths`] profile option.
+///
+/// If the build script introduces absolute paths to built artifacts (such as by invoking a compiler),
+/// the user may request them to be sanitized in different types of artifacts.
+/// Common paths requiring sanitization include `OUT_DIR`, `CARGO_MANIFEST_DIR` and `CARGO_MANIFEST_PATH`,
+/// plus any other introduced by the build script, such as include directories.
+///
+/// [`trim-paths`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#profile-trim-paths-option
+#[doc = unstable!(trim_paths, 111540)]
+#[cfg(feature = "unstable")]
+#[track_caller]
+pub fn cargo_trim_paths_scope() -> Option<Vec<String>> {
+    ENV.get("CARGO_TRIM_PATHS_SCOPE")
+        .map(|v| to_strings(v, ','))
+}
+
+/// The `<from>=<to>` path remap pairs Cargo passes to the compiler.
+///
+/// Empty when [`trim-paths`] is `"none"`.
+/// Build scripts can forward these mappings to C/C++ compilers and other tools,
+/// for example via `cc`'s `-ffile-prefix-map`,
+/// to sanitize paths consistently with the rest of the build.
+///
+/// [`trim-paths`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#profile-trim-paths-option
+#[doc = unstable!(trim_paths, 111540)]
+#[cfg(feature = "unstable")]
+#[track_caller]
+pub fn cargo_trim_paths_remap() -> Option<Vec<(PathBuf, PathBuf)>> {
+    ENV.get("CARGO_TRIM_PATHS_REMAP").map(to_remap_pairs)
+}
+
 #[track_caller]
 fn var_or_panic(key: &str) -> std::ffi::OsString {
     ENV.get(key)
@@ -645,6 +676,25 @@ fn to_strings(value: std::ffi::OsString, sep: char) -> Vec<String> {
     value.split(sep).map(str::to_owned).collect()
 }
 
+#[cfg(any(test, feature = "unstable"))]
+#[track_caller]
+fn to_remap_pairs(value: std::ffi::OsString) -> Vec<(PathBuf, PathBuf)> {
+    let mut pairs = Vec::new();
+    for pair in std::env::split_paths(&value) {
+        if pair.as_os_str().is_empty() {
+            continue;
+        }
+        let pair = to_string(pair.into_os_string());
+        // Split at the last `=` like rustc does.
+        // <https://github.com/rust-lang/rust/blob/feaadeeaca7/compiler/rustc_session/src/config.rs#L2662-L2676>
+        let Some((from, to)) = pair.rsplit_once('=') else {
+            panic!("invalid path remap pair {pair:?}, expected `<from>=<to>`")
+        };
+        pairs.push((PathBuf::from(from), PathBuf::from(to)));
+    }
+    pairs
+}
+
 #[track_caller]
 fn to_parsed<T>(value: std::ffi::OsString) -> T
 where
@@ -657,5 +707,25 @@ where
         Err(err) => {
             panic!("{err}")
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn remap_pairs() {
+        let value =
+            std::env::join_paths(["/from=with=equals=.", "/sysroot=/rustc/some-hash"]).unwrap();
+        assert_eq!(
+            to_remap_pairs(value),
+            vec![
+                (PathBuf::from("/from=with=equals"), PathBuf::from(".")),
+                (PathBuf::from("/sysroot"), PathBuf::from("/rustc/some-hash")),
+            ]
+        );
+
+        assert_eq!(to_remap_pairs(std::ffi::OsString::new()), Vec::new());
     }
 }

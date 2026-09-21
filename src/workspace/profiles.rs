@@ -581,7 +581,7 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
         profile.rustflags = flags.iter().map(InternedString::from).collect();
     }
     if let Some(trim_paths) = &toml.trim_paths {
-        profile.trim_paths = Some(trim_paths.clone());
+        profile.trim_paths = trim_paths.clone();
     }
     if let Some(hint_mostly_unused) = toml.hint_mostly_unused {
         profile.hint_mostly_unused = Some(hint_mostly_unused);
@@ -632,9 +632,7 @@ pub struct Profile {
     #[serde(skip_serializing_if = "Vec::is_empty")] // remove when `rustflags` is stabilized
     // Note that `rustflags` is used for the cargo-feature `profile_rustflags`
     pub rustflags: Vec<InternedString>,
-    // remove when `-Ztrim-paths` is stabilized
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub trim_paths: Option<TomlTrimPaths>,
+    pub trim_paths: TomlTrimPaths,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hint_mostly_unused: Option<bool>,
 }
@@ -657,7 +655,7 @@ impl Default for Profile {
             panic: PanicStrategy::Unwind,
             strip: Strip::Deferred(StripInner::None),
             rustflags: vec![],
-            trim_paths: None,
+            trim_paths: TomlTrimPaths::None,
             hint_mostly_unused: None,
         }
     }

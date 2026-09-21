@@ -1655,18 +1655,18 @@ fn calculate_normal(
         build_runner.bcx.extra_args_for(unit),
         build_runner.lto[unit],
         unit.pkg.manifest().lint_rustflags(),
-        unit.profile
-            .trim_paths
-            .as_ref()
-            .filter(|trim_paths| !trim_paths.is_none())
-            .map(|_| {
+        if unit.profile.trim_paths.is_none() {
+            None
+        } else {
+            Some(
                 build_runner
                     .bcx
                     .gctx
                     .get_env(super::trim_paths::WS_REMAP_ENV)
                     .ok()
-                    .filter(|prefix| !prefix.is_empty())
-            }),
+                    .filter(|prefix| !prefix.is_empty()),
+            )
+        },
     ));
     let mut config = StableHasher::new();
     let linker = if unit.target.for_host() && !build_runner.bcx.gctx.target_applies_to_host()? {

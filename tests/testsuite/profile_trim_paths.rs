@@ -83,8 +83,8 @@ fn release_profile_default() {
             "build.rs",
             r#"
                 fn main() {
-                    assert!(std::env::var_os("CARGO_TRIM_PATHS_SCOPE").is_none());
-                    assert!(std::env::var_os("CARGO_TRIM_PATHS_REMAP").is_none());
+                    assert_eq!(std::env::var("CARGO_TRIM_PATHS_SCOPE").unwrap(), "none");
+                    assert_eq!(std::env::var("CARGO_TRIM_PATHS_REMAP").unwrap(), "");
                 }
             "#,
         )
@@ -1150,11 +1150,10 @@ fn custom_build_env_var_trim_paths() {
                     let scope = std::env::var("CARGO_TRIM_PATHS_SCOPE").unwrap();
                     assert_eq!(scope.as_str(), "{expected}");
 
-                    let remap = std::env::var_os("CARGO_TRIM_PATHS_REMAP");
+                    let remap = std::env::var("CARGO_TRIM_PATHS_REMAP").unwrap();
                     if scope == "none" {{
-                        assert_eq!(remap, None);
+                        assert_eq!(remap, "");
                     }} else {{
-                        let remap = remap.unwrap();
                         let pairs: Vec<String> = std::env::split_paths(&remap)
                             .map(|p| p.into_os_string().into_string().unwrap())
                             .collect();

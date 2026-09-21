@@ -289,10 +289,9 @@ pub(crate) fn should_emit_unremap_file(unit: &Unit) -> bool {
         return false;
     }
 
-    match unit.profile.trim_paths.as_ref() {
-        None => false,
-        Some(TomlTrimPaths::None) => false,
-        Some(TomlTrimPaths::Object | TomlTrimPaths::All) => true,
+    match unit.profile.trim_paths {
+        TomlTrimPaths::None => false,
+        TomlTrimPaths::Object | TomlTrimPaths::All => true,
     }
 }
 
