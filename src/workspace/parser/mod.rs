@@ -85,7 +85,7 @@ pub fn read_manifest(
         let cargo_features = original_toml.cargo_features.as_ref().unwrap_or(&empty);
         let features = Features::new(cargo_features, gctx, &mut warnings, source_id.is_path())?;
         let workspace_config =
-            to_workspace_config(&original_toml, path, is_embedded, &mut warnings)?;
+            to_workspace_config(&original_toml, path, is_embedded, &mut warnings, &features)?;
         if let WorkspaceConfig::Root(ws_root_config) = &workspace_config {
             let package_root = path.parent().unwrap();
             gctx.ws_roots()
@@ -234,6 +234,7 @@ fn to_workspace_config(
     manifest_file: &Path,
     is_embedded: bool,
     warnings: &mut Vec<String>,
+    features: &Features,
 ) -> CargoResult<WorkspaceConfig> {
     if is_embedded {
         let ws_root_config = to_workspace_root_config(&TomlWorkspace::default(), manifest_file);
@@ -247,6 +248,15 @@ fn to_workspace_config(
             verify_lints(toml_config.lints.as_ref(), warnings)?;
             if let Some(ws_deps) = &toml_config.dependencies {
                 for (name, dep) in ws_deps {
+                    if let TomlDependency::Detailed(d) = dep {
+                        if d.builtin {
+                            features
+                                .require(Feature::builtin_dependencies())
+                                .with_context(|| {
+                                    format!("resolving workspace dependency `{name}`")
+                                })?;
+                        }
+                    }
                     if dep.is_optional() {
                         bail!("{name} is optional, but workspace dependencies cannot be optional",);
                     }

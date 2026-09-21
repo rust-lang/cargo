@@ -204,18 +204,20 @@ fn unused_workspace_builtin_dependency_requires_feature_gate() {
         .build();
 
     p.cargo("check")
+        .with_status(101)
+        .masquerade_as_nightly_cargo(&["builtin-dependencies"])
         .with_stderr_data(str![[r#"
-[WARNING] unused workspace dependency `core`
- --> Cargo.toml:8:17
-  |
-8 |                 core = { builtin = true }
-  |                 ^^^^
-  |
-  = [NOTE] `cargo::unused_workspace_dependencies` is set to `warn` by default
-[HELP] consider removing the workspace dependency `core`
-[WARNING] workspace (manifest) generated 1 warning
-[CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  resolving workspace dependency `core`
+
+Caused by:
+  feature `builtin-dependencies` is required
+
+  The package requires the Cargo feature called `builtin-dependencies`, but that feature is not stabilized in this version of Cargo ([..]).
+  Consider adding `cargo-features = ["builtin-dependencies"]` to the top of Cargo.toml (above the [package] table) to tell Cargo you are opting in to use this unstable feature.
+  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#builtin-dependencies for more information about the status of this feature.
 
 "#]])
         .run();
