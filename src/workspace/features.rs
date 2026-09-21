@@ -586,6 +586,9 @@ features! {
 
     /// Allow to use a table for defining features.
     (unstable, feature_metadata, "", "reference/unstable.html#feature_metadata"),
+
+    /// Allow explicit dependencies on builtin crates.
+    (unstable, builtin_dependencies, "", "reference/unstable.html#builtin-dependencies"),
 }
 
 /// Status and metadata for a single unstable feature.

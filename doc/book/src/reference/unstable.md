@@ -116,6 +116,7 @@ Each new feature described below should explain how to use it.
     * [path bases](#path-bases) --- Named base directories for path dependencies.
     * [feature-metadata](#feature-metadata) --- Table syntax for feature definitions.
     * [`unstable-editions`](#unstable-editions) --- Allows use of editions that are not yet stable.
+    * [builtin-dependencies](#builtin-dependencies) --- Allow specifying dependencies on standard library crates.
 * Information and metadata
     * [unit-graph](#unit-graph) --- Emits JSON for Cargo's internal graph structure.
     * [`cargo rustc --print`](#rustc---print) --- Calls rustc with `--print` to display information from rustc.
@@ -2061,6 +2062,21 @@ option:
 [unstable]
 hint-msrv = true
 ```
+
+## builtin-dependencies
+* Tracking Issue: [rust-lang/cargo#16960](https://github.com/rust-lang/cargo/issues/16960)
+- RFC: [rust-lang/rfcs#3875](https://rust-lang.github.io/rfcs/3875-build-std-explicit-dependencies.html)
+
+Allows specifying dependencies on standard library crates, like so:
+
+```toml
+[dependencies]
+std = { builtin = true, optional = true }
+core = { builtin = true}
+```
+
+Specifying builtin dependencies explicitly pairs well with `-Zbuild-std` and is
+also useful for `#[no_std]` crates. See the RFC for further details.
 
 # Stabilized and removed features
 
