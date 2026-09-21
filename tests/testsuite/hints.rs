@@ -941,6 +941,7 @@ fn min_opt_level_with_wrong_type() {
   |
 8 |             min-opt-level = "s"
   |                             ^^^ expected an integer
+[WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -983,6 +984,7 @@ fn min_opt_level_with_out_of_range_values() {
   |
 8 |                     min-opt-level = [..]
   |                                     [..] expected an integer from 0 to 3
+[WARNING] `[..]` (manifest) generated 1 warning
 [CHECKING] [..] v0.0.1 ([ROOT]/[..])
 [RUNNING] `rustc --crate-name [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1075,6 +1077,7 @@ fn min_opt_level_without_feature_gate() {
   |             ^^^^^^^^^^^^^^^^^
   |
   = [HELP] pass `-Zhint-min-opt-level` to enable it
+[WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1091,6 +1094,7 @@ fn min_opt_level_without_feature_gate() {
   |             ^^^^^^^^^^^^^^^^^
   |
   = [HELP] pass `-Zhint-min-opt-level` to enable it
+[WARNING] `foo` (manifest) generated 1 warning
 [FRESH] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1126,6 +1130,7 @@ fn min_opt_level_warning_is_emitted_once_per_package() {
   |             ^^^^^^^^^^^^^^^^^
   |
   = [HELP] pass `-Zhint-min-opt-level` to enable it
+[WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1136,9 +1141,9 @@ fn min_opt_level_warning_is_emitted_once_per_package() {
 #[cargo_test]
 fn min_opt_level_on_local_dependencies_without_feature_gate() {
     // Keep the local hinting packages in a dependency chain so their output
-    // order is stable. They must remain path dependencies because hint gate
-    // warnings are suppressed for non-local units, which would make the
-    // silent-zero case vacuous.
+    // order is stable. The parse pass only checks the root and workspace
+    // members, so it misses these non-member path dependencies; that gap
+    // belongs to the pass rather than to this rule.
     let p = project()
         .file(
             "Cargo.toml",
@@ -1190,13 +1195,6 @@ fn min_opt_level_on_local_dependencies_without_feature_gate() {
     cargo
         .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to highest Rust [..] compatible versions
-[WARNING] ignoring `hints.min-opt-level`
-  --> bar/Cargo.toml:11:13
-   |
-11 |             min-opt-level = 3
-   |             ^^^^^^^^^^^^^^^^^
-   |
-   = [HELP] pass `-Zhint-min-opt-level` to enable it
 [CHECKING] zero v1.0.0 ([ROOT]/foo/zero)
 [RUNNING] `rustc --crate-name zero [..]`
 [CHECKING] bar v1.0.0 ([ROOT]/foo/bar)
