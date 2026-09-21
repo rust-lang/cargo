@@ -184,3 +184,39 @@ Caused by:
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn unused_workspace_builtin_dependency_requires_feature_gate() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+
+                [workspace.dependencies]
+                core = { builtin = true }
+            "#,
+        )
+        .build();
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[WARNING] unused workspace dependency `core`
+ --> Cargo.toml:8:17
+  |
+8 |                 core = { builtin = true }
+  |                 ^^^^
+  |
+  = [NOTE] `cargo::unused_workspace_dependencies` is set to `warn` by default
+[HELP] consider removing the workspace dependency `core`
+[WARNING] workspace (manifest) generated 1 warning
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
