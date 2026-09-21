@@ -16,11 +16,6 @@ Cargo downloads your Rust project’s dependencies and compiles your project.
 > use (except as a transitive dependency). This crate may make major changes to
 > its APIs.
 
-## Code Status
-
-[![CI](https://github.com/rust-lang/cargo/actions/workflows/main.yml/badge.svg?branch=auto-cargo)](https://github.com/rust-lang/cargo/actions/workflows/main.yml)
-
-Code documentation: <https://doc.rust-lang.org/nightly/nightly-rustc/cargo/>
 
 ## Compiling from Source
 
@@ -106,6 +101,8 @@ Please report all issues on the GitHub [issue tracker][issues].
 
 See the **[Cargo Contributor Guide]** for a complete introduction
 to contributing to Cargo.
+
+Code documentation: <https://doc.rust-lang.org/nightly/nightly-rustc/cargo/>
 
 ## License
 
