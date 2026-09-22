@@ -2255,14 +2255,6 @@ fn dep_to_dependency<P: ResolveToPath + Clone>(
         manifest::TomlDependency::Detailed(details) => details,
     };
 
-    if orig.version.is_none() && orig.path.is_none() && orig.git.is_none() {
-        anyhow::bail!(
-            "dependency ({name_in_toml}) specified without \
-                 providing a local path, Git repository, version, or \
-                 workspace dependency to use"
-        );
-    }
-
     if let Some(version) = &orig.version {
         if version.contains('+') {
             manifest_ctx.warnings.push(format!(
@@ -2274,77 +2266,7 @@ fn dep_to_dependency<P: ResolveToPath + Clone>(
         }
     }
 
-    if orig.git.is_some() {
-        if orig.path.is_some() {
-            bail!(
-                "dependency ({name_in_toml}) specification is ambiguous. \
-                    Only one of `git` or `path` is allowed.",
-            );
-        }
-        let n_details = [&orig.branch, &orig.tag, &orig.rev]
-            .into_iter()
-            .flatten()
-            .count();
-
-        if n_details > 1 {
-            bail!(
-                "dependency ({name_in_toml}) specification is ambiguous. \
-                         Only one of `branch`, `tag` or `rev` is allowed.",
-            );
-        }
-    } else {
-        let git_only_keys = [
-            (&orig.branch, "branch"),
-            (&orig.tag, "tag"),
-            (&orig.rev, "rev"),
-        ];
-
-        for &(key, key_name) in &git_only_keys {
-            if key.is_some() {
-                bail!(
-                    "key `{}` is ignored for dependency ({}).",
-                    key_name,
-                    name_in_toml
-                );
-            }
-        }
-    }
-
-    if orig.registry.is_some() && orig.registry_index.is_some() {
-        bail!(
-            "dependency ({name_in_toml}) specification is ambiguous. \
-                 Only one of `registry` or `registry-index` is allowed.",
-        )
-    }
-
-    // Early detection of potentially misused feature syntax
-    // instead of generating a "feature not found" error.
-    if let Some(features) = &orig.features {
-        for feature in features {
-            if feature.contains('/') {
-                bail!(
-                    "feature `{}` in dependency `{}` is not allowed to contain slashes\n\
-                         If you want to enable features of a transitive dependency, \
-                         the direct dependency needs to re-export those features from \
-                         the `[features]` table.",
-                    feature,
-                    name_in_toml
-                );
-            }
-            if feature.starts_with("dep:") {
-                bail!(
-                    "feature `{}` in dependency `{}` is not allowed to use explicit \
-                        `dep:` syntax\n\
-                         If you want to enable an optional dependency, specify the name \
-                         of the optional dependency without the `dep:` prefix, or specify \
-                         a feature from the dependency's `[features]` table that enables \
-                         the optional dependency.",
-                    feature,
-                    name_in_toml
-                );
-            }
-        }
-    }
+    check_for_malformed_toml_dependency(orig, name_in_toml)?;
 
     let new_source_id = to_dependency_source_id(orig, name_in_toml, manifest_ctx)?;
 
@@ -2472,6 +2394,92 @@ fn to_dependency_source_id<P: ResolveToPath + Clone>(
     } else {
         SourceId::crates_io(manifest_ctx.gctx)
     }
+}
+
+fn check_for_malformed_toml_dependency<P: ResolveToPath + Clone>(
+    orig: &TomlDetailedDependency<P>,
+    name_in_toml: &str,
+) -> CargoResult<()> {
+    if orig.version.is_none() && orig.path.is_none() && orig.git.is_none() {
+        anyhow::bail!(
+            "dependency ({name_in_toml}) specified without \
+                 providing a local path, Git repository, version, or \
+                 workspace dependency to use"
+        );
+    }
+
+    if orig.git.is_some() {
+        if orig.path.is_some() {
+            bail!(
+                "dependency ({name_in_toml}) specification is ambiguous. \
+                    Only one of `git` or `path` is allowed.",
+            );
+        }
+        let n_details = [&orig.branch, &orig.tag, &orig.rev]
+            .into_iter()
+            .flatten()
+            .count();
+
+        if n_details > 1 {
+            bail!(
+                "dependency ({name_in_toml}) specification is ambiguous. \
+                         Only one of `branch`, `tag` or `rev` is allowed.",
+            );
+        }
+    } else {
+        let git_only_keys = [
+            (&orig.branch, "branch"),
+            (&orig.tag, "tag"),
+            (&orig.rev, "rev"),
+        ];
+
+        for &(key, key_name) in &git_only_keys {
+            if key.is_some() {
+                bail!(
+                    "key `{}` is ignored for dependency ({}).",
+                    key_name,
+                    name_in_toml
+                );
+            }
+        }
+    }
+
+    if orig.registry.is_some() && orig.registry_index.is_some() {
+        bail!(
+            "dependency ({name_in_toml}) specification is ambiguous. \
+                 Only one of `registry` or `registry-index` is allowed.",
+        )
+    }
+
+    // Early detection of potentially misused feature syntax
+    // instead of generating a "feature not found" error.
+    if let Some(features) = &orig.features {
+        for feature in features {
+            if feature.contains('/') {
+                bail!(
+                    "feature `{}` in dependency `{}` is not allowed to contain slashes\n\
+                         If you want to enable features of a transitive dependency, \
+                         the direct dependency needs to re-export those features from \
+                         the `[features]` table.",
+                    feature,
+                    name_in_toml
+                );
+            }
+            if feature.starts_with("dep:") {
+                bail!(
+                    "feature `{}` in dependency `{}` is not allowed to use explicit \
+                        `dep:` syntax\n\
+                         If you want to enable an optional dependency, specify the name \
+                         of the optional dependency without the `dep:` prefix, or specify \
+                         a feature from the dependency's `[features]` table that enables \
+                         the optional dependency.",
+                    feature,
+                    name_in_toml
+                );
+            }
+        }
+    };
+    Ok(())
 }
 
 pub(crate) fn lookup_path_base<'a>(
