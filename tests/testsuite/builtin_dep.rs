@@ -222,3 +222,36 @@ Caused by:
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn builtin_false_rejected() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["builtin-dependencies"]
+
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+
+                [dependencies]
+                core = { version = "0.0.0", builtin = false }
+            "#,
+        )
+        .build();
+
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["builtin-dependencies"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[ERROR] no matching package named `core` found
+location searched: crates.io index
+required by package `foo v0.1.0 ([ROOT]/foo)`
+
+"#]])
+        .run();
+}
