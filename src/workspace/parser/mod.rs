@@ -2274,7 +2274,14 @@ fn dep_to_dependency<P: ResolveToPath + Clone>(
         }
     }
 
-    if orig.git.is_none() {
+    if orig.git.is_some() {
+        if orig.path.is_some() {
+            bail!(
+                "dependency ({name_in_toml}) specification is ambiguous. \
+                    Only one of `git` or `path` is allowed.",
+            );
+        }
+    } else {
         let git_only_keys = [
             (&orig.branch, "branch"),
             (&orig.tag, "tag"),
@@ -2290,6 +2297,13 @@ fn dep_to_dependency<P: ResolveToPath + Clone>(
                 );
             }
         }
+    }
+
+    if orig.registry.is_some() && orig.registry_index.is_some() {
+        bail!(
+            "dependency ({name_in_toml}) specification is ambiguous. \
+                 Only one of `registry` or `registry-index` is allowed.",
+        )
     }
 
     // Early detection of potentially misused feature syntax
@@ -2402,79 +2416,62 @@ fn to_dependency_source_id<P: ResolveToPath + Clone>(
     name_in_toml: &str,
     manifest_ctx: &mut ManifestContext<'_, '_>,
 ) -> CargoResult<SourceId> {
-    match (
-        orig.git.as_ref(),
-        orig.path.as_ref(),
-        orig.registry.as_deref(),
-        orig.registry_index.as_ref(),
-    ) {
-        (Some(_git), Some(_path), _, _) => {
+    if let Some(git) = orig.git.as_ref() {
+        let n_details = [&orig.branch, &orig.tag, &orig.rev]
+            .iter()
+            .filter(|d| d.is_some())
+            .count();
+
+        if n_details > 1 {
             bail!(
                 "dependency ({name_in_toml}) specification is ambiguous. \
-                     Only one of `git` or `path` is allowed.",
+                         Only one of `branch`, `tag` or `rev` is allowed.",
             );
         }
-        (_, _, Some(_registry), Some(_registry_index)) => bail!(
-            "dependency ({name_in_toml}) specification is ambiguous. \
-                 Only one of `registry` or `registry-index` is allowed.",
-        ),
-        (Some(git), None, _, _) => {
-            let n_details = [&orig.branch, &orig.tag, &orig.rev]
-                .iter()
-                .filter(|d| d.is_some())
-                .count();
 
-            if n_details > 1 {
-                bail!(
-                    "dependency ({name_in_toml}) specification is ambiguous. \
-                         Only one of `branch`, `tag` or `rev` is allowed.",
-                );
-            }
+        let reference = orig
+            .branch
+            .clone()
+            .map(GitReference::Branch)
+            .or_else(|| orig.tag.clone().map(GitReference::Tag))
+            .or_else(|| orig.rev.clone().map(GitReference::Rev))
+            .unwrap_or(GitReference::DefaultBranch);
+        let loc = git.into_url()?;
 
-            let reference = orig
-                .branch
-                .clone()
-                .map(GitReference::Branch)
-                .or_else(|| orig.tag.clone().map(GitReference::Tag))
-                .or_else(|| orig.rev.clone().map(GitReference::Rev))
-                .unwrap_or(GitReference::DefaultBranch);
-            let loc = git.into_url()?;
-
-            if let Some(fragment) = loc.fragment() {
-                let msg = format!(
-                    "URL fragment `#{fragment}` in git URL is ignored for dependency ({name_in_toml}). \
+        if let Some(fragment) = loc.fragment() {
+            let msg = format!(
+                "URL fragment `#{fragment}` in git URL is ignored for dependency ({name_in_toml}). \
                         If you were trying to specify a specific git revision, \
                         use `rev = \"{fragment}\"` in the dependency declaration.",
-                );
-                manifest_ctx.warnings.push(msg);
-            }
+            );
+            manifest_ctx.warnings.push(msg);
+        }
 
-            SourceId::for_git(&loc, reference)
+        SourceId::for_git(&loc, reference)
+    } else if let Some(path) = orig.path.as_ref() {
+        let path = path.resolve(manifest_ctx.gctx);
+        // If the source ID for the package we're parsing is a path
+        // source, then we normalize the path here to get rid of
+        // components like `..`.
+        //
+        // The purpose of this is to get a canonical ID for the package
+        // that we're depending on to ensure that builds of this package
+        // always end up hashing to the same value no matter where it's
+        // built from.
+        if manifest_ctx.source_id.is_path() {
+            let path = manifest_ctx.file.parent().unwrap().join(path);
+            let path = paths::normalize_path(&path);
+            SourceId::for_path(&path)
+        } else {
+            Ok(manifest_ctx.source_id)
         }
-        (None, Some(path), _, _) => {
-            let path = path.resolve(manifest_ctx.gctx);
-            // If the source ID for the package we're parsing is a path
-            // source, then we normalize the path here to get rid of
-            // components like `..`.
-            //
-            // The purpose of this is to get a canonical ID for the package
-            // that we're depending on to ensure that builds of this package
-            // always end up hashing to the same value no matter where it's
-            // built from.
-            if manifest_ctx.source_id.is_path() {
-                let path = manifest_ctx.file.parent().unwrap().join(path);
-                let path = paths::normalize_path(&path);
-                SourceId::for_path(&path)
-            } else {
-                Ok(manifest_ctx.source_id)
-            }
-        }
-        (None, None, Some(registry), None) => SourceId::alt_registry(manifest_ctx.gctx, registry),
-        (None, None, None, Some(registry_index)) => {
-            let url = registry_index.into_url()?;
-            SourceId::for_registry(&url)
-        }
-        (None, None, None, None) => SourceId::crates_io(manifest_ctx.gctx),
+    } else if let Some(registry) = orig.registry.as_deref() {
+        SourceId::alt_registry(manifest_ctx.gctx, registry)
+    } else if let Some(registry_index) = orig.registry_index.as_ref() {
+        let url = registry_index.into_url()?;
+        SourceId::for_registry(&url)
+    } else {
+        SourceId::crates_io(manifest_ctx.gctx)
     }
 }
 
