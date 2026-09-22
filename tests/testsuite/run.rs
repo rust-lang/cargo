@@ -1973,3 +1973,27 @@ fn run_binary_with_same_name_as_dependency() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn cargo_run_out_dir_bug() {
+    let p = project()
+        .file("build.rs", "fn main() {}")
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {
+                assert!(std::env::var("OUT_DIR").is_ok());
+            }
+            "#,
+        )
+        .build();
+
+    p.cargo("run")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo[EXE]`
+
+"#]])
+        .run();
+}
