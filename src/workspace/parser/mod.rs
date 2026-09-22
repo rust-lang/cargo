@@ -2281,6 +2281,17 @@ fn dep_to_dependency<P: ResolveToPath + Clone>(
                     Only one of `git` or `path` is allowed.",
             );
         }
+        let n_details = [&orig.branch, &orig.tag, &orig.rev]
+            .into_iter()
+            .flatten()
+            .count();
+
+        if n_details > 1 {
+            bail!(
+                "dependency ({name_in_toml}) specification is ambiguous. \
+                         Only one of `branch`, `tag` or `rev` is allowed.",
+            );
+        }
     } else {
         let git_only_keys = [
             (&orig.branch, "branch"),
@@ -2417,18 +2428,6 @@ fn to_dependency_source_id<P: ResolveToPath + Clone>(
     manifest_ctx: &mut ManifestContext<'_, '_>,
 ) -> CargoResult<SourceId> {
     if let Some(git) = orig.git.as_ref() {
-        let n_details = [&orig.branch, &orig.tag, &orig.rev]
-            .iter()
-            .filter(|d| d.is_some())
-            .count();
-
-        if n_details > 1 {
-            bail!(
-                "dependency ({name_in_toml}) specification is ambiguous. \
-                         Only one of `branch`, `tag` or `rev` is allowed.",
-            );
-        }
-
         let reference = orig
             .branch
             .clone()
