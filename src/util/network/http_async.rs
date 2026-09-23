@@ -97,8 +97,12 @@ impl Client {
 
     /// Perform a blocking HTTP request using this client.
     /// Does not start an async executor.
-    pub fn request_blocking(&self, request: Request) -> HttpResult<Response> {
-        let mut handle = self.request_helper(request)?;
+    pub fn request_blocking(
+        &self,
+        request: Request,
+        stall_timeout: Option<Duration>,
+    ) -> HttpResult<Response> {
+        let mut handle = self.request_helper(request, stall_timeout)?;
         // Configure the handle timeout since we're blocking here and not using the
         // client-level timeout.
         self.handle_config.timeout.configure2(&mut handle)?;
@@ -108,7 +112,7 @@ impl Client {
 
     /// Perform an HTTP request using this client.
     pub async fn request(&self, request: Request) -> HttpResult<Response> {
-        let handle = self.request_helper(request)?;
+        let handle = self.request_helper(request, None)?;
         let (sender, receiver) = oneshot::channel();
         let req = Message {
             easy: handle,
@@ -118,10 +122,14 @@ impl Client {
         receiver.await.unwrap()
     }
 
-    fn request_helper(&self, request: Request) -> HttpResult<Easy2<Collector>> {
+    fn request_helper(
+        &self,
+        request: Request,
+        stall_timeout: Option<Duration>,
+    ) -> HttpResult<Easy2<Collector>> {
         let url = request.uri().to_string();
         debug!(target: "network::fetch", url);
-        let mut collector = Collector::new(self.stats.clone());
+        let mut collector = Collector::new(self.stats.clone(), stall_timeout);
         let (parts, body) = request.into_parts();
         let body_len = body.len();
         collector.request_body = Cursor::new(body);
@@ -427,16 +435,24 @@ struct Collector {
     global_stats: Arc<Stats>,
     /// How much has this particular transfer added to global `dl_remaining` stats.
     dl_remaining_delta: i64,
+    last_activity: std::time::Instant,
+    last_ulnow: f64,
+    last_dlnow: f64,
+    stall_timeout: Option<std::time::Duration>,
 }
 
 impl Collector {
-    fn new(stats: Arc<Stats>) -> Self {
+    fn new(stats: Arc<Stats>, stall_timeout: Option<std::time::Duration>) -> Self {
         Collector {
             response: Response::new(Vec::new()),
             request_body: Cursor::new(Vec::new()),
             debug: false,
             global_stats: stats,
             dl_remaining_delta: 0,
+            last_activity: std::time::Instant::now(),
+            last_ulnow: 0.0,
+            last_dlnow: 0.0,
+            stall_timeout,
         }
     }
 }
@@ -470,7 +486,19 @@ impl Handler for Collector {
         }
     }
 
-    fn progress(&mut self, dltotal: f64, dlnow: f64, _ultotal: f64, _ulnow: f64) -> bool {
+    fn progress(&mut self, dltotal: f64, dlnow: f64, _ultotal: f64, ulnow: f64) -> bool {
+        let now = std::time::Instant::now();
+        if dlnow != self.last_dlnow || ulnow != self.last_ulnow {
+            self.last_activity = now;
+            self.last_dlnow = dlnow;
+            self.last_ulnow = ulnow;
+        } else if let Some(timeout) = self.stall_timeout {
+            if now.duration_since(self.last_activity) > timeout {
+                error!("Network transfer stalled for longer than {:?}", timeout);
+                return false; // Aborts the curl transfer with CURLE_ABORTED_BY_CALLBACK
+            }
+        }
+
         if dlnow > dltotal {
             return true;
         }

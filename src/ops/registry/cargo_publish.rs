@@ -664,6 +664,10 @@ fn transmit(
         return Ok(());
     }
 
+    tracing::debug!(
+        "starting network upload for registry.publish of package {}",
+        pkg.name()
+    );
     let warnings = registry.publish(&new_crate, tarball).with_context(|| {
         format!(
             "failed to publish {} v{} to registry at {}{}",

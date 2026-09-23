@@ -147,7 +147,20 @@ fn registry<'gctx>(
     } else {
         None
     };
-    let handle = RegistryClient(gctx.http_async()?);
+    let stall_timeout = if gctx.cli_unstable().publish_timeout {
+        let timeout: Option<u64> = gctx.get(["publish", "timeout"])?;
+        // timeout=0 means "skip waiting for publish confirmation" — do not
+        // use it as a 0ns stall threshold which would immediately abort uploads.
+        timeout
+            .filter(|&t| t > 0)
+            .map(std::time::Duration::from_secs)
+    } else {
+        None
+    };
+    let handle = RegistryClient {
+        client: gctx.http_async()?,
+        stall_timeout,
+    };
     Ok((
         Registry::new_handle(api_host, token, handle, cfg.auth_required),
         src,
@@ -346,12 +359,15 @@ pub(crate) fn infer_registry(pkgs: &[&Package]) -> CargoResult<Option<RegistryOr
     }
 }
 
-struct RegistryClient<'gctx>(&'gctx http_async::Client);
+struct RegistryClient<'gctx> {
+    client: &'gctx http_async::Client,
+    stall_timeout: Option<std::time::Duration>,
+}
 
 impl<'gctx> crates_io::HttpClient for RegistryClient<'gctx> {
     type Error = http_async::Error;
 
     fn request(&self, req: http::Request<Vec<u8>>) -> Result<http::Response<Vec<u8>>, Self::Error> {
-        self.0.request_blocking(req)
+        self.client.request_blocking(req, self.stall_timeout)
     }
 }

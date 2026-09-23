@@ -1837,7 +1837,7 @@ fn github_fast_path(
     }
     let response = gctx
         .http_async()?
-        .request_blocking(request.body(Vec::new())?)?;
+        .request_blocking(request.body(Vec::new())?, None)?;
     let response_code = response.status();
     if response_code == StatusCode::NOT_MODIFIED {
         debug!("github fast path up-to-date");
