@@ -2353,7 +2353,7 @@ fn dep_to_dependency<P: ResolveToPath + Clone>(
         }
     }
 
-    let new_source_id = to_dependency_source_id(orig, name_in_toml, manifest_ctx)?;
+    let new_source_id = to_dependency_source_id(orig, name_in_toml, manifest_ctx, kind)?;
 
     let (pkg_name, explicit_name_in_toml) = match orig.package {
         Some(ref s) => (&s[..], Some(name_in_toml)),
@@ -2433,10 +2433,31 @@ fn to_dependency_source_id<P: ResolveToPath + Clone>(
     orig: &manifest::TomlDetailedDependency<P>,
     name_in_toml: &str,
     manifest_ctx: &mut ManifestContext<'_, '_>,
+    kind: Option<DepKind>,
 ) -> CargoResult<SourceId> {
     if orig.builtin {
+        if orig.git.is_some()
+            || orig.path.is_some()
+            || orig.registry.is_some()
+            || orig.registry_index.is_some()
+        {
+            bail!(
+                "dependency ({name_in_toml}) specification is ambiguous. \
+                `builtin = true` cannot be combined with any other dependency source"
+            )
+        }
+        if orig.version.is_some() {
+            bail!(
+                "builtin dependency `{name_in_toml}` cannot be combined with a version requirement\n\
+                 Builtin dependencies are unversioned."
+            )
+        }
+        if kind == Some(DepKind::Build) {
+            bail!("builtin dependency `{name_in_toml}` cannot be used as a build dependency")
+        }
         todo!("SourceKind::Builtin");
     }
+
     match (
         orig.git.as_ref(),
         orig.path.as_ref(),

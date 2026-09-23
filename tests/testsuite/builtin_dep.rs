@@ -222,3 +222,181 @@ Caused by:
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn builtin_false_rejected() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["builtin-dependencies"]
+
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+
+                [dependencies]
+                core = { version = "0.0.0", builtin = false }
+            "#,
+        )
+        .build();
+
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["builtin-dependencies"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] `builtin` cannot be false
+       
+  --> Cargo.toml:10:24
+   |
+10 |                 core = { version = "0.0.0", builtin = false }
+   |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn builtin_in_inherited_dependency_rejected() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["builtin-dependencies"]
+
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+
+                [dependencies]
+                core = { workspace = true, builtin = true}
+            "#,
+        )
+        .build();
+
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["builtin-dependencies"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] `builtin` cannot be combined with `workspace = true`
+  --> Cargo.toml:10:24
+   |
+10 |                 core = { workspace = true, builtin = true}
+   |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn builtin_dependency_combined_with_sources() {
+    let other_sources = [
+        "git = \"https://example.com/custom/core.git\"",
+        "path = \"my/custom/core\"",
+        "registry = \"dummy-registry\"",
+        "registry-index = \"https://www.example.com/index/\"",
+    ];
+    for source in other_sources.into_iter() {
+        let p = project()
+            .file("src/lib.rs", "")
+            .file(
+                "Cargo.toml",
+                &format!(
+                    r#"
+                    cargo-features = ["builtin-dependencies"]
+
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+                    [dependencies]
+
+                    core = {{ builtin = true, {} }}
+                    "#,
+                    source
+                ),
+            )
+            .build();
+
+        p.cargo("check")
+            .masquerade_as_nightly_cargo(&["builtin-dependencies"])
+            .with_status(101)
+            .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  dependency (core) specification is ambiguous. `builtin = true` cannot be combined with any other dependency source
+
+"#]])
+            .run();
+    }
+}
+
+#[cargo_test]
+fn builtin_combined_with_version_specifier() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["builtin-dependencies"]
+
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                [dependencies]
+
+                core = { builtin = true, version = "0.0.0" }
+                "#,
+        )
+        .build();
+
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["builtin-dependencies"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  builtin dependency `core` cannot be combined with a version requirement
+  Builtin dependencies are unversioned.
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn build_dependencies() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["builtin-dependencies"]
+
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+
+                [build-dependencies]
+                core.builtin = true
+                "#,
+        )
+        .build();
+
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["builtin-dependencies"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  builtin dependency `core` cannot be used as a build dependency
+
+"#]])
+        .run();
+}

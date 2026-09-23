@@ -800,7 +800,8 @@
           ]
         },
         "builtin": {
-          "type": "boolean"
+          "type": "boolean",
+          "const": true
         },
         "registry": {
           "type": [
