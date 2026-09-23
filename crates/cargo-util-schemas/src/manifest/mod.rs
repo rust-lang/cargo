@@ -843,7 +843,12 @@ pub struct TomlDetailedDependency<P: Clone = String> {
     pub branch: Option<String>,
     pub tag: Option<String>,
     pub rev: Option<String>,
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_builtin",
+        skip_serializing_if = "std::ops::Not::not"
+    )]
+    #[cfg_attr(feature = "unstable-schema", schemars(extend("const" = true)))]
     pub builtin: bool,
 
     pub features: Option<Vec<String>>,
@@ -867,6 +872,14 @@ pub struct TomlDetailedDependency<P: Clone = String> {
     #[serde(flatten)]
     #[cfg_attr(feature = "unstable-schema", schemars(skip))]
     pub _unused_keys: BTreeMap<String, toml::Value>,
+}
+
+fn deserialize_builtin<'de, D: de::Deserializer<'de>>(deserializer: D) -> Result<bool, D::Error> {
+    if bool::deserialize(deserializer)? {
+        Ok(true)
+    } else {
+        Err(de::Error::custom("`builtin` cannot be false"))
+    }
 }
 
 impl<P: Clone> TomlDetailedDependency<P> {

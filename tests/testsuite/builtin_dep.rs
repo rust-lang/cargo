@@ -247,10 +247,12 @@ fn builtin_false_rejected() {
         .masquerade_as_nightly_cargo(&["builtin-dependencies"])
         .with_status(101)
         .with_stderr_data(str![[r#"
-[UPDATING] crates.io index
-[ERROR] no matching package named `core` found
-location searched: crates.io index
-required by package `foo v0.1.0 ([ROOT]/foo)`
+[ERROR] `builtin` cannot be false
+       
+  --> Cargo.toml:10:24
+   |
+10 |                 core = { version = "0.0.0", builtin = false }
+   |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 "#]])
         .run();
