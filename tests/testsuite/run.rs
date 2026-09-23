@@ -1975,14 +1975,17 @@ fn run_binary_with_same_name_as_dependency() {
 }
 
 #[cargo_test]
-fn cargo_run_out_dir_bug() {
+fn cargo_run_does_not_leak_out_dir() {
     let p = project()
         .file("build.rs", "fn main() {}")
         .file(
             "src/main.rs",
             r#"
             fn main() {
-                assert!(std::env::var("OUT_DIR").is_ok());
+                assert!(
+                    std::env::var("OUT_DIR").is_err(),
+                    "OUT_DIR should not be set at runtime"
+                );
             }
             "#,
         )
