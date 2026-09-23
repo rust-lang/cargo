@@ -703,6 +703,11 @@ impl<'de> de::Deserialize<'de> for InheritableDependency {
             D::Error,
         >::new(value.clone()))
         {
+            if w._unused_keys.get("builtin").is_some() {
+                return Err(de::Error::custom(
+                    "`builtin` cannot be combined with `workspace = true`",
+                ));
+            }
             return if w.workspace {
                 Ok(InheritableDependency::Inherit(w))
             } else {
