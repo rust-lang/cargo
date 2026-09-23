@@ -257,3 +257,39 @@ fn builtin_false_rejected() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn builtin_in_inherited_dependency_rejected() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["builtin-dependencies"]
+
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+
+                [dependencies]
+                core = { workspace = true, builtin = true}
+            "#,
+        )
+        .build();
+
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["builtin-dependencies"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  error inheriting `core` from workspace root manifest's `workspace.dependencies.core`
+
+Caused by:
+  failed to find a workspace root
+
+"#]])
+        .run();
+}
