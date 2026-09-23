@@ -46,6 +46,7 @@ mod lto;
 mod output_depinfo;
 mod output_sbom;
 pub mod rustdoc;
+mod shared_storage;
 pub mod standard_lib;
 pub mod timings;
 pub(crate) mod trim_paths;
@@ -54,6 +55,7 @@ pub mod unit_dependencies;
 pub mod unit_graph;
 pub mod unused_deps;
 
+use crate::compiler::shared_storage::BlobStorage;
 use crate::util::data_structures::{HashMap, HashSet};
 use std::borrow::Cow;
 use std::cell::OnceCell;
@@ -251,6 +253,16 @@ fn compile<'gctx>(
                 // Need to link targets on both the dirty and fresh.
                 work.then(link_targets(build_runner, unit, true)?)
             });
+
+            if job.freshness().is_dirty()
+                && should_dedup_out_dir(build_runner, unit)
+                && let Some(blob_storage) = build_runner.files().blob_storage()
+            {
+                let out_dir = build_runner.files().out_dir_new_layout(unit);
+                job.after(Work::new(move |_state| {
+                    deduplicate_out_dir(&out_dir, &blob_storage)
+                }));
+            }
 
             // If -Zfine-grain-locking is enabled, we wrap the job with an upgrade to exclusive
             // lock before starting, then downgrade to a shared lock after the job is finished.
@@ -665,6 +677,34 @@ fn downgrade_lock_to_shared(lock: LockKey) -> Work {
         state.downgrade_to_shared(&lock)?;
         Ok(())
     })
+}
+
+fn should_dedup_out_dir(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> bool {
+    build_runner.bcx.gctx.cli_unstable().build_dir_new_layout
+        && build_runner.bcx.gctx.cli_unstable().shared_blob_storage
+        && !unit.is_local()
+}
+
+#[tracing::instrument(skip_all)]
+fn deduplicate_out_dir(out_dir: &Path, blob_storage: &BlobStorage) -> CargoResult<()> {
+    for entry in walkdir::WalkDir::new(out_dir) {
+        let Ok(entry) = entry else {
+            continue;
+        };
+        if entry.file_type().is_file() {
+            match blob_storage.insert_or_dedup(entry.path()) {
+                Ok(hash) => {
+                    trace!(path = ?entry.path(), hash, "inserted file into blob storage");
+                }
+                Err(_) => {
+                    // couldn't deduplicate, but we can continue the build
+                    debug!(path = ?entry.path(), "failed to insert file into blob storage");
+                }
+            }
+        }
+    }
+
+    Ok(())
 }
 
 /// Link the compiled target (often of form `foo-{metadata_hash}`) to the
