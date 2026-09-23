@@ -799,6 +799,9 @@
             "null"
           ]
         },
+        "builtin": {
+          "type": "boolean"
+        },
         "registry": {
           "type": [
             "string",

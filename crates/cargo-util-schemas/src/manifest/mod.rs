@@ -843,6 +843,9 @@ pub struct TomlDetailedDependency<P: Clone = String> {
     pub branch: Option<String>,
     pub tag: Option<String>,
     pub rev: Option<String>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub builtin: bool,
+
     pub features: Option<Vec<String>>,
     pub optional: Option<bool>,
     pub default_features: Option<bool>,
@@ -877,6 +880,7 @@ impl<P: Clone> Default for TomlDetailedDependency<P> {
     fn default() -> Self {
         Self {
             version: Default::default(),
+            builtin: Default::default(),
             registry: Default::default(),
             registry_index: Default::default(),
             path: Default::default(),
