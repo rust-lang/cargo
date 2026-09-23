@@ -429,10 +429,10 @@ syntax](../../reference/conditional-compilation.html) will be used to define
 these sections:
 
 ```toml
-[target.'cfg(windows)'.dependencies]
+[target.'cfg(target_os="windows")'.dependencies]
 winhttp = "0.4.0"
 
-[target.'cfg(unix)'.dependencies]
+[target.'cfg(target_os="unix")'.dependencies]
 openssl = "1.0.1"
 
 [target.'cfg(target_arch = "x86")'.dependencies]
