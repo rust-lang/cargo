@@ -2684,12 +2684,20 @@ fn package_preserves_feature_metadata() {
 [features]
 a = []
 b = []
-c = [
+
+[features.c]
+enables = [
     "a",
     "b",
 ]
-empty = []
-only_enables = ["a"]
+doc = "Enables a and b."
+
+[features.empty]
+enables = []
+doc = "Enables nothing."
+
+[features.only_enables]
+enables = ["a"]
 
 ...
 "#]];
