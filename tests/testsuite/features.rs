@@ -2630,7 +2630,7 @@ fn unused_keys_in_feature_metadata() {
 }
 
 #[cargo_test]
-fn normalize_feature_metadata() {
+fn package_preserves_feature_metadata() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -2644,10 +2644,27 @@ fn normalize_feature_metadata() {
                 [features]
                 a = []
                 b = []
-                c = { enables = ["a", "b"] }
+                c = { enables = ["a", "dev-only/feature", "b"], doc = "Enables a and b." }
+                empty = { enables = [], doc = "Enables nothing." }
+                only_enables = { enables = ["a"] }
+
+                [dev-dependencies]
+                dev-only = { path = "dev-only" }
             "#,
         )
         .file("src/main.rs", "")
+        .file(
+            "dev-only/Cargo.toml",
+            r#"
+                [package]
+                name = "dev-only"
+                version = "0.0.0"
+
+                [features]
+                feature = []
+            "#,
+        )
+        .file("dev-only/src/lib.rs", "")
         .build();
 
     p.cargo("package --no-verify")
@@ -2671,6 +2688,8 @@ c = [
     "a",
     "b",
 ]
+empty = []
+only_enables = ["a"]
 
 ...
 "#]];
