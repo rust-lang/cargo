@@ -264,6 +264,203 @@ fn unused_dep_lib_bins() {
 
 "#]])
         .run();
+
+    p.cargo("check --all-targets")
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[WARNING] unused dependency `unused`
+ --> Cargo.toml:9:13
+  |
+9 |             unused = "0.1.0"
+  |             ^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
+[HELP] consider removing the dependency on `unused`
+[WARNING] `foo` (manifest) generated 1 warning
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    p.cargo("test --no-run")
+        .with_stderr_data(
+            str![[r#"
+[COMPILING] bins_used v0.1.0
+[COMPILING] unused v0.1.0
+[COMPILING] lib_used v0.1.0
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[WARNING] unused dependency `unused`
+ --> Cargo.toml:9:13
+  |
+9 |             unused = "0.1.0"
+  |             ^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
+[HELP] consider removing the dependency on `unused`
+[WARNING] `foo` (manifest) generated 1 warning
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[EXECUTABLE] unittests src/lib.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
+[EXECUTABLE] unittests src/bin/bar.rs (target/debug/build/foo/[HASH]/out/bar-[HASH][EXE])
+[EXECUTABLE] unittests src/bin/foo.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
+
+"#]]
+            .unordered(),
+        )
+        .run();
+}
+
+#[cargo_test]
+fn unused_dep_static_lib_only() {
+    // Make sure that dependency uses by both binaries and libraries
+    // are being registered as used
+    Package::new("unused", "0.1.0").publish();
+    Package::new("lib_used", "0.1.0").publish();
+    Package::new("bins_used", "0.1.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            authors = []
+            edition = "2018"
+
+            [lib]
+            crate-type = ["staticlib"]
+
+            [dependencies]
+            unused = "0.1.0"
+            lib_used = "0.1.0"
+            bins_used = "0.1.0"
+
+            [lints.cargo]
+            default = { level = "allow", priority = -1 }
+            unused_dependencies = "warn"
+        "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+            use lib_used as _;
+            "#,
+        )
+        .file(
+            "src/bin/foo.rs",
+            r#"
+            use bins_used as _;
+            fn main() {}
+            "#,
+        )
+        .file(
+            "src/bin/bar.rs",
+            r#"
+            use bins_used as _;
+            fn main() {}
+            "#,
+        )
+        .build();
+
+    p.cargo("check")
+        .with_stderr_data(
+            str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 3 packages to highest compatible versions
+[DOWNLOADING] crates ...
+[DOWNLOADED] bins_used v0.1.0 (registry `dummy-registry`)
+[DOWNLOADED] lib_used v0.1.0 (registry `dummy-registry`)
+[DOWNLOADED] unused v0.1.0 (registry `dummy-registry`)
+[CHECKING] bins_used v0.1.0
+[CHECKING] unused v0.1.0
+[CHECKING] lib_used v0.1.0
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[WARNING] unused dependency `unused`
+  --> Cargo.toml:12:13
+   |
+12 |             unused = "0.1.0"
+   |             ^^^^^^^^^^^^^^^^
+   |
+   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
+[HELP] consider removing the dependency on `unused`
+[WARNING] `foo` (manifest) generated 1 warning
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered(),
+        )
+        .run();
+
+    p.cargo("check --lib")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    p.cargo("check --bins")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    p.cargo("check --bin foo")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    p.cargo("check --all-targets")
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[WARNING] unused dependency `unused`
+  --> Cargo.toml:12:13
+   |
+12 |             unused = "0.1.0"
+   |             ^^^^^^^^^^^^^^^^
+   |
+   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
+[HELP] consider removing the dependency on `unused`
+[WARNING] `foo` (manifest) generated 1 warning
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    p.cargo("test --no-run")
+        .with_stderr_data(
+            str![[r#"
+[COMPILING] lib_used v0.1.0
+[COMPILING] bins_used v0.1.0
+[COMPILING] unused v0.1.0
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[WARNING] unused dependency `lib_used`
+  --> Cargo.toml:13:13
+   |
+13 |             lib_used = "0.1.0"
+   |             ^^^^^^^^^^^^^^^^^^
+   |
+   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
+[HELP] consider removing the dependency on `lib_used`
+[HELP] to still use for development builds, move to `dev-dependencies`
+[WARNING] unused dependency `unused`
+  --> Cargo.toml:12:13
+   |
+12 |             unused = "0.1.0"
+   |             ^^^^^^^^^^^^^^^^
+   |
+[HELP] consider removing the dependency on `unused`
+[WARNING] `foo` (manifest) generated 2 warnings
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[EXECUTABLE] unittests src/lib.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
+[EXECUTABLE] unittests src/bin/bar.rs (target/debug/build/foo/[HASH]/out/bar-[HASH][EXE])
+[EXECUTABLE] unittests src/bin/foo.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
+
+"#]]
+            .unordered(),
+        )
+        .run();
 }
 
 #[cargo_test]
