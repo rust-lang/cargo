@@ -420,12 +420,26 @@ fn jobserver_invalid_fd_warning() {
 
     // Pick some very high FDs that should be unused.
     p.cargo("check")
-    .env("MAKEFLAGS", "--jobserver-auth=200001,200002")
+        .env("MAKEFLAGS", "--jobserver-auth=200001,200002")
         .with_stderr_data(str![[r#"
 [WARNING] failed to connect to jobserver from environment variable `MAKEFLAGS="--jobserver-auth=200001,200002"`: [..]
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
-    .run();
+        .run();
+}
+
+#[cargo_test]
+fn jobserver_fairness_flag() {
+    let p = project().file("src/lib.rs", "").build();
+
+    p.cargo("check -Zjobserver-fairness")
+        .masquerade_as_nightly_cargo(&["jobserver-fairness"])
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
 }

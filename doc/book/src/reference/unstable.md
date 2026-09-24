@@ -98,6 +98,7 @@ Each new feature described below should explain how to use it.
     * [panic-immediate-abort](#panic-immediate-abort) --- Passes `-Cpanic=immediate-abort` to the compiler.
     * [compile-time-deps](#compile-time-deps) --- Perma-unstable feature for rust-analyzer
     * [fine-grain-locking](#fine-grain-locking) --- Use fine grain locking instead of locking the entire build cache
+    * [jobserver-fairness](#jobserver-fairness) --- Eagerly releases jobserver tokens when no work is pending.
     * [json-target-spec](#json-target-spec) --- Allows the use of `.json` custom target specs.
     * [hint-msrv](#hint-msrv) --- Allows Cargo to set `-Zhint-msrv`
 * rustdoc
@@ -1759,6 +1760,26 @@ panic = "immediate-abort"
 * Tracking Issue: [#4282](https://github.com/rust-lang/cargo/issues/4282)
 
 Use fine grain locking instead of locking the entire build cache.
+
+## jobserver-fairness
+
+* Tracking Issue: [#17391](https://github.com/rust-lang/cargo/issues/17391)
+
+The `-Z jobserver-fairness` flag enables demand-aware, eager release of jobserver tokens.
+When enabled, Cargo calculates its total active and ready pending work demand and promptly
+releases any surplus tokens back to the jobserver (e.g., GNU Make or Ninja pipe) whenever no
+additional work is pending, preventing token hoarding and starvation of external concurrent tasks.
+
+```console
+cargo +nightly build -Z jobserver-fairness
+```
+
+You can also set this in `.cargo/config.toml`:
+
+```toml
+[unstable]
+jobserver-fairness = true
+```
 
 ## Path Bases
 

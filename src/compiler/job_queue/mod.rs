@@ -201,6 +201,9 @@ struct DrainState<'gctx> {
     /// single rustc process.
     tokens: Vec<Acquired>,
 
+    /// Whether to eagerly release jobserver tokens when no work is pending.
+    jobserver_fairness: bool,
+
     /// The list of jobs that we have not yet started executing, but have
     /// retrieved from the `queue`. We eagerly pull jobs off the main queue to
     /// allow us to request jobserver tokens pretty early.
@@ -516,6 +519,7 @@ impl<'gctx> JobQueue<'gctx> {
                 .map(|(unit, &index)| (index, unit.clone()))
                 .collect(),
             tokens: Vec::new(),
+            jobserver_fairness: build_runner.bcx.gctx.cli_unstable().jobserver_fairness,
             pending_queue: Vec::new(),
             print: DiagnosticPrinter::new(
                 build_runner.bcx.gctx,
@@ -609,6 +613,22 @@ impl<'gctx> DrainState<'gctx> {
 
     fn has_extra_tokens(&self) -> bool {
         self.active.len() < self.tokens.len() + 1
+    }
+
+    /// Truncate unused tokens to release them back to the jobserver.
+    ///
+    /// When `jobserver_fairness` is enabled (or by default when calculating demand),
+    /// we count both currently `active` units and ready units waiting in `pending_queue`.
+    /// Otherwise, we retain tokens up to `active.len().saturating_sub(1)` (and release
+    /// any excess beyond what is active or needed).
+    fn release_excess_tokens(&mut self) {
+        let max_tokens = if self.jobserver_fairness {
+            // Option C / D: Total demand is active + pending ready units minus Cargo's implicit token.
+            (self.active.len() + self.pending_queue.len()).saturating_sub(1)
+        } else {
+            self.active.len().saturating_sub(1)
+        };
+        self.tokens.truncate(max_tokens);
     }
 
     fn handle_event(
@@ -779,7 +799,7 @@ impl<'gctx> DrainState<'gctx> {
         if events.is_empty() {
             loop {
                 self.tick_progress();
-                self.tokens.truncate(self.active.len() - 1);
+                self.release_excess_tokens();
                 match self.messages.pop(Duration::from_millis(500)) {
                     Some(message) => {
                         events.push(message);
@@ -827,6 +847,9 @@ impl<'gctx> DrainState<'gctx> {
                     self.handle_error(&mut build_runner.bcx.gctx.shell(), &mut errors, e);
                 }
             }
+
+            // Drop any excess tokens after attempting to spawn work.
+            self.release_excess_tokens();
 
             // If after all that we're not actually running anything then we're
             // done!

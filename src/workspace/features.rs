@@ -906,6 +906,7 @@ unstable_cli_options!(
     gitoxide: Option<GitoxideFeatures> = ("Use gitoxide for the given git interactions, or all of them if no argument is given"),
     hint_msrv: bool = ("Enable passing `package.rust-version` to rustc for lints"),
     host_config: bool = ("Enable the `[host]` section in the .cargo/config.toml file"),
+    jobserver_fairness: bool = ("Enable eager release of jobserver tokens when no work is pending"),
     json_target_spec: bool = ("Enable `.json` target spec files"),
     minimal_versions: bool = ("Resolve minimal dependency versions instead of maximum"),
     msrv_policy: bool = ("Enable rust-version aware policy within cargo"),
@@ -1443,6 +1444,7 @@ impl CliUnstable {
                 )?
             }
             "host-config" => self.host_config = parse_empty(k, v)?,
+            "jobserver-fairness" => self.jobserver_fairness = parse_empty(k, v)?,
             "json-target-spec" => self.json_target_spec = parse_empty(k, v)?,
             "hint-msrv" => self.hint_msrv = parse_empty(k, v)?,
             "next-lockfile-bump" => self.next_lockfile_bump = parse_empty(k, v)?,
