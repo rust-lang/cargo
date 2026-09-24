@@ -435,23 +435,6 @@ fn unused_dep_static_lib_only() {
 [COMPILING] bins_used v0.1.0
 [COMPILING] unused v0.1.0
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
-[WARNING] unused dependency `lib_used`
-  --> Cargo.toml:13:13
-   |
-13 |             lib_used = "0.1.0"
-   |             ^^^^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
-[HELP] consider removing the dependency on `lib_used`
-[HELP] to still use for development builds, move to `dev-dependencies`
-[WARNING] unused dependency `unused`
-  --> Cargo.toml:12:13
-   |
-12 |             unused = "0.1.0"
-   |             ^^^^^^^^^^^^^^^^
-   |
-[HELP] consider removing the dependency on `unused`
-[WARNING] `foo` (manifest) generated 2 warnings
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [EXECUTABLE] unittests src/lib.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
 [EXECUTABLE] unittests src/bin/bar.rs (target/debug/build/foo/[HASH]/out/bar-[HASH][EXE])
