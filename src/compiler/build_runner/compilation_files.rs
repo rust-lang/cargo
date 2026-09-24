@@ -317,6 +317,12 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
             .out_force_new_layout(&dir)
     }
 
+    /// Returns the root directory specified unit. (new layout)
+    pub fn build_unit_dir(&self, unit: &Unit) -> PathBuf {
+        let dir = self.pkg_dir(unit);
+        self.layout(unit.kind).build_dir().build_unit(&dir)
+    }
+
     /// Directory where the fingerprint for the given unit should go.
     pub fn fingerprint_dir(&self, unit: &Unit) -> PathBuf {
         let dir = self.pkg_dir(unit);

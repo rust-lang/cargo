@@ -1,9 +1,13 @@
-use std::io::ErrorKind;
+use std::collections::BTreeMap;
+use std::collections::btree_map::Entry;
+use std::fs::File;
+use std::io::{ErrorKind, Write};
 use std::path::{Path, PathBuf};
 
 use anyhow::bail;
 use cargo_util::paths::create_dir_all;
 use filetime::FileTime;
+use tracing::{instrument, warn};
 
 use crate::CargoResult;
 
@@ -105,7 +109,7 @@ fn is_same_filesystem(dir1: &Path, dir2: &Path) -> std::io::Result<bool> {
             };
 
             // FIXME: Ideally we use std if/when https://github.com/rust-lang/rust/issues/63010 is
-            // stablized
+            // stabilized
             fn volume_serial_number(path: &Path) -> std::io::Result<u32> {
                 let file = OpenOptions::new()
                     .access_mode(0)
@@ -119,6 +123,136 @@ fn is_same_filesystem(dir1: &Path, dir2: &Path) -> std::io::Result<bool> {
             }
 
             Ok(volume_serial_number(dir1)? == volume_serial_number(dir2)?)
+        }
+    }
+}
+
+/// A cache of file hashes to speed up file hashing when dealing with shared storage.
+///
+/// The idea with the hash cache, is that we need to get file hashes to insert them into
+/// [`BlobStorage`] but for large workspaces the time to hash everything really adds up.
+/// As an optimization we hash the file's metadata (see [`HashCache::file_metadata_hash`]) and
+/// keep a mapping of the metadata hash to the file hash. It's usually much faster to hash the files
+/// metadata instead of the whole file. If the file changed the metadata will update indicating that
+/// we need to rehash the file to get the new checksum.
+///
+/// This struct is fairly specialized for a specific usecase so the behavior might seem a bit odd at
+/// first. When loading a cache, we are expecting the caller to check all of the files for a build
+/// unit. We want to clean up any stale files that no longer exist so we keep track of the calls
+/// they make to [`HashCache::get`] and during drop if the calls did not match what was originally
+/// loaded, we rewrite the file on Drop so its up to date and does not grow over time.
+pub struct HashCache {
+    file: PathBuf,
+    entries: BTreeMap<u64, String>,
+    cached_entries: Option<BTreeMap<u64, String>>,
+    out_dir: PathBuf,
+}
+
+impl HashCache {
+    const FILE_NAME: &'static str = ".hashes";
+
+    pub fn new(unit_dir: &Path, out_dir: PathBuf) -> Self {
+        Self {
+            file: unit_dir.join(Self::FILE_NAME),
+            entries: BTreeMap::new(),
+            cached_entries: None,
+            out_dir,
+        }
+    }
+
+    pub fn load(unit_dir: &Path, out_dir: PathBuf) -> Self {
+        let file = unit_dir.join(Self::FILE_NAME);
+        let cached_entries = std::fs::read_to_string(&file).ok().map(|content| {
+            content
+                .lines()
+                .filter_map(|line| {
+                    let (metadata_hash, hash) = line.split_once(' ')?;
+                    Some((metadata_hash.parse().ok()?, hash.to_string()))
+                })
+                .collect()
+        });
+
+        Self {
+            file,
+            entries: BTreeMap::new(),
+            cached_entries,
+            out_dir,
+        }
+    }
+
+    pub fn get(&mut self, path: &Path) -> CargoResult<String> {
+        let Ok(key) = self.file_metadata_hash(path) else {
+            // If we failed to hash the metadata, just try to hash the file and don't cache it.
+            return BlobStorage::hash(path);
+        };
+
+        let hash = match self.entries.entry(key) {
+            Entry::Occupied(entry) => entry.into_mut(),
+            Entry::Vacant(entry) => {
+                let cached = self
+                    .cached_entries
+                    .as_ref()
+                    .and_then(|cache| cache.get(&key));
+                let hash = match cached {
+                    Some(hash) => hash.clone(),
+                    None => BlobStorage::hash(path)?,
+                };
+                entry.insert(hash)
+            }
+        };
+
+        Ok(hash.clone())
+    }
+
+    pub fn insert(&mut self, path: &Path, hash: String) -> CargoResult<()> {
+        self.entries.insert(self.file_metadata_hash(path)?, hash);
+        Ok(())
+    }
+
+    #[instrument(skip(self))]
+    fn save(&mut self) -> CargoResult<()> {
+        if self.cached_entries.as_ref() == Some(&self.entries) {
+            return Ok(());
+        }
+        let mut f = match File::create(&self.file) {
+            Ok(f) => f,
+            Err(err) => {
+                warn!(?err, "failed to create hash cache");
+                return Ok(());
+            }
+        };
+        for (metadata_hash, file_hash) in &self.entries {
+            writeln!(f, "{metadata_hash} {file_hash}")?;
+        }
+        f.flush()?;
+        Ok(())
+    }
+
+    #[instrument(skip(self))]
+    fn file_metadata_hash(&self, path: &Path) -> CargoResult<u64> {
+        let metadata = path.metadata()?;
+        cfg_select! {
+            unix => {
+                use std::os::unix::fs::MetadataExt;
+                let ctime = (metadata.ctime(), metadata.ctime_nsec());
+            }
+            _ => {
+                let ctime = metadata.created().ok();
+            }
+        }
+        Ok(crate::util::hash_u64((
+            path.strip_prefix(&self.out_dir)?,
+            ctime,
+            metadata.modified()?,
+            metadata.len(),
+        )))
+    }
+}
+
+impl Drop for HashCache {
+    fn drop(&mut self) {
+        if let Err(err) = self.save() {
+            warn!(?err, "Failed to save hash cache");
         }
     }
 }

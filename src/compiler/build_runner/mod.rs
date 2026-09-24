@@ -207,6 +207,18 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
         // Now that we've figured out everything that we're going to do, do it!
         queue.execute(&mut self)?;
 
+        // Update the last used timestamps now that we built everything
+        {
+            let _lock = self
+                .bcx
+                .gctx
+                .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
+            self.bcx
+                .gctx
+                .deferred_global_last_use()?
+                .save_no_error(self.bcx.gctx);
+        }
+
         // Add `OUT_DIR` to env vars if unit has a build script.
         let units_with_build_script = &self
             .bcx
