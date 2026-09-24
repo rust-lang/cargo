@@ -226,6 +226,7 @@ fn registry_and_path_dep_works() {
 
                 [dependencies.bar]
                 path = "bar"
+                version = "0.0.1"
                 registry = "alternative"
 
                 [lints.cargo]
