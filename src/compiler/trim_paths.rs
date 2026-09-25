@@ -58,10 +58,10 @@ pub(crate) fn trim_paths_args_rustdoc(
 }
 
 /// Generates the `--remap-path-scope` and `--remap-path-prefix` for [RFC 3127].
-/// See also unstable feature [`-Ztrim-paths`].
+/// See also the [`trim-paths`] profile option.
 ///
 /// [RFC 3127]: https://rust-lang.github.io/rfcs/3127-trim-paths.html
-/// [`-Ztrim-paths`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#profile-trim-paths-option
+/// [`trim-paths`]: https://doc.rust-lang.org/cargo/reference/profiles.html#trim-paths
 pub(crate) fn trim_paths_args(
     cmd: &mut ProcessBuilder,
     build_runner: &BuildRunner<'_, '_>,
@@ -72,7 +72,6 @@ pub(crate) fn trim_paths_args(
         return Ok(());
     }
 
-    // feature gate was checked during manifest/config parsing.
     cmd.arg(format!("--remap-path-scope={trim_paths}"));
 
     for pair in trim_paths_remap(build_runner, unit) {

@@ -389,8 +389,6 @@ fn remap_path_scope() {
         .build();
 
     p.cargo("run --release")
-        .arg("-Ztrim-paths")
-        .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
         .env("RUST_BACKTRACE", "1")
         .build_std()
         .target_host()

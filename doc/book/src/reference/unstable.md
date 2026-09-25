@@ -112,7 +112,6 @@ Each new feature described below should explain how to use it.
     * [codegen-backend](#codegen-backend) --- Select the codegen backend used by rustc.
     * [per-package-target](#per-package-target) --- Sets the `--target` to use for each individual package.
     * [artifact dependencies](#artifact-dependencies) --- Allow build artifacts to be included into other build artifacts and build them for different targets.
-    * [Profile `trim-paths` option](#profile-trim-paths-option) --- Control the sanitization of file paths in build outputs.
     * [path bases](#path-bases) --- Named base directories for path dependencies.
     * [feature-metadata](#feature-metadata) --- Table syntax for feature definitions.
     * [`unstable-editions`](#unstable-editions) --- Allows use of editions that are not yet stable.
@@ -1442,212 +1441,6 @@ To get the executable's path, see [`current_exe`](https://doc.rust-lang.org/std/
 
 ### Documentation Updates
 
-## Profile `trim-paths` option
-
-* Tracking Issue: [rust-lang/cargo#12137](https://github.com/rust-lang/cargo/issues/12137)
-* Tracking Rustc Issue: [rust-lang/rust#111540](https://github.com/rust-lang/rust/issues/111540)
-
-This adds a new profile setting to control how paths are sanitized in the resulting binary.
-This can be enabled like so:
-
-```toml
-cargo-features = ["trim-paths"]
-
-[package]
-# ...
-
-[profile.release]
-trim-paths = "object"
-```
-
-To set this in a profile in Cargo configuration,
-you need to use either `-Z trim-paths` or `[unstable]` table to enable it.
-For example,
-
-```toml
-# .cargo/config.toml
-[unstable]
-trim-paths = true
-
-[profile.release]
-trim-paths = "object"
-```
-
-### Documentation updates
-
-#### trim-paths
-
-*as a new ["Profiles settings" entry](./profiles.html#profile-settings)*
-
-The `trim-paths` option controls the scope of path sanitization in build outputs
-Paths are sanitized according to these [remapping rules].
-
-The valid options are:
-
-- `"none"` --- disables path sanitization.
-- `"object"` --- sanitizes paths embedded in compiled executables and libraries.
-  Useful for improving artifact reproducibility
-  with less impact on local development.
-- `"all"` --- sanitizes paths in all supported locations.
-  Useful for hermetic or remote builds that need artifacts and diagnostics
-  to be independent of the build environment.
-
-> [!WARNING]
-> The `"all"` option remaps compiler diagnostics,
-> including [compiler JSON messages](./external-tools.md#json-messages).
-> Some remapped paths may not resolve to files on the local filesystem,
-> which can affect editors and other tools that consume the diagnostic output.
-
-For details about each scope,
-see rustc's [`--remap-path-scope`] documentation.
-
-By default, `trim-paths` is `"none"` and path sanitization is disabled for all profiles.
-You can enable it by specifying this option in `Cargo.toml`:
-
-```toml
-[profile.dev]
-trim-paths = "all"
-
-[profile.release]
-trim-paths = "object"
-```
-
-[`--remap-path-scope`]: ../../rustc/remap-source-paths.html#--remap-path-scope
-[remapping rules]: #remapping-rules
-
-##### Remapping rules
-
-The exact remap path prefixes are unspecified and may change across Cargo versions.
-Tools that map paths embedded in artifacts back to local sources
-should consume [unremap files] instead of interpreting these prefixes.
-
-[unremap files]: #unremap-files
-
-If `trim-paths` is not `"none"`,
-then the following paths are sanitized if they appear in a selected scope:
-
-1. Path to the source files of the standard and core library (sysroot) will begin with `/rustc/<rustc commit hash>`,
-   e.g. `/home/username/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/result.rs` ->
-   `/rustc/fe72845f7bb6a77b9e671e6a4f32fe714962cec4/library/core/src/result.rs`
-2. Path to a local package within the workspace will begin with `.`,
-   which replaces the workspace root,
-   e.g. `/home/username/crate/src/lib.rs` -> `./src/lib.rs`.
-   This also covers path dependencies located inside the workspace directory.
-3. Path to a registry dependency will begin with `/cargo/registry/<registry id>`,
-   which replaces the registry's extraction directory,
-   e.g. `/home/username/.cargo/registry/src/index.crates.io-6f17d22d3f0a95d1/foo-0.1.0/src/lib.rs` ->
-   `/cargo/registry/6f17d22d3f0a95d1/foo-0.1.0/src/lib.rs`.
-4. Path to a git dependency will begin with `/cargo/git/<git source id>/<revision>`,
-   which replaces the checkout directory.
-   `<revision>` is a prefix of the resolved commit ID recorded in the lockfile.
-5. Path to a path dependency outside the workspace will be replaced with
-   `/cargo/deps/<package name>-<package version>`.
-6. Path into the build directory, for example `OUT_DIR` generated sources,
-   will begin with `/cargo/build-dir`.
-
-`<registry id>` and `<git source id>` are opaque stable hashes of the dependency's source.
-
-Vendored copies of registry or git dependencies
-(via [source replacement](./source-replacement.md))
-are sanitized by their file location instead,
-like workspace paths when inside the workspace directory,
-otherwise like path dependencies.
-
-##### Unremap files
-
-When the `object` scope is active and debuginfo is enabled,
-Cargo writes an unremap file beside each final artifact.
-The file is aimed at helping debuggers substitute sanitized paths back to local ones,
-e.g., via GDB's `set substitute-path` or LLDB's `target.source-map`.
-
-The Rust toolchain provides `rust-gdb` and `rust-lldb` wrappers,
-which can load unremap files automatically.
-This integration is currently unstable and available only in nightly toolchains.
-To enable it,
-set `RUST_GDB_TRIM_PATHS=unstable` or `RUST_LLDB_TRIM_PATHS=unstable` respectively.
-
-The unremap file name ends with `.trim-paths.json`.
-For example,
-your `my-app` executable would come with an unremap file named
-`my-app.trim-paths.json` beside it.
-
-The unremap file is in JSON format:
-
-* `v` carries the format version.
-* `rust_version` and `workspace_root` are file-level metadata,
-  namely the toolchain version and the workspace root.
-* `remaps` is an array of records.
-  Each record maps a sanitized path prefix in the artifact
-  (`from`) back to the local path it replaced (`to`),
-  ordered by the `from` prefix.
-  Note that this follows the debugger substitution direction,
-  which is the inverse of `--remap-path-prefix`.
-
-An example of the unremap file:
-
-```json
-{
-  "v": 1,
-  "rust_version": "1.96.0-nightly",
-  "workspace_root": "/home/me/app",
-  "remaps": [
-    { "from": ".", "to": "/home/me/app" },
-    { "from": "/cargo/build-dir", "to": "/home/me/app/target" },
-    { "from": "/cargo/registry/6f17d22d3f0a95d1", "to": "/home/me/.cargo/registry/src/index.crates.io-6f17d22d3f0a95d1" },
-    { "from": "/rustc/abc123", "to": "/home/me/.rustup/toolchains/nightly/lib/rustlib/src/rust" }
-  ]
-}
-```
-
-Since it is meant to be a debugging aid,
-it includes absolute paths of your system,
-so there is no artifact privacy guarantee.
-You might want to exclude `*.trim-paths.json` files when distributing artifacts.
-
-##### Limitations
-
-`trim-paths` supports remapping source path prefixes as a best effort.
-Linkers may add paths that rustc cannot remap.
-See [the limitations section][remap-limitation] on rustc's documentation for more.
-
-For example, on macOS,
-linkers generate OSO entries containing absolute paths to object files
-when debuginfo is enabled.
-The following profile settings keep these paths out of the executable
-while preserving debuginfo in a separate dSYM bundle:
-
-```toml
-[profile.release]
-debug = true
-trim-paths = "object"
-split-debuginfo = "packed"
-strip = "debuginfo"
-```
-
-The dSYM bundle can be used for debugging,
-but it still contains absolute paths.
-
-[remap-limitation]: ../../rustc/remap-source-paths.html#caveats-and-limitations
-
-#### Environment variable
-
-*as a new entry of ["Environment variables Cargo sets for build scripts"](./environment-variables.md#environment-variables-cargo-sets-for-crates)*
-
-* `CARGO_TRIM_PATHS_SCOPE` --- The value of `trim-paths` profile option.
-    If the build script introduces absolute paths to built artifacts (such as by invoking a compiler),
-    the user may request them to be sanitized in different types of artifacts.
-    Common paths requiring sanitization include `OUT_DIR`, `CARGO_MANIFEST_DIR` and `CARGO_MANIFEST_PATH`,
-    plus any other introduced by the build script, such as include directories.
-    > [!NOTE]
-    > For forward compatibility,
-    > build scripts should accept a comma-separated list of scopes.
-* `CARGO_TRIM_PATHS_REMAP` --- The `<from>=<to>` path remap pairs Cargo passes to the compiler,
-    joined by the platform path separator.
-    Empty when `trim-paths` is `"none"`.
-    Build scripts can forward these mappings to C/C++ compilers and other tools,
-    for example via `cc`'s `-ffile-prefix-map`,
-    to sanitize paths consistently with the rest of the build.
-
 ## gc
 
 * Tracking Issue: [#12633](https://github.com/rust-lang/cargo/issues/12633)
@@ -2445,3 +2238,9 @@ and [resolver behavior](resolver.md#publish-age) for more information.
 
 The `-Z asymmetric-token` flag and `cargo:paseto` credential provider have been removed in 1.100-nightly.
 See <https://github.com/rust-lang/cargo/pull/17333> for the reason for its removal.
+
+## trim-paths
+
+The `trim-paths` profile option was stabilized in Rust 1.101.
+See the [`trim-paths` profile setting](profiles.md#trim-paths)
+for more information.
