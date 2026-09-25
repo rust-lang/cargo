@@ -146,6 +146,7 @@ const GIT_CO_TABLE: &str = "git_checkout";
 /// the given number of seconds. This helps reduce the amount of disk I/O when
 /// running cargo multiple times within a short window.
 const UPDATE_RESOLUTION: u64 = 60 * 5;
+const BLOB_UPDATE_RESOLUTION: u64 = 4 * 60 * 60 * 5;
 
 /// Type for timestamps as stored in the database.
 ///
@@ -224,6 +225,8 @@ struct BasePaths {
     crate_dir: PathBuf,
     /// Root path to the `src` directories.
     src: PathBuf,
+    /// Root path to shared blob storage
+    blob_dir: Option<PathBuf>,
 }
 
 /// Migrations which initialize the database, and can be used to evolve it over time.
@@ -231,8 +234,8 @@ struct BasePaths {
 /// See [`Migration`] for more detail.
 ///
 /// **Be sure to not change the order or entries here!**
-fn migrations() -> Vec<Migration> {
-    vec![
+fn migrations(gctx: &GlobalContext) -> Vec<Migration> {
+    let mut migrations = vec![
         // registry_index tracks the overall usage of an index cache, and tracks a
         // numeric ID to refer to that index that is used in other tables.
         basic_migration(
@@ -304,7 +307,17 @@ fn migrations() -> Vec<Migration> {
             )?;
             Ok(())
         }),
-    ]
+    ];
+    if gctx.cli_unstable().shared_blob_storage {
+        // Blob storage
+        migrations.push(basic_migration(
+            "CREATE TABLE blob (
+                name TEXT PRIMARY KEY NOT NULL,
+                timestamp INTEGER NOT NULL
+             )",
+        ));
+    }
+    migrations
 }
 
 /// Type for SQL columns that refer to the primary key of their parent table.
@@ -357,7 +370,7 @@ impl GlobalCacheTracker {
         let db_path = gctx.assert_package_cache_locked(CacheLockMode::DownloadExclusive, &db_path);
         let mut conn = Connection::open(db_path)?;
         conn.pragma_update(None, "foreign_keys", true)?;
-        sqlite::migrate(&mut conn, &migrations())?;
+        sqlite::migrate(&mut conn, &migrations(gctx))?;
         Ok(GlobalCacheTracker {
             conn,
             auto_gc_checked_this_session: false,
@@ -560,6 +573,7 @@ impl GlobalCacheTracker {
             git_co: gctx.git_checkouts_path().into_path_unlocked(),
             crate_dir: gctx.registry_cache_path().into_path_unlocked(),
             src: gctx.registry_source_path().into_path_unlocked(),
+            blob_dir: gctx.blob_storage_dir(),
         };
         let now = now();
         trace!(target: "gc", "cleaning {gc_opts:?}");
@@ -762,9 +776,12 @@ impl GlobalCacheTracker {
             delete_paths,
         )?;
 
-        // For registry_crate, registry_src, and git_checkout, add anything
+        // For registry_crate, registry_src, blobs, and git_checkout, add anything
         // that is missing in the db.
         Self::populate_untracked_crate(conn, now, &base.crate_dir)?;
+        if let Some(blob_dir) = &base.blob_dir {
+            Self::populate_untracked_blobs(conn, now, blob_dir)?;
+        }
         Self::populate_untracked(
             conn,
             now,
@@ -931,6 +948,27 @@ impl GlobalCacheTracker {
                 let size = paths::metadata(index_path.join(&crate_name))?.len();
                 insert_stmt.execute(params![id, crate_name, size, now])?;
             }
+        }
+        Ok(())
+    }
+
+    #[tracing::instrument(skip_all)]
+    fn populate_untracked_blobs(
+        conn: &Connection,
+        now: Timestamp,
+        base_path: &Path,
+    ) -> CargoResult<()> {
+        trace!(target: "gc", "populating untracked blob files");
+        let mut insert_stmt = conn.prepare_cached(
+            "INSERT INTO blob (name, timestamp)
+             VALUES (?1, ?2)
+             ON CONFLICT DO NOTHING",
+        )?;
+        let names = Self::read_dir_with_filter(base_path, &|entry| {
+            entry.file_type().map_or(false, |ty| ty.is_file())
+        })?;
+        for name in names {
+            insert_stmt.execute(params![name, now])?;
         }
         Ok(())
     }
@@ -1443,6 +1481,8 @@ pub struct DeferredGlobalLastUse {
     git_db_timestamps: HashMap<GitDb, Timestamp>,
     /// New git checkout entries to insert.
     git_checkout_timestamps: HashMap<GitCheckout, Timestamp>,
+    /// New blob entries to insert.
+    blob_timestamps: HashMap<String, Timestamp>,
     /// This is used so that a warning about failing to update the database is
     /// only displayed once.
     save_err_has_warned: bool,
@@ -1461,6 +1501,7 @@ impl DeferredGlobalLastUse {
             registry_src_timestamps: HashMap::default(),
             git_db_timestamps: HashMap::default(),
             git_checkout_timestamps: HashMap::default(),
+            blob_timestamps: HashMap::default(),
             save_err_has_warned: false,
             now: now(),
         }
@@ -1472,6 +1513,7 @@ impl DeferredGlobalLastUse {
             && self.registry_src_timestamps.is_empty()
             && self.git_db_timestamps.is_empty()
             && self.git_checkout_timestamps.is_empty()
+            && self.blob_timestamps.is_empty()
     }
 
     fn clear(&mut self) {
@@ -1480,6 +1522,7 @@ impl DeferredGlobalLastUse {
         self.registry_src_timestamps.clear();
         self.git_db_timestamps.clear();
         self.git_checkout_timestamps.clear();
+        self.blob_timestamps.clear();
     }
 
     /// Indicates the given [`RegistryIndex`] has been used right now.
@@ -1572,6 +1615,14 @@ impl DeferredGlobalLastUse {
         self.git_checkout_timestamps.insert(git_checkout, timestamp);
     }
 
+    /// Indicates the given [`GitCheckout`] has been used with the given
+    /// time (or "now" if `None`).
+    ///
+    /// Also implicitly marks the git db used, too.
+    pub fn mark_blob_used_stamp(&mut self, blob: String) {
+        self.blob_timestamps.insert(blob, self.now);
+    }
+
     /// Saves all of the deferred information to the database.
     ///
     /// This will also clear the state of `self`.
@@ -1588,6 +1639,7 @@ impl DeferredGlobalLastUse {
         self.insert_registry_crate_from_cache(&tx)?;
         self.insert_registry_src_from_cache(&tx)?;
         self.insert_git_checkout_from_cache(&tx)?;
+        self.insert_blob_from_cache(&tx)?;
         tx.commit()?;
         trace!(target: "gc", "last-use save complete");
         Ok(())
@@ -1723,6 +1775,23 @@ impl DeferredGlobalLastUse {
             ])?;
         }
 
+        Ok(())
+    }
+
+    /// Flushes all of the `blob_timestamps` to the database,
+    /// clearing `blob_timestamps`.
+    fn insert_blob_from_cache(&mut self, conn: &Connection) -> CargoResult<()> {
+        let blob_timestamps = std::mem::take(&mut self.blob_timestamps);
+        for (hash, timestamp) in blob_timestamps {
+            trace!(target: "gc", "insert blob {hash:?} {timestamp}");
+            let mut stmt = conn.prepare_cached(
+                "INSERT INTO blob (name, timestamp)
+                 VALUES (?1, ?2)
+                 ON CONFLICT DO UPDATE SET timestamp=excluded.timestamp
+                    WHERE timestamp < ?3",
+            )?;
+            stmt.execute(params![hash, timestamp, timestamp - BLOB_UPDATE_RESOLUTION])?;
+        }
         Ok(())
     }
 

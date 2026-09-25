@@ -86,6 +86,7 @@ percent-encoding = "2.3.2"
 proptest = "1.11.0"
 pulldown-cmark = { version = "0.13.3", default-features = false, features = ["html"] }
 rand = "0.10.1"
+reflink-copy = "0.1.30"
 regex = "1.12.3"
 rusqlite = { version = "0.40.0", features = ["bundled"] }
 rustc-hash = "2.1.2"
@@ -202,6 +203,7 @@ os_info.workspace = true
 pathdiff.workspace = true
 portable-atomic.workspace = true
 rand.workspace = true
+reflink-copy.workspace = true
 regex.workspace = true
 rusqlite = { workspace = true, features = ["fallible_uint"] }
 rustc-hash.workspace = true
