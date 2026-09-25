@@ -885,6 +885,8 @@ fn new_unit_dep(
     let is_local = pkg.package_id().source_id().is_path() && !state.is_std;
     let profile = state.profiles.get_profile(
         pkg.package_id(),
+        pkg.hints(),
+        state.gctx.cli_unstable().hint_min_opt_level,
         state.ws.is_member(pkg),
         is_local,
         unit_for,
