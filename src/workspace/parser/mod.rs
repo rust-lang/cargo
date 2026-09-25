@@ -3264,25 +3264,22 @@ fn prepare_toml_for_publish(
             return;
         };
 
-        features.values_mut().for_each(|feature_deps| {
-            let feature_array = feature_deps
-                .enables()
-                .iter()
-                .filter(|feature_dep| {
-                    let feature_value = FeatureValue::new((*feature_dep).into());
-                    match feature_value {
-                        FeatureValue::Dep { dep_name }
-                        | FeatureValue::DepFeature { dep_name, .. } => {
-                            let k = &manifest::PackageName::new(dep_name.to_string()).unwrap();
-                            dep_name_set.contains(k)
-                        }
-                        _ => true,
+        for feature in features.values_mut() {
+            let enables = match feature {
+                FeatureDefinition::Array(enables) => enables,
+                FeatureDefinition::Metadata(metadata) => &mut metadata.enables,
+            };
+            enables.retain(|feature_dep| {
+                let feature_value = FeatureValue::new(feature_dep.as_str().into());
+                match feature_value {
+                    FeatureValue::Dep { dep_name } | FeatureValue::DepFeature { dep_name, .. } => {
+                        let k = &manifest::PackageName::new(dep_name.to_string()).unwrap();
+                        dep_name_set.contains(k)
                     }
-                })
-                .cloned()
-                .collect();
-            *feature_deps = FeatureDefinition::Array(feature_array);
-        });
+                    _ => true,
+                }
+            });
+        }
     }
 
     fn map_deps(
