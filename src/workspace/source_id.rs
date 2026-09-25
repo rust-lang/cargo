@@ -217,7 +217,14 @@ impl SourceId {
 
     /// Creates a `SourceId` from a Git reference.
     pub fn for_git(url: &Url, reference: GitReference) -> CargoResult<SourceId> {
-        SourceId::new(SourceKind::Git(reference), url.clone(), None)
+        if url.fragment().is_some() {
+            Err(anyhow::format_err!(
+                "invalid url `{url}` to create a git reference: URL fragments are not supported\n\n\
+                    help: remove the fragment, or use `--rev`, `--branch`, or `--tag` to select a git reference"
+            ))
+        } else {
+            SourceId::new(SourceKind::Git(reference), url.clone(), None)
+        }
     }
 
     /// Creates a `SourceId` from a remote registry URL when the registry name
