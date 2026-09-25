@@ -5034,6 +5034,18 @@ fn cargo_metadata_features_v2() {
         "table_empty": [],
         "table_without_doc": ["empty"]
       },
+      "features_v2": {
+        "default": { "enables": ["serde"] },
+        "empty": { "enables": [] },
+        "legacy": { "enables": ["empty"] },
+        "log": { "enables": ["dep:log"] },
+        "serde": {
+          "enables": ["dep:serde"],
+          "doc": "Enables support for serialization via serde."
+        },
+        "table_empty": { "enables": [] },
+        "table_without_doc": { "enables": ["empty"] }
+      },
       "...": "{...}"
     },
     "{...}",
