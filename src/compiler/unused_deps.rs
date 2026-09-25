@@ -58,6 +58,40 @@ impl UnusedDepState {
                 );
                 continue;
             }
+            let sibling_targets = root.pkg.targets();
+            let siibling_lib_exists = || sibling_targets.iter().any(|target| target.is_lib());
+            let linkable_sibling_exists =
+                || sibling_targets.iter().any(|target| target.is_linkable());
+            let sibling_lib_present = || {
+                bcx.unit_graph.keys().any(|unit| {
+                    unit.pkg.package_id() == pkg_id
+                        && unit.target.is_lib()
+                        && matches!(
+                            unit.mode,
+                            CompileMode::Build | CompileMode::Check { test: false }
+                        )
+                })
+            };
+            if dep_kind == DepKind::Normal
+                && !root.target.is_lib()
+                && siibling_lib_exists()
+                // don't bother walking all units if all libs are linkable
+                && !linkable_sibling_exists()
+                && !sibling_lib_present()
+            {
+                // In some cases a lib target without an rlib isn't built,
+                // preventing any other normal dep from identifying unused deps,
+                // like bin and staticlib when running `cargo test`
+                //
+                // This would be messier if lib's supported `required-features`
+                trace!(
+                    "pkg {} v{} ({dep_kind:?}): ignoring unused deps due to the lib's build being skipped",
+                    pkg_id.name(),
+                    pkg_id.version(),
+                );
+                continue;
+            }
+
             trace!(
                 "tracking root {} {} ({:?})",
                 root.pkg.name(),
