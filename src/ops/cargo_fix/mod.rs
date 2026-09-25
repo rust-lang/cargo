@@ -770,31 +770,42 @@ pub fn fix_exec_rustc(gctx: &GlobalContext, lock_addr: &str) -> CargoResult<()> 
         }
     }
 
-    // If there were any fixes, let the user know that there was a failure
-    // attempting to apply them, and to ask for a bug report.
-    //
-    // FIXME: The error message here is not correct with --broken-code.
-    //        https://github.com/rust-lang/cargo/issues/10955
+    let krate = {
+        let mut iter = rustc.get_args();
+        let mut krate = None;
+        while let Some(arg) = iter.next() {
+            if arg == "--crate-name" {
+                krate = iter.next().and_then(|s| s.to_owned().into_string().ok());
+            }
+        }
+        krate
+    };
+
     if fixes.files.is_empty() {
+        if !fixes.first_output.status.success() {
+            Message::FixFailed {
+                files: vec![],
+                krate,
+                errors: vec![],
+                abnormal_exit: None,
+                started_broken: true,
+                allow_broken_code,
+                fixes_applied: false,
+            }
+            .post(gctx)?;
+        }
         // No fixes were available. Display whatever errors happened.
         emit_output(&fixes.last_output)?;
         exit_with(fixes.last_output.status);
     } else {
-        let krate = {
-            let mut iter = rustc.get_args();
-            let mut krate = None;
-            while let Some(arg) = iter.next() {
-                if arg == "--crate-name" {
-                    krate = iter.next().and_then(|s| s.to_owned().into_string().ok());
-                }
-            }
-            krate
-        };
         log_failed_fix(
             gctx,
             krate,
             &fixes.last_output.stderr,
             fixes.last_output.status,
+            !fixes.first_output.status.success(),
+            allow_broken_code,
+            true, // fixes were applied since fixes.files is not empty
         )?;
         // Display the diagnostics that appeared at the start, before the
         // fixes failed. This can help with diagnosing which suggestions
@@ -1152,6 +1163,9 @@ fn log_failed_fix(
     krate: Option<String>,
     stderr: &[u8],
     status: ExitStatus,
+    started_broken: bool,
+    allow_broken_code: bool,
+    fixes_applied: bool,
 ) -> CargoResult<()> {
     let stderr = str::from_utf8(stderr).context("failed to parse rustc stderr as utf-8")?;
 
@@ -1186,6 +1200,9 @@ fn log_failed_fix(
         krate,
         errors,
         abnormal_exit,
+        started_broken,
+        allow_broken_code,
+        fixes_applied,
     }
     .post(gctx)?;
 
