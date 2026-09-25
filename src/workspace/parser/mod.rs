@@ -2435,103 +2435,147 @@ fn to_dependency_source_id<P: ResolveToPath + Clone>(
     manifest_ctx: &mut ManifestContext<'_, '_>,
     kind: Option<DepKind>,
 ) -> CargoResult<SourceId> {
-    if orig.builtin {
-        if orig.git.is_some()
-            || orig.path.is_some()
-            || orig.registry.is_some()
-            || orig.registry_index.is_some()
-        {
-            bail!(
-                "dependency ({name_in_toml}) specification is ambiguous. \
-                `builtin = true` cannot be combined with any other dependency source"
-            )
-        }
-        if orig.version.is_some() {
-            bail!(
-                "builtin dependency `{name_in_toml}` cannot be combined with a version requirement\n\
-                 Builtin dependencies are unversioned."
-            )
-        }
+    let manifest::TomlDetailedDependency {
+        version,
+        registry,
+        registry_index,
+        path,
+        base: _,
+        git,
+        branch,
+        tag,
+        rev,
+        builtin,
+        features: _,
+        optional: _,
+        default_features: _,
+        default_features2: _,
+        package: _,
+        public: _,
+        artifact: _,
+        lib: _,
+        target: _,
+        _unused_keys: _,
+    } = orig;
+
+    let builtin_source: Option<()> = if *builtin {
         if kind == Some(DepKind::Build) {
             bail!("builtin dependency `{name_in_toml}` cannot be used as a build dependency")
         }
         todo!("SourceKind::Builtin");
-    }
+    } else {
+        None
+    };
 
-    match (
-        orig.git.as_ref(),
-        orig.path.as_ref(),
-        orig.registry.as_deref(),
-        orig.registry_index.as_ref(),
-    ) {
-        (Some(_git), Some(_path), _, _) => {
+    let git_source = if git.is_some() || branch.is_some() || tag.is_some() || rev.is_some() {
+        let n_details = [&orig.branch, &orig.tag, &orig.rev]
+            .iter()
+            .filter(|d| d.is_some())
+            .count();
+        if n_details > 1 {
             bail!(
                 "dependency ({name_in_toml}) specification is ambiguous. \
-                     Only one of `git` or `path` is allowed.",
+                         Only one of `branch`, `tag` or `rev` is allowed.",
             );
         }
-        (_, _, Some(_registry), Some(_registry_index)) => bail!(
-            "dependency ({name_in_toml}) specification is ambiguous. \
-                 Only one of `registry` or `registry-index` is allowed.",
-        ),
-        (Some(git), None, _, _) => {
-            let n_details = [&orig.branch, &orig.tag, &orig.rev]
-                .iter()
-                .filter(|d| d.is_some())
-                .count();
 
-            if n_details > 1 {
-                bail!(
-                    "dependency ({name_in_toml}) specification is ambiguous. \
-                         Only one of `branch`, `tag` or `rev` is allowed.",
-                );
-            }
+        let reference = orig
+            .branch
+            .clone()
+            .map(GitReference::Branch)
+            .or_else(|| orig.tag.clone().map(GitReference::Tag))
+            .or_else(|| orig.rev.clone().map(GitReference::Rev))
+            .unwrap_or(GitReference::DefaultBranch);
 
-            let reference = orig
-                .branch
-                .clone()
-                .map(GitReference::Branch)
-                .or_else(|| orig.tag.clone().map(GitReference::Tag))
-                .or_else(|| orig.rev.clone().map(GitReference::Rev))
-                .unwrap_or(GitReference::DefaultBranch);
-            let loc = git.into_url()?;
-
-            if let Some(fragment) = loc.fragment() {
-                let msg = format!(
-                    "URL fragment `#{fragment}` in git URL is ignored for dependency ({name_in_toml}). \
+        let loc = git
+            .as_ref()
+            .ok_or_else(|| anyhow::format_err!("missing `git` field"))?
+            .into_url()?;
+        if let Some(fragment) = loc.fragment() {
+            let msg = format!(
+                "URL fragment `#{fragment}` in git URL is ignored for dependency ({name_in_toml}). \
                         If you were trying to specify a specific git revision, \
                         use `rev = \"{fragment}\"` in the dependency declaration.",
-                );
-                manifest_ctx.warnings.push(msg);
+            );
+            manifest_ctx.warnings.push(msg);
+        }
+
+        Some(SourceId::for_git(&loc, reference)?)
+    } else {
+        None
+    };
+
+    let path_source = if let Some(path) = path {
+        let path = path.resolve(manifest_ctx.gctx);
+        // If the source ID for the package we're parsing is a path
+        // source, then we normalize the path here to get rid of
+        // components like `..`.
+        //
+        // The purpose of this is to get a canonical ID for the package
+        // that we're depending on to ensure that builds of this package
+        // always end up hashing to the same value no matter where it's
+        // built from.
+        if manifest_ctx.source_id.is_path() {
+            let path = manifest_ctx.file.parent().unwrap().join(path);
+            let path = paths::normalize_path(&path);
+            Some(SourceId::for_path(&path)?)
+        } else {
+            Some(manifest_ctx.source_id)
+        }
+    } else {
+        None
+    };
+
+    let registry_source = if version.is_some() || registry.is_some() || registry_index.is_some() {
+        if version.is_none() {
+            manifest_ctx
+                .warnings
+                .push(format!("missing `version` field"));
+        }
+
+        let source = if registry.is_some() && registry_index.is_some() {
+            bail!(
+                "dependency ({name_in_toml}) specification is ambiguous. \
+                 Only one of `registry` or `registry-index` is allowed.",
+            )
+        } else if let Some(registry) = registry {
+            SourceId::alt_registry(manifest_ctx.gctx, registry)?
+        } else if let Some(registry_index) = registry_index {
+            let url = registry_index.into_url()?;
+            SourceId::for_registry(&url)?
+        } else {
+            SourceId::crates_io(manifest_ctx.gctx)?
+        };
+        Some(source)
+    } else {
+        None
+    };
+
+    let source = match (builtin_source, git_source, path_source, registry_source) {
+        (Some(()), None, None, None) => unreachable!(),
+        (None, Some(git), None, _) => git,
+        (None, None, Some(path), _) => path,
+        (None, None, None, Some(version)) => version,
+        (None, None, None, None) => bail!("no dependency source specified"),
+        (builtin_source, git_source, path_source, _) => {
+            if builtin_source.is_some() {
+                bail!(
+                    "dependency ({name_in_toml}) specification is ambiguous. \
+                    `builtin = true` cannot be combined with any other dependency source"
+                )
             }
 
-            SourceId::for_git(&loc, reference)
-        }
-        (None, Some(path), _, _) => {
-            let path = path.resolve(manifest_ctx.gctx);
-            // If the source ID for the package we're parsing is a path
-            // source, then we normalize the path here to get rid of
-            // components like `..`.
-            //
-            // The purpose of this is to get a canonical ID for the package
-            // that we're depending on to ensure that builds of this package
-            // always end up hashing to the same value no matter where it's
-            // built from.
-            if manifest_ctx.source_id.is_path() {
-                let path = manifest_ctx.file.parent().unwrap().join(path);
-                let path = paths::normalize_path(&path);
-                SourceId::for_path(&path)
-            } else {
-                Ok(manifest_ctx.source_id)
+            if git_source.is_some() && path_source.is_some() {
+                bail!(
+                    "dependency ({name_in_toml}) specification is ambiguous. \
+                     Only one of `git` or `path` is allowed.",
+                )
             }
+
+            bail!("dependency ({name_in_toml}) specification is ambiguous")
         }
-        (None, None, Some(registry), None) => SourceId::alt_registry(manifest_ctx.gctx, registry),
-        (None, None, None, Some(registry_index)) => {
-            let url = registry_index.into_url()?;
-            SourceId::for_registry(&url)
-        }
-        (None, None, None, None) => SourceId::crates_io(manifest_ctx.gctx),
-    }
+    };
+    Ok(source)
 }
 
 pub(crate) fn lookup_path_base<'a>(
