@@ -2455,7 +2455,7 @@ fn to_dependency_source_id<P: ResolveToPath + Clone>(
         if kind == Some(DepKind::Build) {
             bail!("builtin dependency `{name_in_toml}` cannot be used as a build dependency")
         }
-        todo!("SourceKind::Builtin");
+        return SourceId::for_builtin();
     }
 
     match (

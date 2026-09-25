@@ -176,6 +176,7 @@ impl SourceId {
                 let url = url.into_url()?;
                 SourceId::new(SourceKind::Path, url, None)
             }
+            "builtin" => SourceId::for_builtin(),
             kind => Err(anyhow::format_err!("unsupported source protocol: {}", kind)),
         }
     }
@@ -202,6 +203,12 @@ impl SourceId {
     pub fn for_path(path: &Path) -> CargoResult<SourceId> {
         let url = path.into_url()?;
         SourceId::new(SourceKind::Path, url, None)
+    }
+
+    /// Creates a `SourceId` for the builtin packages in the configured toolchain.
+    pub fn for_builtin() -> CargoResult<SourceId> {
+        let url = "builtin://".into_url()?;
+        SourceId::new(SourceKind::Builtin, url, None)
     }
 
     /// Creates a `SourceId` from a filesystem path.
@@ -404,6 +411,7 @@ impl SourceId {
                 }
                 Ok(Box::new(PathSource::new(&path, self, gctx)))
             }
+            SourceKind::Builtin => todo!("builtin source"),
             SourceKind::Registry | SourceKind::SparseRegistry => {
                 Ok(Box::new(RegistrySource::remote(self, gctx)?))
             }
@@ -664,6 +672,7 @@ impl fmt::Display for SourceId {
                 Ok(())
             }
             SourceKind::Path => write!(f, "{}", url_display(&self.inner.url)),
+            SourceKind::Builtin => write!(f, "builtin {}", url_display(&self.inner.url)),
             SourceKind::Registry | SourceKind::SparseRegistry => {
                 write!(f, "registry `{}`", self.display_registry_name())
             }
@@ -845,6 +854,10 @@ mod tests {
         let source_id = SourceId::for_git(&url, GitReference::DefaultBranch).unwrap();
         assert_data_eq!(gen_hash(source_id), str!["473480029881867801"].raw());
         assert_data_eq!(short_hash(&source_id), str!["199e591d94239206"].raw());
+
+        let source_id = SourceId::for_builtin().unwrap();
+        assert_data_eq!(gen_hash(source_id), str!["8471877086995577839"].raw());
+        assert_data_eq!(short_hash(&source_id), str!["ef7b241f53279275"].raw());
 
         let path = &ws_root.join("crate");
         let source_id = SourceId::for_local_registry(path).unwrap();

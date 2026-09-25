@@ -27,7 +27,7 @@ fn builtin_dep_accepted() {
         .with_stderr_data(str![[r#"
 
 thread [..] panicked at [..]
-not yet implemented: SourceKind::Builtin
+not yet implemented: builtin source
 [NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 "#]])
