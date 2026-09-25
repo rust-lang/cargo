@@ -930,6 +930,7 @@ fn object_works_helper(split_debuginfo: &str, run: impl Fn(&std::path::Path) -> 
 
                 [profile.dev]
                 split-debuginfo = "{split_debuginfo}"
+                debug = true
            "#
             ),
         )
@@ -1125,6 +1126,7 @@ fn lldb_works_after_trimmed() {
 
                 [profile.dev]
                 trim-paths = "object"
+                debug = true
            "#,
         )
         .file(
@@ -1188,6 +1190,7 @@ fn gdb_works_after_trimmed() {
 
                 [profile.dev]
                 trim-paths = "object"
+                debug = true
            "#,
         )
         .file(
@@ -1267,6 +1270,7 @@ fn cdb_works_after_trimmed() {
 
                 [profile.dev]
                 trim-paths = "object"
+                debug = true
            "#,
         )
         .file(
@@ -1696,6 +1700,7 @@ fn unremap_file_in_json_messages() {
                 # Suppress the platform-default dSYM on macOS so that `filenames`
                 # in JSON message is identical on all non-MSVC platforms.
                 split-debuginfo = "off"
+                debug = true
            "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -1986,7 +1991,19 @@ const UNREMAP_MARKERS: &[&str] = &[
 ))]
 fn unremap_debugger_project() -> cargo_test_support::Project {
     Package::new("bar", "0.0.1")
-        .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                authors = []
+                edition = "2015"
+
+                [profile.dev]
+                debug = true
+            "#,
+        )
         .file(
             "src/lib.rs",
             r#"
@@ -1999,7 +2016,19 @@ fn unremap_debugger_project() -> cargo_test_support::Project {
 
     let _baz = project()
         .at("baz")
-        .file("Cargo.toml", &basic_manifest("baz", "0.0.1"))
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "baz"
+                version = "0.0.1"
+                authors = []
+                edition = "2015"
+
+                [profile.dev]
+                debug = true
+            "#,
+        )
         .file(
             "src/lib.rs",
             r#"
@@ -2025,6 +2054,7 @@ fn unremap_debugger_project() -> cargo_test_support::Project {
 
                 [profile.dev]
                 trim-paths = "object"
+                debug = true
            "#,
         )
         .file(

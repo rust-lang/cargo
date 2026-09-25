@@ -157,6 +157,7 @@ impl Profiles {
                 "debug",
                 TomlProfile {
                     inherits: Some(String::from("dev")),
+                    debug: Some(TomlDebugInfo::Full),
                     ..TomlProfile::default()
                 },
             ),
@@ -774,7 +775,7 @@ impl Profile {
         Profile {
             name: "dev".into(),
             root: ProfileRoot::Debug,
-            debuginfo: DebugInfo::Resolved(TomlDebugInfo::Full),
+            debuginfo: DebugInfo::Resolved(TomlDebugInfo::LineTablesOnly),
             debug_assertions: true,
             overflow_checks: true,
             incremental: true,
