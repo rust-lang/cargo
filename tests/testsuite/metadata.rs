@@ -4984,3 +4984,77 @@ fn metadata_ignores_build_target_configuration() -> anyhow::Result<()> {
     );
     Ok(())
 }
+
+#[cargo_test]
+fn cargo_metadata_features_v2() {
+    Package::new("serde", "1.0.0").publish();
+    Package::new("log", "1.0.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["feature-metadata"]
+
+                [package]
+                name = "foo"
+                version = "0.5.0"
+                edition = "2015"
+
+                [dependencies]
+                serde = { version = "1.0.0", optional = true }
+                log = { version = "1.0.0", optional = true }
+
+                [features]
+                default = ["serde"]
+                empty = []
+                legacy = ["empty"]
+                serde = { enables = ["dep:serde"], doc = "Enables support for serialization via serde." }
+                table_empty = { enables = [] }
+                table_without_doc = { enables = ["empty"] }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("metadata --format-version 1")
+        .masquerade_as_nightly_cargo(&["feature-metadata"])
+        .with_stdout_data(
+            str![[r#"
+{
+  "packages": [
+    {
+      "name": "foo",
+      "features": {
+        "default": ["serde"],
+        "empty": [],
+        "legacy": ["empty"],
+        "log": ["dep:log"],
+        "serde": ["dep:serde"],
+        "table_empty": [],
+        "table_without_doc": ["empty"]
+      },
+      "features_v2": {
+        "default": { "enables": ["serde"] },
+        "empty": { "enables": [] },
+        "legacy": { "enables": ["empty"] },
+        "log": { "enables": ["dep:log"] },
+        "serde": {
+          "enables": ["dep:serde"],
+          "doc": "Enables support for serialization via serde."
+        },
+        "table_empty": { "enables": [] },
+        "table_without_doc": { "enables": ["empty"] }
+      },
+      "...": "{...}"
+    },
+    "{...}",
+    "{...}"
+  ],
+  "...": "{...}"
+}
+"#]]
+            .is_json(),
+        )
+        .run();
+}

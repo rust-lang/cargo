@@ -2385,6 +2385,20 @@ foo = { enables = [] }
 
 The required `enables` field is equivalent to the array-of-strings syntax.
 
+With `feature-metadata` enabled, `cargo metadata --format-version 1` includes a
+`features_v2` field alongside the existing `features` field. It mirrors every
+feature as an object with an `enables` array and other metadata fields:
+
+```json
+"features_v2": {
+  "foo": { "enables": [] },
+  "serde": {
+    "enables": ["dep:serde"],
+    "doc": "Enables support for serialization via serde."
+  }
+}
+```
+
 For other metadata fields, see the subsections below.
 
 ### feature-documentation
