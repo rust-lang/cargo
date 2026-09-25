@@ -56,7 +56,7 @@ fn opt_level_override_0() {
         .build();
     p.cargo("build -v").with_stderr_data(str![[r#"
 [COMPILING] test v0.0.0 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name test --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=2 [..] -C metadata=[..] --out-dir [..]`
+[RUNNING] `rustc --crate-name test --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=line-tables-only [..] -C metadata=[..] --out-dir [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]]).run();
@@ -116,7 +116,7 @@ fn check_opt_level_override(profile_level: &str, rustc_level: &str) {
 [RUNNING] `rustc --crate-name test --edition=2015 src/lib.rs [..]--crate-type lib \
         --emit=[..]link[..] \
         -C opt-level={level}[..]\
-        -C debuginfo=2 [..]\
+        -C debuginfo=line-tables-only [..]\
         -C debug-assertions=on[..] \
         -C metadata=[..] \
         --out-dir [..]`
@@ -711,8 +711,8 @@ fn strip_debuginfo_for_build_script_and_proc_macro() {
 [RUNNING] `rustc --crate-name build_script_build [..] --out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out -C strip=debuginfo --force-warn=unused_crate_dependencies`
 [RUNNING] `rustc --crate-name pm [..] --out-dir [ROOT]/foo/target/debug/build/pm/[HASH]/out -C strip=debuginfo --extern proc_macro --force-warn=unused_crate_dependencies`
 [RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/build_script_build`
-[RUNNING] `rustc --crate-name foo [..] -C debuginfo=2 [..] --out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out --extern pm=[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `rustc --crate-name foo [..] -C debuginfo=line-tables-only [..] --out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out --extern pm=[..]`
 
 "#]]
             .unordered(),
