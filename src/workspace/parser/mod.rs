@@ -40,7 +40,7 @@ use crate::workspace::{
 use crate::workspace::{Dependency, Manifest, Package, PackageId, Summary, Target};
 use crate::workspace::{Edition, EitherManifest, Feature, Features, VirtualManifest, Workspace};
 use crate::workspace::{
-    GitReference, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRootConfig,
+    GitReference, PackageIdSpec, SourceId, SourceKind, WorkspaceConfig, WorkspaceRootConfig,
 };
 
 mod embedded;
@@ -73,12 +73,25 @@ pub fn read_manifest(
 
     let is_embedded = is_embedded(path);
     let contents = read_toml_string(path, is_embedded, gctx)?;
-    let document = parse_document(&contents)
-        .map_err(|e| emit_toml_diagnostic(e.into(), &contents, path, gctx))?;
-    let original_toml = deserialize_toml(&document)
-        .map_err(|e| emit_toml_diagnostic(e.into(), &contents, path, gctx))?;
 
-    let document = make_document_owned(document);
+    let keep_document = is_embedded
+        || match source_id.kind() {
+            SourceKind::Path | SourceKind::LocalRegistry | SourceKind::Directory => true,
+            SourceKind::Git(_) | SourceKind::Registry | SourceKind::SparseRegistry => false,
+        };
+    let (original_toml, document) = if keep_document {
+        let document = parse_document(&contents)
+            .map_err(|e| emit_toml_diagnostic(e.into(), &contents, path, gctx))?;
+        let original_toml = deserialize_toml(toml::de::Deserializer::from(document.clone()))
+            .map_err(|e| emit_toml_diagnostic(e.into(), &contents, path, gctx))?;
+        (original_toml, Some(make_document_owned(document)))
+    } else {
+        let deserializer = toml::de::Deserializer::parse(&contents)
+            .map_err(|e| emit_toml_diagnostic(e.into(), &contents, path, gctx))?;
+        let original_toml = deserialize_toml(deserializer)
+            .map_err(|e| emit_toml_diagnostic(e.into(), &contents, path, gctx))?;
+        (original_toml, None)
+    };
 
     let mut manifest = (|| {
         let empty = Vec::new();
@@ -105,7 +118,7 @@ pub fn read_manifest(
         if normalized_toml.package().is_some() {
             to_real_manifest(
                 Some(contents),
-                Some(document),
+                document,
                 original_toml,
                 normalized_toml,
                 features,
@@ -122,7 +135,7 @@ pub fn read_manifest(
             assert!(!is_embedded);
             to_virtual_manifest(
                 Some(contents),
-                Some(document),
+                document,
                 original_toml,
                 normalized_toml,
                 features,
@@ -191,10 +204,9 @@ fn parse_document(contents: &str) -> Result<toml::Spanned<toml::de::DeTable<'_>>
 
 #[tracing::instrument(skip_all)]
 fn deserialize_toml(
-    document: &toml::Spanned<toml::de::DeTable<'_>>,
+    deserializer: toml::de::Deserializer<'_>,
 ) -> Result<manifest::TomlManifest, toml::de::Error> {
     let mut unused = BTreeSet::new();
-    let deserializer = toml::de::Deserializer::from(document.clone());
     let mut document: manifest::TomlManifest = serde_ignored::deserialize(deserializer, |path| {
         let mut key = String::new();
         stringify(&mut key, &path);
@@ -202,6 +214,33 @@ fn deserialize_toml(
     })?;
     document._unused_keys = unused;
     Ok(document)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{deserialize_toml, parse_document};
+
+    #[test]
+    fn direct_deserialize_preserves_diagnostics() {
+        let contents = "[package]\nname = []\n";
+        let document = parse_document(contents).unwrap();
+        let spanned = deserialize_toml(toml::de::Deserializer::from(document)).unwrap_err();
+        let direct =
+            deserialize_toml(toml::de::Deserializer::parse(contents).unwrap()).unwrap_err();
+
+        assert_eq!(direct.message(), spanned.message());
+        assert_eq!(direct.span(), spanned.span());
+    }
+
+    #[test]
+    fn direct_deserialize_preserves_unused_keys() {
+        let contents = "[package]\nname = \"foo\"\nversion = \"0.1.0\"\nunknown = true\n";
+        let document = parse_document(contents).unwrap();
+        let spanned = deserialize_toml(toml::de::Deserializer::from(document)).unwrap();
+        let direct = deserialize_toml(toml::de::Deserializer::parse(contents).unwrap()).unwrap();
+
+        assert_eq!(direct._unused_keys, spanned._unused_keys);
+    }
 }
 
 fn stringify(dst: &mut String, path: &serde_ignored::Path<'_>) {
