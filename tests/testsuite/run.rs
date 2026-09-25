@@ -1124,9 +1124,9 @@ fast2
     p.cargo("run -v --example a")
         .with_stderr_data(str![[r#"
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
-[RUNNING] `rustc --crate-name bar --edition=2015 bar/src/bar.rs [..]--crate-type lib --emit=[..]link [..]-C debuginfo=2 [..]-C metadata=[..]`
+[RUNNING] `rustc --crate-name bar --edition=2015 bar/src/bar.rs [..]--crate-type lib --emit=[..]link [..]-C debuginfo=line-tables-only [..]-C metadata=[..]`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name a --edition=2015 examples/a.rs [..]--crate-type bin --emit=[..]link [..]-C debuginfo=2 [..]-C metadata=[..]`
+[RUNNING] `rustc --crate-name a --edition=2015 examples/a.rs [..]--crate-type bin --emit=[..]link [..]-C debuginfo=line-tables-only [..]-C metadata=[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/examples/a[EXE]`
 

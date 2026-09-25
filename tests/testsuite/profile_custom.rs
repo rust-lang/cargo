@@ -792,7 +792,7 @@ fn debug_inherits_dev() {
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]`
-[FINISHED] `debug` profile [optimized] target(s) in [ELAPSED]s
+[FINISHED] `debug` profile [optimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .with_stderr_does_not_contain("[..] -C debuginfo=0[..]")

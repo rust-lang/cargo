@@ -5336,9 +5336,9 @@ fn build_filter_infer_profile() {
     p.cargo("build -v --test=t1")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..] -C debuginfo=2 [..]`
-[RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]--crate-type bin --emit=[..]link[..] -C debuginfo=2 [..]`
-[RUNNING] `rustc --crate-name t1 --edition=2015 tests/t1.rs [..]--emit=[..]link[..] -C debuginfo=2 [..]`
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..] -C debuginfo=line-tables-only [..]`
+[RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]--crate-type bin --emit=[..]link[..] -C debuginfo=line-tables-only [..]`
+[RUNNING] `rustc --crate-name t1 --edition=2015 tests/t1.rs [..]--emit=[..]link[..] -C debuginfo=line-tables-only [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]].unordered())
@@ -5349,9 +5349,9 @@ fn build_filter_infer_profile() {
     p.cargo("build -v --bench=b1")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link [..]-C debuginfo=2 [..]`
-[RUNNING] `rustc --crate-name b1 --edition=2015 benches/b1.rs [..]--emit=[..]link[..] -C embed-bitcode=no -C debuginfo=2 [..]--test [..]`
-[RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]--crate-type bin --emit=[..]link [..]-C debuginfo=2 [..]`
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link [..]-C debuginfo=line-tables-only [..]`
+[RUNNING] `rustc --crate-name b1 --edition=2015 benches/b1.rs [..]--emit=[..]link[..] -C embed-bitcode=no -C debuginfo=line-tables-only [..]--test [..]`
+[RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]--crate-type bin --emit=[..]link [..]-C debuginfo=line-tables-only [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]].unordered())
@@ -5388,7 +5388,7 @@ fn targets_selected_all() {
     p.cargo("build -v --all-targets")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]--emit=[..]link [..]-C debuginfo=2 -[..]-test[..]`
+[RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]--emit=[..]link [..]-C debuginfo=line-tables-only -[..]-test[..]`
 [RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]--crate-type bin --emit=[..]link[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -5404,7 +5404,7 @@ fn all_targets_no_lib() {
     p.cargo("build -v --all-targets")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]--emit=[..]link[..] -C debuginfo=2 [..]--test [..]`
+[RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]--emit=[..]link[..] -C debuginfo=line-tables-only [..]--test [..]`
 [RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]--crate-type bin --emit=[..]link[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
