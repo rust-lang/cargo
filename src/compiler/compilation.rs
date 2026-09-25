@@ -436,6 +436,9 @@ impl<'gctx> Compilation<'gctx> {
             for meta in meta_vec {
                 if let Some(env) = self.extra_env.get(meta) {
                     for (k, v) in env {
+                        if k == "OUT_DIR" && !tool_kind.is_rustc_tool() {
+                            continue;
+                        }
                         cmd.env(k, v);
                     }
                 }

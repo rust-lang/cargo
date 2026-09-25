@@ -5649,7 +5649,7 @@ fn cargo_test_set_out_dir_env_var() {
                 pub mod tests {
                     #[test]
                     fn test_add() {
-                        assert!(std::env::var("OUT_DIR").is_ok());
+                        let _ = env!("OUT_DIR");
                         assert_eq!(foo::add(2, 5), 7);
                     }
                 }

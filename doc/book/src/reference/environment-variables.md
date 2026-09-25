@@ -280,8 +280,8 @@ corresponding environment variable is set to the empty string, `""`.
   file extension, such as `.exe`.
 * `OUT_DIR` --- If the package has a build script, this is set to the folder
   where the build script should place its output. See below for more information.
-  (Only set during compilation.) Cargo does not guarantee that this directory
-  is empty, and it is not cleaned between builds.
+  Cargo does not guarantee that this directory is empty, and it is not cleaned
+  between builds.
 * `CARGO_BIN_EXE_<name>` --- The absolute path to a binary target's executable.
   This is only set when building an [integration test] or benchmark. This may
   be used with the [`env` macro] to find the executable to run for testing
@@ -402,7 +402,9 @@ let out_dir = env::var("OUT_DIR").unwrap();
   and it is unique for the package in question. Cargo does not clean or reset this
   directory between builds, and its contents may persist across rebuilds. Build
   scripts should not assume that `OUT_DIR` is empty, and are responsible for
-  managing or cleaning up any files they create.
+  managing or cleaning up any files they create. This is set during execution
+  of the build script and compilation of the crate, but it is **not** available
+  at runtime.
 * `TARGET` --- the target tuple that is being compiled for. Native code should be
   compiled for this tuple. See the [Target Tuple] description for more information.
 * `HOST` --- the host tuple of the Rust compiler.

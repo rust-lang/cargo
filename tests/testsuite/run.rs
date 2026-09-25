@@ -1973,3 +1973,30 @@ fn run_binary_with_same_name_as_dependency() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn cargo_run_does_not_leak_out_dir() {
+    let p = project()
+        .file("build.rs", "fn main() {}")
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {
+                assert!(
+                    std::env::var("OUT_DIR").is_err(),
+                    "OUT_DIR should not be set at runtime"
+                );
+            }
+            "#,
+        )
+        .build();
+
+    p.cargo("run")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo[EXE]`
+
+"#]])
+        .run();
+}
