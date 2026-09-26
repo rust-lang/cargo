@@ -135,3 +135,41 @@ fn report_generated_without_any_units() {
     let html = p.read_file("target/cargo-timings/cargo-timing.html");
     assert!(html.contains("const UNIT_DATA = [];"));
 }
+
+// Peak memory reporting relies on OS-specific APIs (`wait4` on Unix,
+// `GetProcessMemoryInfo` on Windows). On other targets the value is always
+// `null`, so only run this test where a real measurement is expected.
+#[cargo_test]
+fn peak_memory_reported() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build --timings").run();
+
+    let html = p.read_file("target/cargo-timings/cargo-timing.html");
+    // Assert that peak memory was captured (present and not `null`) and that the
+    // memory table is rendered.
+    assert!(!html.contains(r#""peak_memory": "#));
+    assert!(!html.contains(r#""peak_memory": null"#));
+    assert!(!html.contains("Peak memory usage per unit"));
+}
+
+#[cargo_test]
+fn peak_memory_reported_on_failure() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
+        .file("src/lib.rs", "this is not valid rust")
+        .build();
+
+    p.cargo("build --timings")
+        .with_status(101)
+        .with_stderr_contains("[ERROR] could not compile `foo` [..]")
+        .run();
+
+    let html = p.read_file("target/cargo-timings/cargo-timing.html");
+    assert!(!html.contains(r#""peak_memory": "#));
+    assert!(!html.contains(r#""peak_memory": null"#));
+    assert!(!html.contains("Peak memory usage per unit"));
+}
