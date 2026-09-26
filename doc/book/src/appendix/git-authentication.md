@@ -1,14 +1,9 @@
 # Git Authentication
 
-Cargo supports some forms of authentication when using git dependencies and
-registries. This appendix contains some information for setting up git
-authentication in a way that works with Cargo.
-
-If you need other authentication methods, the [`net.git-fetch-with-cli`]
-config value can be set to cause Cargo to execute the `git` executable to
-handle fetching remote repositories instead of using the built-in support.
-This can be enabled with the `CARGO_NET_GIT_FETCH_WITH_CLI=true` environment
-variable.
+By default, Cargo delegates to git for authentication when using git dependencies and registries.
+This appendix contains some information for setting up git
+authentication in a way that works with Cargo
+when [`net.git-fetch-with-cli`] is disabled,
 
 > [!NOTE]
 > Cargo does not require authentication for public git dependencies
