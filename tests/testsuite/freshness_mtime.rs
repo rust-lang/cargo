@@ -19,7 +19,6 @@ use cargo_test_support::{
 use filetime::FileTime;
 
 #[cargo_test]
-#[ignore = "equal-mtime fingerprint paths are nondeterministic until the next commit's fix"]
 fn build_script_fingerprint_chooses_stable_path_for_equal_mtimes() {
     let p = project()
         .file("src/main.rs", "fn main() {}")
