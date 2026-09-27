@@ -10,7 +10,7 @@ use std::time::{Duration, Instant};
 
 use crate::util::data_structures::{HashMap, HashSet};
 use anyhow::Context as _;
-use cargo_util_schemas::manifest::{Hints, RustVersion};
+use cargo_util_schemas::manifest::{FeatureDefinition, Hints, RustVersion};
 use futures::FutureExt;
 use futures::TryStreamExt;
 use futures::stream::FuturesUnordered;
@@ -31,8 +31,8 @@ use crate::util::network::retry::{Retry, RetryResult};
 use crate::util::{self, GlobalContext, Progress, ProgressStyle, internal};
 use crate::workspace::dependency::DepKind;
 use crate::workspace::{
-    CliUnstable, Dependency, Features, Manifest, PackageId, PackageIdSpec, SerializedDependency,
-    SourceId, Target,
+    CliUnstable, Dependency, Feature, Features, Manifest, PackageId, PackageIdSpec,
+    SerializedDependency, SourceId, Target,
 };
 use crate::workspace::{Summary, Workspace};
 
@@ -78,6 +78,8 @@ pub struct SerializedPackage {
     dependencies: Vec<SerializedDependency>,
     targets: Vec<Target>,
     features: BTreeMap<InternedString, Vec<InternedString>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    features_v2: Option<BTreeMap<InternedString, SerializedFeature>>,
     manifest_path: PathBuf,
     metadata: Option<toml::Value>,
     publish: Option<Vec<String>>,
@@ -96,6 +98,13 @@ pub struct SerializedPackage {
     rust_version: Option<RustVersion>,
     #[serde(skip_serializing_if = "Option::is_none")]
     hints: Option<Hints>,
+}
+
+#[derive(Serialize)]
+struct SerializedFeature {
+    enables: Vec<InternedString>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    doc: Option<String>,
 }
 
 impl Package {
@@ -210,12 +219,30 @@ impl Package {
             .filter(|t| t.src_path().is_path())
             .cloned()
             .collect();
-        // Convert Vec<FeatureValue> to Vec<InternedString>
-        let crate_features = summary
-            .features()
-            .iter()
-            .map(|(k, v)| (*k, v.iter().map(|fv| fv.to_string().into()).collect()))
-            .collect();
+        let manifest_features = self.manifest().normalized_toml().features();
+        let mut crate_features = BTreeMap::new();
+        let mut features_v2 = cargo_features
+            .is_enabled(Feature::feature_metadata())
+            .then(BTreeMap::new);
+        for (k, v) in summary.features() {
+            let enables: Vec<InternedString> = v.iter().map(|fv| fv.to_string().into()).collect();
+            if let Some(features_v2) = &mut features_v2 {
+                let doc = manifest_features
+                    .and_then(|mf| mf.get(k.as_str()))
+                    .and_then(|feat_def| match feat_def {
+                        FeatureDefinition::Metadata(meta) => meta.doc.clone(),
+                        FeatureDefinition::Array(_) => None,
+                    });
+                features_v2.insert(
+                    *k,
+                    SerializedFeature {
+                        enables: enables.clone(),
+                        doc,
+                    },
+                );
+            }
+            crate_features.insert(*k, enables);
+        }
 
         SerializedPackage {
             name: package_id.name(),
@@ -232,6 +259,7 @@ impl Package {
                 .collect(),
             targets,
             features: crate_features,
+            features_v2,
             manifest_path: self.manifest_path().to_path_buf(),
             metadata: self.manifest().custom_metadata().cloned(),
             authors: manmeta.authors.clone(),
