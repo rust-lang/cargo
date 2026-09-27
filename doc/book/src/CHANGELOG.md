@@ -223,8 +223,6 @@
 
 - Clarify the name of the remote git registry
   [#17240](https://github.com/rust-lang/cargo/pull/17240)
-- Move sysroot lookup to GlobalContext
-  [#17276](https://github.com/rust-lang/cargo/pull/17276)
 - Flatten Cargo's own package layout
   [#17230](https://github.com/rust-lang/cargo/pull/17230)
   [#17231](https://github.com/rust-lang/cargo/pull/17231)
