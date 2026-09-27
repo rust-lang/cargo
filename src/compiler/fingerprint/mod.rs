@@ -91,7 +91,7 @@
 //! `[lints.rust.unexpected_cfgs.check-cfg]`   | ✓           |                          |
 //! `--extern priv:`                           | ✓           |                          |
 //!
-//! [^1]: Bin dependencies are not included.
+//! [^1]: Bin dependencies other than artifact dependencies are not included.
 //!
 //! [^2]: `__CARGO_RUSTC_BOOTSTRAP_WS_REMAP` is set by rustc bootstrap
 //!       to customize remap-path-prefix
