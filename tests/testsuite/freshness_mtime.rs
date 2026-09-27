@@ -19,6 +19,104 @@ use cargo_test_support::{
 use filetime::FileTime;
 
 #[cargo_test]
+#[ignore = "equal-mtime fingerprint paths are nondeterministic until the next commit's fix"]
+fn build_script_fingerprint_chooses_stable_path_for_equal_mtimes() {
+    let p = project()
+        .file("src/main.rs", "fn main() {}")
+        .file("build.rs", "fn main() {}")
+        .file("a.txt", "a")
+        .file("z.txt", "z")
+        .build();
+    p.cargo("generate-lockfile").run();
+
+    // Windows cannot set a file's mtime to FileTime::zero().
+    #[cfg(not(windows))]
+    {
+        let epoch = FileTime::zero();
+        for name in [
+            "Cargo.toml",
+            "Cargo.lock",
+            "src/main.rs",
+            "build.rs",
+            "a.txt",
+            "z.txt",
+        ] {
+            filetime::set_file_mtime(p.root().join(name), epoch).unwrap();
+        }
+
+        p.cargo("build").run();
+        let fingerprint = p
+            .glob("target/debug/build/foo/*/fingerprint/run-build-script-build-script-build.json")
+            .next()
+            .unwrap()
+            .unwrap();
+        let contents = fs::read_to_string(&fingerprint).unwrap();
+        assert!(contents.contains("(z.txt)"), "{contents}");
+    }
+
+    let normalized = FileTime::from_unix_time(946_684_800, 0);
+    for name in [
+        "Cargo.toml",
+        "Cargo.lock",
+        "src/main.rs",
+        "build.rs",
+        "a.txt",
+        "z.txt",
+    ] {
+        filetime::set_file_mtime(p.root().join(name), normalized).unwrap();
+    }
+    p.cargo("build").run();
+    let fingerprint = p
+        .glob("target/debug/build/foo/*/fingerprint/run-build-script-build-script-build.json")
+        .next()
+        .unwrap()
+        .unwrap();
+    let contents = fs::read_to_string(&fingerprint).unwrap();
+    assert!(contents.contains("(z.txt)"), "{contents}");
+
+    fs::remove_file(p.root().join("a.txt")).unwrap();
+    fs::remove_file(p.root().join("z.txt")).unwrap();
+    p.change_file("z.txt", "z");
+    p.change_file("a.txt", "a");
+    for name in ["a.txt", "z.txt"] {
+        filetime::set_file_mtime(p.root().join(name), normalized).unwrap();
+    }
+    p.cargo("build -v")
+        .with_stderr_data(str![[r#"
+[FRESH] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    let ignored = p.root().join("target/newer.txt");
+    fs::write(&ignored, "generated").unwrap();
+    filetime::set_file_mtime(&ignored, FileTime::from_unix_time(946_684_801, 0)).unwrap();
+    p.cargo("build -v")
+        .with_stderr_data(str![[r#"
+[FRESH] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    filetime::set_file_mtime(
+        p.root().join("src/main.rs"),
+        FileTime::from_unix_time(946_684_801, 0),
+    )
+    .unwrap();
+    p.cargo("build -v")
+        .with_stderr_data(str![[r#"
+[DIRTY] foo v0.0.1 ([ROOT]/foo): the precalculated components changed
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+...
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn modifying_and_moving() {
     let p = project()
         .file("src/main.rs", "mod a; fn main() {}")
