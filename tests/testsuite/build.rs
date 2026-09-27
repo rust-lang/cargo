@@ -5165,6 +5165,150 @@ fn same_metadata_different_directory() {
 }
 
 #[cargo_test]
+fn same_metadata_different_host() {
+    // A crate built with `--target` should get the same metadata hash on every
+    // host, even when its build script or a proc-macro has host-specific deps.
+    let host = rustc_host();
+    let (real_arch, rest) = host.split_once('-').unwrap();
+    let fake_arch = if real_arch == "aarch64" {
+        "x86_64"
+    } else {
+        "aarch64"
+    };
+    let fake_host = format!("{fake_arch}-{rest}");
+
+    // rustc wrapper that reports `FAKE_HOST`/`FAKE_ARCH` as the host.
+    let wrapper = project()
+        .at("fake-rustc")
+        .file("Cargo.toml", &basic_manifest("fake-rustc", "0.1.0"))
+        .file(
+            "src/main.rs",
+            r#"
+                use std::process::{exit, Command};
+
+                fn main() {
+                    let args: Vec<String> = std::env::args().skip(1).collect();
+                    let version = args.iter().any(|a| a == "-vV");
+                    let host_cfg = args.iter().any(|a| a.starts_with("--print"))
+                        && !args.iter().any(|a| a.starts_with("--target"));
+                    if !version && !host_cfg {
+                        let status = Command::new("rustc").args(&args).status().unwrap();
+                        exit(status.code().unwrap_or(1));
+                    }
+                    let fake_host = std::env::var("FAKE_HOST").unwrap();
+                    let fake_arch = std::env::var("FAKE_ARCH").unwrap();
+                    let output = Command::new("rustc").args(&args).output().unwrap();
+                    eprint!("{}", String::from_utf8_lossy(&output.stderr));
+                    for line in String::from_utf8(output.stdout).unwrap().lines() {
+                        if version && line.starts_with("host: ") {
+                            println!("host: {fake_host}");
+                        } else if host_cfg && line.starts_with("target_arch=") {
+                            println!("target_arch=\"{fake_arch}\"");
+                        } else {
+                            println!("{line}");
+                        }
+                    }
+                    exit(output.status.code().unwrap_or(1));
+                }
+            "#,
+        )
+        .build();
+    wrapper.cargo("build").run();
+    let fake_rustc = wrapper.bin("fake-rustc");
+
+    // `hostonly` is only pulled in by the build script and the proc-macro when
+    // the host has `fake_arch`.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.0.1"
+                    edition = "2021"
+
+                    [dependencies]
+                    pm = {{ path = "pm" }}
+
+                    [target.'cfg(target_arch = "{fake_arch}")'.build-dependencies]
+                    hostonly = {{ path = "hostonly" }}
+                "#
+            ),
+        )
+        .file("src/lib.rs", "pm::noop!();")
+        .file("build.rs", "fn main() {}")
+        .file(
+            "pm/Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "pm"
+                    version = "0.0.1"
+                    edition = "2021"
+
+                    [lib]
+                    proc-macro = true
+
+                    [target.'cfg(target_arch = "{fake_arch}")'.dependencies]
+                    hostonly = {{ path = "../hostonly" }}
+                "#
+            ),
+        )
+        .file(
+            "pm/src/lib.rs",
+            r#"
+                use proc_macro::TokenStream;
+
+                #[proc_macro]
+                pub fn noop(_input: TokenStream) -> TokenStream {
+                    TokenStream::new()
+                }
+            "#,
+        )
+        .file("hostonly/Cargo.toml", &basic_manifest("hostonly", "0.0.1"))
+        .file("hostonly/src/lib.rs", "")
+        .build();
+
+    // `-C metadata` and `-C extra-filename` passed to rustc for `name`.
+    fn hashes<'a>(stderr: &'a str, name: &str) -> (&'a str, Option<&'a str>) {
+        let line = stderr
+            .lines()
+            .find(|l| l.contains(&format!("--crate-name {name} ")))
+            .unwrap();
+        let arg = |prefix: &str| line.split_whitespace().find_map(|a| a.strip_prefix(prefix));
+        (arg("metadata=").unwrap(), arg("extra-filename="))
+    }
+
+    let build = format!("build -v --target {host}");
+    let real = t!(String::from_utf8(p.cargo(&build).run().stderr));
+    p.cargo("clean").run();
+    let fake = t!(String::from_utf8(
+        p.cargo(&build)
+            .env("RUSTC", &fake_rustc)
+            .env("FAKE_HOST", &fake_host)
+            .env("FAKE_ARCH", fake_arch)
+            .run()
+            .stderr
+    ));
+
+    // The fake host pulls in `hostonly`, so the host-side units change.
+    assert!(!real.contains("--crate-name hostonly "));
+    assert!(fake.contains("--crate-name hostonly "));
+    assert_ne!(
+        hashes(&real, "build_script_build").0,
+        hashes(&fake, "build_script_build").0
+    );
+    assert_ne!(hashes(&real, "pm").0, hashes(&fake, "pm").0);
+
+    let (real_metadata, real_extra) = hashes(&real, "foo");
+    let (fake_metadata, fake_extra) = hashes(&fake, "foo");
+    // FIXME(#8140): the host leaks into the metadata of `foo`.
+    assert_ne!(real_metadata, fake_metadata);
+    assert_ne!(real_extra, fake_extra);
+}
+
+#[cargo_test]
 fn building_a_dependent_crate_without_bin_should_fail() {
     Package::new("testless", "0.1.0")
         .file(
