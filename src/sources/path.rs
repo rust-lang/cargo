@@ -990,7 +990,7 @@ fn last_modified_file(
         // we can ignore the error and treat the path's `mtime`
         // as `0`.
         let mtime = paths::mtime(&file).unwrap_or_else(|_| FileTime::zero());
-        if mtime > max {
+        if mtime > max || (mtime == max && file.path.as_path() > max_path.as_path()) {
             max = mtime;
             max_path = file.into_path_buf();
         }
