@@ -5303,8 +5303,8 @@ fn same_metadata_different_host() {
 
     let (real_metadata, real_extra) = hashes(&real, "foo");
     let (fake_metadata, fake_extra) = hashes(&fake, "foo");
-    // FIXME(#8140): the host leaks into the metadata of `foo`.
-    assert_ne!(real_metadata, fake_metadata);
+    // `foo` keeps its metadata; only its file name reflects the host.
+    assert_eq!(real_metadata, fake_metadata);
     assert_ne!(real_extra, fake_extra);
 }
 
