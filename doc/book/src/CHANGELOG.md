@@ -1,5 +1,35 @@
 # Changelog
 
+## Cargo 1.101 (2026-12-24)
+[3d7cf6e9...HEAD](https://github.com/rust-lang/cargo/compare/3d7cf6e9...HEAD)
+
+### Added
+
+- 🎉 Two new configs are added: `build.profile` and `install.profile`.
+  These override the default profile Cargo compiles with.
+  [docs](https://doc.rust-lang.org/nightly/cargo/reference/config.html#buildprofile)
+  [#17215](https://github.com/rust-lang/cargo/pull/17215)
+
+### Changed
+
+- ❗️ Prevent `OUT_DIR` env var from leaking into `cargo run`.
+  `OUT_DIR` is set only for build script execution and compilation of the crate,
+  but has been accidentally leaked since 1.77.0.
+  [#17503](https://github.com/rust-lang/cargo/pull/17503)
+
+### Fixed
+
+### Nightly only
+
+- `builtin-dependencies`: Add `SourceKind::Builtin`
+  [#17513](https://github.com/rust-lang/cargo/pull/17513)
+- `feature-metadata`: mirror package features in `features_v2` for `cargo metadata` output
+  [#17517](https://github.com/rust-lang/cargo/pull/17517)
+
+### Documentation
+
+### Internal
+
 ## Cargo 1.100 (2026-11-12)
 [eb98b54b...rust-1.100.0](https://github.com/rust-lang/cargo/compare/eb98b54b...rust-1.100.0)
 
