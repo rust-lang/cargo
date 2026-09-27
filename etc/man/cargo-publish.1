@@ -32,9 +32,11 @@ checks on the crate.
 .RE
 .sp
 .RS 4
-\h'-04' 4.\h'+01'The client will poll waiting for the package to appear in the index,
-and may timeout. In that case, you will need to check for completion
-manually. This timeout does not affect the upload.
+\h'-04' 4.\h'+01'The client will poll waiting for the package to appear in the index.
+If that wait times out, \fBcargo publish\fR exits with an error. The upload
+itself has already completed; the crate should become available in the
+index shortly. You can check with \fBcargo search\fR or on the registry
+website.
 .RE
 .sp
 This command requires you to be authenticated using \fBcargo\-login\fR(1)

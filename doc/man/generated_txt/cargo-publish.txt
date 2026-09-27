@@ -21,9 +21,11 @@ DESCRIPTION
        3. Upload the crate to the registry. The server will perform additional
           checks on the crate.
 
-       4. The client will poll waiting for the package to appear in the index,
-          and may timeout. In that case, you will need to check for completion
-          manually. This timeout does not affect the upload.
+       4. The client will poll waiting for the package to appear in the index.
+          If that wait times out, cargo publish exits with an error. The upload
+          itself has already completed; the crate should become available in
+          the index shortly. You can check with cargo search or on the registry
+          website.
 
        This command requires you to be authenticated using cargo-login(1) or
        environment variables of the registry.token

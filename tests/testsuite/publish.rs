@@ -3421,7 +3421,7 @@ fn timeout_waiting_for_publish() {
         .replace_crates_io(registry.index_url())
         .arg("-Zpublish-timeout")
         .masquerade_as_nightly_cargo(&["publish-timeout"])
-        .with_status(0)
+        .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [WARNING] manifest has no documentation, homepage or repository
@@ -3433,9 +3433,9 @@ fn timeout_waiting_for_publish() {
 [UPLOADED] delay v0.0.1 to registry `crates-io`
 [NOTE] waiting for delay v0.0.1 to be available at registry `crates-io`
 [HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
-[WARNING] timed out waiting for delay v0.0.1 to be available in registry `crates-io`
-  |
-  = [NOTE] the registry may have a backlog that is delaying making the crate available. The crate should be available soon.
+[ERROR] timed out waiting for delay v0.0.1 to be available in registry `crates-io`
+
+the crate was uploaded successfully, but the registry index has not yet updated. The registry may have a backlog; the crate should be available soon.
 
 "#]])
         .run();
@@ -3643,10 +3643,9 @@ fn timeout_waiting_for_dependency_publish() {
 [UPLOADED] dep v0.0.1 to registry `crates-io`
 [NOTE] waiting for dep v0.0.1 to be available at registry `crates-io`.
       2 remaining crates to be published
-[WARNING] timed out waiting for dep v0.0.1 to be available in registry `crates-io`
-  |
-  = [NOTE] the registry may have a backlog that is delaying making the crate available. The crate should be available soon.
-[ERROR] unable to publish main v0.0.1 and other v0.0.1 due to a timeout while waiting for published dependencies to be available.
+[ERROR] unable to publish main v0.0.1 and other v0.0.1 due to a timeout while waiting for dep v0.0.1 to be available in registry `crates-io`
+
+the uploaded crate should still become available soon; the remaining packages were not published.
 
 "#]])
         .run();

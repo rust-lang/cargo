@@ -330,37 +330,47 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
                         "Published",
                         format!("{short_pkg_description} at {source_description}"),
                     )?;
+                    confirmed
                 } else {
+                    // Waiting timed out. The upload itself already succeeded; the
+                    // registry index has not yet reflected it. Fail the command so
+                    // callers (CI, scripts) do not treat a silent warning as success.
                     let short_pkg_descriptions = package_list(to_confirm.iter().copied(), "or");
                     let krate = if to_confirm.len() == 1 {
                         "crate"
                     } else {
                         "crates"
                     };
-                    opts.gctx.shell().print_report(
-                        &[Level::WARNING
-                            .secondary_title(format!(
-                                "timed out waiting for {short_pkg_descriptions} \
-                                    to be available in {source_description}",
-                            ))
-                            .element(Level::NOTE.message(format!(
-                                "the registry may have a backlog that is delaying making the \
-                                {krate} available. The {krate} should be available soon.",
-                            )))],
-                        false,
-                    )?;
+                    if plan.is_empty() {
+                        bail!(
+                            "timed out waiting for {short_pkg_descriptions} to be available \
+                             in {source_description}\n\
+                             \n\
+                             the {krate} was uploaded successfully, but the registry index \
+                             has not yet updated. The registry may have a backlog; the \
+                             {krate} should be available soon."
+                        );
+                    } else {
+                        let failed_list = package_list(plan.iter(), "and");
+                        bail!(
+                            "unable to publish {failed_list} due to a timeout while waiting \
+                             for {short_pkg_descriptions} to be available in \
+                             {source_description}\n\
+                             \n\
+                             the uploaded {krate} should still become available soon; the \
+                             remaining packages were not published."
+                        );
+                    }
                 }
-                confirmed
             } else {
+                // `publish.timeout = 0` skips waiting for the index to update.
                 BTreeSet::new()
             }
         };
         if confirmed.is_empty() {
-            // If nothing finished, it means we timed out while waiting for confirmation.
-            // We're going to exit, but first we need to check: have we uploaded everything?
+            // We only reach here when waiting was skipped (`publish.timeout = 0`).
+            // If more packages remain, we cannot safely continue without confirmation.
             if plan.is_empty() {
-                // It's ok that we timed out, because nothing was waiting on dependencies to
-                // be confirmed.
                 break;
             } else {
                 let failed_list = package_list(plan.iter(), "and");
