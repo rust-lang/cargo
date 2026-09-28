@@ -1,9 +1,57 @@
 # Changelog
 
-## Cargo 1.100 (2026-11-12)
-[eb98b54b...HEAD](https://github.com/rust-lang/cargo/compare/eb98b54b...HEAD)
+## Cargo 1.101 (2026-12-24)
+[3d7cf6e9...HEAD](https://github.com/rust-lang/cargo/compare/3d7cf6e9...HEAD)
 
 ### Added
+
+- 🎉 Two new configs are added: `build.profile` and `install.profile`.
+  These override the default profile Cargo compiles with.
+  [docs](https://doc.rust-lang.org/nightly/cargo/reference/config.html#buildprofile)
+  [#17215](https://github.com/rust-lang/cargo/pull/17215)
+
+### Changed
+
+- ❗️ Prevent `OUT_DIR` env var from leaking into `cargo run`.
+  `OUT_DIR` is set only for build script execution and compilation of the crate,
+  but has been accidentally leaked since 1.77.0.
+  [#17503](https://github.com/rust-lang/cargo/pull/17503)
+
+### Fixed
+
+### Nightly only
+
+- `builtin-dependencies`: Add `SourceKind::Builtin`
+  [#17513](https://github.com/rust-lang/cargo/pull/17513)
+- `feature-metadata`: mirror package features in `features_v2` for `cargo metadata` output
+  [#17517](https://github.com/rust-lang/cargo/pull/17517)
+
+### Documentation
+
+### Internal
+
+## Cargo 1.100 (2026-11-12)
+[eb98b54b...rust-1.100.0](https://github.com/rust-lang/cargo/compare/eb98b54b...rust-1.100.0)
+
+### Added
+
+- 🎉 Stabilize Cargo's own linting system.
+  Some Cargo warnings are now emitted as lints that users can control in the `[lints.cargo]` table.
+  The initial set of Cargo lints includes a built-in unused dependency check
+  via the `cargo::unused_dependencies` lint.
+  [docs](https://doc.rust-lang.org/nightly/cargo/reference/lints.html)
+  [#17298](https://github.com/rust-lang/cargo/pull/17298)
+  [#17441](https://github.com/rust-lang/cargo/pull/17441)
+  [#17478](https://github.com/rust-lang/cargo/pull/17478)
+  [#17515](https://github.com/rust-lang/cargo/pull/17515)
+- 🎉 Stabilize minimum publish age configurations.
+  When `registry.global-min-publish-age` is set,
+  the resolver ignores versions published more recently than that,
+  unless they are already in `Cargo.lock`.
+  This feature is also known as dependency cooldowns.
+  ([RFC 3923](https://rust-lang.github.io/rfcs/3923-cargo-min-publish-age.html))
+  [docs](https://doc.rust-lang.org/nightly/cargo/reference/resolver.html#publish-age)
+  [#17335](https://github.com/rust-lang/cargo/pull/17335)
 
 ### Changed
 
@@ -15,33 +63,121 @@
   The layout is not a stable interface and is subject to change.
   ([build cache doc](https://doc.rust-lang.org/nightly/cargo/reference/build-cache.html))
   [#17354](https://github.com/rust-lang/cargo/pull/17354)
+- ❗️ cargo-install: now uses the existing lockfile in the `.crate` tarball by default.
+  `--locked` in `cargo install` becomes a no-op.
+  [#17388](https://github.com/rust-lang/cargo/pull/17388)
+- Cargo now reports not just warnings but also number of errors in build summary
+  when `build.warnings='deny'`.
+  [#17479](https://github.com/rust-lang/cargo/pull/17479)
+- Cargo now suggests PR rev when a git dependency wrongly points to a GitHub pull request URL,
+  also for `net.git-fetch-with-cli=true`.
+  [#17436](https://github.com/rust-lang/cargo/pull/17436)
+  [#17437](https://github.com/rust-lang/cargo/pull/17437)
+- Simplify Git fetch error message for `net.git-fetch-with-cli=true`
+  [#17429](https://github.com/rust-lang/cargo/pull/17429)
+- Tell users which Cargo configs are not forwarded to git on error
+  when using `net.git-fetch-with-cli=true`,
+  for example, `http.proxy`, `http.cainfo`, `net.ssh.known-hosts`, and more.
+  These need to be set in Git config instead.
+  [#17477](https://github.com/rust-lang/cargo/pull/17477)
+- Use Git's 429 retry when available for `net.git-fetch-with-cli=true`
+  [#17422](https://github.com/rust-lang/cargo/pull/17422)
+- Faster fetches by skipping Git forced-update check for `net.git-fetch-with-cli=true` 
+  [#17406](https://github.com/rust-lang/cargo/pull/17406)
+- Cleaner Git fetch progress output for `net.git-fetch-with-cli=true`
+  [#17400](https://github.com/rust-lang/cargo/pull/17400)
 
 ### Fixed
 
 - The automatic `git gc` run no longer fails
   when Git is configured with `safe.bareRepository=explicit`.
   [#17370](https://github.com/rust-lang/cargo/pull/17370)
+- Commands editing `Cargo.toml` like `cargo add` now write to the correct file
+  when the file is a relative symlink.
+  Previously this could fail or overwrite an unrelated file.
+  [#17362](https://github.com/rust-lang/cargo/pull/17362)
+- cargo-clean: now accounts for hardlinks when calculating clean file size.
+  [#17485](https://github.com/rust-lang/cargo/pull/17485)
+- cargo-run: on Windows, error messages for a failing program is no longer overwritten
+  when the program's output ends with `\r`.
+  [#17373](https://github.com/rust-lang/cargo/pull/17373)
 
 ### Nightly only
 
+- 🔥 `builtin-dependencies`: New unstable feature `builtin-dependencies` for the build-std feature.
+  This adds a new builtin dependency source, e.g., `std = { builtin = true }`.
+  ([RFC 3875](https://github.com/rust-lang/rfcs/pull/3875))
+  [#17497](https://github.com/rust-lang/cargo/pull/17497)
+  [#17498](https://github.com/rust-lang/cargo/pull/17498)
+  [#17499](https://github.com/rust-lang/cargo/pull/17499)
+  [#17500](https://github.com/rust-lang/cargo/pull/17500)
+- 🔥 `feature-metadata`: New unstable Cargo.toml manifest syntax that
+  provides an alternate table syntax to describe metadata for Cargo features.
+  ([RFC 3416](https://github.com/rust-lang/rfcs/pull/3416))
+  ([RFC 3485](https://github.com/rust-lang/rfcs/pull/3485))
+  [docs](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#feature-metadata)
+  [#15056](https://github.com/rust-lang/cargo/pull/15056)
+  [#17447](https://github.com/rust-lang/cargo/pull/17447)
+  [#17509](https://github.com/rust-lang/cargo/pull/17509)
 - `update-breaking`: Remove unstable `--breaking` option entirely.
   The experiment uncovered challenges with the current model of `cargo update`.
   We want to step back and rethink the user experience of upgrading dependencies.
   [#17333](https://github.com/rust-lang/cargo/pull/17333)
+- `-Zasymmetric-token`: Remove unstable `-Zasymmetric-token` and `cargo:paseto` credential provider.
+  The feature hasn't made any progress in the past years,
+  and none of the known registries has adopted it.
+  The Cargo team is currently looking at deprecating plain text tokens as a first step.
+  Asymmetric tokens are still an idea worthy of future exploration.
+  [#17486](https://github.com/rust-lang/cargo/pull/17486)
+- `-Zchecksum-freshness`: Add `build.fingerprint` to control Cargo's rebuild detection method.
+  [#17382](https://github.com/rust-lang/cargo/pull/17382)
 - `-Zembed-metadata`: Enable `-Zembed-metadata=no` by default on nightly Cargo
   [#17267](https://github.com/rust-lang/cargo/pull/17267)
   [#17374](https://github.com/rust-lang/cargo/pull/17374)
+- `-Zfeature-unification`: add more comprehensive workspace feature unification tests
+  [#17466](https://github.com/rust-lang/cargo/pull/17466)
+- `-Zfeature-unification`: return correct package specs when resolving workspace deps
+  [#17469](https://github.com/rust-lang/cargo/pull/17469)
 - `-Zmin-publish-age`: remove `registry.min-publish-age` support
   [#17353](https://github.com/rust-lang/cargo/pull/17353)
+- `-Zprerelease`: preserve locked prerelease deps.
+  This also changed the use of the unstable feature
+  from `-Zunstable-options` in `cargo update`
+  to `-Zprerelease` on both `cargo update` and other commands consuming pinned prerelease versions.
+  [#17464](https://github.com/rust-lang/cargo/pull/17464)
+  [#17492](https://github.com/rust-lang/cargo/pull/17492)
+- `-Zprofile-hint-mostly-unused`: extract mostly-unused diagnostics
+  [#17457](https://github.com/rust-lang/cargo/pull/17457)
+- `-Zsbom`: Do not build SBOM if user has not set `build.sbom=true`.
+  [#17412](https://github.com/rust-lang/cargo/pull/17412)
 - `-Zscript`: Don't panic on a short closing fence before a non-ASCII char
   [#17274](https://github.com/rust-lang/cargo/pull/17274)
 - `-Ztrim-paths`: Remove unremap file when running `cargo clean -p` in new build-dir layout
   [#17356](https://github.com/rust-lang/cargo/pull/17356)
+- `-Ztrim-paths`: remove default scope from release profile
+  [#17424](https://github.com/rust-lang/cargo/pull/17424)
+- `-Ztrim-paths`: limit options to `none|object|all`
+  [#17432](https://github.com/rust-lang/cargo/pull/17432)
+- `-Ztrim-paths`: unremap file in one JSON doc
+  [#17476](https://github.com/rust-lang/cargo/pull/17476)
+- `-Ztrim-paths`: custom workspace-relative member paths remap
+  [#17366](https://github.com/rust-lang/cargo/pull/17366)
+- `-Ztrim-paths`: clarify limitations and the workspace remap rule
+  [#17425](https://github.com/rust-lang/cargo/pull/17425)
+  [#17433](https://github.com/rust-lang/cargo/pull/17433)
+- `-Ztrim-paths`: add a new build-rs API for trim-paths inputs access
+  [#17491](https://github.com/rust-lang/cargo/pull/17491)
 
 ### Documentation
 
 - Adopt rust-lang/rust's LLM usage policy
   [#17330](https://github.com/rust-lang/cargo/pull/17330)
+- Switch from "target triple" to "target tuple"
+  [#17430](https://github.com/rust-lang/cargo/pull/17430)
+- Install cargo tools with locked dependencies
+  [#17377](https://github.com/rust-lang/cargo/pull/17377)
+- Use mdbook admonitions
+  [#17384](https://github.com/rust-lang/cargo/pull/17384)
 - cargo-clean: Improve descriptions for clean options
   [#17365](https://github.com/rust-lang/cargo/pull/17365)
 
@@ -49,6 +185,44 @@
 
 - Update dependencies.
   [#17364](https://github.com/rust-lang/cargo/pull/17364)
+  [#17386](https://github.com/rust-lang/cargo/pull/17386)
+  [#17392](https://github.com/rust-lang/cargo/pull/17392)
+  [#17417](https://github.com/rust-lang/cargo/pull/17417)
+  [#17418](https://github.com/rust-lang/cargo/pull/17418)
+  [#17427](https://github.com/rust-lang/cargo/pull/17427)
+- Cargo internal profiling improvements
+  [#17411](https://github.com/rust-lang/cargo/pull/17411)
+- Consolidate more config table definitions
+  [#17480](https://github.com/rust-lang/cargo/pull/17480)
+- Split config keys in code, not at runtime
+  [#17490](https://github.com/rust-lang/cargo/pull/17490)
+- Resolve theoretical use-after-free
+  [#17428](https://github.com/rust-lang/cargo/pull/17428)
+- Remove ad-hoc `subslice_range`
+  [#17390](https://github.com/rust-lang/cargo/pull/17390)
+- Avoid passing search path `-L` args when they are passed as `--extern`
+  [#17410](https://github.com/rust-lang/cargo/pull/17410)
+- Micro-optimize two package dir functions
+  [#17413](https://github.com/rust-lang/cargo/pull/17413)
+- build-rs: make `unstable` compile
+  [#17489](https://github.com/rust-lang/cargo/pull/17489)
+- ci: exclude resolver-tests from intra doc link checks
+  [#17385](https://github.com/rust-lang/cargo/pull/17385)
+- home: fix rustdoc lint
+  [#17394](https://github.com/rust-lang/cargo/pull/17394)
+- test: Move `-Z` onto its own line
+  [#17416](https://github.com/rust-lang/cargo/pull/17416)
+- test: Clean up freshness tests
+  [#17376](https://github.com/rust-lang/cargo/pull/17376)
+- test: Remove gix override run in CI and the mode in code
+  [#17405](https://github.com/rust-lang/cargo/pull/17405)
+- Update dependencies.
+  [#17364](https://github.com/rust-lang/cargo/pull/17364)
+  [#17386](https://github.com/rust-lang/cargo/pull/17386)
+  [#17392](https://github.com/rust-lang/cargo/pull/17392)
+  [#17417](https://github.com/rust-lang/cargo/pull/17417)
+  [#17418](https://github.com/rust-lang/cargo/pull/17418)
+  [#17427](https://github.com/rust-lang/cargo/pull/17427)
 
 ## Cargo 1.99 (2026-10-01)
 [f40cc7a1...rust-1.99.0](https://github.com/rust-lang/cargo/compare/f40cc7a1...rust-1.99.0)
@@ -223,8 +397,6 @@
 
 - Clarify the name of the remote git registry
   [#17240](https://github.com/rust-lang/cargo/pull/17240)
-- Move sysroot lookup to GlobalContext
-  [#17276](https://github.com/rust-lang/cargo/pull/17276)
 - Flatten Cargo's own package layout
   [#17230](https://github.com/rust-lang/cargo/pull/17230)
   [#17231](https://github.com/rust-lang/cargo/pull/17231)
