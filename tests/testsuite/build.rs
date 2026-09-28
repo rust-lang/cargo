@@ -6450,7 +6450,7 @@ fn renamed_uplifted_artifact_remains_unmodified_after_rebuild() {
     assert!(not_the_same, "renamed uplifted artifact must be unmodified");
 }
 
-#[cargo_test(nightly, reason = "-Zembed-metadata is nightly only")]
+#[cargo_test(nightly, reason = "-Cembed-metadata requires rustc 1.101")]
 fn embed_metadata_no() {
     let p = project()
         .file(
@@ -6478,11 +6478,8 @@ fn embed_metadata_no() {
         )
         .build();
 
-    p.cargo("build")
-        .arg("-Zembed-metadata=no")
-        .masquerade_as_nightly_cargo(&["-Z embed-metadata"])
-        .arg("-v")
-        .with_stderr_contains("[RUNNING] `[..]-Z embed-metadata=no[..]`")
+    p.cargo("build -v")
+        .with_stderr_contains("[RUNNING] `[..]-C embed-metadata=no[..]`")
         .with_stderr_contains(
 "[RUNNING] `[..]--extern bar=[ROOT]/foo/target/debug/build/bar/[HASH]/out/libbar-[HASH].rmeta[..]`",
         )
@@ -6491,7 +6488,7 @@ fn embed_metadata_no() {
 
 // Make sure that cargo passes --extern=<dep>.rmeta even if <dep>
 // is compiled as a dylib.
-#[cargo_test(nightly, reason = "-Zembed-metadata is nightly only")]
+#[cargo_test(nightly, reason = "-Cembed-metadata requires rustc 1.101")]
 fn embed_metadata_no_dylib_dep() {
     let p = project()
         .file(
@@ -6529,18 +6526,15 @@ fn embed_metadata_no_dylib_dep() {
         )
         .build();
 
-    p.cargo("build")
-        .arg("-Zembed-metadata=no")
-        .masquerade_as_nightly_cargo(&["-Z embed-metadata"])
-        .arg("-v")
-        .with_stderr_contains("[RUNNING] `[..]-Z embed-metadata=no[..]`")
+    p.cargo("build -v")
+        .with_stderr_contains("[RUNNING] `[..]-C embed-metadata=no[..]`")
         .with_stderr_contains(
     "[RUNNING] `[..]--extern bar=[ROOT]/foo/target/debug/build/bar/[HASH]/out/libbar.rmeta[..]`",
         )
         .run();
 }
 
-#[cargo_test(nightly, reason = "-Zembed-metadata is nightly only")]
+#[cargo_test(nightly, reason = "-Cembed-metadata requires rustc 1.101")]
 fn embed_metadata_no_invalidate() {
     // Invalidate all deps when -Zembed-metadata is toggled
     let p = project()
@@ -6570,8 +6564,6 @@ fn embed_metadata_no_invalidate() {
         .build();
 
     p.cargo("build")
-        .arg("-Zembed-metadata=no")
-        .masquerade_as_nightly_cargo(&["-Z embed-metadata"])
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
