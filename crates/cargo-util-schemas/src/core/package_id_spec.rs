@@ -734,6 +734,7 @@ mod tests {
             },
             "path+file:///path/to/my/project/foo#foo::bar@1.1.8",
         );
+        err!("builtin://.#core", ErrorKind::MissingUrlPath(_));
     }
 
     #[test]
