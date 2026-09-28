@@ -29,7 +29,7 @@ hello
 
 #[cfg(windows)]
 #[cargo_test]
-fn explicit_child_cannot_break_away_from_job() {
+fn explicit_child_breakaway() {
     let p = project()
         .file(
             "src/main.rs",
@@ -45,12 +45,12 @@ fn explicit_child_cannot_break_away_from_job() {
                         return;
                     }
 
-                    let error = Command::new(std::env::current_exe().unwrap())
+                    let status = Command::new(std::env::current_exe().unwrap())
                         .arg("child")
                         .creation_flags(CREATE_BREAKAWAY_FROM_JOB)
                         .status()
-                        .unwrap_err();
-                    assert_eq!(error.kind(), std::io::ErrorKind::PermissionDenied);
+                        .unwrap();
+                    assert!(status.success());
                 }
             "#,
         )
@@ -58,7 +58,10 @@ fn explicit_child_cannot_break_away_from_job() {
 
     p.cargo("run --quiet")
         .with_stderr_data("")
-        .with_stdout_data("")
+        .with_stdout_data(str![[r#"
+child ran
+
+"#]])
         .run();
 }
 
