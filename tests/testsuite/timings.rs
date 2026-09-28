@@ -136,11 +136,30 @@ fn report_generated_without_any_units() {
     assert!(html.contains("const UNIT_DATA = [];"));
 }
 
-// Peak memory reporting relies on OS-specific APIs (`wait4` on Unix,
-// `GetProcessMemoryInfo` on Windows). On other targets the value is always
-// `null`, so only run this test where a real measurement is expected.
+/// Test that peak memory is reported when `--timings` and `-Zmem-stats` are used.
+///
+/// Peak memory reporting relies on OS-specific APIs.
 #[cargo_test]
 fn peak_memory_reported() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build --timings -Zmem-stats")
+        .masquerade_as_nightly_cargo(&["mem-stats"])
+        .run();
+
+    let html = p.read_file("target/cargo-timings/cargo-timing.html");
+    // Assert that peak memory was captured and that the memory table is rendered.
+    assert!(html.contains(r#""peak_memory": "#));
+    assert!(!html.contains(r#""peak_memory": null"#));
+    assert!(html.contains("Peak memory usage per unit"));
+}
+
+/// Without `-Zmem-stats`, `--timings` should not display peak memory.
+#[cargo_test]
+fn peak_memory_not_reported_without_flag() {
     let p = project()
         .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
         .file("src/lib.rs", "")
@@ -149,10 +168,7 @@ fn peak_memory_reported() {
     p.cargo("build --timings").run();
 
     let html = p.read_file("target/cargo-timings/cargo-timing.html");
-    // Assert that peak memory was captured (present and not `null`) and that the
-    // memory table is rendered.
-    assert!(!html.contains(r#""peak_memory": "#));
-    assert!(!html.contains(r#""peak_memory": null"#));
+    assert!(!html.contains("peak_memory"));
     assert!(!html.contains("Peak memory usage per unit"));
 }
 

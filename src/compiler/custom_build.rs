@@ -517,6 +517,7 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
     let build_scripts = build_runner.build_scripts.get(unit).cloned();
     let json_messages = bcx.build_config.emit_json();
     let extra_verbose = bcx.gctx.extra_verbose();
+    let capture_rusage = bcx.capture_rusage();
     let (prev_output, prev_script_out_dir) = prev_build_output(build_runner, unit);
     let metadata_hash = build_runner.get_run_build_script_metadata(unit);
 
@@ -624,6 +625,7 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
                     Ok(())
                 },
                 true,
+                capture_rusage,
             )
             .with_context(|| {
                 let mut build_error_context =
@@ -672,7 +674,12 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
             anyhow::bail!("build script logged errors");
         }
 
-        let output = output.unwrap();
+        let (output, peak_memory) = output.unwrap();
+
+        // Report peak memory usage of this build script to `--timings`.
+        if let Some(peak_memory) = peak_memory {
+            state.peak_memory(peak_memory);
+        }
 
         // After the build command has finished running, we need to be sure to
         // remember all of its output so we can later discover precisely what it

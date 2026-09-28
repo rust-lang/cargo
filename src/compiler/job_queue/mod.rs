@@ -389,6 +389,8 @@ enum Message {
     Finish(JobId, Artifact, CargoResult<()>),
     FutureIncompatReport(JobId, Vec<FutureBreakageItem>),
     SectionTiming(JobId, SectionTiming),
+    /// Peak resident set size (in bytes) of a unit's process, for `--timings`.
+    PeakMemory(JobId, u64),
     UnusedExterns(JobId, std::collections::BTreeSet<InternedString>),
 }
 
@@ -761,6 +763,9 @@ impl<'gctx> DrainState<'gctx> {
             }
             Message::SectionTiming(id, section) => {
                 self.timings.unit_section_timing(build_runner, id, &section);
+            }
+            Message::PeakMemory(id, bytes) => {
+                self.timings.unit_peak_memory(build_runner, id, bytes);
             }
         }
 

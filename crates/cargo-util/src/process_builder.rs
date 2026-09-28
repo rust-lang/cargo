@@ -375,12 +375,17 @@ impl ProcessBuilder {
     /// and stored in the returned `Output` object. If it is false, no caching
     /// is done, and the callbacks are solely responsible for handling the
     /// output.
+    ///
+    /// If `capture_rusage` is true, the peak resident set size (in bytes) of the
+    /// process is also returned. The value is also `None` on platforms which we
+    /// haven't added support for yet, or if the query failed.
     pub fn exec_with_streaming(
         &self,
         on_stdout_line: &mut dyn FnMut(&str) -> Result<()>,
         on_stderr_line: &mut dyn FnMut(&str) -> Result<()>,
         capture_output: bool,
-    ) -> Result<Output> {
+        capture_rusage: bool,
+    ) -> Result<(Output, Option<u64>)> {
         let mut stdout = Vec::new();
         let mut stderr = Vec::new();
 
@@ -400,7 +405,7 @@ impl ProcessBuilder {
             Ok((piped(&mut cmd, false).spawn()?, Some(argfile)))
         };
 
-        let status = (|| {
+        let (status, peak_memory) = (|| {
             let cmd = self.build_command();
             let (mut child, argfile) = spawn(cmd)?;
             let out = child.stdout.take().unwrap();
@@ -448,7 +453,11 @@ impl ProcessBuilder {
                 data.drain(..idx);
                 *pos = 0;
             })?;
-            let status = child.wait();
+            let status = if capture_rusage {
+                imp::wait_with_peak_rss(child)
+            } else {
+                child.wait().map(|status| (status, None))
+            };
             if let Some(argfile) = argfile {
                 close_tempfile_and_log_error(argfile);
             }
@@ -479,7 +488,7 @@ impl ProcessBuilder {
             }
         }
 
-        Ok(output)
+        Ok((output, peak_memory))
     }
 
     /// Builds the command with an `@<path>` argfile that contains all the
@@ -637,7 +646,8 @@ mod imp {
     use super::{ProcessBuilder, ProcessError, close_tempfile_and_log_error, debug_force_argfile};
     use anyhow::Result;
     use std::io;
-    use std::os::unix::process::CommandExt;
+    use std::os::unix::process::{CommandExt, ExitStatusExt};
+    use std::process::ExitStatus;
 
     pub fn exec_replace(process_builder: &ProcessBuilder) -> Result<()> {
         let mut error;
@@ -669,6 +679,45 @@ mod imp {
     pub fn command_line_too_big(err: &io::Error) -> bool {
         err.raw_os_error() == Some(libc::E2BIG)
     }
+
+    /// Waits for `child` to exit, returning its exit status and the peak rss (in bytes).
+    ///
+    /// Use `wait4` to read `rusage.ru_maxrss` (the kernel's exact high-water mark),
+    /// instead of the plain `waitpid` that [`std::process::Child::wait`] performs,
+    /// which discards the `rusage`.
+    pub fn wait_with_peak_rss(
+        mut child: std::process::Child,
+    ) -> io::Result<(ExitStatus, Option<u64>)> {
+        let pid = child.id() as libc::pid_t;
+        let mut status: libc::c_int = 0;
+        // SAFETY: All rusage fields are safe to be initialized to zeroes (structs with i64 fields).
+        let mut usage: libc::rusage = unsafe { std::mem::zeroed() };
+        loop {
+            // SAFETY: Pid is valid, usage and status are initialized.
+            let ret = unsafe { libc::wait4(pid, &mut status, 0, &mut usage) };
+            if ret == -1 {
+                let err = io::Error::last_os_error();
+                if err.kind() == io::ErrorKind::Interrupted {
+                    tracing::debug!("Process `{pid}` was interrupted");
+                    continue;
+                }
+                tracing::error!(
+                    "Unexpected error while waiting for process `{pid}` to finish. {err}"
+                );
+                return child.wait().map(|status| (status, None));
+            }
+            break;
+        }
+        // `ru_maxrss` is in kilobytes on Linux and bytes on the Darwin family.
+        let peak = if cfg!(target_vendor = "apple") {
+            usage.ru_maxrss.max(0) as u64
+        } else {
+            (usage.ru_maxrss.max(0) as u64).saturating_mul(1024)
+        };
+        // We already reaped the child via `wait4`; `Child`'s `Drop` on Unix does
+        // not wait, so simply dropping it here does not double-reap.
+        Ok((ExitStatus::from_raw(status), Some(peak)))
+    }
 }
 
 #[cfg(windows)]
@@ -676,6 +725,7 @@ mod imp {
     use super::{ProcessBuilder, ProcessError};
     use anyhow::Result;
     use std::io;
+    use std::process::ExitStatus;
     use windows_sys::Win32::Foundation::{FALSE, TRUE};
     use windows_sys::Win32::System::Console::SetConsoleCtrlHandler;
     use windows_sys::core::BOOL;
@@ -699,6 +749,29 @@ mod imp {
     pub fn command_line_too_big(err: &io::Error) -> bool {
         use windows_sys::Win32::Foundation::ERROR_FILENAME_EXCED_RANGE;
         err.raw_os_error() == Some(ERROR_FILENAME_EXCED_RANGE as i32)
+    }
+
+    pub fn wait_with_peak_rss(
+        mut child: std::process::Child,
+    ) -> io::Result<(ExitStatus, Option<u64>)> {
+        use std::os::windows::io::AsRawHandle;
+        use windows_sys::Win32::System::ProcessStatus::{
+            GetProcessMemoryInfo, PROCESS_MEMORY_COUNTERS,
+        };
+
+        let status = child.wait()?;
+        // SAFETY: All PROCESS_MEMORY_COUNTERS fields are safe to zero-initialize (plain integers).
+        let mut counters: PROCESS_MEMORY_COUNTERS = unsafe { std::mem::zeroed() };
+        counters.cb = std::mem::size_of::<PROCESS_MEMORY_COUNTERS>() as u32;
+        // SAFETY: The handle is valid (owned by the not-yet-dropped `child`), `counters` is
+        // initialized, and `cb` is set to its size as `GetProcessMemoryInfo` requires.
+        if unsafe { GetProcessMemoryInfo(child.as_raw_handle() as _, &mut counters, counters.cb) }
+            != 0
+        {
+            Ok((status, Some(counters.PeakWorkingSetSize as u64)))
+        } else {
+            Ok((status, None))
+        }
     }
 }
 

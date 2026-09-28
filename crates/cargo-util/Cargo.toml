@@ -29,7 +29,7 @@ libc.workspace = true
 
 [target.'cfg(windows)'.dependencies]
 miow.workspace = true
-windows-sys = { workspace = true, features = ["Win32_Storage_FileSystem", "Win32_Foundation", "Win32_System_Console"] }
+windows-sys = { workspace = true, features = ["Win32_Storage_FileSystem", "Win32_Foundation", "Win32_System_Console", "Win32_System_ProcessStatus"] }
 
 [lints]
 workspace = true

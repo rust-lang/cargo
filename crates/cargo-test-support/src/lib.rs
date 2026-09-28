@@ -1090,17 +1090,20 @@ impl Execs {
             if is_ci() {
                 panic!("`.stream()` is for local debugging")
             }
-            process.exec_with_streaming(
-                &mut |out| {
-                    println!("{}", out);
-                    Ok(())
-                },
-                &mut |err| {
-                    eprintln!("{}", err);
-                    Ok(())
-                },
-                true,
-            )
+            process
+                .exec_with_streaming(
+                    &mut |out| {
+                        println!("{}", out);
+                        Ok(())
+                    },
+                    &mut |err| {
+                        eprintln!("{}", err);
+                        Ok(())
+                    },
+                    true,
+                    false,
+                )
+                .map(|(output, _)| output)
         } else {
             process.exec_with_output()
         };

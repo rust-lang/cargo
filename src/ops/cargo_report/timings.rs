@@ -224,6 +224,7 @@ where
                     features,
                     start: 0.0,
                     duration: 0.0,
+                    peak_memory: None,
                     unblocked_units: Vec::new(),
                     unblocked_rmeta_units: Vec::new(),
                     sections: None,
@@ -321,6 +322,14 @@ where
                     tracing::warn!(
                         "section `{section}` ended, but unit {index} has no start recorded"
                     )
+                }
+            },
+            LogMessage::UnitPeakMemory { index, bytes } => match units.entry(index) {
+                Entry::Occupied(mut e) => {
+                    e.get_mut().data.peak_memory = Some(bytes);
+                }
+                Entry::Vacant(_) => {
+                    tracing::warn!("peak memory reported, but unit {index} has no start recorded")
                 }
             },
             LogMessage::UnitFinished {

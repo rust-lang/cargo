@@ -10,6 +10,7 @@ use itertools::Itertools as _;
 
 use crate::CargoResult;
 use crate::compiler::UnitIndex;
+use crate::util::HumanBytes;
 
 use super::CompilationSection;
 use super::UnitData;
@@ -136,6 +137,7 @@ pub fn write_html(ctx: RenderContext<'_>, f: &mut impl Write) -> CargoResult<()>
     write_summary_table(&ctx, f, duration)?;
     f.write_all(HTML_CANVAS.as_bytes())?;
     write_unit_table(&ctx, f)?;
+    write_memory_table(&ctx, f)?;
     // It helps with pixel alignment to use whole numbers.
     writeln!(
         f,
@@ -344,6 +346,57 @@ fn write_unit_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<
             format_args!("{} v{}", unit.name, unit.version),
             unit.target,
             unit.duration,
+        )?;
+    }
+    write!(f, "</tbody>\n</table>\n")?;
+    Ok(())
+}
+
+/// Render a table of peak memory usage per unit, sorted from most to least.
+///
+/// This is skipped entirely when no unit has a [`UnitData::peak_memory`] value,
+/// which is the case unless `-Zmem-stats` was enabled, and also on platforms
+/// that can't report peak memory.
+fn write_memory_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<()> {
+    let mut units: Vec<_> = ctx
+        .unit_data
+        .iter()
+        .filter(|u| u.peak_memory.is_some())
+        .collect();
+    if units.is_empty() {
+        return Ok(());
+    }
+    units.sort_unstable_by(|a, b| b.peak_memory.cmp(&a.peak_memory));
+
+    write!(
+        f,
+        r#"
+<h2>Peak memory usage per unit</h2>
+<table class="my-table">
+<thead>
+<tr>
+  <th></th>
+  <th>Unit</th>
+  <th>Peak memory</th>
+</tr>
+</thead>
+<tbody>
+"#
+    )?;
+    for (i, unit) in units.iter().enumerate() {
+        write!(
+            f,
+            r#"
+<tr>
+<td>{}.</td>
+<td>{}{}</td>
+<td>{}</td>
+</tr>
+"#,
+            i + 1,
+            format_args!("{} v{}", unit.name, unit.version),
+            unit.target,
+            format_args!("{:.1}", HumanBytes(unit.peak_memory.unwrap())),
         )?;
     }
     write!(f, "</tbody>\n</table>\n")?;

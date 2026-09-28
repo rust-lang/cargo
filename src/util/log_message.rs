@@ -132,6 +132,13 @@ pub enum LogMessage {
         /// Section name from rustc's `-Zjson=timings` (e.g., "codegen", "link").
         section: String,
     },
+    /// Emitted when the peak memory usage of a compilation unit is captured.
+    UnitPeakMemory {
+        /// Unit index from the associated unit-registered event.
+        index: UnitIndex,
+        /// Peak resident set size of the unit's process, in bytes.
+        bytes: u64,
+    },
     /// Emitted when a compilation unit finishes.
     UnitFinished {
         /// Unit index from the associated unit-registered event.
