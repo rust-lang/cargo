@@ -183,13 +183,6 @@
 
 ### Internal
 
-- Update dependencies.
-  [#17364](https://github.com/rust-lang/cargo/pull/17364)
-  [#17386](https://github.com/rust-lang/cargo/pull/17386)
-  [#17392](https://github.com/rust-lang/cargo/pull/17392)
-  [#17417](https://github.com/rust-lang/cargo/pull/17417)
-  [#17418](https://github.com/rust-lang/cargo/pull/17418)
-  [#17427](https://github.com/rust-lang/cargo/pull/17427)
 - Cargo internal profiling improvements
   [#17411](https://github.com/rust-lang/cargo/pull/17411)
 - Consolidate more config table definitions
