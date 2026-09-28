@@ -143,6 +143,10 @@ impl PackageIdSpec {
                     kind = Some(SourceKind::Path);
                     url = strip_url_protocol(&url);
                 }
+                "builtin" => {
+                    kind = Some(SourceKind::Builtin);
+                    url = strip_url_protocol(&url);
+                }
                 kind => return Err(ErrorKind::UnsupportedProtocol(kind.into()).into()),
             }
         } else if url.scheme() == "builtin" {
@@ -758,9 +762,15 @@ mod tests {
             },
             "builtin://.#core",
         );
-        err!(
+        ok(
             "builtin+builtin://.#core",
-            ErrorKind::UnsupportedProtocol(_)
+            PackageIdSpec {
+                name: String::from("core"),
+                version: None,
+                url: Some(Url::parse("builtin://.").unwrap()),
+                kind: Some(SourceKind::Builtin),
+            },
+            "builtin://.#core",
         );
     }
 
