@@ -1371,7 +1371,7 @@ fn build_base_args(
         .info(unit.kind)
         .should_embed_metadata()
     {
-        // Nightly rustc supports the -Zembed-metadata=no flag, which tells it to avoid including
+        // The -Cembed-metadata=no flag tells rustc to avoid including
         // full metadata in rlib/dylib artifacts, to save space on disk. In this case, metadata
         // will only be stored in .rmeta files.
         // When we use this flag, we should also pass --emit=metadata to all artifacts that
@@ -1382,12 +1382,12 @@ fn build_base_args(
         // files on disk.
         if unit.benefits_from_no_embed_metadata() {
             cmd.arg("--emit=dep-info,metadata,link");
-            cmd.args(&["-Z", "embed-metadata=no"]);
+            cmd.args(&["-C", "embed-metadata=no"]);
         } else {
             cmd.arg("--emit=dep-info,link");
         }
     } else {
-        // If we don't use -Zembed-metadata=no, we emit .rmeta files only for rlib outputs.
+        // If we don't use -Cembed-metadata=no, we emit .rmeta files only for rlib outputs.
         // This metadata may be used in this session for a pipelined compilation, or it may
         // be used in a future Cargo session as part of a pipelined compile.
         if !unit.requires_upstream_objects() {
@@ -1944,7 +1944,7 @@ pub fn extern_args(
                 if output.flavor == FileFlavor::Linkable {
                     pass(&output.path);
                 }
-                // If we use -Zembed-metadata=no, we also need to pass the path to the
+                // If we use -Cembed-metadata=no, we also need to pass the path to the
                 // corresponding .rmeta file to the linkable artifact, because the
                 // normal dependency (rlib) doesn't contain the full metadata.
                 else if no_embed_metadata && output.flavor == FileFlavor::Rmeta {
