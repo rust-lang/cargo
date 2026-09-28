@@ -115,7 +115,7 @@ use crate::workspace::manifest::TargetSourcePath;
 use crate::workspace::profiles::{PanicStrategy, Profile, StripInner};
 use crate::workspace::{Feature, PackageId, Target};
 
-use cargo_util::{ProcessBuilder, ProcessError, paths};
+use cargo_util::{ExecStats, ProcessBuilder, ProcessError, paths};
 use cargo_util_schemas::manifest::TomlDebugInfo;
 use cargo_util_terminal::Verbosity;
 use rustfix::diagnostics::Applicability;
@@ -134,9 +134,8 @@ pub trait Executor: Send + Sync + 'static {
     /// In case of an `Err`, Cargo will not continue with the build process for
     /// this package.
     ///
-    /// When `capture_rusage` is set, returns the peak resident set size (in
-    /// bytes) of the rustc invocation if the platform can report it, for use by
-    /// `--timings`.
+    /// When `capture_rusage` is set, the returned [`ExecStats`] hold the peak
+    /// memory of the invocation (for `--timings`), even when it failed.
     fn exec(
         &self,
         cmd: &ProcessBuilder,
@@ -146,7 +145,7 @@ pub trait Executor: Send + Sync + 'static {
         on_stdout_line: &mut dyn FnMut(&str) -> CargoResult<()>,
         on_stderr_line: &mut dyn FnMut(&str) -> CargoResult<()>,
         capture_rusage: bool,
-    ) -> CargoResult<Option<u64>>;
+    ) -> (ExecStats, CargoResult<()>);
 
     /// Queried when queuing each unit of work. If it returns true, then the
     /// unit will always be rebuilt, independent of whether it needs to be.
@@ -171,9 +170,10 @@ impl Executor for DefaultExecutor {
         on_stdout_line: &mut dyn FnMut(&str) -> CargoResult<()>,
         on_stderr_line: &mut dyn FnMut(&str) -> CargoResult<()>,
         capture_rusage: bool,
-    ) -> CargoResult<Option<u64>> {
-        cmd.exec_with_streaming(on_stdout_line, on_stderr_line, false, capture_rusage)
-            .map(|(_, peak_memory)| peak_memory)
+    ) -> (ExecStats, CargoResult<()>) {
+        let (stats, result) =
+            cmd.exec_with_streaming(on_stdout_line, on_stderr_line, false, capture_rusage);
+        (stats, result.map(drop))
     }
 }
 
@@ -476,25 +476,25 @@ fn rustc(
             }
         }
 
-        let result = exec
-            .exec(
-                &rustc,
-                package_id,
-                &target,
-                mode,
-                &mut |line| on_stdout_line(state, line, package_id, &target),
-                &mut |line| {
-                    on_stderr_line(
-                        state,
-                        line,
-                        package_id,
-                        &manifest,
-                        &target,
-                        &mut output_options,
-                    )
-                },
-                capture_rusage,
-            )
+        let (stats, result) = exec.exec(
+            &rustc,
+            package_id,
+            &target,
+            mode,
+            &mut |line| on_stdout_line(state, line, package_id, &target),
+            &mut |line| {
+                on_stderr_line(
+                    state,
+                    line,
+                    package_id,
+                    &manifest,
+                    &target,
+                    &mut output_options,
+                )
+            },
+            capture_rusage,
+        );
+        let result = result
             .map_err(|e| {
                 if output_options.errors_seen == 0 {
                     // If we didn't expect an error, do not require --verbose to fail.
@@ -522,17 +522,17 @@ fn rustc(
                 format!("could not compile {name}{errors}{warnings}")
             });
 
-        match result {
-            Err(e) => {
-                if let Some(diagnostic) = failed_scrape_diagnostic {
-                    state.warning(diagnostic);
-                }
+        if let Some(peak_memory) = stats.peak_rss {
+            state.peak_memory(peak_memory);
+        }
 
-                return Err(e);
+        if let Err(e) = result {
+            if let Some(diagnostic) = failed_scrape_diagnostic {
+                state.warning(diagnostic);
             }
-            Ok(Some(peak_memory)) => state.peak_memory(peak_memory),
-            Ok(_) => {}
-        };
+
+            return Err(e);
+        }
 
         // Exec should never return with success *and* generate an error.
         debug_assert_eq!(output_options.errors_seen, 0);
@@ -1154,36 +1154,36 @@ fn rustdoc(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<W
         state.running(&rustdoc);
         let timestamp = paths::set_invocation_time(&fingerprint_dir)?;
 
-        let result = rustdoc
-            .exec_with_streaming(
-                &mut |line| on_stdout_line(state, line, package_id, &target),
-                &mut |line| {
-                    on_stderr_line(
-                        state,
-                        line,
-                        package_id,
-                        &manifest,
-                        &target,
-                        &mut output_options,
-                    )
-                },
-                false,
-                capture_rusage,
-            )
+        let (stats, result) = rustdoc.exec_with_streaming(
+            &mut |line| on_stdout_line(state, line, package_id, &target),
+            &mut |line| {
+                on_stderr_line(
+                    state,
+                    line,
+                    package_id,
+                    &manifest,
+                    &target,
+                    &mut output_options,
+                )
+            },
+            false,
+            capture_rusage,
+        );
+        let result = result
             .map_err(verbose_if_simple_exit_code)
             .with_context(|| format!("could not document `{}`", name));
 
-        match result {
-            Err(e) => {
-                if let Some(diagnostic) = failed_scrape_diagnostic {
-                    state.warning(diagnostic);
-                }
+        if let Some(peak_memory) = stats.peak_rss {
+            state.peak_memory(peak_memory);
+        }
 
-                return Err(e);
+        if let Err(e) = result {
+            if let Some(diagnostic) = failed_scrape_diagnostic {
+                state.warning(diagnostic);
             }
-            Ok((_, Some(peak_memory))) => state.peak_memory(peak_memory),
-            Ok(_) => {}
-        };
+
+            return Err(e);
+        }
         if rustdoc_depinfo_enabled && rustdoc_dep_info_loc.exists() {
             fingerprint::translate_dep_info(
                 &rustdoc_dep_info_loc,

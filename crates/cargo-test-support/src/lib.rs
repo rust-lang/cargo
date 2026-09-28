@@ -1103,7 +1103,7 @@ impl Execs {
                     true,
                     false,
                 )
-                .map(|(output, _)| output)
+                .1
         } else {
             process.exec_with_output()
         };

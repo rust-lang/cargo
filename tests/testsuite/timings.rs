@@ -172,6 +172,7 @@ fn peak_memory_not_reported_without_flag() {
     assert!(!html.contains("Peak memory usage per unit"));
 }
 
+/// Peak memory is reported even for a unit whose compilation fails
 #[cargo_test]
 fn peak_memory_reported_on_failure() {
     let p = project()
@@ -179,13 +180,14 @@ fn peak_memory_reported_on_failure() {
         .file("src/lib.rs", "this is not valid rust")
         .build();
 
-    p.cargo("build --timings")
+    p.cargo("build --timings -Zmem-stats")
+        .masquerade_as_nightly_cargo(&["mem-stats"])
         .with_status(101)
         .with_stderr_contains("[ERROR] could not compile `foo` [..]")
         .run();
 
     let html = p.read_file("target/cargo-timings/cargo-timing.html");
-    assert!(!html.contains(r#""peak_memory": "#));
+    assert!(html.contains(r#""peak_memory": "#));
     assert!(!html.contains(r#""peak_memory": null"#));
-    assert!(!html.contains("Peak memory usage per unit"));
+    assert!(html.contains("Peak memory usage per unit"));
 }

@@ -601,8 +601,8 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
         let prefix = format!("[{} {}] ", id.name(), id.version());
         let mut log_messages_in_case_of_panic = Vec::new();
         let span = tracing::debug_span!("build_script", process = cmd.to_string());
-        let output = span.in_scope(|| {
-            cmd.exec_with_streaming(
+        let (stats, output) = span.in_scope(|| {
+            let (stats, result) = cmd.exec_with_streaming(
                 &mut |stdout| {
                     if let Some(error) = stdout.strip_prefix(CARGO_ERROR_SYNTAX) {
                         log_messages_in_case_of_panic.push((Severity::Error, error.to_owned()));
@@ -626,8 +626,8 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
                 },
                 true,
                 capture_rusage,
-            )
-            .with_context(|| {
+            );
+            let result = result.with_context(|| {
                 let mut build_error_context =
                     format!("failed to run custom build command for `{}`", pkg_descr);
 
@@ -647,8 +647,13 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
                 }
 
                 build_error_context
-            })
+            });
+            (stats, result)
         });
+
+        if let Some(peak_memory) = stats.peak_rss {
+            state.peak_memory(peak_memory);
+        }
 
         // If the build failed
         if let Err(error) = output {
@@ -674,12 +679,7 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
             anyhow::bail!("build script logged errors");
         }
 
-        let (output, peak_memory) = output.unwrap();
-
-        // Report peak memory usage of this build script to `--timings`.
-        if let Some(peak_memory) = peak_memory {
-            state.peak_memory(peak_memory);
-        }
+        let output = output.unwrap();
 
         // After the build command has finished running, we need to be sure to
         // remember all of its output so we can later discover precisely what it

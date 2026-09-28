@@ -1,7 +1,7 @@
 use crate::process_error::ProcessError;
 use crate::read2;
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result};
 use jobserver::Client;
 use shell_escape::escape;
 use tempfile::NamedTempFile;
@@ -14,6 +14,15 @@ use std::io::{self, Write};
 use std::iter::once;
 use std::path::Path;
 use std::process::{Command, ExitStatus, Output};
+
+/// Metrics gathered while running a process
+///
+/// Returned by [`ProcessBuilder::exec_with_streaming`] whether or not it succeeded.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct ExecStats {
+    /// Peak resident set size of the process, in bytes.
+    pub peak_rss: Option<u64>,
+}
 
 /// A builder object for an external process, similar to [`std::process::Command`].
 #[derive(Clone, Debug)]
@@ -376,16 +385,15 @@ impl ProcessBuilder {
     /// is done, and the callbacks are solely responsible for handling the
     /// output.
     ///
-    /// If `capture_rusage` is true, the peak resident set size (in bytes) of the
-    /// process is also returned. The value is also `None` on platforms which we
-    /// haven't added support for yet, or if the query failed.
+    /// The returned [`ExecStats`] are populated only when `capture_rusage` is
+    /// set, and are returned even on failure (e.g. an OOM-killed process).
     pub fn exec_with_streaming(
         &self,
         on_stdout_line: &mut dyn FnMut(&str) -> Result<()>,
         on_stderr_line: &mut dyn FnMut(&str) -> Result<()>,
         capture_output: bool,
         capture_rusage: bool,
-    ) -> Result<(Output, Option<u64>)> {
+    ) -> (ExecStats, Result<Output>) {
         let mut stdout = Vec::new();
         let mut stderr = Vec::new();
 
@@ -405,7 +413,7 @@ impl ProcessBuilder {
             Ok((piped(&mut cmd, false).spawn()?, Some(argfile)))
         };
 
-        let (status, peak_memory) = (|| {
+        let wait_result = (|| {
             let cmd = self.build_command();
             let (mut child, argfile) = spawn(cmd)?;
             let out = child.stdout.take().unwrap();
@@ -463,14 +471,21 @@ impl ProcessBuilder {
             }
             status
         })()
-        .with_context(|| ProcessError::could_not_execute(self))?;
+        .with_context(|| ProcessError::could_not_execute(self));
+
+        let (status, peak_rss) = match wait_result {
+            Ok((status, peak_rss)) => (status, peak_rss),
+            // The process may have failed to spawn.
+            Err(e) => return (ExecStats::default(), Err(e)),
+        };
+
         let output = Output {
             status,
             stdout,
             stderr,
         };
 
-        {
+        let result = {
             let to_print = if capture_output { Some(&output) } else { None };
             if let Some(e) = callback_error {
                 let cx = ProcessError::new(
@@ -478,17 +493,20 @@ impl ProcessBuilder {
                     Some(output.status),
                     to_print,
                 );
-                bail!(anyhow::Error::new(cx).context(e));
+                Err(anyhow::Error::new(cx).context(e))
             } else if !output.status.success() {
-                bail!(ProcessError::new(
+                Err(anyhow::Error::new(ProcessError::new(
                     &format!("process didn't exit successfully: {}", self),
                     Some(output.status),
                     to_print,
-                ));
+                )))
+            } else {
+                Ok(())
             }
-        }
+        };
 
-        Ok((output, peak_memory))
+        let stats = ExecStats { peak_rss };
+        (stats, result.map(|()| output))
     }
 
     /// Builds the command with an `@<path>` argfile that contains all the

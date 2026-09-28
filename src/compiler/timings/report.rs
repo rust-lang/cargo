@@ -354,9 +354,8 @@ fn write_unit_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<
 
 /// Render a table of peak memory usage per unit, sorted from most to least.
 ///
-/// This is skipped entirely when no unit has a [`UnitData::peak_memory`] value,
-/// which is the case unless `-Zmem-stats` was enabled, and also on platforms
-/// that can't report peak memory.
+/// Skipped when no unit has a [`UnitData::peak_memory`] value (e.g. without
+/// `-Zmem-stats`, or on an unsupported platform).
 fn write_memory_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<()> {
     let mut units: Vec<_> = ctx
         .unit_data
