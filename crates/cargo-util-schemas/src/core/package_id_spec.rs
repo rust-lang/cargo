@@ -757,7 +757,11 @@ mod tests {
                 kind: Some(SourceKind::Builtin),
             },
             "builtin://.#core",
-        )
+        );
+        err!(
+            "builtin+builtin://.#core",
+            ErrorKind::UnsupportedProtocol(_)
+        );
     }
 
     #[test]
