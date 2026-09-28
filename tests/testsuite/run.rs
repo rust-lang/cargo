@@ -27,6 +27,41 @@ hello
     assert!(p.bin("foo").is_file());
 }
 
+#[cfg(windows)]
+#[cargo_test]
+fn explicit_child_cannot_break_away_from_job() {
+    let p = project()
+        .file(
+            "src/main.rs",
+            r#"
+                use std::os::windows::process::CommandExt;
+                use std::process::Command;
+
+                const CREATE_BREAKAWAY_FROM_JOB: u32 = 0x01000000;
+
+                fn main() {
+                    if std::env::args().nth(1).as_deref() == Some("child") {
+                        println!("child ran");
+                        return;
+                    }
+
+                    let error = Command::new(std::env::current_exe().unwrap())
+                        .arg("child")
+                        .creation_flags(CREATE_BREAKAWAY_FROM_JOB)
+                        .status()
+                        .unwrap_err();
+                    assert_eq!(error.kind(), std::io::ErrorKind::PermissionDenied);
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("run --quiet")
+        .with_stderr_data("")
+        .with_stdout_data("")
+        .run();
+}
+
 #[cargo_test]
 fn quiet_arg() {
     let p = project()
