@@ -161,6 +161,9 @@ impl PackageIdSpec {
         if kind == Some(SourceKind::Builtin) {
             // Builtins are different in that they require a fragment and cannot have path segments,
             // so handle them early
+            if url.host_str() != Some(".") {
+                return Err(ErrorKind::InvalidHostname.into());
+            }
             let Some(frag) = frag else {
                 return Err(ErrorKind::FragmentRequired.into());
             };
@@ -385,6 +388,9 @@ enum ErrorKind {
 
     #[error("version `{0}` is invalid for builtin packages, which are unversioned (or `0.0.0`)")]
     InvalidVersion(String),
+
+    #[error("only `.` is permitted as a hostname for builtin package ID specifications")]
+    InvalidHostname,
 
     #[error(transparent)]
     NameValidation(#[from] crate::restricted_names::NameValidationError),
@@ -885,15 +891,6 @@ mod tests {
         );
         err!("builtin://.#", ErrorKind::EmptyFragment);
         err!("builtin://.#0.0.0", ErrorKind::NameValidation(_));
-        ok(
-            "builtin://wrong#core",
-            PackageIdSpec {
-                name: String::from("core"),
-                version: Some("0.0.0".parse().unwrap()),
-                url: Some(Url::parse("builtin://wrong").unwrap()),
-                kind: Some(SourceKind::Builtin),
-            },
-            "builtin://wrong#core",
-        );
+        err!("builtin://wrong#core", ErrorKind::InvalidHostname);
     }
 }
