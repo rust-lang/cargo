@@ -4,7 +4,7 @@ This chapter gives an overview of how to build Cargo, make a change, and
 submit a Pull Request.
 
 0. [Before hacking on Cargo.](#before-hacking-on-cargo)
-1. [Check out the Cargo source.](#checkout-out-the-source)
+1. [Check out the Cargo source.](#checkout-the-source)
 2. [Building Cargo.](#building-cargo)
 3. [Making a change.](#making-a-change)
 4. [Writing and running tests.](../tests/index.md)
