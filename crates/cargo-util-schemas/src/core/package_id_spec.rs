@@ -885,5 +885,15 @@ mod tests {
         );
         err!("builtin://.#", ErrorKind::EmptyFragment);
         err!("builtin://.#0.0.0", ErrorKind::NameValidation(_));
+        ok(
+            "builtin://wrong#core",
+            PackageIdSpec {
+                name: String::from("core"),
+                version: Some("0.0.0".parse().unwrap()),
+                url: Some(Url::parse("builtin://wrong").unwrap()),
+                kind: Some(SourceKind::Builtin),
+            },
+            "builtin://wrong#core",
+        );
     }
 }
