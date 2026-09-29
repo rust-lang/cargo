@@ -161,13 +161,24 @@ impl PackageIdSpec {
         if kind == Some(SourceKind::Builtin) {
             // Builtins are different in that they require a fragment and cannot have path segments,
             // so handle them early
-            let Some(name) = frag else {
+            let Some(frag) = frag else {
                 return Err(ErrorKind::FragmentRequired.into());
             };
+            let name = match parse_spec(&frag)? {
+                Some((name, _)) => name,
+                None => frag,
+            };
             PackageName::new(&name)?;
+            let version = PartialVersion {
+                major: 0,
+                minor: Some(0),
+                patch: Some(0),
+                pre: None,
+                build: None,
+            };
             return Ok(PackageIdSpec {
                 name,
-                version: None,
+                version: Some(version),
                 url: Some(url),
                 kind,
             });
@@ -279,7 +290,9 @@ impl fmt::Display for PackageIdSpec {
                 write!(f, "{}", self.name)?;
             }
         }
-        if let Some(ref v) = self.version {
+        if let Some(ref v) = self.version
+            && self.kind != Some(SourceKind::Builtin)
+        {
             write!(f, "{}{}", if printed_name { "@" } else { "#" }, v)?;
         }
         Ok(())
@@ -762,7 +775,7 @@ mod tests {
             "builtin://.#core",
             PackageIdSpec {
                 name: String::from("core"),
-                version: None,
+                version: Some("0.0.0".parse().unwrap()),
                 url: Some(Url::parse("builtin://.").unwrap()),
                 kind: Some(SourceKind::Builtin),
             },
@@ -772,15 +785,21 @@ mod tests {
             "builtin+builtin://.#core",
             PackageIdSpec {
                 name: String::from("core"),
-                version: None,
+                version: Some("0.0.0".parse().unwrap()),
                 url: Some(Url::parse("builtin://.").unwrap()),
                 kind: Some(SourceKind::Builtin),
             },
             "builtin://.#core",
         );
-        err!(
+        ok(
             "builtin+builtin://.#core@0.0.0",
-            ErrorKind::NameValidation(_)
+            PackageIdSpec {
+                name: String::from("core"),
+                version: Some("0.0.0".parse().unwrap()),
+                url: Some(Url::parse("builtin://.").unwrap()),
+                kind: Some(SourceKind::Builtin),
+            },
+            "builtin://.#core",
         );
     }
 
