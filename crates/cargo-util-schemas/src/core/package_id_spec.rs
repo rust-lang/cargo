@@ -144,6 +144,9 @@ impl PackageIdSpec {
                     url = strip_url_protocol(&url)?;
                 }
                 "builtin" => {
+                    if scheme != "builtin" {
+                        return Err(ErrorKind::UnsupportedBuiltinScheme(scheme.into()).into());
+                    }
                     kind = Some(SourceKind::Builtin);
                     url = strip_url_protocol(&url)?;
                 }
@@ -397,6 +400,11 @@ enum ErrorKind {
 
     #[error("only empty paths are permitted for builtin package ID specifications")]
     InvalidPath,
+
+    #[error(
+        "`builtin+{0}` is unsupported - only the `builtin` protocol is supported for `builtin` kinds"
+    )]
+    UnsupportedBuiltinScheme(String),
 
     #[error(transparent)]
     NameValidation(#[from] crate::restricted_names::NameValidationError),
@@ -899,6 +907,9 @@ mod tests {
         err!("builtin://.#0.0.0", ErrorKind::NameValidation(_));
         err!("builtin://wrong#core", ErrorKind::InvalidHostname);
         err!("builtin://./invalid/path#core", ErrorKind::InvalidPath);
-        err!("builtin+invalid://.", ErrorKind::FragmentRequired);
+        err!(
+            "builtin+invalid://.",
+            ErrorKind::UnsupportedBuiltinScheme(_)
+        );
     }
 }
