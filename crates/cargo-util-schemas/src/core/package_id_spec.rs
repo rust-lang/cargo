@@ -164,6 +164,9 @@ impl PackageIdSpec {
             if url.host_str() != Some(".") {
                 return Err(ErrorKind::InvalidHostname.into());
             }
+            if url.path() != "" {
+                return Err(ErrorKind::InvalidPath.into());
+            }
             let Some(frag) = frag else {
                 return Err(ErrorKind::FragmentRequired.into());
             };
@@ -391,6 +394,9 @@ enum ErrorKind {
 
     #[error("only `.` is permitted as a hostname for builtin package ID specifications")]
     InvalidHostname,
+
+    #[error("only empty paths are permitted for builtin package ID specifications")]
+    InvalidPath,
 
     #[error(transparent)]
     NameValidation(#[from] crate::restricted_names::NameValidationError),
@@ -892,15 +898,6 @@ mod tests {
         err!("builtin://.#", ErrorKind::EmptyFragment);
         err!("builtin://.#0.0.0", ErrorKind::NameValidation(_));
         err!("builtin://wrong#core", ErrorKind::InvalidHostname);
-        ok(
-            "builtin://./invalid/path#core",
-            PackageIdSpec {
-                name: String::from("core"),
-                version: Some("0.0.0".parse().unwrap()),
-                url: Some(Url::parse("builtin://./invalid/path").unwrap()),
-                kind: Some(SourceKind::Builtin),
-            },
-            "builtin://./invalid/path#core",
-        );
+        err!("builtin://./invalid/path#core", ErrorKind::InvalidPath);
     }
 }
