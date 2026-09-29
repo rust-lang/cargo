@@ -159,8 +159,11 @@ impl PackageIdSpec {
         url.set_fragment(None);
 
         if kind == Some(SourceKind::Builtin) {
-            // Builtins cannot have path segments, so handle them early
-            let name = frag.unwrap();
+            // Builtins are different in that they require a fragment and cannot have path segments,
+            // so handle them early
+            let Some(name) = frag else {
+                return Err(ErrorKind::FragmentRequired.into());
+            };
             PackageName::new(&name)?;
             return Ok(PackageIdSpec {
                 name,
@@ -349,6 +352,9 @@ enum ErrorKind {
 
     #[error("pkgid url cannot have an empty fragment")]
     EmptyFragment,
+
+    #[error("builtin package ID specifications must specify the package name in the fragment")]
+    FragmentRequired,
 
     #[error(transparent)]
     NameValidation(#[from] crate::restricted_names::NameValidationError),
@@ -775,7 +781,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
     fn bad_parsing() {
         err!("baz:", ErrorKind::PartialVersion(_));
         err!("baz:*", ErrorKind::PartialVersion(_));
@@ -814,6 +819,6 @@ mod tests {
         err!("registry+https://github.com", ErrorKind::NameValidation(_));
         err!("https://crates.io/1foo#1.2.3", ErrorKind::NameValidation(_));
         err!("https://example.com/foo#", ErrorKind::EmptyFragment);
-        err!("builtin://.", ErrorKind::EmptyFragment);
+        err!("builtin://.", ErrorKind::FragmentRequired);
     }
 }
