@@ -867,5 +867,6 @@ mod tests {
             "builtin+builtin://.#core@0.1.0",
             ErrorKind::InvalidVersion(_)
         );
+        err!("builtin://.#", ErrorKind::NameValidation(_));
     }
 }
