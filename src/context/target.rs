@@ -2,6 +2,7 @@ use super::{CV, ConfigKey, ConfigRelativePath, GlobalContext, OptValue, PathAndA
 use crate::compiler::{BuildOutput, LibraryPath, LinkArgTarget};
 use crate::util::CargoResult;
 use crate::util::data_structures::HashMap;
+use cargo_util_terminal::report::Level;
 use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -112,8 +113,56 @@ pub(super) fn load_host_triple(gctx: &GlobalContext, triple: &str) -> CargoResul
 }
 
 /// Loads a single `[target]` table for the given tuple.
-pub(super) fn load_target_triple(gctx: &GlobalContext, triple: &str) -> CargoResult<TargetConfig> {
-    load_config_table(gctx, &["target", triple])
+pub(super) fn load_target_triple(gctx: &GlobalContext, tuple: &str) -> CargoResult<TargetConfig> {
+    let cfg = load_config_table(gctx, &["target", tuple])?;
+
+    if tuple.contains(".")
+        && gctx
+            .get::<Option<toml::Table>>(&["target", tuple])?
+            .is_none()
+    {
+        let key = format!("target.{tuple}");
+        let key = key.split(".").collect::<Vec<_>>();
+        if gctx.get::<Option<toml::Table>>(&key)?.is_some() {
+            // Derived from https://doc.rust-lang.org/1.98.0/rustc/platform-support.html
+            const DOTTED_TARGETS_1_98: &[&str] = &[
+                "thumbv8m.base-none-eabi",
+                "thumbv8m.main-none-eabi",
+                "thumbv8m.main-none-eabihf",
+                "thumbv8m.base-nuttx-eabi",
+                "thumbv8m.main-nuttx-eabi",
+                "thumbv8m.main-nuttx-eabihf",
+            ];
+            if DOTTED_TARGETS_1_98.contains(&tuple) {
+                // HACK: support tables like `[target.thumbv8m.main-none-eabihf]` for
+                // when it was used as a workaround from before `[target."thumbv8m.main-none-eabihf"]`
+                // started working
+                let _ = gctx.shell().print_report(
+                    &[Level::WARNING
+                        .secondary_title(format!("reading config from `[target.{tuple}]`"))
+                        .element(Level::NOTE.message(format!(
+                            r#"`[target.{tuple}]` will be ignored or error in a future version"#,
+                        )))
+                        .element(Level::HELP.message(format!(
+                            r#"to configure `{tuple}`, quote the key like `[target."{tuple}"]`"#,
+                        )))],
+                    false,
+                )?;
+                return load_config_table(gctx, &key);
+            } else {
+                let _ = gctx.shell().print_report(
+                    &[Level::WARNING
+                        .secondary_title(format!("unused config table `[target.{tuple}]`"))
+                        .element(Level::HELP.message(format!(
+                            r#"to configure `{tuple}`, quote the key like `[target."{tuple}"]`"#,
+                        )))],
+                    false,
+                )?;
+            }
+        }
+    }
+
+    Ok(cfg)
 }
 
 /// Loads a single table for the given prefix.
