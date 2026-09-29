@@ -886,5 +886,6 @@ mod tests {
         err!("builtin://.#0.0.0", ErrorKind::NameValidation(_));
         err!("builtin://wrong#core", ErrorKind::InvalidHostname);
         err!("builtin://./invalid/path#core", ErrorKind::InvalidPath);
+        err!("builtin+invalid://.", ErrorKind::FragmentRequired);
     }
 }
