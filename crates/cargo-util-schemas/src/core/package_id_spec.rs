@@ -818,6 +818,16 @@ mod tests {
             },
             "builtin://.#core",
         );
+        ok(
+            "builtin+builtin://.#core@0",
+            PackageIdSpec {
+                name: String::from("core"),
+                version: Some("0.0.0".parse().unwrap()),
+                url: Some(Url::parse("builtin://.").unwrap()),
+                kind: Some(SourceKind::Builtin),
+            },
+            "builtin://.#core",
+        );
     }
 
     #[test]
