@@ -782,6 +782,7 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
     fn bad_parsing() {
         err!("baz:", ErrorKind::PartialVersion(_));
         err!("baz:*", ErrorKind::PartialVersion(_));
@@ -826,5 +827,6 @@ mod tests {
             ErrorKind::InvalidPkgIdUrl(_)
         );
         err!("git+https://", ErrorKind::InvalidPkgIdUrl(_));
+        err!("builtin://.", ErrorKind::EmptyFragment);
     }
 }
