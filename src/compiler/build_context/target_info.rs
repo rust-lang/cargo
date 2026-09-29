@@ -416,7 +416,7 @@ impl TargetInfo {
         &self,
         crate_type: &CrateType,
         flavor: FileFlavor,
-        target_triple: &str,
+        target_tuple: &str,
     ) -> CargoResult<Option<Vec<FileType>>> {
         let crate_type = if *crate_type == CrateType::Lib {
             CrateType::Rlib
@@ -448,7 +448,7 @@ impl TargetInfo {
         if crate_type.is_dynamic() {
             // Note: Custom JSON specs can alter the suffix. For now, we'll
             // just ignore non-DLL suffixes.
-            if target_triple.ends_with("-windows-msvc") && suffix == ".dll" {
+            if target_tuple.ends_with("-windows-msvc") && suffix == ".dll" {
                 // See https://docs.microsoft.com/en-us/cpp/build/reference/working-with-import-libraries-and-export-files
                 // for more information about DLL import/export files.
                 ret.push(FileType {
@@ -467,9 +467,9 @@ impl TargetInfo {
                     should_replace_hyphens: true,
                 });
             } else if suffix == ".dll"
-                && (target_triple.ends_with("windows-gnu")
-                    || target_triple.ends_with("windows-gnullvm")
-                    || target_triple.ends_with("cygwin"))
+                && (target_tuple.ends_with("windows-gnu")
+                    || target_tuple.ends_with("windows-gnullvm")
+                    || target_tuple.ends_with("cygwin"))
             {
                 // See https://cygwin.com/cygwin-ug-net/dll.html for more
                 // information about GNU import libraries.
@@ -484,7 +484,7 @@ impl TargetInfo {
             }
         }
 
-        if target_triple.starts_with("wasm32-") && crate_type == CrateType::Bin && suffix == ".js" {
+        if target_tuple.starts_with("wasm32-") && crate_type == CrateType::Bin && suffix == ".js" {
             // emscripten binaries generate a .js file, which loads a .wasm
             // file.
             ret.push(FileType {
@@ -511,7 +511,7 @@ impl TargetInfo {
         }
 
         // Handle separate debug files.
-        let is_apple = target_triple.contains("-apple-");
+        let is_apple = target_tuple.contains("-apple-");
         if matches!(
             crate_type,
             CrateType::Bin | CrateType::Dylib | CrateType::Cdylib | CrateType::ProcMacro
@@ -535,7 +535,7 @@ impl TargetInfo {
                     // the names to match.
                     should_replace_hyphens: false,
                 })
-            } else if target_triple.ends_with("-msvc") || target_triple.ends_with("-uefi") {
+            } else if target_tuple.ends_with("-msvc") || target_tuple.ends_with("-uefi") {
                 ret.push(FileType {
                     suffix: ".pdb".to_string(),
                     prefix: prefix.clone(),
@@ -599,12 +599,12 @@ impl TargetInfo {
         &self,
         mode: CompileMode,
         target_kind: &TargetKind,
-        target_triple: &str,
+        target_tuple: &str,
     ) -> CargoResult<(Vec<FileType>, Vec<CrateType>)> {
         match mode {
-            CompileMode::Build => self.calc_rustc_outputs(target_kind, target_triple),
+            CompileMode::Build => self.calc_rustc_outputs(target_kind, target_tuple),
             CompileMode::Test => {
-                match self.file_types(&CrateType::Bin, FileFlavor::Normal, target_triple)? {
+                match self.file_types(&CrateType::Bin, FileFlavor::Normal, target_tuple)? {
                     Some(fts) => Ok((fts, Vec::new())),
                     None => Ok((Vec::new(), vec![CrateType::Bin])),
                 }
@@ -622,7 +622,7 @@ impl TargetInfo {
     fn calc_rustc_outputs(
         &self,
         target_kind: &TargetKind,
-        target_triple: &str,
+        target_tuple: &str,
     ) -> CargoResult<(Vec<FileType>, Vec<CrateType>)> {
         let mut unsupported = Vec::new();
         let mut result = Vec::new();
@@ -633,7 +633,7 @@ impl TargetInfo {
             } else {
                 FileFlavor::Normal
             };
-            let file_types = self.file_types(crate_type, flavor, target_triple)?;
+            let file_types = self.file_types(crate_type, flavor, target_tuple)?;
             match file_types {
                 Some(types) => {
                     result.extend(types);
@@ -909,7 +909,7 @@ fn rustflags_from_host(
     flag: Flags,
     host_triple: &str,
 ) -> CargoResult<Option<Vec<String>>> {
-    let target_cfg = gctx.host_cfg_triple(host_triple)?;
+    let target_cfg = gctx.host_cfg_tuple(host_triple)?;
     let list = match flag {
         Flags::Rust => &target_cfg.rustflags,
         Flags::Rustdoc => {
@@ -1002,9 +1002,9 @@ impl<'gctx> RustcTargetData<'gctx> {
 
         // This config is used for link overrides and choosing a linker.
         let host_config = if target_applies_to_host {
-            gctx.target_cfg_triple(&rustc.host)?
+            gctx.target_cfg_tuple(&rustc.host)?
         } else {
-            gctx.host_cfg_triple(&rustc.host)?
+            gctx.host_cfg_tuple(&rustc.host)?
         };
 
         // This is a hack. The unit_dependency graph builder "pretends" that
@@ -1013,7 +1013,7 @@ impl<'gctx> RustcTargetData<'gctx> {
         // needs access to the target config data, create a copy so that it
         // can be found. See `rebuild_unit_graph_shared` for why this is done.
         if requested_kinds.iter().any(CompileKind::is_host) {
-            target_config.insert(host_target, gctx.target_cfg_triple(&rustc.host)?);
+            target_config.insert(host_target, gctx.target_cfg_tuple(&rustc.host)?);
 
             // If target_applies_to_host is true, the host_info is the target info,
             // otherwise we need to build target info for the target.
@@ -1076,7 +1076,7 @@ impl<'gctx> RustcTargetData<'gctx> {
         if let CompileKind::Target(target) = kind {
             if !self.target_config.contains_key(&target) {
                 self.target_config
-                    .insert(target, self.gctx.target_cfg_triple(target.short_name())?);
+                    .insert(target, self.gctx.target_cfg_tuple(target.short_name())?);
             }
             if !self.target_info.contains_key(&target) {
                 self.target_info.insert(

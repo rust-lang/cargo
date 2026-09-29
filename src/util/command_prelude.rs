@@ -327,11 +327,11 @@ pub trait CommandExt: Sized {
         self._arg(flag("doc", doc))
     }
 
-    fn arg_target_triple(self, target: &'static str) -> Self {
-        self.arg_target_triple_with_candidates(target, ArgValueCandidates::new(get_target_triples))
+    fn arg_target_tuple(self, target: &'static str) -> Self {
+        self.arg_target_tuple_with_candidates(target, ArgValueCandidates::new(get_target_tuples))
     }
 
-    fn arg_target_triple_with_candidates(
+    fn arg_target_tuple_with_candidates(
         self,
         target: &'static str,
         target_completion: ArgValueCandidates,
@@ -1208,15 +1208,15 @@ fn get_crate_candidates(kind: TargetKind) -> CargoResult<Vec<clap_complete::Comp
     Ok(targets)
 }
 
-fn get_target_triples() -> Vec<clap_complete::CompletionCandidate> {
+fn get_target_tuples() -> Vec<clap_complete::CompletionCandidate> {
     let mut candidates = Vec::new();
 
-    if let Ok(targets) = get_target_triples_from_rustup() {
+    if let Ok(targets) = get_target_tuples_from_rustup() {
         candidates = targets;
     }
 
     if candidates.is_empty() {
-        if let Ok(targets) = get_target_triples_from_rustc() {
+        if let Ok(targets) = get_target_tuples_from_rustc() {
             candidates = targets;
         }
     }
@@ -1232,15 +1232,15 @@ fn get_target_triples() -> Vec<clap_complete::CompletionCandidate> {
     candidates
 }
 
-pub fn get_target_triples_with_all() -> Vec<clap_complete::CompletionCandidate> {
+pub fn get_target_tuples_with_all() -> Vec<clap_complete::CompletionCandidate> {
     let mut candidates = vec![
         clap_complete::CompletionCandidate::new("all").help(Some("Include all targets".into())),
     ];
-    candidates.extend(get_target_triples());
+    candidates.extend(get_target_tuples());
     candidates
 }
 
-fn get_target_triples_from_rustup() -> CargoResult<Vec<clap_complete::CompletionCandidate>> {
+fn get_target_tuples_from_rustup() -> CargoResult<Vec<clap_complete::CompletionCandidate>> {
     let output = std::process::Command::new("rustup")
         .arg("target")
         .arg("list")
@@ -1264,7 +1264,7 @@ fn get_target_triples_from_rustup() -> CargoResult<Vec<clap_complete::Completion
         .collect())
 }
 
-fn get_target_triples_from_rustc() -> CargoResult<Vec<clap_complete::CompletionCandidate>> {
+fn get_target_tuples_from_rustc() -> CargoResult<Vec<clap_complete::CompletionCandidate>> {
     let gctx = new_gctx_for_completions()?;
 
     let ws = Workspace::new(&find_root_manifest_for_wd(gctx.cwd())?, &gctx);

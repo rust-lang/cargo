@@ -108,10 +108,10 @@ pub fn cli() -> Command {
         )
         .arg_features()
         .arg(flag("all-targets", "Deprecated, use --target=all instead").hide(true))
-        .arg_target_triple_with_candidates(
+        .arg_target_tuple_with_candidates(
             "Filter dependencies matching the given target tuple (default host platform). \
             Pass `all` to include all targets.",
-            ArgValueCandidates::new(get_target_triples_with_all),
+            ArgValueCandidates::new(get_target_tuples_with_all),
         )
         .arg_manifest_path()
         .after_help(color_print::cstr!(

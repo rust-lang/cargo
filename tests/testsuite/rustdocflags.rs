@@ -260,7 +260,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 }
 
 #[cargo_test]
-fn target_triple_rustdocflags_works() {
+fn target_tuple_rustdocflags_works() {
     let host = rustc_host();
     let host_env = rustc_host_env();
     let p = project().file("src/lib.rs", "").build();
@@ -291,7 +291,7 @@ fn target_triple_rustdocflags_works() {
 }
 
 #[cargo_test]
-fn target_triple_rustdocflags_works_through_cargo_test() {
+fn target_tuple_rustdocflags_works_through_cargo_test() {
     let host = rustc_host();
     let host_env = rustc_host_env();
     let p = project()
