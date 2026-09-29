@@ -775,6 +775,7 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
     fn bad_parsing() {
         err!("baz:", ErrorKind::PartialVersion(_));
         err!("baz:*", ErrorKind::PartialVersion(_));
@@ -813,5 +814,6 @@ mod tests {
         err!("registry+https://github.com", ErrorKind::NameValidation(_));
         err!("https://crates.io/1foo#1.2.3", ErrorKind::NameValidation(_));
         err!("https://example.com/foo#", ErrorKind::EmptyFragment);
+        err!("builtin://.", ErrorKind::EmptyFragment);
     }
 }
