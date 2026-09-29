@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 use crate::compiler::{DirtyReason, Freshness};
 use crate::context::{ConfigRootRelativeProgramPath, Definition};
 use crate::ops::{self, CompileFilter, CompileOptions};
+use crate::resolver::CliFeatures;
 use crate::sources::IndexSummary;
 use crate::sources::PathSource;
 use crate::sources::source::{QueryKind, Source, SourceMap};
@@ -172,7 +173,7 @@ impl InstallTracker {
         target: &str,
         _rustc: &str,
     ) -> CargoResult<(Freshness, BTreeMap<String, Option<PackageId>>)> {
-        let exes = exe_names(pkg, &opts.filter);
+        let exes = exe_names(pkg, &opts.filter, &opts.cli_features);
         // Check if any tracked exe's are already installed.
         let duplicates = self.find_duplicates(dst, &exes);
         if force || duplicates.is_empty() {
@@ -779,16 +780,125 @@ fn feature_set(features: &Rc<BTreeSet<FeatureValue>>) -> BTreeSet<String> {
     features.iter().map(|s| s.to_string()).collect()
 }
 
+/// Returns the set of package features enabled for the package by the CLI feature options
+/// Any weak dependency features of the form dep?/feat will be upgraded to dep/feat if the
+/// dependency is enabled, or removed entirely otherwise.
+fn cli_feature_filter(pkg: &Package, cli_features: &CliFeatures) -> BTreeSet<FeatureValue> {
+    let mut visit: Vec<_> = cli_features.features.iter().cloned().collect();
+    if cli_features.uses_default_features {
+        visit.push(FeatureValue::Feature("default".into()));
+    }
+
+    let pkg_features = pkg.summary().features();
+    // --all-features only enables features in the feature table. If a target has a required feature
+    // (e.g., dep/feat) that isn't in the feature table, it won't be built by --all-features.
+    if cli_features.all_features {
+        visit.extend(pkg_features.keys().map(|&s| FeatureValue::Feature(s)));
+    }
+    let mut enabled = BTreeSet::new();
+    let mut weak_dependencies = Vec::new();
+    while let Some(feature) = visit.pop() {
+        match feature {
+            FeatureValue::Feature(feature_name) => {
+                if pkg_features.contains_key(&feature_name) {
+                    if enabled.insert(feature) {
+                        if let Some(dependencies) = pkg_features.get(&feature_name) {
+                            visit.extend(dependencies.iter().cloned());
+                        }
+                    }
+                }
+            }
+            FeatureValue::Dep { .. } => {
+                enabled.insert(feature);
+            }
+            FeatureValue::DepFeature {
+                dep_name,
+                weak: false,
+                ..
+            } => {
+                enabled.insert(feature);
+                if enabled.insert(FeatureValue::Feature(dep_name)) {
+                    if let Some(dependencies) = pkg_features.get(&dep_name) {
+                        visit.extend(dependencies.iter().cloned());
+                    }
+                }
+            }
+            FeatureValue::DepFeature { weak: true, .. } => {
+                // revisit after all non-weak dependencies have been enabled to see if any of those activate this dependency
+                weak_dependencies.push(feature);
+            }
+        }
+    }
+
+    while let Some(feature) = weak_dependencies.pop() {
+        if let FeatureValue::DepFeature {
+            dep_name,
+            dep_feature,
+            ..
+        } = feature
+        {
+            if enabled.contains(&FeatureValue::Feature(dep_name))
+                || enabled.contains(&FeatureValue::Dep { dep_name })
+            {
+                enabled.insert(FeatureValue::DepFeature {
+                    dep_name,
+                    dep_feature,
+                    weak: false,
+                });
+            }
+        }
+    }
+
+    enabled
+}
+
+// Match a feature in a target's required-features list against enabled features
+// Empirically, required features can contain all forms: feat, dep (implicit dep feature), dep/feat, dep?/feat, dep:dep
+// This predicate matches dep?/feat against dep/feat and dep:dep against both dep:dep and dep (implicit dep feature)
+fn feature_is_enabled(features: &BTreeSet<FeatureValue>, feature_str: &str) -> bool {
+    let fv = FeatureValue::new(feature_str.into());
+    match fv {
+        // if fv is weak, compare to non-weak enabled feature
+        FeatureValue::DepFeature {
+            dep_name,
+            dep_feature,
+            weak: true,
+        } => features.contains(&FeatureValue::DepFeature {
+            dep_name,
+            dep_feature,
+            weak: false,
+        }),
+        // if fv is dep:foo, match on either dep:foo or foo
+        FeatureValue::Dep { dep_name, .. } => {
+            features.contains(&fv) || features.contains(&FeatureValue::Feature(dep_name))
+        }
+        _ => features.contains(&fv),
+    }
+}
+
 /// Helper to get the executable names from a filter.
-pub fn exe_names(pkg: &Package, filter: &ops::CompileFilter) -> BTreeSet<String> {
+pub fn exe_names(
+    pkg: &Package,
+    filter: &ops::CompileFilter,
+    features: &CliFeatures,
+) -> BTreeSet<String> {
     let to_exe = |name| format!("{}{}", name, env::consts::EXE_SUFFIX);
+
     match filter {
-        CompileFilter::Default { .. } => pkg
-            .targets()
-            .iter()
-            .filter(|t| t.is_bin())
-            .map(|t| to_exe(t.name()))
-            .collect(),
+        CompileFilter::Default { .. } => {
+            let enabled_features = cli_feature_filter(pkg, features);
+            pkg.targets()
+                .iter()
+                .filter(|t| {
+                    t.is_bin()
+                        && t.required_features().map_or(true, |reqs| {
+                            reqs.iter()
+                                .all(|r| feature_is_enabled(&enabled_features, r))
+                        })
+                })
+                .map(|t| to_exe(t.name()))
+                .collect()
+        }
         CompileFilter::Only {
             all_targets: true, ..
         } => pkg
