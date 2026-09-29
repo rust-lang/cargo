@@ -2678,7 +2678,12 @@ linker = "foo"
     assert!(cfg.linker.is_none(), "{cfg:?}");
 
     let output = read_output(gctx);
-    let expected = str![""];
+    let expected = str![[r#"
+[WARNING] unused config table `[target.some.dotted.tuple]`
+  |
+  = [HELP] to configure `some.dotted.tuple`, quote the key like `[target."some.dotted.tuple"]`
+
+"#]];
     assert_e2e().eq(&output, expected);
 }
 
@@ -2697,7 +2702,12 @@ linker = "foo"
     assert!(cfg.linker.is_none(), "{cfg:?}");
 
     let output = read_output(gctx);
-    let expected = str![""];
+    let expected = str![[r#"
+[WARNING] unused config table `[target.thumbv8m.main-none-eabihf]`
+  |
+  = [HELP] to configure `thumbv8m.main-none-eabihf`, quote the key like `[target."thumbv8m.main-none-eabihf"]`
+
+"#]];
     assert_e2e().eq(&output, expected);
 }
 

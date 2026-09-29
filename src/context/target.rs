@@ -2,6 +2,7 @@ use super::{CV, ConfigKey, ConfigRelativePath, GlobalContext, OptValue, PathAndA
 use crate::compiler::{BuildOutput, LibraryPath, LinkArgTarget};
 use crate::util::CargoResult;
 use crate::util::data_structures::HashMap;
+use cargo_util_terminal::report::Level;
 use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -113,7 +114,28 @@ pub(super) fn load_host_tuple(gctx: &GlobalContext, tuple: &str) -> CargoResult<
 
 /// Loads a single `[target]` table for the given tuple.
 pub(super) fn load_target_tuple(gctx: &GlobalContext, tuple: &str) -> CargoResult<TargetConfig> {
-    load_config_table(gctx, &["target", tuple])
+    let cfg = load_config_table(gctx, &["target", tuple])?;
+
+    if tuple.contains(".")
+        && gctx
+            .get::<Option<toml::Table>>(&["target", tuple])?
+            .is_none()
+    {
+        let key = format!("target.{tuple}");
+        let key = key.split(".").collect::<Vec<_>>();
+        if gctx.get::<Option<toml::Table>>(&key)?.is_some() {
+            let _ = gctx.shell().print_report(
+                &[Level::WARNING
+                    .secondary_title(format!("unused config table `[target.{tuple}]`"))
+                    .element(Level::HELP.message(format!(
+                        r#"to configure `{tuple}`, quote the key like `[target."{tuple}"]`"#,
+                    )))],
+                false,
+            )?;
+        }
+    }
+
+    Ok(cfg)
 }
 
 /// Loads a single table for the given prefix.
