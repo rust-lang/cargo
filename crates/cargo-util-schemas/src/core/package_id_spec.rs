@@ -843,5 +843,15 @@ mod tests {
         err!("https://crates.io/1foo#1.2.3", ErrorKind::NameValidation(_));
         err!("https://example.com/foo#", ErrorKind::EmptyFragment);
         err!("builtin://.", ErrorKind::FragmentRequired);
+        ok(
+            "builtin+builtin://.#core@0.1.0",
+            PackageIdSpec {
+                name: String::from("core"),
+                version: Some("0.0.0".parse().unwrap()),
+                url: Some(Url::parse("builtin://.").unwrap()),
+                kind: Some(SourceKind::Builtin),
+            },
+            "builtin://.#core",
+        );
     }
 }
