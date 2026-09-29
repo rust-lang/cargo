@@ -871,5 +871,6 @@ mod tests {
             ErrorKind::InvalidVersion(_)
         );
         err!("builtin://.#", ErrorKind::EmptyFragment);
+        err!("builtin://.#0.0.0", ErrorKind::NameValidation(_));
     }
 }
