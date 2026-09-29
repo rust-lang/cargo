@@ -165,6 +165,9 @@ impl PackageIdSpec {
                 return Err(ErrorKind::FragmentRequired.into());
             };
 
+            if frag.is_empty() {
+                return Err(ErrorKind::EmptyFragment.into());
+            }
             let name = match parse_spec(&frag)? {
                 Some((name, ver)) => {
                     if !ver.matches(&Version::new(0, 0, 0)) {
@@ -880,6 +883,6 @@ mod tests {
             "builtin+builtin://.#core@0.1.0",
             ErrorKind::InvalidVersion(_)
         );
-        err!("builtin://.#", ErrorKind::NameValidation(_));
+        err!("builtin://.#", ErrorKind::EmptyFragment);
     }
 }
