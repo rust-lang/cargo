@@ -1067,58 +1067,54 @@ fn check_upgrade_respects_features() {
             .run();
     };
 
-    // When #8703 is fixed, we should see [IGNORED] here rather than [REPLACED]
     check_install(
         "install --no-default-features foo",
         &["foo"],
         str![[r#"
 ...
-[REPLACED] package `foo v1.0.0` with `foo v1.0.0` (executable `foo`)
+[IGNORED] package `foo v1.0.0` is already installed, use --force to override
 ...
 "#]],
     );
     // leave installed, default feature should trigger adding extra binary
-    // When #8703 is fixed, we should see [IGNORED] here rather than [REPLACED]
     check_install(
         "install foo",
         &["foo", "foo-feat"],
         str![[r#"
 ...
-[REPLACED] package `foo v1.0.0` with `foo v1.0.0` (executables `foo`, `foo-feat`)
+[IGNORED] package `foo v1.0.0` is already installed, use --force to override
 ...
 "#]],
     );
-    // When #8703 is fixed, we should see [IGNORED] here rather than [REPLACED]
+    // weak dependency feature should not add foo-dep
     check_install(
         "install -F dep?/feat foo",
         &["foo", "foo-feat"],
         str![[r#"
 ...
-[REPLACED] package `foo v1.0.0` with `foo v1.0.0` (executables `foo`, `foo-feat`)
+[IGNORED] package `foo v1.0.0` is already installed, use --force to override
 ...
 "#]],
     );
     // implicit feature should add foo-dep
-    // When #8703 is fixed, we should see [IGNORED] here rather than [REPLACED]
     check_install(
         "install -F dep/feat foo",
         &["foo", "foo-feat", "foo-dep"],
         str![[r#"
 ...
-[REPLACED] package `foo v1.0.0` with `foo v1.0.0` (executables `foo`, `foo-dep`, `foo-feat`)
+[IGNORED] package `foo v1.0.0` is already installed, use --force to override
 ...
 "#]],
     );
 
     cargo_process("uninstall foo").run();
 
-    // When #8703 is fixed, we should see [IGNORED] here rather than [REPLACED]
     check_install(
         "install -F extra foo",
         &["foo", "foo-e1", "foo-e2", "foo-feat"],
         str![[r#"
 ...
-[REPLACED] package `foo v1.0.0` with `foo v1.0.0` (executables `foo`, `foo-e1`, `foo-e2`, `foo-feat`)
+[IGNORED] package `foo v1.0.0` is already installed, use --force to override
 ...
 "#]],
     );

@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 use crate::compiler::{DirtyReason, Freshness};
 use crate::context::{ConfigRelativePath, Definition};
 use crate::ops::{self, CompileFilter, CompileOptions};
+use crate::resolver::CliFeatures;
 use crate::sources::IndexSummary;
 use crate::sources::PathSource;
 use crate::sources::source::{QueryKind, Source, SourceMap};
@@ -172,7 +173,7 @@ impl InstallTracker {
         target: &str,
         _rustc: &str,
     ) -> CargoResult<(Freshness, BTreeMap<String, Option<PackageId>>)> {
-        let exes = exe_names(pkg, &opts.filter);
+        let exes = exe_names(pkg, &opts.filter, &opts.cli_features);
         // Check if any tracked exe's are already installed.
         let duplicates = self.find_duplicates(dst, &exes);
         if force || duplicates.is_empty() {
@@ -777,16 +778,82 @@ fn feature_set(features: &Rc<BTreeSet<FeatureValue>>) -> BTreeSet<String> {
     features.iter().map(|s| s.to_string()).collect()
 }
 
+/// Returns the set of features enabled for the package by the CLI options
+fn cli_feature_filter(pkg: &Package, cli_features: &CliFeatures) -> Option<BTreeSet<String>> {
+    if cli_features.all_features {
+        return None;
+    }
+
+    // convert a FeatureValue to an optional string if the feature is enabled
+    let enabled_featurevalue = |fv: &FeatureValue| match fv {
+        // requested feature
+        &FeatureValue::Feature(f) => Some(f.as_str()),
+        // dep/feature enables implicit feature dep, dep?/feature doesn't
+        &FeatureValue::DepFeature { dep_name, weak, .. } => {
+            if weak {
+                None
+            } else {
+                Some(dep_name.as_str())
+            }
+        }
+        // dep:feature doesn't enable feature
+        &FeatureValue::Dep { .. } => None,
+    };
+
+    // package features can depend on other features, so start with the features from the CLI
+    // and visit each feature's dependencies recursively.
+    let mut enabled: BTreeSet<String> = BTreeSet::new();
+    let mut visit: Vec<&str> = cli_features
+        .features
+        .iter()
+        .filter_map(enabled_featurevalue)
+        .collect();
+    if cli_features.uses_default_features {
+        visit.push("default");
+    }
+
+    let pkg_features = pkg.summary().features();
+    while let Some(feature) = visit.pop() {
+        match pkg_features.get(feature) {
+            Some(deps) => {
+                for dep in deps.iter().filter_map(enabled_featurevalue) {
+                    if !enabled.contains(dep) {
+                        visit.push(dep);
+                    }
+                }
+                enabled.insert(feature.to_string());
+            }
+            None => {}
+        }
+    }
+
+    Some(enabled)
+}
+
 /// Helper to get the executable names from a filter.
-pub fn exe_names(pkg: &Package, filter: &ops::CompileFilter) -> BTreeSet<String> {
+pub fn exe_names(
+    pkg: &Package,
+    filter: &ops::CompileFilter,
+    features: &CliFeatures,
+) -> BTreeSet<String> {
     let to_exe = |name| format!("{}{}", name, env::consts::EXE_SUFFIX);
     match filter {
-        CompileFilter::Default { .. } => pkg
-            .targets()
-            .iter()
-            .filter(|t| t.is_bin())
-            .map(|t| to_exe(t.name()))
-            .collect(),
+        CompileFilter::Default { .. } => {
+            let enabled_features = cli_feature_filter(pkg, features);
+            pkg.targets()
+                .iter()
+                .filter(|t| {
+                    t.is_bin()
+                        && match enabled_features {
+                            None => true,
+                            Some(ref features) => t
+                                .required_features()
+                                .map_or(true, |reqs| reqs.iter().all(|r| features.contains(r))),
+                        }
+                })
+                .map(|t| to_exe(t.name()))
+                .collect()
+        }
         CompileFilter::Only {
             all_targets: true, ..
         } => pkg
