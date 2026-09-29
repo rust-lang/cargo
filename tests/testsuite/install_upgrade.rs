@@ -986,3 +986,150 @@ fn partially_already_installed_does_one_update() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn check_upgrade_respects_features() {
+    // Issue #8703: an installed package should not consider binaries to be missing if they
+    // depend on unselected features
+    Package::new("foo", "1.0.0")
+        .file(
+            "Cargo.toml",
+            r#"
+        [package]
+        name = "foo"
+        version = "1.0.0"
+
+        [features]
+        default = ["feat"]
+        e1 = []
+        e2 = []
+        extra = ["e1", "e2"]
+        feat = []
+
+        [[bin]]
+        name = "foo"
+        path = "src/main.rs"
+
+        [[bin]]
+        name = "foo-feat"
+        path = "src/bin/foo-feat.rs"
+        required-features = ["feat"]
+
+        [[bin]]
+        name = "foo-e1"
+        path = "src/bin/foo-e1.rs"
+        required-features = ["e1"]
+
+        [[bin]]
+        name = "foo-e2"
+        path = "src/bin/foo-e2.rs"
+        required-features = ["e2"]
+
+        [[bin]]
+        name = "foo-dep"
+        path = "src/bin/foo-dep.rs"
+        required-features = ["dep"]
+
+        [dependencies]
+        dep = { version = "1.0.0", optional = true }
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("src/bin/foo-feat.rs", "fn main() {}")
+        .file("src/bin/foo-e1.rs", "fn main() {}")
+        .file("src/bin/foo-e2.rs", "fn main() {}")
+        .file("src/bin/foo-dep.rs", "fn main() {}")
+        .publish();
+
+    Package::new("dep", "1.0.0")
+        .file(
+            "Cargo.toml",
+            r#"
+        [package]
+        name = "dep"
+        version = "1.0.0"
+
+        [features]
+        feat = []
+        "#,
+        )
+        .feature("feat", &[])
+        .file("src/lib.rs", "pub fn dep() {}")
+        .publish();
+
+    // install, check binaries are expected, expect reinstall to take no action
+    let check_install = |arg_line, expected_bins, expected_output| {
+        cargo_process(arg_line).run();
+        validate_trackers("foo", "1.0.0", expected_bins);
+
+        cargo_process(arg_line)
+            .with_stderr_data(expected_output)
+            .run();
+    };
+
+    // When #8703 is fixed, we should see [IGNORED] here rather than [REPLACED]
+    check_install(
+        "install --no-default-features foo",
+        &["foo"],
+        str![[r#"
+...
+[REPLACED] package `foo v1.0.0` with `foo v1.0.0` (executable `foo`)
+...
+"#]],
+    );
+    // leave installed, default feature should trigger adding extra binary
+    // When #8703 is fixed, we should see [IGNORED] here rather than [REPLACED]
+    check_install(
+        "install foo",
+        &["foo", "foo-feat"],
+        str![[r#"
+...
+[REPLACED] package `foo v1.0.0` with `foo v1.0.0` (executables `foo`, `foo-feat`)
+...
+"#]],
+    );
+    // When #8703 is fixed, we should see [IGNORED] here rather than [REPLACED]
+    check_install(
+        "install -F dep?/feat foo",
+        &["foo", "foo-feat"],
+        str![[r#"
+...
+[REPLACED] package `foo v1.0.0` with `foo v1.0.0` (executables `foo`, `foo-feat`)
+...
+"#]],
+    );
+    // implicit feature should add foo-dep
+    // When #8703 is fixed, we should see [IGNORED] here rather than [REPLACED]
+    check_install(
+        "install -F dep/feat foo",
+        &["foo", "foo-feat", "foo-dep"],
+        str![[r#"
+...
+[REPLACED] package `foo v1.0.0` with `foo v1.0.0` (executables `foo`, `foo-dep`, `foo-feat`)
+...
+"#]],
+    );
+
+    cargo_process("uninstall foo").run();
+
+    // When #8703 is fixed, we should see [IGNORED] here rather than [REPLACED]
+    check_install(
+        "install -F extra foo",
+        &["foo", "foo-e1", "foo-e2", "foo-feat"],
+        str![[r#"
+...
+[REPLACED] package `foo v1.0.0` with `foo v1.0.0` (executables `foo`, `foo-e1`, `foo-e2`, `foo-feat`)
+...
+"#]],
+    );
+
+    check_install(
+        "install --all-features foo",
+        &["foo", "foo-dep", "foo-e1", "foo-e2", "foo-feat"],
+        str![[r#"
+...
+[IGNORED] package `foo v1.0.0` is already installed, use --force to override
+...
+"#]],
+    );
+}
