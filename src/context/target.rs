@@ -97,9 +97,9 @@ pub(super) fn get_target_applies_to_host(gctx: &GlobalContext) -> CargoResult<bo
 }
 
 /// Loads a single `[host]` table for the given tuple.
-pub(super) fn load_host_triple(gctx: &GlobalContext, triple: &str) -> CargoResult<TargetConfig> {
+pub(super) fn load_host_tuple(gctx: &GlobalContext, tuple: &str) -> CargoResult<TargetConfig> {
     if gctx.cli_unstable().host_config {
-        let host_triple_prefix = ["host", triple];
+        let host_triple_prefix = ["host", tuple];
         let host_triple_key = ConfigKey::from_parts(host_triple_prefix);
         let host_prefix = match gctx.get_cv(&host_triple_key)? {
             Some(_) => host_triple_prefix.as_slice(),
@@ -112,8 +112,8 @@ pub(super) fn load_host_triple(gctx: &GlobalContext, triple: &str) -> CargoResul
 }
 
 /// Loads a single `[target]` table for the given tuple.
-pub(super) fn load_target_triple(gctx: &GlobalContext, triple: &str) -> CargoResult<TargetConfig> {
-    load_config_table(gctx, &["target", triple])
+pub(super) fn load_target_tuple(gctx: &GlobalContext, tuple: &str) -> CargoResult<TargetConfig> {
+    load_config_table(gctx, &["target", tuple])
 }
 
 /// Loads a single table for the given prefix.

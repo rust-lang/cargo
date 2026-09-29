@@ -2022,13 +2022,13 @@ impl GlobalContext {
     }
 
     /// Returns the `[host]` table definition for the given target tuple.
-    pub fn host_cfg_triple(&self, target: &str) -> CargoResult<TargetConfig> {
-        target::load_host_triple(self, target)
+    pub fn host_cfg_tuple(&self, target: &str) -> CargoResult<TargetConfig> {
+        target::load_host_tuple(self, target)
     }
 
     /// Returns the `[target]` table definition for the given target tuple.
-    pub fn target_cfg_triple(&self, target: &str) -> CargoResult<TargetConfig> {
-        target::load_target_triple(self, target)
+    pub fn target_cfg_tuple(&self, target: &str) -> CargoResult<TargetConfig> {
+        target::load_target_tuple(self, target)
     }
 
     /// Returns the cached [`SourceId`] corresponding to the main repository.

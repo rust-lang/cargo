@@ -127,7 +127,7 @@ Caused by:
 }
 
 #[cargo_test]
-fn check_with_invalid_target_triple() {
+fn check_with_invalid_target_tuple() {
     // invalid name
     let p = project()
         .file(

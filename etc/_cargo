@@ -66,7 +66,7 @@ _cargo() {
     )
 
     msgfmt='--message-format=[specify error format]:error format [human]:(human json short)'
-    triple='--target=[specify target tuple]:target tuple:_cargo_target_triple'
+    triple='--target=[specify target tuple]:target tuple:_cargo_target_tuple'
     target='--target-dir=[specify directory for all generated artifacts]:directory:_directories'
     registry='--registry=[specify registry to use]:registry'
 
@@ -409,7 +409,7 @@ _cargo_cmds() {
     _describe -t commands 'command' commands
 }
 
-_cargo_target_triple() {
+_cargo_target_tuple() {
     local -a result
 
     if (( $+commands[rustup] )); then

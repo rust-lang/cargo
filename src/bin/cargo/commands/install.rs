@@ -99,7 +99,7 @@ pub fn cli() -> Command {
         )
         .arg_redundant_default_mode("release", "install", "debug")
         .arg_profile("Install artifacts with the specified profile")
-        .arg_target_triple("Build for the target tuple")
+        .arg_target_tuple("Build for the target tuple")
         .arg_target_dir()
         .arg_timings()
         .after_help(color_print::cstr!(
