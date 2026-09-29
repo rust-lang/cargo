@@ -2699,12 +2699,13 @@ linker = "foo"
     let gctx = new_gctx();
 
     let cfg = gctx.target_cfg_tuple("thumbv8m.main-none-eabihf").unwrap();
-    assert!(cfg.linker.is_none(), "{cfg:?}");
+    assert!(cfg.linker.is_some(), "{cfg:?}");
 
     let output = read_output(gctx);
     let expected = str![[r#"
-[WARNING] unused config table `[target.thumbv8m.main-none-eabihf]`
+[WARNING] reading config from `[target.thumbv8m.main-none-eabihf]`
   |
+  = [NOTE] `[target.thumbv8m.main-none-eabihf]` will be ignored or error in a future version
   = [HELP] to configure `thumbv8m.main-none-eabihf`, quote the key like `[target."thumbv8m.main-none-eabihf"]`
 
 "#]];
