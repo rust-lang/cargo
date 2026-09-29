@@ -879,5 +879,15 @@ mod tests {
         err!("builtin://.#", ErrorKind::EmptyFragment);
         err!("builtin://.#0.0.0", ErrorKind::NameValidation(_));
         err!("builtin://wrong#core", ErrorKind::InvalidHostname);
+        ok(
+            "builtin://./invalid/path#core",
+            PackageIdSpec {
+                name: String::from("core"),
+                version: Some("0.0.0".parse().unwrap()),
+                url: Some(Url::parse("builtin://./invalid/path").unwrap()),
+                kind: Some(SourceKind::Builtin),
+            },
+            "builtin://./invalid/path#core",
+        );
     }
 }
