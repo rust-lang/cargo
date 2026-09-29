@@ -65,7 +65,7 @@ impl ConfigKey {
     /// corresponding env key is appended with `name` after transforming it to
     /// uppercase characters.
     pub fn push(&mut self, name: &str) {
-        let env = name.replace("-", "_").to_uppercase();
+        let env = name.replace(['-', '.'], "_").to_uppercase();
         self._push(&env, name);
     }
 

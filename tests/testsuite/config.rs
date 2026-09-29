@@ -2643,3 +2643,85 @@ embed-metadata = false
         .unwrap();
     assert!(!value);
 }
+
+#[cargo_test]
+fn quoted_dotted_key_table() {
+    write_config_toml(
+        r#"
+[target."some.dotted.tuple"]
+linker = "foo"
+"#,
+    );
+
+    let gctx = new_gctx();
+
+    let cfg = gctx.target_cfg_tuple("some.dotted.tuple").unwrap();
+    assert!(cfg.linker.is_some(), "{cfg:?}");
+
+    let output = read_output(gctx);
+    let expected = str![""];
+    assert_e2e().eq(&output, expected);
+}
+
+#[cargo_test]
+fn unquoted_dotted_key_table() {
+    write_config_toml(
+        r#"
+[target.some.dotted.tuple]
+linker = "foo"
+"#,
+    );
+
+    let gctx = new_gctx();
+
+    let cfg = gctx.target_cfg_tuple("some.dotted.tuple").unwrap();
+    assert!(cfg.linker.is_none(), "{cfg:?}");
+
+    let output = read_output(gctx);
+    let expected = str![[r#"
+[WARNING] unused config table `[target.some.dotted.tuple]`
+  |
+  = [HELP] to configure `some.dotted.tuple`, quote the key like `[target."some.dotted.tuple"]`
+
+"#]];
+    assert_e2e().eq(&output, expected);
+}
+
+#[cargo_test]
+fn unquoted_dotted_key_table_known_tuple() {
+    write_config_toml(
+        r#"
+[target.thumbv8m.main-none-eabihf]
+linker = "foo"
+"#,
+    );
+
+    let gctx = new_gctx();
+
+    let cfg = gctx.target_cfg_tuple("thumbv8m.main-none-eabihf").unwrap();
+    assert!(cfg.linker.is_some(), "{cfg:?}");
+
+    let output = read_output(gctx);
+    let expected = str![[r#"
+[WARNING] reading config from `[target.thumbv8m.main-none-eabihf]`
+  |
+  = [NOTE] `[target.thumbv8m.main-none-eabihf]` will be ignored or error in a future version
+  = [HELP] to configure `thumbv8m.main-none-eabihf`, quote the key like `[target."thumbv8m.main-none-eabihf"]`
+
+"#]];
+    assert_e2e().eq(&output, expected);
+}
+
+#[cargo_test]
+fn dotted_key_env() {
+    let gctx = GlobalContextBuilder::new()
+        .env("CARGO_TARGET_SOME_DOTTED_TUPLE_LINKER", "foo")
+        .build();
+
+    let cfg = gctx.target_cfg_tuple("some.dotted.tuple").unwrap();
+    assert!(cfg.linker.is_some(), "{cfg:?}");
+
+    let output = read_output(gctx);
+    let expected = str![""];
+    assert_e2e().eq(&output, expected);
+}
