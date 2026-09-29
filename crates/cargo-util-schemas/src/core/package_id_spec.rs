@@ -778,6 +778,10 @@ mod tests {
             },
             "builtin://.#core",
         );
+        err!(
+            "builtin+builtin://.#core@0.0.0",
+            ErrorKind::NameValidation(_)
+        );
     }
 
     #[test]
