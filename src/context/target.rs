@@ -124,14 +124,41 @@ pub(super) fn load_target_triple(gctx: &GlobalContext, tuple: &str) -> CargoResu
         let key = format!("target.{tuple}");
         let key = key.split(".").collect::<Vec<_>>();
         if gctx.get::<Option<toml::Table>>(&key)?.is_some() {
-            let _ = gctx.shell().print_report(
-                &[Level::WARNING
-                    .secondary_title(format!("unused config table `[target.{tuple}]`"))
-                    .element(Level::HELP.message(format!(
-                        r#"to configure `{tuple}`, quote the key like `[target."{tuple}"]`"#,
-                    )))],
-                false,
-            )?;
+            // Derived from https://doc.rust-lang.org/1.98.0/rustc/platform-support.html
+            const DOTTED_TARGETS_1_98: &[&str] = &[
+                "thumbv8m.base-none-eabi",
+                "thumbv8m.main-none-eabi",
+                "thumbv8m.main-none-eabihf",
+                "thumbv8m.base-nuttx-eabi",
+                "thumbv8m.main-nuttx-eabi",
+                "thumbv8m.main-nuttx-eabihf",
+            ];
+            if DOTTED_TARGETS_1_98.contains(&tuple) {
+                // HACK: support tables like `[target.thumbv8m.main-none-eabihf]` for
+                // when it was used as a workaround from before `[target."thumbv8m.main-none-eabihf"]`
+                // started working
+                let _ = gctx.shell().print_report(
+                    &[Level::WARNING
+                        .secondary_title(format!("reading config from `[target.{tuple}]`"))
+                        .element(Level::NOTE.message(format!(
+                            r#"`[target.{tuple}]` will be ignored or error in a future version"#,
+                        )))
+                        .element(Level::HELP.message(format!(
+                            r#"to configure `{tuple}`, quote the key like `[target."{tuple}"]`"#,
+                        )))],
+                    false,
+                )?;
+                return load_config_table(gctx, &key);
+            } else {
+                let _ = gctx.shell().print_report(
+                    &[Level::WARNING
+                        .secondary_title(format!("unused config table `[target.{tuple}]`"))
+                        .element(Level::HELP.message(format!(
+                            r#"to configure `{tuple}`, quote the key like `[target."{tuple}"]`"#,
+                        )))],
+                    false,
+                )?;
+            }
         }
     }
 
