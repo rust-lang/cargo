@@ -94,7 +94,10 @@ impl PackageIdSpec {
                 .into());
             }
         }
-        let (name, version) = parse_spec(spec)?.unwrap_or_else(|| (spec.to_owned(), None));
+        let (name, version) = match parse_spec(spec)? {
+            Some((name, ver)) => (name, Some(ver)),
+            None => (spec.to_owned(), None),
+        };
         PackageName::new(&name)?;
         Ok(PackageIdSpec {
             name: String::from(name),
@@ -157,7 +160,7 @@ impl PackageIdSpec {
             };
             match frag {
                 Some(fragment) => match parse_spec(&fragment)? {
-                    Some((name, ver)) => (name, ver),
+                    Some((name, ver)) => (name, Some(ver)),
                     None => {
                         let Some(f) = fragment.chars().next() else {
                             return Err(PackageIdSpecError(ErrorKind::EmptyFragment));
@@ -213,7 +216,7 @@ impl PackageIdSpec {
     }
 }
 
-fn parse_spec(spec: &str) -> Result<Option<(String, Option<PartialVersion>)>> {
+fn parse_spec(spec: &str) -> Result<Option<(String, PartialVersion)>> {
     let Some((name, ver)) = spec
         .rsplit_once('@')
         .or_else(|| spec.rsplit_once(':').filter(|(n, _)| !n.ends_with(':')))
@@ -222,7 +225,7 @@ fn parse_spec(spec: &str) -> Result<Option<(String, Option<PartialVersion>)>> {
     };
     let name = name.to_owned();
     let ver = ver.parse::<PartialVersion>()?;
-    Ok(Some((name, Some(ver))))
+    Ok(Some((name, ver)))
 }
 
 fn strip_url_protocol(url: &Url) -> Url {
