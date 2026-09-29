@@ -2708,7 +2708,7 @@ fn dotted_key_env() {
         .build();
 
     let cfg = gctx.target_cfg_triple("some.dotted.tuple").unwrap();
-    assert!(cfg.linker.is_none(), "{cfg:?}");
+    assert!(cfg.linker.is_some(), "{cfg:?}");
 
     let output = read_output(gctx);
     let expected = str![""];
