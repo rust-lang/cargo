@@ -207,7 +207,7 @@ impl SourceId {
 
     /// Creates a `SourceId` for the builtin packages in the configured toolchain.
     pub fn for_builtin() -> CargoResult<SourceId> {
-        let url = "builtin://".into_url()?;
+        let url = "builtin://.".into_url()?;
         SourceId::new(SourceKind::Builtin, url, None)
     }
 
@@ -856,8 +856,8 @@ mod tests {
         assert_data_eq!(short_hash(&source_id), str!["199e591d94239206"].raw());
 
         let source_id = SourceId::for_builtin().unwrap();
-        assert_data_eq!(gen_hash(source_id), str!["8471877086995577839"].raw());
-        assert_data_eq!(short_hash(&source_id), str!["ef7b241f53279275"].raw());
+        assert_data_eq!(gen_hash(source_id), str!["5062137541645472653"].raw());
+        assert_data_eq!(short_hash(&source_id), str!["8d93f21546534046"].raw());
 
         let path = &ws_root.join("crate");
         let source_id = SourceId::for_local_registry(path).unwrap();
