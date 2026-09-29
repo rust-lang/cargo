@@ -164,10 +164,17 @@ impl PackageIdSpec {
             let Some(frag) = frag else {
                 return Err(ErrorKind::FragmentRequired.into());
             };
+
             let name = match parse_spec(&frag)? {
-                Some((name, _)) => name,
+                Some((name, ver)) => {
+                    if !ver.matches(&Version::new(0, 0, 0)) {
+                        return Err(ErrorKind::InvalidVersion(ver.to_string()).into());
+                    }
+                    name
+                }
                 None => frag,
             };
+
             PackageName::new(&name)?;
             let version = PartialVersion {
                 major: 0,
@@ -368,6 +375,9 @@ enum ErrorKind {
 
     #[error("builtin package ID specifications must specify the package name in the fragment")]
     FragmentRequired,
+
+    #[error("version `{0}` is invalid for builtin packages, which are unversioned (or `0.0.0`)")]
+    InvalidVersion(String),
 
     #[error(transparent)]
     NameValidation(#[from] crate::restricted_names::NameValidationError),
@@ -843,15 +853,9 @@ mod tests {
         err!("https://crates.io/1foo#1.2.3", ErrorKind::NameValidation(_));
         err!("https://example.com/foo#", ErrorKind::EmptyFragment);
         err!("builtin://.", ErrorKind::FragmentRequired);
-        ok(
+        err!(
             "builtin+builtin://.#core@0.1.0",
-            PackageIdSpec {
-                name: String::from("core"),
-                version: Some("0.0.0".parse().unwrap()),
-                url: Some(Url::parse("builtin://.").unwrap()),
-                kind: Some(SourceKind::Builtin),
-            },
-            "builtin://.#core",
+            ErrorKind::InvalidVersion(_)
         );
     }
 }
