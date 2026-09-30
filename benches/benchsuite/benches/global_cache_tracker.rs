@@ -1,12 +1,15 @@
 //! Benchmarks for the global cache tracker.
 
+use cargo::ops::CleanContext;
 use cargo::util::GlobalContext;
 use cargo::util::cache_lock::CacheLockMode;
 use cargo::util::interning::InternedString;
+use cargo::workspace::gc::GcOpts;
 use cargo::workspace::global_cache_tracker::{self, DeferredGlobalLastUse, GlobalCacheTracker};
-use criterion::{Criterion, criterion_group, criterion_main};
+use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 // Samples of real-world data.
 const GLOBAL_CACHE_SAMPLE: &str = "global-cache-tracker/global-cache-sample";
@@ -149,10 +152,74 @@ fn global_tracker_update(c: &mut Criterion) {
     }
 }
 
+/// Creates a registry source directory holding `packages` package
+/// directories, as an older cargo that didn't track them would leave behind.
+fn untracked_src_dir(packages: usize) -> PathBuf {
+    let src = cargo_home().join("registry/src/bench-0000000000000000");
+    if src.exists() {
+        return src;
+    }
+    // The source directories are only tracked once their registry is, which
+    // happens by finding its index on disk.
+    fs::create_dir_all(cargo_home().join("registry/index/bench-0000000000000000/.cache")).unwrap();
+    for package in 0..packages {
+        let dir = src.join(format!("some-crate-{package}-0.1.0"));
+        fs::create_dir_all(dir.join("src")).unwrap();
+        fs::write(dir.join("Cargo.toml"), "[package]\n").unwrap();
+        for module in 0..5 {
+            fs::write(dir.join("src").join(format!("m{module}.rs")), "// x\n").unwrap();
+        }
+    }
+    src
+}
+
+/// Benchmarks synchronizing the database with a cache left by a cargo that
+/// didn't track it, which has to discover every package directory on disk.
+///
+/// Sizing those directories is a separate, much more expensive step, only
+/// taken when a size limit is given, so both are measured.
+fn global_tracker_sync(c: &mut Criterion) {
+    let gctx = initialize_context();
+    let _lock = gctx
+        .acquire_package_cache_lock(CacheLockMode::MutateExclusive)
+        .unwrap();
+    let db_path = GlobalCacheTracker::db_path(&gctx).into_path_unlocked();
+    untracked_src_dir(500);
+
+    let mut group = c.benchmark_group("global_tracker_sync");
+    for (name, max_download_size) in [("age_only", None), ("with_size", Some(u64::MAX))] {
+        let gc_opts = GcOpts {
+            max_src_age: Some(Duration::from_secs(0)),
+            max_download_size,
+            ..GcOpts::default()
+        };
+        group.bench_function(name, |b| {
+            b.iter_batched(
+                || {
+                    // Start each iteration with nothing tracked, so that the
+                    // whole directory is discovered again.
+                    if db_path.exists() {
+                        fs::remove_file(&db_path).unwrap();
+                    }
+                    GlobalCacheTracker::new(&gctx).unwrap()
+                },
+                |mut tracker| {
+                    let mut clean_ctx = CleanContext::new(&gctx);
+                    clean_ctx.dry_run = true;
+                    tracker.clean(&mut clean_ctx, &gc_opts).unwrap();
+                },
+                BatchSize::PerIteration,
+            )
+        });
+    }
+    group.finish();
+}
+
 criterion_group!(
     benches,
     global_tracker_init,
     global_tracker_empty_save,
-    global_tracker_update
+    global_tracker_update,
+    global_tracker_sync
 );
 criterion_main!(benches);
