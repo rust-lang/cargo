@@ -2,6 +2,7 @@ mod blanket_hint_mostly_unused;
 mod deferred_parse_diagnostics;
 mod im_a_teapot;
 mod manual_readme;
+mod min_opt_level_hint;
 mod missing_lints_features;
 mod missing_lints_inheritance;
 mod mostly_unused_hint;
@@ -29,6 +30,9 @@ pub const PARSE_PASS_RULES: &[ParsePassRule<'static>] = &[
     },
     ParsePassRule::DiagnosticManifest {
         rule: missing_lints_features::diagnose_manifest,
+    },
+    ParsePassRule::DiagnosticPackage {
+        rule: min_opt_level_hint::diagnose_package,
     },
     ParsePassRule::DiagnosticWorkspace {
         rule: mostly_unused_hint::diagnose_workspace,
