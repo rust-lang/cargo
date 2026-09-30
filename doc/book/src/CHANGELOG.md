@@ -89,6 +89,13 @@
 
 ### Fixed
 
+- Support target tuples with `.` in them in `.cargo/config.toml`'s `[target]` table as `[target."thumbv8m.main-none-eabihf"]`.
+  A bug allowed `[target.thumbv8m.main-none-eabihf]` to work.
+  Support has been
+  maintained for the current set of target tuples with a future-incomptibility
+  warning that these tables will be ignored or error in the future.
+  [#17490](https://github.com/rust-lang/cargo/pull/17490)
+  [#17536](https://github.com/rust-lang/cargo/pull/17536)
 - The automatic `git gc` run no longer fails
   when Git is configured with `safe.bareRepository=explicit`.
   [#17370](https://github.com/rust-lang/cargo/pull/17370)
@@ -187,8 +194,6 @@
   [#17411](https://github.com/rust-lang/cargo/pull/17411)
 - Consolidate more config table definitions
   [#17480](https://github.com/rust-lang/cargo/pull/17480)
-- Split config keys in code, not at runtime
-  [#17490](https://github.com/rust-lang/cargo/pull/17490)
 - Resolve theoretical use-after-free
   [#17428](https://github.com/rust-lang/cargo/pull/17428)
 - Remove ad-hoc `subslice_range`
