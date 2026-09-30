@@ -958,6 +958,8 @@ fn registry_without_version() {
 
     p.cargo("check")
         .with_stderr_data(str![[r#"
+[WARNING] Cargo.toml: key `registry` is ignored for dependency `bar`
+[WARNING] `foo` (manifest) generated 1 warning
 [LOCKING] 1 package to highest compatible version
 [CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
 [CHECKING] foo v0.0.1 ([ROOT]/foo)

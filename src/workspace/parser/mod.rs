@@ -2461,7 +2461,22 @@ fn to_dependency_source_id<P: ResolveToPath + Clone>(
         None
     };
 
-    let registry_kind = if version.is_some() { Some(()) } else { None };
+    let registry_kind = if version.is_some() {
+        Some(())
+    } else {
+        if orig.registry.is_some() {
+            manifest_ctx.warnings.push(format!(
+                "key `registry` is ignored for dependency `{name_in_toml}`",
+            ));
+        }
+        if orig.registry_index.is_some() {
+            manifest_ctx.warnings.push(format!(
+                "key `registry-index` is ignored for dependency `{name_in_toml}`",
+            ));
+        }
+
+        None
+    };
 
     let source = match (builtin_kind, git_kind, path_kind, registry_kind) {
         (Some(()), None, None, None) => {
