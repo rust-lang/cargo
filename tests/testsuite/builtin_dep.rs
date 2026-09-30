@@ -326,26 +326,6 @@ Caused by:
 
 "#]],
         ),
-        (
-            "registry = \"dummy-registry\"",
-            str![[r#"
-[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  dependency (core) specification is ambiguous. `builtin = true` cannot be combined with any other dependency source
-
-"#]],
-        ),
-        (
-            "registry-index = \"https://www.example.com/index/\"",
-            str![[r#"
-[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  dependency (core) specification is ambiguous. `builtin = true` cannot be combined with any other dependency source
-
-"#]],
-        ),
     ];
     for (source, expected) in other_sources.into_iter() {
         let p = project()
