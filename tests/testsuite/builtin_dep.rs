@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use cargo_test_support::registry;
 use cargo_test_support::{project, str};
 
 #[cargo_test]
@@ -294,6 +295,8 @@ fn builtin_in_inherited_dependency_rejected() {
 
 #[cargo_test]
 fn builtin_dependency_combined_with_sources() {
+    registry::alt_init();
+
     let other_sources = [
         (
             "git = \"https://example.com/custom/core.git\"",
