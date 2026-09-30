@@ -14,6 +14,7 @@ mod non_kebab_case_packages;
 mod non_snake_case_features;
 mod non_snake_case_packages;
 mod redundant_homepage;
+mod repository_not_inherited;
 mod text_direction_codepoint;
 mod unknown_lints;
 mod unused_dependencies;
