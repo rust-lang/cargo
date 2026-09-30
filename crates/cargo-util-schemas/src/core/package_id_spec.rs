@@ -918,5 +918,15 @@ mod tests {
             "builtin://.?query=test#core",
             ErrorKind::UnexpectedQueryString(_)
         );
+        // This failing test doesn't use ok() as the roundtrip without the builtin kind exercises
+        // the above case
+        let parsed = PackageIdSpec::parse("builtin+builtin://.?query=test#core").unwrap();
+        let expected = PackageIdSpec {
+            name: String::from("core"),
+            version: Some("0.0.0".parse().unwrap()),
+            url: Some(Url::parse("builtin://.?query=test").unwrap()),
+            kind: Some(SourceKind::Builtin),
+        };
+        assert_eq!(parsed, expected);
     }
 }
