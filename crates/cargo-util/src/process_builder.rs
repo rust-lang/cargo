@@ -703,6 +703,7 @@ mod imp {
     /// Use `wait4` to read `rusage.ru_maxrss` (the kernel's exact high-water mark),
     /// instead of the plain `waitpid` that [`std::process::Child::wait`] performs,
     /// which discards the `rusage`.
+    #[cfg(not(any(target_os = "solaris", target_os = "illumos")))]
     pub fn wait_with_peak_rss(
         mut child: std::process::Child,
     ) -> io::Result<(ExitStatus, Option<u64>)> {
@@ -726,8 +727,11 @@ mod imp {
             }
             break;
         }
-        // `ru_maxrss` is in kilobytes on Linux and bytes on the Darwin family.
-        let peak = if cfg!(target_vendor = "apple") {
+        // `ru_maxrss` is in kilobytes on Linux / FreeBSD and bytes on the Darwin family. Refs:
+        // Linux: https://man7.org/linux/man-pages/man2/getrusage.2.html
+        // Darwin: https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/getrusage.2.html
+        // FreeBSD: https://man.freebsd.org/cgi/man.cgi?manpath=FreeBSD+14.0-RELEASE&query=getrusage&sektion=2
+        let peak = if cfg!(target_os = "macos") {
             usage.ru_maxrss.max(0) as u64
         } else {
             (usage.ru_maxrss.max(0) as u64).saturating_mul(1024)
@@ -735,6 +739,14 @@ mod imp {
         // We already reaped the child via `wait4`; `Child`'s `Drop` on Unix does
         // not wait, so simply dropping it here does not double-reap.
         Ok((ExitStatus::from_raw(status), Some(peak)))
+    }
+
+    /// Regular wait logic since Solaris/Illumos do not support `wait4`.
+    #[cfg(any(target_os = "solaris", target_os = "illumos"))]
+    pub fn wait_with_peak_rss(
+        mut child: std::process::Child,
+    ) -> io::Result<(ExitStatus, Option<u64>)> {
+        child.wait().map(|status| (status, None))
     }
 }
 

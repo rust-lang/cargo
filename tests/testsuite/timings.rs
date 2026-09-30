@@ -139,6 +139,7 @@ fn report_generated_without_any_units() {
 /// Test that peak memory is reported when `--timings` and `-Zmem-stats` are used.
 ///
 /// Peak memory reporting relies on OS-specific APIs.
+#[cfg(not(any(target_os = "solaris", target_os = "illumos")))] // `libc::wait4` is not available.
 #[cargo_test]
 fn peak_memory_reported() {
     let p = project()
@@ -173,6 +174,7 @@ fn peak_memory_not_reported_without_flag() {
 }
 
 /// Peak memory is reported even for a unit whose compilation fails
+#[cfg(not(any(target_os = "solaris", target_os = "illumos")))] // `libc::wait4` is not available.
 #[cargo_test]
 fn peak_memory_reported_on_failure() {
     let p = project()
