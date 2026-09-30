@@ -2287,14 +2287,6 @@ fn dep_to_dependency<P: ResolveToPath + Clone>(
         manifest::TomlDependency::Detailed(details) => details,
     };
 
-    if orig.version.is_none() && orig.path.is_none() && orig.git.is_none() && !orig.builtin {
-        anyhow::bail!(
-            "dependency ({name_in_toml}) specified without \
-                 providing a local path, Git repository, version, or \
-                 workspace dependency to use"
-        );
-    }
-
     if let Some(version) = &orig.version {
         if version.contains('+') {
             manifest_ctx.warnings.push(format!(
@@ -2303,24 +2295,6 @@ fn dep_to_dependency<P: ResolveToPath + Clone>(
                      metadata is recommended to avoid confusion",
                 version, name_in_toml
             ));
-        }
-    }
-
-    if orig.git.is_none() {
-        let git_only_keys = [
-            (&orig.branch, "branch"),
-            (&orig.tag, "tag"),
-            (&orig.rev, "rev"),
-        ];
-
-        for &(key, key_name) in &git_only_keys {
-            if key.is_some() {
-                bail!(
-                    "key `{}` is ignored for dependency ({}).",
-                    key_name,
-                    name_in_toml
-                );
-            }
         }
     }
 
@@ -2456,6 +2430,32 @@ fn to_dependency_source_id<P: ResolveToPath + Clone>(
             bail!("builtin dependency `{name_in_toml}` cannot be used as a build dependency")
         }
         return SourceId::for_builtin();
+    }
+
+    if orig.version.is_none() && orig.path.is_none() && orig.git.is_none() && !orig.builtin {
+        anyhow::bail!(
+            "dependency ({name_in_toml}) specified without \
+                 providing a local path, Git repository, version, or \
+                 workspace dependency to use"
+        );
+    }
+
+    if orig.git.is_none() {
+        let git_only_keys = [
+            (&orig.branch, "branch"),
+            (&orig.tag, "tag"),
+            (&orig.rev, "rev"),
+        ];
+
+        for &(key, key_name) in &git_only_keys {
+            if key.is_some() {
+                bail!(
+                    "key `{}` is ignored for dependency ({}).",
+                    key_name,
+                    name_in_toml
+                );
+            }
+        }
     }
 
     match (
