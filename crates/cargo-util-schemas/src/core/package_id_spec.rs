@@ -898,5 +898,15 @@ mod tests {
             "builtin+invalid://.",
             ErrorKind::UnsupportedBuiltinScheme(_)
         );
+        ok(
+            "builtin+builtin://.?query=test#core",
+            PackageIdSpec {
+                name: String::from("core"),
+                version: Some("0.0.0".parse().unwrap()),
+                url: Some(Url::parse("builtin://.?query=test").unwrap()),
+                kind: Some(SourceKind::Builtin),
+            },
+            "builtin://.?query=test#core",
+        );
     }
 }
