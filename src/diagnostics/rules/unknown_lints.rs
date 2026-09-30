@@ -172,7 +172,7 @@ fn lint_manifest_inner(
         }
 
         if emitted_source.is_none() {
-            emitted_source = Some(LINT.emitted_source(*lint_level, *source));
+            emitted_source = Some(LINT.emitted_source(*lint_level, *source, gctx));
             group = group.element(Level::NOTE.message(emitted_source.as_ref().unwrap()));
         }
         if let Some(help) = help.as_ref() {

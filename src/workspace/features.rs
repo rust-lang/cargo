@@ -1602,10 +1602,11 @@ fn is_new_build_dir_layout_opt_out() -> bool {
 /// Generate a link to Cargo documentation for the current release channel
 /// `path` is the URL component after `https://doc.rust-lang.org/{channel}/cargo/`
 pub fn cargo_docs_link(path: &str) -> String {
+    let version = crate::version().version;
     let url_channel = match channel().as_str() {
-        "dev" | "nightly" => "nightly/",
-        "beta" => "beta/",
-        _ => "",
+        "dev" | "nightly" => "nightly",
+        "beta" => "beta",
+        _ => version.as_str(),
     };
-    format!("https://doc.rust-lang.org/{url_channel}cargo/{path}")
+    format!("https://doc.rust-lang.org/{url_channel}/cargo/{path}")
 }

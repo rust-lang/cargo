@@ -31,7 +31,7 @@
 </tspan>
     <tspan x="10px" y="118px"><tspan>  </tspan><tspan class="fg-bright-blue bold">|</tspan>
 </tspan>
-    <tspan x="10px" y="136px"><tspan>  </tspan><tspan class="fg-bright-blue bold">= </tspan><tspan class="bold">note</tspan><tspan>: `cargo::im_a_teapot` is set to `deny` in `[lints]`</tspan>
+    <tspan x="10px" y="136px"><tspan>  </tspan><tspan class="fg-bright-blue bold">= </tspan><tspan class="bold">note</tspan><tspan>: `</tspan><tspan><a href="https://doc.rust-lang.org/nightly/cargo/reference/lints.html#im_a_teapot">cargo::im_a_teapot</a></tspan><tspan>` is set to `deny` in `[lints]`</tspan>
 </tspan>
     <tspan x="10px" y="154px"><tspan class="fg-bright-red bold">error</tspan><tspan>: could not parse `foo` (manifest) due to 1 previous error</tspan>
 </tspan>

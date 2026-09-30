@@ -6,6 +6,7 @@ use cargo_util_terminal::report::Level;
 
 use crate::context::WarningHandling;
 use crate::util::GlobalContext;
+use crate::workspace::features::cargo_docs_link;
 use crate::workspace::{Feature, Features};
 
 #[derive(Clone, Debug)]
@@ -97,8 +98,16 @@ impl Lint {
         LintLevelProduct { level, source }
     }
 
-    pub fn emitted_source(&self, lint_level: LintLevel, source: LintLevelSource) -> String {
-        format!("`cargo::{}` is set to `{lint_level}` {source}", self.name,)
+    pub fn emitted_source(
+        &self,
+        lint_level: LintLevel,
+        source: LintLevelSource,
+        gctx: &GlobalContext,
+    ) -> String {
+        let url = cargo_docs_link(&format!("reference/lints.html#{}", self.name));
+        let link = gctx.shell().err_hyperlink(&url);
+        let name = self.name;
+        format!("`{link}cargo::{name}{link:#}` is set to `{lint_level}` {source}")
     }
 }
 

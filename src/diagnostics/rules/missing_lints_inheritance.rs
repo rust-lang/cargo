@@ -93,7 +93,7 @@ pub(crate) fn lint_package(
     let manifest = pkg.manifest();
     let contents = manifest.contents();
     let level = lint_level.to_diagnostic_level();
-    let emitted_source = LINT.emitted_source(lint_level, source);
+    let emitted_source = LINT.emitted_source(lint_level, source, gctx);
     let manifest_path = workspace_rel_path(ws, manifest_path);
 
     let mut primary =
