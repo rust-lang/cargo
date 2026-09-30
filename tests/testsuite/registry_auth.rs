@@ -58,7 +58,7 @@ Caused by:
 
 Caused by:
   authenticated registries require a credential-provider to be configured
-  see https://doc.rust-lang.org/cargo/reference/registry-authentication.html for details
+  see https://doc.rust-lang.org/[..]cargo/reference/registry-authentication.html for details
 
 "#]])
         .run();
