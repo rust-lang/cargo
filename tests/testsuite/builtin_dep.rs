@@ -295,12 +295,48 @@ fn builtin_in_inherited_dependency_rejected() {
 #[cargo_test]
 fn builtin_dependency_combined_with_sources() {
     let other_sources = [
-        "git = \"https://example.com/custom/core.git\"",
-        "path = \"my/custom/core\"",
-        "registry = \"dummy-registry\"",
-        "registry-index = \"https://www.example.com/index/\"",
+        (
+            "git = \"https://example.com/custom/core.git\"",
+            str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  dependency (core) specification is ambiguous. `builtin = true` cannot be combined with any other dependency source
+
+"#]],
+        ),
+        (
+            "path = \"my/custom/core\"",
+            str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  dependency (core) specification is ambiguous. `builtin = true` cannot be combined with any other dependency source
+
+"#]],
+        ),
+        (
+            "registry = \"dummy-registry\"",
+            str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  dependency (core) specification is ambiguous. `builtin = true` cannot be combined with any other dependency source
+
+"#]],
+        ),
+        (
+            "registry-index = \"https://www.example.com/index/\"",
+            str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  dependency (core) specification is ambiguous. `builtin = true` cannot be combined with any other dependency source
+
+"#]],
+        ),
     ];
-    for source in other_sources.into_iter() {
+    for (source, expected) in other_sources.into_iter() {
         let p = project()
             .file("src/lib.rs", "")
             .file(
@@ -324,13 +360,7 @@ fn builtin_dependency_combined_with_sources() {
         p.cargo("check")
             .masquerade_as_nightly_cargo(&["builtin-dependencies"])
             .with_status(101)
-            .with_stderr_data(str![[r#"
-[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  dependency (core) specification is ambiguous. `builtin = true` cannot be combined with any other dependency source
-
-"#]])
+            .with_stderr_data(expected)
             .run();
     }
 }
