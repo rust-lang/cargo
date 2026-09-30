@@ -153,6 +153,9 @@ impl PackageIdSpec {
                 kind => return Err(ErrorKind::UnsupportedProtocol(kind.into()).into()),
             }
         } else if url.scheme() == "builtin" {
+            if url.query().is_some() {
+                return Err(ErrorKind::UnexpectedQueryString(url).into());
+            }
             kind = Some(SourceKind::Builtin)
         } else if url.query().is_some() {
             return Err(ErrorKind::UnexpectedQueryString(url).into());
@@ -911,15 +914,9 @@ mod tests {
             "builtin+invalid://.",
             ErrorKind::UnsupportedBuiltinScheme(_)
         );
-        ok(
-            "builtin+builtin://.?query=test#core",
-            PackageIdSpec {
-                name: String::from("core"),
-                version: Some("0.0.0".parse().unwrap()),
-                url: Some(Url::parse("builtin://.?query=test").unwrap()),
-                kind: Some(SourceKind::Builtin),
-            },
+        err!(
             "builtin://.?query=test#core",
+            ErrorKind::UnexpectedQueryString(_)
         );
     }
 }
