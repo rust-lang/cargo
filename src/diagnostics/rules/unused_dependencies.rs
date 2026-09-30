@@ -128,7 +128,7 @@ pub(crate) fn lint_package(
         .enumerate()
     {
         let level = lint_level.to_diagnostic_level();
-        let emitted_source = LINT.emitted_source(lint_level, source);
+        let emitted_source = LINT.emitted_source(lint_level, source, gctx);
 
         let mut primary =
             Group::with_title(level.primary_title(format!("unused build dependency `{dep_name}`")));
@@ -305,7 +305,7 @@ fn lint_package_build_results(
                 let document = manifest.document();
                 let contents = manifest.contents();
                 let level = lint_level.to_diagnostic_level();
-                let emitted_source = LINT.emitted_source(lint_level, source);
+                let emitted_source = LINT.emitted_source(lint_level, source, build_runner.bcx.gctx);
                 let toml_path = dependency.toml_path();
                 let dep_name = toml_path.last().unwrap();
 

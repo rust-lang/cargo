@@ -128,7 +128,7 @@ pub(crate) fn lint_workspace(
         let contents = maybe_pkg.contents();
         let level = lint_level.to_diagnostic_level();
         let manifest_path = workspace_rel_path(ws, manifest_path);
-        let emitted_source = LINT.emitted_source(lint_level, source);
+        let emitted_source = LINT.emitted_source(lint_level, source, gctx);
 
         let mut primary = Group::with_title(
             level.primary_title(format!("unused workspace dependency `{unused}`")),

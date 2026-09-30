@@ -166,8 +166,8 @@ pub(crate) fn lint_workspace(
         }
 
         if i == 0 {
-            primary_group =
-                primary_group.element(Level::NOTE.message(LINT.emitted_source(lint_level, source)));
+            primary_group = primary_group
+                .element(Level::NOTE.message(LINT.emitted_source(lint_level, source, gctx)));
         }
 
         // The primary group should always be first

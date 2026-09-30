@@ -104,7 +104,7 @@ fn lint_package_inner(
         let document = manifest.document();
         let contents = manifest.contents();
         let level = lint_level.to_diagnostic_level();
-        let emitted_source = LINT.emitted_source(lint_level, source);
+        let emitted_source = LINT.emitted_source(lint_level, source, gctx);
 
         let mut primary_source = ws.target_dir().as_path_unlocked().to_owned();
         // Elide profile/platform as we don't have that context

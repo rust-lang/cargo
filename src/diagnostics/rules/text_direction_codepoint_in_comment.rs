@@ -111,7 +111,7 @@ pub(crate) fn lint_manifest(
         ))
         .element(snippet);
         if emitted_source.is_none() {
-            emitted_source = Some(LINT.emitted_source(lint_level, source));
+            emitted_source = Some(LINT.emitted_source(lint_level, source, gctx));
             primary = primary.element(Level::NOTE.message(emitted_source.as_ref().unwrap()));
         }
 
