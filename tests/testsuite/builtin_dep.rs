@@ -316,6 +316,17 @@ Caused by:
 "#]],
         ),
         (
+            "version = \"1.0.0\"",
+            str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  builtin dependency `core` cannot be combined with a version requirement
+  Builtin dependencies are unversioned.
+
+"#]],
+        ),
+        (
             "registry = \"dummy-registry\"",
             str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
@@ -363,39 +374,6 @@ Caused by:
             .with_stderr_data(expected)
             .run();
     }
-}
-
-#[cargo_test]
-fn builtin_combined_with_version_specifier() {
-    let p = project()
-        .file("src/lib.rs", "")
-        .file(
-            "Cargo.toml",
-            r#"
-                cargo-features = ["builtin-dependencies"]
-
-                [package]
-                name = "foo"
-                version = "0.1.0"
-                [dependencies]
-
-                core = { builtin = true, version = "0.0.0" }
-                "#,
-        )
-        .build();
-
-    p.cargo("check")
-        .masquerade_as_nightly_cargo(&["builtin-dependencies"])
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  builtin dependency `core` cannot be combined with a version requirement
-  Builtin dependencies are unversioned.
-
-"#]])
-        .run();
 }
 
 #[cargo_test]
