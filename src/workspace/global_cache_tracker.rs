@@ -125,7 +125,7 @@ use crate::{CargoResult, GlobalContext};
 use anyhow::{Context as _, bail};
 use cargo_util::paths;
 use cargo_util_terminal::Verbosity;
-use rusqlite::{Connection, ErrorCode, params};
+use rusqlite::{Connection, ErrorCode, Transaction, params};
 use std::collections::hash_map;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
@@ -666,7 +666,17 @@ impl GlobalCacheTracker {
             Self::get_registry_items_to_clean_size_both(&tx, max_size, &base, &mut delete_paths)?;
         }
 
-        clean_ctx.remove_paths(&delete_paths)?;
+        Self::remove_paths_and_finish(tx, clean_ctx, &delete_paths)
+    }
+
+    /// Deletes the given paths, then commits the transaction, or rolls it
+    /// back for `--dry-run`.
+    fn remove_paths_and_finish(
+        tx: Transaction<'_>,
+        clean_ctx: &mut CleanContext<'_>,
+        delete_paths: &[PathBuf],
+    ) -> CargoResult<()> {
+        clean_ctx.remove_paths(delete_paths)?;
 
         if clean_ctx.dry_run {
             tx.rollback()?;
