@@ -701,7 +701,9 @@ impl<'gctx> DrainState<'gctx> {
                             let stop_on_warnings = denied_warnings
                                 && !build_runner.bcx.build_config.keep_going
                                 && !count.supplanted_by_errors;
-                            if stop_on_warnings {
+                            // Preserve the original failure when the compiler has
+                            // already failed, including in JSON output mode.
+                            if stop_on_warnings && result.is_ok() {
                                 result = Err(anyhow::format_err!(
                                     "warnings are denied by `build.warnings` configuration"
                                 ))

@@ -38,8 +38,11 @@ fn json_deny() {
                 .arg(format!("--message-format={format}"))
                 .arg("--config")
                 .arg("build.warnings='deny'")
-                .with_status(0)
-                .with_stdout_contains(r#"{"reason":"build-finished","success":true}"#)
+                .with_status(101)
+                .with_stdout_contains(r#"{"reason":"build-finished","success":false}"#)
+                .with_stderr_contains(
+                    "[ERROR] warnings are denied by `build.warnings` configuration",
+                )
                 .run();
             let messages: Vec<serde_json::Value> = std::str::from_utf8(&output.stdout)
                 .unwrap()
@@ -63,8 +66,8 @@ fn json_deny_keep_going() {
         p.cargo("check --message-format=json --keep-going")
             .arg("--config")
             .arg("build.warnings='deny'")
-            .with_status(0)
-            .with_stdout_contains(r#"{"reason":"build-finished","success":true}"#)
+            .with_status(101)
+            .with_stderr_contains("[ERROR] warnings are denied by `build.warnings` configuration")
             .run();
     }
 }
@@ -843,6 +846,7 @@ error[..]
             .with_stdout_contains(r#"{"reason":"build-finished","success":false}"#)
             .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
+[ERROR] `foo` (bin "foo") generated 1 warning
 [ERROR] could not compile `foo` (bin "foo") due to 1 previous error; 1 warning emitted
 
 "#]])
