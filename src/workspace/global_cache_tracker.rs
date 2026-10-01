@@ -116,7 +116,7 @@
 
 use crate::ops::CleanContext;
 use crate::util::cache_lock::CacheLockMode;
-use crate::util::data_structures::HashMap;
+use crate::util::data_structures::{HashMap, HashSet};
 use crate::util::interning::InternedString;
 use crate::util::sqlite::{self, Migration, basic_migration};
 use crate::util::{Filesystem, Progress, ProgressStyle};
@@ -127,6 +127,7 @@ use cargo_util::paths;
 use cargo_util_terminal::Verbosity;
 use rusqlite::{Connection, ErrorCode, Transaction, params};
 use std::collections::hash_map;
+use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 use tracing::{debug, trace};
@@ -669,6 +670,30 @@ impl GlobalCacheTracker {
         Self::remove_paths(tx, clean_ctx, &delete_paths)
     }
 
+    /// Deletes workspace target and build directories that have not been
+    /// used since the given age.
+    pub fn clean_workspace_builds(
+        &mut self,
+        clean_ctx: &mut CleanContext<'_>,
+        max_age: Duration,
+    ) -> CargoResult<()> {
+        self.clean_workspace_builds_inner(clean_ctx, max_age)
+            .context("failed to clean workspace target and build directories")
+    }
+
+    #[tracing::instrument(skip_all)]
+    fn clean_workspace_builds_inner(
+        &mut self,
+        clean_ctx: &mut CleanContext<'_>,
+        max_age: Duration,
+    ) -> CargoResult<()> {
+        let max_age = now().saturating_sub(max_age.as_secs());
+        let tx = self.conn.transaction()?;
+        let mut delete_paths = Vec::new();
+        Self::get_workspace_builds_to_clean(&tx, clean_ctx.gctx, max_age, &mut delete_paths)?;
+        Self::remove_paths(tx, clean_ctx, &delete_paths)
+    }
+
     /// Deletes the given paths, then commits the transaction, or rolls it
     /// back for `--dry-run`.
     fn remove_paths(
@@ -682,6 +707,136 @@ impl GlobalCacheTracker {
             tx.rollback()?;
         } else {
             tx.commit()?;
+        }
+        Ok(())
+    }
+
+    /// Adds workspace target and build directories to delete that have not
+    /// been used since the given timestamp, and forgets stale builds whose
+    /// directories are gone or deleted.
+    ///
+    /// Recent usage counts even if the workspace manifest is missing, because
+    /// its drive may be temporarily disconnected.
+    fn get_workspace_builds_to_clean(
+        conn: &Connection,
+        gctx: &GlobalContext,
+        max_age: Timestamp,
+        delete_paths: &mut Vec<PathBuf>,
+    ) -> CargoResult<()> {
+        /// Usage of a directory through one recorded path.
+        struct DirectoryUsage {
+            rowid: i64,
+            last_used: Timestamp,
+            /// Whether the recorded path ends in a directory rather than a
+            /// symlink.
+            real_dir: bool,
+        }
+
+        debug!(target: "gc", "cleaning workspace_build since {max_age:?}");
+        let mut stmt = conn.prepare_cached(
+            "SELECT rowid, target_dir, build_dir, timestamp
+             FROM workspace_build",
+        )?;
+        let rows = stmt
+            .query_map([], |row| {
+                let rowid: i64 = row.get_unwrap(0);
+                let target_dir: Vec<u8> = row.get_unwrap(1);
+                let build_dir: Vec<u8> = row.get_unwrap(2);
+                let timestamp: Timestamp = row.get_unwrap(3);
+                Ok((rowid, target_dir, build_dir, timestamp))
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        // A row is kept while one of its directories is kept, and while it is
+        // recent even if its directories are missing, such as on an ejected
+        // drive.
+        let mut kept = HashSet::default();
+        // Different recorded paths can resolve to the same directory, such as
+        // through symlinks. Group them so all recorded usage is considered.
+        let mut dirs: HashMap<PathBuf, Vec<DirectoryUsage>> = HashMap::default();
+        let mut rowids = Vec::new();
+        for (rowid, target_dir, build_dir, timestamp) in rows {
+            rowids.push(rowid);
+            if timestamp >= max_age {
+                kept.insert(rowid);
+            }
+            let recorded = if target_dir == build_dir {
+                vec![target_dir]
+            } else {
+                vec![target_dir, build_dir]
+            };
+            for blob in recorded {
+                // With a trailing separator or `.`, `symlink_metadata` follows
+                // a final symlink and would report a directory.
+                let path: PathBuf = paths::bytes2path(&blob)?.components().collect();
+                let inspected = crate::util::try_canonicalize(&path).and_then(|canonical| {
+                    let metadata = std::fs::symlink_metadata(&path)?;
+                    Ok((canonical, metadata.is_dir()))
+                });
+                let (canonical, real_dir) = match inspected {
+                    Ok(inspected) => inspected,
+                    Err(e)
+                        if matches!(e.kind(), ErrorKind::NotFound | ErrorKind::NotADirectory) =>
+                    {
+                        continue;
+                    }
+                    Err(e) => {
+                        // Keeping the row lets a later run retry instead of
+                        // forgetting a directory that may still be in use.
+                        kept.insert(rowid);
+                        crate::display_warning_with_error(
+                            &format!("failed to inspect workspace output `{}`", path.display()),
+                            &e.into(),
+                            &mut gctx.shell(),
+                        );
+                        continue;
+                    }
+                };
+                dirs.entry(canonical).or_default().push(DirectoryUsage {
+                    rowid,
+                    last_used: timestamp,
+                    real_dir,
+                });
+            }
+        }
+
+        let mut stale_dirs = Vec::new();
+        // These paths also prevent deletion of any directory that contains them.
+        let mut keep_paths = Vec::new();
+        for (dir, uses) in dirs {
+            let fresh = uses.iter().any(|u| u.last_used >= max_age);
+            // Deleting a directory referenced by a symlink would break that
+            // link.
+            let linked = uses.iter().any(|u| !u.real_dir);
+            if fresh || linked {
+                keep_paths.push(dir);
+                kept.extend(uses.iter().map(|u| u.rowid));
+            } else if crate::ops::validate_target_dir_tag(&dir).is_err() {
+                // Without a valid cache tag, do not delete this directory directly.
+                // Keep its row, but do not add it to `keep_paths`: deleting a tagged
+                // parent may still remove this directory along with its other contents.
+                kept.extend(uses.iter().map(|u| u.rowid));
+            } else {
+                stale_dirs.push((dir, uses));
+            }
+        }
+        // Deleting a directory also deletes the directories nested in it,
+        // such as `target/rust-analyzer` inside `target`.
+        let kept_ancestors: HashSet<&Path> = keep_paths
+            .iter()
+            .flat_map(|path| path.ancestors())
+            .collect();
+        for (dir, uses) in stale_dirs {
+            if kept_ancestors.contains(dir.as_path()) {
+                kept.extend(uses.iter().map(|u| u.rowid));
+            } else {
+                delete_paths.push(dir);
+            }
+        }
+        let mut delete_stmt =
+            conn.prepare_cached("DELETE FROM workspace_build WHERE rowid = ?1")?;
+        for rowid in rowids.into_iter().filter(|rowid| !kept.contains(rowid)) {
+            delete_stmt.execute([rowid])?;
         }
         Ok(())
     }

@@ -1727,13 +1727,12 @@ fn clean_max_target_age() {
         .arg("--max-target-age=3 days")
         .arg("-Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
-        .with_status(1)
         .with_stderr_data(str![[r#"
-[ERROR] unexpected argument '--max-target-age' found
-...
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
 "#]])
         .run();
-    assert!(old.build_dir().is_dir());
+    assert!(!old.build_dir().is_dir());
     assert!(new.build_dir().is_dir());
 }
 
@@ -1757,10 +1756,9 @@ fn clean_max_target_age_shared_dir() {
         .arg("--max-target-age=3 days")
         .arg("-Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
-        .with_status(1)
         .with_stderr_data(str![[r#"
-[ERROR] unexpected argument '--max-target-age' found
-...
+[REMOVED] 0 files
+
 "#]])
         .run();
 
@@ -1768,10 +1766,9 @@ fn clean_max_target_age_shared_dir() {
         .arg("--max-target-age=0 days")
         .arg("-Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
-        .with_status(1)
         .with_stderr_data(str![[r#"
-[ERROR] unexpected argument '--max-target-age' found
-...
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
 "#]])
         .run();
 }
@@ -1787,10 +1784,10 @@ fn clean_max_target_age_dry_run() {
         .arg("--max-target-age=3 days")
         .arg("-Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
-        .with_status(1)
         .with_stderr_data(str![[r#"
-[ERROR] unexpected argument '--max-target-age' found
-...
+[SUMMARY] [FILE_NUM] files, [FILE_SIZE]B total
+[WARNING] no files deleted due to --dry-run
+
 "#]])
         .run();
     assert!(p.build_dir().is_dir());
@@ -1809,10 +1806,9 @@ fn clean_max_target_age_untagged_dir() {
         .arg("--max-target-age=3 days")
         .arg("-Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
-        .with_status(1)
         .with_stderr_data(str![[r#"
-[ERROR] unexpected argument '--max-target-age' found
-...
+[REMOVED] 0 files
+
 "#]])
         .run();
 }
@@ -1831,10 +1827,9 @@ fn clean_max_target_age_nested_dir() {
         .arg("--max-target-age=3 days")
         .arg("-Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
-        .with_status(1)
         .with_stderr_data(str![[r#"
-[ERROR] unexpected argument '--max-target-age' found
-...
+[REMOVED] 0 files
+
 "#]])
         .run();
 }
@@ -1853,10 +1848,9 @@ fn clean_max_target_age_package() {
         .arg("--max-target-age=3 days")
         .arg("-Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
-        .with_status(1)
         .with_stderr_data(str![[r#"
-[ERROR] unexpected argument '--max-target-age' found
-...
+[REMOVED] 0 files
+
 "#]])
         .run();
 }
@@ -1874,13 +1868,12 @@ fn clean_max_target_age_script() {
         .arg("--max-target-age=3 days")
         .arg("-Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
-        .with_status(1)
         .with_stderr_data(str![[r#"
-[ERROR] unexpected argument '--max-target-age' found
-...
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
 "#]])
         .run();
-    assert_eq!(get_names(".cargo/build/*/*").len(), 1);
+    assert!(get_names(".cargo/build/*/*").is_empty());
 }
 
 #[cargo_test]
@@ -1902,10 +1895,9 @@ fn clean_max_target_age_dir_under_symlink() {
         .arg("--max-target-age=3 days")
         .arg("-Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
-        .with_status(1)
         .with_stderr_data(str![[r#"
-[ERROR] unexpected argument '--max-target-age' found
-...
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
 "#]])
         .run();
 }
@@ -1927,10 +1919,9 @@ fn clean_max_target_age_two_paths_one_dir() {
         .arg("--max-target-age=3 days")
         .arg("-Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
-        .with_status(1)
         .with_stderr_data(str![[r#"
-[ERROR] unexpected argument '--max-target-age' found
-...
+[REMOVED] 0 files
+
 "#]])
         .run();
 }
@@ -1955,10 +1946,9 @@ fn clean_max_target_age_dir_is_symlink() {
         .arg("--max-target-age=3 days")
         .arg("-Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
-        .with_status(1)
         .with_stderr_data(str![[r#"
-[ERROR] unexpected argument '--max-target-age' found
-...
+[REMOVED] 0 files
+
 "#]])
         .run();
 }
