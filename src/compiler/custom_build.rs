@@ -517,6 +517,7 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
     let build_scripts = build_runner.build_scripts.get(unit).cloned();
     let json_messages = bcx.build_config.emit_json();
     let extra_verbose = bcx.gctx.extra_verbose();
+    let capture_rusage = bcx.capture_rusage();
     let (prev_output, prev_script_out_dir) = prev_build_output(build_runner, unit);
     let metadata_hash = build_runner.get_run_build_script_metadata(unit);
 
@@ -600,8 +601,8 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
         let prefix = format!("[{} {}] ", id.name(), id.version());
         let mut log_messages_in_case_of_panic = Vec::new();
         let span = tracing::debug_span!("build_script", process = cmd.to_string());
-        let output = span.in_scope(|| {
-            cmd.exec_with_streaming(
+        let (stats, output) = span.in_scope(|| {
+            let (stats, result) = cmd.exec_with_streaming(
                 &mut |stdout| {
                     if let Some(error) = stdout.strip_prefix(CARGO_ERROR_SYNTAX) {
                         log_messages_in_case_of_panic.push((Severity::Error, error.to_owned()));
@@ -624,8 +625,9 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
                     Ok(())
                 },
                 true,
-            )
-            .with_context(|| {
+                capture_rusage,
+            );
+            let result = result.with_context(|| {
                 let mut build_error_context =
                     format!("failed to run custom build command for `{}`", pkg_descr);
 
@@ -645,8 +647,13 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
                 }
 
                 build_error_context
-            })
+            });
+            (stats, result)
         });
+
+        if let Some(peak_memory) = stats.peak_rss {
+            state.peak_memory(peak_memory);
+        }
 
         // If the build failed
         if let Err(error) = output {

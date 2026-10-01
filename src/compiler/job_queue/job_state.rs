@@ -167,6 +167,12 @@ impl<'a, 'gctx> JobState<'a, 'gctx> {
         self.messages.push(Message::SectionTiming(self.id, section));
     }
 
+    /// Reports the peak resident set size (in bytes) of this unit's process,
+    /// for the `--timings` report.
+    pub fn peak_memory(&self, bytes: u64) {
+        self.messages.push(Message::PeakMemory(self.id, bytes));
+    }
+
     /// Drives a [`Job`] to finish. This ensures that a [`Message::Finish`] is
     /// sent even if our job panics.
     pub(super) fn run_to_finish(self, job: Job) {

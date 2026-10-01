@@ -162,6 +162,13 @@ impl<'a, 'gctx> BuildContext<'a, 'gctx> {
     pub fn extra_args_for(&self, unit: &Unit) -> Option<&Vec<String>> {
         self.extra_compiler_args.get(unit)
     }
+
+    /// Whether to measure the peak memory usage (rusage) of build unit processes.
+    ///
+    /// Only true when `-Zmem-stats` is enabled and the build logger is active.
+    pub fn capture_rusage(&self) -> bool {
+        self.gctx.cli_unstable().mem_stats && self.logger.is_some()
+    }
 }
 
 #[derive(Copy, Clone, Default, Debug)]

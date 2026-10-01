@@ -115,7 +115,7 @@ use crate::workspace::manifest::TargetSourcePath;
 use crate::workspace::profiles::{PanicStrategy, Profile, StripInner};
 use crate::workspace::{Feature, PackageId, Target};
 
-use cargo_util::{ProcessBuilder, ProcessError, paths};
+use cargo_util::{ExecStats, ProcessBuilder, ProcessError, paths};
 use cargo_util_schemas::manifest::TomlDebugInfo;
 use cargo_util_terminal::Verbosity;
 use rustfix::diagnostics::Applicability;
@@ -133,6 +133,9 @@ pub trait Executor: Send + Sync + 'static {
 
     /// In case of an `Err`, Cargo will not continue with the build process for
     /// this package.
+    ///
+    /// When `capture_rusage` is set, the returned [`ExecStats`] hold the peak
+    /// memory of the invocation (for `--timings`), even when it failed.
     fn exec(
         &self,
         cmd: &ProcessBuilder,
@@ -141,7 +144,8 @@ pub trait Executor: Send + Sync + 'static {
         mode: CompileMode,
         on_stdout_line: &mut dyn FnMut(&str) -> CargoResult<()>,
         on_stderr_line: &mut dyn FnMut(&str) -> CargoResult<()>,
-    ) -> CargoResult<()>;
+        capture_rusage: bool,
+    ) -> (ExecStats, CargoResult<()>);
 
     /// Queried when queuing each unit of work. If it returns true, then the
     /// unit will always be rebuilt, independent of whether it needs to be.
@@ -165,9 +169,11 @@ impl Executor for DefaultExecutor {
         _mode: CompileMode,
         on_stdout_line: &mut dyn FnMut(&str) -> CargoResult<()>,
         on_stderr_line: &mut dyn FnMut(&str) -> CargoResult<()>,
-    ) -> CargoResult<()> {
-        cmd.exec_with_streaming(on_stdout_line, on_stderr_line, false)
-            .map(drop)
+        capture_rusage: bool,
+    ) -> (ExecStats, CargoResult<()>) {
+        let (stats, result) =
+            cmd.exec_with_streaming(on_stdout_line, on_stderr_line, false, capture_rusage);
+        (stats, result.map(drop))
     }
 }
 
@@ -341,6 +347,7 @@ fn rustc(
     let package_id = unit.pkg.package_id();
     let target = Target::clone(&unit.target);
     let mode = unit.mode;
+    let capture_rusage = build_runner.bcx.capture_rusage();
 
     exec.init(build_runner, unit);
     let exec = exec.clone();
@@ -469,24 +476,25 @@ fn rustc(
             }
         }
 
-        let result = exec
-            .exec(
-                &rustc,
-                package_id,
-                &target,
-                mode,
-                &mut |line| on_stdout_line(state, line, package_id, &target),
-                &mut |line| {
-                    on_stderr_line(
-                        state,
-                        line,
-                        package_id,
-                        &manifest,
-                        &target,
-                        &mut output_options,
-                    )
-                },
-            )
+        let (stats, result) = exec.exec(
+            &rustc,
+            package_id,
+            &target,
+            mode,
+            &mut |line| on_stdout_line(state, line, package_id, &target),
+            &mut |line| {
+                on_stderr_line(
+                    state,
+                    line,
+                    package_id,
+                    &manifest,
+                    &target,
+                    &mut output_options,
+                )
+            },
+            capture_rusage,
+        );
+        let result = result
             .map_err(|e| {
                 if output_options.errors_seen == 0 {
                     // If we didn't expect an error, do not require --verbose to fail.
@@ -513,6 +521,10 @@ fn rustc(
                 let name = descriptive_pkg_name(&name, &target, &mode);
                 format!("could not compile {name}{errors}{warnings}")
             });
+
+        if let Some(peak_memory) = stats.peak_rss {
+            state.peak_memory(peak_memory);
+        }
 
         if let Err(e) = result {
             if let Some(diagnostic) = failed_scrape_diagnostic {
@@ -1070,6 +1082,7 @@ fn rustdoc(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<W
     let fingerprint_dir = build_runner.files().fingerprint_dir(unit);
     let is_local = unit.is_local();
     let env_config = Arc::clone(build_runner.bcx.gctx.env_config()?);
+    let capture_rusage = build_runner.bcx.capture_rusage();
     let rustdoc_depinfo_enabled = build_runner.bcx.gctx.cli_unstable().rustdoc_depinfo;
 
     let mut output_options = OutputOptions::for_dirty(build_runner, unit);
@@ -1141,23 +1154,28 @@ fn rustdoc(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<W
         state.running(&rustdoc);
         let timestamp = paths::set_invocation_time(&fingerprint_dir)?;
 
-        let result = rustdoc
-            .exec_with_streaming(
-                &mut |line| on_stdout_line(state, line, package_id, &target),
-                &mut |line| {
-                    on_stderr_line(
-                        state,
-                        line,
-                        package_id,
-                        &manifest,
-                        &target,
-                        &mut output_options,
-                    )
-                },
-                false,
-            )
+        let (stats, result) = rustdoc.exec_with_streaming(
+            &mut |line| on_stdout_line(state, line, package_id, &target),
+            &mut |line| {
+                on_stderr_line(
+                    state,
+                    line,
+                    package_id,
+                    &manifest,
+                    &target,
+                    &mut output_options,
+                )
+            },
+            false,
+            capture_rusage,
+        );
+        let result = result
             .map_err(verbose_if_simple_exit_code)
             .with_context(|| format!("could not document `{}`", name));
+
+        if let Some(peak_memory) = stats.peak_rss {
+            state.peak_memory(peak_memory);
+        }
 
         if let Err(e) = result {
             if let Some(diagnostic) = failed_scrape_diagnostic {
@@ -1166,7 +1184,6 @@ fn rustdoc(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<W
 
             return Err(e);
         }
-
         if rustdoc_depinfo_enabled && rustdoc_dep_info_loc.exists() {
             fingerprint::translate_dep_info(
                 &rustdoc_dep_info_loc,

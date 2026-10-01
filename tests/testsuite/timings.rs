@@ -135,3 +135,61 @@ fn report_generated_without_any_units() {
     let html = p.read_file("target/cargo-timings/cargo-timing.html");
     assert!(html.contains("const UNIT_DATA = [];"));
 }
+
+/// Test that peak memory is reported when `--timings` and `-Zmem-stats` are used.
+///
+/// Peak memory reporting relies on OS-specific APIs.
+#[cfg(not(any(target_os = "solaris", target_os = "illumos")))] // `libc::wait4` is not available.
+#[cargo_test]
+fn peak_memory_reported() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build --timings -Zmem-stats")
+        .masquerade_as_nightly_cargo(&["mem-stats"])
+        .run();
+
+    let html = p.read_file("target/cargo-timings/cargo-timing.html");
+    // Assert that peak memory was captured and that the memory table is rendered.
+    assert!(html.contains(r#""peak_memory": "#));
+    assert!(!html.contains(r#""peak_memory": null"#));
+    assert!(html.contains("Peak memory usage per unit"));
+}
+
+/// Without `-Zmem-stats`, `--timings` should not display peak memory.
+#[cargo_test]
+fn peak_memory_not_reported_without_flag() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build --timings").run();
+
+    let html = p.read_file("target/cargo-timings/cargo-timing.html");
+    assert!(!html.contains("peak_memory"));
+    assert!(!html.contains("Peak memory usage per unit"));
+}
+
+/// Peak memory is reported even for a unit whose compilation fails
+#[cfg(not(any(target_os = "solaris", target_os = "illumos")))] // `libc::wait4` is not available.
+#[cargo_test]
+fn peak_memory_reported_on_failure() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
+        .file("src/lib.rs", "this is not valid rust")
+        .build();
+
+    p.cargo("build --timings -Zmem-stats")
+        .masquerade_as_nightly_cargo(&["mem-stats"])
+        .with_status(101)
+        .with_stderr_contains("[ERROR] could not compile `foo` [..]")
+        .run();
+
+    let html = p.read_file("target/cargo-timings/cargo-timing.html");
+    assert!(html.contains(r#""peak_memory": "#));
+    assert!(!html.contains(r#""peak_memory": null"#));
+    assert!(html.contains("Peak memory usage per unit"));
+}

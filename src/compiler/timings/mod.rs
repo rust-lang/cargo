@@ -73,6 +73,9 @@ pub struct UnitData {
     pub features: Vec<String>,
     pub start: f64,
     pub duration: f64,
+    /// Peak resident set size of the unit's process, in bytes.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub peak_memory: Option<u64>,
     pub unblocked_units: Vec<UnitIndex>,
     pub unblocked_rmeta_units: Vec<UnitIndex>,
     pub sections: Option<Vec<(report::SectionName, report::SectionData)>>,
@@ -227,6 +230,22 @@ impl<'gctx> Timings<'gctx> {
                 section,
             },
         })
+    }
+
+    /// Record the peak memory usage (in bytes) of a unit's process.
+    ///
+    /// This should only be called when `-Zmem-stats` is enabled.
+    pub fn unit_peak_memory(&mut self, build_runner: &BuildRunner<'_, '_>, id: JobId, bytes: u64) {
+        let Some(logger) = build_runner.bcx.logger else {
+            return;
+        };
+        let Some(unit) = self.active.get(&id) else {
+            return;
+        };
+        logger.log(LogMessage::UnitPeakMemory {
+            index: self.unit_to_index[unit],
+            bytes,
+        });
     }
 
     /// Take a sample of CPU usage
