@@ -210,6 +210,15 @@ pub struct GitCheckout {
     pub size: Option<u64>,
 }
 
+/// The key for a workspace's target and build directories stored in the
+/// database.
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
+pub struct WorkspaceBuild {
+    pub workspace_manifest: PathBuf,
+    pub target_dir: PathBuf,
+    pub build_dir: PathBuf,
+}
+
 /// Filesystem paths in the global cache.
 ///
 /// Accessing these assumes a lock has already been acquired.
@@ -304,6 +313,15 @@ fn migrations() -> Vec<Migration> {
             )?;
             Ok(())
         }),
+        basic_migration(
+            "CREATE TABLE workspace_build (
+                workspace_manifest BLOB NOT NULL,
+                target_dir BLOB NOT NULL,
+                build_dir BLOB NOT NULL,
+                timestamp INTEGER NOT NULL,
+                PRIMARY KEY (workspace_manifest, target_dir, build_dir)
+            )",
+        ),
     ]
 }
 
@@ -1443,6 +1461,8 @@ pub struct DeferredGlobalLastUse {
     git_db_timestamps: HashMap<GitDb, Timestamp>,
     /// New git checkout entries to insert.
     git_checkout_timestamps: HashMap<GitCheckout, Timestamp>,
+    /// New workspace target and build directory entries to insert.
+    workspace_build_timestamps: HashMap<WorkspaceBuild, Timestamp>,
     /// This is used so that a warning about failing to update the database is
     /// only displayed once.
     save_err_has_warned: bool,
@@ -1461,6 +1481,7 @@ impl DeferredGlobalLastUse {
             registry_src_timestamps: HashMap::default(),
             git_db_timestamps: HashMap::default(),
             git_checkout_timestamps: HashMap::default(),
+            workspace_build_timestamps: HashMap::default(),
             save_err_has_warned: false,
             now: now(),
         }
@@ -1472,6 +1493,7 @@ impl DeferredGlobalLastUse {
             && self.registry_src_timestamps.is_empty()
             && self.git_db_timestamps.is_empty()
             && self.git_checkout_timestamps.is_empty()
+            && self.workspace_build_timestamps.is_empty()
     }
 
     fn clear(&mut self) {
@@ -1480,6 +1502,7 @@ impl DeferredGlobalLastUse {
         self.registry_src_timestamps.clear();
         self.git_db_timestamps.clear();
         self.git_checkout_timestamps.clear();
+        self.workspace_build_timestamps.clear();
     }
 
     /// Indicates the given [`RegistryIndex`] has been used right now.
@@ -1572,6 +1595,12 @@ impl DeferredGlobalLastUse {
         self.git_checkout_timestamps.insert(git_checkout, timestamp);
     }
 
+    /// Indicates the given [`WorkspaceBuild`] has been used right now.
+    pub fn mark_workspace_build_used(&mut self, workspace_build: WorkspaceBuild) {
+        self.workspace_build_timestamps
+            .insert(workspace_build, self.now);
+    }
+
     /// Saves all of the deferred information to the database.
     ///
     /// This will also clear the state of `self`.
@@ -1588,6 +1617,7 @@ impl DeferredGlobalLastUse {
         self.insert_registry_crate_from_cache(&tx)?;
         self.insert_registry_src_from_cache(&tx)?;
         self.insert_git_checkout_from_cache(&tx)?;
+        self.insert_workspace_build_from_cache(&tx)?;
         tx.commit()?;
         trace!(target: "gc", "last-use save complete");
         Ok(())
@@ -1723,6 +1753,38 @@ impl DeferredGlobalLastUse {
             ])?;
         }
 
+        Ok(())
+    }
+
+    fn insert_workspace_build_from_cache(&mut self, conn: &Connection) -> CargoResult<()> {
+        let workspace_build_timestamps = std::mem::take(&mut self.workspace_build_timestamps);
+        for (workspace_build, timestamp) in workspace_build_timestamps {
+            trace!(target: "gc", "insert workspace build {workspace_build:?} {timestamp}");
+            // Failing here would also drop the global cache entries saved in
+            // the same transaction, so a build whose paths cannot be stored is
+            // skipped instead.
+            let (Ok(workspace_manifest), Ok(target_dir), Ok(build_dir)) = (
+                paths::path2bytes(&workspace_build.workspace_manifest),
+                paths::path2bytes(&workspace_build.target_dir),
+                paths::path2bytes(&workspace_build.build_dir),
+            ) else {
+                debug!(target: "gc", "skipping non-unicode workspace build {workspace_build:?}");
+                continue;
+            };
+            let mut stmt = conn.prepare_cached(
+                "INSERT INTO workspace_build (workspace_manifest, target_dir, build_dir, timestamp)
+                      VALUES (?1, ?2, ?3, ?4)
+                      ON CONFLICT DO UPDATE SET timestamp=excluded.timestamp
+                         WHERE timestamp < ?5",
+            )?;
+            stmt.execute(params![
+                workspace_manifest,
+                target_dir,
+                build_dir,
+                timestamp,
+                timestamp - UPDATE_RESOLUTION
+            ])?;
+        }
         Ok(())
     }
 
