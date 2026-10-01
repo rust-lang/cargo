@@ -992,9 +992,9 @@ fn installed_package_not_reinstalled_for_unselected_feature_bins() {
     // Issue #8703: an installed package should not consider binaries to be missing if they
     // depend on unselected features
     Package::new("foo", "1.0.0")
-    .file(
-        "Cargo.toml",
-        r#"
+        .file(
+            "Cargo.toml",
+            r#"
         [package]
         name = "foo"
         version = "1.0.0"
@@ -1010,11 +1010,11 @@ fn installed_package_not_reinstalled_for_unselected_feature_bins() {
         name = "foo-extra"
         path = "src/bin/foo-extra.rs"
         required-features = ["extra"]
-        "#
-    )
-    .file("src/main.rs", "fn main() {}")
-    .file("src/bin/foo-extra.rs", "fn main() {}")
-    .publish();
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("src/bin/foo-extra.rs", "fn main() {}")
+        .publish();
 
     cargo_process("install foo").run();
     validate_trackers("foo", "1.0.0", &["foo"]);

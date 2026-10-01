@@ -789,7 +789,13 @@ fn cli_feature_filter(pkg: &Package, cli_features: &CliFeatures) -> Option<BTree
         // requested feature
         &FeatureValue::Feature(f) => Some(f.as_str()),
         // dep/feature enables implicit feature dep, dep?/feature doesn't
-        &FeatureValue::DepFeature { dep_name, weak, ..  } => if weak { None } else { Some(dep_name.as_str()) },
+        &FeatureValue::DepFeature { dep_name, weak, .. } => {
+            if weak {
+                None
+            } else {
+                Some(dep_name.as_str())
+            }
+        }
         // dep:feature doesn't enable feature
         &FeatureValue::Dep { .. } => None,
     };
@@ -797,7 +803,11 @@ fn cli_feature_filter(pkg: &Package, cli_features: &CliFeatures) -> Option<BTree
     // package features can depend on other features, so start with the features from the CLI
     // and visit each feature's dependencies recursively.
     let mut enabled: BTreeSet<String> = BTreeSet::new();
-    let mut visit: Vec<&str> = cli_features.features.iter().filter_map(enabled_featurevalue).collect();
+    let mut visit: Vec<&str> = cli_features
+        .features
+        .iter()
+        .filter_map(enabled_featurevalue)
+        .collect();
     if cli_features.uses_default_features {
         visit.push("default");
     }
@@ -812,28 +822,34 @@ fn cli_feature_filter(pkg: &Package, cli_features: &CliFeatures) -> Option<BTree
                     }
                 }
                 enabled.insert(feature.to_string());
-           }
-           None => {}
-       }
+            }
+            None => {}
+        }
     }
 
     Some(enabled)
 }
 
 /// Helper to get the executable names from a filter.
-pub fn exe_names(pkg: &Package, filter: &ops::CompileFilter, features: &CliFeatures) -> BTreeSet<String> {
+pub fn exe_names(
+    pkg: &Package,
+    filter: &ops::CompileFilter,
+    features: &CliFeatures,
+) -> BTreeSet<String> {
     let to_exe = |name| format!("{}{}", name, env::consts::EXE_SUFFIX);
     match filter {
         CompileFilter::Default { .. } => {
             let enabled_features = cli_feature_filter(pkg, features);
-            pkg
-                .targets()
+            pkg.targets()
                 .iter()
-                .filter(|t| t.is_bin() && match enabled_features {
-                    None => true,
-                    Some(ref features) => {
-                        t.required_features().map_or(true, |reqs| reqs.iter().all(|r| features.contains(r)))
-                    }
+                .filter(|t| {
+                    t.is_bin()
+                        && match enabled_features {
+                            None => true,
+                            Some(ref features) => t
+                                .required_features()
+                                .map_or(true, |reqs| reqs.iter().all(|r| features.contains(r))),
+                        }
                 })
                 .map(|t| to_exe(t.name()))
                 .collect()
