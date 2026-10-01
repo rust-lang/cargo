@@ -127,11 +127,12 @@ use crate::workspace::Workspace;
 use crate::workspace::gc::GcOpts;
 use crate::{CargoResult, GlobalContext};
 use anyhow::{Context as _, bail};
-use cargo_util::collections::HashMap;
+use cargo_util::collections::{HashMap, HashSet};
 use cargo_util::paths;
 use cargo_util_terminal::Verbosity;
 use rusqlite::{Connection, ErrorCode, params};
 use std::collections::hash_map;
+use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 use tracing::{debug, trace};
@@ -773,6 +774,154 @@ impl GlobalCacheTracker {
             tx.rollback()?;
         } else {
             tx.commit()?;
+        }
+        Ok(())
+    }
+
+    /// Deletes workspace target and build directories that have not been
+    /// used since the given age.
+    pub fn clean_workspace_builds(
+        &mut self,
+        clean_ctx: &mut CleanContext<'_>,
+        max_age: Duration,
+    ) -> CargoResult<()> {
+        self.clean_workspace_builds_inner(clean_ctx, max_age)
+            .context("failed to clean workspace target and build directories")
+    }
+
+    #[tracing::instrument(skip_all)]
+    fn clean_workspace_builds_inner(
+        &mut self,
+        clean_ctx: &mut CleanContext<'_>,
+        max_age: Duration,
+    ) -> CargoResult<()> {
+        let max_age = now().saturating_sub(max_age.as_secs());
+        let tx = self.conn.transaction()?;
+        let delete_paths = Self::get_workspace_builds_to_clean(&tx, clean_ctx.gctx, max_age)?;
+        clean_ctx.remove_paths(&delete_paths)?;
+        Self::update_db_for_removed_workspace_builds(&tx, max_age)?;
+
+        if clean_ctx.dry_run {
+            tx.rollback()?;
+        } else {
+            tx.commit()?;
+        }
+        Ok(())
+    }
+
+    /// Returns workspace target and build directories to delete that have not
+    /// been used since the given timestamp.
+    ///
+    /// Recent usage counts even if the workspace manifest is missing, because
+    /// its drive may be temporarily disconnected.
+    fn get_workspace_builds_to_clean(
+        conn: &Connection,
+        gctx: &GlobalContext,
+        max_age: Timestamp,
+    ) -> CargoResult<Vec<PathBuf>> {
+        debug!(target: "gc", "cleaning workspace_build since {max_age:?}");
+        let mut stmt = conn.prepare_cached("SELECT path, timestamp FROM build_cache_dir")?;
+        let rows = stmt
+            .query_map([], |row| {
+                let path: Vec<u8> = row.get_unwrap(0);
+                let timestamp: Timestamp = row.get_unwrap(1);
+                Ok((path, timestamp))
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let mut keep_dirs = Vec::new();
+        let mut stale_dirs = HashSet::default();
+        for (blob, timestamp) in rows {
+            // Remove trailing separators and `.` so `link/` and `link/.` become
+            // `link`. Otherwise, `symlink_metadata` can report the directory that
+            // the link points to instead of the link itself. This could cause
+            // cleanup to delete that directory instead of protecting it.
+            let path: PathBuf = paths::bytes2path(&blob)?.components().collect();
+            let inspected = crate::util::try_canonicalize(&path).and_then(|canonical| {
+                let metadata = std::fs::symlink_metadata(&path)?;
+                Ok((canonical, metadata.is_dir()))
+            });
+            let (canonical, real_dir) = match inspected {
+                Ok(inspected) => inspected,
+                Err(e) if matches!(e.kind(), ErrorKind::NotFound | ErrorKind::NotADirectory) => {
+                    continue;
+                }
+                Err(e) => {
+                    crate::display_warning_with_error(
+                        &format!("failed to inspect directory `{}`", path.display()),
+                        &e.into(),
+                        &mut gctx.shell(),
+                    );
+                    continue;
+                }
+            };
+            // Deleting a directory referenced by a symlink would break that
+            // link.
+            if timestamp >= max_age || !real_dir {
+                keep_dirs.push(canonical);
+            } else {
+                stale_dirs.insert(canonical);
+            }
+        }
+
+        // Deleting a directory also deletes everything in it, such as
+        // `target/rust-analyzer` inside `target`. So a stale directory is not
+        // deleted if it is or contains a kept path, including one that
+        // resolves to it through a symlink.
+        let kept_ancestors: HashSet<&Path> =
+            keep_dirs.iter().flat_map(|path| path.ancestors()).collect();
+        Ok(stale_dirs
+            .into_iter()
+            .filter(|dir| !kept_ancestors.contains(dir.as_path()))
+            // A missing or invalid tag removes only this directory from the
+            // deletion list, not its parents. Deleting a parent also deletes
+            // this directory.
+            .filter(|dir| crate::ops::validate_target_dir_tag(dir).is_ok())
+            .collect())
+    }
+
+    fn update_db_for_removed_workspace_builds(
+        conn: &Connection,
+        max_age: Timestamp,
+    ) -> CargoResult<()> {
+        fn is_missing(path: &Path) -> bool {
+            // An inspection error must not make Cargo forget a path that may still exist.
+            matches!(
+                std::fs::metadata(path),
+                Err(e) if matches!(e.kind(), ErrorKind::NotFound | ErrorKind::NotADirectory)
+            )
+        }
+
+        // The timestamp filter preserves recent usage if a drive is temporarily disconnected.
+        let mut stmt =
+            conn.prepare_cached("SELECT id, path FROM build_cache_dir WHERE timestamp < ?1")?;
+        let mut delete_stmt = conn.prepare_cached("DELETE FROM build_cache_dir WHERE id = ?1")?;
+        let mut rows = stmt.query([max_age])?;
+        while let Some(row) = rows.next()? {
+            let id: ParentId = row.get_unwrap(0);
+            let path: Vec<u8> = row.get_unwrap(1);
+            let path: PathBuf = paths::bytes2path(&path)?.components().collect();
+            if is_missing(&path) {
+                delete_stmt.execute([id])?;
+            }
+        }
+        // Deleting a directory deletes its `workspace_build` rows, but not
+        // the workspaces that now use no directory. Such a workspace is
+        // deleted only when its manifest is missing, so the record of a
+        // workspace lives as long as the workspace, not its directories.
+        let mut workspace_stmt = conn.prepare_cached(
+            "SELECT id, manifest_path FROM workspace
+             WHERE id NOT IN (SELECT workspace_id FROM workspace_build)",
+        )?;
+        let mut delete_workspace_stmt =
+            conn.prepare_cached("DELETE FROM workspace WHERE id = ?1")?;
+        let mut workspaces = workspace_stmt.query([])?;
+        while let Some(row) = workspaces.next()? {
+            let id: ParentId = row.get_unwrap(0);
+            let manifest_path: Vec<u8> = row.get_unwrap(1);
+            if is_missing(&paths::bytes2path(&manifest_path)?) {
+                delete_workspace_stmt.execute([id])?;
+            }
         }
         Ok(())
     }
