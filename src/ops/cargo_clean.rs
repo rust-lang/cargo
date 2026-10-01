@@ -626,6 +626,26 @@ impl<'gctx> CleanContext<'gctx> {
     /// generate an error. This only generates an error for other issues, like
     /// not being able to write to the console.
     pub fn remove_paths(&mut self, paths: &[PathBuf]) -> CargoResult<()> {
+        // A path inside another one is removed along with it, and would
+        // otherwise be counted twice by `--dry-run`. Sorting by components
+        // puts it right after the outer path, while removal keeps the given
+        // order.
+        let mut sorted: Vec<_> = paths.iter().enumerate().collect();
+        sorted.sort_by_key(|&(_, path)| path);
+        let mut nested = vec![false; paths.len()];
+        let mut outer: Option<&PathBuf> = None;
+        for (i, path) in sorted {
+            if outer.is_some_and(|outer| path.starts_with(outer)) {
+                nested[i] = true;
+            } else {
+                outer = Some(path);
+            }
+        }
+        let paths: Vec<_> = paths
+            .iter()
+            .zip(nested)
+            .filter_map(|(path, nested)| (!nested).then_some(path))
+            .collect();
         let num_paths = paths
             .iter()
             .map(|path| walkdir::WalkDir::new(path).into_iter().count())
