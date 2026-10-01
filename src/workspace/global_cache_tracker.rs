@@ -78,6 +78,10 @@
 //! destructive things like removing a column, or changing the semantics of an
 //! existing column.
 //!
+//! A new table that refers to an existing table must use `ON DELETE CASCADE`.
+//! Older versions of cargo delete rows of the existing table and do not know
+//! the new table, so a different action makes their cleanup fail.
+//!
 //! Since users may run older versions of cargo that do not do cache tracking,
 //! the [`GlobalCacheTracker::sync_db_with_files`] method helps dealing with
 //! keeping the database in sync in the presence of older versions of cargo
@@ -119,6 +123,7 @@ use crate::util::cache_lock::CacheLockMode;
 use crate::util::interning::InternedString;
 use crate::util::sqlite::{self, Migration, basic_migration};
 use crate::util::{Filesystem, Progress, ProgressStyle};
+use crate::workspace::Workspace;
 use crate::workspace::gc::GcOpts;
 use crate::{CargoResult, GlobalContext};
 use anyhow::{Context as _, bail};
@@ -208,6 +213,53 @@ pub struct GitCheckout {
     /// This can be None when the size is unknown. See [`RegistrySrc::size`]
     /// for an explanation.
     pub size: Option<u64>,
+}
+
+/// The key for a workspace's target or build directory stored in the
+/// database.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct WorkspaceBuild {
+    /// The path of the root manifest of the workspace.
+    pub workspace_manifest_path: PathBuf,
+    /// How the workspace uses the directory.
+    pub kind: WorkspaceBuildKind,
+    /// The path of the directory.
+    pub path: PathBuf,
+}
+
+/// How a workspace uses a directory tracked by [`WorkspaceBuild`].
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum WorkspaceBuildKind {
+    /// The target directory of the workspace.
+    Target,
+    /// The build directory of the workspace.
+    Build,
+    /// A kind that this version of Cargo does not know.
+    ///
+    /// All versions of Cargo share the database, so a newer version can
+    /// record a kind that an older version must still be able to read.
+    Unknown(String),
+}
+
+impl rusqlite::types::FromSql for WorkspaceBuildKind {
+    fn column_result(value: rusqlite::types::ValueRef<'_>) -> rusqlite::types::FromSqlResult<Self> {
+        Ok(match value.as_str()? {
+            "target" => WorkspaceBuildKind::Target,
+            "build" => WorkspaceBuildKind::Build,
+            kind => WorkspaceBuildKind::Unknown(kind.to_owned()),
+        })
+    }
+}
+
+impl rusqlite::types::ToSql for WorkspaceBuildKind {
+    fn to_sql(&self) -> rusqlite::Result<rusqlite::types::ToSqlOutput<'_>> {
+        let kind = match self {
+            WorkspaceBuildKind::Target => "target",
+            WorkspaceBuildKind::Build => "build",
+            WorkspaceBuildKind::Unknown(kind) => kind,
+        };
+        Ok(rusqlite::types::ToSqlOutput::from(kind))
+    }
 }
 
 /// Filesystem paths in the global cache.
@@ -304,6 +356,43 @@ fn migrations() -> Vec<Migration> {
             )?;
             Ok(())
         }),
+        // Workspaces, identified by the path of the root manifest
+        basic_migration(
+            "CREATE TABLE workspace (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                manifest_path BLOB UNIQUE NOT NULL
+            )",
+        ),
+        // Build cache directories
+        //
+        // At this time, only the target and build directories of workspaces.
+        basic_migration(
+            "CREATE TABLE build_cache_dir (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                path BLOB UNIQUE NOT NULL,
+                timestamp INTEGER NOT NULL
+            )",
+        ),
+        // Which workspace uses which directory
+        //
+        // `kind` is `target` or `build`. A directory that is both the target
+        // and the build directory of a workspace has one row for each kind.
+        // A newer Cargo can add kinds, so a reader must accept unknown values.
+        basic_migration(
+            "CREATE TABLE workspace_build (
+                dir_id INTEGER NOT NULL,
+                workspace_id INTEGER NOT NULL,
+                kind TEXT NOT NULL,
+                PRIMARY KEY (dir_id, workspace_id, kind),
+                FOREIGN KEY (dir_id) REFERENCES build_cache_dir (id) ON DELETE CASCADE,
+                FOREIGN KEY (workspace_id) REFERENCES workspace (id) ON DELETE CASCADE
+             )",
+        ),
+        // The primary key index starts with `dir_id`, so lookups by
+        // `workspace_id` need their own index.
+        basic_migration(
+            "CREATE INDEX workspace_build_workspace_id ON workspace_build (workspace_id)",
+        ),
     ]
 }
 
@@ -511,6 +600,36 @@ impl GlobalCacheTracker {
             })?
             .collect::<Result<Vec<_>, _>>()?;
         Ok(rows)
+    }
+
+    /// Returns all workspace target and build directory timestamps.
+    pub fn workspace_build_all(&self) -> CargoResult<Vec<(WorkspaceBuild, Timestamp)>> {
+        let mut stmt = self.conn.prepare_cached(
+            "SELECT workspace.manifest_path, workspace_build.kind,
+                    build_cache_dir.path, build_cache_dir.timestamp
+             FROM workspace, build_cache_dir, workspace_build
+             WHERE workspace_build.workspace_id = workspace.id
+               AND workspace_build.dir_id = build_cache_dir.id",
+        )?;
+        let rows = stmt
+            .query_map([], |row| {
+                let workspace_manifest_path: Vec<u8> = row.get_unwrap(0);
+                let kind: WorkspaceBuildKind = row.get_unwrap(1);
+                let path: Vec<u8> = row.get_unwrap(2);
+                let timestamp: Timestamp = row.get_unwrap(3);
+                Ok((workspace_manifest_path, kind, path, timestamp))
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        rows.into_iter()
+            .map(|(workspace_manifest_path, kind, path, timestamp)| {
+                let workspace_build = WorkspaceBuild {
+                    workspace_manifest_path: paths::bytes2path(&workspace_manifest_path)?,
+                    kind,
+                    path: paths::bytes2path(&path)?,
+                };
+                Ok((workspace_build, timestamp))
+            })
+            .collect()
     }
 
     /// Returns whether or not an auto GC should be performed, compared to the
@@ -1443,6 +1562,8 @@ pub struct DeferredGlobalLastUse {
     git_db_timestamps: HashMap<GitDb, Timestamp>,
     /// New git checkout entries to insert.
     git_checkout_timestamps: HashMap<GitCheckout, Timestamp>,
+    /// New workspace target and build directory entries to insert.
+    workspace_build_timestamps: HashMap<WorkspaceBuild, Timestamp>,
     /// This is used so that a warning about failing to update the database is
     /// only displayed once.
     save_err_has_warned: bool,
@@ -1461,6 +1582,7 @@ impl DeferredGlobalLastUse {
             registry_src_timestamps: HashMap::default(),
             git_db_timestamps: HashMap::default(),
             git_checkout_timestamps: HashMap::default(),
+            workspace_build_timestamps: HashMap::default(),
             save_err_has_warned: false,
             now: now(),
         }
@@ -1472,6 +1594,7 @@ impl DeferredGlobalLastUse {
             && self.registry_src_timestamps.is_empty()
             && self.git_db_timestamps.is_empty()
             && self.git_checkout_timestamps.is_empty()
+            && self.workspace_build_timestamps.is_empty()
     }
 
     fn clear(&mut self) {
@@ -1480,6 +1603,7 @@ impl DeferredGlobalLastUse {
         self.registry_src_timestamps.clear();
         self.git_db_timestamps.clear();
         self.git_checkout_timestamps.clear();
+        self.workspace_build_timestamps.clear();
     }
 
     /// Indicates the given [`RegistryIndex`] has been used right now.
@@ -1572,6 +1696,30 @@ impl DeferredGlobalLastUse {
         self.git_checkout_timestamps.insert(git_checkout, timestamp);
     }
 
+    /// Indicates the target and build directories of the given workspace have
+    /// been used right now.
+    pub fn mark_workspace_build_used(&mut self, ws: &Workspace<'_>) {
+        self.mark_workspace_dir_used(ws, WorkspaceBuildKind::Target, ws.target_dir());
+        self.mark_workspace_dir_used(ws, WorkspaceBuildKind::Build, ws.build_dir());
+    }
+
+    /// Indicates the directory that the given workspace uses as `kind` has
+    /// been used right now.
+    pub fn mark_workspace_dir_used(
+        &mut self,
+        ws: &Workspace<'_>,
+        kind: WorkspaceBuildKind,
+        path: Filesystem,
+    ) {
+        let workspace_build = WorkspaceBuild {
+            workspace_manifest_path: ws.root_manifest().to_path_buf(),
+            kind,
+            path: path.into_path_unlocked(),
+        };
+        self.workspace_build_timestamps
+            .insert(workspace_build, self.now);
+    }
+
     /// Saves all of the deferred information to the database.
     ///
     /// This will also clear the state of `self`.
@@ -1588,6 +1736,7 @@ impl DeferredGlobalLastUse {
         self.insert_registry_crate_from_cache(&tx)?;
         self.insert_registry_src_from_cache(&tx)?;
         self.insert_git_checkout_from_cache(&tx)?;
+        self.insert_workspace_build_from_cache(&tx)?;
         tx.commit()?;
         trace!(target: "gc", "last-use save complete");
         Ok(())
@@ -1724,6 +1873,83 @@ impl DeferredGlobalLastUse {
         }
 
         Ok(())
+    }
+
+    fn insert_workspace_build_from_cache(&mut self, conn: &Connection) -> CargoResult<()> {
+        let workspace_build_timestamps = std::mem::take(&mut self.workspace_build_timestamps);
+        for (workspace_build, timestamp) in workspace_build_timestamps {
+            trace!(target: "gc", "insert workspace build {workspace_build:?} {timestamp}");
+            // Failing here would also drop the global cache entries saved in
+            // the same transaction, so a directory whose paths cannot be
+            // stored is skipped instead.
+            let (Ok(workspace_manifest_path), Ok(path)) = (
+                paths::path2bytes(&workspace_build.workspace_manifest_path),
+                paths::path2bytes(&workspace_build.path),
+            ) else {
+                continue;
+            };
+            let dir_id = Self::build_cache_dir_id(conn, path, timestamp)?;
+            let workspace_id = Self::workspace_id(conn, workspace_manifest_path)?;
+            let mut stmt = conn.prepare_cached(
+                "INSERT OR IGNORE INTO workspace_build (dir_id, workspace_id, kind)
+                 VALUES (?1, ?2, ?3)",
+            )?;
+            stmt.execute(params![dir_id, workspace_id, workspace_build.kind])?;
+        }
+        Ok(())
+    }
+
+    /// Returns the ID of the build cache directory. Inserts the directory if
+    /// it is not in the database, or updates its timestamp if that is old.
+    ///
+    /// An upsert on a table with `AUTOINCREMENT` takes a new ID before it
+    /// finds the conflict. This writes to the database even when no row
+    /// changes, so this looks for the row first.
+    fn build_cache_dir_id(
+        conn: &Connection,
+        path: &[u8],
+        new_timestamp: Timestamp,
+    ) -> CargoResult<ParentId> {
+        let mut select_stmt =
+            conn.prepare_cached("SELECT id, timestamp FROM build_cache_dir WHERE path = ?1")?;
+        let mut rows = select_stmt.query([path])?;
+        let Some(row) = rows.next()? else {
+            let mut insert_stmt = conn.prepare_cached(
+                "INSERT INTO build_cache_dir (path, timestamp)
+                 VALUES (?1, ?2)
+                 RETURNING id",
+            )?;
+            let id = insert_stmt.query_row(params![path, new_timestamp], |row| row.get(0))?;
+            return Ok(id);
+        };
+        let id: ParentId = row.get_unwrap(0);
+        let timestamp: Timestamp = row.get_unwrap(1);
+        if timestamp < new_timestamp - UPDATE_RESOLUTION {
+            let mut update_stmt =
+                conn.prepare_cached("UPDATE build_cache_dir SET timestamp = ?1 WHERE id = ?2")?;
+            update_stmt.execute(params![new_timestamp, id])?;
+        }
+        Ok(id)
+    }
+
+    /// Returns the ID of the workspace. Inserts the workspace if it is not in
+    /// the database.
+    ///
+    /// See [`Self::build_cache_dir_id`] for why this looks for the row first.
+    fn workspace_id(conn: &Connection, manifest_path: &[u8]) -> CargoResult<ParentId> {
+        let mut select_stmt =
+            conn.prepare_cached("SELECT id FROM workspace WHERE manifest_path = ?1")?;
+        let mut rows = select_stmt.query([manifest_path])?;
+        if let Some(row) = rows.next()? {
+            return Ok(row.get_unwrap(0));
+        }
+        let mut insert_stmt = conn.prepare_cached(
+            "INSERT INTO workspace (manifest_path)
+             VALUES (?1)
+             RETURNING id",
+        )?;
+        let id = insert_stmt.query_row([manifest_path], |row| row.get(0))?;
+        Ok(id)
     }
 
     /// Returns the numeric ID of the registry, either fetching from the local

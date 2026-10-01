@@ -18,7 +18,9 @@ use crate::prelude::*;
 use crate::utils::cargo_process;
 use cargo::GlobalContext;
 use cargo::util::cache_lock::CacheLockMode;
-use cargo::workspace::global_cache_tracker::{self, DeferredGlobalLastUse, GlobalCacheTracker};
+use cargo::workspace::global_cache_tracker::{
+    self, DeferredGlobalLastUse, GlobalCacheTracker, WorkspaceBuildKind,
+};
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::paths;
 use cargo_test_support::paths::ReadOnly;
@@ -79,6 +81,22 @@ fn get_git_db_names() -> Vec<String> {
 
 fn get_git_checkout_names(db_name: &str) -> Vec<String> {
     get_names(&format!(".cargo/git/checkouts/{db_name}/*"))
+}
+
+fn workspace_build_dirs() -> Vec<(WorkspaceBuildKind, PathBuf)> {
+    let gctx = GlobalContextBuilder::new().build();
+    let _lock = gctx
+        .acquire_package_cache_lock(CacheLockMode::MutateExclusive)
+        .unwrap();
+    let tracker = GlobalCacheTracker::new(&gctx).unwrap();
+    let mut dirs: Vec<_> = tracker
+        .workspace_build_all()
+        .unwrap()
+        .into_iter()
+        .map(|(workspace_build, _timestamp)| (workspace_build.kind, workspace_build.path))
+        .collect();
+    dirs.sort();
+    dirs
 }
 
 fn days_ago(n: u64) -> SystemTime {
@@ -1527,6 +1545,32 @@ fn can_handle_future_schema() -> anyhow::Result<()> {
 }
 
 #[cargo_test]
+fn can_handle_future_workspace_build_kind() -> anyhow::Result<()> {
+    // It should work when a future version of cargo has recorded a kind of
+    // workspace directory that this version does not know.
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("check").run();
+    // Change a kind to pretend this is done by a future version of cargo.
+    let gctx = GlobalContextBuilder::new().build();
+    let db_path = GlobalCacheTracker::db_path(&gctx).into_path_unlocked();
+    rusqlite::Connection::open(&db_path)?.execute(
+        "UPDATE workspace_build SET kind = 'future' WHERE kind = 'build'",
+        [],
+    )?;
+    assert_eq!(
+        workspace_build_dirs(),
+        [
+            (WorkspaceBuildKind::Target, p.build_dir()),
+            (
+                WorkspaceBuildKind::Unknown("future".to_owned()),
+                p.build_dir()
+            ),
+        ]
+    );
+    Ok(())
+}
+
+#[cargo_test]
 fn clean_max_git_age() {
     // --max-git-*-age flags
     let (git_a, git_a_repo) = git::new_repo("git_a", |p| {
@@ -2087,6 +2131,34 @@ fn clean_max_target_age_dir_is_symlink() {
 ...
 "#]])
         .run();
+}
+
+#[cargo_test]
+fn install_temp_target_dir() {
+    Package::new("foo", "1.0.0")
+        .file("src/main.rs", "fn main() {}")
+        .publish();
+
+    cargo_process("install foo").run();
+    assert!(workspace_build_dirs().is_empty());
+}
+
+#[cargo_test]
+fn install_temp_target_dir_separate_build_dir() {
+    let git_project = git::new("foo", |p| {
+        p.file("Cargo.toml", &basic_manifest("foo", "1.0.0"))
+            .file("src/main.rs", "fn main() {}")
+    });
+    let build_dir = paths::root().join("build");
+
+    cargo_process("install --git")
+        .arg(git_project.url().to_string())
+        .env("CARGO_BUILD_BUILD_DIR", &build_dir)
+        .run();
+    assert_eq!(
+        workspace_build_dirs(),
+        [(WorkspaceBuildKind::Build, build_dir)]
+    );
 }
 
 #[cargo_test]
