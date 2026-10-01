@@ -23,6 +23,53 @@ fn make_project_with_rustc_warning() -> Project {
 }
 
 #[cargo_test]
+fn json_deny() {
+    // Regression: https://github.com/rust-lang/cargo/issues/17519
+    for format in [
+        "json",
+        "json-diagnostic-short",
+        "json-diagnostic-rendered-ansi",
+    ] {
+        let p = make_project_with_rustc_warning();
+        // The second invocation replays cached diagnostics from a fresh unit.
+        for _ in 0..2 {
+            let output = p
+                .cargo("check")
+                .arg(format!("--message-format={format}"))
+                .arg("--config")
+                .arg("build.warnings='deny'")
+                .with_status(0)
+                .with_stdout_contains(r#"{"reason":"build-finished","success":true}"#)
+                .run();
+            let messages: Vec<serde_json::Value> = std::str::from_utf8(&output.stdout)
+                .unwrap()
+                .lines()
+                .map(|line| serde_json::from_str(line).unwrap())
+                .collect();
+            assert!(messages.iter().any(|msg| {
+                msg["reason"] == "compiler-message"
+                    && msg["message"]["code"]["code"] == "unused_variables"
+                    && msg["message"]["level"] == "warning"
+            }));
+        }
+    }
+}
+
+#[cargo_test]
+fn json_deny_keep_going() {
+    // Regression: https://github.com/rust-lang/cargo/issues/17519
+    let p = make_project_with_rustc_warning();
+    for _ in 0..2 {
+        p.cargo("check --message-format=json --keep-going")
+            .arg("--config")
+            .arg("build.warnings='deny'")
+            .with_status(0)
+            .with_stdout_contains(r#"{"reason":"build-finished","success":true}"#)
+            .run();
+    }
+}
+
+#[cargo_test]
 fn always_show_error_diags() {
     let p = make_project_with_rustc_warning();
     p.cargo("check")
@@ -782,4 +829,24 @@ error[..]
 "#]])
         .with_status(101)
         .run();
+
+    // Regression: https://github.com/rust-lang/cargo/issues/17519
+    for format in [
+        "json",
+        "json-diagnostic-short",
+        "json-diagnostic-rendered-ansi",
+    ] {
+        p.cargo("check")
+            .arg(format!("--message-format={format}"))
+            .arg("--config")
+            .arg("build.warnings='deny'")
+            .with_stdout_contains(r#"{"reason":"build-finished","success":false}"#)
+            .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[ERROR] could not compile `foo` (bin "foo") due to 1 previous error; 1 warning emitted
+
+"#]])
+            .with_status(101)
+            .run();
+    }
 }
