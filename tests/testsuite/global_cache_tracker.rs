@@ -1343,7 +1343,7 @@ fn read_only_locking_auto_gc() {
     let p = basic_foo_bar_project();
     // Populate cache.
     p.cargo("fetch").run();
-    let cargo_home = paths::home().join(".cargo");
+    let cargo_home = paths::cargo_home();
     let mut perms = std::fs::metadata(&cargo_home).unwrap().permissions();
     // Test when it can't update auto-gc db.
     perms.set_readonly(true);
@@ -2146,7 +2146,7 @@ fn resilient_to_unexpected_files() {
         .env("__CARGO_TEST_LAST_USE_NOW", months_ago_unix(4))
         .run();
 
-    let root = paths::home().join(".cargo");
+    let root = paths::cargo_home();
     std::fs::write(root.join("registry/index/foo"), "").unwrap();
     std::fs::write(root.join("registry/cache/foo"), "").unwrap();
     std::fs::write(root.join("registry/src/foo"), "").unwrap();
