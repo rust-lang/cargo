@@ -317,6 +317,17 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
             .out_force_new_layout(&dir)
     }
 
+    /// Root directory for the unit in the new build layout.
+    pub fn build_unit_dir(&self, unit: &Unit) -> PathBuf {
+        let dir = self.pkg_dir(unit);
+        self.layout(unit.kind).build_dir().build_unit(&dir)
+    }
+
+    /// Directory where the timestamps for the given unit should go.
+    pub fn timestamps_dir(&self, unit: &Unit) -> PathBuf {
+        self.build_unit_dir(unit).join(".timestamps")
+    }
+
     /// Directory where the fingerprint for the given unit should go.
     pub fn fingerprint_dir(&self, unit: &Unit) -> PathBuf {
         let dir = self.pkg_dir(unit);

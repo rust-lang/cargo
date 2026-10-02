@@ -19,6 +19,7 @@
 //! module documentation for an in-depth explanation of how global cache
 //! tracking works.
 
+use crate::compiler::blob_storage::read_timestamp_file;
 use crate::context::{CargoCacheConfig, GlobalCleanConfig};
 use crate::ops::CleanContext;
 use crate::util::cache_lock::{CacheLock, CacheLockMode};
@@ -26,6 +27,11 @@ use crate::util::time_span::maybe_parse_time_span;
 use crate::workspace::global_cache_tracker::{self, GlobalCacheTracker};
 use crate::{CargoResult, GlobalContext};
 use anyhow::{Context as _, format_err};
+use cargo_util::paths;
+use std::collections::BinaryHeap;
+use std::fs;
+use std::io::ErrorKind;
+use std::path::PathBuf;
 use std::time::Duration;
 
 /// Default max age to auto-clean extracted sources, which can be recovered
@@ -110,6 +116,8 @@ pub struct GcOpts {
     pub max_git_size: Option<u64>,
     /// The `--max-download-size` CLI option.
     pub max_download_size: Option<u64>,
+    /// The `--max-blob-size` CLI option.
+    pub max_blob_size: Option<u64>,
 }
 
 impl GcOpts {
@@ -124,6 +132,7 @@ impl GcOpts {
             || self.max_crate_size.is_some()
             || self.max_git_size.is_some()
             || self.max_download_size.is_some()
+            || self.max_blob_size.is_some()
     }
 
     /// Returns whether any download cache cleaning options based on size are set.
@@ -281,8 +290,134 @@ impl<'a, 'gctx> Gc<'a, 'gctx> {
     /// Performs garbage collection based on the given options.
     pub fn gc(&mut self, clean_ctx: &mut CleanContext<'gctx>, gc_opts: &GcOpts) -> CargoResult<()> {
         self.global_cache_tracker.clean(clean_ctx, gc_opts)?;
+        if let Some(blob_dir) = self.gctx.blob_storage_dir()
+            && let Some(max_blob_size) = gc_opts.max_blob_size
+        {
+            self.clean_blobs(clean_ctx, &blob_dir, max_blob_size)?;
+        }
         // In the future, other gc operations go here, such as target cleaning.
         Ok(())
+    }
+
+    fn clean_blobs(
+        &self,
+        clean_ctx: &mut CleanContext<'gctx>,
+        blob_dir: &std::path::Path,
+        max_blob_size: u64,
+    ) -> CargoResult<()> {
+        let entries = match fs::read_dir(blob_dir) {
+            Ok(entries) => entries,
+            Err(e) if e.kind() == ErrorKind::NotFound => return Ok(()),
+            Err(e) => {
+                return Err(e).with_context(|| {
+                    format!("failed to read blob cache `{}`", blob_dir.display())
+                });
+            }
+        };
+
+        // Field order determines deletion priority.
+        // We prioritize orphaned blobs meaning they are no longer
+        // used by any workspaces. Then we try to delete the oldest
+        // blobs. Then prioritizing largest size if there are any ties.
+        #[derive(Eq, PartialEq, Ord, PartialOrd)]
+        struct FileItem {
+            referenced: bool,
+            last_used: u64,
+            size: u64,
+            path: PathBuf,
+        }
+
+        // First get the total directory size
+        let mut total_size = 0u64;
+        for entry in entries {
+            let Ok(entry) = entry else { continue };
+            if entry
+                .file_name()
+                .as_os_str()
+                .to_str()
+                .is_some_and(|name| name.ends_with(".timestamp"))
+            {
+                continue;
+            }
+            if let Ok(metadata) = entry.metadata()
+                && metadata.is_file()
+            {
+                total_size = total_size.saturating_add(metadata.len());
+            }
+        }
+        if total_size <= max_blob_size {
+            return Ok(());
+        }
+
+        // Now loop over all of the files and add them to a heap
+        // while keeping track of the bytes. The heap orders files
+        // by the priority so we can quickly replace files with
+        // older files. Once we are done, we should have only the
+        // files we want to delete left.
+
+        let bytes_to_free = total_size - max_blob_size;
+        let mut selected_size = 0u64;
+        let mut selected = BinaryHeap::new();
+
+        for entry in fs::read_dir(blob_dir)? {
+            let Ok(entry) = entry else { continue };
+            if entry
+                .file_name()
+                .as_os_str()
+                .to_str()
+                .is_some_and(|name| name.ends_with(".timestamp"))
+            {
+                continue;
+            }
+            let Ok(metadata) = entry.metadata() else {
+                continue;
+            };
+            if !metadata.is_file() {
+                continue;
+            }
+            let path = entry.path();
+            let timestamp_path = path.with_added_extension("timestamp");
+            let last_used = read_timestamp_file(&timestamp_path).unwrap_or(0);
+            let timestamp_links = timestamp_path
+                .metadata()
+                .ok()
+                .as_ref()
+                .and_then(|marker| paths::nlink(marker, &timestamp_path).ok());
+            let Ok(blob_links) = paths::nlink(&metadata, &path) else {
+                continue;
+            };
+            let item = FileItem {
+                referenced: blob_links > 1 || timestamp_links.is_some_and(|links| links > 1),
+                last_used,
+                path,
+                size: metadata.len(),
+            };
+
+            let is_higher_priority_to_delete = selected
+                .peek()
+                .is_some_and(|worst: &FileItem| item < *worst);
+
+            if selected_size < bytes_to_free || is_higher_priority_to_delete {
+                selected_size = selected_size.saturating_add(item.size);
+                selected.push(item);
+
+                // Now that we added a new file, we can potentially remove newer files
+                // that we don't need to hit the size target.
+                while selected
+                    .peek()
+                    .is_some_and(|worst| selected_size - worst.size >= bytes_to_free)
+                {
+                    selected_size -= selected.pop().unwrap().size;
+                }
+            }
+        }
+
+        let mut delete_paths = Vec::with_capacity(selected.len() * 2);
+        for item in selected {
+            delete_paths.push(item.path.with_added_extension("timestamp"));
+            delete_paths.push(item.path);
+        }
+        clean_ctx.remove_paths(&delete_paths)
     }
 }
 

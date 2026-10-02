@@ -1,13 +1,17 @@
 use std::fs::File;
-use std::io::ErrorKind;
+use std::io::{ErrorKind, Read as _, Write as _};
 use std::path::{Path, PathBuf};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use anyhow::bail;
 use cargo_util::paths::create_dir_all;
 use filetime::FileTime;
-use tracing::instrument;
+use tracing::{debug, instrument};
 
 use crate::CargoResult;
+use crate::util::flock::{lock_exclusive, lock_shared};
+
+const USAGE_UPDATE_INTERVAL: Duration = Duration::from_secs(4 * 60 * 60);
 
 pub struct BlobStorage {
     root: PathBuf,
@@ -28,20 +32,55 @@ impl BlobStorage {
     ///
     /// This function will prefer reflink if available on the current filesystem but fallback to
     /// hardlinking.
-    pub fn insert_or_dedup(&self, path: &Path) -> CargoResult<String> {
-        let hash = Self::hash(path)?;
+    pub fn insert_or_dedup(
+        &self,
+        artifact_path: &Path,
+        timestamp_path: &Path,
+    ) -> CargoResult<String> {
+        let hash = Self::hash(artifact_path)?;
         let storage_path = self.root.join(&hash);
 
-        if self.insert(path, &storage_path)? {
-            return Ok(hash);
+        if !self.insert(artifact_path, timestamp_path, &storage_path)? {
+            self.dedup(artifact_path, timestamp_path, &storage_path)?;
         }
-
-        self.dedup(path, &storage_path)?;
 
         Ok(hash)
     }
 
-    fn insert(&self, path: &Path, storage_path: &Path) -> CargoResult<bool> {
+    #[instrument(skip_all)]
+    pub fn mark_timestamps_used(timestamps_dir: &Path, now: SystemTime) -> CargoResult<()> {
+        let now_secs = unix_timestamp(now);
+        for entry in std::fs::read_dir(timestamps_dir)? {
+            let Ok(entry) = entry else {
+                continue;
+            };
+            let update = || -> CargoResult<()> {
+                let file_type = entry.file_type()?;
+                if file_type.is_dir() {
+                    return Self::mark_timestamps_used(&entry.path(), now);
+                }
+                if !file_type.is_file() {
+                    return Ok(());
+                }
+                let path = entry.path();
+                if is_timestamp_stale(&path, now_secs) {
+                    write_used_timestamp(&path, now_secs)?;
+                }
+                Ok(())
+            };
+            if let Err(err) = update() {
+                debug!(path = ?entry.path(), ?err, "failed to update blob usage");
+            }
+        }
+        Ok(())
+    }
+
+    fn insert(
+        &self,
+        artifact_path: &Path,
+        timestamp_path: &Path,
+        storage_path: &Path,
+    ) -> CargoResult<bool> {
         if storage_path.try_exists()? {
             return Ok(false);
         }
@@ -57,20 +96,24 @@ impl BlobStorage {
             .prefix(".blob")
             .tempdir_in(&self.root)?;
         let staged = staging_dir.path().join("artifact");
-        if reflink_copy::reflink(path, &staged).is_err() {
-            std::fs::hard_link(path, &staged)?;
+        if reflink_copy::reflink(artifact_path, &staged).is_err() {
+            std::fs::hard_link(artifact_path, &staged)?;
         }
         #[cfg(target_os = "linux")]
         ensure_no_writers(&staged)?;
 
         match std::fs::hard_link(&staged, storage_path) {
-            Ok(()) => Ok(true),
+            Ok(()) => {
+                Self::create_timestamp_file(timestamp_path, storage_path)?;
+
+                Ok(true)
+            }
             Err(err) if err.kind() == ErrorKind::AlreadyExists => Ok(false),
             Err(err) => Err(err.into()),
         }
     }
 
-    fn dedup(&self, path: &Path, storage_path: &Path) -> CargoResult<()> {
+    fn dedup(&self, path: &Path, timestamp_path: &Path, storage_path: &Path) -> CargoResult<()> {
         let metadata = path.metadata()?;
         let staging_dir = tempfile::Builder::new()
             .prefix(".blob")
@@ -92,6 +135,16 @@ impl BlobStorage {
         ensure_no_writers(&replacement)?;
         std::fs::rename(&replacement, path)?;
 
+        Self::create_timestamp_file(timestamp_path, storage_path)?;
+
+        Ok(())
+    }
+
+    fn create_timestamp_file(timestamp_path: &Path, storage_path: &Path) -> CargoResult<()> {
+        let timestamp = storage_path.with_added_extension("timestamp");
+        write_used_timestamp(&timestamp, now())?;
+        create_dir_all(timestamp_path.parent().unwrap())?;
+        std::fs::hard_link(&timestamp, &timestamp_path)?;
         Ok(())
     }
 
@@ -102,6 +155,40 @@ impl BlobStorage {
         hasher.update_reader(file)?;
         Ok(hasher.finalize().to_hex().to_string())
     }
+}
+
+fn is_timestamp_stale(path: &Path, now_secs: u64) -> bool {
+    match read_timestamp_file(path) {
+        Some(stored) => now_secs.saturating_sub(stored) >= USAGE_UPDATE_INTERVAL.as_secs(),
+        None => true,
+    }
+}
+
+pub fn read_timestamp_file(path: &Path) -> Option<u64> {
+    let mut contents = String::new();
+    let file = File::open(path).ok()?;
+    lock_shared(&file).ok()?;
+    file.take(32).read_to_string(&mut contents).ok()?;
+    contents.trim().parse().ok()
+}
+
+/// Writes unix seconds to a timestamp file, creating it if needed.
+/// This truncates and rewrites so the hardlink is preserved.
+fn write_used_timestamp(path: &Path, now_secs: u64) -> std::io::Result<()> {
+    let mut file = File::create(path)?;
+    lock_exclusive(&file)?;
+    write!(file, "{now_secs}")?;
+    Ok(())
+}
+
+fn now() -> u64 {
+    unix_timestamp(SystemTime::now())
+}
+
+fn unix_timestamp(time: SystemTime) -> u64 {
+    time.duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or_default()
 }
 
 /// Errors if there we cannot get a read lease to a file (ensuring no writers)
