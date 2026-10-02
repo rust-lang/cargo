@@ -21,6 +21,7 @@ use cargo::util::cache_lock::CacheLockMode;
 use cargo::workspace::global_cache_tracker::{self, DeferredGlobalLastUse, GlobalCacheTracker};
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::paths;
+use cargo_test_support::paths::ReadOnly;
 use cargo_test_support::registry::{Package, RegistryBuilder};
 use cargo_test_support::{
     Execs, Project, basic_manifest, execs, git, process, project, retry, sleep_ms, str,
@@ -1343,11 +1344,9 @@ fn read_only_locking_auto_gc() {
     let p = basic_foo_bar_project();
     // Populate cache.
     p.cargo("fetch").run();
-    let cargo_home = paths::home().join(".cargo");
-    let mut perms = std::fs::metadata(&cargo_home).unwrap().permissions();
+    let cargo_home = paths::cargo_home();
     // Test when it can't update auto-gc db.
-    perms.set_readonly(true);
-    std::fs::set_permissions(&cargo_home, perms.clone()).unwrap();
+    let readonly = ReadOnly::new(&cargo_home);
     p.cargo("check")
         .arg("-Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
@@ -1360,14 +1359,12 @@ fn read_only_locking_auto_gc() {
         .run();
     // Try again without the last-use existing (such as if the cache was
     // populated by an older version of cargo).
-    perms.set_readonly(false);
-    std::fs::set_permissions(&cargo_home, perms.clone()).unwrap();
+    drop(readonly);
     let gctx = GlobalContextBuilder::new().build();
     GlobalCacheTracker::db_path(&gctx)
         .into_path_unlocked()
         .rm_rf();
-    perms.set_readonly(true);
-    std::fs::set_permissions(&cargo_home, perms.clone()).unwrap();
+    let _readonly = ReadOnly::new(&cargo_home);
     p.cargo("check")
         .arg("-Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
@@ -1376,8 +1373,6 @@ fn read_only_locking_auto_gc() {
 
 "#]])
         .run();
-    perms.set_readonly(false);
-    std::fs::set_permissions(&cargo_home, perms).unwrap();
 }
 
 #[cargo_test]
@@ -2146,7 +2141,7 @@ fn resilient_to_unexpected_files() {
         .env("__CARGO_TEST_LAST_USE_NOW", months_ago_unix(4))
         .run();
 
-    let root = paths::home().join(".cargo");
+    let root = paths::cargo_home();
     std::fs::write(root.join("registry/index/foo"), "").unwrap();
     std::fs::write(root.join("registry/cache/foo"), "").unwrap();
     std::fs::write(root.join("registry/src/foo"), "").unwrap();

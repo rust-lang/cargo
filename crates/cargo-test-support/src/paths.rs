@@ -540,3 +540,47 @@ pub fn test_dir(path: &str, name: &str) -> std::path::PathBuf {
         .collect();
     test_dir.join(name)
 }
+
+/// Temporarily sets a file or directory as read only until
+/// this struct is dropped.
+/// Useful to make sure tests reset permissions if they fail.
+pub struct ReadOnly(PathBuf);
+
+impl ReadOnly {
+    pub fn new(path: impl Into<PathBuf>) -> Self {
+        let path = path.into();
+        chmod_readonly(&path, true);
+
+        Self(path)
+    }
+}
+
+impl Drop for ReadOnly {
+    fn drop(&mut self) {
+        chmod_readonly(&self.0, false);
+    }
+}
+
+fn chmod_readonly(path: &Path, readonly: bool) {
+    if path.is_file() {
+        set_readonly(path, readonly);
+        return;
+    }
+
+    for entry in t!(path.read_dir()) {
+        let entry = t!(entry);
+        let path = entry.path();
+        if t!(entry.file_type()).is_dir() {
+            chmod_readonly(&path, readonly);
+        } else {
+            set_readonly(&path, readonly);
+        }
+    }
+    set_readonly(path, readonly);
+}
+
+fn set_readonly(path: &Path, readonly: bool) {
+    let mut perms = t!(path.metadata()).permissions();
+    perms.set_readonly(readonly);
+    t!(fs::set_permissions(path, perms));
+}
