@@ -988,7 +988,7 @@ fn partially_already_installed_does_one_update() {
 }
 
 #[cargo_test]
-fn installed_package_not_reinstalled_for_unselected_feature_bins() {
+fn check_upgrade_respects_features() {
     // Issue #8703: an installed package should not consider binaries to be missing if they
     // depend on unselected features
     Package::new("foo", "1.0.0")
@@ -1000,30 +1000,64 @@ fn installed_package_not_reinstalled_for_unselected_feature_bins() {
         version = "1.0.0"
 
         [features]
-        extra = []
+        default = ["feat"]
+        e1 = []
+        e2 = []
+        extra = ["e1", "e2"]
+        feat = []
 
         [[bin]]
         name = "foo"
         path = "src/main.rs"
 
         [[bin]]
-        name = "foo-extra"
-        path = "src/bin/foo-extra.rs"
-        required-features = ["extra"]
+        name = "foo-feat"
+        path = "src/bin/foo-feat.rs"
+        required-features = ["feat"]
+
+        [[bin]]
+        name = "foo-e1"
+        path = "src/bin/foo-e1.rs"
+        required-features = ["e1"]
+
+        [[bin]]
+        name = "foo-e2"
+        path = "src/bin/foo-e2.rs"
+        required-features = ["e2"]
         "#,
         )
         .file("src/main.rs", "fn main() {}")
-        .file("src/bin/foo-extra.rs", "fn main() {}")
+        .file("src/bin/foo-feat.rs", "fn main() {}")
+        .file("src/bin/foo-e1.rs", "fn main() {}")
+        .file("src/bin/foo-e2.rs", "fn main() {}")
         .publish();
 
-    cargo_process("install foo").run();
-    validate_trackers("foo", "1.0.0", &["foo"]);
+    // install, check binaries are expected, expect reinstall to take no action
+    let check_install = |arg_line, expected_bins| {
+        cargo_process(arg_line).run();
+        validate_trackers("foo", "1.0.0", expected_bins);
 
-    cargo_process("install foo")
-        .with_stderr_data(str![[r#"
+        cargo_process(arg_line)
+            .with_stderr_data(str![[r#"
 ...
 [IGNORED] package `foo v1.0.0` is already installed, use --force to override
 ...
 "#]])
-        .run();
+            .run();
+    };
+
+    check_install("install --no-default-features foo", &["foo"]);
+    // leave installed, default feature should trigger adding extra binary
+    check_install("install foo", &["foo", "foo-feat"]);
+    check_install(
+        "install -F extra foo",
+        &["foo", "foo-e1", "foo-e2", "foo-feat"],
+    );
+
+    cargo_process("uninstall foo").run();
+
+    check_install(
+        "install --all-features foo",
+        &["foo", "foo-e1", "foo-e2", "foo-feat"],
+    );
 }
