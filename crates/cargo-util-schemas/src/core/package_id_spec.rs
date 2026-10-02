@@ -772,5 +772,9 @@ mod tests {
         err!("registry+https://github.com", ErrorKind::NameValidation(_));
         err!("https://crates.io/1foo#1.2.3", ErrorKind::NameValidation(_));
         err!("https://example.com/foo#", ErrorKind::EmptyFragment);
+        assert!(std::panic::catch_unwind(|| {
+            err!("git++://x:", ErrorKind::NameValidation(_));
+        })
+        .is_err());
     }
 }
