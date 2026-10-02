@@ -10,7 +10,7 @@ use crate::prelude::*;
 use crate::utils::cargo_process;
 use cargo::workspace::SourceId;
 use cargo_test_support::assert_deterministic_mtime;
-use cargo_test_support::paths;
+use cargo_test_support::paths::{self, ReadOnly};
 use cargo_test_support::registry::{
     self, Dependency, Package, RegistryBuilder, Response, TestRegistry, registry_path,
 };
@@ -3152,29 +3152,8 @@ fn readonly_registry_still_works() {
 
     p.cargo("generate-lockfile").run();
     p.cargo("fetch --locked").run();
-    chmod_readonly(&paths::home(), true);
+    let _readonly = ReadOnly::new(paths::home());
     p.cargo("check").run();
-    // make sure we un-readonly the files afterwards so "cargo clean" can remove them (#6934)
-    chmod_readonly(&paths::home(), false);
-
-    fn chmod_readonly(path: &Path, readonly: bool) {
-        for entry in t!(path.read_dir()) {
-            let entry = t!(entry);
-            let path = entry.path();
-            if t!(entry.file_type()).is_dir() {
-                chmod_readonly(&path, readonly);
-            } else {
-                set_readonly(&path, readonly);
-            }
-        }
-        set_readonly(path, readonly);
-    }
-
-    fn set_readonly(path: &Path, readonly: bool) {
-        let mut perms = t!(path.metadata()).permissions();
-        perms.set_readonly(readonly);
-        t!(fs::set_permissions(path, perms));
-    }
 }
 
 #[cargo_test(ignore_windows = "On Windows setting file attributes is a bit complicated")]

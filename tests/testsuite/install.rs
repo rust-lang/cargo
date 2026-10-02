@@ -19,7 +19,7 @@ use cargo_util::{ProcessBuilder, ProcessError};
 
 use crate::utils::cross_compile::disabled as cross_compile_disabled;
 use cargo_test_support::install::{assert_has_installed_exe, assert_has_not_installed_exe, exe};
-use cargo_test_support::paths::{self, cargo_home};
+use cargo_test_support::paths::{self, ReadOnly, cargo_home};
 
 fn pkg(name: &str, vers: &str) {
     Package::new(name, vers)
@@ -1547,9 +1547,7 @@ fn readonly_dir() {
     let root = paths::root();
     let dir = &root.join("readonly");
     fs::create_dir(root.join("readonly")).unwrap();
-    let mut perms = fs::metadata(dir).unwrap().permissions();
-    perms.set_readonly(true);
-    fs::set_permissions(dir, perms).unwrap();
+    let _readonly = ReadOnly::new(&dir);
 
     cargo_process("install foo").cwd(dir).run();
     assert_has_installed_exe(paths::cargo_home(), "foo");
