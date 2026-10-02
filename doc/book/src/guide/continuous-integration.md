@@ -140,7 +140,7 @@ When testing the latest versions some considerations are:
   parallel runners, causing new jobs to be serialized when at the maximum.
 
 Some potential solutions include:
-- [Not checking in the `Cargo.lock`](../faq.md#why-have-cargolock-in-version-control)
+- [Not checking in the `Cargo.lock`][why-have-cargolock-in-version-control]
   - Depending on PR velocity, many versions may go untested
   - This comes at the cost of determinism
 - Have a CI job verify the latest dependencies but mark it to "continue on failure"
@@ -229,9 +229,25 @@ Considerations:
 - Balance between exhaustiveness and turnaround time in selecting the combinations of platforms, features, and package/build-target combinations to check
 - Some CI systems have direct integration for reporting lints, e.g. using [`clippy-sarif`] with GitHub
 
+## Ensuring the lockfile is updated
+
+Having a stale lockfile negates the [benefits of committing a lockfile][why-have-cargolock-in-version-control].
+
+An example CI job to check for stale lockfiles using GitHub Actions:
+```yaml
+jobs:
+  lockfile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - run: rustup update stable && rustup default stable
+      - run: cargo update --workspace --locked
+```
+
 [`build.warnings = "deny"`]: ../reference/config.md#buildwarnings
 [`cargo add`]: ../commands/cargo-add.md
 [`cargo install`]: ../commands/cargo-install.md
 [`clippy-sarif`]: https://crates.io/crates/clippy-sarif
 [Dependabot]: https://docs.github.com/en/code-security/dependabot/working-with-dependabot
 [RenovateBot]: https://renovatebot.com/
+[why-have-cargolock-in-version-control]: ../faq.md#why-have-cargolock-in-version-control
