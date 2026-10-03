@@ -1624,10 +1624,27 @@ fn calculate_normal(
         } else {
             FingerprintMethod::Mtime
         };
-        vec![LocalFingerprint::CheckDepInfo {
+        let mut local = vec![LocalFingerprint::CheckDepInfo {
             dep_info,
             fingerprint,
-        }]
+        }];
+        let source_id = unit.pkg.package_id().source_id();
+        let sources = build_runner.bcx.packages.sources();
+        let source = sources
+            .get(source_id)
+            .ok_or_else(|| internal("missing package source"))?;
+        // Git and registry files are omitted from dep-info. A replacement can
+        // keep the same source path while its checksumless origin is updated.
+        if source.is_replaced() && !source.supports_checksums() {
+            let fingerprint = source.fingerprint(&unit.pkg).with_context(|| {
+                format!(
+                    "failed to determine replacement source fingerprint for {}",
+                    unit.pkg
+                )
+            })?;
+            local.push(LocalFingerprint::Precalculated(fingerprint));
+        }
+        local
     };
 
     // Figure out what the outputs of our unit is, and we'll be storing them
