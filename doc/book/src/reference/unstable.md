@@ -91,7 +91,7 @@ Each new feature described below should explain how to use it.
     * [checksum-freshness](#checksum-freshness) --- When passed, the decision as to whether a crate needs to be rebuilt is made using file checksums instead of the file mtime.
     * [panic-abort-tests](#panic-abort-tests) --- Allows running tests with the "abort" panic strategy.
     * [host-config](#host-config) --- Allows setting `[target]`-like configuration settings for host build targets.
-    * [embed-metadata](#embed-metadata) --- If set to `no`, cargo will pass `-Zembed-metadata=no` to the compiler, which avoid embedding metadata into rlib and dylib artifacts, to save disk space.
+    * [embed-metadata](#embed-metadata) --- If set to `yes`, cargo will not pass `-Cembed-metadata=no` to the compiler, so metadata is embedded into rlib and dylib artifacts.
     * [target-applies-to-host](#target-applies-to-host) --- Alters whether certain flags will be passed to host build targets.
     * [gc](#gc) --- Global cache garbage collection.
     * [open-namespaces](#open-namespaces) --- Allow multiple packages to participate in the same API namespace
@@ -1912,19 +1912,17 @@ whether documentations are required to re-generate. This can be combined with
 * Original Pull Request: [#15378](https://github.com/rust-lang/cargo/pull/15378)
 * Tracking Issue: [#15495](https://github.com/rust-lang/cargo/issues/15495)
 
-The default behavior of Rust is to embed crate metadata into `rlib` and `dylib` artifacts.
-Since Cargo also passes `--emit=metadata` to these intermediate artifacts to enable pipelined
-compilation, this means that a lot of metadata ends up being duplicated on disk, which wastes
-disk space in the target directory.
+By default, when rustc supports it, Cargo passes the `-Cembed-metadata=no` flag to the compiler,
+which instructs it not to embed metadata within rlib and dylib artifacts.
+In this case, the metadata will only be stored in `.rmeta` files.
 
-If you pass `-Zembed-metadata=no` to Cago, it will then pass the `-Zembed-metadata=no` flag to the compiler, which instructs it not to embed metadata within rlib and dylib artifacts. In this case, the metadata will only
-be stored in `.rmeta` files.
+To embed metadata anyway, pass `-Zembed-metadata=yes`:
 
 ```console
-cargo +nightly -Zembed-metadata=no build
+cargo +nightly -Zembed-metadata=yes build
 ```
 
-> Note that this flag is planned to be removed in the future, as the `no` behavior should become the default.
+> Note that this flag is planned to be removed in the future.
 
 ## `unstable-editions`
 
