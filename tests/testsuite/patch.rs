@@ -407,15 +407,12 @@ Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/123-[HASH]
 
 Caused by:
-  network failure seems to have happened
-  if a proxy or similar is necessary `net.git-fetch-with-cli` may help here
-  https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
+  `git fetch` failed for https://github.com/rust-lang/does-not-exist/pull/123
 
   [NOTE] GitHub url https://github.com/rust-lang/does-not-exist/pull/123 is not a repository
   [HELP] to specify a pull request as a dependency, replace the dependency with:
          `git = "https://github.com/rust-lang/does-not-exist.git" rev = "refs/pull/123/head"`
 
-Caused by:
 ...
 
 "#]])

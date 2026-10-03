@@ -387,6 +387,9 @@ fn collision_doc_profile_split() {
         .with_stderr_data(
             str![[r#"
 [UPDATING] `dummy-registry` index
+[RUNNING] `git [..] fetch [..]`
+From [ROOTURL]/registry
+ * [new ref]         HEAD       -> origin/HEAD
 [LOCKING] 2 packages to highest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] common v1.0.0 (registry `dummy-registry`)
