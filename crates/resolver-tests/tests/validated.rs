@@ -5,7 +5,7 @@ use resolver_tests::{
         ToDep, dep, dep_kind, dep_platform, dep_req, dep_req_kind, dep_req_platform, pkg, pkg_dep,
         pkg_dep_with, registry,
     },
-    pkg, resolve, resolve_and_validated,
+    pkg, resolve_and_validated,
     sat::SatResolver,
 };
 
@@ -202,19 +202,17 @@ fn missing_weak_dep_feature() {
     let mut sat_resolver = SatResolver::new(&reg);
     assert!(resolve_and_validated(deps, &reg, &mut sat_resolver).is_err());
 
-    // Weak dependencies are not supported yet in the dependency resolver
     let deps = vec![dep("dep3").with(&["f"])];
-    assert!(resolve(deps.clone(), &reg).is_err());
-    assert!(SatResolver::new(&reg).sat_resolve(&deps));
+    let mut sat_resolver = SatResolver::new(&reg);
+    assert!(resolve_and_validated(deps, &reg, &mut sat_resolver).is_ok());
 
     let deps = vec![dep("dep3").with(&["a", "f"])];
     let mut sat_resolver = SatResolver::new(&reg);
     assert!(resolve_and_validated(deps, &reg, &mut sat_resolver).is_err());
 
-    // Weak dependencies are not supported yet in the dependency resolver
     let deps = vec![dep("dep4").with(&["f"])];
-    assert!(resolve(deps.clone(), &reg).is_err());
-    assert!(SatResolver::new(&reg).sat_resolve(&deps));
+    let mut sat_resolver = SatResolver::new(&reg);
+    assert!(resolve_and_validated(deps, &reg, &mut sat_resolver).is_ok());
 
     let deps = vec![dep("dep4").with(&["x", "f"])];
     let mut sat_resolver = SatResolver::new(&reg);
@@ -259,10 +257,8 @@ fn conflict_weak_features() {
     ]);
 
     let deps = vec![dep("dep").with(&["a1", "a2"])];
-
-    // Weak dependencies are not supported yet in the dependency resolver
-    assert!(resolve(deps.clone(), &reg).is_err());
-    assert!(SatResolver::new(&reg).sat_resolve(&deps));
+    let mut sat_resolver = SatResolver::new(&reg);
+    assert!(resolve_and_validated(deps, &reg, &mut sat_resolver).is_ok());
 }
 
 #[test]
@@ -462,16 +458,14 @@ fn optional_dep_features_with_rename() {
 #[test]
 fn optional_weak_dep_features() {
     let reg = registry(vec![
-        pkg_dep("a", vec!["bad".opt()]),
+        pkg_dep_with("a", vec![], &[("x", &[])]),
         pkg_dep("b", vec![dep("a")]),
-        pkg_dep_with("dep", vec!["a".opt(), dep("b")], &[("f", &["a?/bad"])]),
+        pkg_dep_with("dep", vec!["a".opt(), dep("b")], &[("f", &["a?/x"])]),
     ]);
 
     let deps = vec!["dep".with(&["f"])];
-
-    // Weak dependencies are not supported yet in the dependency resolver
-    assert!(resolve(deps.clone(), &reg).is_err());
-    assert!(SatResolver::new(&reg).sat_resolve(&deps));
+    let mut sat_resolver = SatResolver::new(&reg);
+    assert!(resolve_and_validated(deps, &reg, &mut sat_resolver).is_ok());
 }
 
 #[test]
