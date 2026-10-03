@@ -8,12 +8,13 @@
 //! not happen and Ctrl-C just kills cargo.
 //!
 //! To achieve the same semantics on Windows we use Job Objects to ensure that
-//! all processes die at the same time. Job objects have a mode of operation
+//! processes in the job die at the same time. Job objects have a mode of operation
 //! where when all handles to the object are closed it causes all child
 //! processes associated with the object to be terminated immediately.
-//! Conveniently whenever a process in the job object spawns a new process the
-//! child will be associated with the job object as well. This means if we add
-//! ourselves to the job object we create then everything will get torn down!
+//! Conveniently, whenever a process in the job object spawns a new process the
+//! child will be associated with the job object as well, unless it is created
+//! with CREATE_BREAKAWAY_FROM_JOB. This means if we add ourselves to the job
+//! object we create then all processes remaining in the job will get torn down!
 
 pub use self::imp::Setup;
 
@@ -60,6 +61,7 @@ mod imp {
     use windows_sys::Win32::Foundation::INVALID_HANDLE_VALUE;
     use windows_sys::Win32::System::JobObjects::AssignProcessToJobObject;
     use windows_sys::Win32::System::JobObjects::CreateJobObjectW;
+    use windows_sys::Win32::System::JobObjects::JOB_OBJECT_LIMIT_BREAKAWAY_OK;
     use windows_sys::Win32::System::JobObjects::JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
     use windows_sys::Win32::System::JobObjects::JOBOBJECT_EXTENDED_LIMIT_INFORMATION;
     use windows_sys::Win32::System::JobObjects::JobObjectExtendedLimitInformation;
@@ -95,12 +97,13 @@ mod imp {
         let job = Handle { inner: job };
 
         // Indicate that when all handles to the job object are gone that all
-        // process in the object should be killed. Note that this includes our
+        // processes in the object should be killed. Note that this includes our
         // entire process tree by default because we've added ourselves and
         // our children will reside in the job once we spawn a process.
         let mut info: JOBOBJECT_EXTENDED_LIMIT_INFORMATION;
         info = unsafe { mem::zeroed() };
-        info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+        info.BasicLimitInformation.LimitFlags =
+            JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE | JOB_OBJECT_LIMIT_BREAKAWAY_OK;
         let r = unsafe {
             SetInformationJobObject(
                 job.inner,
@@ -114,7 +117,7 @@ mod imp {
         }
 
         // Assign our process to this job object, meaning that our children will
-        // now live or die based on our existence.
+        // now live or die based on our existence unless they break away from the job.
         let me = unsafe { GetCurrentProcess() };
         let r = unsafe { AssignProcessToJobObject(job.inner, me) };
         if r == 0 {
