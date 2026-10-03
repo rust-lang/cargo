@@ -29,6 +29,7 @@
 //! [`ops::cargo_compile::compile`]: crate::ops::compile
 
 pub mod artifact;
+pub mod blob_storage;
 mod build_config;
 pub(crate) mod build_context;
 pub(crate) mod build_runner;
@@ -54,6 +55,7 @@ pub mod unit_dependencies;
 pub mod unit_graph;
 pub mod unused_deps;
 
+use crate::compiler::blob_storage::BlobStorage;
 use crate::util::data_structures::{HashMap, HashSet};
 use std::borrow::Cow;
 use std::cell::OnceCell;
@@ -257,6 +259,21 @@ fn compile<'gctx>(
                 // Need to link targets on both the dirty and fresh.
                 work.then(link_targets(build_runner, unit, true)?)
             });
+
+            if should_dedup_out_dir(build_runner, unit)
+                && let Some(blob_storage) = build_runner.files().blob_storage()
+            {
+                let timestamps_dir = build_runner.files().timestamps_dir(unit);
+                if job.freshness().is_dirty() {
+                    let unit_dir = build_runner.files().build_unit_dir(unit);
+                    let out_dir = build_runner.files().out_dir_new_layout(unit);
+                    job.after(Work::new(move |_state| {
+                        deduplicate_out_dir(&unit_dir, &out_dir, &timestamps_dir, &blob_storage)
+                    }));
+                } else {
+                    mark_build_unit_used(&timestamps_dir);
+                }
+            }
 
             // If -Zfine-grain-locking is enabled, we wrap the job with an upgrade to exclusive
             // lock before starting, then downgrade to a shared lock after the job is finished.
@@ -677,6 +694,56 @@ fn downgrade_lock_to_shared(lock: LockKey) -> Work {
         state.downgrade_to_shared(&lock)?;
         Ok(())
     })
+}
+
+fn should_dedup_out_dir(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> bool {
+    build_runner.bcx.gctx.cli_unstable().build_dir_new_layout
+        && build_runner.bcx.gctx.cli_unstable().shared_blob_storage
+        && !unit.is_local()
+}
+
+#[tracing::instrument(skip_all)]
+fn deduplicate_out_dir(
+    unit_dir: &Path,
+    out_dir: &Path,
+    timestamps_dir: &Path,
+    blob_storage: &BlobStorage,
+) -> CargoResult<()> {
+    if let Err(err) = fs::remove_dir_all(timestamps_dir)
+        && err.kind() != std::io::ErrorKind::NotFound
+    {
+        debug!(?timestamps_dir, ?err, "failed to clear blob timestamps");
+        return Ok(());
+    }
+    for entry in walkdir::WalkDir::new(out_dir) {
+        let Ok(entry) = entry else {
+            continue;
+        };
+        if entry.file_type().is_file() {
+            let relative_path = entry.path().strip_prefix(unit_dir)?;
+            let timestamp_path = timestamps_dir
+                .join(relative_path)
+                .with_added_extension("timestamp");
+            match blob_storage.insert_or_dedup(entry.path(), &timestamp_path) {
+                Ok(hash) => {
+                    trace!(path = ?entry.path(), hash, "added blob timestamp tracking file into blob storage");
+                }
+                Err(err) => {
+                    debug!(path = ?entry.path(), ?err, "failed to add blob timestamp tracking file into blob storage");
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
+#[tracing::instrument(skip_all)]
+fn mark_build_unit_used(timestamps_dir: &Path) {
+    let now = std::time::SystemTime::now();
+    if let Err(err) = BlobStorage::mark_timestamps_used(timestamps_dir, now) {
+        debug!(?timestamps_dir, ?err, "failed to update blob usage");
+    }
 }
 
 /// Link the compiled target (often of form `foo-{metadata_hash}`) to the

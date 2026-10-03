@@ -130,6 +130,15 @@ pub fn cli() -> Command {
                     )
                     .value_name("SIZE")
                     .value_parser(parse_human_size),
+                )
+                .arg(
+                    opt(
+                        "max-blob-size",
+                        "Deletes shared blobs until the cache is under the \
+                        given size (unstable)",
+                    )
+                    .value_name("SIZE")
+                    .value_parser(parse_human_size),
                 ),
         )
         .after_help(color_print::cstr!(
@@ -199,6 +208,7 @@ fn gc(gctx: &GlobalContext, args: &ArgMatches) -> CliResult {
         max_crate_size: size_opt("max-crate-size"),
         max_git_size: size_opt("max-git-size"),
         max_download_size: size_opt("max-download-size"),
+        max_blob_size: size_opt("max-blob-size"),
     };
     if let Some(age) = duration_opt("max-download-age") {
         gc_opts.set_max_download_age(age);

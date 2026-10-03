@@ -101,6 +101,7 @@ Each new feature described below should explain how to use it.
     * [json-target-spec](#json-target-spec) --- Allows the use of `.json` custom target specs.
     * [hint-msrv](#hint-msrv) --- Allows Cargo to set `-Zhint-msrv`
     * [mem-stats](#mem-stats) --- Reports peak memory usage per build unit in `--timings`.
+    * [shared-blob-storage](#shared-blob-storage) --- Deduplicates build artifacts between workspaces
 * rustdoc
     * [rustdoc-map](#rustdoc-map) --- Provides mappings for documentation to link to external sites like [docs.rs](https://docs.rs/).
     * [scrape-examples](#scrape-examples) --- Shows examples within documentation.
@@ -2075,6 +2076,21 @@ option:
 ```toml
 [unstable]
 hint-msrv = true
+```
+
+## shared-blob-storage
+* Tracking Issue: [rust-lang/cargo#17453](https://github.com/rust-lang/cargo/issues/17453)
+
+Enables Cargo to automatically deduplicate files across build units and workspaces by hardlink/reflinking
+against a shared content addressable blob storage located in `~/.cargo/blobs`.
+
+You can set this via your global `~/.cargo/config.toml`, and nightly Cargo will
+automatically use it, while stable Cargo will silently ignore the unstable
+option:
+
+```toml
+[unstable]
+shared-blob-storage = true
 ```
 
 ## builtin-dependencies
