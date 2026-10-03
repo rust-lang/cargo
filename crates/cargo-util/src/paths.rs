@@ -192,20 +192,21 @@ pub fn write<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) -> Result<()>
 /// Writes a file to disk atomically.
 ///
 /// This uses `tempfile::persist` to accomplish atomic writes.
-/// If the path is a symlink, it will follow the symlink and write to the actual target.
+/// If the path is a symlink, it will follow the symlink chain and write to the actual target.
 pub fn write_atomic<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) -> Result<()> {
-    let path = path.as_ref();
+    let mut path = path.as_ref().to_owned();
+    let mut symlink_chain = Vec::new();
+    while path.is_symlink() {
+        let normalized_path = normalize_path(&path);
+        if symlink_chain.contains(&normalized_path) {
+            anyhow::bail!("symlink loop detected at `{}`", path.display());
+        }
+        symlink_chain.push(normalized_path);
 
-    // Check if the path is a symlink and follow it if it is
-    let resolved_path;
-    let path = if path.is_symlink() {
-        let target = fs::read_link(path)
+        let target = fs::read_link(&path)
             .with_context(|| format!("failed to read symlink at `{}`", path.display()))?;
-        resolved_path = path.parent().unwrap().join(target);
-        &resolved_path
-    } else {
-        path
-    };
+        path = path.parent().unwrap().join(target);
+    }
 
     // On unix platforms, get the permissions of the original file. Copy only the user/group/other
     // read/write/execute permission bits. The tempfile lib defaults to an initial mode of 0o600,
@@ -1056,6 +1057,67 @@ mod tests {
         assert_eq!(std::fs::read_to_string(&target_path).unwrap(), "updated");
         assert!(symlink_path.is_symlink());
         assert_eq!(std::fs::read_link(&symlink_path).unwrap(), relative_target);
+    }
+
+    #[test]
+    fn write_atomic_chained_symlink() {
+        let tmpdir = tempfile::tempdir().unwrap();
+        let project_dir = tmpdir.path().join("project");
+        let generated_dir = project_dir.join("generated");
+        let target_dir = generated_dir.join("final");
+        let target_path = target_dir.join("target.txt");
+        let intermediate_path = generated_dir.join("intermediate.txt");
+        let symlink_path = project_dir.join("symlink.txt");
+        let intermediate_target = std::path::Path::new("final/target.txt");
+        let symlink_target = std::path::Path::new("generated/intermediate.txt");
+
+        std::fs::create_dir_all(&target_dir).unwrap();
+        write(&target_path, "initial").unwrap();
+
+        #[cfg(unix)]
+        {
+            std::os::unix::fs::symlink(intermediate_target, &intermediate_path).unwrap();
+            std::os::unix::fs::symlink(symlink_target, &symlink_path).unwrap();
+        }
+        #[cfg(windows)]
+        {
+            std::os::windows::fs::symlink_file(intermediate_target, &intermediate_path).unwrap();
+            std::os::windows::fs::symlink_file(symlink_target, &symlink_path).unwrap();
+        }
+
+        write_atomic(&symlink_path, "updated").unwrap();
+
+        assert_eq!(std::fs::read_to_string(&target_path).unwrap(), "updated");
+        assert!(symlink_path.is_symlink());
+        assert!(intermediate_path.is_symlink());
+        assert_eq!(std::fs::read_link(&symlink_path).unwrap(), symlink_target);
+        assert_eq!(
+            std::fs::read_link(&intermediate_path).unwrap(),
+            intermediate_target
+        );
+    }
+
+    #[test]
+    fn write_atomic_symlink_loop() {
+        let tmpdir = tempfile::tempdir().unwrap();
+        let first_path = tmpdir.path().join("first.txt");
+        let second_path = tmpdir.path().join("second.txt");
+
+        #[cfg(unix)]
+        {
+            std::os::unix::fs::symlink("second.txt", &first_path).unwrap();
+            std::os::unix::fs::symlink("first.txt", &second_path).unwrap();
+        }
+        #[cfg(windows)]
+        {
+            std::os::windows::fs::symlink_file("second.txt", &first_path).unwrap();
+            std::os::windows::fs::symlink_file("first.txt", &second_path).unwrap();
+        }
+
+        let error = write_atomic(&first_path, "updated").unwrap_err();
+        assert!(error.to_string().contains("symlink loop detected"));
+        assert!(first_path.is_symlink());
+        assert!(second_path.is_symlink());
     }
 
     #[test]
