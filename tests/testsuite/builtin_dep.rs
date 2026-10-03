@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use cargo_test_support::registry;
 use cargo_test_support::{project, str};
 
 #[cargo_test]
@@ -294,13 +295,42 @@ fn builtin_in_inherited_dependency_rejected() {
 
 #[cargo_test]
 fn builtin_dependency_combined_with_sources() {
+    registry::alt_init();
+
     let other_sources = [
-        "git = \"https://example.com/custom/core.git\"",
-        "path = \"my/custom/core\"",
-        "registry = \"dummy-registry\"",
-        "registry-index = \"https://www.example.com/index/\"",
+        (
+            "git = \"https://example.com/custom/core.git\"",
+            str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  dependency (core) specification is ambiguous. `builtin = true` cannot be combined with any other dependency source
+
+"#]],
+        ),
+        (
+            "path = \"my/custom/core\"",
+            str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  dependency (core) specification is ambiguous. `builtin = true` cannot be combined with any other dependency source
+
+"#]],
+        ),
+        (
+            "version = \"1.0.0\"",
+            str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  builtin dependency `core` cannot be combined with a version requirement
+  Builtin dependencies are unversioned.
+
+"#]],
+        ),
     ];
-    for source in other_sources.into_iter() {
+    for (source, expected) in other_sources.into_iter() {
         let p = project()
             .file("src/lib.rs", "")
             .file(
@@ -324,48 +354,9 @@ fn builtin_dependency_combined_with_sources() {
         p.cargo("check")
             .masquerade_as_nightly_cargo(&["builtin-dependencies"])
             .with_status(101)
-            .with_stderr_data(str![[r#"
-[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  dependency (core) specification is ambiguous. `builtin = true` cannot be combined with any other dependency source
-
-"#]])
+            .with_stderr_data(expected)
             .run();
     }
-}
-
-#[cargo_test]
-fn builtin_combined_with_version_specifier() {
-    let p = project()
-        .file("src/lib.rs", "")
-        .file(
-            "Cargo.toml",
-            r#"
-                cargo-features = ["builtin-dependencies"]
-
-                [package]
-                name = "foo"
-                version = "0.1.0"
-                [dependencies]
-
-                core = { builtin = true, version = "0.0.0" }
-                "#,
-        )
-        .build();
-
-    p.cargo("check")
-        .masquerade_as_nightly_cargo(&["builtin-dependencies"])
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  builtin dependency `core` cannot be combined with a version requirement
-  Builtin dependencies are unversioned.
-
-"#]])
-        .run();
 }
 
 #[cargo_test]
