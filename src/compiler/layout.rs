@@ -250,6 +250,15 @@ impl Layout {
         // here. Use this opportunity to exclude it from backups as well if the
         // system supports it since this is a freshly created folder.
         //
+        // Only the created directory is excluded, not the parents created
+        // along the way, so a build root containing the target root, as for a
+        // cargo script, is created first.
+        if root
+            .as_path_unlocked()
+            .starts_with(build_root.as_path_unlocked())
+        {
+            paths::create_dir_all_excluded_from_backups_atomic(build_root.as_path_unlocked())?;
+        }
         paths::create_dir_all_excluded_from_backups_atomic(root.as_path_unlocked())?;
         if root != build_root {
             paths::create_dir_all_excluded_from_backups_atomic(build_root.as_path_unlocked())?;

@@ -59,6 +59,7 @@ use crate::util::log_message::LogMessage;
 use crate::util::machine_message;
 use crate::util::machine_message::Message as _;
 use crate::util::{CargoResult, StableHasher};
+use crate::workspace::global_cache_tracker;
 use crate::workspace::profiles::Profiles;
 use crate::workspace::{PackageId, PackageSet, SourceId, TargetKind, Workspace};
 
@@ -324,6 +325,14 @@ pub fn create_bcx<'a, 'gctx>(
         let elapsed = ws.gctx().invocation_instant().elapsed().as_secs_f64();
         logger.log(LogMessage::ResolutionStarted { elapsed });
     }
+
+    gctx.deferred_global_last_use()?.mark_workspace_build_used(
+        global_cache_tracker::WorkspaceBuild {
+            workspace_manifest: ws.root_manifest().to_path_buf(),
+            target_dir: ws.target_dir().into_path_unlocked(),
+            build_dir: ws.build_dir().into_path_unlocked(),
+        },
+    );
 
     let resolve = ops::resolve_ws_with_opts(
         ws,

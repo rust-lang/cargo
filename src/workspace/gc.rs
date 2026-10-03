@@ -110,6 +110,8 @@ pub struct GcOpts {
     pub max_git_size: Option<u64>,
     /// The `--max-download-size` CLI option.
     pub max_download_size: Option<u64>,
+    /// The `--max-target-age` CLI option.
+    pub max_target_age: Option<Duration>,
 }
 
 impl GcOpts {
@@ -124,6 +126,10 @@ impl GcOpts {
             || self.max_crate_size.is_some()
             || self.max_git_size.is_some()
             || self.max_download_size.is_some()
+    }
+
+    pub fn is_any_opt_set(&self) -> bool {
+        self.is_download_cache_opt_set() || self.max_target_age.is_some()
     }
 
     /// Returns whether any download cache cleaning options based on size are set.
@@ -280,8 +286,14 @@ impl<'a, 'gctx> Gc<'a, 'gctx> {
 
     /// Performs garbage collection based on the given options.
     pub fn gc(&mut self, clean_ctx: &mut CleanContext<'gctx>, gc_opts: &GcOpts) -> CargoResult<()> {
+        // Workspace outputs go first, since cleaning the cache can delete the
+        // manifest of a workspace in a git checkout, which `--dry-run` would
+        // not see.
+        if let Some(max_age) = gc_opts.max_target_age {
+            self.global_cache_tracker
+                .clean_workspace_builds(clean_ctx, max_age)?;
+        }
         self.global_cache_tracker.clean(clean_ctx, gc_opts)?;
-        // In the future, other gc operations go here, such as target cleaning.
         Ok(())
     }
 }

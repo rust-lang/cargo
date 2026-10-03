@@ -87,6 +87,14 @@ pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &mut Resolve) -> CargoRes
     }
 
     if !lock_root.as_path_unlocked().exists() {
+        // A cargo script's default lock file lives in its build directory,
+        // which would otherwise be created here as a plain parent and never
+        // get excluded from backups by `Layout`.
+        if ws.root_maybe().is_embedded() && ws.requested_lockfile_path().is_none() {
+            cargo_util::paths::create_dir_all_excluded_from_backups_atomic(
+                ws.build_dir().as_path_unlocked(),
+            )?;
+        }
         lock_root.create_dir()?;
     }
 
