@@ -608,6 +608,11 @@ fn scp_to_ssh(url: &str) -> Option<String> {
     let mut gix_url = gix::url::parse(gix::bstr::BStr::new(url.as_bytes())).ok()?;
     if gix_url.serialize_alternative_form && gix_url.scheme == gix::url::Scheme::Ssh {
         gix_url.serialize_alternative_form = false;
+        if !gix_url.path.starts_with(b"/") {
+            let mut new_path = gix::bstr::BString::from(b"/".as_slice());
+            new_path.extend_from_slice(&gix_url.path);
+            gix_url.path = new_path;
+        }
         Some(gix_url.to_bstring().to_string())
     } else {
         None
