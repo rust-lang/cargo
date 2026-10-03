@@ -2130,6 +2130,7 @@ where
     } else {
         None
     };
+    let mut checksum_buffer = Vec::new();
     for (path, prior_checksum) in paths {
         let path = path.as_ref();
 
@@ -2171,7 +2172,12 @@ where
                                 path: path.to_path_buf(),
                             });
                         };
-                        let Ok(checksum) = Checksum::compute(prior_checksum.algo(), file) else {
+                        // Buffer size is the recommended amount to fully leverage SIMD instructions on AVX-512 as per
+                        // blake3 documentation.
+                        checksum_buffer.resize(16 * 1024, 0);
+                        let Ok(checksum) =
+                            Checksum::compute(prior_checksum.algo(), file, &mut checksum_buffer)
+                        else {
                             return Some(StaleItem::UnableToReadFile {
                                 path: path.to_path_buf(),
                             });

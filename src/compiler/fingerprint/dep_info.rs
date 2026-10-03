@@ -567,10 +567,12 @@ impl Checksum {
         Self { algo, value }
     }
 
-    pub fn compute(algo: ChecksumAlgo, contents: impl Read) -> Result<Self, io::Error> {
-        // Buffer size is the recommended amount to fully leverage SIMD instructions on AVX-512 as per
-        // blake3 documentation.
-        let mut buf = vec![0; 16 * 1024];
+    pub fn compute(
+        algo: ChecksumAlgo,
+        contents: impl Read,
+        buf: &mut [u8],
+    ) -> Result<Self, io::Error> {
+        assert!(!buf.is_empty());
         let mut ret = Self {
             algo,
             value: [0; 32],
@@ -606,7 +608,7 @@ impl Checksum {
                     },
                     |mut h, out| out.copy_from_slice(&h.finish()),
                     contents,
-                    &mut buf,
+                    buf,
                     value,
                 )?;
             }
@@ -618,7 +620,7 @@ impl Checksum {
                     },
                     |h, out| out.copy_from_slice(h.finalize().as_bytes()),
                     contents,
-                    &mut buf,
+                    buf,
                     value,
                 )?;
             }
@@ -696,6 +698,32 @@ pub enum InvalidChecksum {
     InvalidChecksum(ChecksumAlgo),
     #[error("expected a string with format \"algorithm=hex_checksum\"")]
     InvalidFormat,
+}
+
+#[cfg(test)]
+mod checksum {
+    use super::*;
+
+    #[test]
+    fn reused_buffer() {
+        let mut buf = vec![0; 16 * 1024];
+        let large = vec![b'a'; 32 * 1024 + 1];
+
+        for contents in [large.as_slice(), b"abc", b""] {
+            assert_eq!(
+                Checksum::compute(ChecksumAlgo::Sha256, contents, &mut buf)
+                    .unwrap()
+                    .value(),
+                &Sha256::new().update(contents).finish(),
+            );
+            assert_eq!(
+                Checksum::compute(ChecksumAlgo::Blake3, contents, &mut buf)
+                    .unwrap()
+                    .value(),
+                blake3::hash(contents).as_bytes(),
+            );
+        }
+    }
 }
 
 #[cfg(test)]
