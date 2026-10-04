@@ -113,14 +113,14 @@ impl PackageIdSpec {
                     let git_ref = GitReference::from_query(url.query_pairs());
                     url.set_query(None);
                     kind = Some(SourceKind::Git(git_ref));
-                    url = strip_url_protocol(&url);
+                    url = strip_url_protocol(&url)?;
                 }
                 "registry" => {
                     if url.query().is_some() {
                         return Err(ErrorKind::UnexpectedQueryString(url).into());
                     }
                     kind = Some(SourceKind::Registry);
-                    url = strip_url_protocol(&url);
+                    url = strip_url_protocol(&url)?;
                 }
                 "sparse" => {
                     if url.query().is_some() {
@@ -138,7 +138,7 @@ impl PackageIdSpec {
                         return Err(ErrorKind::UnsupportedPathPlusScheme(scheme.into()).into());
                     }
                     kind = Some(SourceKind::Path);
-                    url = strip_url_protocol(&url);
+                    url = strip_url_protocol(&url)?;
                 }
                 kind => return Err(ErrorKind::UnsupportedProtocol(kind.into()).into()),
             }
@@ -225,10 +225,14 @@ fn parse_spec(spec: &str) -> Result<Option<(String, Option<PartialVersion>)>> {
     Ok(Some((name, Some(ver))))
 }
 
-fn strip_url_protocol(url: &Url) -> Url {
+fn strip_url_protocol(url: &Url) -> Result<Url> {
     // Ridiculous hoop because `Url::set_scheme` errors when changing to http/https
     let raw = url.to_string();
-    raw.split_once('+').unwrap().1.parse().unwrap()
+    let (_, rest) = raw
+        .split_once('+')
+        .ok_or_else(|| ErrorKind::MalformedProtocolUrl(raw.clone()))?;
+    rest.parse()
+        .map_err(|_| ErrorKind::MalformedProtocolUrl(raw).into())
 }
 
 impl fmt::Display for PackageIdSpec {
@@ -334,6 +338,9 @@ enum ErrorKind {
 
     #[error(transparent)]
     PartialVersion(#[from] crate::core::PartialVersionError),
+
+    #[error("malformed source protocol in pkgid url: {0}")]
+    MalformedProtocolUrl(String),
 }
 
 #[cfg(test)]
@@ -772,9 +779,6 @@ mod tests {
         err!("registry+https://github.com", ErrorKind::NameValidation(_));
         err!("https://crates.io/1foo#1.2.3", ErrorKind::NameValidation(_));
         err!("https://example.com/foo#", ErrorKind::EmptyFragment);
-        assert!(std::panic::catch_unwind(|| {
-            err!("git++://x:", ErrorKind::NameValidation(_));
-        })
-        .is_err());
+        err!("git++://x:", ErrorKind::MalformedProtocolUrl(_));
     }
 }
