@@ -230,9 +230,9 @@ fn strip_url_protocol(url: &Url) -> Result<Url> {
     let raw = url.to_string();
     let (_, rest) = raw
         .split_once('+')
-        .ok_or_else(|| ErrorKind::MalformedProtocolUrl(raw.clone()))?;
+        .ok_or_else(|| ErrorKind::InvalidPkgIdUrl(raw.clone()))?;
     rest.parse()
-        .map_err(|_| ErrorKind::MalformedProtocolUrl(raw).into())
+        .map_err(|_| ErrorKind::InvalidPkgIdUrl(raw).into())
 }
 
 impl fmt::Display for PackageIdSpec {
@@ -339,8 +339,8 @@ enum ErrorKind {
     #[error(transparent)]
     PartialVersion(#[from] crate::core::PartialVersionError),
 
-    #[error("malformed source protocol in pkgid url: {0}")]
-    MalformedProtocolUrl(String),
+    #[error("invalid pkgid url: {0}")]
+    InvalidPkgIdUrl(String),
 }
 
 #[cfg(test)]
@@ -779,6 +779,11 @@ mod tests {
         err!("registry+https://github.com", ErrorKind::NameValidation(_));
         err!("https://crates.io/1foo#1.2.3", ErrorKind::NameValidation(_));
         err!("https://example.com/foo#", ErrorKind::EmptyFragment);
-        err!("git++://x:", ErrorKind::MalformedProtocolUrl(_));
+        err!("git++://x:", ErrorKind::InvalidPkgIdUrl(_));
+        err!(
+            "git++https://github.com/rust-lang/cargo",
+            ErrorKind::InvalidPkgIdUrl(_)
+        );
+        err!("git+https://", ErrorKind::InvalidPkgIdUrl(_));
     }
 }
