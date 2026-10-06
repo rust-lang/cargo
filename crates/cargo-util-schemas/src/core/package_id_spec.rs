@@ -72,7 +72,8 @@ impl PackageIdSpec {
     ///     "https://github.com/rust-lang/crates.io-index#foo@1.4.3",
     ///     "ssh://git@github.com/rust-lang/foo.git#foo@1.4.3",
     ///     "file:///path/to/my/project/foo",
-    ///     "file:///path/to/my/project/foo#1.1.8"
+    ///     "file:///path/to/my/project/foo#1.1.8",
+    ///     "builtin://.#core"
     /// ];
     /// for spec in specs {
     ///     assert!(PackageIdSpec::parse(spec).is_ok());
@@ -94,7 +95,10 @@ impl PackageIdSpec {
                 .into());
             }
         }
-        let (name, version) = parse_spec(spec)?.unwrap_or_else(|| (spec.to_owned(), None));
+        let (name, version) = match parse_spec(spec)? {
+            Some((name, ver)) => (name, Some(ver)),
+            None => (spec.to_owned(), None),
+        };
         PackageName::new(&name)?;
         Ok(PackageIdSpec {
             name: String::from(name),
@@ -140,16 +144,71 @@ impl PackageIdSpec {
                     kind = Some(SourceKind::Path);
                     url = strip_url_protocol(&url)?;
                 }
+                "builtin" => {
+                    if url.query().is_some() {
+                        return Err(ErrorKind::UnexpectedQueryString(url).into());
+                    }
+                    if scheme != "builtin" {
+                        return Err(ErrorKind::UnsupportedBuiltinScheme(scheme.into()).into());
+                    }
+                    kind = Some(SourceKind::Builtin);
+                    url = strip_url_protocol(&url)?;
+                }
                 kind => return Err(ErrorKind::UnsupportedProtocol(kind.into()).into()),
             }
-        } else {
+        } else if url.scheme() == "builtin" {
             if url.query().is_some() {
                 return Err(ErrorKind::UnexpectedQueryString(url).into());
             }
+            kind = Some(SourceKind::Builtin)
+        } else if url.query().is_some() {
+            return Err(ErrorKind::UnexpectedQueryString(url).into());
         }
 
         let frag = url.fragment().map(|s| s.to_owned());
         url.set_fragment(None);
+
+        if kind == Some(SourceKind::Builtin) {
+            // Builtins are different in that they require a fragment and cannot have path segments,
+            // so handle them early
+            if url.host_str() != Some(".") {
+                return Err(ErrorKind::InvalidHostname.into());
+            }
+            if url.path() != "" {
+                return Err(ErrorKind::InvalidPath.into());
+            }
+            let Some(frag) = frag else {
+                return Err(ErrorKind::FragmentRequired.into());
+            };
+
+            if frag.is_empty() {
+                return Err(ErrorKind::EmptyFragment.into());
+            }
+            let name = match parse_spec(&frag)? {
+                Some((name, ver)) => {
+                    if !ver.matches(&Version::new(0, 0, 0)) {
+                        return Err(ErrorKind::InvalidVersion(ver.to_string()).into());
+                    }
+                    name
+                }
+                None => frag,
+            };
+
+            PackageName::new(&name)?;
+            let version = PartialVersion {
+                major: 0,
+                minor: Some(0),
+                patch: Some(0),
+                pre: None,
+                build: None,
+            };
+            return Ok(PackageIdSpec {
+                name,
+                version: Some(version),
+                url: Some(url),
+                kind,
+            });
+        }
 
         let (name, version) = {
             let Some(path_name) = url.path_segments().and_then(|mut p| p.next_back()) else {
@@ -157,7 +216,7 @@ impl PackageIdSpec {
             };
             match frag {
                 Some(fragment) => match parse_spec(&fragment)? {
-                    Some((name, ver)) => (name, ver),
+                    Some((name, ver)) => (name, Some(ver)),
                     None => {
                         let Some(f) = fragment.chars().next() else {
                             return Err(PackageIdSpecError(ErrorKind::EmptyFragment));
@@ -213,7 +272,7 @@ impl PackageIdSpec {
     }
 }
 
-fn parse_spec(spec: &str) -> Result<Option<(String, Option<PartialVersion>)>> {
+fn parse_spec(spec: &str) -> Result<Option<(String, PartialVersion)>> {
     let Some((name, ver)) = spec
         .rsplit_once('@')
         .or_else(|| spec.rsplit_once(':').filter(|(n, _)| !n.ends_with(':')))
@@ -222,7 +281,7 @@ fn parse_spec(spec: &str) -> Result<Option<(String, Option<PartialVersion>)>> {
     };
     let name = name.to_owned();
     let ver = ver.parse::<PartialVersion>()?;
-    Ok(Some((name, Some(ver))))
+    Ok(Some((name, ver)))
 }
 
 fn strip_url_protocol(url: &Url) -> Result<Url> {
@@ -240,7 +299,7 @@ impl fmt::Display for PackageIdSpec {
         let mut printed_name = false;
         match self.url {
             Some(ref url) => {
-                if let Some(protocol) = self.kind.as_ref().and_then(|k| k.protocol()) {
+                if let Some(protocol) = self.kind.as_ref().and_then(SourceKind::protocol) {
                     write!(f, "{protocol}+")?;
                 }
                 write!(f, "{}", url)?;
@@ -249,7 +308,9 @@ impl fmt::Display for PackageIdSpec {
                         write!(f, "?{}", pretty)?;
                     }
                 }
-                if url.path_segments().unwrap().next_back().unwrap() != &*self.name {
+                if self.kind() == Some(&SourceKind::Builtin)
+                    || url.path_segments().unwrap().next_back().unwrap() != &*self.name
+                {
                     printed_name = true;
                     write!(f, "#{}", self.name)?;
                 }
@@ -259,7 +320,9 @@ impl fmt::Display for PackageIdSpec {
                 write!(f, "{}", self.name)?;
             }
         }
-        if let Some(ref v) = self.version {
+        if let Some(ref v) = self.version
+            && self.kind != Some(SourceKind::Builtin)
+        {
             write!(f, "{}{}", if printed_name { "@" } else { "#" }, v)?;
         }
         Ok(())
@@ -332,6 +395,23 @@ enum ErrorKind {
 
     #[error("pkgid url cannot have an empty fragment")]
     EmptyFragment,
+
+    #[error("builtin package ID specifications must specify the package name in the fragment")]
+    FragmentRequired,
+
+    #[error("version `{0}` is invalid for builtin packages, which are unversioned (or `0.0.0`)")]
+    InvalidVersion(String),
+
+    #[error("only `.` is permitted as a hostname for builtin package ID specifications")]
+    InvalidHostname,
+
+    #[error("only empty paths are permitted for builtin package ID specifications")]
+    InvalidPath,
+
+    #[error(
+        "`builtin+{0}` is unsupported - only the `builtin` protocol is supported for `builtin` kinds"
+    )]
+    UnsupportedBuiltinScheme(String),
 
     #[error(transparent)]
     NameValidation(#[from] crate::restricted_names::NameValidationError),
@@ -738,6 +818,46 @@ mod tests {
             },
             "path+file:///path/to/my/project/foo#foo::bar@1.1.8",
         );
+        ok(
+            "builtin://.#core",
+            PackageIdSpec {
+                name: String::from("core"),
+                version: Some("0.0.0".parse().unwrap()),
+                url: Some(Url::parse("builtin://.").unwrap()),
+                kind: Some(SourceKind::Builtin),
+            },
+            "builtin://.#core",
+        );
+        ok(
+            "builtin+builtin://.#core",
+            PackageIdSpec {
+                name: String::from("core"),
+                version: Some("0.0.0".parse().unwrap()),
+                url: Some(Url::parse("builtin://.").unwrap()),
+                kind: Some(SourceKind::Builtin),
+            },
+            "builtin://.#core",
+        );
+        ok(
+            "builtin+builtin://.#core@0.0.0",
+            PackageIdSpec {
+                name: String::from("core"),
+                version: Some("0.0.0".parse().unwrap()),
+                url: Some(Url::parse("builtin://.").unwrap()),
+                kind: Some(SourceKind::Builtin),
+            },
+            "builtin://.#core",
+        );
+        ok(
+            "builtin+builtin://.#core@0",
+            PackageIdSpec {
+                name: String::from("core"),
+                version: Some("0.0.0".parse().unwrap()),
+                url: Some(Url::parse("builtin://.").unwrap()),
+                kind: Some(SourceKind::Builtin),
+            },
+            "builtin://.#core",
+        );
     }
 
     #[test]
@@ -785,5 +905,26 @@ mod tests {
             ErrorKind::InvalidPkgIdUrl(_)
         );
         err!("git+https://", ErrorKind::InvalidPkgIdUrl(_));
+        err!("builtin://.", ErrorKind::FragmentRequired);
+        err!(
+            "builtin+builtin://.#core@0.1.0",
+            ErrorKind::InvalidVersion(_)
+        );
+        err!("builtin://.#", ErrorKind::EmptyFragment);
+        err!("builtin://.#0.0.0", ErrorKind::NameValidation(_));
+        err!("builtin://wrong#core", ErrorKind::InvalidHostname);
+        err!("builtin://./invalid/path#core", ErrorKind::InvalidPath);
+        err!(
+            "builtin+invalid://.",
+            ErrorKind::UnsupportedBuiltinScheme(_)
+        );
+        err!(
+            "builtin://.?query=test#core",
+            ErrorKind::UnexpectedQueryString(_)
+        );
+        err!(
+            "builtin+builtin://.?query=test#core",
+            ErrorKind::UnexpectedQueryString(_)
+        );
     }
 }
