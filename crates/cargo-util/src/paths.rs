@@ -163,6 +163,49 @@ pub fn symlink_metadata<P: AsRef<Path>>(path: P) -> Result<Metadata> {
         .with_context(|| format!("failed to load metadata for path `{}`", path.display()))
 }
 
+/// Returns the number of hard links to a file.
+#[cfg(unix)]
+pub fn nlink(metadata: &Metadata, _path: &Path) -> io::Result<u64> {
+    use std::os::unix::fs::MetadataExt;
+    Ok(metadata.nlink())
+}
+
+/// Returns the number of hard links to a file.
+#[cfg(windows)]
+pub fn nlink(_metadata: &Metadata, path: &Path) -> io::Result<u64> {
+    use std::os::windows::ffi::OsStrExt;
+    use std::os::windows::io::{AsRawHandle, FromRawHandle, OwnedHandle};
+    use windows_sys::Win32::Foundation::INVALID_HANDLE_VALUE;
+    use windows_sys::Win32::Storage::FileSystem::{
+        BY_HANDLE_FILE_INFORMATION, CreateFileW, FILE_ATTRIBUTE_NORMAL, FILE_READ_ATTRIBUTES,
+        FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE, GetFileInformationByHandle,
+        OPEN_EXISTING,
+    };
+
+    let mut wide: Vec<u16> = path.as_os_str().encode_wide().collect();
+    wide.push(0);
+    let handle = unsafe {
+        CreateFileW(
+            wide.as_ptr(),
+            FILE_READ_ATTRIBUTES,
+            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+            std::ptr::null(),
+            OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL,
+            std::ptr::null_mut(),
+        )
+    };
+    if handle == INVALID_HANDLE_VALUE {
+        return Err(io::Error::last_os_error());
+    }
+    let handle = unsafe { OwnedHandle::from_raw_handle(handle) };
+    let mut info: BY_HANDLE_FILE_INFORMATION = unsafe { std::mem::zeroed() };
+    if unsafe { GetFileInformationByHandle(handle.as_raw_handle(), &mut info) } == 0 {
+        return Err(io::Error::last_os_error());
+    }
+    Ok(info.nNumberOfLinks as u64)
+}
+
 /// Reads a file to a string.
 ///
 /// Equivalent to [`std::fs::read_to_string`] with better error messages.
@@ -887,6 +930,7 @@ fn exclude_from_time_machine_and_cloud_sync(path: &Path) {
 #[cfg(test)]
 mod tests {
     use super::join_paths;
+    use super::nlink;
     use super::normalize_path;
     use super::write;
     use super::write_atomic;
@@ -1102,5 +1146,21 @@ mod tests {
 
         assert!(!symlink_path.exists());
         assert!(file_path.exists());
+    }
+
+    #[test]
+    fn hard_link_count_tracks_links() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("file");
+        let linked = dir.path().join("linked");
+        std::fs::write(&file, "contents").unwrap();
+        assert_eq!(nlink(&file.metadata().unwrap(), &file).unwrap(), 1);
+
+        std::fs::hard_link(&file, &linked).unwrap();
+        assert_eq!(nlink(&file.metadata().unwrap(), &file).unwrap(), 2);
+        assert_eq!(nlink(&linked.metadata().unwrap(), &linked).unwrap(), 2);
+
+        std::fs::remove_file(&linked).unwrap();
+        assert_eq!(nlink(&file.metadata().unwrap(), &file).unwrap(), 1);
     }
 }

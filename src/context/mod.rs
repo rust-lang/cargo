@@ -823,6 +823,14 @@ impl GlobalContext {
         Ok(Filesystem::new(path))
     }
 
+    pub fn blob_storage_dir(&self) -> Option<PathBuf> {
+        if !self.cli_unstable().shared_blob_storage || !self.cli_unstable().build_dir_new_layout {
+            return None;
+        }
+
+        return Some(self.home_path.as_path_unlocked().join("blobs"));
+    }
+
     /// Get a configuration value by key.
     ///
     /// This does NOT look at environment variables. See `get_cv_with_env` for
