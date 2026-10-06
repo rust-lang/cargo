@@ -928,6 +928,75 @@ This will cause the crate to default to hint-mostly-unused, unless overridden
 via `profile`, which takes precedence, and which can only be specified in the
 top-level crate being built.
 
+### Documentation updates
+
+#### hint-mostly-unused
+
+*as a new ["Profile settings" entry](./profiles.html#profile-settings)*
+
+The `hint-mostly-unused` setting controls the [`-Zhint-mostly-unused` flag]
+which indicates that most of a crate's API surface will go unused by anything
+depending on it. This hint can speed up the build by attempting to minimize
+compilation time for items that aren't used at all. Misapplication to crates
+that don't fit that criteria can slow down the build rather than speeding it
+up.
+
+The valid options are:
+
+* `true`: enabled
+* `false`: disabled
+
+The default is the crate's [`mostly-unused` hint](#mostly-unused), or `false`
+if the crate does not set the hint.
+
+This is primarily useful to enable for specific dependencies:
+
+```toml
+[profile.dev.package.huge-mostly-unused-dependency]
+hint-mostly-unused = true
+```
+
+The [`blanket_hint_mostly_unused`] lint warns when this setting is applied to
+all dependencies.
+
+[`-Zhint-mostly-unused` flag]: ../../unstable-book/compiler-flags/hint-mostly-unused.html
+[`blanket_hint_mostly_unused`]: lints.md#blanket_hint_mostly_unused
+
+#### `mostly-unused`
+
+*as a new subsection of ["The `[hints]` section"](./manifest.html#the-hints-section),
+which would gain one subsection per hint*
+
+The `mostly-unused` hint indicates that most of this crate's API surface will
+go unused by anything depending on it. A crate can provide this hint
+automatically for crates that depend on it:
+
+```toml
+# In example-dependency's Cargo.toml
+[hints]
+mostly-unused = true
+```
+
+This will cause the crate to default to
+[`hint-mostly-unused`](#hint-mostly-unused), unless overridden via
+[`profile`](profiles.md), which takes precedence, and which can only be
+specified in the top-level crate being built:
+
+```toml
+# This package uses most of `example-dependency`, so the hint does not apply.
+[profile.dev.package.example-dependency]
+hint-mostly-unused = false
+```
+
+The valid values are `true` and `false`. Any other value is ignored. Cargo
+warns about it for [workspace](workspaces.md) members, but not for dependencies
+outside of the workspace.
+
+A hint only applies to the package that sets it, not to its dependencies.
+
+Only use this hint when you expect most dependents to use a small part of the
+crate. Otherwise, the hint may slow down their builds.
+
 ## rustdoc-map
 * Tracking Issue: [#8296](https://github.com/rust-lang/cargo/issues/8296)
 
