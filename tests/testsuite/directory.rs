@@ -160,6 +160,39 @@ fn simple_install() {
 }
 
 #[cargo_test]
+fn install_without_dependencies() {
+    setup();
+
+    VendorPackage::new("bar")
+        .file("Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("src/main.rs", "pub fn main() {}")
+        .build();
+
+    cargo_process("install bar")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[INSTALLING] bar v0.1.0
+[ERROR] failed to compile `bar v0.1.0`, intermediate artifacts can be found at `[..]`.
+To reuse those artifacts with a future compilation, set the environment variable `CARGO_BUILD_BUILD_DIR` to that path.
+
+Caused by:
+  failed to download `bar v0.1.0`
+
+Caused by:
+  unable to get packages from source
+
+Caused by:
+  failed to download replaced source registry `crates-io`
+
+Caused by:
+  failed to find package with id: bar v0.1.0 (dir [ROOT]/index)
+
+"#]])
+        .run();
+}
+
+
+#[cargo_test]
 fn simple_install_fail() {
     setup();
 
