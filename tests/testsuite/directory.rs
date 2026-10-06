@@ -169,28 +169,17 @@ fn install_without_dependencies() {
         .build();
 
     cargo_process("install bar")
-        .with_status(101)
         .with_stderr_data(str![[r#"
 [INSTALLING] bar v0.1.0
-[ERROR] failed to compile `bar v0.1.0`, intermediate artifacts can be found at `[..]`.
-To reuse those artifacts with a future compilation, set the environment variable `CARGO_BUILD_BUILD_DIR` to that path.
-
-Caused by:
-  failed to download `bar v0.1.0`
-
-Caused by:
-  unable to get packages from source
-
-Caused by:
-  failed to download replaced source registry `crates-io`
-
-Caused by:
-  failed to find package with id: bar v0.1.0 (dir [ROOT]/index)
+[COMPILING] bar v0.1.0
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[INSTALLING] [..]bar[..]
+[INSTALLED] package `bar v0.1.0` (executable `bar[EXE]`)
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]])
         .run();
 }
-
 
 #[cargo_test]
 fn simple_install_fail() {

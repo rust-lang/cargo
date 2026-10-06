@@ -1,5 +1,5 @@
 use crate::util::data_structures::HashMap;
-use std::cell::{Cell, RefCell};
+use std::cell::OnceCell;
 use std::fmt::{self, Debug, Formatter};
 use std::path::{Path, PathBuf};
 
@@ -9,6 +9,7 @@ use crate::sources::source::MaybePackage;
 use crate::sources::source::QueryKind;
 use crate::sources::source::Source;
 use crate::util::GlobalContext;
+use crate::util::OnceExt;
 use crate::util::VersionReqMatchMode;
 use crate::util::errors::CargoResult;
 use crate::workspace::{Dependency, Package, PackageId, SourceId};
@@ -61,9 +62,8 @@ pub struct DirectorySource<'gctx> {
     /// The root path of this source.
     root: PathBuf,
     /// Packages that this sources has discovered.
-    packages: RefCell<HashMap<PackageId, (Package, Checksum)>>,
+    packages: OnceCell<HashMap<PackageId, (Package, Checksum)>>,
     gctx: &'gctx GlobalContext,
-    updated: Cell<bool>,
 }
 
 /// The checksum file to ensure the integrity of a package in a directory source.
@@ -85,16 +85,16 @@ impl<'gctx> DirectorySource<'gctx> {
             source_id: id,
             root: path.to_path_buf(),
             gctx,
-            packages: RefCell::new(HashMap::default()),
-            updated: Cell::new(false),
+            packages: OnceCell::new(),
         }
     }
 
-    fn update(&self) -> CargoResult<()> {
-        if self.updated.get() {
-            return Ok(());
-        }
-        self.packages.borrow_mut().clear();
+    fn packages(&self) -> CargoResult<&HashMap<PackageId, (Package, Checksum)>> {
+        self.packages.try_borrow_with(|| self.load_packages())
+    }
+
+    fn load_packages(&self) -> CargoResult<HashMap<PackageId, (Package, Checksum)>> {
+        let mut packages = HashMap::default();
         let entries = self.root.read_dir().with_context(|| {
             format!(
                 "failed to read root of directory source: {}",
@@ -161,13 +161,10 @@ impl<'gctx> DirectorySource<'gctx> {
                     .summary_mut()
                     .set_checksum(package.clone());
             }
-            self.packages
-                .borrow_mut()
-                .insert(pkg.package_id(), (pkg, cksum));
+            packages.insert(pkg.package_id(), (pkg, cksum));
         }
 
-        self.updated.set(true);
-        Ok(())
+        Ok(packages)
     }
 }
 
@@ -185,10 +182,7 @@ impl<'gctx> Source for DirectorySource<'gctx> {
         kind: QueryKind,
         f: &mut dyn FnMut(IndexSummary),
     ) -> CargoResult<()> {
-        if !self.updated.get() {
-            self.update()?;
-        }
-        let packages = self.packages.borrow();
+        let packages = self.packages()?;
         let packages = packages.values().map(|p| &p.0);
         let matches = packages.filter(|pkg| match kind {
             QueryKind::Exact | QueryKind::RejectedVersions => {
@@ -216,8 +210,7 @@ impl<'gctx> Source for DirectorySource<'gctx> {
     }
 
     async fn download(&self, id: PackageId) -> CargoResult<MaybePackage> {
-        self.packages
-            .borrow()
+        self.packages()?
             .get(&id)
             .map(|p| &p.0)
             .cloned()
@@ -234,7 +227,7 @@ impl<'gctx> Source for DirectorySource<'gctx> {
     }
 
     fn verify(&self, id: PackageId) -> CargoResult<()> {
-        let packages = self.packages.borrow_mut();
+        let packages = self.packages()?;
         let Some((pkg, cksum)) = packages.get(&id) else {
             anyhow::bail!("failed to find entry for `{}` in directory source", id);
         };
