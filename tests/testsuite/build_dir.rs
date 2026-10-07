@@ -233,6 +233,7 @@ fn target_dir_inside_build_dir() {
 
     p.root().join("target").assert_build_dir_layout(str![[r#"
 [ROOT]/foo/target/.rustc_info.json
+[ROOT]/foo/target/CACHEDIR.TAG
 [ROOT]/foo/target/debug/.cargo-build-lock
 [ROOT]/foo/target/debug/build/foo/[HASH]/fingerprint/bin-foo
 [ROOT]/foo/target/debug/build/foo/[HASH]/fingerprint/bin-foo.json

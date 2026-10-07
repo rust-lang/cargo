@@ -450,6 +450,7 @@ fn config_lockfile_in_target_dir_with_build_dir() {
 
     p.root().join("target").assert_dir_layout(
         str![[r#"
+[ROOT]/foo/target/CACHEDIR.TAG
 [ROOT]/foo/target/Cargo.lock
 
 "#]],

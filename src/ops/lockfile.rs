@@ -1,5 +1,6 @@
 use std::io::prelude::*;
 
+use crate::compiler::layout::outer_first;
 use crate::resolver::encode::into_resolve;
 use crate::resolver::{Resolve, ResolveVersion};
 use crate::util::Filesystem;
@@ -87,6 +88,16 @@ pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &mut Resolve) -> CargoRes
     }
 
     if !lock_root.as_path_unlocked().exists() {
+        // A lock root in the target or build directory, as for a cargo script,
+        // would create that directory without excluding it from backups, and
+        // `Layout` skips a directory that exists already.
+        let target_dir = ws.target_dir().into_path_unlocked();
+        let build_dir = ws.build_dir().into_path_unlocked();
+        for dir in outer_first(&target_dir, &build_dir) {
+            if lock_root.as_path_unlocked().starts_with(dir) {
+                cargo_util::paths::create_dir_all_excluded_from_backups_atomic(dir)?;
+            }
+        }
         lock_root.create_dir()?;
     }
 

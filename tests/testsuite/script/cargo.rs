@@ -1620,6 +1620,7 @@ args: []
 
     paths::cargo_home().join("build").assert_dir_layout(
         str![[r#"
+[ROOT]/home/.cargo/build/[HASH]/CACHEDIR.TAG
 [ROOT]/home/.cargo/build/[HASH]/[HASH]/Cargo.lock
 [ROOT]/home/.cargo/build/[HASH]/target/CACHEDIR.TAG
 
@@ -1834,12 +1835,9 @@ fn cmd_clean_with_embedded_and_target_dir() {
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/script.rs`
-[ERROR] cannot clean `[ROOT]/foo/script-target`: missing or invalid `CACHEDIR.TAG` file
-  |
-  = [NOTE] cleaning has been aborted to prevent accidental deletion of unrelated files
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
 
 "#]])
-        .with_status(101)
         .run();
 }
 
