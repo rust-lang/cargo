@@ -34,17 +34,11 @@ pub fn remove(options: &RemoveOptions<'_>) -> CargoResult<()> {
     let manifest_path = options.spec.manifest_path().to_path_buf();
     let mut manifest = LocalManifest::try_new(&manifest_path)?;
 
+    // Apply every removal to the in-memory manifest before printing any status.
+    // `remove` is atomic: if any name fails to validate, nothing is written to
+    // disk. Printing "Removing" as we go would then report dependencies as
+    // removed that are actually left untouched when a later name fails (#17340).
     for dep in &options.dependencies {
-        let section = if dep_table.len() >= 3 {
-            format!("{} for target `{}`", &dep_table[2], &dep_table[1])
-        } else {
-            dep_table[0].clone()
-        };
-        options
-            .gctx
-            .shell()
-            .status("Removing", format!("{dep} from {section}"))?;
-
         manifest.remove_from_table(&dep_table, dep).map_err(
             |MissingDependencyError {
                  expected_name,
@@ -104,6 +98,20 @@ pub fn remove(options: &RemoveOptions<'_>) -> CargoResult<()> {
         // crate, then we need to drop any explicitly activated features on
         // that crate.
         manifest.gc_dep(dep);
+    }
+
+    // Every name validated and was removed from the in-memory manifest, so it is
+    // now safe to report what is being removed.
+    for dep in &options.dependencies {
+        let section = if dep_table.len() >= 3 {
+            format!("{} for target `{}`", &dep_table[2], &dep_table[1])
+        } else {
+            dep_table[0].clone()
+        };
+        options
+            .gctx
+            .shell()
+            .status("Removing", format!("{dep} from {section}"))?;
     }
 
     manifest.ensure_edition();

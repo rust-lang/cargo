@@ -9,6 +9,7 @@ mod gc_replace;
 mod help;
 mod invalid_arg;
 mod invalid_dep;
+mod invalid_dep_preserves_valid;
 mod invalid_package;
 mod invalid_package_multiple;
 mod invalid_section;
