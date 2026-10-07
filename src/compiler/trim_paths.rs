@@ -102,15 +102,15 @@ pub(crate) fn trim_paths_args(
 ///
 /// [RFC 3127]: https://rust-lang.github.io/rfcs/3127-trim-paths.html
 pub(crate) fn trim_paths_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> Vec<OsString> {
-    let mut remaps = Vec::with_capacity(4);
-    remaps.extend(
-        package_remap(build_runner, unit)
-            .into_iter()
-            .map(join_remap),
-    );
-    remaps.push(join_remap(build_dir_remap(build_runner)));
-    remaps.push(join_remap(sysroot_remap(build_runner, unit)));
-    remaps
+    remap_pairs(build_runner, unit).map(join_remap).collect()
+}
+
+/// Like [`trim_paths_remap`] but yields `(from, to)` pairs.
+fn remap_pairs(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> impl Iterator<Item = RemapPair> {
+    package_remap(build_runner, unit).into_iter().chain([
+        build_dir_remap(build_runner),
+        sysroot_remap(build_runner, unit),
+    ])
 }
 
 fn join_remap((from, to): RemapPair) -> OsString {
