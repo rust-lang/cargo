@@ -257,7 +257,7 @@ real rustc running
 }
 
 #[cargo_test]
-fn absolute_toolchain_path_uses_proxy() {
+fn absolute_toolchain_path_bypasses_proxy() {
     let RustupEnvironment {
         cargo_bin,
         rustup_home,
@@ -274,7 +274,6 @@ fn absolute_toolchain_path_uses_proxy() {
         .env("PATH", &path)
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-`[..]rustc[EXE]` proxy running
 real rustc running
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
