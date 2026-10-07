@@ -29,7 +29,6 @@ fn builtin_dep_accepted() {
         .env("__CARGO_TESTS_ONLY_SRC_ROOT", &root)
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to highest compatible version
-[CHECKING] core v0.0.0 (builtin builtin://.)
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
