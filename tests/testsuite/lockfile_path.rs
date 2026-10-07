@@ -437,6 +437,26 @@ fn config_lockfile_path_rejects_templates() {
         .run();
 }
 
+#[cargo_test]
+fn config_lockfile_in_target_dir_with_build_dir() {
+    let p = make_project().build();
+
+    p.cargo("check")
+        .arg("--config")
+        .arg("resolver.lockfile-path='target/Cargo.lock'")
+        .arg("--config")
+        .arg("build.build-dir='build-dir'")
+        .run();
+
+    p.root().join("target").assert_dir_layout(
+        str![[r#"
+[ROOT]/foo/target/Cargo.lock
+
+"#]],
+        &["[..]/debug/[..]".into()],
+    );
+}
+
 const VALID_LOCKFILE: &str = r#"# Test lockfile
 version = 4
 

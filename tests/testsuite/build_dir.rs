@@ -215,6 +215,42 @@ fn should_default_to_target() {
 }
 
 #[cargo_test]
+fn target_dir_inside_build_dir() {
+    let p = project()
+        .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [build]
+            build-dir = "target"
+            "#,
+        )
+        .build();
+
+    p.cargo("build --target-dir target/nested")
+        .enable_mac_dsym()
+        .run();
+
+    p.root().join("target").assert_build_dir_layout(str![[r#"
+[ROOT]/foo/target/.rustc_info.json
+[ROOT]/foo/target/debug/.cargo-build-lock
+[ROOT]/foo/target/debug/build/foo/[HASH]/fingerprint/bin-foo
+[ROOT]/foo/target/debug/build/foo/[HASH]/fingerprint/bin-foo.json
+[ROOT]/foo/target/debug/build/foo/[HASH]/fingerprint/dep-bin-foo
+[ROOT]/foo/target/debug/build/foo/[HASH]/fingerprint/invoked.timestamp
+[ROOT]/foo/target/debug/build/foo/[HASH]/fingerprint/output-bin-foo
+[ROOT]/foo/target/debug/build/foo/[HASH]/out/foo[..][EXE]
+[ROOT]/foo/target/debug/build/foo/[HASH]/out/foo[..].d
+[ROOT]/foo/target/nested/CACHEDIR.TAG
+[ROOT]/foo/target/nested/debug/.cargo-lock
+[ROOT]/foo/target/nested/debug/.cargo-artifact-lock
+[ROOT]/foo/target/nested/debug/foo[EXE]
+[ROOT]/foo/target/nested/debug/foo.d
+
+"#]]);
+}
+
+#[cargo_test]
 fn should_respect_env_var() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)

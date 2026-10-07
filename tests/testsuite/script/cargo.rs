@@ -1,5 +1,6 @@
 use crate::prelude::*;
 use cargo_test_support::basic_manifest;
+use cargo_test_support::paths;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
 
@@ -1616,6 +1617,16 @@ args: []
 
 "#]])
         .run();
+
+    paths::cargo_home().join("build").assert_dir_layout(
+        str![[r#"
+[ROOT]/home/.cargo/build/[HASH]/[HASH]/Cargo.lock
+[ROOT]/home/.cargo/build/[HASH]/target/CACHEDIR.TAG
+
+"#]]
+        .unordered(),
+        &["[..]/debug/[..]".into(), "[..]/.rustc_info.json".into()],
+    );
 }
 
 #[cargo_test(nightly, reason = "-Zscript is unstable")]
@@ -1804,6 +1815,31 @@ fn cmd_clean_with_embedded() {
 [REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
 
 "#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+fn cmd_clean_with_embedded_and_target_dir() {
+    let script = ECHO_SCRIPT;
+    let p = cargo_test_support::project()
+        .file("script.rs", script)
+        .build();
+
+    p.cargo("-Zscript check --manifest-path script.rs --target-dir script-target")
+        .masquerade_as_nightly_cargo(&["script"])
+        .run();
+
+    p.cargo("-Zscript clean --manifest-path script.rs --target-dir script-target")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stderr_data(str![[r#"
+[WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
+[HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/script.rs`
+[ERROR] cannot clean `[ROOT]/foo/script-target`: missing or invalid `CACHEDIR.TAG` file
+  |
+  = [NOTE] cleaning has been aborted to prevent accidental deletion of unrelated files
+
+"#]])
+        .with_status(101)
         .run();
 }
 
