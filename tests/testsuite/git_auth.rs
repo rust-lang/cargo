@@ -234,7 +234,7 @@ Caused by:
 }
 
 // It would sure be nice to have an SSH implementation in Rust!
-#[cargo_test]
+#[cargo_test(requires = "ssh")]
 fn ssh_something_happens() {
     let server = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = server.local_addr().unwrap();
