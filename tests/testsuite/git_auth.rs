@@ -6,7 +6,9 @@ use std::io::prelude::*;
 use std::net::{SocketAddr, TcpListener};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
+use std::sync::mpsc;
 use std::thread::{self, JoinHandle};
+use std::time::Duration;
 
 use crate::prelude::*;
 use cargo_test_support::basic_manifest;
@@ -232,12 +234,14 @@ Caused by:
 }
 
 // It would sure be nice to have an SSH implementation in Rust!
-#[cargo_test]
+#[cargo_test(requires = "ssh")]
 fn ssh_something_happens() {
     let server = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = server.local_addr().unwrap();
-    let t = thread::spawn(move || {
+    let (tx, rx) = mpsc::channel();
+    thread::spawn(move || {
         drop(server.accept().unwrap());
+        tx.send(()).unwrap();
     });
 
     let p = project()
@@ -287,7 +291,7 @@ Caused by:
         .with_status(101)
         .with_stderr_data(expected)
         .run();
-    t.join().ok().unwrap();
+    rx.recv_timeout(Duration::from_secs(30)).unwrap();
 }
 
 #[cargo_test]

@@ -4854,7 +4854,7 @@ fn dep_with_cached_submodule() {
     assert_eq!(db_paths.len(), 1, "submodule db created once");
 }
 
-#[cargo_test]
+#[cargo_test(public_network_test, requires = "ssh")]
 fn dep_with_scp_like_submodule_url() {
     // Regression test for https://github.com/rust-lang/cargo/pull/16727
     let git_project = git::new("dep1", |project| {
