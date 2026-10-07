@@ -2212,16 +2212,10 @@ fn cargo_home_moved_trim_paths_object() {
         .env("CARGO_HOME", &new_cargo_home)
         .with_stderr_data(
             str![[r#"
-[DIRTY] bar v0.0.1: the path to the source changed
-[COMPILING] bar v0.0.1
-[RUNNING] `rustc --crate-name bar [..]`
-[DIRTY] baz v0.0.1 ([ROOTURL]/baz#[..]): the path to the source changed
-[COMPILING] baz v0.0.1 ([ROOTURL]/baz#[..])
-[RUNNING] `rustc --crate-name baz [..]`
-[COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo [..]`
+[FRESH] bar v0.0.1
+[FRESH] baz v0.0.1 ([ROOTURL]/baz#[..])
+[FRESH] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[DIRTY] foo v0.0.1 ([ROOT]/foo): info of dependency `[..]` changed
 
 "#]]
             .unordered(),
@@ -2245,16 +2239,10 @@ fn cargo_home_moved_trim_paths_all() {
         .env("CARGO_HOME", &new_cargo_home)
         .with_stderr_data(
             str![[r#"
-[DIRTY] bar v0.0.1: the path to the source changed
-[COMPILING] bar v0.0.1
-[RUNNING] `rustc --crate-name bar [..]`
-[DIRTY] baz v0.0.1 ([ROOTURL]/baz#[..]): the path to the source changed
-[COMPILING] baz v0.0.1 ([ROOTURL]/baz#[..])
-[RUNNING] `rustc --crate-name baz [..]`
-[COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo [..]`
+[FRESH] bar v0.0.1
+[FRESH] baz v0.0.1 ([ROOTURL]/baz#[..])
+[FRESH] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[DIRTY] foo v0.0.1 ([ROOT]/foo): info of dependency `[..]` changed
 
 "#]]
             .unordered(),
@@ -2305,10 +2293,9 @@ fn cargo_home_moved_trim_paths_object_with_diagnostics() {
         .env("CARGO_HOME", &new_cargo_home)
         .with_stderr_data(str![[r#"
 ...
-[DIRTY] bar v0.0.1: the path to the source changed
-...
+[FRESH] bar v0.0.1
 [WARNING] unused variable: `unused`
- --> [ROOT]/home/.cargo-moved/registry/src/-[..]/bar-0.0.1/src/lib.rs:1:18
+ --> [ROOT]/home/.cargo/registry/src/-[..]/bar-0.0.1/src/lib.rs:1:18
 ...
 "#]])
         .run();

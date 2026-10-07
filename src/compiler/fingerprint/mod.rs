@@ -79,7 +79,7 @@
 //! `__CARGO_DEFAULT_LIB_METADATA`[^4]         |             | ✓                        | ✓
 //! `__CARGO_RUSTC_BOOTSTRAP_WS_REMAP`[^2]     | ✓           |                          |
 //! `package_id`                               |             | ✓                        | ✓
-//! Target src path relative to ws             | ✓           |                          |
+//! Target src path relative to ws[^9]         | ✓           |                          |
 //! Target flags (test/bench/for_host/edition) | ✓           |                          |
 //! -C incremental=… flag                      | ✓           |                          |
 //! mtime of sources                           | ✓[^3]       |                          |
@@ -110,6 +110,9 @@
 //!       present to avoid breaking build reproducibility while we wait for trim-paths
 //!
 //! [^8]: including `-Cextra-filename`
+//!
+//! [^9]: Absolute source paths, for example registry deps,
+//!       are hashed after remapping when `trim-paths` is enabled.
 //!
 //! When deciding what should go in the Metadata vs the Fingerprint, consider
 //! that some files (like dylibs) do not have a hash in their filename. Thus,
@@ -396,6 +399,7 @@ use std::time::SystemTime;
 use anyhow::Context as _;
 use anyhow::format_err;
 use cargo_util::paths;
+use cargo_util_schemas::manifest::TomlTrimPaths;
 use filetime::FileTime;
 use serde::de;
 use serde::ser;
@@ -1705,13 +1709,35 @@ fn calculate_normal(
     let mut declared_features = unit.pkg.summary().features().keys().collect::<Vec<_>>();
     declared_features.sort(); // to avoid useless rebuild if the user orders it's features
     // differently
+
+    let src_path = {
+        // Note that .0 is hashed here, not .1 which is the cwd. That doesn't
+        // actually affect the output artifact so there's no need to hash it.
+        let src_path = path_args(build_runner.bcx.ws, unit).0;
+
+        // Some CI has random CI path for different runs.
+        // By tracking remapped paths, we avoid rebuilds when `CARGO_HOME` moves.
+        // See rust-lang/cargo#10915
+        let should_remap = match unit.profile.trim_paths {
+            TomlTrimPaths::None => false,
+            TomlTrimPaths::Object | TomlTrimPaths::All => true,
+        };
+
+        if should_remap
+            && src_path.is_absolute()
+            && let Some(remapped) = super::trim_paths::remap_path(build_runner, unit, &src_path)
+        {
+            remapped
+        } else {
+            src_path
+        }
+    };
+
     Ok(Fingerprint {
         rustc: util::hash_u64(&build_runner.bcx.rustc().verbose_version),
         target: util::hash_u64(&unit.target),
         profile: profile_hash,
-        // Note that .0 is hashed here, not .1 which is the cwd. That doesn't
-        // actually affect the output artifact so there's no need to hash it.
-        path: util::hash_u64(path_args(build_runner.bcx.ws, unit).0),
+        path: util::hash_u64(src_path),
         features: format!("{:?}", unit.features),
         declared_features: format!("{declared_features:?}"),
         deps,

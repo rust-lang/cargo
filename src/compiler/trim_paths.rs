@@ -105,6 +105,23 @@ pub(crate) fn trim_paths_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) 
     remap_pairs(build_runner, unit).map(join_remap).collect()
 }
 
+/// Remaps `path` the same way rustc does with [`trim_paths_remap`] rules,
+/// like the last takes precedence.
+///
+/// `None` if no rule matches.
+pub(crate) fn remap_path(
+    build_runner: &BuildRunner<'_, '_>,
+    unit: &Unit,
+    path: &Path,
+) -> Option<PathBuf> {
+    remap_pairs(build_runner, unit)
+        .filter_map(|(from, to)| {
+            let rest = path.strip_prefix(&from).ok()?;
+            Some(Path::new(&to).join(rest))
+        })
+        .last()
+}
+
 /// Like [`trim_paths_remap`] but yields `(from, to)` pairs.
 fn remap_pairs(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> impl Iterator<Item = RemapPair> {
     package_remap(build_runner, unit).into_iter().chain([
