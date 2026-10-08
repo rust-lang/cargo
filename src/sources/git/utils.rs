@@ -1108,10 +1108,21 @@ pub fn fetch(
         .unwrap_or_else(|| git_version().is_some())
     {
         fetch_with_cli(repo, remote_url, &refspecs, tags, shallow, gctx)
-    } else if gctx.cli_unstable().gitoxide.map_or(false, |git| git.fetch) {
-        fetch_with_gitoxide(repo, remote_url, refspecs, tags, shallow, gctx)
     } else {
-        fetch_with_libgit2(repo, remote_url, refspecs, tags, shallow, gctx)
+        if gctx.net_config()?.git_fetch_with_cli.is_none() && git_version().is_none() {
+            gctx.shell().warn(
+                "no compatible `git` found
+note: this may become a hard error in the future, see <https://github.com/rust-lang/cargo/issues/17227>
+help: to still use `git` for fetching, install it
+help: to use builtin native git support, re-try with `net.git-fetch-with-cli = false`
+https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli"
+            )?;
+        }
+        if gctx.cli_unstable().gitoxide.map_or(false, |git| git.fetch) {
+            fetch_with_gitoxide(repo, remote_url, refspecs, tags, shallow, gctx)
+        } else {
+            fetch_with_libgit2(repo, remote_url, refspecs, tags, shallow, gctx)
+        }
     };
 
     if fast_path_rev {
