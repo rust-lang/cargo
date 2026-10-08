@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use crate::prelude::*;
 use cargo_test_support::{project, str};
 
@@ -21,8 +23,10 @@ fn builtin_dep_accepted() {
         )
         .build();
 
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/testsuite/mock-std/library");
     p.cargo("check")
         .masquerade_as_nightly_cargo(&["builtin-dependencies"])
+        .env("__CARGO_TESTS_ONLY_SRC_ROOT", &root)
         .with_status(101)
         .with_stderr_data(str![[r#"
 
@@ -65,6 +69,43 @@ Caused by:
   The package requires the Cargo feature called `builtin-dependencies`, but that feature is not stabilized in this version of Cargo ([..]).
   Consider trying a newer version of Cargo (this may require the nightly release).
   See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#builtin-dependencies for more information about the status of this feature.
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn resolve_contents() {
+    crate::standard_lib::publish_mock_std_registry_packages();
+
+    let p = project()
+        .file("src/lib.rs", "#![no_std]")
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["builtin-dependencies"]
+
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+
+                [dependencies]
+                core = { builtin = true }
+                "#,
+        )
+        .build();
+
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/testsuite/mock-std/library");
+    p.cargo("metadata")
+        .masquerade_as_nightly_cargo(&["builtin-dependencies"])
+        .env("__CARGO_TESTS_ONLY_SRC_ROOT", &root)
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+
+thread [..] panicked at [..]
+not yet implemented: builtin source
+[NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 "#]])
         .run();

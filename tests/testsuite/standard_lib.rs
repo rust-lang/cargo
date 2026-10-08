@@ -17,7 +17,7 @@ struct Setup {
     real_sysroot: String,
 }
 
-fn setup() -> Setup {
+pub(crate) fn publish_mock_std_registry_packages() {
     // Our mock sysroot requires a few packages from crates.io, so make sure
     // they're "published" to crates.io. Also edit their code a bit to make sure
     // that they have access to our custom crates with custom apis.
@@ -83,6 +83,10 @@ fn setup() -> Setup {
         .add_dep(Dependency::new("rustc-std-workspace-std", "*").optional(true))
         .feature("mockbuild", &["rustc-std-workspace-std"])
         .publish();
+}
+
+fn setup() -> Setup {
+    publish_mock_std_registry_packages();
 
     let p = ProjectBuilder::new(paths::root().join("rustc-wrapper"))
         .file(
