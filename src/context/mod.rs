@@ -1395,7 +1395,7 @@ impl GlobalContext {
 
         let contents = fs::read_to_string(path)
             .with_context(|| format!("failed to read configuration file `{}`", path.display()))?;
-        let toml = parse_document(&contents, path, self).with_context(|| {
+        let toml = contents.parse::<toml::Table>().with_context(|| {
             format!("could not parse TOML configuration in `{}`", path.display())
         })?;
         let def = match why_load {
@@ -2207,7 +2207,7 @@ pub fn save_credentials(
         )
     })?;
 
-    let mut toml = parse_document(&contents, file.path(), gctx)?;
+    let mut toml = contents.parse::<toml::Table>()?;
 
     // Move the old token location to the new one.
     if let Some(token) = toml.remove("token") {
@@ -2349,11 +2349,6 @@ impl ConfigInclude {
             Some(abs_path)
         }
     }
-}
-
-fn parse_document(toml: &str, _file: &Path, _gctx: &GlobalContext) -> CargoResult<toml::Table> {
-    // At the moment, no compatibility checks are needed.
-    toml.parse().map_err(Into::into)
 }
 
 fn toml_dotted_keys(arg: &str) -> CargoResult<toml_edit::DocumentMut> {
