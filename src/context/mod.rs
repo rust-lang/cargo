@@ -1393,6 +1393,23 @@ impl GlobalContext {
         }
         tracing::debug!(?path, ?why_load, includes, "load config from file");
 
+        let value = self.load_layer(path, why_load)?;
+
+        if includes {
+            self.load_includes(value, seen, why_load)
+        } else {
+            Ok(value)
+        }
+    }
+
+    /// Loads a config value from a path with options.
+    ///
+    /// This makes no assumption of the schema, including include support.
+    ///
+    /// * `why_load` tells why a config is being loaded.
+    fn load_layer(&self, path: &Path, why_load: WhyLoad) -> CargoResult<ConfigValue> {
+        tracing::debug!(?path, ?why_load, "load config from file");
+
         let contents = fs::read_to_string(path)
             .with_context(|| format!("failed to read configuration file `{}`", path.display()))?;
         let toml = contents.parse::<toml::Table>().with_context(|| {
@@ -1408,11 +1425,7 @@ impl GlobalContext {
                 path.display()
             )
         })?;
-        if includes {
-            self.load_includes(value, seen, why_load)
-        } else {
-            Ok(value)
-        }
+        Ok(value)
     }
 
     /// Load any `include` files listed in the given `value`.
