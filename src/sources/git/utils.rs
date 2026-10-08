@@ -545,6 +545,7 @@ impl CheckoutGuard {
     }
 
     fn mark_ok(self) -> CargoResult<()> {
+        let _ = paths::remove_file(&self.ok_file);
         let _ = paths::create(self.ok_file)?;
         Ok(())
     }

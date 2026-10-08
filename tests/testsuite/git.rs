@@ -5347,3 +5347,65 @@ rev2
     assert!(lock.contains(&format!("?branch=master#{rev1}")));
     assert!(lock.contains(&format!("?branch=master#{rev2}")));
 }
+
+#[cargo_test]
+fn git_dep_tracked_cargo_ok_symlink_target_not_truncated() {
+    #[cfg(unix)]
+    use std::os::unix::fs::symlink;
+
+    if cfg!(windows) {
+        return;
+    }
+
+    let victim = paths::root().join("cargo-ok-victim.txt");
+    t!(fs::write(&victim, "precious bytes"));
+
+    let git_project = git::new("dep1", |project| {
+        project
+            .file("Cargo.toml", &basic_lib_manifest("dep1"))
+            .file("src/lib.rs", "")
+    });
+    let repo = git2::Repository::open(git_project.root()).unwrap();
+    t!(symlink(&victim, git_project.root().join(".cargo-ok")));
+    {
+        let mut index = t!(repo.index());
+        t!(index.add_path(Path::new(".cargo-ok")));
+        t!(index.write());
+        let tree_id = t!(index.write_tree());
+        let sig = t!(repo.signature());
+        let parent = t!(t!(repo.head()).peel_to_commit());
+        let tree = t!(repo.find_tree(tree_id));
+        t!(repo.commit(
+            Some("HEAD"),
+            &sig,
+            &sig,
+            "track .cargo-ok as a symlink",
+            &tree,
+            &[&parent],
+        ));
+    }
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+                    edition = "2015"
+
+                    [dependencies.dep1]
+                    git = '{}'
+                "#,
+                git_project.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("fetch").run();
+
+    let after = t!(fs::read(&victim));
+    assert_eq!(after, b"precious bytes");
+}
