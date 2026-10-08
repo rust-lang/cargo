@@ -1769,7 +1769,7 @@ impl GlobalContext {
             return Ok(());
         };
 
-        let mut value = self.load_file(&credentials)?;
+        let mut value = self.load_layer(&credentials, WhyLoad::FileDiscovery)?;
         // Backwards compatibility for old `.cargo/credentials` layout.
         {
             let (value_map, def) = value.table_mut("<root>")?;
