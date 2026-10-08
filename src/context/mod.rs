@@ -1393,9 +1393,26 @@ impl GlobalContext {
         }
         tracing::debug!(?path, ?why_load, includes, "load config from file");
 
+        let value = self.load_layer(path, why_load)?;
+
+        if includes {
+            self.load_includes(value, seen, why_load)
+        } else {
+            Ok(value)
+        }
+    }
+
+    /// Loads a config value from a path with options.
+    ///
+    /// This makes no assumption of the schema, including include support.
+    ///
+    /// * `why_load` tells why a config is being loaded.
+    fn load_layer(&self, path: &Path, why_load: WhyLoad) -> CargoResult<ConfigValue> {
+        tracing::debug!(?path, ?why_load, "load config from file");
+
         let contents = fs::read_to_string(path)
             .with_context(|| format!("failed to read configuration file `{}`", path.display()))?;
-        let toml = parse_document(&contents, path, self).with_context(|| {
+        let toml = contents.parse::<toml::Table>().with_context(|| {
             format!("could not parse TOML configuration in `{}`", path.display())
         })?;
         let def = match why_load {
@@ -1408,11 +1425,7 @@ impl GlobalContext {
                 path.display()
             )
         })?;
-        if includes {
-            self.load_includes(value, seen, why_load)
-        } else {
-            Ok(value)
-        }
+        Ok(value)
     }
 
     /// Load any `include` files listed in the given `value`.
@@ -1756,7 +1769,7 @@ impl GlobalContext {
             return Ok(());
         };
 
-        let mut value = self.load_file(&credentials)?;
+        let mut value = self.load_layer(&credentials, WhyLoad::FileDiscovery)?;
         // Backwards compatibility for old `.cargo/credentials` layout.
         {
             let (value_map, def) = value.table_mut("<root>")?;
@@ -2207,7 +2220,7 @@ pub fn save_credentials(
         )
     })?;
 
-    let mut toml = parse_document(&contents, file.path(), gctx)?;
+    let mut toml = contents.parse::<toml::Table>()?;
 
     // Move the old token location to the new one.
     if let Some(token) = toml.remove("token") {
@@ -2349,11 +2362,6 @@ impl ConfigInclude {
             Some(abs_path)
         }
     }
-}
-
-fn parse_document(toml: &str, _file: &Path, _gctx: &GlobalContext) -> CargoResult<toml::Table> {
-    // At the moment, no compatibility checks are needed.
-    toml.parse().map_err(Into::into)
 }
 
 fn toml_dotted_keys(arg: &str) -> CargoResult<toml_edit::DocumentMut> {
