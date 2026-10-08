@@ -1960,6 +1960,10 @@ core = { builtin = true}
 Specifying builtin dependencies explicitly pairs well with `-Zbuild-std` and is
 also useful for `#[no_std]` crates. See the RFC for further details.
 
+The Package ID specification can refer to builtin packages using the form
+`builtin://.#<name>`. For example, `builtin://.#core` identifies the builtin
+core package, distinguishing it from packages named "core" from other sources.
+
 # Stabilized and removed features
 
 ## Compile progress
