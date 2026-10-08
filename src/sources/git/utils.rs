@@ -1108,10 +1108,12 @@ pub fn fetch(
         .unwrap_or_else(|| git_version().is_some())
     {
         fetch_with_cli(repo, remote_url, &refspecs, tags, shallow, gctx)
-    } else if gctx.cli_unstable().gitoxide.map_or(false, |git| git.fetch) {
-        fetch_with_gitoxide(repo, remote_url, refspecs, tags, shallow, gctx)
     } else {
-        fetch_with_libgit2(repo, remote_url, refspecs, tags, shallow, gctx)
+        if gctx.cli_unstable().gitoxide.map_or(false, |git| git.fetch) {
+            fetch_with_gitoxide(repo, remote_url, refspecs, tags, shallow, gctx)
+        } else {
+            fetch_with_libgit2(repo, remote_url, refspecs, tags, shallow, gctx)
+        }
     };
 
     if fast_path_rev {
