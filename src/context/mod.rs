@@ -1772,21 +1772,17 @@ impl GlobalContext {
         Ok(url)
     }
 
-    /// Loads credentials config from the credentials file, if present.
-    ///
-    /// The credentials are loaded into a separate field to enable them
-    /// to be lazy-loaded after the main configuration has been loaded,
-    /// without requiring `mut` access to the [`GlobalContext`].
-    ///
-    /// If the credentials are already loaded, this function does nothing.
-    fn load_credentials(&self) -> CargoResult<()> {
-        if self.credential_values.filled() {
-            return Ok(());
-        }
+    /// Gets configuration values from the credentials file, loading them on first use.
+    fn credentials_values(&self) -> CargoResult<&HashMap<String, ConfigValue>> {
+        self.credential_values
+            .try_borrow_with(|| self.load_credentials())
+    }
 
+    /// Loads credentials config from the credentials file, if present.
+    fn load_credentials(&self) -> CargoResult<HashMap<String, ConfigValue>> {
         let home_path = self.home_path.clone().into_path_unlocked();
         let Some(credentials) = self.get_file_path(&home_path, "credentials", true)? else {
-            return Ok(());
+            return Ok(HashMap::default());
         };
 
         let mut value = self.load_layer(&credentials, WhyLoad::FileDiscovery)?;
@@ -1817,10 +1813,7 @@ impl GlobalContext {
                 credential_values.insert(k, entry);
             }
         }
-        self.credential_values
-            .set(credential_values)
-            .expect("was not filled at beginning of the function");
-        Ok(())
+        Ok(credential_values)
     }
 
     /// Looks for a path for `tool` in an environment variable or the given config, and returns
@@ -2197,7 +2190,7 @@ fn registry_config_uncached(
     sid: &SourceId,
 ) -> CargoResult<Option<RegistryConfig>> {
     tracing::trace!("loading registry config for {}", sid);
-    gctx.load_credentials()?;
+    gctx.credentials_values()?;
     if !sid.is_remote_registry() {
         bail!(
             "{} does not support API commands.\n\
