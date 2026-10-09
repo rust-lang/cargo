@@ -397,6 +397,52 @@ fn update_dependency_mtime_does_not_rebuild() {
         .run();
 }
 
+#[cargo_test]
+fn no_rebuild_when_rename_dir_with_workspace_relative_paths() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["foo"]
+            "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+                authors = []
+                [lints.cargo]
+                default = "allow"
+            "#,
+        )
+        // We have a path that is relative to the workspace but not with in the package.
+        .file(
+            "foo/src/lib.rs",
+            r#"pub fn foo() { let _a = include_str!("../../other/file.txt"); }"#,
+        )
+        .file("other/file.txt", "hello")
+        .build();
+
+    p.cargo("build").run();
+
+    let mut new = p.root();
+    new.pop();
+    new.push("bar");
+    fs::rename(p.root(), &new).unwrap();
+
+    p.cargo("build")
+        .cwd(&new)
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
 fn fingerprint_cleaner(mut dir: PathBuf, timestamp: filetime::FileTime) {
     // Cargo is experimenting with letting outside projects develop some
     // limited forms of GC for target_dir. This is one of the forms.

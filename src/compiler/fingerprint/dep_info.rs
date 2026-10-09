@@ -55,6 +55,8 @@ pub enum DepInfoPathType {
     /// {build-dir}/debug/deps/lib...
     /// or an absolute path /.../sysroot/...
     BuildRootRelative,
+    /// Relative to the workspace root (but not in the package root)
+    WorkspaceRootRelative,
 }
 
 /// Same as [`RustcDepInfo`] except avoids absolute paths as much as possible to
@@ -128,6 +130,7 @@ impl EncodedDepInfo {
             let ty = match read_u8(bytes)? {
                 0 => DepInfoPathType::PackageRootRelative,
                 1 => DepInfoPathType::BuildRootRelative,
+                2 => DepInfoPathType::WorkspaceRootRelative,
                 _ => return None,
             };
             let path_bytes = read_bytes(bytes)?;
@@ -212,6 +215,7 @@ impl EncodedDepInfo {
             match ty {
                 DepInfoPathType::PackageRootRelative => dst.push(0),
                 DepInfoPathType::BuildRootRelative => dst.push(1),
+                DepInfoPathType::WorkspaceRootRelative => dst.push(2),
             }
             write_bytes(dst, paths::path2bytes(file)?);
             write_bool(dst, checksum_info.is_some());
@@ -294,6 +298,7 @@ pub fn translate_dep_info(
     rustc_cwd: &Path,
     pkg_root: &Path,
     build_root: &Path,
+    ws_root: &Path,
     rustc_cmd: &ProcessBuilder,
     allow_package: bool,
     env_config: &Arc<HashMap<String, OsString>>,
@@ -302,6 +307,7 @@ pub fn translate_dep_info(
 
     let build_root = crate::util::try_canonicalize(build_root)?;
     let pkg_root = crate::util::try_canonicalize(pkg_root)?;
+    let ws_root = crate::util::try_canonicalize(ws_root)?;
     let mut on_disk_info = EncodedDepInfo::default();
     on_disk_info.env = depinfo.env;
 
@@ -359,6 +365,8 @@ pub fn translate_dep_info(
                 return None;
             }
             (DepInfoPathType::PackageRootRelative, stripped)
+        } else if let Ok(stripped) = canon_file.strip_prefix(&ws_root) {
+            (DepInfoPathType::WorkspaceRootRelative, stripped)
         } else {
             // It's definitely not target root relative, but this is an absolute path (since it was
             // joined to rustc_cwd) and as such re-joining it later to the target root will have no
@@ -474,6 +482,7 @@ pub fn parse_rustc_dep_info(rustc_dep_info: &Path) -> CargoResult<RustcDepInfo> 
 pub fn parse_dep_info(
     pkg_root: &Path,
     build_root: &Path,
+    ws_root: &Path,
     dep_info: &Path,
 ) -> CargoResult<Option<RustcDepInfo>> {
     let Ok(data) = paths::read_bytes(dep_info) else {
@@ -488,7 +497,7 @@ pub fn parse_dep_info(
     ret.files
         .extend(info.files.into_iter().map(|(ty, path, checksum_info)| {
             (
-                make_absolute_path(ty, pkg_root, build_root, path),
+                make_absolute_path(ty, pkg_root, build_root, ws_root, path),
                 checksum_info.and_then(|(file_len, checksum)| {
                     Checksum::from_str(&checksum).ok().map(|c| (file_len, c))
                 }),
@@ -501,12 +510,14 @@ fn make_absolute_path(
     ty: DepInfoPathType,
     pkg_root: &Path,
     build_root: &Path,
+    ws_root: &Path,
     path: PathBuf,
 ) -> PathBuf {
     let relative_to = match ty {
         DepInfoPathType::PackageRootRelative => pkg_root,
         // N.B. path might be absolute here in which case the join below will have no effect
         DepInfoPathType::BuildRootRelative => build_root,
+        DepInfoPathType::WorkspaceRootRelative => ws_root,
     };
 
     if path.as_os_str().is_empty() {

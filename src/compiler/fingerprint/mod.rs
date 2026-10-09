@@ -941,6 +941,7 @@ impl LocalFingerprint {
         checksum_cache: &mut HashMap<PathBuf, Checksum>,
         pkg: &Package,
         build_root: &Path,
+        ws_root: &Path,
         cargo_exe: &Path,
         gctx: &GlobalContext,
     ) -> CargoResult<Option<StaleItem>> {
@@ -957,7 +958,7 @@ impl LocalFingerprint {
                 fingerprint,
             } => {
                 let dep_info = build_root.join(dep_info);
-                let Some(info) = parse_dep_info(pkg_root, build_root, &dep_info)? else {
+                let Some(info) = parse_dep_info(pkg_root, build_root, ws_root, &dep_info)? else {
                     return Ok(Some(StaleItem::MissingFile { path: dep_info }));
                 };
                 for (key, previous) in info.env.iter() {
@@ -1258,6 +1259,7 @@ impl Fingerprint {
         checksum_cache: &mut HashMap<PathBuf, Checksum>,
         pkg: &Package,
         build_root: &Path,
+        ws_root: &Path,
         cargo_exe: &Path,
         gctx: &GlobalContext,
     ) -> CargoResult<()> {
@@ -1367,6 +1369,7 @@ impl Fingerprint {
                 checksum_cache,
                 pkg,
                 build_root,
+                ws_root,
                 cargo_exe,
                 gctx,
             )? {
@@ -1556,12 +1559,14 @@ fn calculate(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult
     // After we built the initial `Fingerprint` be sure to update the
     // `fs_status` field of it.
     let build_root = build_root(build_runner);
+    let ws_root = build_runner.bcx.ws.root();
     let cargo_exe = build_runner.bcx.gctx.cargo_exe()?;
     fingerprint.check_filesystem(
         &mut build_runner.mtime_cache,
         &mut build_runner.checksum_cache,
         &unit.pkg,
         &build_root,
+        ws_root,
         cargo_exe,
         build_runner.bcx.gctx,
     )?;
