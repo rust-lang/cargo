@@ -437,7 +437,6 @@ fn no_rebuild_when_rename_dir_with_workspace_relative_paths() {
     p.cargo("build")
         .cwd(&new)
         .with_stderr_data(str![[r#"
-[COMPILING] foo v0.1.0 ([ROOT]/bar/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])

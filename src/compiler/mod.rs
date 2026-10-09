@@ -355,6 +355,7 @@ fn rustc(
     let root_output = build_runner.files().host_dest().map(|v| v.to_path_buf());
     let build_dir = build_runner.bcx.ws.build_dir().into_path_unlocked();
     let pkg_root = unit.pkg.root().to_path_buf();
+    let ws_root = build_runner.bcx.ws.root().to_path_buf();
     let cwd = rustc
         .get_cwd()
         .unwrap_or_else(|| build_runner.bcx.gctx.cwd())
@@ -544,6 +545,7 @@ fn rustc(
                 &cwd,
                 &pkg_root,
                 &build_dir,
+                &ws_root,
                 &rustc,
                 // Do not track source files in the fingerprint for registry dependencies.
                 is_local,
@@ -1075,6 +1077,7 @@ fn rustdoc(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<W
     let dep_info_loc = fingerprint::dep_info_loc(build_runner, unit);
     let build_dir = build_runner.bcx.ws.build_dir().into_path_unlocked();
     let pkg_root = unit.pkg.root().to_path_buf();
+    let ws_root = build_runner.bcx.ws.root().to_path_buf();
     let cwd = rustdoc
         .get_cwd()
         .unwrap_or_else(|| build_runner.bcx.gctx.cwd())
@@ -1191,6 +1194,7 @@ fn rustdoc(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<W
                 &cwd,
                 &pkg_root,
                 &build_dir,
+                &ws_root,
                 &rustdoc,
                 // Should we track source file for doc gen?
                 is_local,
