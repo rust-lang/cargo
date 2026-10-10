@@ -1416,7 +1416,7 @@ fn get_packages() -> CargoResult<Vec<Package>> {
     let ws = Workspace::new(&find_root_manifest_for_wd(gctx.cwd())?, &gctx)?;
 
     let requested_kinds = CompileKind::from_requested_targets(ws.gctx(), &[])?;
-    let mut target_data = RustcTargetData::new(&ws, &requested_kinds)?;
+    let mut target_data = RustcTargetData::new(&gctx, Some(&ws), &requested_kinds)?;
     // `cli_features.all_features` must be true in case that `specs` is empty.
     let cli_features = CliFeatures::new_all(true);
     let has_dev_units = HasDevUnits::Yes;

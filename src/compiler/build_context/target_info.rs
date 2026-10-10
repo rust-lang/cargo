@@ -989,11 +989,11 @@ pub struct RustcTargetData<'gctx> {
 impl<'gctx> RustcTargetData<'gctx> {
     #[tracing::instrument(skip_all)]
     pub fn new(
-        ws: &Workspace<'gctx>,
+        gctx: &'gctx GlobalContext,
+        ws: Option<&Workspace<'gctx>>,
         requested_kinds: &[CompileKind],
     ) -> CargoResult<RustcTargetData<'gctx>> {
-        let gctx = ws.gctx();
-        let rustc = gctx.load_global_rustc(Some(ws))?;
+        let rustc = gctx.load_global_rustc(ws)?;
         let mut target_config = HashMap::default();
         let mut target_info = HashMap::default();
         let target_applies_to_host = gctx.target_applies_to_host()?;
@@ -1054,16 +1054,14 @@ impl<'gctx> RustcTargetData<'gctx> {
                 .iter()
                 .filter_map(|d| d.artifact()?.target()?.to_compile_kind())
         }
-        let all_kinds = requested_kinds
-            .iter()
-            .copied()
-            .chain(ws.members().flat_map(|p| {
-                p.manifest()
-                    .default_kind()
-                    .into_iter()
-                    .chain(p.manifest().forced_kind())
-                    .chain(artifact_targets(p))
-            }));
+        let members = ws.into_iter().flat_map(|ws| ws.members());
+        let all_kinds = requested_kinds.iter().copied().chain(members.flat_map(|p| {
+            p.manifest()
+                .default_kind()
+                .into_iter()
+                .chain(p.manifest().forced_kind())
+                .chain(artifact_targets(p))
+        }));
         for kind in all_kinds {
             res.merge_compile_kind(kind)?;
         }

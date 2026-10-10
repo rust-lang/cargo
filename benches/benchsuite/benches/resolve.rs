@@ -25,7 +25,7 @@ struct ResolveInfo<'gctx> {
 fn do_resolve<'gctx>(gctx: &'gctx GlobalContext, ws_root: &Path) -> ResolveInfo<'gctx> {
     let requested_kinds = [CompileKind::Host];
     let ws = Workspace::new(&ws_root.join("Cargo.toml"), gctx).unwrap();
-    let mut target_data = RustcTargetData::new(&ws, &requested_kinds).unwrap();
+    let mut target_data = RustcTargetData::new(gctx, Some(&ws), &requested_kinds).unwrap();
     let cli_features = CliFeatures::from_command_line(&[], false, true).unwrap();
     let pkgs = cargo::ops::Packages::Default;
     let specs = pkgs.to_package_id_specs(&ws).unwrap();

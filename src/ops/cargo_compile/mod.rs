@@ -294,7 +294,7 @@ pub fn create_bcx<'a, 'gctx>(
     }
     gctx.validate_term_config()?;
 
-    let mut target_data = RustcTargetData::new(ws, &build_config.requested_kinds)?;
+    let mut target_data = RustcTargetData::new(gctx, Some(ws), &build_config.requested_kinds)?;
 
     let specs = spec.to_package_id_specs(ws)?;
     let has_dev_units = {
