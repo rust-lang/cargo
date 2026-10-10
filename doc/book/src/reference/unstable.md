@@ -1564,6 +1564,7 @@ Deletion of cache contents can be performed by passing one of the cache options:
 - `--max-crate-size=SIZE` --- Deletes the oldest crate cache files until the cache is under the given size.
 - `--max-git-size=SIZE` --- Deletes the oldest git dependency caches until the cache is under the given size.
 - `--max-download-size=SIZE` --- Deletes the oldest downloaded cache data until the cache is under the given size.
+- `--max-target-age=DURATION` --- Deletes target and build directories that have not been used since the given age.
 
 A DURATION is specified in the form "N seconds/minutes/days/weeks/months" where N is an integer.
 
@@ -1573,6 +1574,7 @@ A SIZE is specified in the form "N *suffix*" where *suffix* is B, kB, MB, GB, ki
 cargo clean gc -Zgc
 cargo clean gc -Zgc --max-download-age=1week
 cargo clean gc -Zgc --max-git-size=0 --max-download-size=100MB
+cargo clean gc -Zgc --max-target-age=7days
 ```
 
 ## open-namespaces
