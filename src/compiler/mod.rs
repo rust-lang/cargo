@@ -2418,6 +2418,7 @@ fn on_stderr_line_inner(
         message: Cow<'a, str>,
         #[serde(borrow)]
         level: Cow<'a, str>,
+        code: Option<serde_json::Value>,
     }
 
     if let Ok(msg) = serde_json::from_str::<CompilerMessage<'_>>(compiler_message.get()) {
@@ -2429,6 +2430,9 @@ fn on_stderr_line_inner(
             return Ok(true);
         }
         count_diagnostic(&msg.level, options);
+        if msg.level == "warning" {
+            state.count_json_warning(msg.code.is_some());
+        }
     }
 
     let msg = machine_message::FromCompiler {
