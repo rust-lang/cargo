@@ -25,7 +25,7 @@ use cargo_test_support::paths::ReadOnly;
 use cargo_test_support::registry::{Package, RegistryBuilder};
 use cargo_test_support::{
     Execs, Project, basic_manifest, execs, git, process, project, retry, sleep_ms, str,
-    thread_wait_timeout,
+    symlink_supported, thread_wait_timeout,
 };
 use itertools::Itertools;
 
@@ -1708,6 +1708,257 @@ fn clean_max_src_crate_age() {
 [REMOVING] [ROOT]/home/.cargo/registry/cache/-[HASH]/bar-1.0.1.crate
 [REMOVED] 1 file, [FILE_SIZE]B total
 
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn clean_max_target_age() {
+    let old = project().at("old").file("src/lib.rs", "").build();
+    let new = project().at("new").file("src/lib.rs", "").build();
+    old.cargo("check")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+    new.cargo("check")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(2))
+        .run();
+
+    cargo_process("clean gc")
+        .arg("--max-target-age=3 days")
+        .arg("-Zgc")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_status(1)
+        .with_stderr_data(str![[r#"
+[ERROR] unexpected argument '--max-target-age' found
+...
+"#]])
+        .run();
+    assert!(old.build_dir().is_dir());
+    assert!(new.build_dir().is_dir());
+}
+
+#[cargo_test]
+fn clean_max_target_age_shared_dir() {
+    let old = project().at("old").file("src/lib.rs", "").build();
+    let new = project().at("new").file("src/lib.rs", "").build();
+    let shared = paths::root().join("shared");
+    old.cargo("check")
+        .env("CARGO_TARGET_DIR", &shared)
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+    new.cargo("check")
+        .env("CARGO_TARGET_DIR", &shared)
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(2))
+        .run();
+    // A use still counts when its workspace is gone.
+    new.root().rm_rf();
+
+    cargo_process("clean gc")
+        .arg("--max-target-age=3 days")
+        .arg("-Zgc")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_status(1)
+        .with_stderr_data(str![[r#"
+[ERROR] unexpected argument '--max-target-age' found
+...
+"#]])
+        .run();
+
+    cargo_process("clean gc")
+        .arg("--max-target-age=0 days")
+        .arg("-Zgc")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_status(1)
+        .with_stderr_data(str![[r#"
+[ERROR] unexpected argument '--max-target-age' found
+...
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn clean_max_target_age_dry_run() {
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("check")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+
+    p.cargo("clean gc --dry-run")
+        .arg("--max-target-age=3 days")
+        .arg("-Zgc")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_status(1)
+        .with_stderr_data(str![[r#"
+[ERROR] unexpected argument '--max-target-age' found
+...
+"#]])
+        .run();
+    assert!(p.build_dir().is_dir());
+}
+
+#[cargo_test]
+fn clean_max_target_age_untagged_dir() {
+    let p = project().file("src/lib.rs", "").build();
+    // Cargo does not add `CACHEDIR.TAG` to a directory that it did not create.
+    p.build_dir().mkdir_p();
+    p.cargo("check")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+
+    p.cargo("clean gc")
+        .arg("--max-target-age=3 days")
+        .arg("-Zgc")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_status(1)
+        .with_stderr_data(str![[r#"
+[ERROR] unexpected argument '--max-target-age' found
+...
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn clean_max_target_age_nested_dir() {
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("check")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+    p.cargo("check --target-dir target/rust-analyzer")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(2))
+        .run();
+
+    p.cargo("clean gc")
+        .arg("--max-target-age=3 days")
+        .arg("-Zgc")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_status(1)
+        .with_stderr_data(str![[r#"
+[ERROR] unexpected argument '--max-target-age' found
+...
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn clean_max_target_age_package() {
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("check")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+    p.cargo("package")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(2))
+        .run();
+
+    p.cargo("clean gc")
+        .arg("--max-target-age=3 days")
+        .arg("-Zgc")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_status(1)
+        .with_stderr_data(str![[r#"
+[ERROR] unexpected argument '--max-target-age' found
+...
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+fn clean_max_target_age_script() {
+    let p = project().file("echo.rs", "fn main() {}").build();
+    p.cargo("-Zscript echo.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+    assert_eq!(get_names(".cargo/build/*/*").len(), 1);
+
+    p.cargo("clean gc")
+        .arg("--max-target-age=3 days")
+        .arg("-Zgc")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_status(1)
+        .with_stderr_data(str![[r#"
+[ERROR] unexpected argument '--max-target-age' found
+...
+"#]])
+        .run();
+    assert_eq!(get_names(".cargo/build/*/*").len(), 1);
+}
+
+#[cargo_test]
+fn clean_max_target_age_dir_under_symlink() {
+    if !symlink_supported() {
+        return;
+    }
+    let p = project().file("src/lib.rs", "").build();
+    p.root().join("real").mkdir_p();
+    p.symlink("real", "alias");
+    p.cargo("check --target-dir alias/target")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+
+    // The symlink points to the parent `real`, not to `real/target`.
+    // Removing the stale, tagged target directory leaves `alias -> real`
+    // intact, so it does not break the symlink.
+    p.cargo("clean gc")
+        .arg("--max-target-age=3 days")
+        .arg("-Zgc")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_status(1)
+        .with_stderr_data(str![[r#"
+[ERROR] unexpected argument '--max-target-age' found
+...
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn clean_max_target_age_two_paths_one_dir() {
+    if !symlink_supported() {
+        return;
+    }
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("check --target-dir real/target")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+    p.symlink("real", "alias");
+    // This is a recent use of `real/target` through another path.
+    p.cargo("check --target-dir alias/target").run();
+
+    p.cargo("clean gc")
+        .arg("--max-target-age=3 days")
+        .arg("-Zgc")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_status(1)
+        .with_stderr_data(str![[r#"
+[ERROR] unexpected argument '--max-target-age' found
+...
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn clean_max_target_age_dir_is_symlink() {
+    if !symlink_supported() {
+        return;
+    }
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("check")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+    // Cargo created this directory, so it has a `CACHEDIR.TAG` and only the
+    // symlink keeps it.
+    std::fs::rename(p.build_dir(), p.root().join("real")).unwrap();
+    p.symlink("real", "target");
+
+    // Removing `real` would break `target -> real`, so cleanup must keep
+    // the directory even though it is stale and has a valid cache tag.
+    p.cargo("clean gc")
+        .arg("--max-target-age=3 days")
+        .arg("-Zgc")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_status(1)
+        .with_stderr_data(str![[r#"
+[ERROR] unexpected argument '--max-target-age' found
+...
 "#]])
         .run();
 }
