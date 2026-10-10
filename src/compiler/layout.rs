@@ -250,9 +250,12 @@ impl Layout {
         // here. Use this opportunity to exclude it from backups as well if the
         // system supports it since this is a freshly created folder.
         //
-        paths::create_dir_all_excluded_from_backups_atomic(root.as_path_unlocked())?;
-        if root != build_root {
-            paths::create_dir_all_excluded_from_backups_atomic(build_root.as_path_unlocked())?;
+        // Only the created directory is excluded, not the parents created
+        // along the way, so when one root contains the other, as with a
+        // `--target-dir` inside `build.build-dir`, the outer one is created
+        // first.
+        for dir in outer_first(root.as_path_unlocked(), build_root.as_path_unlocked()) {
+            paths::create_dir_all_excluded_from_backups_atomic(dir)?;
         }
 
         // Now that the excluded from backups target root is created we can create the
@@ -351,6 +354,11 @@ impl Layout {
     pub fn build_dir(&self) -> &BuildDirLayout {
         &self.build_dir
     }
+}
+
+/// Orders two directories so that one that contains the other comes first.
+pub fn outer_first<'a>(a: &'a Path, b: &'a Path) -> [&'a Path; 2] {
+    if a.starts_with(b) { [b, a] } else { [a, b] }
 }
 
 pub struct ArtifactDirLayout {
