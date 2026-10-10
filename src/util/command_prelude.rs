@@ -4,8 +4,7 @@ use crate::context::VersionControl;
 use crate::ops::registry::RegistryOrIndex;
 use crate::ops::{self, CompileFilter, CompileOptions, NewOptions, Packages};
 use crate::resolver::{CliFeatures, ForceAllTargets, HasDevUnits};
-use crate::util::data_structures::IndexSet;
-use crate::util::data_structures::{HashMap, HashSet};
+use crate::util::data_structures::{HashMap, HashSet, IndexMap, IndexSet};
 use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::interning::InternedString;
 use crate::util::is_rustup;
@@ -1160,28 +1159,31 @@ fn get_feature_candidates() -> CargoResult<Vec<clap_complete::CompletionCandidat
     let gctx = new_gctx_for_completions()?;
 
     let ws = Workspace::new(&find_root_manifest_for_wd(gctx.cwd())?, &gctx)?;
-    let mut feature_candidates = Vec::new();
+    let mut feature_candidates: IndexMap<&str, (usize, Vec<&str>)> = IndexMap::default();
 
     // Process all packages in the workspace
     for package in ws.members() {
-        let package_name = package.name();
+        let package_name = package.name().as_str();
+        let order = (ws.current_opt().map(|p| p.name().as_str()) == Some(package_name)) as usize;
 
         // Add direct features with package info
         for feature_name in package.summary().features().keys() {
-            let order = if ws.current_opt().map(|p| p.name()) == Some(package_name) {
-                0
-            } else {
-                1
-            };
-            feature_candidates.push(
-                clap_complete::CompletionCandidate::new(feature_name)
-                    .display_order(Some(order))
-                    .help(Some(format!("from {}", package_name).into())),
-            );
+            let entry = feature_candidates
+                .entry(feature_name.as_str())
+                .or_insert((order, Vec::new()));
+            entry.0 = entry.0.min(order);
+            entry.1.push(package_name);
         }
     }
 
-    Ok(feature_candidates)
+    Ok(feature_candidates
+        .into_iter()
+        .map(|(feature_name, (order, packages))| {
+            clap_complete::CompletionCandidate::new(feature_name)
+                .display_order(Some(order))
+                .help(Some(format!("from {}", packages.join(", ")).into()))
+        })
+        .collect())
 }
 
 fn get_crate_candidates(kind: TargetKind) -> CargoResult<Vec<clap_complete::CompletionCandidate>> {

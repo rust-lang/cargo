@@ -78,6 +78,7 @@ mod clean;
 mod clean_legacy_layout;
 mod collisions;
 mod compile_time_deps;
+mod complete;
 mod concurrent;
 mod config;
 mod config_cli;
