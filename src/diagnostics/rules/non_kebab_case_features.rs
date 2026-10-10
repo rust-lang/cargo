@@ -44,14 +44,14 @@ Users would expect that a feature tightly coupled to a dependency would match th
 
 ```toml
 [features]
-foo_bar = []
+foo_bar = { enables = [] }
 ```
 
 Should be written as:
 
 ```toml
 [features]
-foo-bar = []
+foo-bar = { enables = [] }
 ```
 "#,
     ),
