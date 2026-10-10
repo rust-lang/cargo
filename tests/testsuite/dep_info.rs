@@ -150,6 +150,87 @@ fn dep_path_inside_target_has_correct_path() {
 }
 
 #[cargo_test]
+fn external_path_dependency_with_shared_target_dir() {
+    let p = project()
+        .no_manifest()
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [build]
+                target-dir = "./target"
+            "#,
+        )
+        .file("external/Cargo.toml", &basic_manifest("external", "0.1.0"))
+        .file(
+            "external/src/lib.rs",
+            r#"
+                pub fn value() -> &'static str {
+                    include_str!("../../a/shared.txt")
+                }
+            "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.1.0"
+                edition = "2021"
+
+                [workspace]
+
+                [dependencies]
+                external = { path = "../external" }
+            "#,
+        )
+        .file(
+            "a/src/main.rs",
+            r#"fn main() { println!("{}", external::value()); }"#,
+        )
+        .file("a/shared.txt", "before")
+        .file(
+            "b/Cargo.toml",
+            r#"
+                [package]
+                name = "b"
+                version = "0.1.0"
+                edition = "2021"
+
+                [workspace]
+
+                [dependencies]
+                external = { path = "../external" }
+            "#,
+        )
+        .file(
+            "b/src/main.rs",
+            r#"fn main() { println!("{}", external::value()); }"#,
+        )
+        .file("b/shared.txt", "unrelated")
+        .build();
+
+    p.cargo("run")
+        .cwd("a")
+        .with_stdout_data(str![[r#"
+before
+
+"#]])
+        .run();
+
+    p.root().move_into_the_past();
+    p.root().join("target").move_into_the_past();
+    p.change_file("a/shared.txt", "after");
+
+    p.cargo("run")
+        .cwd("b")
+        .with_stdout_data(str![[r#"
+after
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn no_rewrite_if_no_change() {
     let p = project().file("src/lib.rs", "").build();
 
