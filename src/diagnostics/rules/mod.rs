@@ -12,6 +12,7 @@ mod non_kebab_case_packages;
 mod non_snake_case_features;
 mod non_snake_case_packages;
 mod redundant_homepage;
+mod repository_not_inherited;
 mod text_direction_codepoint_in_comment;
 mod text_direction_codepoint_in_literal;
 mod unknown_lints;
@@ -106,6 +107,10 @@ pub const PARSE_PASS_RULES: &[ParsePassRule<'static>] = &[
         rule: non_snake_case_packages::lint_package,
         lint: non_snake_case_packages::LINT,
     },
+    ParsePassRule::LintPackage {
+        rule: repository_not_inherited::lint_package,
+        lint: repository_not_inherited::LINT,
+    },
 ];
 
 pub static LINTS: &[&crate::diagnostics::Lint] = &[
@@ -119,6 +124,7 @@ pub static LINTS: &[&crate::diagnostics::Lint] = &[
     non_snake_case_features::LINT,
     non_snake_case_packages::LINT,
     redundant_homepage::LINT,
+    repository_not_inherited::LINT,
     text_direction_codepoint_in_comment::LINT,
     text_direction_codepoint_in_literal::LINT,
     unknown_lints::LINT,
