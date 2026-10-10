@@ -986,3 +986,78 @@ fn partially_already_installed_does_one_update() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn check_upgrade_respects_features() {
+    // Issue #8703: an installed package should not consider binaries to be missing if they
+    // depend on unselected features
+    Package::new("foo", "1.0.0")
+        .file(
+            "Cargo.toml",
+            r#"
+        [package]
+        name = "foo"
+        version = "1.0.0"
+
+        [features]
+        default = ["feat"]
+        e1 = []
+        e2 = []
+        extra = ["e1", "e2"]
+        feat = []
+
+        [[bin]]
+        name = "foo"
+        path = "src/main.rs"
+
+        [[bin]]
+        name = "foo-feat"
+        path = "src/bin/foo-feat.rs"
+        required-features = ["feat"]
+
+        [[bin]]
+        name = "foo-e1"
+        path = "src/bin/foo-e1.rs"
+        required-features = ["e1"]
+
+        [[bin]]
+        name = "foo-e2"
+        path = "src/bin/foo-e2.rs"
+        required-features = ["e2"]
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("src/bin/foo-feat.rs", "fn main() {}")
+        .file("src/bin/foo-e1.rs", "fn main() {}")
+        .file("src/bin/foo-e2.rs", "fn main() {}")
+        .publish();
+
+    // install, check binaries are expected, expect reinstall to take no action
+    let check_install = |arg_line, expected_bins| {
+        cargo_process(arg_line).run();
+        validate_trackers("foo", "1.0.0", expected_bins);
+
+        cargo_process(arg_line)
+            .with_stderr_data(str![[r#"
+...
+[IGNORED] package `foo v1.0.0` is already installed, use --force to override
+...
+"#]])
+            .run();
+    };
+
+    check_install("install --no-default-features foo", &["foo"]);
+    // leave installed, default feature should trigger adding extra binary
+    check_install("install foo", &["foo", "foo-feat"]);
+    check_install(
+        "install -F extra foo",
+        &["foo", "foo-e1", "foo-e2", "foo-feat"],
+    );
+
+    cargo_process("uninstall foo").run();
+
+    check_install(
+        "install --all-features foo",
+        &["foo", "foo-e1", "foo-e2", "foo-feat"],
+    );
+}
