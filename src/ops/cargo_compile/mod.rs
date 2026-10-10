@@ -59,6 +59,7 @@ use crate::util::log_message::LogMessage;
 use crate::util::machine_message;
 use crate::util::machine_message::Message as _;
 use crate::util::{CargoResult, StableHasher};
+use crate::workspace::global_cache_tracker;
 use crate::workspace::profiles::Profiles;
 use crate::workspace::{PackageId, PackageSet, SourceId, TargetKind, Workspace};
 
@@ -145,10 +146,40 @@ pub fn compile_with_exec<'a>(
     options: &CompileOptions,
     exec: &Arc<dyn Executor>,
 ) -> CargoResult<Compilation<'a>> {
+    compile_with_exec_inner(ws, options, exec, true)
+}
+
+pub(crate) fn compile_for_package_verification<'a>(
+    ws: &Workspace<'a>,
+    options: &CompileOptions,
+    exec: &Arc<dyn Executor>,
+) -> CargoResult<Compilation<'a>> {
+    // This workspace is a temporary copy. `do_package` records the
+    // directories for the real workspace.
+    compile_with_exec_inner(ws, options, exec, false)
+}
+
+fn compile_with_exec_inner<'a>(
+    ws: &Workspace<'a>,
+    options: &CompileOptions,
+    exec: &Arc<dyn Executor>,
+    track_workspace_build: bool,
+) -> CargoResult<Compilation<'a>> {
     let parse_pass_output = crate::diagnostics::passes::emit_parse_diagnostics(
         ws,
         crate::diagnostics::rules::PARSE_PASS_RULES,
     )?;
+    // Record before compilation setup, whose dependency resolution saves
+    // the deferred last-use data.
+    if track_workspace_build {
+        ws.gctx()
+            .deferred_global_last_use()?
+            .mark_workspace_build_used(global_cache_tracker::WorkspaceBuild {
+                workspace_manifest: ws.root_manifest().to_path_buf(),
+                target_dir: ws.target_dir().into_path_unlocked(),
+                build_dir: ws.build_dir().into_path_unlocked(),
+            });
+    }
     let compilation = compile_ws(ws, options, exec)?;
     if ws.gctx().warning_handling()? == WarningHandling::Deny
         && (compilation.lint_warning_count + parse_pass_output.lint_warning_count) > 0

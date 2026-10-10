@@ -29,6 +29,7 @@ use crate::workspace::Dependency;
 use crate::workspace::PackageIdSpecQuery;
 use crate::workspace::Workspace;
 use crate::workspace::dependency::DepKind;
+use crate::workspace::global_cache_tracker::WorkspaceBuild;
 use crate::workspace::manifest::Target;
 use crate::workspace::parser::prepare_for_publish;
 use crate::workspace::{Package, PackageId, PackageSet, SourceId};
@@ -256,6 +257,20 @@ fn do_package<'a>(
     opts: &PackageOpts<'a>,
     pkgs: Vec<(&Package, CliFeatures)>,
 ) -> CargoResult<Vec<(Package, PackageOpts<'a>, FileLock)>> {
+    if !opts.list && !pkgs.is_empty() {
+        // Verification builds a temporary workspace, which is not recorded.
+        // Save both original output paths even when resolution and verification are skipped.
+        let gctx = ws.gctx();
+        let _lock = gctx.acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
+        let mut deferred = gctx.deferred_global_last_use()?;
+        deferred.mark_workspace_build_used(WorkspaceBuild {
+            workspace_manifest: ws.root_manifest().to_path_buf(),
+            target_dir: ws.target_dir().into_path_unlocked(),
+            build_dir: ws.build_dir().into_path_unlocked(),
+        });
+        deferred.save_no_error(gctx);
+    }
+
     if ws
         .lock_root()
         .as_path_unlocked()

@@ -92,7 +92,7 @@ pub fn run_verify(
     };
 
     let exec: Arc<dyn Executor> = Arc::new(DefaultExecutor);
-    ops::compile_with_exec(
+    ops::cargo_compile::compile_for_package_verification(
         &ws,
         &ops::CompileOptions {
             build_config: BuildConfig::new(
