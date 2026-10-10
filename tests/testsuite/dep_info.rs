@@ -224,7 +224,7 @@ before
     p.cargo("run")
         .cwd("b")
         .with_stdout_data(str![[r#"
-before
+after
 
 "#]])
         .run();

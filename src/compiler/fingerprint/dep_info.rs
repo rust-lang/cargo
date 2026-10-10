@@ -308,6 +308,7 @@ pub fn translate_dep_info(
     let build_root = crate::util::try_canonicalize(build_root)?;
     let pkg_root = crate::util::try_canonicalize(pkg_root)?;
     let ws_root = crate::util::try_canonicalize(ws_root)?;
+    let package_in_workspace = pkg_root.starts_with(&ws_root);
     let mut on_disk_info = EncodedDepInfo::default();
     on_disk_info.env = depinfo.env;
 
@@ -365,7 +366,7 @@ pub fn translate_dep_info(
                 return None;
             }
             (DepInfoPathType::PackageRootRelative, stripped)
-        } else if let Ok(stripped) = canon_file.strip_prefix(&ws_root) {
+        } else if package_in_workspace && let Ok(stripped) = canon_file.strip_prefix(&ws_root) {
             (DepInfoPathType::WorkspaceRootRelative, stripped)
         } else {
             // It's definitely not target root relative, but this is an absolute path (since it was
