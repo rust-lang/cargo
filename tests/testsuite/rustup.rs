@@ -256,6 +256,93 @@ real rustc running
         .run();
 }
 
+#[cargo_test]
+fn absolute_toolchain_path_bypasses_proxy() {
+    let RustupEnvironment {
+        cargo_bin,
+        rustup_home,
+        cargo_toolchain_exe: _,
+    } = RustupEnvironmentBuilder::new().build();
+
+    let toolchain_path = rustup_home.join("toolchains").join("test-toolchain");
+
+    let p = project().file("src/lib.rs", "").build();
+    let path = prepend_path(&cargo_bin);
+    p.cargo("check")
+        .env("RUSTUP_TOOLCHAIN", &toolchain_path)
+        .env("RUSTUP_HOME", &rustup_home)
+        .env("PATH", &path)
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+real rustc running
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn relative_toolchain_path_uses_proxy() {
+    let RustupEnvironment {
+        cargo_bin,
+        rustup_home,
+        cargo_toolchain_exe: _,
+    } = RustupEnvironmentBuilder::new().build();
+
+    let p = project().file("src/lib.rs", "").build();
+
+    // Create a decoy relative toolchain in cwd to verify Cargo does not
+    // resolve relative toolchain paths against the current directory.
+    let decoy_bin = p.root().join("relative").join("toolchain").join("bin");
+    decoy_bin.mkdir_p();
+    make_exe(
+        &decoy_bin,
+        "rustc",
+        r#"panic!("relative toolchain should not be executed");"#,
+        &[],
+    );
+
+    let path = prepend_path(&cargo_bin);
+    p.cargo("check")
+        .env("RUSTUP_TOOLCHAIN", "relative/toolchain")
+        .env("RUSTUP_HOME", &rustup_home)
+        .env("PATH", &path)
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+`[..]rustc[EXE]` proxy running
+real rustc running
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn missing_absolute_toolchain_uses_proxy() {
+    let RustupEnvironment {
+        cargo_bin,
+        rustup_home,
+        cargo_toolchain_exe: _,
+    } = RustupEnvironmentBuilder::new().build();
+
+    let missing_toolchain = root().join("non-existent-toolchain");
+
+    let p = project().file("src/lib.rs", "").build();
+    let path = prepend_path(&cargo_bin);
+    p.cargo("check")
+        .env("RUSTUP_TOOLCHAIN", &missing_toolchain)
+        .env("RUSTUP_HOME", &rustup_home)
+        .env("PATH", &path)
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+`[..]rustc[EXE]` proxy running
+real rustc running
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
 // This doesn't work on Windows because Cargo forces the PATH to contain the
 // sysroot_libdir, which is actually `bin`, preventing the test from
 // overriding the bin directory.

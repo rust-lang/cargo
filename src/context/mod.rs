@@ -1855,11 +1855,17 @@ impl GlobalContext {
                 //
                 // First, we must be running under rustup in the first place.
                 let toolchain = self.get_env_os("RUSTUP_TOOLCHAIN")?;
-                // This currently does not support toolchain paths.
-                // This also enforces UTF-8.
-                if toolchain.to_str()?.contains(&['/', '\\']) {
+                // Rustup supports named toolchains and absolute path toolchains,
+                // but not relative path toolchains. This also enforces UTF-8.
+                let toolchain = toolchain.to_str()?;
+                let toolchain_path = Path::new(toolchain);
+                let toolchain_dir = if toolchain_path.is_absolute() {
+                    toolchain_path.to_path_buf()
+                } else if !toolchain.contains(&['/', '\\']) {
+                    home::rustup_home().ok()?.join("toolchains").join(toolchain)
+                } else {
                     return None;
-                }
+                };
                 // If the tool on PATH is the same as `rustup` on path, then
                 // there is pretty good evidence that it will be a proxy.
                 let tool_resolved = paths::resolve_executable(Path::new(tool_str)).ok()?;
@@ -1875,12 +1881,7 @@ impl GlobalContext {
                 }
                 // Try to find the tool in rustup's toolchain directory.
                 let tool_exe = Path::new(tool_str).with_extension(env::consts::EXE_EXTENSION);
-                let toolchain_exe = home::rustup_home()
-                    .ok()?
-                    .join("toolchains")
-                    .join(&toolchain)
-                    .join("bin")
-                    .join(&tool_exe);
+                let toolchain_exe = toolchain_dir.join("bin").join(&tool_exe);
                 toolchain_exe.exists().then_some(toolchain_exe)
             })
             .unwrap_or_else(|| PathBuf::from(tool_str))
