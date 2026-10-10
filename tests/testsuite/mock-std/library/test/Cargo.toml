@@ -6,6 +6,5 @@ edition = "2018"
 
 [dependencies]
 std = { path = "../std" }
-panic_unwind = { path = "../panic_unwind" }
 compiler_builtins = { path = "../compiler_builtins" }
 registry-dep-using-std = { version = "*", features = ['mockbuild'] }
