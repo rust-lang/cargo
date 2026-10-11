@@ -142,10 +142,7 @@ pub fn cargo_test(attr: TokenStream, item: TokenStream) -> TokenStream {
                     panic!("expect a string literal, found: {command}");
                 };
                 let literal = literal.to_string();
-                let Some(command) = literal
-                    .strip_prefix('"')
-                    .and_then(|lit| lit.strip_suffix('"'))
-                else {
+                let Some(command) = literal.strip_circumfix('"', '"') else {
                     panic!("expect a quoted string literal, found: {literal}");
                 };
                 set_ignore!(!has_command(command), "{command} not installed");
@@ -156,10 +153,7 @@ pub fn cargo_test(attr: TokenStream, item: TokenStream) -> TokenStream {
                     panic!("expect a string literal, found: {split_debuginfo}");
                 };
                 let literal = literal.to_string();
-                let Some(split_debuginfo) = literal
-                    .strip_prefix('"')
-                    .and_then(|lit| lit.strip_suffix('"'))
-                else {
+                let Some(split_debuginfo) = literal.strip_circumfix('"', '"') else {
                     panic!("expect a quoted string literal, found: {literal}");
                 };
                 set_ignore!(

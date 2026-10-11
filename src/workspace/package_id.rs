@@ -85,18 +85,13 @@ impl<'de> de::Deserialize<'de> for PackageId {
             .ok_or_else(|| de::Error::custom("invalid serialized PackageId"))?;
         let version = field.parse().map_err(de::Error::custom)?;
 
-        let url =
-            strip_parens(rest).ok_or_else(|| de::Error::custom("invalid serialized PackageId"))?;
+        let url = rest
+            .strip_circumfix('(', ')')
+            .ok_or_else(|| de::Error::custom("invalid serialized PackageId"))?;
         let source_id = SourceId::from_url(url).map_err(de::Error::custom)?;
 
         Ok(PackageId::new(name, version, source_id))
     }
-}
-
-fn strip_parens(value: &str) -> Option<&str> {
-    let value = value.strip_prefix('(')?;
-    let value = value.strip_suffix(')')?;
-    Some(value)
 }
 
 impl PartialEq for PackageId {
