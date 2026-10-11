@@ -288,15 +288,18 @@ fn collect_statuses(
         .tree_index_track_renames(TrackRenames::Disabled)
         .index_worktree_submodules(None)
         .into_iter(
-            relative_package_root.map(|rela_pkg_root| {
-                // Use `:(top)` magic signature to make the pathspec relative to
-                // the repo root, not the current working directory.
-                let mut pathspec = BString::from(":(top)");
-                let prefix =
-                    gix::path::to_unix_separators_on_windows(gix::path::into_bstr(rela_pkg_root));
-                pathspec.push_str(prefix.as_ref());
-                pathspec
-            }), /* pathspec patterns */
+            relative_package_root
+                .map(|rela_pkg_root| -> gix::Result<_> {
+                    // Use `:(top)` magic signature to make the pathspec relative to
+                    // the repo root, not the current working directory.
+                    let mut pathspec = BString::from(":(top)");
+                    let prefix = gix::path::to_unix_separators_on_windows(gix::path::into_bstr(
+                        rela_pkg_root,
+                    )?);
+                    pathspec.push_str(prefix.as_ref());
+                    Ok(pathspec)
+                })
+                .transpose()?, /* pathspec patterns */
         )
         .with_context(|| {
             format!(
@@ -313,7 +316,7 @@ fn collect_statuses(
             )
         })?;
 
-        let rel_path = gix::path::from_bstr(status.location());
+        let rel_path = gix::path::from_bstr(status.location())?;
         let path = workdir.join(&rel_path);
         // It is OK to include Cargo.lock even if it is ignored.
         if path.ends_with("Cargo.lock")
@@ -416,7 +419,8 @@ fn dirty_files_outside_pkg_root(
         .into_iter(
             linked_files_outside_package_root
                 .into_iter()
-                .map(|p| gix::path::into_bstr(p).into_owned()),
+                .map(|p| gix::path::into_bstr(p).map(|p| p.into_owned()))
+                .collect::<gix::Result<Vec<_>>>()?,
         )
         .with_context(|| {
             format!(
@@ -434,7 +438,7 @@ fn dirty_files_outside_pkg_root(
             )
         })?;
 
-        let rel_path = gix::path::from_bstr(status.location());
+        let rel_path = gix::path::from_bstr(status.location())?;
         let path = workdir.join(&rel_path);
         dirty_files.push(path);
     }
