@@ -1051,7 +1051,7 @@ fn update_mtime_for_generated_files(pkg_root: &Path) {
     for file in GENERATED_FILES {
         let path = pkg_root.join(file);
         let mtime = filetime::FileTime::from_unix_time(DETERMINISTIC_TIMESTAMP, 0);
-        if let Err(e) = filetime::set_file_mtime(&path, mtime) {
+        if let Err(e) = fs::set_times(&path, fs::FileTimes::new().set_modified(mtime.into())) {
             tracing::trace!("failed to set deterministic mtime for {path:?}: {e}");
         }
     }

@@ -342,6 +342,9 @@ impl ProjectBuilder {
 
         let past = time::SystemTime::now() - Duration::new(1, 0);
         let ftime = filetime::FileTime::from_system_time(past);
+        let times = fs::FileTimes::new()
+            .set_accessed(ftime.into())
+            .set_modified(ftime.into());
 
         for file in self.files.iter_mut() {
             file.mk();
@@ -351,7 +354,7 @@ impl ProjectBuilder {
                 // see targets as "fresh". Without this, if cargo finishes in
                 // under 1 second, the second call will see the mtime of
                 // source == mtime of output and consider it dirty.
-                filetime::set_file_times(&file.path, ftime, ftime).unwrap();
+                fs::set_times(&file.path, times).unwrap();
             }
         }
 

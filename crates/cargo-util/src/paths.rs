@@ -706,7 +706,10 @@ pub fn copy<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q) -> Result<u64> {
 /// "best effort" approach, and errors shouldn't be propagated.
 pub fn set_file_time_no_err<P: AsRef<Path>>(path: P, time: FileTime) {
     let path = path.as_ref();
-    match filetime::set_file_times(path, time, time) {
+    let times = fs::FileTimes::new()
+        .set_accessed(time.into())
+        .set_modified(time.into());
+    match fs::set_times(path, times) {
         Ok(()) => tracing::debug!("set file mtime {} to {}", path.display(), time),
         Err(e) => tracing::warn!(
             "could not set mtime of {} to {}: {:?}",
