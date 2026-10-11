@@ -230,10 +230,8 @@ fn maybe_spurious(err: &Error) -> bool {
         }
     }
 
-    use gix::protocol::transport::IsSpuriousError;
-
     if let Some(err) = err.downcast_ref::<crate::sources::git::fetch::Error>() {
-        if err.is_spurious() {
+        if err.can_retry_lenient() {
             return true;
         }
     }
@@ -280,25 +278,16 @@ where
 #[cfg(test)]
 mod tests {
     use super::maybe_spurious;
-    use crate::sources::git::fetch::Error;
-    use gix::protocol::{fetch, transport::client};
+    use gix::error::ErrorExt;
 
     #[test]
     fn gitoxide_retry_classification_preserves_cancellation() {
-        let transient = Error::Fetch(gix::remote::fetch::Error::Fetch(fetch::Error::Client(
-            client::Error::Io(std::io::Error::from(std::io::ErrorKind::ConnectionReset)),
-        )));
+        let transient = std::io::Error::from(std::io::ErrorKind::ConnectionReset).raise();
         assert!(maybe_spurious(&anyhow::Error::from(transient)));
-        let permanent = Error::Fetch(gix::remote::fetch::Error::Fetch(
-            fetch::Error::MissingServerFeature {
-                feature: "invalid refspec",
-                description: "unsupported feature",
-            },
-        ));
+        let permanent = gix::error::validation("invalid refspec").raise();
         assert!(!maybe_spurious(&anyhow::Error::from(permanent)));
-        let cancelled = Error::Fetch(gix::remote::fetch::Error::Fetch(fetch::Error::Negotiate(
-            fetch::negotiate::Error::IO(std::io::Error::from(std::io::ErrorKind::Interrupted)),
-        )));
+        let cancelled = std::io::Error::from(std::io::ErrorKind::ConnectionReset)
+            .and_raise(gix::error::cancelled("cancelled"));
         assert!(!maybe_spurious(&anyhow::Error::from(cancelled)));
     }
 }
