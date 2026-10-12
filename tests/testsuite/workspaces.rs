@@ -1900,73 +1900,6 @@ fn glob_syntax() {
     assert!(p.root().join("crates/qux/Cargo.lock").is_file());
 }
 
-/*FIXME: This fails because of how workspace.exclude and workspace.members are working.
-#[cargo_test]
-fn glob_syntax_2() {
-    let p = project()
-        .file("Cargo.toml", r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            edition = "2015"
-            authors = []
-
-            [workspace]
-            members = ["crates/b*"]
-            exclude = ["crates/q*"]
-        "#)
-        .file("src/main.rs", "fn main() {}")
-        .file("crates/bar/Cargo.toml", r#"
-            [package]
-            name = "bar"
-            version = "0.1.0"
-            edition = "2015"
-            authors = []
-            workspace = "../.."
-        "#)
-        .file("crates/bar/src/main.rs", "fn main() {}")
-        .file("crates/baz/Cargo.toml", r#"
-            [package]
-            name = "baz"
-            version = "0.1.0"
-            edition = "2015"
-            authors = []
-            workspace = "../.."
-        "#)
-        .file("crates/baz/src/main.rs", "fn main() {}")
-        .file("crates/qux/Cargo.toml", r#"
-            [package]
-            name = "qux"
-            version = "0.1.0"
-            edition = "2015"
-            authors = []
-        "#)
-        .file("crates/qux/src/main.rs", "fn main() {}");
-    p.build();
-
-    p.cargo("build").run();
-    assert!(p.bin("foo").is_file());
-    assert!(!p.bin("bar").is_file());
-    assert!(!p.bin("baz").is_file());
-
-    p.cargo("build").cwd("crates/bar").run();
-    assert!(p.bin("foo").is_file());
-    assert!(p.bin("bar").is_file());
-
-    p.cargo("build").cwd("crates/baz").run();
-    assert!(p.bin("foo").is_file());
-    assert!(p.bin("baz").is_file());
-
-    p.cargo("build").cwd("crates/qux").run();
-    assert!(!p.bin("qux").is_file());
-
-    assert!(p.root().join("Cargo.lock").is_file());
-    assert!(!p.root().join("crates/bar/Cargo.lock").is_file());
-    assert!(!p.root().join("crates/baz/Cargo.lock").is_file());
-    assert!(p.root().join("crates/qux/Cargo.lock").is_file());
-}
-*/
-
 #[cargo_test]
 fn glob_syntax_invalid_members() {
     let p = project()
@@ -2183,30 +2116,6 @@ fn dont_recurse_out_of_cargo_home() {
         .env("CARGO_HOME", p.root().join(".cargo"))
         .run();
 }
-
-// FIXME: this fails because of how workspace.exclude and workspace.members are working.
-/*
-#[cargo_test]
-fn include_and_exclude() {
-    let p = project()
-        .file("Cargo.toml", r#"
-            [workspace]
-            members = ["foo"]
-            exclude = ["foo/bar"]
-            "#)
-        .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
-        .file("foo/src/lib.rs", "")
-        .file("foo/bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
-        .file("foo/bar/src/lib.rs", "");
-    p.build();
-
-    p.cargo("build").cwd("foo").run();
-    assert!(p.root().join("target").is_dir());
-    assert!(!p.root().join("foo/target").is_dir());
-    p.cargo("build").cwd("foo/bar").run();
-    assert!(p.root().join("foo/bar/target").is_dir());
-}
-*/
 
 #[cargo_test]
 fn cargo_home_at_root_works() {
