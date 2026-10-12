@@ -10,3 +10,7 @@ _A clear overview along with an in-depth explanation are helpful._
 
 _Demonstrate how you test this change and guide reviewers through your PR._
 _With a smooth review process, a pull request usually gets reviewed quicker._
+
+---
+
+🤖 LLM disclosure: _If an LLM was used in a way that requires disclosure under the [LLM usage policy](https://doc.crates.io/contrib/process/llm-usage.html), please describe it here. Remove this section if no disclosure is required._
