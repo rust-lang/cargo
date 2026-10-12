@@ -1193,7 +1193,10 @@ fn simulated_docker_deps_stay_cached() {
             let atime = metadata.accessed().unwrap();
             let atime_duration = atime.duration_since(SystemTime::UNIX_EPOCH).unwrap();
             let trunc_atime = FileTime::from_unix_time(atime_duration.as_secs() as i64, 0);
-            if let Err(e) = filetime::set_file_times(entry.path(), trunc_atime, trunc_mtime) {
+            let times = fs::FileTimes::new()
+                .set_accessed(trunc_atime.into())
+                .set_modified(trunc_mtime.into());
+            if let Err(e) = fs::set_times(entry.path(), times) {
                 // Windows doesn't allow changing filetimes on some things
                 // (directories, other random things I'm not sure why). Just
                 // ignore them.

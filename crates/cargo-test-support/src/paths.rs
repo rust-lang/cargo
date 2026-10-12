@@ -269,7 +269,10 @@ impl CargoPathExt for Path {
             // Sadly change_file_times has a failure mode where a readonly file
             // cannot have its times changed on windows.
             do_op(path, "set file times", |path| {
-                filetime::set_file_times(path, newtime, newtime)
+                let times = fs::FileTimes::new()
+                    .set_accessed(newtime.into())
+                    .set_modified(newtime.into());
+                fs::set_times(path, times)
             });
         }
     }

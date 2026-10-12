@@ -23,7 +23,6 @@ impl<'s> ScriptSource<'s> {
     pub fn parse(raw: &'s str) -> Result<Self, FrontmatterError> {
         use winnow::stream::FindSlice as _;
         use winnow::stream::Location as _;
-        use winnow::stream::Offset as _;
         use winnow::stream::Stream as _;
 
         let content_end = raw.len();
@@ -97,9 +96,7 @@ impl<'s> ScriptSource<'s> {
         let info = info.strip_suffix('\r').unwrap_or(info); // already excludes `\n`
         let info = info.trim_matches(is_horizontal_whitespace);
         if !info.is_empty() {
-            let info_start = info.offset_from(&raw);
-            let info_end = info_start + info.len();
-            source.info = Some(info_start..info_end);
+            source.info = Some(raw.substr_range(info).unwrap().into());
         }
 
         // Ends with a line that starts with a matching number of `-` only followed by whitespace
@@ -164,11 +161,9 @@ impl<'s> ScriptSource<'s> {
             let after_closing_fence = after_closing_fence.trim_matches(is_horizontal_whitespace);
             if !after_closing_fence.is_empty() {
                 // extra characters beyond the original fence pattern
-                let after_start = after_closing_fence.offset_from(&raw);
-                let after_end = after_start + after_closing_fence.len();
                 return Err(FrontmatterError::new(
                     format!("unexpected characters after frontmatter close"),
-                    after_start..after_end,
+                    raw.substr_range(after_closing_fence).unwrap().into(),
                 )
                 .push_visible_span(open_start..open_end));
             }

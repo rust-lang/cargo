@@ -240,7 +240,7 @@ impl FromStr for TomlLockfilePackageId {
         let version = s.next();
         let source_id = match s.next() {
             Some(s) => {
-                if let Some(s) = s.strip_prefix('(').and_then(|s| s.strip_suffix(')')) {
+                if let Some(s) = s.strip_circumfix('(', ')') {
                     Some(TomlLockfileSourceId::new(s.to_string())?)
                 } else {
                     return Err(TomlLockfilePackageIdErrorKind::InvalidSerializedPackageId.into());

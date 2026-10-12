@@ -354,7 +354,7 @@
 //! Various weird filesystems (such as network filesystems) also can cause
 //! complications. Network filesystems may track the time on the server
 //! (except when the time is set manually such as with
-//! `filetime::set_file_times`). Not all filesystems support modifying the
+//! `std::fs::set_times`). Not all filesystems support modifying the
 //! mtime.
 //!
 //! See the [`A-rebuild-detection`] label on the issue tracker for more.

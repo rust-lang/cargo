@@ -214,10 +214,7 @@ fn third_party_subcommands(gctx: &GlobalContext) -> BTreeMap<String, CommandInfo
             let Some(filename) = path.file_name().and_then(|s| s.to_str()) else {
                 continue;
             };
-            let Some(name) = filename
-                .strip_prefix(prefix)
-                .and_then(|s| s.strip_suffix(suffix))
-            else {
+            let Some(name) = filename.strip_circumfix(prefix, suffix) else {
                 continue;
             };
             if is_executable(entry.path()) {
