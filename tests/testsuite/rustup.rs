@@ -264,7 +264,12 @@ fn absolute_toolchain_path_bypasses_proxy() {
         cargo_toolchain_exe: _,
     } = RustupEnvironmentBuilder::new().build();
 
-    let toolchain_path = rustup_home.join("toolchains").join("test-toolchain");
+    // Put the toolchain outside RUSTUP_HOME
+    // so it won't be found through named toolchain lookup
+    let toolchain_path = root().join("custom-toolchain");
+    let toolchain_bin = toolchain_path.join("bin");
+    toolchain_bin.mkdir_p();
+    real_rustc_wrapper(&toolchain_bin, "custom toolchain rustc running");
 
     let p = project().file("src/lib.rs", "").build();
     let path = prepend_path(&cargo_bin);
@@ -274,7 +279,7 @@ fn absolute_toolchain_path_bypasses_proxy() {
         .env("PATH", &path)
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-real rustc running
+custom toolchain rustc running
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
