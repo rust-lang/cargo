@@ -836,8 +836,6 @@ fn hyphen_in_lint_name() {
 
     foo.cargo("check")
         .with_stderr_data(str![[r#"
-[WARNING] Cargo.toml: `lints.rust.unexpected-cfgs` is deprecated in favor of `lints.rust.unexpected_cfgs` and will not work in a future edition
-[WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -866,9 +864,8 @@ fn duplicate_lint_name_hyphen_and_underscore() {
 
     foo.cargo("check")
         .with_stderr_data(str![[r#"
-[WARNING] Cargo.toml: `lints.rust.unexpected-cfgs` is deprecated in favor of `lints.rust.unexpected_cfgs` and will not work in a future edition
 [WARNING] Cargo.toml: duplicate lint `unexpected-cfgs` in `[lints.rust]`, conflicts with `unexpected_cfgs` and will not work in a future edition
-[WARNING] `foo` (manifest) generated 2 warnings
+[WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
