@@ -111,9 +111,12 @@ use crate::util::errors::{CargoResult, VerboseError};
 use crate::util::interning::InternedString;
 use crate::util::machine_message::{self, Message};
 use crate::util::{add_path_args, internal, path_args};
+use crate::workspace::Feature;
+use crate::workspace::PackageId;
+use crate::workspace::Target;
+use crate::workspace::TargetKind;
 use crate::workspace::manifest::TargetSourcePath;
 use crate::workspace::profiles::{PanicStrategy, Profile, StripInner};
-use crate::workspace::{Feature, PackageId, Target};
 
 use cargo_util::{ExecStats, ProcessBuilder, ProcessError, paths};
 use cargo_util_schemas::manifest::TomlDebugInfo;
@@ -1821,6 +1824,15 @@ fn dep_paths_for_args(unit: &Unit, build_runner: &BuildRunner<'_, '_>) -> Vec<Pa
     if direct.is_empty() {
         return Vec::new();
     }
+
+    // Checks crate type rustc actually set rather than the `target.proc-macro` flag.
+    // The latter is inconsistent.
+    // See https://github.com/rust-lang/cargo/issues/17579
+    let is_proc_macro = |u: &Unit| match u.target.kind() {
+        TargetKind::Lib(kinds) => kinds.contains(&CrateType::ProcMacro),
+        _ => false,
+    };
+
     let mut indirect = HashSet::default();
     let mut visited = HashSet::default();
     let mut stack: Vec<&Unit> = direct
@@ -1832,7 +1844,7 @@ fn dep_paths_for_args(unit: &Unit, build_runner: &BuildRunner<'_, '_>) -> Vec<Pa
         if !visited.insert(u.clone()) {
             continue;
         }
-        if u.target.proc_macro() {
+        if is_proc_macro(u) {
             continue;
         }
         for dep in build_runner.unit_deps(u) {
@@ -1841,7 +1853,7 @@ fn dep_paths_for_args(unit: &Unit, build_runner: &BuildRunner<'_, '_>) -> Vec<Pa
                 continue;
             }
             indirect.insert(v.clone());
-            if v.target.proc_macro() {
+            if is_proc_macro(v) {
                 continue;
             }
             if !visited.contains(v) {
