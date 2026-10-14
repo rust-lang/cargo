@@ -20,6 +20,60 @@ pub fn is_keyword(name: &str) -> bool {
     .contains(&name)
 }
 
+/// Crate names that crates.io refuses to publish.
+///
+/// This mirrors the `reserved_crate_names` table on crates.io, as seeded by
+/// <https://github.com/rust-lang/crates.io/blob/main/migrations/20170305095748_create_reserved_crate_names/up.sql>.
+/// Names are stored in their canonical form (lowercase, `_` instead of `-`).
+const CRATES_IO_RESERVED_NAMES: &[&str] = &[
+    "alloc",
+    "arena",
+    "ast",
+    "builtins",
+    "collections",
+    "compiler_builtins",
+    "compiler_rt",
+    "compiletest",
+    "core",
+    "coretest",
+    "debug",
+    "driver",
+    "flate",
+    "fmt_macros",
+    "grammar",
+    "graphviz",
+    "macro",
+    "macros",
+    "proc_macro",
+    "rbml",
+    "rust_installer",
+    "rustbook",
+    "rustc",
+    "rustc_back",
+    "rustc_borrowck",
+    "rustc_driver",
+    "rustc_llvm",
+    "rustc_resolve",
+    "rustc_trans",
+    "rustc_typeck",
+    "rustdoc",
+    "rustllvm",
+    "rustuv",
+    "serialize",
+    "std",
+    "syntax",
+    "test",
+    "unicode",
+];
+
+/// Returns `true` if crates.io refuses to publish a crate with this name.
+///
+/// The comparison follows crates.io's rules: case-insensitive, with `-` and `_` treated as equal.
+pub fn is_crates_io_reserved(name: &str) -> bool {
+    let canonical = name.to_ascii_lowercase().replace('-', "_");
+    CRATES_IO_RESERVED_NAMES.contains(&canonical.as_str())
+}
+
 /// These names cannot be used on Windows, even with an extension.
 pub fn is_windows_reserved(name: &str) -> bool {
     [

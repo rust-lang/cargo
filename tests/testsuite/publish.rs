@@ -232,6 +232,91 @@ fn duplicate_version() {
         .run();
 }
 
+#[cargo_test]
+fn reserved_crate_name() {
+    let registry = RegistryBuilder::new().http_api().http_index().build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "Alloc"
+                version = "0.0.1"
+                edition = "2021"
+                authors = []
+                license = "MIT"
+                description = "alloc"
+                documentation = "alloc"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish --dry-run")
+        .replace_crates_io(registry.index_url())
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[WARNING] crate name `Alloc` is reserved on crates.io and cannot be published
+[PACKAGING] Alloc v0.0.1 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] Alloc v0.0.1 ([ROOT]/foo)
+[COMPILING] Alloc v0.0.1 ([ROOT]/foo/target/package/Alloc-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[UPLOADING] Alloc v0.0.1 ([ROOT]/foo)
+[WARNING] aborting upload due to dry run
+
+"#]])
+        .run();
+
+    p.cargo("publish")
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[ERROR] crate name `Alloc` is reserved on crates.io and cannot be published
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn reserved_crate_name_on_other_registry() {
+    let registry = RegistryBuilder::new().http_api().build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "alloc"
+                version = "0.0.1"
+                edition = "2021"
+                authors = []
+                license = "MIT"
+                description = "alloc"
+                documentation = "alloc"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish --dry-run --index")
+        .arg(registry.index_url().as_str())
+        .with_stderr_data(str![[r#"
+[UPDATING] `[ROOT]/registry` index
+[PACKAGING] alloc v0.0.1 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] alloc v0.0.1 ([ROOT]/foo)
+[COMPILING] alloc v0.0.1 ([ROOT]/foo/target/package/alloc-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[UPLOADING] alloc v0.0.1 ([ROOT]/foo)
+[WARNING] aborting upload due to dry run
+
+"#]])
+        .run();
+}
+
 // Check that the `token` key works at the root instead of under a
 // `[registry]` table.
 #[cargo_test]

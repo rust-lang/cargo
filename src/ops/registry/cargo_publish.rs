@@ -43,6 +43,7 @@ use crate::util::VersionExt as _;
 use crate::util::auth;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::ManifestError;
+use crate::util::restricted_names;
 use crate::workspace::Dependency;
 use crate::workspace::Package;
 use crate::workspace::PackageId;
@@ -147,6 +148,9 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
 
         for (pkg, _) in &pkgs {
             verify_unpublished(pkg, &mut source, &source_ids, opts.dry_run, opts.gctx)?;
+            if source_ids.original.is_crates_io() {
+                verify_not_reserved(pkg, opts.dry_run, opts.gctx)?;
+            }
             verify_dependencies(pkg, &registry, source_ids.original).map_err(|err| {
                 ManifestError::new(
                     err.context(format!(
@@ -481,6 +485,27 @@ fn verify_unpublished(
         }
     }
 
+    Ok(())
+}
+
+/// Checks the crate name against the names crates.io reserves.
+///
+/// Like [`verify_unpublished`], a dry run only warns, since crates.io is the one that rejects it.
+fn verify_not_reserved(pkg: &Package, dry_run: bool, gctx: &GlobalContext) -> CargoResult<()> {
+    if !restricted_names::is_crates_io_reserved(pkg.name().as_str()) {
+        return Ok(());
+    }
+    if dry_run {
+        gctx.shell().warn(format!(
+            "crate name `{}` is reserved on crates.io and cannot be published",
+            pkg.name()
+        ))?;
+    } else {
+        bail!(
+            "crate name `{}` is reserved on crates.io and cannot be published",
+            pkg.name()
+        );
+    }
     Ok(())
 }
 
