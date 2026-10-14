@@ -30,6 +30,8 @@ flate2 = "flate2"
 
 [default.extend-words]
 filetimes = "filetimes"
+# Reserved crate name on crates.io
+flate = "flate"
 
 [type.cargo_command]
 extend-glob = ["cargo_command.rs"]
