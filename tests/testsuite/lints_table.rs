@@ -134,7 +134,7 @@ fn invalid_type_in_lint_value() {
                 edition = "2015"
 
                 [workspace.lints.rust]
-                rust_2018_idioms = -1
+                rust-2018-idioms = -1
             "#,
         )
         .file("src/lib.rs", "")
@@ -146,7 +146,7 @@ fn invalid_type_in_lint_value() {
 [ERROR] invalid type: integer `-1`, expected a string or map
  --> Cargo.toml:8:36
   |
-8 |                 rust_2018_idioms = -1
+8 |                 rust-2018-idioms = -1
   |                                    ^^
 
 "#]])
@@ -165,9 +165,9 @@ fn warn_on_unused_key() {
                 edition = "2015"
 
                 [workspace.lints.rust]
-                rust_2018_idioms = { level = "allow", unused = true }
+                rust-2018-idioms = { level = "allow", unused = true }
                 [lints.rust]
-                rust_2018_idioms = { level = "allow", unused = true }
+                rust-2018-idioms = { level = "allow", unused = true }
             "#,
         )
         .file("src/lib.rs", "")
@@ -175,8 +175,8 @@ fn warn_on_unused_key() {
 
     foo.cargo("check")
         .with_stderr_data(str![[r#"
-[WARNING] Cargo.toml: unused manifest key: `lints.rust.rust_2018_idioms.unused`
-[WARNING] Cargo.toml: unused manifest key: `lints.rust.rust_2018_idioms.unused`
+[WARNING] Cargo.toml: unused manifest key: `lints.rust.rust-2018-idioms.unused`
+[WARNING] Cargo.toml: unused manifest key: `lints.rust.rust-2018-idioms.unused`
 [WARNING] `foo` (manifest) generated 2 warnings
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -706,7 +706,7 @@ fn doctest_respects_lints() {
                 authors = []
 
                 [lints.rust]
-                confusable_idents = 'allow'
+                confusable-idents = 'allow'
             "#,
         )
         .file(
