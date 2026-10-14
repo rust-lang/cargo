@@ -2287,14 +2287,6 @@ fn dep_to_dependency<P: ResolveToPath + Clone>(
         manifest::TomlDependency::Detailed(details) => details,
     };
 
-    if orig.version.is_none() && orig.path.is_none() && orig.git.is_none() && !orig.builtin {
-        anyhow::bail!(
-            "dependency ({name_in_toml}) specified without \
-                 providing a local path, Git repository, version, or \
-                 workspace dependency to use"
-        );
-    }
-
     if let Some(version) = &orig.version {
         if version.contains('+') {
             manifest_ctx.warnings.push(format!(
@@ -2303,24 +2295,6 @@ fn dep_to_dependency<P: ResolveToPath + Clone>(
                      metadata is recommended to avoid confusion",
                 version, name_in_toml
             ));
-        }
-    }
-
-    if orig.git.is_none() {
-        let git_only_keys = [
-            (&orig.branch, "branch"),
-            (&orig.tag, "tag"),
-            (&orig.rev, "rev"),
-        ];
-
-        for &(key, key_name) in &git_only_keys {
-            if key.is_some() {
-                bail!(
-                    "key `{}` is ignored for dependency ({}).",
-                    key_name,
-                    name_in_toml
-                );
-            }
         }
     }
 
@@ -2435,51 +2409,84 @@ fn to_dependency_source_id<P: ResolveToPath + Clone>(
     manifest_ctx: &mut ManifestContext<'_, '_>,
     kind: Option<DepKind>,
 ) -> CargoResult<SourceId> {
-    if orig.builtin {
-        if orig.git.is_some()
-            || orig.path.is_some()
-            || orig.registry.is_some()
-            || orig.registry_index.is_some()
-        {
-            bail!(
-                "dependency ({name_in_toml}) specification is ambiguous. \
-                `builtin = true` cannot be combined with any other dependency source"
-            )
-        }
-        if orig.version.is_some() {
-            bail!(
-                "builtin dependency `{name_in_toml}` cannot be combined with a version requirement\n\
-                 Builtin dependencies are unversioned."
-            )
-        }
-        if kind == Some(DepKind::Build) {
-            bail!("builtin dependency `{name_in_toml}` cannot be used as a build dependency")
-        }
-        return SourceId::for_builtin();
-    }
+    let manifest::TomlDetailedDependency {
+        version,
+        registry,
+        registry_index,
+        path,
+        base: _,
+        git,
+        branch,
+        tag,
+        rev,
+        builtin,
+        features: _,
+        optional: _,
+        default_features: _,
+        default_features2: _,
+        package: _,
+        public: _,
+        artifact: _,
+        lib: _,
+        target: _,
+        _unused_keys: _,
+    } = orig;
 
-    match (
-        orig.git.as_ref(),
-        orig.path.as_ref(),
-        orig.registry.as_deref(),
-        orig.registry_index.as_ref(),
-    ) {
-        (Some(_git), Some(_path), _, _) => {
-            bail!(
-                "dependency ({name_in_toml}) specification is ambiguous. \
-                     Only one of `git` or `path` is allowed.",
-            );
-        }
-        (_, _, Some(_registry), Some(_registry_index)) => bail!(
-            "dependency ({name_in_toml}) specification is ambiguous. \
-                 Only one of `registry` or `registry-index` is allowed.",
-        ),
-        (Some(git), None, _, _) => {
-            let n_details = [&orig.branch, &orig.tag, &orig.rev]
-                .iter()
-                .filter(|d| d.is_some())
-                .count();
+    let builtin_kind = if *builtin { Some(()) } else { None };
 
+    let git_kind = if let Some(git) = git {
+        Some(git)
+    } else {
+        let git_only_keys = [
+            (&orig.branch, "branch"),
+            (&orig.tag, "tag"),
+            (&orig.rev, "rev"),
+        ];
+        for &(key, key_name) in &git_only_keys {
+            if key.is_some() {
+                bail!(
+                    "key `{}` is ignored for dependency ({}).",
+                    key_name,
+                    name_in_toml
+                );
+            }
+        }
+
+        None
+    };
+
+    let path_kind = if let Some(path) = path {
+        Some(path)
+    } else {
+        None
+    };
+
+    let registry_kind = if version.is_some() {
+        Some(())
+    } else {
+        if orig.registry.is_some() {
+            manifest_ctx.warnings.push(format!(
+                "key `registry` is ignored for dependency `{name_in_toml}`",
+            ));
+        }
+        if orig.registry_index.is_some() {
+            manifest_ctx.warnings.push(format!(
+                "key `registry-index` is ignored for dependency `{name_in_toml}`",
+            ));
+        }
+
+        None
+    };
+
+    let source = match (builtin_kind, git_kind, path_kind, registry_kind) {
+        (Some(()), None, None, None) => {
+            if kind == Some(DepKind::Build) {
+                bail!("builtin dependency `{name_in_toml}` cannot be used as a build dependency")
+            }
+            SourceId::for_builtin()?
+        }
+        (None, Some(git), None, _) => {
+            let n_details = [&branch, &tag, &rev].iter().filter(|d| d.is_some()).count();
             if n_details > 1 {
                 bail!(
                     "dependency ({name_in_toml}) specification is ambiguous. \
@@ -2494,8 +2501,8 @@ fn to_dependency_source_id<P: ResolveToPath + Clone>(
                 .or_else(|| orig.tag.clone().map(GitReference::Tag))
                 .or_else(|| orig.rev.clone().map(GitReference::Rev))
                 .unwrap_or(GitReference::DefaultBranch);
-            let loc = git.into_url()?;
 
+            let loc = git.into_url()?;
             if let Some(fragment) = loc.fragment() {
                 let msg = format!(
                     "URL fragment `#{fragment}` in git URL is ignored for dependency ({name_in_toml}). \
@@ -2505,9 +2512,9 @@ fn to_dependency_source_id<P: ResolveToPath + Clone>(
                 manifest_ctx.warnings.push(msg);
             }
 
-            SourceId::for_git(&loc, reference)
+            SourceId::for_git(&loc, reference)?
         }
-        (None, Some(path), _, _) => {
+        (None, None, Some(path), _) => {
             let path = path.resolve(manifest_ctx.gctx);
             // If the source ID for the package we're parsing is a path
             // source, then we normalize the path here to get rid of
@@ -2520,18 +2527,57 @@ fn to_dependency_source_id<P: ResolveToPath + Clone>(
             if manifest_ctx.source_id.is_path() {
                 let path = manifest_ctx.file.parent().unwrap().join(path);
                 let path = paths::normalize_path(&path);
-                SourceId::for_path(&path)
+                SourceId::for_path(&path)?
             } else {
-                Ok(manifest_ctx.source_id)
+                manifest_ctx.source_id
             }
         }
-        (None, None, Some(registry), None) => SourceId::alt_registry(manifest_ctx.gctx, registry),
-        (None, None, None, Some(registry_index)) => {
-            let url = registry_index.into_url()?;
-            SourceId::for_registry(&url)
+        (None, None, None, Some(())) => match (registry, registry_index) {
+            (Some(_), Some(_)) => {
+                bail!(
+                    "dependency ({name_in_toml}) specification is ambiguous. \
+                    Only one of `registry` or `registry-index` is allowed.",
+                )
+            }
+            (Some(registry), None) => SourceId::alt_registry(manifest_ctx.gctx, registry)?,
+            (None, Some(registry_index)) => {
+                let url = registry_index.into_url()?;
+                SourceId::for_registry(&url)?
+            }
+            (None, None) => SourceId::crates_io(manifest_ctx.gctx)?,
+        },
+        (None, None, None, None) => {
+            bail!(
+                "dependency ({name_in_toml}) specified without \
+                     providing a local path, Git repository, version, or \
+                     workspace dependency to use"
+            )
         }
-        (None, None, None, None) => SourceId::crates_io(manifest_ctx.gctx),
-    }
+        (builtin_kind, git_kind, path_kind, registry_kind) => {
+            if builtin_kind.is_some() {
+                if registry_kind.is_some() {
+                    bail!(
+                        "builtin dependency `{name_in_toml}` cannot be combined with a version requirement\n\
+                    Builtin dependencies are unversioned."
+                    )
+                }
+                bail!(
+                    "dependency ({name_in_toml}) specification is ambiguous. \
+                    `builtin = true` cannot be combined with any other dependency source"
+                )
+            }
+
+            if git_kind.is_some() && path_kind.is_some() {
+                bail!(
+                    "dependency ({name_in_toml}) specification is ambiguous. \
+                     Only one of `git` or `path` is allowed.",
+                )
+            }
+
+            bail!("dependency ({name_in_toml}) specification is ambiguous")
+        }
+    };
+    Ok(source)
 }
 
 pub(crate) fn lookup_path_base<'a>(

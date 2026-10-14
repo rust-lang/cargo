@@ -930,6 +930,46 @@ Caused by:
 }
 
 #[cargo_test]
+fn registry_without_version() {
+    registry::alt_init();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                edition = "2015"
+
+                [dependencies.bar]
+                path = "bar"
+                registry = "alternative"
+
+                [lints.cargo]
+                default = "allow"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[WARNING] Cargo.toml: key `registry` is ignored for dependency `bar`
+[WARNING] `foo` (manifest) generated 1 warning
+[LOCKING] 1 package to highest compatible version
+[CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn dev_dependencies2() {
     let p = project()
         .file(
