@@ -874,6 +874,26 @@ fn rustflags_from_target(
     };
     if let Some(args) = gctx.get::<Option<StringList>>(["target", target, flag.as_key()])? {
         rustflags.extend(args.as_slice().iter().cloned());
+    } else {
+        // Derived from https://doc.rust-lang.org/1.98.0/rustc/platform-support.html
+        const DOTTED_TARGETS_1_98: &[&str] = &[
+            "thumbv8m.base-none-eabi",
+            "thumbv8m.main-none-eabi",
+            "thumbv8m.main-none-eabihf",
+            "thumbv8m.base-nuttx-eabi",
+            "thumbv8m.main-nuttx-eabi",
+            "thumbv8m.main-nuttx-eabihf",
+        ];
+        if DOTTED_TARGETS_1_98.contains(&target) {
+            // HACK: support tables like `[target.thumbv8m.main-none-eabihf]` for
+            // when it was used as a workaround from before `[target."thumbv8m.main-none-eabihf"]`
+            // started working
+            let key = format!("target.{}.{}", target, flag.as_key());
+            let key = key.split(".").collect::<Vec<_>>();
+            if let Some(args) = gctx.get::<Option<StringList>>(key)? {
+                rustflags.extend(args.as_slice().iter().cloned());
+            }
+        }
     }
     // ...including target.'cfg(...)'.rustflags
     if let Some(target_cfg) = target_cfg {
