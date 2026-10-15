@@ -230,10 +230,8 @@ fn maybe_spurious(err: &Error) -> bool {
         }
     }
 
-    use gix::protocol::transport::IsSpuriousError;
-
     if let Some(err) = err.downcast_ref::<crate::sources::git::fetch::Error>() {
-        if err.is_spurious() {
+        if err.can_retry() {
             return true;
         }
     }
