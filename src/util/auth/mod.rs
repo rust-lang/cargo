@@ -38,7 +38,7 @@ fn credential_provider(
         }
     };
 
-    let cfg = registry_credential_config_raw(gctx, sid)?;
+    let cfg = registry_config_raw(gctx, sid)?;
     let mut global_provider_defined = true;
     let default_providers = || {
         global_provider_defined = false;
@@ -107,8 +107,8 @@ fn credential_provider(
     Ok(global_providers)
 }
 
-/// Get the credential configuration for a `SourceId`.
-pub fn registry_credential_config_raw(
+/// Get the registry configuration for a `SourceId`.
+pub fn registry_config_raw(
     gctx: &GlobalContext,
     sid: &SourceId,
 ) -> CargoResult<Option<RegistryConfig>> {
@@ -116,16 +116,16 @@ pub fn registry_credential_config_raw(
     if let Some(cfg) = cache.get(&sid) {
         return Ok(cfg.clone());
     }
-    let cfg = registry_credential_config_raw_uncached(gctx, sid)?;
+    let cfg = registry_config_raw_uncached(gctx, sid)?;
     cache.insert(*sid, cfg.clone());
     return Ok(cfg);
 }
 
-fn registry_credential_config_raw_uncached(
+fn registry_config_raw_uncached(
     gctx: &GlobalContext,
     sid: &SourceId,
 ) -> CargoResult<Option<RegistryConfig>> {
-    tracing::trace!("loading credential config for {}", sid);
+    tracing::trace!("loading registry config for {}", sid);
     gctx.load_credentials()?;
     if !sid.is_remote_registry() {
         bail!(
