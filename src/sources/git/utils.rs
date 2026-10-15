@@ -2067,6 +2067,29 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn test_scp_to_ssh() {
+        // Standard SCP-like URLs should be converted to ssh:// form.
+        assert_eq!(
+            scp_to_ssh("git@github.com:rust-lang/cargo.git"),
+            Some("ssh://git@github.com/rust-lang/cargo.git".to_string()),
+        );
+        assert_eq!(
+            scp_to_ssh("git@github.com:foo/bar.git"),
+            Some("ssh://git@github.com/foo/bar.git".to_string()),
+        );
+        // A path starting with '~' should also be converted.
+        assert_eq!(
+            scp_to_ssh("git@github.com:~user/repo.git"),
+            Some("ssh://git@github.com/~user/repo.git".to_string()),
+        );
+        // Non-SCP URLs should not be converted and return None.
+        assert_eq!(scp_to_ssh("ssh://git@github.com/rust-lang/cargo.git"), None);
+        assert_eq!(scp_to_ssh("https://github.com/rust-lang/cargo.git"), None);
+        // Unparsable input should also return None.
+        assert_eq!(scp_to_ssh("not-a-url"), None);
+    }
 }
 
 /// Turns a full commit hash revision into an oid.
