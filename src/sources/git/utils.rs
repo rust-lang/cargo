@@ -608,6 +608,9 @@ fn scp_to_ssh(url: &str) -> Option<String> {
     let mut gix_url = gix::url::parse(gix::bstr::BStr::new(url.as_bytes())).ok()?;
     if gix_url.serialize_alternative_form && gix_url.scheme == gix::url::Scheme::Ssh {
         gix_url.serialize_alternative_form = false;
+        if !gix_url.path.starts_with(b"/") && !gix_url.path.starts_with(b"~") {
+            gix_url.path.insert(0, b'/');
+        }
         Some(gix_url.to_bstring().to_string())
     } else {
         None
@@ -2081,6 +2084,29 @@ mod tests {
                 "base `{base_url}`; submodule `{submodule_url}`"
             );
         }
+    }
+
+    #[test]
+    fn test_scp_to_ssh() {
+        // Standard SCP-like URLs should be converted to ssh:// form.
+        assert_eq!(
+            scp_to_ssh("git@github.com:rust-lang/cargo.git"),
+            Some("ssh://git@github.com/rust-lang/cargo.git".to_string()),
+        );
+        assert_eq!(
+            scp_to_ssh("git@github.com:foo/bar.git"),
+            Some("ssh://git@github.com/foo/bar.git".to_string()),
+        );
+        // A path starting with '~' should also be converted.
+        assert_eq!(
+            scp_to_ssh("git@github.com:~user/repo.git"),
+            Some("ssh://git@github.com/~user/repo.git".to_string()),
+        );
+        // Non-SCP URLs should not be converted and return None.
+        assert_eq!(scp_to_ssh("ssh://git@github.com/rust-lang/cargo.git"), None);
+        assert_eq!(scp_to_ssh("https://github.com/rust-lang/cargo.git"), None);
+        // Unparsable input should also return None.
+        assert_eq!(scp_to_ssh("not-a-url"), None);
     }
 }
 
