@@ -62,10 +62,8 @@ fn complete_features_duplicate_in_workspace() {
         .env("CARGO_COMPLETE", "fish")
         .with_stdout_data(str![[r#"
 feature_a	from crate_a
-shared_feature	from crate_a
+shared_feature	from crate_a, crate_b, crate_c
 feature_b	from crate_b
-shared_feature	from crate_b
-shared_feature	from crate_c
 
 "#]])
         .run();
@@ -117,10 +115,9 @@ fn complete_features_duplicate_in_workspace_from_member() {
         .masquerade_as_nightly_cargo(&["completions"])
         .env("CARGO_COMPLETE", "fish")
         .with_stdout_data(str![[r#"
+shared_feature	from crate_a, crate_b
 feature_b	from crate_b
-shared_feature	from crate_b
 feature_a	from crate_a
-shared_feature	from crate_a
 
 "#]])
         .run();
