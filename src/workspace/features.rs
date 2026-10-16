@@ -891,6 +891,7 @@ unstable_cli_options!(
     build_std: Option<Vec<String>>  = ("Enable Cargo to compile the standard library itself as part of a crate graph compilation"),
     #[serde(deserialize_with = "deserialize_comma_separated_list")]
     build_std_features: Option<Vec<String>>  = ("Configure features enabled for the standard library itself when building the standard library"),
+    build_std_next: Option<BuildStdConfig>,
     checksum_freshness: bool = ("Use a checksum to determine if output is fresh rather than filesystem mtime"),
     codegen_backend: bool = ("Enable the `codegen-backend` option in profiles in .cargo/config.toml file"),
     direct_minimal_versions: bool = ("Resolve minimal dependency versions instead of maximum (direct dependencies only)"),
@@ -1032,6 +1033,21 @@ const STABILIZED_MIN_PUBLISH_AGE: &str =
     "The `min-publish-age` configuration is now always available.";
 
 const STABILIZED_TRIM_PATHS: &str = "The `trim-paths` profile option is now always available.";
+
+/// Configuration for `unstable.build-std-next`.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct BuildStdConfig {
+    pub when: Option<BuildStdWhen>,
+}
+
+/// When to build the standard library.
+#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum BuildStdWhen {
+    Never,
+    Always,
+}
 
 fn deserialize_comma_separated_list<'de, D>(
     deserializer: D,

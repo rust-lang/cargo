@@ -2312,10 +2312,28 @@ fn build_std() {
 
 #[cargo_test]
 fn build_std_next_when() {
-    let gctx = GlobalContextBuilder::new()
-        .config_arg(format!("unstable.build-std-next.when='always'"))
-        .build();
-    // No way to access the key
+    use cargo::workspace::features::BuildStdWhen;
+
+    let gctx = GlobalContextBuilder::new().build();
+    assert!(gctx.cli_unstable().build_std_next.is_none());
+
+    for (value, expected) in [
+        ("never", BuildStdWhen::Never),
+        ("always", BuildStdWhen::Always),
+    ] {
+        let gctx = GlobalContextBuilder::new()
+            .config_arg(format!("unstable.build-std-next.when='{value}'"))
+            .build();
+        let value = gctx
+            .get::<Option<cargo::workspace::CliUnstable>>(["unstable"])
+            .unwrap()
+            .unwrap()
+            .build_std_next
+            .unwrap()
+            .when
+            .unwrap();
+        assert_eq!(value, expected);
+    }
 }
 
 #[cargo_test]
