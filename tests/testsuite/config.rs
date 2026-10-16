@@ -2352,11 +2352,29 @@ Caused by:
 
 #[cargo_test]
 fn build_std_next_crates() {
-    let gctx = GlobalContextBuilder::new()
-        .config_arg(format!("unstable.build-std-next.crates='core'"))
-        .build();
+    use cargo::workspace::features::BuildStdCrates;
 
-    // No way to get config value
+    let gctx = GlobalContextBuilder::new().build();
+    assert!(gctx.cli_unstable().build_std_next.is_none());
+
+    for (value, expected) in [
+        ("core", BuildStdCrates::Core),
+        ("alloc", BuildStdCrates::Alloc),
+        ("std", BuildStdCrates::Std),
+    ] {
+        let gctx = GlobalContextBuilder::new()
+            .config_arg(format!("unstable.build-std-next.crates='{value}'"))
+            .build();
+        let value = gctx
+            .get::<Option<cargo::workspace::CliUnstable>>(["unstable"])
+            .unwrap()
+            .unwrap()
+            .build_std_next
+            .unwrap()
+            .crates
+            .unwrap();
+        assert_eq!(value, expected);
+    }
 }
 
 #[cargo_test]
