@@ -2375,11 +2375,25 @@ fn build_std_next_crates() {
             .unwrap();
         assert_eq!(value, expected);
     }
+
+    let gctx = GlobalContextBuilder::new()
+        .config_arg("unstable.build-std-next.crates='something-else'")
+        .build();
+    assert_error(
+        gctx.get::<Option<cargo::workspace::CliUnstable>>(["unstable"])
+            .unwrap_err(),
+        str![[r#"
+error in --config cli option: could not load config key `unstable.build-std-next.crates`
+
+Caused by:
+  unknown variant `something-else`, expected one of `core`, `alloc`, `std`
+"#]],
+    );
 }
 
 #[cargo_test]
 fn build_std_next_nightly_only() {
-    use cargo::workspace::features::BuildStdWhen;
+    use cargo::workspace::features::{BuildStdCrates, BuildStdWhen};
 
     for nightly in [false, true] {
         let gctx = GlobalContextBuilder::new()
@@ -2392,6 +2406,18 @@ fn build_std_next_nightly_only() {
                 .as_ref()
                 .and_then(|config| config.when.as_ref()),
             nightly.then_some(&BuildStdWhen::Always)
+        );
+
+        let gctx = GlobalContextBuilder::new()
+            .nightly_features_allowed(nightly)
+            .config_arg("unstable.build-std-next.crates='core'")
+            .build();
+        assert_eq!(
+            gctx.cli_unstable()
+                .build_std_next
+                .as_ref()
+                .and_then(|config| config.crates.as_ref()),
+            nightly.then_some(&BuildStdCrates::Core)
         );
     }
 }
