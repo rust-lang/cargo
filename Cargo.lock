@@ -377,7 +377,7 @@ dependencies = [
  "cargo-credential-libsecret",
  "cargo-credential-macos-keychain",
  "cargo-credential-wincred",
- "cargo-platform 0.3.3",
+ "cargo-platform 0.3.4",
  "cargo-test-support",
  "cargo-util",
  "cargo-util-schemas",
@@ -505,6 +505,8 @@ dependencies = [
 [[package]]
 name = "cargo-platform"
 version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dd0061da739915fae12ea00e16397555ed4371a6bb285431aab930f61b0aa4ba"
 dependencies = [
  "serde",
  "serde_core",
@@ -512,9 +514,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-platform"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd0061da739915fae12ea00e16397555ed4371a6bb285431aab930f61b0aa4ba"
+version = "0.3.4"
 dependencies = [
  "serde",
  "serde_core",
@@ -614,7 +614,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ef987d17b0a113becdd19d3d0022d04d7ef41f9efe4f3fb63ac44ba61df3ade9"
 dependencies = [
  "camino",
- "cargo-platform 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cargo-platform 0.3.3",
  "semver",
  "serde",
  "serde_json",
@@ -3917,7 +3917,7 @@ name = "resolver-tests"
 version = "0.0.0"
 dependencies = [
  "cargo",
- "cargo-platform 0.3.3",
+ "cargo-platform 0.3.4",
  "cargo-util",
  "cargo-util-schemas",
  "proptest",
