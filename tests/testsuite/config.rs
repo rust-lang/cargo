@@ -2346,6 +2346,18 @@ fn build_std_when_invalid() {
 }
 
 #[cargo_test]
+fn build_std_crates() {
+    let gctx = GlobalContextBuilder::new()
+        .config_arg(format!("build.build-std.crates='core'"))
+        .build();
+
+    let value = gctx
+        .get::<String>(["build", "build-std", "crates"])
+        .unwrap();
+    assert_eq!(value, "core");
+}
+
+#[cargo_test]
 fn array_of_any_types() {
     write_config_toml(
         r#"
