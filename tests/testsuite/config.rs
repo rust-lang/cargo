@@ -2312,11 +2312,24 @@ fn build_std() {
 
 #[cargo_test]
 fn build_std_when() {
-    let gctx = GlobalContextBuilder::new()
-        .config_arg(format!("build.build-std.when='always'"))
-        .build();
-    let value = gctx.get::<String>(["build", "build-std", "when"]).unwrap();
-    assert_eq!(value, "always");
+    use cargo::context::BuildStdWhen;
+
+    let gctx = GlobalContextBuilder::new().build();
+    assert!(gctx.build_config().unwrap().build_std.is_none());
+
+    for (value, expected) in [
+        ("never", BuildStdWhen::Never),
+        ("always", BuildStdWhen::Always),
+    ] {
+        let gctx = GlobalContextBuilder::new()
+            .config_arg(format!("build.build-std.when='{value}'"))
+            .build();
+        let value = gctx
+            .get::<Option<BuildStdWhen>>(["build", "build-std", "when"])
+            .unwrap()
+            .unwrap();
+        assert_eq!(value, expected);
+    }
 }
 
 #[cargo_test]

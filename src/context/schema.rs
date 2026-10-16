@@ -430,6 +430,7 @@ pub struct CargoBuildConfig {
     pub analysis: Option<CargoBuildAnalysis>,
     /// Unstable feature `-Zchecksum-freshness`.
     pub fingerprint: Option<FingerprintMethod>,
+    pub build_std: Option<BuildStdConfig>,
 }
 
 /// Metrics collection for build analysis.
@@ -473,6 +474,21 @@ impl std::fmt::Display for FingerprintMethod {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.as_str().fmt(f)
     }
+}
+
+/// Configuration for `build.build-std`.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct BuildStdConfig {
+    pub when: Option<BuildStdWhen>,
+}
+
+/// When to build the standard library.
+#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum BuildStdWhen {
+    Never,
+    Always,
 }
 
 /// Configuration for `build.target`.
