@@ -1141,10 +1141,8 @@ https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli"
 /// Cargo has its own lock files and doesn't need that mechanism for race protection, so a stray lock means
 /// a signal interrupted a previous shallow fetch and doesn't mean a race is happening.
 fn has_shallow_lock_file(err: &crate::sources::git::fetch::Error) -> bool {
-    err.iter_errors().any(|e| {
-        e.to_string()
-            .contains("'shallow' file could not be locked")
-    })
+    err.iter_errors()
+        .any(|e| e.to_string().contains("'shallow' file could not be locked"))
 }
 
 fn git_version() -> Option<GitVersion> {
