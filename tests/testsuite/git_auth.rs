@@ -165,6 +165,38 @@ Caused by:
     t.join().ok().unwrap();
 }
 
+#[cargo_test]
+fn http_auth_offered_gitoxide() {
+    let (addr, t, connections) = setup_failed_auth_test();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    {}
+                    [dependencies]
+                    bar = {{ git = "http://{addr}/foo/bar" }}
+                "#,
+                basic_manifest("foo", "0.0.1")
+            ),
+        )
+        .file("src/main.rs", "")
+        .build();
+
+    p.cargo("check -Zgitoxide=fetch --config net.git-fetch-with-cli=false --config net.retry=0")
+        .masquerade_as_nightly_cargo(&["gitoxide"])
+        .with_status(101)
+        .with_stderr_contains("[..]failed to authenticate when downloading repository[..]")
+        .with_stderr_contains("[..]credentials were incorrect[..]")
+        .run();
+    assert_eq!(
+        connections.load(SeqCst),
+        2,
+        "expected an unauthenticated request, then one retry with credential.helper credentials after HTTP 401"
+    );
+    t.join().unwrap();
+}
+
 // Boy, sure would be nice to have a TLS implementation in rust!
 #[cargo_test]
 fn https_something_happens() {

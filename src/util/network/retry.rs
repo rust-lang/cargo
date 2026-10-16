@@ -277,6 +277,32 @@ where
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::maybe_spurious;
+    use crate::sources::git::fetch::Error;
+    use gix::protocol::{fetch, transport::client};
+
+    #[test]
+    fn gitoxide_retry_classification_preserves_cancellation() {
+        let transient = Error::Fetch(gix::remote::fetch::Error::Fetch(fetch::Error::Client(
+            client::Error::Io(std::io::Error::from(std::io::ErrorKind::ConnectionReset)),
+        )));
+        assert!(maybe_spurious(&anyhow::Error::from(transient)));
+        let permanent = Error::Fetch(gix::remote::fetch::Error::Fetch(
+            fetch::Error::MissingServerFeature {
+                feature: "invalid refspec",
+                description: "unsupported feature",
+            },
+        ));
+        assert!(!maybe_spurious(&anyhow::Error::from(permanent)));
+        let cancelled = Error::Fetch(gix::remote::fetch::Error::Fetch(fetch::Error::Negotiate(
+            fetch::negotiate::Error::IO(std::io::Error::from(std::io::ErrorKind::Interrupted)),
+        )));
+        assert!(!maybe_spurious(&anyhow::Error::from(cancelled)));
+    }
+}
+
 #[test]
 fn with_retry_repeats_the_call_then_works() {
     use cargo_util_terminal::Shell;

@@ -394,3 +394,46 @@ pub fn reinitialize(git_dir: &Path) -> CargoResult<()> {
     paths::remove_dir_all(&tmp)?;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::amend_authentication_hints;
+    use crate::sources::git::fetch::Error;
+    use gix::protocol::{credentials, handshake, transport::client};
+
+    #[test]
+    fn authentication_hints_preserve_causes_and_distinguish_network_errors() {
+        let missing =
+            handshake::Error::Credentials(credentials::protocol::Error::IdentityMissing {
+                context: Default::default(),
+            });
+        let helper = handshake::Error::Credentials(credentials::protocol::Error::InvokeHelper(
+            credentials::helper::Error::Io(std::io::Error::other("Terminal prompts are disabled")),
+        ));
+        let rejected = handshake::Error::InvalidCredentials {
+            url: "https://example.com/auth".into(),
+            source: std::io::Error::from(std::io::ErrorKind::PermissionDenied),
+        };
+        let network = handshake::Error::Transport(client::Error::Io(std::io::Error::from(
+            std::io::ErrorKind::ConnectionReset,
+        )));
+        for (err, hint) in [
+            (missing, "git's `credential.helper` support, but failed"),
+            (helper, "git's `credential.helper` support, but failed"),
+            (rejected, "credentials were incorrect"),
+            (network, "network failure seems to have happened"),
+        ] {
+            let err = Error::PrepareFetch(gix::remote::fetch::prepare::Error::RefMap(
+                gix::remote::ref_map::Error::Handshake(err),
+            ));
+            let err = amend_authentication_hints(
+                Err(err),
+                "https://example.com/repo",
+                Some("https://example.com/auth".into()),
+            )
+            .unwrap_err();
+            assert!(err.to_string().contains(hint));
+            assert!(err.downcast_ref::<Error>().is_some());
+        }
+    }
+}

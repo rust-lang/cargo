@@ -1978,6 +1978,71 @@ mod tests {
     use super::*;
 
     #[test]
+    fn scp_to_ssh_produces_parseable_cache_urls() {
+        assert!(
+            "git@github.com:foo/bar.git".into_url().is_err(),
+            "SourceId needs a WHATWG URL, which cannot represent SCP syntax"
+        );
+        for (input, expected) in [
+            (
+                "git@github.com:foo/bar.git",
+                "ssh://git@github.com/foo/bar.git",
+            ),
+            (
+                "git@github.com:/foo/bar.git",
+                "ssh://git@github.com/foo/bar.git",
+            ),
+            ("git@github.com:~/bar.git", "ssh://git@github.com/~/bar.git"),
+            (
+                "git@github.com:~other/bar.git",
+                "ssh://git@github.com/~other/bar.git",
+            ),
+            ("host:foo/bar.git", "ssh://host/foo/bar.git"),
+        ] {
+            let url = scp_to_ssh(input).unwrap();
+            assert_eq!(
+                url, expected,
+                "conversion must preserve the pre-update cache URL"
+            );
+            let cache_url = url.as_str().into_url().unwrap();
+            let source_id = SourceId::for_git(&cache_url, GitReference::DefaultBranch).unwrap();
+            assert_eq!(source_id.url().as_str(), expected);
+        }
+        assert!(scp_to_ssh("https://github.com/foo/bar.git").is_none());
+    }
+
+    #[test]
+    fn shallow_lock_recovery_requires_existing_lock_and_matching_io_error() {
+        use crate::sources::git::fetch::Error;
+        use gix::protocol::transport::client;
+
+        let dir = tempfile::TempDir::new().unwrap();
+        let unrelated = Error::Fetch(gix::remote::fetch::Error::Fetch(
+            gix::protocol::fetch::Error::Client(client::Error::Io(std::io::Error::from(
+                std::io::ErrorKind::AlreadyExists,
+            ))),
+        ));
+        assert!(!has_shallow_lock_file(&unrelated));
+        std::fs::write(dir.path().join("shallow.lock"), []).unwrap();
+        let locked = gix::lock::File::acquire_to_update_resource(
+            dir.path().join("shallow"),
+            gix::lock::acquire::Fail::Immediately,
+            None,
+        )
+        .unwrap_err();
+        let locked = Error::Fetch(gix::remote::fetch::Error::Fetch(
+            gix::protocol::fetch::Error::LockShallowFile(locked),
+        ));
+        assert!(has_shallow_lock_file(&locked));
+        let denied = Error::Fetch(gix::remote::fetch::Error::Fetch(
+            gix::protocol::fetch::Error::Client(client::Error::Io(std::io::Error::from(
+                std::io::ErrorKind::PermissionDenied,
+            ))),
+        ));
+        assert!(!has_shallow_lock_file(&denied));
+    }
+
+    #[test]
     fn github_fast_path_full_hash_returns_needs_fetch() {
         let temp_dir = tempfile::TempDir::new().unwrap();
         let repo = git2::Repository::init_bare(temp_dir.path()).unwrap();
