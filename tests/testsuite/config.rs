@@ -2311,6 +2311,15 @@ fn build_std() {
 }
 
 #[cargo_test]
+fn build_std_when() {
+    let gctx = GlobalContextBuilder::new()
+        .config_arg(format!("build.build-std.when='always'"))
+        .build();
+    let value = gctx.get::<String>(["build", "build-std", "when"]).unwrap();
+    assert_eq!(value, "always");
+}
+
+#[cargo_test]
 fn array_of_any_types() {
     write_config_toml(
         r#"
