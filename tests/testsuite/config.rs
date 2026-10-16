@@ -2311,6 +2311,14 @@ fn build_std() {
 }
 
 #[cargo_test]
+fn build_std_next_when() {
+    let gctx = GlobalContextBuilder::new()
+        .config_arg(format!("unstable.build-std-next.when='always'"))
+        .build();
+    // No way to access the key
+}
+
+#[cargo_test]
 fn array_of_any_types() {
     write_config_toml(
         r#"
