@@ -2207,6 +2207,31 @@ fn registry_config_uncached(
             .map(|c| c.to_registry_config()));
     }
 
+    let name = registry_name(gctx, sid)?;
+
+    // It's possible to have a registry configured in a Cargo config file,
+    // then override it with configuration from environment variables.
+    // If the name doesn't match, leave a note to help the user understand
+    // the potentially confusing situation.
+    if let Some(name) = name.as_deref() {
+        if Some(name) != sid.alt_registry_key() {
+            gctx.shell().note(format!(
+                "name of alternative registry `{}` set to `{name}`",
+                sid.url()
+            ))?
+        }
+    }
+
+    if let Some(name) = &name {
+        tracing::debug!("found alternative registry name `{name}` for {sid}");
+        gctx.get::<Option<RegistryConfig>>(["registries", name.as_str()])
+    } else {
+        tracing::debug!("no registry name found for {sid}");
+        Ok(None)
+    }
+}
+
+fn registry_name(gctx: &GlobalContext, sid: &SourceId) -> CargoResult<Option<String>> {
     // Find the SourceId's name by its index URL. If environment variables
     // are available they will be preferred over configuration values.
     //
@@ -2262,26 +2287,7 @@ fn registry_config_uncached(
         }
     };
 
-    // It's possible to have a registry configured in a Cargo config file,
-    // then override it with configuration from environment variables.
-    // If the name doesn't match, leave a note to help the user understand
-    // the potentially confusing situation.
-    if let Some(name) = name.as_deref() {
-        if Some(name) != sid.alt_registry_key() {
-            gctx.shell().note(format!(
-                "name of alternative registry `{}` set to `{name}`",
-                sid.url()
-            ))?
-        }
-    }
-
-    if let Some(name) = &name {
-        tracing::debug!("found alternative registry name `{name}` for {sid}");
-        gctx.get::<Option<RegistryConfig>>(["registries", name.as_str()])
-    } else {
-        tracing::debug!("no registry name found for {sid}");
-        Ok(None)
-    }
+    Ok(name)
 }
 
 pub fn homedir(cwd: &Path) -> Option<PathBuf> {
