@@ -2351,6 +2351,15 @@ Caused by:
 }
 
 #[cargo_test]
+fn build_std_next_crates() {
+    let gctx = GlobalContextBuilder::new()
+        .config_arg(format!("unstable.build-std-next.crates='core'"))
+        .build();
+
+    // No way to get config value
+}
+
+#[cargo_test]
 fn build_std_next_nightly_only() {
     use cargo::workspace::features::BuildStdWhen;
 
