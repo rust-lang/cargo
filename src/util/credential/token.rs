@@ -4,10 +4,7 @@ use anyhow::Context as _;
 use cargo_credential::{Action, CacheControl, Credential, CredentialResponse, Error, RegistryInfo};
 use url::Url;
 
-use crate::{
-    GlobalContext, context, ops::RegistryCredentialConfig,
-    util::auth::registry_credential_config_raw, workspace::SourceId,
-};
+use crate::{GlobalContext, context, ops::RegistryCredentialConfig, workspace::SourceId};
 
 pub struct TokenCredential<'a> {
     gctx: &'a GlobalContext,
@@ -32,7 +29,7 @@ impl<'a> Credential for TokenCredential<'a> {
         } else {
             SourceId::for_registry(&index_url)
         }?;
-        let previous_token = registry_credential_config_raw(self.gctx, &sid)?.and_then(|c| c.token);
+        let previous_token = self.gctx.registry_credentials(&sid)?.and_then(|c| c.token);
 
         match action {
             Action::Get(_) => {

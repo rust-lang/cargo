@@ -2,7 +2,7 @@
 
 use crate::{
     context::ConfigKey,
-    util::{CanonicalUrl, CargoResult, GlobalContext, IntoUrl},
+    util::{CargoResult, GlobalContext},
     workspace::features::cargo_docs_link,
 };
 use anyhow::{Context as _, bail};
@@ -21,7 +21,7 @@ use crate::util::credential::adaptor::BasicProcessCredential;
 use crate::workspace::SourceId;
 
 use super::{credential::process::CredentialProcessCredential, credential::token::TokenCredential};
-use crate::context::{CredentialCacheValue, GlobalRegistryConfig, PathAndArgs, RegistryConfig};
+use crate::context::{CredentialCacheValue, PathAndArgs, RegistryConfig};
 
 /// Get the list of credential providers for a registry source.
 fn credential_provider(
@@ -38,7 +38,8 @@ fn credential_provider(
         }
     };
 
-    let cfg = registry_credential_config_raw(gctx, sid)?;
+    let cfg = gctx.registry_config(sid)?;
+    let token = gctx.registry_credentials(sid)?.and_then(|c| c.token);
     let mut global_provider_defined = true;
     let default_providers = || {
         global_provider_defined = false;
@@ -57,13 +58,15 @@ fn credential_provider(
         .unwrap_or_else(default_providers);
     tracing::debug!(?global_providers);
 
-    match cfg {
+    match (cfg, token) {
         // If there's a specific provider configured for this registry, use it.
-        Some(RegistryConfig {
-            credential_provider: Some(provider),
+        (
+            Some(RegistryConfig {
+                credential_provider: Some(provider),
+                ..
+            }),
             token,
-            ..
-        }) => {
+        ) => {
             let provider = resolve_credential_alias(gctx, provider);
             if let Some(token) = token {
                 if provider[0] != "cargo:token" {
@@ -78,9 +81,7 @@ fn credential_provider(
         }
 
         // Check if a `token` is configured that will be ignored.
-        Some(RegistryConfig {
-            token: Some(token), ..
-        }) => {
+        (_, Some(token)) => {
             if !global_providers
                 .iter()
                 .any(|p| p.first().map(String::as_str) == Some("cargo:token"))
@@ -95,7 +96,7 @@ fn credential_provider(
         }
 
         // If we couldn't find a registry-specific provider, use the fallback provider list.
-        None | Some(RegistryConfig { .. }) => {}
+        _ => {}
     };
     if !global_provider_defined && require_cred_provider_config {
         bail!(
@@ -105,119 +106,6 @@ fn credential_provider(
         );
     }
     Ok(global_providers)
-}
-
-/// Get the credential configuration for a `SourceId`.
-pub fn registry_credential_config_raw(
-    gctx: &GlobalContext,
-    sid: &SourceId,
-) -> CargoResult<Option<RegistryConfig>> {
-    let mut cache = gctx.registry_config();
-    if let Some(cfg) = cache.get(&sid) {
-        return Ok(cfg.clone());
-    }
-    let cfg = registry_credential_config_raw_uncached(gctx, sid)?;
-    cache.insert(*sid, cfg.clone());
-    return Ok(cfg);
-}
-
-fn registry_credential_config_raw_uncached(
-    gctx: &GlobalContext,
-    sid: &SourceId,
-) -> CargoResult<Option<RegistryConfig>> {
-    tracing::trace!("loading credential config for {}", sid);
-    gctx.load_credentials()?;
-    if !sid.is_remote_registry() {
-        bail!(
-            "{} does not support API commands.\n\
-             Check for a source-replacement in .cargo/config.",
-            sid
-        );
-    }
-
-    // Handle crates.io specially, since it uses different configuration keys.
-    if sid.is_crates_io() {
-        gctx.check_registry_index_not_set()?;
-        return Ok(gctx
-            .get::<Option<GlobalRegistryConfig>>(["registry"])?
-            .map(|c| c.to_registry_config()));
-    }
-
-    // Find the SourceId's name by its index URL. If environment variables
-    // are available they will be preferred over configuration values.
-    //
-    // The fundamental problem is that we only know the index url of the registry
-    // for certain. For example, an unnamed registry source can come from the `--index`
-    // command line argument, or from a Cargo.lock file. For this reason, we always
-    // attempt to discover the name by looking it up by the index URL.
-    //
-    // This also allows the authorization token for a registry to be set
-    // without knowing the registry name by using the _INDEX and _TOKEN
-    // environment variables.
-
-    let name = {
-        // Discover names from environment variables.
-        let index = sid.canonical_url();
-        let mut names: Vec<_> = gctx
-            .env()
-            .filter_map(|(k, v)| {
-                Some((
-                    k.strip_prefix("CARGO_REGISTRIES_")?
-                        .strip_suffix("_INDEX")?,
-                    v,
-                ))
-            })
-            .filter_map(|(k, v)| Some((k, CanonicalUrl::new(&v.into_url().ok()?).ok()?)))
-            .filter(|(_, v)| v == index)
-            .map(|(k, _)| k.to_lowercase())
-            .collect();
-
-        // Discover names from the configuration only if none were found in the environment.
-        if names.len() == 0 {
-            if let Some(registries) = gctx.values()?.get("registries") {
-                let (registries, _) = registries.table("registries")?;
-                for (name, value) in registries {
-                    if let Some(v) = value.table(&format!("registries.{name}"))?.0.get("index") {
-                        let (v, _) = v.string(&format!("registries.{name}.index"))?;
-                        if index == &CanonicalUrl::new(&v.into_url()?)? {
-                            names.push(name.clone());
-                        }
-                    }
-                }
-            }
-        }
-        names.sort();
-        match names.len() {
-            0 => None,
-            1 => Some(std::mem::take(&mut names[0])),
-            _ => anyhow::bail!(
-                "multiple registries are configured with the same index url '{}': {}",
-                &sid.as_url(),
-                names.join(", ")
-            ),
-        }
-    };
-
-    // It's possible to have a registry configured in a Cargo config file,
-    // then override it with configuration from environment variables.
-    // If the name doesn't match, leave a note to help the user understand
-    // the potentially confusing situation.
-    if let Some(name) = name.as_deref() {
-        if Some(name) != sid.alt_registry_key() {
-            gctx.shell().note(format!(
-                "name of alternative registry `{}` set to `{name}`",
-                sid.url()
-            ))?
-        }
-    }
-
-    if let Some(name) = &name {
-        tracing::debug!("found alternative registry name `{name}` for {sid}");
-        gctx.get::<Option<RegistryConfig>>(["registries", name.as_str()])
-    } else {
-        tracing::debug!("no registry name found for {sid}");
-        Ok(None)
-    }
 }
 
 /// Use the `[credential-alias]` table to see if the provider name has been aliased.

@@ -619,11 +619,68 @@ impl GlobalContext {
         self.credential_cache.lock().unwrap()
     }
 
-    /// Cache of already parsed registries from the `[registries]` table.
-    pub(crate) fn registry_config(
-        &self,
-    ) -> MutexGuard<'_, HashMap<SourceId, Option<RegistryConfig>>> {
-        self.registry_config.lock().unwrap()
+    /// Gets the configuration for a remote registry.
+    ///
+    /// The registry name is resolved from its index URL. This may emit a note if
+    /// the resolved name differs from the source's configured name. Returns
+    /// `None` if no configuration is found.
+    ///
+    /// **Note:** this does not load tokens from `credentials.toml`, see instead
+    /// [`Self::registry_credentials`].
+    pub fn registry_config(&self, sid: &SourceId) -> CargoResult<Option<RegistryConfig>> {
+        let mut cache = self.registry_config.lock().unwrap();
+        if let Some(cfg) = cache.get(sid) {
+            return Ok(cfg.clone());
+        }
+        let cfg = registry_config_uncached(self, sid)?;
+        cache.insert(*sid, cfg.clone());
+        Ok(cfg)
+    }
+
+    /// Gets the credentials configured for a remote registry.
+    ///
+    /// This loads credentials if needed and resolves the registry name in the
+    /// same way as [`GlobalContext::registry_config`].
+    pub fn registry_credentials(&self, sid: &SourceId) -> CargoResult<Option<RegistryCredential>> {
+        let credentials = self.credentials_values()?;
+        let mut key = if sid.is_crates_io() {
+            ConfigKey::from_parts(["registry"])
+        } else if let Some(name) = registry_name(self, sid)? {
+            ConfigKey::from_parts(["registries", &name])
+        } else {
+            return Ok(None);
+        };
+        let has_credentials = self.get_cv_helper(&key, credentials)?.is_some();
+        key.push("token");
+        let credentials_token = match self.get_cv_helper(&key, credentials)? {
+            Some(CV::String(val, definition)) => Some(Value {
+                val: Secret::from(val),
+                definition,
+            }),
+            Some(cv) => return Err(ConfigError::expected(&key, "a string", &cv).into()),
+            None => None,
+        };
+
+        let config = self.registry_config(sid)?;
+        let has_config = config.is_some();
+        let config_token = config.and_then(|config| {
+            #[expect(deprecated)]
+            config.token
+        });
+
+        let token = match (config_token, credentials_token) {
+            (Some(config_token), Some(credentials_token))
+                if config_token
+                    .definition
+                    .is_higher_priority(&credentials_token.definition) =>
+            {
+                Some(config_token)
+            }
+            (_, Some(credentials_token)) => Some(credentials_token),
+            (config_token, None) => config_token,
+        };
+
+        Ok((has_config || has_credentials).then_some(RegistryCredential { token }))
     }
 
     /// Gets all config values from disk.
@@ -828,12 +885,6 @@ impl GlobalContext {
     /// This does NOT look at environment variables. See `get_cv_with_env` for
     /// a variant that supports environment variables.
     fn get_cv(&self, key: &ConfigKey) -> CargoResult<Option<ConfigValue>> {
-        if let Some(vals) = self.credential_values.get() {
-            let val = self.get_cv_helper(key, vals)?;
-            if val.is_some() {
-                return Ok(val);
-            }
-        }
         self.get_cv_helper(key, &*self.values()?)
     }
 
@@ -1752,21 +1803,17 @@ impl GlobalContext {
         Ok(url)
     }
 
-    /// Loads credentials config from the credentials file, if present.
-    ///
-    /// The credentials are loaded into a separate field to enable them
-    /// to be lazy-loaded after the main configuration has been loaded,
-    /// without requiring `mut` access to the [`GlobalContext`].
-    ///
-    /// If the credentials are already loaded, this function does nothing.
-    pub fn load_credentials(&self) -> CargoResult<()> {
-        if self.credential_values.filled() {
-            return Ok(());
-        }
+    /// Gets configuration values from the credentials file, loading them on first use.
+    fn credentials_values(&self) -> CargoResult<&HashMap<String, ConfigValue>> {
+        self.credential_values
+            .try_borrow_with(|| self.load_credentials())
+    }
 
+    /// Loads credentials config from the credentials file, if present.
+    fn load_credentials(&self) -> CargoResult<HashMap<String, ConfigValue>> {
         let home_path = self.home_path.clone().into_path_unlocked();
         let Some(credentials) = self.get_file_path(&home_path, "credentials", true)? else {
-            return Ok(());
+            return Ok(HashMap::default());
         };
 
         let mut value = self.load_layer(&credentials, WhyLoad::FileDiscovery)?;
@@ -1782,25 +1829,10 @@ impl GlobalContext {
             }
         }
 
-        let mut credential_values = HashMap::default();
-        if let CV::Table(map, _) = value {
-            let base_map = self.values()?;
-            for (k, v) in map {
-                let entry = match base_map.get(&k) {
-                    Some(base_entry) => {
-                        let mut entry = base_entry.clone();
-                        entry.merge(v, true)?;
-                        entry
-                    }
-                    None => v,
-                };
-                credential_values.insert(k, entry);
-            }
-        }
-        self.credential_values
-            .set(credential_values)
-            .expect("was not filled at beginning of the function");
-        Ok(())
+        let CV::Table(map, _) = value else {
+            unreachable!("credentials root was checked to be a table");
+        };
+        Ok(map)
     }
 
     /// Looks for a path for `tool` in an environment variable or the given config, and returns
@@ -2170,6 +2202,110 @@ impl GlobalContext {
     pub fn ws_roots(&self) -> MutexGuard<'_, HashMap<PathBuf, WorkspaceRootConfig>> {
         self.ws_roots.lock().unwrap()
     }
+}
+
+fn registry_config_uncached(
+    gctx: &GlobalContext,
+    sid: &SourceId,
+) -> CargoResult<Option<RegistryConfig>> {
+    tracing::trace!("loading registry config for {}", sid);
+    if !sid.is_remote_registry() {
+        bail!(
+            "{} does not support API commands.\n\
+             Check for a source-replacement in .cargo/config.",
+            sid
+        );
+    }
+
+    // Handle crates.io specially, since it uses different configuration keys.
+    if sid.is_crates_io() {
+        gctx.check_registry_index_not_set()?;
+        return Ok(gctx
+            .get::<Option<GlobalRegistryConfig>>(["registry"])?
+            .map(|c| c.to_registry_config()));
+    }
+
+    let name = registry_name(gctx, sid)?;
+
+    // It's possible to have a registry configured in a Cargo config file,
+    // then override it with configuration from environment variables.
+    // If the name doesn't match, leave a note to help the user understand
+    // the potentially confusing situation.
+    if let Some(name) = name.as_deref() {
+        if Some(name) != sid.alt_registry_key() {
+            gctx.shell().note(format!(
+                "name of alternative registry `{}` set to `{name}`",
+                sid.url()
+            ))?
+        }
+    }
+
+    if let Some(name) = &name {
+        tracing::debug!("found alternative registry name `{name}` for {sid}");
+        gctx.get::<Option<RegistryConfig>>(["registries", name.as_str()])
+    } else {
+        tracing::debug!("no registry name found for {sid}");
+        Ok(None)
+    }
+}
+
+fn registry_name(gctx: &GlobalContext, sid: &SourceId) -> CargoResult<Option<String>> {
+    // Find the SourceId's name by its index URL. If environment variables
+    // are available they will be preferred over configuration values.
+    //
+    // The fundamental problem is that we only know the index url of the registry
+    // for certain. For example, an unnamed registry source can come from the `--index`
+    // command line argument, or from a Cargo.lock file. For this reason, we always
+    // attempt to discover the name by looking it up by the index URL.
+    //
+    // This also allows the authorization token for a registry to be set
+    // without knowing the registry name by using the _INDEX and _TOKEN
+    // environment variables.
+
+    let name = {
+        // Discover names from environment variables.
+        let index = sid.canonical_url();
+        let mut names: Vec<_> = gctx
+            .env()
+            .filter_map(|(k, v)| {
+                Some((
+                    k.strip_prefix("CARGO_REGISTRIES_")?
+                        .strip_suffix("_INDEX")?,
+                    v,
+                ))
+            })
+            .filter_map(|(k, v)| Some((k, CanonicalUrl::new(&v.into_url().ok()?).ok()?)))
+            .filter(|(_, v)| v == index)
+            .map(|(k, _)| k.to_lowercase())
+            .collect();
+
+        // Discover names from the configuration only if none were found in the environment.
+        if names.len() == 0 {
+            if let Some(registries) = gctx.values()?.get("registries") {
+                let (registries, _) = registries.table("registries")?;
+                for (name, value) in registries {
+                    if let Some(v) = value.table(&format!("registries.{name}"))?.0.get("index") {
+                        let (v, _) = v.string(&format!("registries.{name}.index"))?;
+                        if index == &CanonicalUrl::new(&v.into_url()?)? {
+                            names.push(name.clone());
+                        }
+                    }
+                }
+            }
+        }
+        names.sort();
+        match names.len() {
+            0 => None,
+            1 => Some(std::mem::take(&mut names[0])),
+            _ => anyhow::bail!(
+                "multiple registries are configured with the same index url '{}': {}",
+                &sid.as_url(),
+                names.join(", ")
+            ),
+        }
+    };
+
+    Ok(name)
 }
 
 pub fn homedir(cwd: &Path) -> Option<PathBuf> {
