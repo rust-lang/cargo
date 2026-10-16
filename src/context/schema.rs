@@ -481,6 +481,7 @@ impl std::fmt::Display for FingerprintMethod {
 #[serde(rename_all = "kebab-case")]
 pub struct BuildStdConfig {
     pub when: Option<BuildStdWhen>,
+    pub crates: Option<BuildStdCrates>,
 }
 
 /// When to build the standard library.
@@ -489,6 +490,15 @@ pub struct BuildStdConfig {
 pub enum BuildStdWhen {
     Never,
     Always,
+}
+
+/// Which standard library crates to build.
+#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum BuildStdCrates {
+    Core,
+    Alloc,
+    Std,
 }
 
 /// Configuration for `build.target`.

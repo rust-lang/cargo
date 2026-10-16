@@ -2347,14 +2347,25 @@ fn build_std_when_invalid() {
 
 #[cargo_test]
 fn build_std_crates() {
-    let gctx = GlobalContextBuilder::new()
-        .config_arg(format!("build.build-std.crates='core'"))
-        .build();
+    use cargo::context::BuildStdCrates;
 
-    let value = gctx
-        .get::<String>(["build", "build-std", "crates"])
-        .unwrap();
-    assert_eq!(value, "core");
+    let gctx = GlobalContextBuilder::new().build();
+    assert!(gctx.build_config().unwrap().build_std.is_none());
+
+    for (value, expected) in [
+        ("core", BuildStdCrates::Core),
+        ("alloc", BuildStdCrates::Alloc),
+        ("std", BuildStdCrates::Std),
+    ] {
+        let gctx = GlobalContextBuilder::new()
+            .config_arg(format!("build.build-std.crates='{value}'"))
+            .build();
+        let value = gctx
+            .get::<Option<BuildStdCrates>>(["build", "build-std", "crates"])
+            .unwrap()
+            .unwrap();
+        assert_eq!(value, expected);
+    }
 }
 
 #[cargo_test]
