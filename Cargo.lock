@@ -378,7 +378,7 @@ dependencies = [
  "cargo-credential-libsecret",
  "cargo-credential-macos-keychain",
  "cargo-credential-wincred",
- "cargo-platform 0.3.4",
+ "cargo-platform 0.3.5",
  "cargo-test-support",
  "cargo-util",
  "cargo-util-schemas",
@@ -515,7 +515,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-platform"
-version = "0.3.4"
+version = "0.3.5"
 dependencies = [
  "serde",
  "serde_core",
@@ -3944,7 +3944,7 @@ name = "resolver-tests"
 version = "0.0.0"
 dependencies = [
  "cargo",
- "cargo-platform 0.3.4",
+ "cargo-platform 0.3.5",
  "cargo-util",
  "cargo-util-schemas",
  "proptest",
