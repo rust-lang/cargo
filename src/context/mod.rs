@@ -634,6 +634,18 @@ impl GlobalContext {
         Ok(cfg)
     }
 
+    /// Gets the credentials configured for a remote registry.
+    ///
+    /// This loads credentials if needed and resolves the registry name in the
+    /// same way as [`GlobalContext::registry_config`].
+    pub fn registry_credentials(&self, sid: &SourceId) -> CargoResult<Option<RegistryCredential>> {
+        Ok(self.registry_config(sid)?.map(|config| {
+            #[expect(deprecated)]
+            let token = config.token;
+            RegistryCredential { token }
+        }))
+    }
+
     /// Gets all config values from disk.
     ///
     /// This will lazy-load the values as necessary. Callers are responsible

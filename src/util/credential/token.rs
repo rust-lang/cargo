@@ -29,7 +29,7 @@ impl<'a> Credential for TokenCredential<'a> {
         } else {
             SourceId::for_registry(&index_url)
         }?;
-        let previous_token = self.gctx.registry_config(&sid)?.and_then(|c| c.token);
+        let previous_token = self.gctx.registry_credentials(&sid)?.and_then(|c| c.token);
 
         match action {
             Action::Get(_) => {

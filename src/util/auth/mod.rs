@@ -39,6 +39,7 @@ fn credential_provider(
     };
 
     let cfg = gctx.registry_config(sid)?;
+    let token = gctx.registry_credentials(sid)?.and_then(|c| c.token);
     let mut global_provider_defined = true;
     let default_providers = || {
         global_provider_defined = false;
@@ -57,13 +58,15 @@ fn credential_provider(
         .unwrap_or_else(default_providers);
     tracing::debug!(?global_providers);
 
-    match cfg {
+    match (cfg, token) {
         // If there's a specific provider configured for this registry, use it.
-        Some(RegistryConfig {
-            credential_provider: Some(provider),
+        (
+            Some(RegistryConfig {
+                credential_provider: Some(provider),
+                ..
+            }),
             token,
-            ..
-        }) => {
+        ) => {
             let provider = resolve_credential_alias(gctx, provider);
             if let Some(token) = token {
                 if provider[0] != "cargo:token" {
@@ -78,9 +81,7 @@ fn credential_provider(
         }
 
         // Check if a `token` is configured that will be ignored.
-        Some(RegistryConfig {
-            token: Some(token), ..
-        }) => {
+        (Some(RegistryConfig { .. }), Some(token)) => {
             if !global_providers
                 .iter()
                 .any(|p| p.first().map(String::as_str) == Some("cargo:token"))
@@ -95,7 +96,7 @@ fn credential_provider(
         }
 
         // If we couldn't find a registry-specific provider, use the fallback provider list.
-        None | Some(RegistryConfig { .. }) => {}
+        _ => {}
     };
     if !global_provider_defined && require_cred_provider_config {
         bail!(

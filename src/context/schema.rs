@@ -757,6 +757,13 @@ impl EnvConfigValue {
 
 pub type EnvConfig = HashMap<String, EnvConfigValue>;
 
+/// Credentials for a registry.
+#[derive(Clone, Debug, Default, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct RegistryCredential {
+    pub token: OptValue<Secret<String>>,
+}
+
 /// `[registries.NAME]` tables.
 ///
 /// The values here should be kept in sync with `GlobalRegistryConfig`
@@ -764,6 +771,7 @@ pub type EnvConfig = HashMap<String, EnvConfigValue>;
 #[serde(rename_all = "kebab-case")]
 pub struct RegistryConfig {
     pub index: Option<String>,
+    #[deprecated = "see `RegistryCredential::token` instead"]
     pub token: OptValue<Secret<String>>,
     pub credential_provider: Option<PathAndArgs>,
     /// Minimum publish age threshold for RFC 3923
@@ -780,6 +788,7 @@ pub struct RegistryConfig {
 #[serde(rename_all = "kebab-case")]
 pub struct GlobalRegistryConfig {
     pub index: Option<String>,
+    #[deprecated = "see `RegistryCredential::token` instead"]
     pub token: OptValue<Secret<String>>,
     pub credential_provider: Option<PathAndArgs>,
     /// Global default Minimum publish age threshold for RFC 3923
@@ -794,6 +803,7 @@ impl GlobalRegistryConfig {
     pub fn to_registry_config(self) -> RegistryConfig {
         RegistryConfig {
             index: self.index,
+            #[expect(deprecated)]
             token: self.token,
             credential_provider: self.credential_provider,
             // `min-publish-age` is per-registry config only.
