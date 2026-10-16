@@ -145,7 +145,7 @@ impl serde_core::Serialize for Platform {
     where
         S: serde_core::Serializer,
     {
-        self.to_string().serialize(s)
+        s.collect_str(self)
     }
 }
 
@@ -154,8 +154,9 @@ impl<'de> serde_core::Deserialize<'de> for Platform {
     where
         D: serde_core::Deserializer<'de>,
     {
-        let s = String::deserialize(deserializer)?;
-        FromStr::from_str(&s).map_err(serde_core::de::Error::custom)
+        String::deserialize(deserializer)?
+            .parse()
+            .map_err(serde_core::de::Error::custom)
     }
 }
 
