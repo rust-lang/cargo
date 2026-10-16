@@ -128,6 +128,26 @@ impl fmt::Display for Cfg {
     }
 }
 
+impl serde_core::Serialize for Cfg {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde_core::Serializer,
+    {
+        s.collect_str(self)
+    }
+}
+
+impl<'de> serde_core::Deserialize<'de> for Cfg {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde_core::Deserializer<'de>,
+    {
+        String::deserialize(deserializer)?
+            .parse()
+            .map_err(serde_core::de::Error::custom)
+    }
+}
+
 impl CfgExpr {
     /// Utility function to check if the key, "cfg(..)" matches the `target_cfg`
     pub fn matches_key(key: &str, target_cfg: &[Cfg]) -> bool {
