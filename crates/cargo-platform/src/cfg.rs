@@ -184,6 +184,26 @@ impl fmt::Display for CfgExpr {
     }
 }
 
+impl serde_core::Serialize for CfgExpr {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde_core::Serializer,
+    {
+        s.collect_str(self)
+    }
+}
+
+impl<'de> serde_core::Deserialize<'de> for CfgExpr {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde_core::Deserializer<'de>,
+    {
+        String::deserialize(deserializer)?
+            .parse()
+            .map_err(serde_core::de::Error::custom)
+    }
+}
+
 struct CommaSep<'a, T>(&'a [T]);
 
 impl<'a, T: fmt::Display> fmt::Display for CommaSep<'a, T> {
