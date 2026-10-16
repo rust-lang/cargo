@@ -619,11 +619,14 @@ impl GlobalContext {
         self.credential_cache.lock().unwrap()
     }
 
-    /// Gets the configuration for a remote registry, loading credentials if needed.
+    /// Gets the configuration for a remote registry.
     ///
     /// The registry name is resolved from its index URL. This may emit a note if
     /// the resolved name differs from the source's configured name. Returns
     /// `None` if no configuration is found.
+    ///
+    /// **Note:** this does not load tokens from `credentials.toml`, see instead
+    /// [`Self::registry_credentials`].
     pub fn registry_config(&self, sid: &SourceId) -> CargoResult<Option<RegistryConfig>> {
         let mut cache = self.registry_config.lock().unwrap();
         if let Some(cfg) = cache.get(sid) {
@@ -639,11 +642,45 @@ impl GlobalContext {
     /// This loads credentials if needed and resolves the registry name in the
     /// same way as [`GlobalContext::registry_config`].
     pub fn registry_credentials(&self, sid: &SourceId) -> CargoResult<Option<RegistryCredential>> {
-        Ok(self.registry_config(sid)?.map(|config| {
+        let credentials = self.credentials_values()?;
+        let mut key = if sid.is_crates_io() {
+            ConfigKey::from_parts(["registry"])
+        } else if let Some(name) = registry_name(self, sid)? {
+            ConfigKey::from_parts(["registries", &name])
+        } else {
+            return Ok(None);
+        };
+        let has_credentials = self.get_cv_helper(&key, credentials)?.is_some();
+        key.push("token");
+        let credentials_token = match self.get_cv_helper(&key, credentials)? {
+            Some(CV::String(val, definition)) => Some(Value {
+                val: Secret::from(val),
+                definition,
+            }),
+            Some(cv) => return Err(ConfigError::expected(&key, "a string", &cv).into()),
+            None => None,
+        };
+
+        let config = self.registry_config(sid)?;
+        let has_config = config.is_some();
+        let config_token = config.and_then(|config| {
             #[expect(deprecated)]
-            let token = config.token;
-            RegistryCredential { token }
-        }))
+            config.token
+        });
+
+        let token = match (config_token, credentials_token) {
+            (Some(config_token), Some(credentials_token))
+                if config_token
+                    .definition
+                    .is_higher_priority(&credentials_token.definition) =>
+            {
+                Some(config_token)
+            }
+            (_, Some(credentials_token)) => Some(credentials_token),
+            (config_token, None) => config_token,
+        };
+
+        Ok((has_config || has_credentials).then_some(RegistryCredential { token }))
     }
 
     /// Gets all config values from disk.
@@ -848,12 +885,6 @@ impl GlobalContext {
     /// This does NOT look at environment variables. See `get_cv_with_env` for
     /// a variant that supports environment variables.
     fn get_cv(&self, key: &ConfigKey) -> CargoResult<Option<ConfigValue>> {
-        if let Some(vals) = self.credential_values.get() {
-            let val = self.get_cv_helper(key, vals)?;
-            if val.is_some() {
-                return Ok(val);
-            }
-        }
         self.get_cv_helper(key, &*self.values()?)
     }
 
@@ -1798,22 +1829,10 @@ impl GlobalContext {
             }
         }
 
-        let mut credential_values = HashMap::default();
-        if let CV::Table(map, _) = value {
-            let base_map = self.values()?;
-            for (k, v) in map {
-                let entry = match base_map.get(&k) {
-                    Some(base_entry) => {
-                        let mut entry = base_entry.clone();
-                        entry.merge(v, true)?;
-                        entry
-                    }
-                    None => v,
-                };
-                credential_values.insert(k, entry);
-            }
-        }
-        Ok(credential_values)
+        let CV::Table(map, _) = value else {
+            unreachable!("credentials root was checked to be a table");
+        };
+        Ok(map)
     }
 
     /// Looks for a path for `tool` in an environment variable or the given config, and returns
@@ -2190,7 +2209,6 @@ fn registry_config_uncached(
     sid: &SourceId,
 ) -> CargoResult<Option<RegistryConfig>> {
     tracing::trace!("loading registry config for {}", sid);
-    gctx.credentials_values()?;
     if !sid.is_remote_registry() {
         bail!(
             "{} does not support API commands.\n\

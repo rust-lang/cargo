@@ -81,7 +81,7 @@ fn credential_provider(
         }
 
         // Check if a `token` is configured that will be ignored.
-        (Some(RegistryConfig { .. }), Some(token)) => {
+        (_, Some(token)) => {
             if !global_providers
                 .iter()
                 .any(|p| p.first().map(String::as_str) == Some("cargo:token"))
