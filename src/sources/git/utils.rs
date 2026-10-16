@@ -1978,6 +1978,31 @@ mod tests {
     use super::*;
 
     #[test]
+    fn scp_relative_and_absolute_paths_have_distinct_source_ids_and_cache_keys() {
+        let [relative, absolute] =
+            ["git@example.com:repo.git", "git@example.com:/repo.git"].map(|location| {
+                let url = scp_to_ssh(location).unwrap().into_url().unwrap();
+                SourceId::for_git(&url, GitReference::DefaultBranch).unwrap()
+            });
+        let ssh_absolute = SourceId::for_git(
+            &"ssh://git@example.com/repo.git".into_url().unwrap(),
+            GitReference::DefaultBranch,
+        )
+        .unwrap();
+
+        assert_eq!(absolute, ssh_absolute);
+        assert_ne!(
+            relative, absolute,
+            "home-relative and absolute SSH paths refer to different repositories"
+        );
+        assert_ne!(
+            crate::util::hex::short_hash(relative.canonical_url()),
+            crate::util::hex::short_hash(absolute.canonical_url()),
+            "different repositories must not share a Git database cache key"
+        );
+    }
+
+    #[test]
     fn scp_to_ssh_produces_parseable_cache_urls() {
         assert!(
             "git@github.com:foo/bar.git".into_url().is_err(),

@@ -4854,6 +4854,92 @@ fn dep_with_cached_submodule() {
     assert_eq!(db_paths.len(), 1, "submodule db created once");
 }
 
+#[cargo_test]
+#[cfg(unix)]
+fn scp_submodule_cache_does_not_supply_commits_from_a_different_repository() {
+    let relative = git::new("relative", |p| {
+        p.file("lib.rs", "pub fn value() -> u8 { 1 }")
+    });
+    let absolute = git::new("absolute", |p| {
+        p.file("lib.rs", "pub fn value() -> u8 { 2 }")
+    });
+    let parents = ["relative_parent", "absolute_parent"].map(|name| {
+        let (p, repo) = git::new_repo(name, |p| {
+            p.file("Cargo.toml", &basic_manifest(name, "0.1.0"))
+                .file("src/lib.rs", "include!(\"../submod/lib.rs\");")
+        });
+        // Both parents pin the relative repository's commit. The absolute
+        // repository deliberately does not contain it.
+        git::add_submodule(&repo, relative.url().as_str(), Path::new("submod"));
+        let location = if name == "relative_parent" {
+            "git@example.com:repo.git"
+        } else {
+            "git@example.com:/repo.git"
+        };
+        p.change_file(
+            ".gitmodules",
+            &format!("[submodule \"submod\"]\npath = submod\nurl = {location}\n"),
+        );
+        git::add(&repo);
+        git::commit(&repo);
+        p
+    });
+    let clients = parents.each_ref().map(|parent| {
+        project()
+            .at(format!(
+                "{}_client",
+                parent.root().file_name().unwrap().to_str().unwrap()
+            ))
+            .file(
+                "Cargo.toml",
+                &format!(
+                    "{}\n[dependencies]\n{} = {{ git = '{}' }}\n",
+                    basic_manifest("client", "0.1.0"),
+                    parent.root().file_name().unwrap().to_str().unwrap(),
+                    parent.url(),
+                ),
+            )
+            .file("src/lib.rs", "")
+            .build()
+    });
+    let ssh = project()
+        .at("ssh")
+        .executable(
+            "ssh.sh",
+            r#"#!/bin/sh
+case "$2" in
+    "git-upload-pack 'repo.git'") exec git-upload-pack "$RELATIVE_REPO" ;;
+    "git-upload-pack '/repo.git'") exec git-upload-pack "$ABSOLUTE_REPO" ;;
+    *) echo "unexpected SSH command: $*" >&2; exit 1 ;;
+esac
+"#,
+        )
+        .build();
+    let fetch = |client: &Project, status| {
+        let mut command =
+            client.cargo("fetch --config net.git-fetch-with-cli=true --config net.retry=0");
+        command
+            .env(
+                "GIT_SSH_COMMAND",
+                format!("sh '{}'", ssh.root().join("ssh.sh").display()),
+            )
+            .env("GIT_SSH_VARIANT", "simple")
+            .env("RELATIVE_REPO", relative.root())
+            .env("ABSOLUTE_REPO", absolute.root())
+            .with_status(status);
+        if status == 101 {
+            command.with_stderr_contains("[..]revspec '[..]' not found[..]");
+        }
+        command.run();
+    };
+
+    // With a cold cache, the absolute source cannot supply the pinned commit.
+    fetch(&clients[1], 101);
+    fetch(&clients[0], 0);
+    // Warming the relative source must not make the absolute source succeed.
+    fetch(&clients[1], 101);
+}
+
 #[cargo_test(public_network_test, requires = "ssh")]
 fn dep_with_scp_like_submodule_url() {
     // Regression test for https://github.com/rust-lang/cargo/pull/16727
