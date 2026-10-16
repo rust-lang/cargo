@@ -602,10 +602,21 @@ fn build_script_sees_target_features_with_host_config() {
                 "expected build script to be compiled with host-specific cfg"
             );
             let features = std::env::var("CARGO_CFG_TARGET_FEATURE").unwrap_or_default();
-            assert!(
-                features.split(',').any(|f| f == "crt-static"),
-                "expected crt-static in CARGO_CFG_TARGET_FEATURE, got: {features:?}"
-            );
+            let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
+            let target_env = std::env::var("CARGO_CFG_TARGET_ENV").unwrap_or_default();
+            let supports_crt_static =
+                target_os == "linux" || (target_os == "windows" && target_env == "msvc");
+            if supports_crt_static {
+                assert!(
+                    features.split(',').any(|f| f == "crt-static"),
+                    "expected crt-static in CARGO_CFG_TARGET_FEATURE, got: {features:?}"
+                );
+            } else {
+                assert!(
+                    !features.split(',').any(|f| f == "crt-static"),
+                    "did not expect crt-static in CARGO_CFG_TARGET_FEATURE on this target, got: {features:?}"
+                );
+            }
             let encoded_flags = std::env::var("CARGO_ENCODED_RUSTFLAGS").unwrap_or_default();
             assert!(
                 encoded_flags.contains("target-feature=+crt-static"),
@@ -632,8 +643,12 @@ fn build_script_sees_target_features_with_host_config() {
             #![allow(unexpected_cfgs)]
             #[cfg(is_host_build)]
             compile_error!("host-only cfg leaked to target crate");
+            #[cfg(any(target_os = "linux", all(target_os = "windows", target_env = "msvc")))]
             #[cfg(not(target_feature = "crt-static"))]
             compile_error!("target missing crt-static");
+            #[cfg(not(any(target_os = "linux", all(target_os = "windows", target_env = "msvc"))))]
+            #[cfg(target_feature = "crt-static")]
+            compile_error!("target unexpectedly has crt-static");
             "#,
         )
         .file("build.rs", build_rs)
