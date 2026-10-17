@@ -216,7 +216,7 @@ pub struct GlobalContext {
     /// A collection of configuration options
     config: OnceLock<ConfigValues>,
     /// A collection of configuration options from the credentials file
-    credential_values: OnceLock<HashMap<String, ConfigValue>>,
+    credential_values: OnceLock<ConfigValues>,
     /// CLI config values, passed in via `configure`.
     cli_config: Option<Vec<String>>,
     /// The current working directory of cargo
@@ -653,9 +653,9 @@ impl GlobalContext {
         } else {
             return Ok(None);
         };
-        let has_credentials = self.get_cv_helper(&key, credentials)?.is_some();
+        let has_credentials = self.get_cv_helper(&key, &credentials.values)?.is_some();
         key.push("token");
-        let credentials_token = match self.get_cv_helper(&key, credentials)? {
+        let credentials_token = match self.get_cv_helper(&key, &credentials.values)? {
             Some(CV::String(val, definition)) => Some(Value {
                 val: Secret::from(val),
                 definition,
@@ -1819,16 +1819,16 @@ impl GlobalContext {
     }
 
     /// Gets configuration values from the credentials file, loading them on first use.
-    fn credentials_values(&self) -> CargoResult<&HashMap<String, ConfigValue>> {
+    fn credentials_values(&self) -> CargoResult<&ConfigValues> {
         self.credential_values
             .try_borrow_with(|| self.load_credentials())
     }
 
     /// Loads credentials config from the credentials file, if present.
-    fn load_credentials(&self) -> CargoResult<HashMap<String, ConfigValue>> {
+    fn load_credentials(&self) -> CargoResult<ConfigValues> {
         let home_path = self.home_path.clone().into_path_unlocked();
         let Some(credentials) = self.get_file_path(&home_path, "credentials", true)? else {
-            return Ok(HashMap::default());
+            return Ok(ConfigValues::default());
         };
 
         let mut value = self.load_layer(&credentials, WhyLoad::FileDiscovery)?;
@@ -1847,7 +1847,7 @@ impl GlobalContext {
         let CV::Table(map, _) = value else {
             unreachable!("credentials root was checked to be a table");
         };
-        Ok(map)
+        Ok(ConfigValues { values: map })
     }
 
     /// Looks for a path for `tool` in an environment variable or the given config, and returns
