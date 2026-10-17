@@ -2125,3 +2125,178 @@ fn unremap_substitutions(artifact: &std::path::Path) -> Vec<(String, String)> {
 
     pairs
 }
+
+/// Builds a package and then moves `CARGO_HOME` to a new location.
+fn cargo_home_moved_trim_paths(
+    trim_paths: &str,
+) -> (cargo_test_support::Project, std::path::PathBuf) {
+    Package::new("bar", "0.0.1")
+        .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("src/lib.rs", r#"pub fn f() { println!("{}", file!()); }"#)
+        .publish();
+    let git_project = git::new("baz", |project| {
+        project
+            .file("Cargo.toml", &basic_manifest("baz", "0.0.1"))
+            .file("src/lib.rs", r#"pub fn f() { println!("{}", file!()); }"#)
+    });
+    let url = git_project.url();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+
+                [dependencies]
+                bar = "0.0.1"
+                baz = {{ git = "{url}" }}
+
+                [profile.dev]
+                trim-paths = "{trim_paths}"
+           "#
+            ),
+        )
+        .file("src/main.rs", "fn main() { bar::f(); baz::f(); }")
+        .build();
+
+    p.cargo("build").run();
+
+    let new_cargo_home = paths::home().join(".cargo-moved");
+    std::fs::rename(paths::cargo_home(), &new_cargo_home).unwrap();
+
+    (p, new_cargo_home)
+}
+
+#[cargo_test]
+fn cargo_home_moved_trim_paths_none() {
+    let (p, new_cargo_home) = cargo_home_moved_trim_paths("none");
+
+    p.cargo("build --verbose")
+        .env("CARGO_HOME", &new_cargo_home)
+        .with_stderr_data(
+            str![[r#"
+[DIRTY] bar v0.0.1: the path to the source changed
+[COMPILING] bar v0.0.1
+[RUNNING] `rustc --crate-name bar [..]`
+[DIRTY] baz v0.0.1 ([ROOTURL]/baz#[..]): the path to the source changed
+[COMPILING] baz v0.0.1 ([ROOTURL]/baz#[..])
+[RUNNING] `rustc --crate-name baz [..]`
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[DIRTY] foo v0.0.1 ([ROOT]/foo): info of dependency `[..]` changed
+
+"#]]
+            .unordered(),
+        )
+        .run();
+
+    p.process(&p.bin("foo"))
+        .with_stdout_data(str![[r#"
+[ROOT]/home/.cargo-moved/registry/src/-[..]/bar-0.0.1/src/lib.rs
+[ROOT]/home/.cargo-moved/git/checkouts/baz-[HASH]/[..]/src/lib.rs
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn cargo_home_moved_trim_paths_object() {
+    let (p, new_cargo_home) = cargo_home_moved_trim_paths("object");
+
+    p.cargo("build --verbose")
+        .env("CARGO_HOME", &new_cargo_home)
+        .with_stderr_data(
+            str![[r#"
+[FRESH] bar v0.0.1
+[FRESH] baz v0.0.1 ([ROOTURL]/baz#[..])
+[FRESH] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered(),
+        )
+        .run();
+
+    p.process(&p.bin("foo"))
+        .with_stdout_data(str![[r#"
+/cargo/registry/[..]/bar-0.0.1/src/lib.rs
+/cargo/git/[..]/src/lib.rs
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn cargo_home_moved_trim_paths_all() {
+    let (p, new_cargo_home) = cargo_home_moved_trim_paths("all");
+
+    p.cargo("build --verbose")
+        .env("CARGO_HOME", &new_cargo_home)
+        .with_stderr_data(
+            str![[r#"
+[FRESH] bar v0.0.1
+[FRESH] baz v0.0.1 ([ROOTURL]/baz#[..])
+[FRESH] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered(),
+        )
+        .run();
+
+    p.process(&p.bin("foo"))
+        .with_stdout_data(str![[r#"
+/cargo/registry/[..]/bar-0.0.1/src/lib.rs
+/cargo/git/[..]/src/lib.rs
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn cargo_home_moved_trim_paths_object_with_diagnostics() {
+    Package::new("bar", "0.0.1")
+        .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("src/lib.rs", "pub fn f() { let unused = 0; }")
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+
+                [dependencies]
+                bar = "0.0.1"
+
+                [profile.dev]
+                trim-paths = "object"
+           "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // `-vv` shows warnings of non-local packages.
+    p.cargo("build -vv").run();
+
+    let new_cargo_home = paths::home().join(".cargo-moved");
+    std::fs::rename(paths::cargo_home(), &new_cargo_home).unwrap();
+
+    p.cargo("build -vv")
+        .env("CARGO_HOME", &new_cargo_home)
+        .with_stderr_data(str![[r#"
+...
+[FRESH] bar v0.0.1
+[WARNING] unused variable: `unused`
+ --> [ROOT]/home/.cargo/registry/src/-[..]/bar-0.0.1/src/lib.rs:1:18
+...
+"#]])
+        .run();
+}
