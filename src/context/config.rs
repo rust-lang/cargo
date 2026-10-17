@@ -1,5 +1,12 @@
-use crate::context::ConfigValue;
+use std::path::PathBuf;
+
+use anyhow::bail;
+
+use crate::context::{ConfigKey, ConfigValue, Definition};
 use crate::util::data_structures::HashMap;
+use crate::util::errors::CargoResult;
+
+use ConfigValue as CV;
 
 #[derive(Default, Debug)]
 pub struct ConfigValues {
@@ -18,5 +25,58 @@ impl ConfigValues {
 
     pub fn values_mut(&mut self) -> &mut HashMap<String, ConfigValue> {
         &mut self.values
+    }
+
+    /// Get a configuration value by key.
+    ///
+    /// This does NOT look at environment variables. See `get_cv_with_env` for
+    /// a variant that supports environment variables.
+    pub fn get_cv(&self, key: &ConfigKey) -> CargoResult<Option<ConfigValue>> {
+        get_cv_helper(key, self.values())
+    }
+}
+
+fn get_cv_helper(
+    key: &ConfigKey,
+    vals: &HashMap<String, ConfigValue>,
+) -> CargoResult<Option<ConfigValue>> {
+    {
+        tracing::trace!("get cv {:?}", key);
+        if key.is_root() {
+            // Returning the entire root table (for example `cargo config get`
+            // with no key). The definition here shouldn't matter.
+            return Ok(Some(CV::Table(
+                vals.clone(),
+                Definition::Path(PathBuf::new()),
+            )));
+        }
+        let mut parts = key.parts().enumerate();
+        let Some(mut val) = vals.get(parts.next().unwrap().1) else {
+            return Ok(None);
+        };
+        for (i, part) in parts {
+            match val {
+                CV::Table(map, _) => {
+                    val = match map.get(part) {
+                        Some(val) => val,
+                        None => return Ok(None),
+                    }
+                }
+                CV::Integer(_, def)
+                | CV::String(_, def)
+                | CV::List(_, def)
+                | CV::Boolean(_, def) => {
+                    let key_so_far = ConfigKey::from_parts(key.parts().take(i));
+                    bail!(
+                        "expected table for configuration key `{}`, \
+                         but found {} in {}",
+                        key_so_far,
+                        val.desc(),
+                        def
+                    )
+                }
+            }
+        }
+        Ok(Some(val.clone()))
     }
 }

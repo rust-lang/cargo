@@ -653,9 +653,9 @@ impl GlobalContext {
         } else {
             return Ok(None);
         };
-        let has_credentials = self.get_cv_helper(&key, credentials.values())?.is_some();
+        let has_credentials = credentials.get_cv(&key)?.is_some();
         key.push("token");
-        let credentials_token = match self.get_cv_helper(&key, credentials.values())? {
+        let credentials_token = match credentials.get_cv(&key)? {
             Some(CV::String(val, definition)) => Some(Value {
                 val: Secret::from(val),
                 definition,
@@ -889,51 +889,7 @@ impl GlobalContext {
     /// This does NOT look at environment variables. See `get_cv_with_env` for
     /// a variant that supports environment variables.
     fn get_cv(&self, key: &ConfigKey) -> CargoResult<Option<ConfigValue>> {
-        self.get_cv_helper(key, self.config()?.values())
-    }
-
-    fn get_cv_helper(
-        &self,
-        key: &ConfigKey,
-        vals: &HashMap<String, ConfigValue>,
-    ) -> CargoResult<Option<ConfigValue>> {
-        tracing::trace!("get cv {:?}", key);
-        if key.is_root() {
-            // Returning the entire root table (for example `cargo config get`
-            // with no key). The definition here shouldn't matter.
-            return Ok(Some(CV::Table(
-                vals.clone(),
-                Definition::Path(PathBuf::new()),
-            )));
-        }
-        let mut parts = key.parts().enumerate();
-        let Some(mut val) = vals.get(parts.next().unwrap().1) else {
-            return Ok(None);
-        };
-        for (i, part) in parts {
-            match val {
-                CV::Table(map, _) => {
-                    val = match map.get(part) {
-                        Some(val) => val,
-                        None => return Ok(None),
-                    }
-                }
-                CV::Integer(_, def)
-                | CV::String(_, def)
-                | CV::List(_, def)
-                | CV::Boolean(_, def) => {
-                    let key_so_far = ConfigKey::from_parts(key.parts().take(i));
-                    bail!(
-                        "expected table for configuration key `{}`, \
-                         but found {} in {}",
-                        key_so_far,
-                        val.desc(),
-                        def
-                    )
-                }
-            }
-        }
-        Ok(Some(val.clone()))
+        self.config()?.get_cv(key)
     }
 
     /// This is a helper for getting a CV from a file or env var.
