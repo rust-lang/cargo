@@ -140,6 +140,10 @@ impl Summary {
         Arc::make_mut(&mut self.inner).checksum = Some(cksum);
     }
 
+    pub fn clear_checksum(&mut self) {
+        Arc::make_mut(&mut self.inner).checksum = None;
+    }
+
     pub fn set_pubtime(&mut self, pubtime: jiff::Timestamp) {
         Arc::make_mut(&mut self.inner).pubtime = Some(pubtime);
     }

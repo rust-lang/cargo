@@ -16,6 +16,8 @@ pub struct ReplacedSource<'gctx> {
     to_replace: SourceId,
     /// The identifier of the new replacement source.
     replace_with: SourceId,
+    /// Whether the original source supports checksums.
+    to_replace_supports_checksums: bool,
     inner: Box<dyn Source + 'gctx>,
 }
 
@@ -26,11 +28,13 @@ impl<'gctx> ReplacedSource<'gctx> {
     pub fn new(
         to_replace: SourceId,
         replace_with: SourceId,
+        to_replace_supports_checksums: bool,
         src: Box<dyn Source + 'gctx>,
     ) -> ReplacedSource<'gctx> {
         ReplacedSource {
             to_replace,
             replace_with,
+            to_replace_supports_checksums,
             inner: src,
         }
     }
@@ -55,7 +59,7 @@ impl<'gctx> Source for ReplacedSource<'gctx> {
     }
 
     fn supports_checksums(&self) -> bool {
-        self.inner.supports_checksums()
+        self.to_replace_supports_checksums
     }
 
     fn requires_precise(&self) -> bool {
@@ -69,11 +73,20 @@ impl<'gctx> Source for ReplacedSource<'gctx> {
         f: &mut dyn FnMut(IndexSummary),
     ) -> CargoResult<()> {
         let (replace_with, to_replace) = (self.replace_with, self.to_replace);
+        let supports_checksums = self.to_replace_supports_checksums;
         let dep = dep.clone().map_source(to_replace, replace_with);
 
         self.inner
             .query(&dep, kind, &mut |summary| {
-                f(summary.map_summary(|s| s.map_source(replace_with, to_replace)))
+                f(summary.map_summary(|s| {
+                    let mut s = s.map_source(replace_with, to_replace);
+                    // The lockfile describes the original source, not the
+                    // stronger guarantees offered by its replacement.
+                    if !supports_checksums {
+                        s.clear_checksum();
+                    }
+                    s
+                }))
             })
             .await
             .map_err(|e| {
@@ -132,7 +145,11 @@ impl<'gctx> Source for ReplacedSource<'gctx> {
     }
 
     fn fingerprint(&self, id: &Package) -> CargoResult<String> {
-        self.inner.fingerprint(id)
+        let replacement = self.inner.fingerprint(id)?;
+        match id.package_id().source_id().precise_git_fragment() {
+            Some(precise) => Ok(format!("{precise} {replacement}")),
+            None => Ok(replacement),
+        }
     }
 
     fn verify(&self, id: PackageId) -> CargoResult<()> {
