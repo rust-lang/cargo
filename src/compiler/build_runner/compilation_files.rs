@@ -89,6 +89,8 @@ impl fmt::Debug for UnitHash {
 /// mangled symbols need to be stable between different builds with different
 /// settings. For example, profile-guided optimizations need to swap
 /// `RUSTFLAGS` between runs, but needs to keep the same symbol names.
+/// Likewise a target unit only mixes the package id of its host-kind
+/// dependencies into `c_metadata`, see `compute_metadata`.
 #[derive(Copy, Clone, Debug)]
 pub struct Metadata {
     unit_id: UnitHash,
@@ -749,7 +751,7 @@ fn compute_metadata(
     let deps_metadata = build_runner
         .unit_deps(unit)
         .iter()
-        .map(|dep| *metadata_of(&dep.unit, build_runner, metas))
+        .map(|dep| (&dep.unit, *metadata_of(&dep.unit, build_runner, metas)))
         .collect::<Vec<_>>();
     let c_extra_filename = use_extra_filename(bcx, unit);
     let pkg_dir = use_pkg_dir(bcx, unit);
@@ -848,16 +850,28 @@ fn compute_metadata(
 
     let mut c_metadata_hasher = shared_hasher.clone();
     // Mix in the target-metadata of all the dependencies of this target.
+    // Host-kind deps of a target unit (build scripts, proc-macros) are not
+    // linked into it, and their metadata depends on the build host, so use
+    // a host independent stand-in for them (rust-lang/cargo#8140).
     let mut dep_c_metadata_hashes = deps_metadata
         .iter()
-        .map(|m| m.c_metadata)
+        .map(|(dep, m)| {
+            if !unit.kind.is_host() && dep.kind.is_host() {
+                host_independent_c_metadata(dep, ws_root)
+            } else {
+                m.c_metadata
+            }
+        })
         .collect::<Vec<_>>();
     dep_c_metadata_hashes.sort();
     dep_c_metadata_hashes.hash(&mut c_metadata_hasher);
 
     let mut unit_id_hasher = shared_hasher.clone();
     // Mix in the target-metadata of all the dependencies of this target.
-    let mut dep_unit_id_hashes = deps_metadata.iter().map(|m| m.unit_id).collect::<Vec<_>>();
+    let mut dep_unit_id_hashes = deps_metadata
+        .iter()
+        .map(|(_, m)| m.unit_id)
+        .collect::<Vec<_>>();
     dep_unit_id_hashes.sort();
     dep_unit_id_hashes.hash(&mut unit_id_hasher);
     // Avoid trashing the caches on RUSTFLAGS changing via `unit_id`
@@ -887,6 +901,15 @@ fn compute_metadata(
         c_extra_filename,
         pkg_dir,
     }
+}
+
+/// Stand-in `c_metadata` for a host-kind dependency of a target unit:
+/// only the dependency's package id, see `compute_metadata`.
+fn host_independent_c_metadata(dep: &Unit, ws_root: &Path) -> UnitHash {
+    let mut hasher = StableHasher::new();
+    METADATA_VERSION.hash(&mut hasher);
+    dep.pkg.package_id().stable_hash(ws_root).hash(&mut hasher);
+    UnitHash(Hasher::finish(&hasher))
 }
 
 /// HACK: Detect the *potential* presence of `--remap-path-prefix`
