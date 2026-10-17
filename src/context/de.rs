@@ -180,7 +180,7 @@ impl<'de, 'gctx> de::Deserializer<'de> for Deserializer<'gctx> {
         if name == "StringList" {
             let mut res = Vec::new();
 
-            match self.gctx.get_cv(&self.key)? {
+            match self.gctx.config()?.get_cv(&self.key)? {
                 Some(CV::List(val, _def)) => res.extend(val),
                 Some(CV::String(val, def)) => {
                     let split_vs = val
@@ -435,7 +435,7 @@ impl ConfigSeqAccess<'_> {
     fn new(de: Deserializer<'_>) -> Result<ConfigSeqAccess<'_>, ConfigError> {
         let mut res = Vec::new();
 
-        match de.gctx.get_cv(&de.key)? {
+        match de.gctx.config()?.get_cv(&de.key)? {
             Some(CV::List(val, _definition)) => {
                 res.extend(val);
             }
@@ -508,7 +508,10 @@ impl<'gctx, 'err> ValueSource<'gctx, 'err> {
         let definition = {
             let env = de.key.as_env_key();
             let env_def = Definition::Environment(env.to_string());
-            match (de.gctx.env.contains_key(env), de.gctx.get_cv(&de.key)?) {
+            match (
+                de.gctx.env.contains_key(env),
+                de.gctx.config()?.get_cv(&de.key)?,
+            ) {
                 (true, Some(cv)) => {
                     // Both, pick highest priority.
                     if env_def.is_higher_priority(cv.definition()) {

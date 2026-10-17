@@ -102,7 +102,7 @@ pub(super) fn load_host_tuple(gctx: &GlobalContext, tuple: &str) -> CargoResult<
     if gctx.cli_unstable().host_config {
         let host_triple_prefix = ["host", tuple];
         let host_triple_key = ConfigKey::from_parts(host_triple_prefix);
-        let host_prefix = match gctx.get_cv(&host_triple_key)? {
+        let host_prefix = match gctx.config()?.get_cv(&host_triple_key)? {
             Some(_) => host_triple_prefix.as_slice(),
             None => &["host"],
         };

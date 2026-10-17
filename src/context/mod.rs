@@ -143,7 +143,7 @@ macro_rules! get_value_typed {
     ($name:ident, $ty:ty, $variant:ident, $expected:expr) => {
         /// Low-level private method for getting a config value as an [`OptValue`].
         fn $name(&self, key: &ConfigKey) -> Result<OptValue<$ty>, ConfigError> {
-            let cv = self.get_cv(key)?;
+            let cv = self.config()?.get_cv(key)?;
             let env = self.get_config_env::<$ty>(key)?;
             match (cv, env) {
                 (Some(CV::$variant(val, definition)), Some(env)) => {
@@ -884,19 +884,11 @@ impl GlobalContext {
         Ok(Filesystem::new(path))
     }
 
-    /// Get a configuration value by key.
-    ///
-    /// This does NOT look at environment variables. See `get_cv_with_env` for
-    /// a variant that supports environment variables.
-    fn get_cv(&self, key: &ConfigKey) -> CargoResult<Option<ConfigValue>> {
-        self.config()?.get_cv(key)
-    }
-
     /// This is a helper for getting a CV from a file or env var.
     pub(crate) fn get_cv_with_env(&self, key: &ConfigKey) -> CargoResult<Option<CV>> {
         // Determine if value comes from env, cli, or file, and merge env if
         // possible.
-        let cv = self.get_cv(key)?;
+        let cv = self.config()?.get_cv(key)?;
         if key.is_root() {
             // Root table can't have env value.
             return Ok(cv);
@@ -1037,7 +1029,7 @@ impl GlobalContext {
                 return Ok(true);
             }
         }
-        if self.get_cv(key)?.is_some() {
+        if self.config()?.get_cv(key)?.is_some() {
             return Ok(true);
         }
         self.check_environment_key_case_mismatch(key);
@@ -1138,7 +1130,7 @@ impl GlobalContext {
     ///
     /// NOTE: This does not read from env. The caller is responsible for that.
     fn get_table(&self, key: &ConfigKey) -> CargoResult<OptValue<HashMap<String, CV>>> {
-        match self.get_cv(key)? {
+        match self.config()?.get_cv(key)? {
             Some(CV::Table(val, definition)) => Ok(Some(Value { val, definition })),
             Some(val) => self.expected("table", key, &val),
             None => Ok(None),
@@ -1886,7 +1878,7 @@ impl GlobalContext {
     pub fn paths_overrides(&self) -> CargoResult<OptValue<Vec<(String, Definition)>>> {
         let key = ConfigKey::from_parts(["paths"]);
         // paths overrides cannot be set via env config, so use get_cv here.
-        match self.get_cv(&key)? {
+        match self.config()?.get_cv(&key)? {
             Some(CV::List(val, definition)) => {
                 let val = val
                     .into_iter()
