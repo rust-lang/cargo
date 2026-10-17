@@ -179,63 +179,64 @@ fn translate_progress_to_bar(
     Ok(())
 }
 
+#[derive(Debug, thiserror::Error)]
+#[error("{0}")]
+pub(super) struct CredentialError(#[source] pub gix::Error);
+
 fn amend_authentication_hints(
     res: Result<(), crate::sources::git::fetch::Error>,
     remote_url: &str,
     last_url_for_authentication: Option<gix::bstr::BString>,
 ) -> CargoResult<()> {
     let Err(err) = res else { return Ok(()) };
-    let e = match &err {
-        crate::sources::git::fetch::Error::PrepareFetch(
-            gix::remote::fetch::prepare::Error::RefMap(gix::remote::ref_map::Error::Handshake(err)),
-        ) => Some(err),
-        _ => None,
-    };
-
-    if let Some(e) = e {
-        let auth_message = match e {
-            gix::protocol::handshake::Error::Credentials(_) => {
-                "\n* attempted to find username/password via \
+    let auth_message = if err.downcast_any_ref::<CredentialError>().is_some()
+        || err.is_unauthenticated()
+    {
+        if err
+            .downcast_any_ref::<gix::protocol::transport::client::AuthenticationRequired>()
+            .is_none()
+        {
+            "\n* attempted to find username/password via \
                      git's `credential.helper` support, but failed"
-                    .into()
-            }
-            gix::protocol::handshake::Error::InvalidCredentials { .. } => {
-                "\n* attempted to find username/password via \
+                .into()
+        } else {
+            "\n* attempted to find username/password via \
                      `credential.helper`, but maybe the found \
                      credentials were incorrect"
-                    .into()
-            }
-            gix::protocol::handshake::Error::Transport(_) => {
-                let msg = format!(
-                    concat!(
-                        "network failure seems to have happened\n",
-                        "if a proxy or similar is necessary `net.git-fetch-with-cli` may help here\n",
-                        "https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli",
-                        "{}"
-                    ),
-                    super::utils::note_github_pull_request(remote_url).unwrap_or_default()
-                );
-                return Err(anyhow::Error::from(err).context(msg));
-            }
-            _ => None,
-        };
-        if let Some(auth_message) = auth_message {
-            let mut msg = "failed to authenticate when downloading \
-                       repository"
-                .to_string();
-            if let Some(url) = last_url_for_authentication {
-                msg.push_str(": ");
-                msg.push_str(url.to_str_lossy().as_ref());
-            }
-            msg.push('\n');
-            msg.push_str(auth_message);
-            msg.push_str("\n\n");
-            msg.push_str("if the git CLI succeeds then `net.git-fetch-with-cli` may help here\n");
-            msg.push_str(
-                "https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli",
+                .into()
+        }
+    } else {
+        if err
+            .downcast_any_ref::<gix::protocol::transport::client::Error>()
+            .is_some()
+        {
+            let msg = format!(
+                concat!(
+                    "network failure seems to have happened\n",
+                    "if a proxy or similar is necessary `net.git-fetch-with-cli` may help here\n",
+                    "https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli",
+                    "{}"
+                ),
+                super::utils::note_github_pull_request(remote_url).unwrap_or_default()
             );
             return Err(anyhow::Error::from(err).context(msg));
         }
+        None
+    };
+    if let Some(auth_message) = auth_message {
+        let mut msg = "failed to authenticate when downloading \
+                       repository"
+            .to_string();
+        if let Some(url) = last_url_for_authentication {
+            msg.push_str(": ");
+            msg.push_str(url.to_str_lossy().as_ref());
+        }
+        msg.push('\n');
+        msg.push_str(auth_message);
+        msg.push_str("\n\n");
+        msg.push_str("if the git CLI succeeds then `net.git-fetch-with-cli` may help here\n");
+        msg.push_str("https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli");
+        return Err(anyhow::Error::from(err).context(msg));
     }
     Err(err.into())
 }
@@ -268,7 +269,7 @@ pub fn open_repo(
     repo_path: &std::path::Path,
     config_overrides: Vec<BString>,
     purpose: OpenMode,
-) -> Result<gix::Repository, gix::open::Error> {
+) -> gix::Result<gix::Repository> {
     gix::open_opts(repo_path, {
         let mut opts = gix::open::Options::default();
         opts.permissions.config = gix::open::permissions::Config::all();
@@ -393,4 +394,46 @@ pub fn reinitialize(git_dir: &Path) -> CargoResult<()> {
     init(git_dir, bare)?;
     paths::remove_dir_all(&tmp)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{CredentialError, amend_authentication_hints};
+    use gix::error::ErrorExt;
+    use gix::protocol::transport::client::{AuthenticationRequired, Error};
+
+    #[test]
+    fn authentication_hints_preserve_causes_and_distinguish_network_errors() {
+        let missing = gix::error::unauthenticated("missing identity").raise();
+        let helper =
+            CredentialError(gix::error::message("Terminal prompts are disabled").raise()).raise();
+        let rejected = std::io::Error::new(
+            std::io::ErrorKind::PermissionDenied,
+            AuthenticationRequired::default(),
+        )
+        .raise();
+        let network = Error::Io(std::io::Error::from(std::io::ErrorKind::ConnectionReset)).raise();
+        for (err, hint) in [
+            (missing, "git's `credential.helper` support, but failed"),
+            (helper, "git's `credential.helper` support, but failed"),
+            (rejected, "credentials were incorrect"),
+            (network, "network failure seems to have happened"),
+        ] {
+            let err = amend_authentication_hints(
+                Err(err),
+                "https://example.com/repo",
+                Some("https://example.com/auth".into()),
+            )
+            .unwrap_err();
+            assert!(err.to_string().contains(hint));
+            assert!(err.downcast_ref::<gix::Error>().is_some());
+        }
+        let cancelled = CredentialError(
+            std::io::Error::from(std::io::ErrorKind::ConnectionReset)
+                .and_raise(gix::error::cancelled("cancelled")),
+        )
+        .raise();
+        assert!(cancelled.is_cancelled());
+        assert!(!cancelled.can_retry_lenient());
+    }
 }

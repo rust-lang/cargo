@@ -683,7 +683,7 @@ fn discover_gix_repo(root: &Path) -> CargoResult<Option<gix::Repository>> {
         }
     };
     let manifest_path = gix::path::join_bstr_unix_pathsep(
-        gix::path::to_unix_separators_on_windows(gix::path::into_bstr(repo_relative_path)),
+        gix::path::to_unix_separators_on_windows(gix::path::into_bstr(repo_relative_path)?),
         "Cargo.toml",
     );
     if index.entry_index_by_path(&manifest_path).is_ok() {
@@ -727,9 +727,9 @@ fn list_files_gix(
     let repo_relative_pkg_path = pkg_path.strip_prefix(root).unwrap_or(Path::new(""));
     let target_prefix = gix::path::to_unix_separators_on_windows(gix::path::into_bstr(
         repo_relative_pkg_path.join("target/"),
-    ));
+    )?);
     let package_prefix =
-        gix::path::to_unix_separators_on_windows(gix::path::into_bstr(repo_relative_pkg_path));
+        gix::path::to_unix_separators_on_windows(gix::path::into_bstr(repo_relative_pkg_path)?);
 
     let pathspec = {
         // Include the package root.
@@ -799,7 +799,7 @@ fn list_files_gix(
         )
     {
         let (rela_path, kind, maybe_plain_text_symlink) = item?;
-        let file_path = root.join(gix::path::from_bstr(rela_path));
+        let file_path = root.join(gix::path::from_bstr(rela_path)?);
         if file_path.file_name().and_then(|name| name.to_str()) == Some("Cargo.toml") {
             // Keep track of all sub-packages found and also strip out all
             // matches we've found so far. Note, though, that if we find
