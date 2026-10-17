@@ -1798,3 +1798,32 @@ From [ROOTURL]/registry
         )
         .run();
 }
+
+#[cargo_test]
+fn target_rustflags_unquoted_dotted_tuple() {
+    let p = project()
+        .file("src/lib.rs", "#![no_std]")
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [target.thumbv8m.main-none-eabihf]
+                rustflags = ["-Z", "bogus"]
+            "#,
+        )
+        .build();
+
+    p.cargo("check -v --target thumbv8m.main-none-eabihf")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[WARNING] reading config from `[target.thumbv8m.main-none-eabihf]`
+  |
+  = [NOTE] `[target.thumbv8m.main-none-eabihf]` will be ignored or error in a future version
+  = [HELP] to configure `thumbv8m.main-none-eabihf`, quote the key like `[target."thumbv8m.main-none-eabihf"]`
+[ERROR] failed to run `rustc` to learn about target-specific information
+
+Caused by:
+  [..]bogus[..]
+...
+"#]])
+        .run();
+}
