@@ -84,15 +84,25 @@ impl PackageIdSpec {
                 return PackageIdSpec::from_url(url);
             }
         } else if spec.contains('/') || spec.contains('\\') {
-            let abs = std::env::current_dir().unwrap_or_default().join(spec);
-            if abs.exists() {
-                let maybe_url = Url::from_file_path(abs)
-                    .map_or_else(|_| "a file:// URL".to_string(), |url| url.to_string());
-                return Err(ErrorKind::MaybeFilePath {
-                    spec: spec.into(),
-                    maybe_url,
+            // Diagnostic only; `Url::from_file_path` has this same `cfg`.
+            #[cfg(any(
+                unix,
+                windows,
+                target_os = "redox",
+                target_os = "wasi",
+                target_os = "hermit"
+            ))]
+            {
+                let abs = std::env::current_dir().unwrap_or_default().join(spec);
+                if abs.exists() {
+                    let maybe_url = Url::from_file_path(abs)
+                        .map_or_else(|_| "a file:// URL".to_string(), |url| url.to_string());
+                    return Err(ErrorKind::MaybeFilePath {
+                        spec: spec.into(),
+                        maybe_url,
+                    }
+                    .into());
                 }
-                .into());
             }
         }
         let (name, version) = match parse_spec(spec)? {
@@ -390,6 +400,13 @@ enum ErrorKind {
     #[error("pkgid urls must have at least one path component: {0}")]
     MissingUrlPath(Url),
 
+    #[cfg(any(
+        unix,
+        windows,
+        target_os = "redox",
+        target_os = "wasi",
+        target_os = "hermit"
+    ))]
     #[error("package ID specification `{spec}` looks like a file path, maybe try {maybe_url}")]
     MaybeFilePath { spec: String, maybe_url: String },
 
