@@ -130,6 +130,15 @@ pub fn cli() -> Command {
                     )
                     .value_name("SIZE")
                     .value_parser(parse_human_size),
+                )
+                .arg(
+                    opt(
+                        "max-target-age",
+                        "Deletes target and build directories that have not \
+                        been used since the given age (unstable)",
+                    )
+                    .value_name("DURATION")
+                    .value_parser(parse_time_span),
                 ),
         )
         .after_help(color_print::cstr!(
@@ -199,13 +208,14 @@ fn gc(gctx: &GlobalContext, args: &ArgMatches) -> CliResult {
         max_crate_size: size_opt("max-crate-size"),
         max_git_size: size_opt("max-git-size"),
         max_download_size: size_opt("max-download-size"),
+        max_target_age: duration_opt("max-target-age"),
     };
     if let Some(age) = duration_opt("max-download-age") {
         gc_opts.set_max_download_age(age);
     }
     // If the user sets any options, then only perform the options requested.
     // If no options are set, do the default behavior.
-    if !gc_opts.is_download_cache_opt_set() {
+    if !gc_opts.is_download_cache_opt_set() && gc_opts.max_target_age.is_none() {
         gc_opts.update_for_auto_gc(gctx)?;
     }
 
