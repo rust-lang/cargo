@@ -77,8 +77,9 @@ pub fn check_repo_state(
 
     let manifest_exists = path.exists();
     let path = paths::strip_prefix_canonical(path, workdir).unwrap_or_else(|_| path.to_path_buf());
-    let rela_path =
-        gix::path::to_unix_separators_on_windows(gix::path::os_str_into_bstr(path.as_os_str())?);
+    let rela_path = gix::path::to_unix_separators_on_windows(
+        gix::path::os_str_into_bstr(path.as_os_str()).map_err(|e| anyhow::format_err!("{e}"))?,
+    );
     if !manifest_exists {
         gctx.shell().verbose(|shell| {
             shell.warn(format_args!(

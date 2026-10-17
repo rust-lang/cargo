@@ -185,57 +185,54 @@ fn amend_authentication_hints(
     last_url_for_authentication: Option<gix::bstr::BString>,
 ) -> CargoResult<()> {
     let Err(err) = res else { return Ok(()) };
-    let e = match &err {
-        crate::sources::git::fetch::Error::PrepareFetch(
-            gix::remote::fetch::prepare::Error::RefMap(gix::remote::ref_map::Error::Handshake(err)),
-        ) => Some(err),
-        _ => None,
-    };
-
-    if let Some(e) = e {
-        let auth_message = match e {
-            gix::protocol::handshake::Error::Credentials(_) => {
-                "\n* attempted to find username/password via \
-                     git's `credential.helper` support, but failed"
-                    .into()
-            }
-            gix::protocol::handshake::Error::InvalidCredentials { .. } => {
-                "\n* attempted to find username/password via \
-                     `credential.helper`, but maybe the found \
-                     credentials were incorrect"
-                    .into()
-            }
-            gix::protocol::handshake::Error::Transport(_) => {
-                let msg = format!(
-                    concat!(
-                        "network failure seems to have happened\n",
-                        "if a proxy or similar is necessary `net.git-fetch-with-cli` may help here\n",
-                        "https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli",
-                        "{}"
-                    ),
-                    super::utils::note_github_pull_request(remote_url).unwrap_or_default()
-                );
-                return Err(anyhow::Error::from(err).context(msg));
-            }
-            _ => None,
-        };
-        if let Some(auth_message) = auth_message {
-            let mut msg = "failed to authenticate when downloading \
-                       repository"
-                .to_string();
-            if let Some(url) = last_url_for_authentication {
-                msg.push_str(": ");
-                msg.push_str(url.to_str_lossy().as_ref());
-            }
-            msg.push('\n');
-            msg.push_str(auth_message);
-            msg.push_str("\n\n");
-            msg.push_str("if the git CLI succeeds then `net.git-fetch-with-cli` may help here\n");
-            msg.push_str(
+    let auth_message: Option<&str> = if err.can_retry() {
+        // Network-level transport failure.
+        let msg = format!(
+            concat!(
+                "network failure seems to have happened\n",
+                "if a proxy or similar is necessary `net.git-fetch-with-cli` may help here\n",
                 "https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli",
-            );
-            return Err(anyhow::Error::from(err).context(msg));
+                "{}"
+            ),
+            super::utils::note_github_pull_request(remote_url).unwrap_or_default()
+        );
+        return Err(anyhow::Error::from(err).context(msg));
+    } else if err
+        .iter_errors()
+        .any(|e| e.to_string().contains("were not accepted by the remote"))
+    {
+        // Credentials were supplied but were rejected by the remote.
+        Some(
+            "\n* attempted to find username/password via \
+             `credential.helper`, but maybe the found \
+             credentials were incorrect",
+        )
+    } else if err
+        .iter_errors()
+        .any(|e| e.to_string().contains("Failed to obtain credentials"))
+    {
+        // The credential helper failed to return credentials.
+        Some(
+            "\n* attempted to find username/password via \
+             git's `credential.helper` support, but failed",
+        )
+    } else {
+        None
+    };
+    if let Some(auth_message) = auth_message {
+        let mut msg = "failed to authenticate when downloading \
+                   repository"
+            .to_string();
+        if let Some(url) = last_url_for_authentication {
+            msg.push_str(": ");
+            msg.push_str(url.to_str_lossy().as_ref());
         }
+        msg.push('\n');
+        msg.push_str(auth_message);
+        msg.push_str("\n\n");
+        msg.push_str("if the git CLI succeeds then `net.git-fetch-with-cli` may help here\n");
+        msg.push_str("https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli");
+        return Err(anyhow::Error::from(err).context(msg));
     }
     Err(err.into())
 }
@@ -268,7 +265,7 @@ pub fn open_repo(
     repo_path: &std::path::Path,
     config_overrides: Vec<BString>,
     purpose: OpenMode,
-) -> Result<gix::Repository, gix::open::Error> {
+) -> Result<gix::Repository, gix::Error> {
     gix::open_opts(repo_path, {
         let mut opts = gix::open::Options::default();
         opts.permissions.config = gix::open::permissions::Config::all();

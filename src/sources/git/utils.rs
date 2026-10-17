@@ -1141,12 +1141,8 @@ https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli"
 /// Cargo has its own lock files and doesn't need that mechanism for race protection, so a stray lock means
 /// a signal interrupted a previous shallow fetch and doesn't mean a race is happening.
 fn has_shallow_lock_file(err: &crate::sources::git::fetch::Error) -> bool {
-    matches!(
-        err,
-        gix::env::collate::fetch::Error::Fetch(gix::remote::fetch::Error::Fetch(
-            gix::protocol::fetch::Error::LockShallowFile(_)
-        ))
-    )
+    err.iter_errors()
+        .any(|e| e.to_string().contains("'shallow' file could not be locked"))
 }
 
 fn git_version() -> Option<GitVersion> {
@@ -1447,8 +1443,7 @@ fn fetch_with_gitoxide(
                         .with_refspecs(
                             refspecs.iter().map(|s| s.as_str()),
                             gix::remote::Direction::Fetch,
-                        )
-                        .map_err(crate::sources::git::fetch::Error::Other)?;
+                        )?;
                     let url = remote
                         .url(gix::remote::Direction::Fetch)
                         .expect("set at init")

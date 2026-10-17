@@ -57,5 +57,5 @@ pub mod fetch {
         }
     }
 
-    pub type Error = gix::env::collate::fetch::Error<gix::refspec::parse::Error>;
+    pub type Error = gix::Error;
 }
