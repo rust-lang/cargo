@@ -2811,13 +2811,6 @@ supported tools: {}",
         let mut seen_normalized: HashMap<String, String> = HashMap::default();
         for (name, config) in lints {
             let normalized = name.replace('-', "_");
-            if name.contains('-') {
-                warnings.push(format!(
-                    "`lints.{tool}.{name}` is deprecated in favor of \
-                     `lints.{tool}.{normalized}` and will not work in a \
-                     future edition"
-                ));
-            }
             if let Some(existing) = seen_normalized.get(&normalized) {
                 warnings.push(format!(
                     "duplicate lint `{existing}` in `[lints.{tool}]`, \
