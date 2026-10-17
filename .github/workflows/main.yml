@@ -34,6 +34,7 @@ jobs:
       - schema
       - spellcheck
       - test
+      - wasm
     permissions:
       contents: none
     # We need to ensure this job does *not* get skipped if its dependencies fail,
@@ -276,6 +277,16 @@ jobs:
     - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
     - run: rustup update stable && rustup default stable
     - run: cargo test -p cargo-util-schemas -F unstable-schema
+
+  # `cargo-util-schemas` is consumed by third-party tools, some of which run
+  # on targets with no filesystem, environment, clock, or network.
+  wasm:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
+    - run: rustup update stable && rustup default stable
+    - run: rustup target add wasm32-unknown-unknown
+    - run: cargo check -p cargo-util-schemas --all-features --target wasm32-unknown-unknown
 
   resolver:
     runs-on: ubuntu-latest
