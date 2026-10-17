@@ -69,7 +69,6 @@ use std::fmt;
 use std::fs::{self, File};
 use std::io::SeekFrom;
 use std::io::prelude::*;
-use std::mem;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::{Arc, LazyLock, Mutex, MutexGuard, OnceLock};
@@ -1614,22 +1613,11 @@ impl GlobalContext {
 
     /// Add config arguments passed on the command line.
     fn merge_cli_args(&mut self) -> CargoResult<()> {
-        let cv_from_cli = self.cli_args_as_table()?;
-        assert!(cv_from_cli.is_table(), "cv from CLI must be a table");
-
-        let root_cv = mem::take(self.config_mut()?.values_mut());
-        // The root config value container isn't from any external source,
-        // so its definition should be built-in.
-        let mut root_cv = CV::Table(root_cv, Definition::BuiltIn);
-        root_cv.merge(cv_from_cli, true)?;
-
-        // Put it back to gctx
-        mem::swap(
-            self.config_mut()?.values_mut(),
-            root_cv.table_mut("<root>")?.0,
-        );
-
-        Ok(())
+        let CV::Table(values, _) = self.cli_args_as_table()? else {
+            unreachable!("cv from CLI must be a table");
+        };
+        self.config_mut()?
+            .merge(ConfigValues::with_values(values), true)
     }
 
     /// The purpose of this function is to aid in the transition to using

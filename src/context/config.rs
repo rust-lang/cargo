@@ -19,6 +19,29 @@ impl ConfigValues {
         Self { values }
     }
 
+    /// Merge the given values into self.
+    ///
+    /// If `force` is true, primitive (non-container) types will override existing values
+    /// of equal priority. For arrays, incoming values of equal priority will be placed later.
+    ///
+    /// Container types (tables and arrays) are merged with existing values.
+    ///
+    /// Container and non-container types cannot be mixed.
+    pub fn merge(&mut self, from: Self, force: bool) -> CargoResult<()> {
+        let root_cv = std::mem::take(self.values_mut());
+
+        // The root config value container isn't from any external source,
+        // so its definition should be built-in.
+        let mut root_cv = CV::Table(root_cv, Definition::BuiltIn);
+        let from = CV::Table(from.values, Definition::BuiltIn);
+        root_cv.merge(from, force)?;
+
+        // Put it back to gctx
+        std::mem::swap(self.values_mut(), root_cv.table_mut("<root>")?.0);
+
+        Ok(())
+    }
+
     pub fn values(&self) -> &HashMap<String, ConfigValue> {
         &self.values
     }
