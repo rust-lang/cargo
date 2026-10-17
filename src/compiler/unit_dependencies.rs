@@ -1138,6 +1138,7 @@ impl<'a, 'gctx> State<'a, 'gctx> {
         let kind = unit.kind;
         self.resolve()
             .deps(pkg_id)
+            .filter(|(id, _)| !id.source_id().is_builtin())
             .filter_map(|(id, deps)| {
                 assert!(!deps.is_empty());
                 let deps: Vec<_> = deps

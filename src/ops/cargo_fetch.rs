@@ -34,7 +34,7 @@ pub fn fetch<'a>(
     let gctx = ws.gctx();
     let build_config =
         BuildConfig::new(gctx, jobs, keep_going, &options.targets, UserIntent::Build)?;
-    let mut data = RustcTargetData::new(ws, &build_config.requested_kinds)?;
+    let mut data = RustcTargetData::new(ws.gctx(), Some(ws), &build_config.requested_kinds)?;
     let mut fetched_packages = HashSet::default();
     let mut deps_to_fetch = ws.members().map(|p| p.package_id()).collect::<Vec<_>>();
     let mut to_download = Vec::new();

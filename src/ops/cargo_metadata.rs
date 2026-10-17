@@ -144,7 +144,7 @@ fn build_resolve_graph(
         &metadata_opts.filter_platforms,
         CompileKindFallback::JustHost,
     )?;
-    let mut target_data = RustcTargetData::new(ws, &requested_kinds)?;
+    let mut target_data = RustcTargetData::new(ws.gctx(), Some(ws), &requested_kinds)?;
     // Resolve entire workspace.
     let specs = Packages::All(Vec::new()).to_package_id_specs(ws)?;
     let force_all = if metadata_opts.filter_platforms.is_empty() {
