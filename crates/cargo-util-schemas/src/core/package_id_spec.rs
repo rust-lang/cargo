@@ -84,15 +84,19 @@ impl PackageIdSpec {
                 return PackageIdSpec::from_url(url);
             }
         } else if spec.contains('/') || spec.contains('\\') {
-            let abs = std::env::current_dir().unwrap_or_default().join(spec);
-            if abs.exists() {
-                let maybe_url = Url::from_file_path(abs)
-                    .map_or_else(|_| "a file:// URL".to_string(), |url| url.to_string());
-                return Err(ErrorKind::MaybeFilePath {
-                    spec: spec.into(),
-                    maybe_url,
+            // Diagnostic only; `Url::from_file_path` doesn't exist on bare wasm.
+            #[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
+            {
+                let abs = std::env::current_dir().unwrap_or_default().join(spec);
+                if abs.exists() {
+                    let maybe_url = Url::from_file_path(abs)
+                        .map_or_else(|_| "a file:// URL".to_string(), |url| url.to_string());
+                    return Err(ErrorKind::MaybeFilePath {
+                        spec: spec.into(),
+                        maybe_url,
+                    }
+                    .into());
                 }
-                .into());
             }
         }
         let (name, version) = match parse_spec(spec)? {
@@ -390,6 +394,7 @@ enum ErrorKind {
     #[error("pkgid urls must have at least one path component: {0}")]
     MissingUrlPath(Url),
 
+    #[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
     #[error("package ID specification `{spec}` looks like a file path, maybe try {maybe_url}")]
     MaybeFilePath { spec: String, maybe_url: String },
 
