@@ -1795,3 +1795,41 @@ fn host_config_shared_build_dep() {
         )
         .run();
 }
+
+#[cargo_test]
+fn target_rustflags_unquoted_dotted_tuple() {
+    let p = project()
+        .file("src/lib.rs", "#![no_std]")
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [target.thumbv8m.main-none-eabihf]
+                rustflags = ["-Z", "bogus"]
+            "#,
+        )
+        .build();
+
+    p.cargo("check -v --target thumbv8m.main-none-eabihf")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[WARNING] reading config from `[target.thumbv8m.main-none-eabihf]`
+  |
+  = [NOTE] `[target.thumbv8m.main-none-eabihf]` will be ignored or error in a future version
+  = [HELP] to configure `thumbv8m.main-none-eabihf`, quote the key like `[target."thumbv8m.main-none-eabihf"]`
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat,unused-externs-silent --diagnostic-width=400 --crate-type lib --emit=dep-info,metadata -C embed-bitcode=no -C debuginfo=2 --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=1376f81ba3e05994 -C extra-filename=-753056aff2529cb7 --out-dir [ROOT]/foo/target/thumbv8m.main-none-eabihf/debug/build/foo/[HASH]/out --target thumbv8m.main-none-eabihf -L dependency=[ROOT]/foo/target/debug/build/foo/[HASH]/out --force-warn=unused_crate_dependencies`
+error[E0463]: can't find crate for `core`
+  |
+  = [NOTE] the `thumbv8m.main-none-eabihf` target may not be installed
+  = [HELP] consider downloading the target with `rustup target add thumbv8m.main-none-eabihf`
+  = [HELP] consider building the standard library from source with `cargo build -Zbuild-std`
+
+For more information about this error, try `rustc --explain E0463`.
+[ERROR] could not compile `foo` (lib) due to 1 previous error
+
+Caused by:
+  process didn't exit successfully: `rustc --crate-name foo --edition=2015 src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat,unused-externs-silent --diagnostic-width=400 --crate-type lib --emit=dep-info,metadata -C embed-bitcode=no -C debuginfo=2 --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=1376f81ba3e05994 -C extra-filename=-753056aff2529cb7 --out-dir [ROOT]/foo/target/thumbv8m.main-none-eabihf/debug/build/foo/[HASH]/out --target thumbv8m.main-none-eabihf -L dependency=[ROOT]/foo/target/debug/build/foo/[HASH]/out --force-warn=unused_crate_dependencies` ([EXIT_STATUS]: 1)
+
+"#]])
+        .run();
+}
