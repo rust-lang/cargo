@@ -56,7 +56,7 @@ fn opt_level_override_0() {
         .build();
     p.cargo("build -v").with_stderr_data(str![[r#"
 [COMPILING] test v0.0.0 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name test --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=2 [..] -C metadata=[..] --out-dir [..]`
+[RUNNING] `rustc --crate-name test --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=line-tables-only [..] -C metadata=[..] --out-dir [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]]).run();
@@ -116,7 +116,7 @@ fn check_opt_level_override(profile_level: &str, rustc_level: &str) {
 [RUNNING] `rustc --crate-name test --edition=2015 src/lib.rs [..]--crate-type lib \
         --emit=[..]link[..] \
         -C opt-level={level}[..]\
-        -C debuginfo=2 [..]\
+        -C debuginfo=line-tables-only [..]\
         -C debug-assertions=on[..] \
         -C metadata=[..] \
         --out-dir [..]`
