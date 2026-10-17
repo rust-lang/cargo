@@ -429,7 +429,7 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
     if unit.profile.debug_assertions {
         cfg_map.insert("debug_assertions", Vec::new());
     }
-    for cfg in bcx.target_data.cfg(unit.kind) {
+    for cfg in bcx.target_data.cfg(bcx.unit_compile_kind(unit)) {
         match *cfg {
             Cfg::Name(ref n) => {
                 // Skip debug_assertions from rustc query; we use the profile setting instead

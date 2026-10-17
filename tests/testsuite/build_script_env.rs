@@ -591,3 +591,73 @@ fn build_script_debug_assertions_build_override() {
     p.cargo("check").run();
     p.cargo("check --release").run();
 }
+
+#[cargo_test]
+fn build_script_sees_target_features_with_host_config() {
+    let build_rs = r#"
+        #![allow(unexpected_cfgs)]
+        fn main() {
+            assert!(
+                cfg!(is_host_build),
+                "expected build script to be compiled with host-specific cfg"
+            );
+            let features = std::env::var("CARGO_CFG_TARGET_FEATURE").unwrap_or_default();
+            let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
+            let target_env = std::env::var("CARGO_CFG_TARGET_ENV").unwrap_or_default();
+            let supports_crt_static =
+                target_os == "linux" || (target_os == "windows" && target_env == "msvc");
+            if supports_crt_static {
+                assert!(
+                    features.split(',').any(|f| f == "crt-static"),
+                    "expected crt-static in CARGO_CFG_TARGET_FEATURE, got: {features:?}"
+                );
+            } else {
+                assert!(
+                    !features.split(',').any(|f| f == "crt-static"),
+                    "did not expect crt-static in CARGO_CFG_TARGET_FEATURE on this target, got: {features:?}"
+                );
+            }
+            let encoded_flags = std::env::var("CARGO_ENCODED_RUSTFLAGS").unwrap_or_default();
+            assert!(
+                encoded_flags.contains("target-feature=+crt-static"),
+                "expected target-feature=+crt-static in CARGO_ENCODED_RUSTFLAGS, got: {encoded_flags:?}"
+            );
+            assert!(
+                !encoded_flags.contains("is_host_build"),
+                "host flags should not leak into CARGO_ENCODED_RUSTFLAGS, got: {encoded_flags:?}"
+            );
+        }
+    "#;
+
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [host]
+            rustflags = ["-C", "target-feature=-crt-static", "--cfg", "is_host_build"]
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+            #![allow(unexpected_cfgs)]
+            #[cfg(is_host_build)]
+            compile_error!("host-only cfg leaked to target crate");
+            #[cfg(any(target_os = "linux", all(target_os = "windows", target_env = "msvc")))]
+            #[cfg(not(target_feature = "crt-static"))]
+            compile_error!("target missing crt-static");
+            #[cfg(not(any(target_os = "linux", all(target_os = "windows", target_env = "msvc"))))]
+            #[cfg(target_feature = "crt-static")]
+            compile_error!("target unexpectedly has crt-static");
+            "#,
+        )
+        .file("build.rs", build_rs)
+        .build();
+
+    p.cargo("check -vv")
+        .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
+        .arg("-Ztarget-applies-to-host")
+        .arg("-Zhost-config")
+        .env("RUSTFLAGS", "-Ctarget-feature=+crt-static")
+        .run();
+}

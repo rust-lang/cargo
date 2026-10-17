@@ -535,7 +535,7 @@ pub fn create_bcx<'a, 'gctx>(
     // shared with build and artifact dependencies.
     //
     // NOTE: after this point, all units and the unit graph must be immutable.
-    let (root_units, scrape_units, unit_graph) = rebuild_unit_graph_shared(
+    let (root_units, scrape_units, unit_graph, canonicalized_units) = rebuild_unit_graph_shared(
         interner,
         unit_graph,
         &root_units,
@@ -695,6 +695,7 @@ where `<compatible-ver>` is the latest version supporting rustc {rustc_version}"
         unit_graph,
         unit_to_index,
         scrape_units,
+        canonicalized_units,
     )?;
 
     Ok(bcx)
@@ -840,8 +841,9 @@ fn rebuild_unit_graph_shared(
     scrape_units: &[Unit],
     to_host: Option<CompileKind>,
     compile_time_deps_only: bool,
-) -> (Vec<Unit>, Vec<Unit>, UnitGraph) {
+) -> (Vec<Unit>, Vec<Unit>, UnitGraph, HashSet<Unit>) {
     let mut result = UnitGraph::default();
+    let mut canonicalized_units = HashSet::default();
     // Map of the old unit to the new unit, used to avoid recursing into units
     // that have already been computed to improve performance.
     let mut memo = HashMap::default();
@@ -852,6 +854,7 @@ fn rebuild_unit_graph_shared(
                 interner,
                 &mut memo,
                 &mut result,
+                &mut canonicalized_units,
                 &unit_graph,
                 root,
                 true,
@@ -868,7 +871,7 @@ fn rebuild_unit_graph_shared(
         .iter()
         .map(|unit| memo.get(unit).unwrap().clone())
         .collect();
-    (new_roots, new_scrape_units, result)
+    (new_roots, new_scrape_units, result, canonicalized_units)
 }
 
 /// Recursive function for rebuilding the graph.
@@ -880,6 +883,7 @@ fn traverse_and_share(
     interner: &UnitInterner,
     memo: &mut HashMap<Unit, Unit>,
     new_graph: &mut UnitGraph,
+    canonicalized_units: &mut HashSet<Unit>,
     unit_graph: &UnitGraph,
     unit: &Unit,
     unit_is_root: bool,
@@ -904,6 +908,7 @@ fn traverse_and_share(
                 interner,
                 memo,
                 new_graph,
+                canonicalized_units,
                 unit_graph,
                 &dep.unit,
                 false,
@@ -1011,6 +1016,9 @@ fn traverse_and_share(
         None,
         skip_non_compile_time_deps,
     );
+    if to_host == Some(unit.kind) {
+        canonicalized_units.insert(new_unit.clone());
+    }
     if !unit_is_root || !compile_time_deps_only {
         assert!(memo.insert(unit.clone(), new_unit.clone()).is_none());
     }

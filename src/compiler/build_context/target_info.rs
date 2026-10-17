@@ -969,6 +969,7 @@ pub struct RustcTargetData<'gctx> {
     /// Config
     pub gctx: &'gctx GlobalContext,
     requested_kinds: Vec<CompileKind>,
+    host_target: CompileTarget,
 
     /// Build information for the "host", which is information about when
     /// `rustc` is invoked without a `--target` flag. This is used for
@@ -1034,6 +1035,7 @@ impl<'gctx> RustcTargetData<'gctx> {
             rustc,
             gctx,
             requested_kinds: requested_kinds.into(),
+            host_target,
             host_config,
             host_info,
             target_config,
@@ -1154,5 +1156,9 @@ impl<'gctx> RustcTargetData<'gctx> {
 
     pub fn requested_kinds(&self) -> &[CompileKind] {
         &self.requested_kinds
+    }
+
+    pub fn host_target(&self) -> CompileTarget {
+        self.host_target
     }
 }
