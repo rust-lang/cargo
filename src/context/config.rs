@@ -32,15 +32,7 @@ impl ConfigValues {
     /// This does NOT look at environment variables. See `get_cv_with_env` for
     /// a variant that supports environment variables.
     pub fn get_cv(&self, key: &ConfigKey) -> CargoResult<Option<ConfigValue>> {
-        get_cv_helper(key, self.values())
-    }
-}
-
-fn get_cv_helper(
-    key: &ConfigKey,
-    vals: &HashMap<String, ConfigValue>,
-) -> CargoResult<Option<ConfigValue>> {
-    {
+        let vals = self.values();
         tracing::trace!("get cv {:?}", key);
         if key.is_root() {
             // Returning the entire root table (for example `cargo config get`
