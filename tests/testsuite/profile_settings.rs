@@ -429,8 +429,8 @@ fn panic_unwind_does_not_build_twice() {
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib [..]`
 [RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..] --test [..]`
-[RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]--crate-type bin [..]`
-[RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..] --test [..]`
+[RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]--crate-type bin --emit=dep-info,link [..]`
+[RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..] --test --crate-type bin [..]`
 [RUNNING] `rustc --crate-name t1 --edition=2015 tests/t1.rs [..]`
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [EXECUTABLE] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/foo-[HASH][EXE]`
