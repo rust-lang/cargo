@@ -691,8 +691,7 @@ impl GlobalContext {
     /// for checking environment variables. Callers outside of the `config`
     /// module should avoid using this.
     pub fn config(&self) -> CargoResult<&ConfigValues> {
-        self.config
-            .try_borrow_with(|| Ok(ConfigValues::with_values(self.load_values()?)))
+        self.config.try_borrow_with(|| self.load_values())
     }
 
     /// Gets a mutable copy of the on-disk config values.
@@ -748,7 +747,7 @@ impl GlobalContext {
     /// walking up its ancestors.
     pub fn reload_rooted_at<P: AsRef<Path>>(&mut self, path: P) -> CargoResult<()> {
         let values = self.load_values_from(path.as_ref())?;
-        self.config.replace(ConfigValues::with_values(values));
+        self.config.replace(values);
         self.merge_cli_args()?;
         self.load_unstable_flags_from_config()?;
         Ok(())
@@ -1293,7 +1292,7 @@ impl GlobalContext {
     }
 
     /// Loads configuration from the filesystem.
-    pub fn load_values(&self) -> CargoResult<HashMap<String, ConfigValue>> {
+    pub fn load_values(&self) -> CargoResult<ConfigValues> {
         self.load_values_from(&self.cwd)
     }
 
@@ -1345,7 +1344,7 @@ impl GlobalContext {
     }
 
     /// Start a config file discovery from a path and merges all config values found.
-    fn load_values_from(&self, path: &Path) -> CargoResult<HashMap<String, ConfigValue>> {
+    fn load_values_from(&self, path: &Path) -> CargoResult<ConfigValues> {
         // The root config value container isn't from any external source,
         // so its definition should be built-in.
         let mut cfg = CV::Table(HashMap::default(), Definition::BuiltIn);
@@ -1360,10 +1359,7 @@ impl GlobalContext {
         })
         .context("could not load Cargo configuration")?;
 
-        match cfg {
-            CV::Table(map, _) => Ok(map),
-            _ => unreachable!(),
-        }
+        Ok(ConfigValues::with_table_value(cfg).unwrap())
     }
 
     /// Loads a config value from a path.
