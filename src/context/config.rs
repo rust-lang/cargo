@@ -35,6 +35,10 @@ impl ConfigValues {
         CV::Table(values, def)
     }
 
+    pub fn definition(&self) -> &Definition {
+        &self.def
+    }
+
     /// Merge the given values into self.
     ///
     /// If `force` is true, primitive (non-container) types will override existing values

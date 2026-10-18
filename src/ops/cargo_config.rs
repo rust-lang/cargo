@@ -312,7 +312,8 @@ fn print_toml_unmerged(
     }
 
     let unmerged = gctx.load_values_unmerged()?;
-    for mut cv in unmerged {
+    for config in unmerged {
+        let mut cv = config.into_value();
         if trim_cv(&mut cv, key)? {
             print_table(&cv);
         }
