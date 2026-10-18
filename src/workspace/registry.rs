@@ -502,11 +502,7 @@ impl<'gctx> PackageRegistry<'gctx> {
     pub fn lock_patches(&mut self) {
         assert!(!self.patches_locked);
 
-        let mode = if self.gctx.cli_unstable().prerelease {
-            VersionReqMatchMode::Prerelease
-        } else {
-            VersionReqMatchMode::Default
-        };
+        let mode = self.gctx.version_req_match_mode();
         for summaries in self.patches.values_mut() {
             for summary in summaries {
                 debug!("locking patch {:?}", summary);
@@ -600,11 +596,7 @@ impl<'gctx> PackageRegistry<'gctx> {
     /// through.
     pub fn lock(&self, summary: Summary) -> Summary {
         assert!(self.patches_locked);
-        let mode = if self.gctx.cli_unstable().prerelease {
-            VersionReqMatchMode::Prerelease
-        } else {
-            VersionReqMatchMode::Default
-        };
+        let mode = self.gctx.version_req_match_mode();
         lock(&self.locked, &self.patches_available, summary, mode)
     }
 
@@ -771,11 +763,7 @@ impl<'gctx> Registry for PackageRegistry<'gctx> {
                 // then we skip this `summary`.
                 let locked = &self.locked;
                 let all_patches = &self.patches_available;
-                let mode = if self.gctx.cli_unstable().prerelease {
-                    VersionReqMatchMode::Prerelease
-                } else {
-                    VersionReqMatchMode::Default
-                };
+                let mode = self.gctx.version_req_match_mode();
                 let callback = &mut |summary: IndexSummary| {
                     for patch in patches.iter() {
                         let patch = patch.package_id().version();

@@ -710,11 +710,7 @@ fn register_previous_locks(
 
                 // If we match *anything* in the dependency graph then we consider
                 // ourselves all ok, and assume that we'll resolve to that.
-                let mode = if ws.gctx().cli_unstable().prerelease {
-                    VersionReqMatchMode::Prerelease
-                } else {
-                    VersionReqMatchMode::Default
-                };
+                let mode = ws.gctx().version_req_match_mode();
                 if resolve
                     .iter()
                     .any(|id| dep.matches_ignoring_source(id, mode))

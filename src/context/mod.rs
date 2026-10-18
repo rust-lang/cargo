@@ -80,6 +80,7 @@ use crate::ops::RegistryCredentialConfig;
 use crate::sources::CRATES_IO_INDEX;
 use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::OnceExt as _;
+use crate::util::VersionReqMatchMode;
 use crate::util::cache_lock::{CacheLock, CacheLockMode, CacheLocker};
 use crate::util::errors::CargoResult;
 use crate::util::network::http::{HandleConfiguration, configure_http_handle, http_handle};
@@ -2201,6 +2202,19 @@ impl GlobalContext {
 
     pub fn ws_roots(&self) -> MutexGuard<'_, HashMap<PathBuf, WorkspaceRootConfig>> {
         self.ws_roots.lock().unwrap()
+    }
+
+    /// Mode for matching version requirements
+    /// against versions already selected / locked.
+    ///
+    /// Once stabilized,
+    /// this always returns [`VersionReqMatchMode::Prerelease`] (or remove and inline).
+    pub fn version_req_match_mode(&self) -> VersionReqMatchMode {
+        if self.cli_unstable().prerelease {
+            VersionReqMatchMode::Prerelease
+        } else {
+            VersionReqMatchMode::Default
+        }
     }
 }
 
