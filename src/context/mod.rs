@@ -1555,8 +1555,10 @@ impl GlobalContext {
     }
 
     /// Parses the CLI config args and returns them as a table.
-    pub(crate) fn cli_args_as_table(&self) -> CargoResult<ConfigValue> {
-        let mut loaded_args = CV::Table(HashMap::default(), Definition::Cli(None));
+    pub(crate) fn cli_args_to_config(&self) -> CargoResult<ConfigValues> {
+        let mut loaded_args =
+            ConfigValues::with_table_value(CV::Table(HashMap::default(), Definition::Cli(None)))
+                .unwrap();
         let Some(cli_args) = &self.cli_config else {
             return Ok(loaded_args);
         };
@@ -1601,7 +1603,7 @@ impl GlobalContext {
                 .load_includes(tmp_table, &mut HashSet::default(), WhyLoad::Cli)
                 .context("failed to load --config include".to_string())?;
             loaded_args
-                .merge(tmp_table, true)
+                .merge(ConfigValues::with_table_value(tmp_table).unwrap(), true)
                 .with_context(|| format!("failed to merge --config argument `{arg}`"))?;
         }
         Ok(loaded_args)
@@ -1609,11 +1611,8 @@ impl GlobalContext {
 
     /// Add config arguments passed on the command line.
     fn merge_cli_args(&mut self) -> CargoResult<()> {
-        let CV::Table(values, _) = self.cli_args_as_table()? else {
-            unreachable!("cv from CLI must be a table");
-        };
-        self.config_mut()?
-            .merge(ConfigValues::with_values(values), true)
+        let cli_config = self.cli_args_to_config()?;
+        self.config_mut()?.merge(cli_config, true)
     }
 
     /// The purpose of this function is to aid in the transition to using

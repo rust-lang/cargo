@@ -272,7 +272,7 @@ fn print_toml_unmerged(
         })
     }
 
-    let mut cli_args = gctx.cli_args_as_table()?;
+    let mut cli_args = gctx.cli_args_to_config()?.into_value();
     if trim_cv(&mut cli_args, key)? {
         print_table(&cli_args);
     }

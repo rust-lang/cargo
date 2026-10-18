@@ -23,14 +23,14 @@ impl ConfigValues {
         }
     }
 
-    pub(crate) fn with_table_value(value: ConfigValue) -> Option<Self> {
+    pub fn with_table_value(value: ConfigValue) -> Option<Self> {
         match value {
             CV::Table(values, def) => Some(Self { values, def }),
             _ => None,
         }
     }
 
-    pub(crate) fn into_value(self) -> ConfigValue {
+    pub fn into_value(self) -> ConfigValue {
         let Self { values, def } = self;
         CV::Table(values, def)
     }
