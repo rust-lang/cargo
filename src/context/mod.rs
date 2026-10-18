@@ -691,7 +691,7 @@ impl GlobalContext {
     /// for checking environment variables. Callers outside of the `config`
     /// module should avoid using this.
     pub fn config(&self) -> CargoResult<&ConfigValues> {
-        self.config.try_borrow_with(|| self.load_values())
+        self.config.try_borrow_with(|| self.load_config())
     }
 
     /// Gets a mutable copy of the on-disk config values.
@@ -746,7 +746,7 @@ impl GlobalContext {
     /// Reloads on-disk configuration values, starting at the given path and
     /// walking up its ancestors.
     pub fn reload_rooted_at<P: AsRef<Path>>(&mut self, path: P) -> CargoResult<()> {
-        let values = self.load_values_from(path.as_ref())?;
+        let values = self.load_config_from(path.as_ref())?;
         self.config.replace(values);
         self.merge_cli_args()?;
         self.load_unstable_flags_from_config()?;
@@ -1292,11 +1292,11 @@ impl GlobalContext {
     }
 
     /// Loads configuration from the filesystem.
-    pub fn load_values(&self) -> CargoResult<ConfigValues> {
-        self.load_values_from(&self.cwd)
+    pub fn load_config(&self) -> CargoResult<ConfigValues> {
+        self.load_config_from(&self.cwd)
     }
 
-    /// Like [`load_values`](GlobalContext::load_values) but without merging config values.
+    /// Like [`load_config`](GlobalContext::load_config) but without merging config values.
     ///
     /// This is primarily crafted for `cargo config` command.
     pub(crate) fn load_values_unmerged(&self) -> CargoResult<Vec<ConfigValue>> {
@@ -1344,7 +1344,7 @@ impl GlobalContext {
     }
 
     /// Start a config file discovery from a path and merges all config values found.
-    fn load_values_from(&self, path: &Path) -> CargoResult<ConfigValues> {
+    fn load_config_from(&self, path: &Path) -> CargoResult<ConfigValues> {
         // The root config value container isn't from any external source,
         // so its definition should be built-in.
         let mut cfg = CV::Table(HashMap::default(), Definition::BuiltIn);
