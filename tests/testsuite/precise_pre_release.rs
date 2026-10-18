@@ -1810,3 +1810,48 @@ version = "0.1.2-pre.0"
 "##]],
     );
 }
+
+#[cargo_test]
+fn prerelease_replace() {
+    cargo_test_support::registry::init();
+    cargo_test_support::registry::Package::new("my-dependency", "0.1.1").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "package"
+            edition = "2018"
+            [dependencies]
+            my-dependency = "0.1.1"
+            [replace]
+            "my-dependency:0.1.1" = { path = "my-dependency" }
+            "#,
+        )
+        .file("src/lib.rs", "use my_dependency as _;")
+        .file(
+            "my-dependency/Cargo.toml",
+            &basic_manifest("my-dependency", "0.1.2-pre.0"),
+        )
+        .file("my-dependency/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .arg("-Zprerelease")
+        .masquerade_as_nightly_cargo(&["prerelease"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] failed to get `my-dependency` as a dependency of package `package v0.0.0 ([ROOT]/foo)`
+
+Caused by:
+  no matching package for override `https://github.com/rust-lang/crates.io-index#my-dependency@0.1.1` found
+  location searched: [ROOT]/foo/my-dependency
+  version required: =0.1.1
+
+"#]])
+        .run();
+
+    assert!(!p.root().join("Cargo.lock").exists());
+}
