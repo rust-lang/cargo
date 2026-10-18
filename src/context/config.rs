@@ -12,11 +12,27 @@ use ConfigValue as CV;
 pub struct ConfigValues {
     /// A collection of configuration options
     values: HashMap<String, ConfigValue>,
+    def: Definition,
 }
 
 impl ConfigValues {
     pub fn with_values(values: HashMap<String, ConfigValue>) -> Self {
-        Self { values }
+        Self {
+            values,
+            def: Definition::BuiltIn,
+        }
+    }
+
+    pub(crate) fn with_table_value(value: ConfigValue) -> Option<Self> {
+        match value {
+            CV::Table(values, def) => Some(Self { values, def }),
+            _ => None,
+        }
+    }
+
+    pub(crate) fn into_value(self) -> ConfigValue {
+        let Self { values, def } = self;
+        CV::Table(values, def)
     }
 
     /// Merge the given values into self.
@@ -28,16 +44,10 @@ impl ConfigValues {
     ///
     /// Container and non-container types cannot be mixed.
     pub fn merge(&mut self, from: Self, force: bool) -> CargoResult<()> {
-        let root_cv = std::mem::take(self.values_mut());
-
-        // The root config value container isn't from any external source,
-        // so its definition should be built-in.
-        let mut root_cv = CV::Table(root_cv, Definition::BuiltIn);
-        let from = CV::Table(from.values, Definition::BuiltIn);
+        let mut root_cv = std::mem::take(self).into_value();
+        let from = from.into_value();
         root_cv.merge(from, force)?;
-
-        // Put it back to gctx
-        std::mem::swap(self.values_mut(), root_cv.table_mut("<root>")?.0);
+        *self = Self::with_table_value(root_cv).unwrap();
 
         Ok(())
     }
