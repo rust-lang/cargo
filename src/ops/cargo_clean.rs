@@ -49,8 +49,8 @@ pub struct CleanContext<'gctx> {
 
 /// Cleans various caches.
 pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
-    let mut target_dir = ws.target_dir();
-    let mut build_dir = ws.build_dir();
+    let target_dir = ws.target_dir();
+    let build_dir = ws.build_dir();
     let gctx = opts.gctx;
     let mut clean_ctx = CleanContext::new(gctx);
     clean_ctx.dry_run = opts.dry_run;
@@ -114,14 +114,14 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     } else {
         let profiles = Profiles::new(&ws, opts.requested_profile)?;
 
-        if opts.profile_specified {
+        let profile_dir_name = if opts.profile_specified {
             // After parsing profiles we know the dir-name of the profile, if a profile
             // was passed from the command line. If so, delete only the directory of
             // that profile.
-            let dir_name = profiles.get_dir_name();
-            target_dir = target_dir.join(dir_name);
-            build_dir = build_dir.join(dir_name);
-        }
+            Some(profiles.get_dir_name())
+        } else {
+            None
+        };
 
         // If we have a spec, then we need to delete some packages, otherwise, just
         // remove the whole target directory and be done with it!
@@ -129,15 +129,36 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         // Note that we don't bother grabbing a lock here as we're just going to
         // blow it all away anyway.
         if opts.spec.is_empty() {
-            let paths: &[PathBuf] = if build_dir != target_dir {
-                &[
-                    target_dir.into_path_unlocked(),
-                    build_dir.into_path_unlocked(),
-                ]
+            // Without a spec, the whole target directory is removed, unless `--target` was
+            // passed, in which case only those targets are removed.
+            let targets: Vec<Option<String>> = if opts.targets.is_empty() {
+                vec![None]
             } else {
-                &[target_dir.into_path_unlocked()]
+                CompileKind::from_requested_targets(gctx, &opts.targets)?
+                    .into_iter()
+                    .map(|kind| match kind {
+                        CompileKind::Host => None,
+                        CompileKind::Target(target) => Some(target.short_name().to_owned()),
+                    })
+                    .collect()
             };
-            clean_ctx.remove_paths(paths)?;
+            let separate_build_dir = build_dir != target_dir;
+            let mut paths = Vec::new();
+            for target in targets {
+                let (mut target_dir, mut build_dir) = match &target {
+                    Some(target) => (target_dir.join(target), build_dir.join(target)),
+                    None => (target_dir.clone(), build_dir.clone()),
+                };
+                if let Some(dir_name) = &profile_dir_name {
+                    target_dir.push(dir_name);
+                    build_dir.push(dir_name);
+                }
+                paths.push(target_dir.into_path_unlocked());
+                if separate_build_dir {
+                    paths.push(build_dir.into_path_unlocked());
+                }
+            }
+            clean_ctx.remove_paths(&paths)?;
         } else {
             clean_specs(
                 &mut clean_ctx,

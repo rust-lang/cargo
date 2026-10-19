@@ -343,6 +343,45 @@ fn clean_doc_target() {
 }
 
 #[cargo_test]
+fn clean_target() {
+    // `clean --target` removes the requested target's output, rather than the whole
+    // target directory, like `clean --doc --target` and `clean -p --target` do.
+    let target = rustc_host();
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("src/lib.rs", "")
+        .build();
+    let host_dir = p.build_dir().join("debug");
+    let target_dir = p.build_dir().join(&target);
+
+    p.cargo("build").run();
+    p.cargo("build --target").arg(&target).run();
+    assert!(host_dir.is_dir());
+    assert!(target_dir.is_dir());
+
+    p.cargo("clean --target")
+        .arg(&target)
+        .with_stderr_data(str![[r#"
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
+"#]])
+        .run();
+    assert!(!target_dir.is_dir());
+    assert!(host_dir.is_dir());
+
+    // `--profile` narrows it down to that profile of the requested target.
+    p.cargo("build --target").arg(&target).run();
+    p.cargo("build --release --target").arg(&target).run();
+    let target_release_dir = target_dir.join("release");
+    assert!(target_release_dir.is_dir());
+
+    p.cargo("clean --release --target").arg(&target).run();
+    assert!(!target_release_dir.is_dir());
+    assert!(target_dir.join("debug").is_dir());
+    assert!(host_dir.is_dir());
+}
+
+#[cargo_test]
 fn build_script() {
     let p = project()
         .file(
