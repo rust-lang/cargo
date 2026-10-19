@@ -2369,6 +2369,19 @@ fn build_std_crates() {
 }
 
 #[cargo_test]
+fn build_std_crates_invalid() {
+    use cargo::context::BuildStdCrates;
+
+    let gctx = GlobalContextBuilder::new()
+        .config_arg(format!("build.build-std.crates='something-else'"))
+        .build();
+    assert!(
+        gctx.get::<Option<BuildStdCrates>>(["build", "build-std", "crates"])
+            .is_err()
+    );
+}
+
+#[cargo_test]
 fn array_of_any_types() {
     write_config_toml(
         r#"
