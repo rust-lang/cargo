@@ -493,12 +493,34 @@ pub enum BuildStdWhen {
 }
 
 /// Which standard library crates to build.
-#[derive(Debug, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "kebab-case")]
+/// Valid values are "core", "alloc", "std", or an array of crate names
+#[derive(Debug, PartialEq, Eq)]
 pub enum BuildStdCrates {
     Core,
     Alloc,
     Std,
+    // Custom list of crates - permanently unstable
+    List(Vec<String>),
+}
+
+impl<'de> Deserialize<'de> for BuildStdCrates {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        UntaggedEnumVisitor::new()
+            .string(|s| match s {
+                "core" => Ok(Self::Core),
+                "alloc" => Ok(Self::Alloc),
+                "std" => Ok(Self::Std),
+                _ => Err(serde::de::Error::unknown_variant(
+                    s,
+                    &["core", "alloc", "std"],
+                )),
+            })
+            .seq(|seq| seq.deserialize().map(Self::List))
+            .deserialize(deserializer)
+    }
 }
 
 /// Configuration for `build.target`.

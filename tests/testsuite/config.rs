@@ -2388,9 +2388,13 @@ fn build_std_crates_custom() {
     let gctx = GlobalContextBuilder::new()
         .config_arg(format!("build.build-std.crates=['core','alloc']"))
         .build();
-    assert!(
-        gctx.get::<Option<BuildStdCrates>>(["build", "build-std", "crates"])
-            .is_err()
+    let value = gctx
+        .get::<Option<BuildStdCrates>>(["build", "build-std", "crates"])
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        value,
+        BuildStdCrates::List(vec!["core".to_string(), "alloc".to_string()])
     );
 }
 
