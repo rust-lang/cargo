@@ -2311,6 +2311,94 @@ fn build_std() {
 }
 
 #[cargo_test]
+fn build_std_when() {
+    use cargo::context::BuildStdWhen;
+
+    let gctx = GlobalContextBuilder::new().build();
+    assert!(gctx.build_config().unwrap().build_std.is_none());
+
+    for (value, expected) in [
+        ("never", BuildStdWhen::Never),
+        ("always", BuildStdWhen::Always),
+    ] {
+        let gctx = GlobalContextBuilder::new()
+            .config_arg(format!("build.build-std.when='{value}'"))
+            .build();
+        let value = gctx
+            .get::<Option<BuildStdWhen>>(["build", "build-std", "when"])
+            .unwrap()
+            .unwrap();
+        assert_eq!(value, expected);
+    }
+}
+
+#[cargo_test]
+fn build_std_when_invalid() {
+    use cargo::context::BuildStdWhen;
+
+    let gctx = GlobalContextBuilder::new()
+        .config_arg(format!("build.build-std.when='something-else'"))
+        .build();
+    assert!(
+        gctx.get::<Option<BuildStdWhen>>(["build", "build-std", "when"])
+            .is_err()
+    )
+}
+
+#[cargo_test]
+fn build_std_crates() {
+    use cargo::context::BuildStdCrates;
+
+    let gctx = GlobalContextBuilder::new().build();
+    assert!(gctx.build_config().unwrap().build_std.is_none());
+
+    for (value, expected) in [
+        ("core", BuildStdCrates::Core),
+        ("alloc", BuildStdCrates::Alloc),
+        ("std", BuildStdCrates::Std),
+    ] {
+        let gctx = GlobalContextBuilder::new()
+            .config_arg(format!("build.build-std.crates='{value}'"))
+            .build();
+        let value = gctx
+            .get::<Option<BuildStdCrates>>(["build", "build-std", "crates"])
+            .unwrap()
+            .unwrap();
+        assert_eq!(value, expected);
+    }
+}
+
+#[cargo_test]
+fn build_std_crates_invalid() {
+    use cargo::context::BuildStdCrates;
+
+    let gctx = GlobalContextBuilder::new()
+        .config_arg(format!("build.build-std.crates='something-else'"))
+        .build();
+    assert!(
+        gctx.get::<Option<BuildStdCrates>>(["build", "build-std", "crates"])
+            .is_err()
+    );
+}
+
+#[cargo_test]
+fn build_std_crates_custom() {
+    use cargo::context::BuildStdCrates;
+
+    let gctx = GlobalContextBuilder::new()
+        .config_arg(format!("build.build-std.crates=['core','alloc']"))
+        .build();
+    let value = gctx
+        .get::<Option<BuildStdCrates>>(["build", "build-std", "crates"])
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        value,
+        BuildStdCrates::List(vec!["core".to_string(), "alloc".to_string()])
+    );
+}
+
+#[cargo_test]
 fn array_of_any_types() {
     write_config_toml(
         r#"
