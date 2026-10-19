@@ -272,7 +272,7 @@ fn print_toml_unmerged(
         })
     }
 
-    let mut cli_args = gctx.cli_args_as_table()?;
+    let mut cli_args = gctx.cli_args_to_config()?.into_value();
     if trim_cv(&mut cli_args, key)? {
         print_table(&cli_args);
     }
@@ -311,8 +311,9 @@ fn print_toml_unmerged(
         drop_println!(gctx, "");
     }
 
-    let unmerged = gctx.load_values_unmerged()?;
-    for mut cv in unmerged {
+    let unmerged = gctx.load_config_unmerged()?;
+    for config in unmerged {
+        let mut cv = config.into_value();
         if trim_cv(&mut cv, key)? {
             print_table(&cv);
         }

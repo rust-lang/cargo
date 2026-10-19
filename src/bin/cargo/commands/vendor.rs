@@ -61,7 +61,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     // source, e.g. crates.io, to fetch crates.
     let respect_source_config = args.flag("respect-source-config");
     if !respect_source_config {
-        gctx.values_mut()?.remove("source");
+        gctx.config_mut()?.values_mut().remove("source");
     }
 
     let ws = args.workspace(gctx)?;

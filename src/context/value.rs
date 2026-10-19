@@ -70,8 +70,9 @@ pub(crate) const NAME: &str = "$__cargo_private_Value";
 pub(crate) static FIELDS: [&str; 2] = [VALUE_FIELD, DEFINITION_FIELD];
 
 /// Location where a config value is defined.
-#[derive(Clone, Debug, Eq)]
+#[derive(Clone, Debug, Eq, Default)]
 pub enum Definition {
+    #[default]
     BuiltIn,
     /// Defined in a `.cargo/config`, includes the path to the file.
     Path(PathBuf),
