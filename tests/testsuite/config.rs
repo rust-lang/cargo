@@ -2333,6 +2333,19 @@ fn build_std_when() {
 }
 
 #[cargo_test]
+fn build_std_when_invalid() {
+    use cargo::context::BuildStdWhen;
+
+    let gctx = GlobalContextBuilder::new()
+        .config_arg(format!("build.build-std.when='something-else'"))
+        .build();
+    assert!(
+        gctx.get::<Option<BuildStdWhen>>(["build", "build-std", "when"])
+            .is_err()
+    )
+}
+
+#[cargo_test]
 fn array_of_any_types() {
     write_config_toml(
         r#"
