@@ -90,6 +90,21 @@ pub struct TomlSpan {
     pub value: Range<usize>,
 }
 
+impl TomlSpan {
+    /// The span of the whole `key = value` entry, for use in annotations
+    ///
+    /// A table declared with a header, like `[dependencies.foo]`, has a value that spans the
+    /// header, which starts before the key and ends with the closing bracket, so the key is used
+    /// on its own instead.
+    pub fn key_value_span(&self) -> Range<usize> {
+        if self.value.start < self.key.start {
+            self.key.clone()
+        } else {
+            self.key.start..self.value.end
+        }
+    }
+}
+
 #[derive(Copy, Clone)]
 pub enum TomlIndex<'i> {
     Key(&'i str),

@@ -136,7 +136,7 @@ pub(crate) fn lint_package(
             && let Some(contents) = contents
             && let Some(span) = get_key_value_span(document, &["build-dependencies", dep_name])
         {
-            let span = span.key.start..span.value.end;
+            let span = span.key_value_span();
             primary = primary.element(
                 Snippet::source(contents)
                     .path(&manifest_path)
@@ -316,7 +316,7 @@ fn lint_package_build_results(
                     && let Some(contents) = contents
                     && let Some(span) = get_key_value_span(document, &toml_path)
                 {
-                    let span = span.key.start..span.value.end;
+                    let span = span.key_value_span();
                     primary = primary.element(
                         Snippet::source(contents)
                             .path(&manifest_path)
