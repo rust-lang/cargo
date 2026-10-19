@@ -581,6 +581,18 @@ something doesn't quite work the way you'd like it to, feel free to check out
 the [issue tracker](https://github.com/rust-lang/wg-cargo-std-aware/issues) of
 the tracking repository, and if it's not there please file a new issue!
 
+### `build-std=always`
+
+Build-std is currently in the process of migrating its implementation. The UI
+will consist of cargo configuration keys that will replace `-Zbuild-std`:
+
+```
+[build]
+build-std = { when = "always", crates = "std" }
+```
+
+See the [`build-std=always` RFC](https://rust-lang.github.io/rfcs/3874-build-std-always.html#standard-library-crate-stability) for more details.
+
 ## build-std-features
 * Tracking Repository: <https://github.com/rust-lang/wg-cargo-std-aware>
 
