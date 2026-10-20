@@ -71,14 +71,12 @@ pub(crate) static FIELDS: [&str; 2] = [VALUE_FIELD, DEFINITION_FIELD];
 
 /// The kind of source where a config value is defined.
 #[derive(Clone, Copy, Debug)]
-pub(super) enum DefinitionKind {
+pub enum DefinitionKind {
     /// A built-in value.
-    #[expect(dead_code, reason = "file loading does not use built-in values")]
     BuiltIn,
     /// Loaded due to config file discovery.
     Path,
     /// A value defined in an environment variable.
-    #[expect(dead_code, reason = "file loading does not use environment values")]
     Environment,
     /// Loaded due to a request from the global cli arg `--config`
     ///

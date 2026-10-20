@@ -111,8 +111,7 @@ mod error;
 pub use error::ConfigError;
 
 mod value;
-use value::DefinitionKind;
-pub use value::{Definition, OptValue, Value};
+pub use value::{Definition, DefinitionKind, OptValue, Value};
 
 mod key;
 pub use key::ConfigKey;
