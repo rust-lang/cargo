@@ -110,8 +110,11 @@ use de::Deserializer;
 mod error;
 pub use error::ConfigError;
 
+mod definition;
+pub use definition::{Definition, DefinitionKind};
+
 mod value;
-pub use value::{Definition, DefinitionKind, OptValue, Value};
+pub use value::{OptValue, Value};
 
 mod key;
 pub use key::ConfigKey;
