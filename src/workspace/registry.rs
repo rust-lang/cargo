@@ -502,11 +502,7 @@ impl<'gctx> PackageRegistry<'gctx> {
     pub fn lock_patches(&mut self) {
         assert!(!self.patches_locked);
 
-        let mode = if self.gctx.cli_unstable().prerelease {
-            VersionReqMatchMode::Prerelease
-        } else {
-            VersionReqMatchMode::Default
-        };
+        let mode = self.gctx.version_req_match_mode();
         for summaries in self.patches.values_mut() {
             for summary in summaries {
                 debug!("locking patch {:?}", summary);
@@ -600,11 +596,7 @@ impl<'gctx> PackageRegistry<'gctx> {
     /// through.
     pub fn lock(&self, summary: Summary) -> Summary {
         assert!(self.patches_locked);
-        let mode = if self.gctx.cli_unstable().prerelease {
-            VersionReqMatchMode::Prerelease
-        } else {
-            VersionReqMatchMode::Default
-        };
+        let mode = self.gctx.version_req_match_mode();
         lock(&self.locked, &self.patches_available, summary, mode)
     }
 
@@ -682,12 +674,11 @@ impl<'gctx> Registry for PackageRegistry<'gctx> {
         // always return false, when what we really care about is the name/version match.
         let mut patches = Vec::<Summary>::new();
         if let Some(extra) = self.patches.get(dep.source_id().canonical_url()) {
+            let mode = self.gctx.version_req_match_mode();
             patches.extend(
                 extra
                     .iter()
-                    .filter(|s| {
-                        dep.matches_ignoring_source(s.package_id(), VersionReqMatchMode::Default)
-                    })
+                    .filter(|s| dep.matches_ignoring_source(s.package_id(), mode))
                     .cloned(),
             );
         }
@@ -771,11 +762,7 @@ impl<'gctx> Registry for PackageRegistry<'gctx> {
                 // then we skip this `summary`.
                 let locked = &self.locked;
                 let all_patches = &self.patches_available;
-                let mode = if self.gctx.cli_unstable().prerelease {
-                    VersionReqMatchMode::Prerelease
-                } else {
-                    VersionReqMatchMode::Default
-                };
+                let mode = self.gctx.version_req_match_mode();
                 let callback = &mut |summary: IndexSummary| {
                     for patch in patches.iter() {
                         let patch = patch.package_id().version();
@@ -901,7 +888,7 @@ fn lock(
                 // If the name/version doesn't match, then we definitely don't
                 // have a match whatsoever. Otherwise we need to check
                 // `[patch]`...
-                if !dep.matches_ignoring_source(id, VersionReqMatchMode::Default) {
+                if !dep.matches_ignoring_source(id, mode) {
                     return false;
                 }
 
@@ -926,7 +913,7 @@ fn lock(
                 if locked.source_id() == dep.source_id() {
                     dep.lock_to(locked, mode);
                 } else {
-                    dep.lock_version(locked.version());
+                    dep.lock_version(locked.version(), mode);
                 }
                 return dep;
             }

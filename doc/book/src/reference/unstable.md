@@ -412,6 +412,8 @@ Subsequent `cargo` commands must also pass `-Zprerelease` to keep the locked pre
 Without the flag, Cargo considers `0.1.2-pre.0` incompatible with `0.1.1` again
 and may either downgrade `my-dependency` back to `0.1.1` or fail with a resolution error.
 
+The same pre-release matching also applies when matching `[patch]` entries against dependency requirements.
+
 ## sbom
 * Tracking Issue: [#13709](https://github.com/rust-lang/cargo/pull/13709)
 * RFC: [#3553](https://github.com/rust-lang/rfcs/pull/3553)

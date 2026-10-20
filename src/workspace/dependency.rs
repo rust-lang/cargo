@@ -385,9 +385,13 @@ impl Dependency {
     ///
     /// Mainly used in dependency patching like `[patch]` or `[replace]`, which
     /// doesn't need to lock the entire dependency to a specific [`PackageId`].
-    pub fn lock_version(&mut self, version: &semver::Version) -> &mut Dependency {
+    pub fn lock_version(
+        &mut self,
+        version: &semver::Version,
+        mode: VersionReqMatchMode,
+    ) -> &mut Dependency {
         let me = Arc::make_mut(&mut self.inner);
-        me.req.lock_to(version, VersionReqMatchMode::Default);
+        me.req.lock_to(version, mode);
         self
     }
 
