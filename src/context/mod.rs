@@ -132,8 +132,8 @@ pub use target::{TargetCfgConfig, TargetConfig};
 mod environment;
 use environment::Env;
 
-mod config;
-pub use config::ConfigValues;
+mod config_store;
+pub use config_store::ConfigValues;
 
 mod schema;
 pub use schema::*;
