@@ -6,18 +6,17 @@ use std::ffi::{OsStr, OsString};
 use crate::util::errors::CargoResult;
 use anyhow::{anyhow, bail};
 
-/// Generate `case_insensitive_env` and `normalized_env` from the `env`.
-fn make_case_insensitive_and_normalized_env(
-    env: &HashMap<OsString, OsString>,
-) -> (HashMap<String, String>, HashMap<String, String>) {
-    let case_insensitive_env: HashMap<_, _> = env
-        .keys()
+/// Generate `case_insensitive_env` from the `env`.
+fn make_case_insensitive_env(env: &HashMap<OsString, OsString>) -> HashMap<String, String> {
+    env.keys()
         .filter_map(|k| k.to_str())
         .map(|k| (k.to_uppercase(), k.to_owned()))
-        .collect();
+        .collect()
+}
 
-    let normalized_env = env
-        .iter()
+/// Generate `normalized_env` from the `env`.
+fn make_normalized_env(env: &HashMap<OsString, OsString>) -> HashMap<String, String> {
+    env.iter()
         // Only keep entries where both the key and value are valid UTF-8,
         // since the config env vars only support UTF-8 keys and values.
         // Otherwise, the normalized map warning could incorrectly warn about entries that can't be
@@ -25,8 +24,7 @@ fn make_case_insensitive_and_normalized_env(
         // Please see the docs for `Env` for more context.
         .filter_map(|(k, v)| Some((k.to_str()?, v.to_str()?)))
         .map(|(k, _)| (k.to_uppercase().replace("-", "_"), k.to_owned()))
-        .collect();
-    (case_insensitive_env, normalized_env)
+        .collect()
 }
 
 /// A snapshot of the environment variables available to [`GlobalContext`].
@@ -71,7 +69,8 @@ impl Env {
     pub fn new() -> Self {
         #[expect(clippy::disallowed_methods, reason = "seeds `GlobalContext::get_env`")]
         let env: HashMap<_, _> = std::env::vars_os().collect();
-        let (case_insensitive_env, normalized_env) = make_case_insensitive_and_normalized_env(&env);
+        let case_insensitive_env = make_case_insensitive_env(&env);
+        let normalized_env = make_normalized_env(&env);
         Self {
             env,
             case_insensitive_env,
@@ -83,7 +82,8 @@ impl Env {
     /// This should be used for debugging purposes only.
     pub(super) fn from_map(env: HashMap<String, String>) -> Self {
         let env = env.into_iter().map(|(k, v)| (k.into(), v.into())).collect();
-        let (case_insensitive_env, normalized_env) = make_case_insensitive_and_normalized_env(&env);
+        let case_insensitive_env = make_case_insensitive_env(&env);
+        let normalized_env = make_normalized_env(&env);
         Self {
             env,
             case_insensitive_env,
