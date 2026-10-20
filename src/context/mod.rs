@@ -706,17 +706,6 @@ impl GlobalContext {
         Ok(self.config.get_mut().expect("already loaded config values"))
     }
 
-    // Note: this is used by RLS, not Cargo.
-    pub fn set_values(&self, values: HashMap<String, ConfigValue>) -> CargoResult<()> {
-        if self.config.get().is_some() {
-            bail!("config values already found")
-        }
-        match self.config.set(ConfigValues::with_values(values.into())) {
-            Ok(()) => Ok(()),
-            Err(_) => bail!("could not fill values"),
-        }
-    }
-
     /// Sets the path where ancestor config file searching will stop. The
     /// given path is included, but its ancestors are not.
     pub fn set_search_stop_path<P: Into<PathBuf>>(&mut self, path: P) {
