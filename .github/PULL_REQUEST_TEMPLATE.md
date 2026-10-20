@@ -1,16 +1,13 @@
-_Thanks for the pull request 🎉!_
-_Please read the contribution guide: <https://doc.crates.io/contrib/>._
-
 ### What does this PR try to resolve?
 
 _Explain the motivation behind this change._
-_A clear overview along with an in-depth explanation are helpful._
 
-### How to test and review this PR?
+### Notes to reviewers
 
-_Demonstrate how you test this change and guide reviewers through your PR._
-_With a smooth review process, a pull request usually gets reviewed quicker._
+_What might the reviewers need to know about the change and how to review it?_
+_Example: the larger context this fits within_
+_Example: manual testing performed and why it wasn't automated_
 
 ---
 
-🤖 LLM disclosure: _If an LLM was used in a way that requires disclosure under the [LLM usage policy](https://doc.crates.io/contrib/process/llm-usage.html), please describe it here. Remove this section if no disclosure is required._
+🤖 LLM involvement: _How an LLM was used in preparing this change._
