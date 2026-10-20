@@ -21,7 +21,7 @@
 //!
 //! [`ConfigValue`]: CV
 
-use crate::context::key::ArrayItemKeyPath;
+use crate::config::ArrayItemKeyPath;
 use crate::context::value;
 use crate::context::{ConfigError, ConfigKey, GlobalContext};
 use crate::context::{ConfigValue as CV, Definition, Value};

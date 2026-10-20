@@ -163,6 +163,7 @@ pub const CARGO_ENV: &str = "CARGO";
 mod macros;
 
 pub mod compiler;
+pub mod config;
 pub mod context;
 pub mod diagnostics;
 pub mod ops;

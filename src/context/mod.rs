@@ -110,18 +110,11 @@ use de::Deserializer;
 mod error;
 pub use error::ConfigError;
 
-mod definition;
-pub use definition::{Definition, DefinitionKind};
+use crate::config::is_nonmergeable_list;
+pub use crate::config::{ConfigKey, ConfigStore, ConfigValue, Definition, DefinitionKind};
 
 mod value;
 pub use value::{OptValue, Value};
-
-mod key;
-pub use key::ConfigKey;
-
-mod config_value;
-pub use config_value::ConfigValue;
-use config_value::is_nonmergeable_list;
 
 mod path;
 pub use path::BracketType;
@@ -134,9 +127,6 @@ pub use target::{TargetCfgConfig, TargetConfig};
 
 mod environment;
 use environment::Env;
-
-mod config_store;
-pub use config_store::ConfigStore;
 
 mod schema;
 pub use schema::*;

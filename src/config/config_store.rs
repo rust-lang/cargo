@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context as _, bail};
 
-use crate::context::{ConfigKey, ConfigValue, Definition, DefinitionKind};
+use super::{ConfigKey, ConfigValue, Definition, DefinitionKind};
 use crate::util::data_structures::HashMap;
 use crate::util::errors::CargoResult;
 

@@ -14,7 +14,7 @@ pub enum DefinitionKind {
     Environment,
     /// Loaded due to a request from the global cli arg `--config`
     ///
-    /// Indirect configs loaded via [`super::ConfigInclude`] are also seen as from cli args,
+    /// Configs loaded via `include` are also seen as from cli args,
     /// if the initial config is being loaded from cli.
     Cli,
 }
