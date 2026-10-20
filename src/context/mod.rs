@@ -111,6 +111,7 @@ mod error;
 pub use error::ConfigError;
 
 mod value;
+use value::WhyLoad;
 pub use value::{Definition, OptValue, Value};
 
 mod key;
@@ -184,18 +185,6 @@ pub const TOP_LEVEL_CONFIG_KEYS: &[&str] = &[
     "target",
     "term",
 ];
-
-/// Indicates why a config value is being loaded.
-#[derive(Clone, Copy, Debug)]
-enum WhyLoad {
-    /// Loaded due to a request from the global cli arg `--config`
-    ///
-    /// Indirect configs loaded via [`ConfigInclude`] are also seen as from cli args,
-    /// if the initial config is being loaded from cli.
-    Cli,
-    /// Loaded due to config file discovery.
-    FileDiscovery,
-}
 
 /// A previously generated authentication token and the data needed to determine if it can be reused.
 #[derive(Debug)]

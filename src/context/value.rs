@@ -69,6 +69,18 @@ pub(crate) const DEFINITION_FIELD: &str = "$__cargo_private_definition";
 pub(crate) const NAME: &str = "$__cargo_private_Value";
 pub(crate) static FIELDS: [&str; 2] = [VALUE_FIELD, DEFINITION_FIELD];
 
+/// Indicates why a config value is being loaded.
+#[derive(Clone, Copy, Debug)]
+pub(super) enum WhyLoad {
+    /// Loaded due to a request from the global cli arg `--config`
+    ///
+    /// Indirect configs loaded via [`super::ConfigInclude`] are also seen as from cli args,
+    /// if the initial config is being loaded from cli.
+    Cli,
+    /// Loaded due to config file discovery.
+    FileDiscovery,
+}
+
 /// Location where a config value is defined.
 #[derive(Clone, Debug, Eq, Default)]
 pub enum Definition {
