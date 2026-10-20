@@ -72,13 +72,19 @@ pub(crate) static FIELDS: [&str; 2] = [VALUE_FIELD, DEFINITION_FIELD];
 /// Indicates why a config value is being loaded.
 #[derive(Clone, Copy, Debug)]
 pub(super) enum WhyLoad {
+    /// A built-in value.
+    #[expect(dead_code, reason = "file loading does not use built-in values")]
+    BuiltIn,
+    /// Loaded due to config file discovery.
+    Path,
+    /// A value defined in an environment variable.
+    #[expect(dead_code, reason = "file loading does not use environment values")]
+    Environment,
     /// Loaded due to a request from the global cli arg `--config`
     ///
     /// Indirect configs loaded via [`super::ConfigInclude`] are also seen as from cli args,
     /// if the initial config is being loaded from cli.
     Cli,
-    /// Loaded due to config file discovery.
-    FileDiscovery,
 }
 
 /// Location where a config value is defined.

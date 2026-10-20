@@ -1283,7 +1283,7 @@ impl GlobalContext {
         let mut seen = HashSet::default();
         let home = self.home_path.clone().into_path_unlocked();
         self.walk_tree(&self.cwd, &home, |path| {
-            let mut config = self._load_file(path, &mut seen, false, WhyLoad::FileDiscovery)?;
+            let mut config = self._load_file(path, &mut seen, false, WhyLoad::Path)?;
             self.load_unmerged_include(&mut config, &mut seen, &mut result)?;
             result.push(config);
             Ok(())
@@ -1308,7 +1308,7 @@ impl GlobalContext {
             };
 
             let mut config = self
-                ._load_file(&abs_path, seen, false, WhyLoad::FileDiscovery)
+                ._load_file(&abs_path, seen, false, WhyLoad::Path)
                 .with_context(|| {
                     format!(
                         "failed to load config include `{}` from `{}`",
@@ -1343,7 +1343,7 @@ impl GlobalContext {
     ///
     /// This is used during config file discovery.
     fn load_file(&self, path: &Path) -> CargoResult<ConfigValues> {
-        self._load_file(path, &mut HashSet::default(), true, WhyLoad::FileDiscovery)
+        self._load_file(path, &mut HashSet::default(), true, WhyLoad::Path)
     }
 
     /// Loads configuration from a path with options.
@@ -1392,7 +1392,10 @@ impl GlobalContext {
         })?;
         let def = match why_load {
             WhyLoad::Cli => Definition::Cli(Some(path.into())),
-            WhyLoad::FileDiscovery => Definition::Path(path.into()),
+            WhyLoad::Path => Definition::Path(path.into()),
+            WhyLoad::BuiltIn | WhyLoad::Environment => {
+                unreachable!("file loading requires a path or CLI definition")
+            }
         };
         let value = CV::from_toml(def, toml::Value::Table(toml)).with_context(|| {
             format!(
@@ -1735,7 +1738,7 @@ impl GlobalContext {
             return Ok(ConfigValues::default());
         };
 
-        let mut config = self.load_layer(&credentials, WhyLoad::FileDiscovery)?;
+        let mut config = self.load_layer(&credentials, WhyLoad::Path)?;
         // Backwards compatibility for old `.cargo/credentials` layout.
         {
             let def = config.definition().clone();
