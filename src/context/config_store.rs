@@ -10,13 +10,13 @@ use crate::util::errors::CargoResult;
 use ConfigValue as CV;
 
 #[derive(Default, Debug)]
-pub struct ConfigValues {
+pub struct ConfigStore {
     /// A collection of configuration options
     values: HashMap<String, ConfigValue>,
     def: Definition,
 }
 
-impl ConfigValues {
+impl ConfigStore {
     pub fn with_values(values: HashMap<String, ConfigValue>) -> Self {
         Self {
             values,
