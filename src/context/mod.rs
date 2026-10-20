@@ -111,7 +111,7 @@ mod error;
 pub use error::ConfigError;
 
 mod value;
-use value::WhyLoad;
+use value::DefinitionKind;
 pub use value::{Definition, OptValue, Value};
 
 mod key;
@@ -1283,7 +1283,7 @@ impl GlobalContext {
         let mut seen = HashSet::default();
         let home = self.home_path.clone().into_path_unlocked();
         self.walk_tree(&self.cwd, &home, |path| {
-            let mut config = self._load_file(path, &mut seen, false, WhyLoad::Path)?;
+            let mut config = self._load_file(path, &mut seen, false, DefinitionKind::Path)?;
             self.load_unmerged_include(&mut config, &mut seen, &mut result)?;
             result.push(config);
             Ok(())
@@ -1308,7 +1308,7 @@ impl GlobalContext {
             };
 
             let mut config = self
-                ._load_file(&abs_path, seen, false, WhyLoad::Path)
+                ._load_file(&abs_path, seen, false, DefinitionKind::Path)
                 .with_context(|| {
                     format!(
                         "failed to load config include `{}` from `{}`",
@@ -1343,7 +1343,7 @@ impl GlobalContext {
     ///
     /// This is used during config file discovery.
     fn load_file(&self, path: &Path) -> CargoResult<ConfigValues> {
-        self._load_file(path, &mut HashSet::default(), true, WhyLoad::Path)
+        self._load_file(path, &mut HashSet::default(), true, DefinitionKind::Path)
     }
 
     /// Loads configuration from a path with options.
@@ -1352,13 +1352,13 @@ impl GlobalContext {
     ///
     /// * `includes` determines whether to load configs from [`ConfigInclude`].
     /// * `seen` is used to check for cyclic includes.
-    /// * `why_load` tells why a config is being loaded.
+    /// * `definition_kind` tells why a config is being loaded.
     fn _load_file(
         &self,
         path: &Path,
         seen: &mut HashSet<PathBuf>,
         includes: bool,
-        why_load: WhyLoad,
+        definition_kind: DefinitionKind,
     ) -> CargoResult<ConfigValues> {
         if !seen.insert(path.to_path_buf()) {
             bail!(
@@ -1366,12 +1366,12 @@ impl GlobalContext {
                 path.display()
             );
         }
-        tracing::debug!(?path, ?why_load, includes, "load config from file");
+        tracing::debug!(?path, ?definition_kind, includes, "load config from file");
 
-        let config = self.load_layer(path, why_load)?;
+        let config = self.load_layer(path, definition_kind)?;
 
         if includes {
-            self.load_includes(config, seen, why_load)
+            self.load_includes(config, seen, definition_kind)
         } else {
             Ok(config)
         }
@@ -1381,19 +1381,23 @@ impl GlobalContext {
     ///
     /// This makes no assumption of the schema, including include support.
     ///
-    /// * `why_load` tells why a config is being loaded.
-    fn load_layer(&self, path: &Path, why_load: WhyLoad) -> CargoResult<ConfigValues> {
-        tracing::debug!(?path, ?why_load, "load config from file");
+    /// * `definition_kind` tells why a config is being loaded.
+    fn load_layer(
+        &self,
+        path: &Path,
+        definition_kind: DefinitionKind,
+    ) -> CargoResult<ConfigValues> {
+        tracing::debug!(?path, ?definition_kind, "load config from file");
 
         let contents = fs::read_to_string(path)
             .with_context(|| format!("failed to read configuration file `{}`", path.display()))?;
         let toml = contents.parse::<toml::Table>().with_context(|| {
             format!("could not parse TOML configuration in `{}`", path.display())
         })?;
-        let def = match why_load {
-            WhyLoad::Cli => Definition::Cli(Some(path.into())),
-            WhyLoad::Path => Definition::Path(path.into()),
-            WhyLoad::BuiltIn | WhyLoad::Environment => {
+        let def = match definition_kind {
+            DefinitionKind::Cli => Definition::Cli(Some(path.into())),
+            DefinitionKind::Path => Definition::Path(path.into()),
+            DefinitionKind::BuiltIn | DefinitionKind::Environment => {
                 unreachable!("file loading requires a path or CLI definition")
             }
         };
@@ -1411,12 +1415,12 @@ impl GlobalContext {
     /// Returns `config` with the given include files merged into it.
     ///
     /// * `seen` is used to check for cyclic includes.
-    /// * `why_load` tells why a config is being loaded.
+    /// * `definition_kind` tells why a config is being loaded.
     fn load_includes(
         &self,
         mut config: ConfigValues,
         seen: &mut HashSet<PathBuf>,
-        why_load: WhyLoad,
+        definition_kind: DefinitionKind,
     ) -> CargoResult<ConfigValues> {
         // Get the list of files to load.
         let includes = self.include_paths(&mut config, true)?;
@@ -1429,7 +1433,7 @@ impl GlobalContext {
                 continue;
             };
 
-            self._load_file(&abs_path, seen, true, why_load)
+            self._load_file(&abs_path, seen, true, definition_kind)
                 .and_then(|include| root.merge(include, true))
                 .with_context(|| {
                     format!(
@@ -1550,7 +1554,7 @@ impl GlobalContext {
             let arg_as_path = self.cwd.join(arg);
             let arg_config = if !arg.is_empty() && arg_as_path.exists() {
                 // --config path_to_file
-                self._load_file(&arg_as_path, &mut seen, true, WhyLoad::Cli)
+                self._load_file(&arg_as_path, &mut seen, true, DefinitionKind::Cli)
                     .with_context(|| {
                         format!("failed to load config from `{}`", arg_as_path.display())
                     })?
@@ -1584,7 +1588,7 @@ impl GlobalContext {
                 ConfigValues::with_table_value(table).unwrap()
             };
             let arg_config = self
-                .load_includes(arg_config, &mut HashSet::default(), WhyLoad::Cli)
+                .load_includes(arg_config, &mut HashSet::default(), DefinitionKind::Cli)
                 .context("failed to load --config include".to_string())?;
             loaded_args
                 .merge(arg_config, true)
@@ -1738,7 +1742,7 @@ impl GlobalContext {
             return Ok(ConfigValues::default());
         };
 
-        let mut config = self.load_layer(&credentials, WhyLoad::Path)?;
+        let mut config = self.load_layer(&credentials, DefinitionKind::Path)?;
         // Backwards compatibility for old `.cargo/credentials` layout.
         {
             let def = config.definition().clone();

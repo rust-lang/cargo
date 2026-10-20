@@ -69,9 +69,9 @@ pub(crate) const DEFINITION_FIELD: &str = "$__cargo_private_definition";
 pub(crate) const NAME: &str = "$__cargo_private_Value";
 pub(crate) static FIELDS: [&str; 2] = [VALUE_FIELD, DEFINITION_FIELD];
 
-/// Indicates why a config value is being loaded.
+/// The kind of source where a config value is defined.
 #[derive(Clone, Copy, Debug)]
-pub(super) enum WhyLoad {
+pub(super) enum DefinitionKind {
     /// A built-in value.
     #[expect(dead_code, reason = "file loading does not use built-in values")]
     BuiltIn,
