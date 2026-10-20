@@ -66,7 +66,7 @@ use std::borrow::Cow;
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fmt;
-use std::fs::{self, File};
+use std::fs::File;
 use std::io::SeekFrom;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
@@ -1367,46 +1367,13 @@ impl GlobalContext {
         }
         tracing::debug!(?path, ?definition_kind, includes, "load config from file");
 
-        let config = self.load_layer(path, definition_kind)?;
+        let config = ConfigValues::read_layer(path, definition_kind)?;
 
         if includes {
             self.load_includes(config, seen, definition_kind)
         } else {
             Ok(config)
         }
-    }
-
-    /// Loads configuration from a path with options.
-    ///
-    /// This makes no assumption of the schema, including include support.
-    ///
-    /// * `definition_kind` tells why a config is being loaded.
-    fn load_layer(
-        &self,
-        path: &Path,
-        definition_kind: DefinitionKind,
-    ) -> CargoResult<ConfigValues> {
-        tracing::debug!(?path, ?definition_kind, "load config from file");
-
-        let contents = fs::read_to_string(path)
-            .with_context(|| format!("failed to read configuration file `{}`", path.display()))?;
-        let toml = contents.parse::<toml::Table>().with_context(|| {
-            format!("could not parse TOML configuration in `{}`", path.display())
-        })?;
-        let def = match definition_kind {
-            DefinitionKind::Cli => Definition::Cli(Some(path.into())),
-            DefinitionKind::Path => Definition::Path(path.into()),
-            DefinitionKind::BuiltIn | DefinitionKind::Environment => {
-                unreachable!("file loading requires a path or CLI definition")
-            }
-        };
-        let value = CV::from_toml(def, toml::Value::Table(toml)).with_context(|| {
-            format!(
-                "failed to load TOML configuration from `{}`",
-                path.display()
-            )
-        })?;
-        Ok(ConfigValues::with_table_value(value).unwrap())
     }
 
     /// Load any `include` files listed in the given `config`.
@@ -1741,7 +1708,7 @@ impl GlobalContext {
             return Ok(ConfigValues::default());
         };
 
-        let mut config = self.load_layer(&credentials, DefinitionKind::Path)?;
+        let mut config = ConfigValues::read_layer(&credentials, DefinitionKind::Path)?;
         // Backwards compatibility for old `.cargo/credentials` layout.
         {
             let def = config.definition().clone();
