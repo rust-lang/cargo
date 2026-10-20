@@ -6,29 +6,6 @@ use std::ffi::{OsStr, OsString};
 use crate::util::errors::CargoResult;
 use anyhow::{anyhow, bail};
 
-/// Generate `case_insensitive_env` and `normalized_env` from the `env`.
-fn make_case_insensitive_and_normalized_env(
-    env: &HashMap<OsString, OsString>,
-) -> (HashMap<String, String>, HashMap<String, String>) {
-    let case_insensitive_env: HashMap<_, _> = env
-        .keys()
-        .filter_map(|k| k.to_str())
-        .map(|k| (k.to_uppercase(), k.to_owned()))
-        .collect();
-
-    let normalized_env = env
-        .iter()
-        // Only keep entries where both the key and value are valid UTF-8,
-        // since the config env vars only support UTF-8 keys and values.
-        // Otherwise, the normalized map warning could incorrectly warn about entries that can't be
-        // read by the config system.
-        // Please see the docs for `Env` for more context.
-        .filter_map(|(k, v)| Some((k.to_str()?, v.to_str()?)))
-        .map(|(k, _)| (k.to_uppercase().replace("-", "_"), k.to_owned()))
-        .collect();
-    (case_insensitive_env, normalized_env)
-}
-
 /// A snapshot of the environment variables available to [`GlobalContext`].
 ///
 /// Currently, the [`GlobalContext`] supports lookup of environment variables
@@ -63,6 +40,7 @@ pub struct Env {
     /// Maps from uppercased env keys to the actual key in the environment.
     /// For example, this might hold a pair `("PATH", "Path")`.
     /// Currently only supports UTF-8 keys and values.
+    #[cfg(windows)]
     case_insensitive_env: HashMap<String, String>,
 }
 
@@ -71,21 +49,23 @@ impl Env {
     pub fn new() -> Self {
         #[expect(clippy::disallowed_methods, reason = "seeds `GlobalContext::get_env`")]
         let env: HashMap<_, _> = std::env::vars_os().collect();
-        let (case_insensitive_env, normalized_env) = make_case_insensitive_and_normalized_env(&env);
-        Self {
-            env,
-            case_insensitive_env,
-            normalized_env,
-        }
+        Self::from_map_os(env)
     }
 
     /// Set the env directly from a `HashMap`.
     /// This should be used for debugging purposes only.
     pub(super) fn from_map(env: HashMap<String, String>) -> Self {
         let env = env.into_iter().map(|(k, v)| (k.into(), v.into())).collect();
-        let (case_insensitive_env, normalized_env) = make_case_insensitive_and_normalized_env(&env);
+        Self::from_map_os(env)
+    }
+
+    pub(super) fn from_map_os(env: HashMap<OsString, OsString>) -> Self {
+        #[cfg(windows)]
+        let case_insensitive_env = make_case_insensitive_env(&env);
+        let normalized_env = make_normalized_env(&env);
         Self {
             env,
+            #[cfg(windows)]
             case_insensitive_env,
             normalized_env,
         }
@@ -110,16 +90,14 @@ impl Env {
     /// This can be used similarly to [`std::env::var_os`].
     /// On Windows, we check for case mismatch since environment keys are case-insensitive.
     pub fn get_env_os(&self, key: impl AsRef<OsStr>) -> Option<&OsStr> {
+        #[cfg(windows)]
         match self.env.get(key.as_ref()) {
             Some(s) => Some(s),
-            None => {
-                if cfg!(windows) {
-                    self.get_env_case_insensitive(key)
-                } else {
-                    None
-                }
-            }
+            #[cfg(windows)]
+            None => self.get_env_case_insensitive(key),
         }
+        #[cfg(not(windows))]
+        self.env.get(key.as_ref()).map(|s| s.as_os_str())
     }
 
     /// Get the value of environment variable `key` through the `self.env` snapshot.
@@ -143,6 +121,7 @@ impl Env {
     /// This is relevant on Windows, where environment variables are case-insensitive.
     /// Note that this only works on keys that are valid UTF-8 and it uses Unicode uppercase,
     /// which may differ from the OS's notion of uppercase.
+    #[cfg(windows)]
     fn get_env_case_insensitive(&self, key: impl AsRef<OsStr>) -> Option<&OsStr> {
         let upper_case_key = key.as_ref().to_str()?.to_uppercase();
         let env_key: &OsStr = self.case_insensitive_env.get(&upper_case_key)?.as_ref();
@@ -186,4 +165,26 @@ impl Env {
     pub(super) fn get_normalized(&self, key: &str) -> Option<&str> {
         self.normalized_env.get(key).map(|s| s.as_ref())
     }
+}
+
+/// Generate `case_insensitive_env` from the `env`.
+#[cfg(windows)]
+fn make_case_insensitive_env(env: &HashMap<OsString, OsString>) -> HashMap<String, String> {
+    env.keys()
+        .filter_map(|k| k.to_str())
+        .map(|k| (k.to_uppercase(), k.to_owned()))
+        .collect()
+}
+
+/// Generate `normalized_env` from the `env`.
+fn make_normalized_env(env: &HashMap<OsString, OsString>) -> HashMap<String, String> {
+    env.iter()
+        // Only keep entries where both the key and value are valid UTF-8,
+        // since the config env vars only support UTF-8 keys and values.
+        // Otherwise, the normalized map warning could incorrectly warn about entries that can't be
+        // read by the config system.
+        // Please see the docs for `Env` for more context.
+        .filter_map(|(k, v)| Some((k.to_str()?, v.to_str()?)))
+        .map(|(k, _)| (k.to_uppercase().replace("-", "_"), k.to_owned()))
+        .collect()
 }
