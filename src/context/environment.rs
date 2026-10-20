@@ -69,19 +69,17 @@ impl Env {
     pub fn new() -> Self {
         #[expect(clippy::disallowed_methods, reason = "seeds `GlobalContext::get_env`")]
         let env: HashMap<_, _> = std::env::vars_os().collect();
-        let case_insensitive_env = make_case_insensitive_env(&env);
-        let normalized_env = make_normalized_env(&env);
-        Self {
-            env,
-            case_insensitive_env,
-            normalized_env,
-        }
+        Self::from_map_os(env)
     }
 
     /// Set the env directly from a `HashMap`.
     /// This should be used for debugging purposes only.
     pub(super) fn from_map(env: HashMap<String, String>) -> Self {
         let env = env.into_iter().map(|(k, v)| (k.into(), v.into())).collect();
+        Self::from_map_os(env)
+    }
+
+    pub(super) fn from_map_os(env: HashMap<OsString, OsString>) -> Self {
         let case_insensitive_env = make_case_insensitive_env(&env);
         let normalized_env = make_normalized_env(&env);
         Self {
