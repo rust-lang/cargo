@@ -6,28 +6,6 @@ use std::ffi::{OsStr, OsString};
 use crate::util::errors::CargoResult;
 use anyhow::{anyhow, bail};
 
-/// Generate `case_insensitive_env` from the `env`.
-#[cfg(windows)]
-fn make_case_insensitive_env(env: &HashMap<OsString, OsString>) -> HashMap<String, String> {
-    env.keys()
-        .filter_map(|k| k.to_str())
-        .map(|k| (k.to_uppercase(), k.to_owned()))
-        .collect()
-}
-
-/// Generate `normalized_env` from the `env`.
-fn make_normalized_env(env: &HashMap<OsString, OsString>) -> HashMap<String, String> {
-    env.iter()
-        // Only keep entries where both the key and value are valid UTF-8,
-        // since the config env vars only support UTF-8 keys and values.
-        // Otherwise, the normalized map warning could incorrectly warn about entries that can't be
-        // read by the config system.
-        // Please see the docs for `Env` for more context.
-        .filter_map(|(k, v)| Some((k.to_str()?, v.to_str()?)))
-        .map(|(k, _)| (k.to_uppercase().replace("-", "_"), k.to_owned()))
-        .collect()
-}
-
 /// A snapshot of the environment variables available to [`GlobalContext`].
 ///
 /// Currently, the [`GlobalContext`] supports lookup of environment variables
@@ -187,4 +165,26 @@ impl Env {
     pub(super) fn get_normalized(&self, key: &str) -> Option<&str> {
         self.normalized_env.get(key).map(|s| s.as_ref())
     }
+}
+
+/// Generate `case_insensitive_env` from the `env`.
+#[cfg(windows)]
+fn make_case_insensitive_env(env: &HashMap<OsString, OsString>) -> HashMap<String, String> {
+    env.keys()
+        .filter_map(|k| k.to_str())
+        .map(|k| (k.to_uppercase(), k.to_owned()))
+        .collect()
+}
+
+/// Generate `normalized_env` from the `env`.
+fn make_normalized_env(env: &HashMap<OsString, OsString>) -> HashMap<String, String> {
+    env.iter()
+        // Only keep entries where both the key and value are valid UTF-8,
+        // since the config env vars only support UTF-8 keys and values.
+        // Otherwise, the normalized map warning could incorrectly warn about entries that can't be
+        // read by the config system.
+        // Please see the docs for `Env` for more context.
+        .filter_map(|(k, v)| Some((k.to_str()?, v.to_str()?)))
+        .map(|(k, _)| (k.to_uppercase().replace("-", "_"), k.to_owned()))
+        .collect()
 }
