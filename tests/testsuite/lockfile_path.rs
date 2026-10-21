@@ -3,7 +3,6 @@
 use std::fs;
 
 use crate::prelude::*;
-use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::install::assert_has_installed_exe;
 use cargo_test_support::registry::{Package, RegistryBuilder};
 use cargo_test_support::str;
@@ -308,16 +307,10 @@ bar = "0.1.0"
         .arg(&format!("resolver.lockfile-path='{lockfile_path}'"))
         .run();
 
-    assert!(
-        p.root()
-            .join("target/package/test_foo-0.5.0/Cargo.lock")
-            .is_file()
-    );
+    let packaged_lockfile = p.build_dir().join("package/test_foo-0.5.0/Cargo.lock");
+    assert!(packaged_lockfile.is_file());
 
-    let path = p.root().join("target/package/test_foo-0.5.0/Cargo.lock");
-    let contents = fs::read_to_string(path).unwrap();
-
-    assert_e2e().eq(contents, lockfile_original);
+    p.assert_file(packaged_lockfile, lockfile_original);
 }
 
 #[cargo_test]
