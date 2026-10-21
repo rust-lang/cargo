@@ -24,7 +24,7 @@ use crate::diagnostics::Lint;
 use crate::diagnostics::LintLevel;
 use crate::diagnostics::LintLevelProduct;
 use crate::diagnostics::ScopedDiagnosticStats;
-use crate::diagnostics::get_key_value_span;
+use crate::diagnostics::get_key_value;
 use crate::diagnostics::workspace_rel_path;
 use crate::workspace::Package;
 use crate::workspace::PackageId;
@@ -134,9 +134,9 @@ pub(crate) fn lint_package(
             Group::with_title(level.primary_title(format!("unused build dependency `{dep_name}`")));
         if let Some(document) = document
             && let Some(contents) = contents
-            && let Some(span) = get_key_value_span(document, &["build-dependencies", dep_name])
+            && let Some((key, value)) = get_key_value(document, &["build-dependencies", dep_name])
         {
-            let span = span.key.start..span.value.end;
+            let span = dep_underline_span(contents, key, value);
             primary = primary.element(
                 Snippet::source(contents)
                     .path(&manifest_path)
@@ -314,9 +314,9 @@ fn lint_package_build_results(
                 );
                 if let Some(document) = document
                     && let Some(contents) = contents
-                    && let Some(span) = get_key_value_span(document, &toml_path)
+                    && let Some((key, value)) = get_key_value(document, &toml_path)
                 {
-                    let span = span.key.start..span.value.end;
+                    let span = dep_underline_span(contents, key, value);
                     primary = primary.element(
                         Snippet::source(contents)
                             .path(&manifest_path)
@@ -400,4 +400,25 @@ fn is_transitive_dep(
     }
 
     false
+}
+
+/// Computes the underline span for a dependency entry in `Cargo.toml`.
+///
+/// Dependencies defined with table header syntax (e.g. `[dependencies.foo]`)
+/// have a value span that covers the table body, or the closing `]` of the
+/// header when the table is empty. Underlining `key.start..value.end` would
+/// drag that `]` into the diagnostic, so for header-defined tables only the
+/// key itself is underlined. Inline tables (`foo = { .. }`) and plain
+/// key-value entries keep the full `key..value` span.
+fn dep_underline_span(
+    contents: &str,
+    key: &toml::Spanned<std::borrow::Cow<'_, str>>,
+    value: &toml::Spanned<toml::de::DeValue<'_>>,
+) -> std::ops::Range<usize> {
+    if value.get_ref().as_table().is_some()
+        && contents.as_bytes().get(value.span().start) != Some(&b'{')
+    {
+        return key.span().start..key.span().end;
+    }
+    key.span().start..value.span().end
 }
