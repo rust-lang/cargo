@@ -13,7 +13,10 @@ use super::{BuildContext, BuildRunner, CompileKind, FileFlavor, Layout};
 use crate::compiler::trim_paths;
 use crate::compiler::{CompileMode, CompileTarget, CrateType, FileType, Unit};
 use crate::util::{self, CargoResult, OnceExt, StableHasher};
-use crate::workspace::{Target, TargetKind, Workspace};
+use crate::workspace::Target;
+use crate::workspace::TargetKind;
+use crate::workspace::Workspace;
+use crate::workspace::features;
 
 /// This is a generic version number that can be changed to make
 /// backwards-incompatible changes to any file structures in the output
@@ -474,6 +477,17 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
 
         // Build script bins are never uplifted.
         if bcx.gctx.cli_unstable().build_dir_new_layout && unit.target.is_custom_build() {
+            return None;
+        }
+
+        // We plan to stop the uplift for rlibs in future versions.
+        // Currently we do it for nightly channel only.
+        //
+        // See https://rust-lang.zulipchat.com/#narrow/channel/246057-t-cargo/topic/Usage.20of.20-Zno-embed-metadata/near/633481654
+        if file_type.crate_type == Some(CrateType::Rlib)
+            && features::is_nightly_toolchain(&bcx.rustc().version)
+            && !features::is_stop_rlib_uplift_opt_out()
+        {
             return None;
         }
 
