@@ -1,6 +1,5 @@
 //! Tests for the `min-publish-age` feature (RFC 3923).
 
-use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::install::assert_has_installed_exe;
 use cargo_test_support::paths;
 use cargo_test_support::project;
@@ -1489,8 +1488,8 @@ fn cargo_add_skips_too_new() {
 "#]])
         .run();
 
-    assert_e2e().eq(
-        p.read_file("Cargo.toml"),
+    p.assert_file(
+        "Cargo.toml",
         str![[r#"
 
                 [package]

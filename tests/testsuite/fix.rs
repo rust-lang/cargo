@@ -2503,8 +2503,8 @@ edition = "2021"
 
 "#]])
         .run();
-    assert_e2e().eq(
-        p.read_file("Cargo.toml"),
+    p.assert_file(
+        "Cargo.toml",
         str![[r#"
 
 # Before project
@@ -2552,8 +2552,8 @@ edition = "2021"
 
 "#]])
         .run();
-    assert_e2e().eq(
-        p.read_file("Cargo.toml"),
+    p.assert_file(
+        "Cargo.toml",
         str![[r#"
 
 # Before package
@@ -2720,8 +2720,8 @@ default = "allow"
 
 "#]])
         .run();
-    assert_e2e().eq(
-        p.read_file("Cargo.toml"),
+    p.assert_file(
+        "Cargo.toml",
         str![[r#"
 
 [workspace.dependencies]
@@ -2837,8 +2837,8 @@ default = "allow"
 
 "#]])
         .run();
-    assert_e2e().eq(
-        p.read_file("Cargo.toml"),
+    p.assert_file(
+        "Cargo.toml",
         str![[r#"
 
 [workspace]
@@ -2855,8 +2855,8 @@ default = "allow"
 
 "#]],
     );
-    assert_e2e().eq(
-        p.read_file("foo/Cargo.toml"),
+    p.assert_file(
+        "foo/Cargo.toml",
         str![[r#"
 
 [package]
@@ -2999,10 +2999,10 @@ dep_df_false = { version = "0.1.0", default-features = false }
         )
         .run();
 
-    assert_e2e().eq(p.read_file("pkg_default/Cargo.toml"), pkg_default);
-    assert_e2e().eq(p.read_file("pkg_df_true/Cargo.toml"), pkg_df_true);
-    assert_e2e().eq(
-        p.read_file("pkg_df_false/Cargo.toml"),
+    p.assert_file("pkg_default/Cargo.toml", pkg_default);
+    p.assert_file("pkg_df_true/Cargo.toml", pkg_df_true);
+    p.assert_file(
+        "pkg_df_false/Cargo.toml",
         str![[r#"
 
 [package]
@@ -3123,8 +3123,8 @@ fn fix_edition_future() {
 
 "#]])
         .run();
-    assert_e2e().eq(
-        p.read_file("Cargo.toml"),
+    p.assert_file(
+        "Cargo.toml",
         str![[r#"
 cargo-features = ["unstable-editions"]
 
