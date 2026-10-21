@@ -5,7 +5,6 @@ use std::path::PathBuf;
 use crate::prelude::*;
 use cargo_test_support::basic_bin_manifest;
 use cargo_test_support::cargo_test;
-use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::project;
 use cargo_test_support::registry::Package;
 use snapbox::IntoData;
@@ -61,11 +60,10 @@ fn simple() {
         .run();
 
     let file = append_sbom_suffix(&p.bin("foo"));
-    let output = std::fs::read_to_string(file).unwrap();
     // The expected test does contain the "rustc" section
     // but other tests omit them for brevity.
-    assert_e2e().eq(
-        output,
+    p.assert_file(
+        file,
         cargo_test_support::str![[r#"
 {
   "crates": [
@@ -164,9 +162,8 @@ fn with_multiple_crate_types() {
     let sbom_path = append_sbom_suffix(&p.dylib("foo"));
     assert!(sbom_path.is_file());
 
-    let output = std::fs::read_to_string(sbom_path).unwrap();
-    assert_e2e().eq(
-        output,
+    p.assert_file(
+        sbom_path,
         cargo_test_support::str![[r#"
 {
   "crates": [
@@ -221,9 +218,8 @@ fn with_simple_build_script() {
     let path = append_sbom_suffix(&p.bin("foo"));
     assert!(path.is_file());
 
-    let output = std::fs::read_to_string(path).unwrap();
-    assert_e2e().eq(
-        output,
+    p.assert_file(
+        path,
         cargo_test_support::str![[r#"
 {
   "crates": [
@@ -308,9 +304,8 @@ fn with_build_dependencies() {
         .run();
 
     let path = append_sbom_suffix(&p.bin("foo"));
-    let output = std::fs::read_to_string(path).unwrap();
-    assert_e2e().eq(
-        output,
+    p.assert_file(
+        path,
         cargo_test_support::str![[r#"
 {
   "crates": [
@@ -435,9 +430,8 @@ fn crate_uses_different_features_for_build_and_normal_dependencies() {
 
     let path = append_sbom_suffix(&p.bin("a"));
     assert!(path.is_file());
-    let output = std::fs::read_to_string(path).unwrap();
-    assert_e2e().eq(
-        output,
+    p.assert_file(
+        path,
         cargo_test_support::str![[r#"
 {
   "crates": [
@@ -542,9 +536,8 @@ fn artifact_dep() {
         .masquerade_as_nightly_cargo(&["bindeps", "sbom"])
         .run();
 
-    let output = std::fs::read_to_string(append_sbom_suffix(&p.dylib("foo"))).unwrap();
-    assert_e2e().eq(
-        output,
+    p.assert_file(
+        append_sbom_suffix(&p.dylib("foo")),
         cargo_test_support::str![[r#"
 {
   "crates": [
@@ -658,9 +651,8 @@ fn proc_macro() {
         .masquerade_as_nightly_cargo(&["sbom"])
         .run();
 
-    let output = std::fs::read_to_string(append_sbom_suffix(&p.bin("foo"))).unwrap();
-    assert_e2e().eq(
-        output,
+    p.assert_file(
+        append_sbom_suffix(&p.bin("foo")),
         cargo_test_support::str![[r#"
 {
   "crates": [
@@ -739,9 +731,8 @@ found sbom
         .run();
 
     let file = append_sbom_suffix(&p.bin("foo"));
-    let output = std::fs::read_to_string(file).unwrap();
-    assert_e2e().eq(
-        output,
+    p.assert_file(
+        file,
         cargo_test_support::str![[r#"
 {
   "crates": [

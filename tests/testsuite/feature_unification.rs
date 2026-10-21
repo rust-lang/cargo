@@ -3,9 +3,7 @@
 use crate::prelude::*;
 use crate::utils::cargo_process;
 use cargo_test_support::{
-    basic_manifest,
-    compare::assert_e2e,
-    project,
+    basic_manifest, project,
     registry::{Dependency, Package},
     str,
 };
@@ -1575,8 +1573,8 @@ edition = "2021"
 
 "#]])
         .run();
-    assert_e2e().eq(
-        p.read_file("Cargo.toml"),
+    p.assert_file(
+        "Cargo.toml",
         str![[r#"
 
 # Before project

@@ -3299,8 +3299,8 @@ fn mergeable_info_with_deps() {
     assert_eq!(p.glob("target/debug/build/foo/*/out/foo.json").count(), 1);
     assert_eq!(p.glob("target/debug/build/dep/*/out/dep.json").count(), 1);
 
-    assert_e2e().eq(
-        fs::read_to_string(p.build_dir().join(".rustdoc_fingerprint.json")).unwrap(),
+    p.assert_file(
+        p.build_dir().join(".rustdoc_fingerprint.json"),
         str![[r#"
 {
   "doc_parts": [
@@ -3385,8 +3385,8 @@ fn mergeable_info_no_deps() {
     assert_eq!(p.glob("target/debug/build/foo/*/out/foo.json").count(), 1);
     assert_eq!(p.glob("target/debug/build/dep/*/out/dep.json").count(), 0);
 
-    assert_e2e().eq(
-        fs::read_to_string(p.build_dir().join(".rustdoc_fingerprint.json")).unwrap(),
+    p.assert_file(
+        p.build_dir().join(".rustdoc_fingerprint.json"),
         str![[r#"
 {
   "doc_parts": [
@@ -3460,8 +3460,8 @@ fn mergeable_info_workspace() {
     assert_eq!(p.glob("target/debug/build/bar/*/out/bar.json").count(), 1);
     assert_eq!(p.glob("target/debug/build/dep/*/out/dep.json").count(), 1);
 
-    assert_e2e().eq(
-        fs::read_to_string(p.build_dir().join(".rustdoc_fingerprint.json")).unwrap(),
+    p.assert_file(
+        p.build_dir().join(".rustdoc_fingerprint.json"),
         str![[r#"
 {
   "doc_parts": [
@@ -3530,8 +3530,8 @@ fn mergeable_info_multi_targets() {
     let path = format!("target/{target}/debug/build/foo/*/out/foo.json");
     assert_eq!(p.glob(path).count(), 1);
 
-    assert_e2e().eq(
-        p.read_file(format!("target/{host}/.rustdoc_fingerprint.json")),
+    p.assert_file(
+        p.build_dir().join(host).join(".rustdoc_fingerprint.json"),
         str![[r#"
 {
   "doc_parts": [
@@ -3543,8 +3543,8 @@ fn mergeable_info_multi_targets() {
         .is_json(),
     );
 
-    assert_e2e().eq(
-        p.read_file(format!("target/{target}/.rustdoc_fingerprint.json")),
+    p.assert_file(
+        p.build_dir().join(target).join(".rustdoc_fingerprint.json"),
         str![[r#"
 {
   "doc_parts": [
@@ -3591,8 +3591,8 @@ fn mergeable_info_rebuild_detection() {
     assert!(p.root().join("target/doc/foo/index.html").is_file());
     assert_eq!(p.glob("target/debug/build/foo/*/out/foo.json").count(), 1);
 
-    assert_e2e().eq(
-        fs::read_to_string(p.build_dir().join(".rustdoc_fingerprint.json")).unwrap(),
+    p.assert_file(
+        p.build_dir().join(".rustdoc_fingerprint.json"),
         str![[r#"
 {
   "doc_parts": [
@@ -3619,8 +3619,8 @@ fn mergeable_info_rebuild_detection() {
         .run();
 
     // Still there
-    assert_e2e().eq(
-        fs::read_to_string(p.build_dir().join(".rustdoc_fingerprint.json")).unwrap(),
+    p.assert_file(
+        p.build_dir().join(".rustdoc_fingerprint.json"),
         str![[r#"
 {
   "doc_parts": [
@@ -3683,8 +3683,8 @@ fn mergeable_info_rebuild_detection() {
         .run();
 
     // Stay the same
-    assert_e2e().eq(
-        fs::read_to_string(p.build_dir().join(".rustdoc_fingerprint.json")).unwrap(),
+    p.assert_file(
+        p.build_dir().join(".rustdoc_fingerprint.json"),
         str![[r#"
 {
   "doc_parts": [
@@ -3735,8 +3735,8 @@ fn mergeable_info_rebuild_with_depinfo() {
     assert!(p.root().join("target/doc/foo/index.html").is_file());
     assert_eq!(p.glob("target/debug/build/foo/*/out/foo.json").count(), 1);
 
-    assert_e2e().eq(
-        fs::read_to_string(p.build_dir().join(".rustdoc_fingerprint.json")).unwrap(),
+    p.assert_file(
+        p.build_dir().join(".rustdoc_fingerprint.json"),
         str![[r#"
 {
   "doc_parts": [
@@ -3764,8 +3764,8 @@ fn mergeable_info_rebuild_with_depinfo() {
         .run();
 
     // Still there
-    assert_e2e().eq(
-        fs::read_to_string(p.build_dir().join(".rustdoc_fingerprint.json")).unwrap(),
+    p.assert_file(
+        p.build_dir().join(".rustdoc_fingerprint.json"),
         str![[r#"
 {
   "doc_parts": [
@@ -3831,8 +3831,8 @@ fn mergeable_info_rebuild_with_depinfo() {
         .run();
 
     // Still there
-    assert_e2e().eq(
-        fs::read_to_string(p.build_dir().join(".rustdoc_fingerprint.json")).unwrap(),
+    p.assert_file(
+        p.build_dir().join(".rustdoc_fingerprint.json"),
         str![[r#"
 {
   "doc_parts": [
@@ -3900,8 +3900,8 @@ fn mergeable_info_additive() {
     assert_eq!(p.glob("target/debug/build/bar/*/out/bar.json").count(), 0);
     assert_eq!(p.glob("target/debug/build/dep/*/out/dep.json").count(), 0);
 
-    assert_e2e().eq(
-        fs::read_to_string(p.build_dir().join(".rustdoc_fingerprint.json")).unwrap(),
+    p.assert_file(
+        p.build_dir().join(".rustdoc_fingerprint.json"),
         str![[r#"
 {
   "doc_parts": [
@@ -3937,8 +3937,8 @@ fn mergeable_info_additive() {
     assert_eq!(p.glob("target/debug/build/bar/*/out/bar.json").count(), 0);
     assert_eq!(p.glob("target/debug/build/dep/*/out/dep.json").count(), 1);
 
-    assert_e2e().eq(
-        fs::read_to_string(p.build_dir().join(".rustdoc_fingerprint.json")).unwrap(),
+    p.assert_file(
+        p.build_dir().join(".rustdoc_fingerprint.json"),
         str![[r#"
 {
   "doc_parts": [
@@ -3975,8 +3975,8 @@ fn mergeable_info_additive() {
     assert_eq!(p.glob("target/debug/build/bar/*/out/bar.json").count(), 1);
     assert_eq!(p.glob("target/debug/build/dep/*/out/dep.json").count(), 1);
 
-    assert_e2e().eq(
-        fs::read_to_string(p.build_dir().join(".rustdoc_fingerprint.json")).unwrap(),
+    p.assert_file(
+        p.build_dir().join(".rustdoc_fingerprint.json"),
         str![[r#"
 {
   "doc_parts": [

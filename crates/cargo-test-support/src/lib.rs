@@ -529,6 +529,22 @@ impl Project {
             .unwrap_or_else(|e| panic!("could not read file {}: {}", full.display(), e))
     }
 
+    /// Verifies that the contents match `expected`.
+    ///
+    /// See [`compare::assert_e2e`] for assertion details.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # use cargo_test_support::str;
+    /// # let p = cargo_test_support::project().build();
+    /// p.assert_file("src/lib.rs", str!["pub fn pippin() {}\n"]);
+    /// ```
+    #[track_caller]
+    pub fn assert_file(&self, path: impl AsRef<Path>, expected: impl snapbox::IntoData) {
+        compare::assert_e2e().eq(self.read_file(path), expected);
+    }
+
     /// Modifies `Cargo.toml` to remove all commented lines.
     pub fn uncomment_root_manifest(&self) {
         let contents = self.read_file("Cargo.toml").replace("#", "");
