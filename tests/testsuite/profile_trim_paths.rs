@@ -2,7 +2,6 @@
 
 use crate::prelude::*;
 use cargo_test_support::basic_manifest;
-use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::git;
 use cargo_test_support::paths;
 use cargo_test_support::project;
@@ -133,9 +132,8 @@ From [ROOTURL]/registry
 
     // Unremap files for both original exe and uplifted exe.
     assert_eq!(p.glob("target/**/*.trim-paths.json").count(), 2);
-    let unremap_file = unremap_file_path(&p.bin("foo"));
-    assert_e2e().eq(
-        &std::fs::read_to_string(&unremap_file).unwrap(),
+    p.assert_file(
+        unremap_file_path(&p.bin("foo")),
         str![[r#"
 {
   "remaps": [
@@ -297,9 +295,8 @@ From [ROOTURL]/bar
 
     // Unremap files for both original exe and uplifted exe.
     assert_eq!(p.glob("target/**/*.trim-paths.json").count(), 2);
-    let unremap_file = unremap_file_path(&p.bin("foo"));
-    assert_e2e().eq(
-        &std::fs::read_to_string(&unremap_file).unwrap(),
+    p.assert_file(
+        unremap_file_path(&p.bin("foo")),
         str![[r#"
 {
   "remaps": [
@@ -374,9 +371,8 @@ cocktail-bar/src/lib.rs
 
     // Unremap files for both original exe and uplifted exe.
     assert_eq!(p.glob("target/**/*.trim-paths.json").count(), 2);
-    let unremap_file = unremap_file_path(&p.bin("foo"));
-    assert_e2e().eq(
-        &std::fs::read_to_string(&unremap_file).unwrap(),
+    p.assert_file(
+        unremap_file_path(&p.bin("foo")),
         str![[r#"
 {
   "remaps": [
@@ -448,9 +444,8 @@ fn path_dependency_outside_workspace() {
 
     // Unremap files for both original exe and uplifted exe.
     assert_eq!(p.glob("target/**/*.trim-paths.json").count(), 2);
-    let unremap_file = unremap_file_path(&p.bin("foo"));
-    assert_e2e().eq(
-        &std::fs::read_to_string(&unremap_file).unwrap(),
+    p.assert_file(
+        unremap_file_path(&p.bin("foo")),
         str![[r#"
 {
   "remaps": [
@@ -558,9 +553,8 @@ fn vendored_dependencies() {
 
     // Unremap files for both original exe and uplifted exe.
     assert_eq!(p.glob("target/**/*.trim-paths.json").count(), 2);
-    let unremap_file = unremap_file_path(&p.bin("foo"));
-    assert_e2e().eq(
-        &std::fs::read_to_string(&unremap_file).unwrap(),
+    p.assert_file(
+        unremap_file_path(&p.bin("foo")),
         str![[r#"
 {
   "remaps": [
@@ -666,9 +660,8 @@ fn vendored_dependencies_outside_workspace() {
 
     // Unremap files for both original exe and uplifted exe.
     assert_eq!(p.glob("target/**/*.trim-paths.json").count(), 2);
-    let unremap_file = unremap_file_path(&p.bin("foo"));
-    assert_e2e().eq(
-        &std::fs::read_to_string(&unremap_file).unwrap(),
+    p.assert_file(
+        unremap_file_path(&p.bin("foo")),
         str![[r#"
 {
   "remaps": [
@@ -1448,9 +1441,8 @@ fn workspace_remap_with_root_dir() {
 "#]])
         .run();
 
-    let unremap_file = unremap_file_path(&p.bin("foo"));
-    assert_e2e().eq(
-        &std::fs::read_to_string(&unremap_file).unwrap(),
+    p.assert_file(
+        unremap_file_path(&p.bin("foo")),
         str![[r#"
 {
   "remaps": [
@@ -1512,9 +1504,8 @@ fn workspace_prefix_override_from_env() {
 "#]])
         .run();
 
-    let unremap_file = unremap_file_path(&p.bin("foo"));
-    assert_e2e().eq(
-        &std::fs::read_to_string(&unremap_file).unwrap(),
+    p.assert_file(
+        unremap_file_path(&p.bin("foo")),
         str![[r#"
 {
   "remaps": [
@@ -2068,8 +2059,8 @@ fn unremap_debugger_project() -> cargo_test_support::Project {
 
     p.cargo("build").run();
 
-    assert_e2e().eq(
-        &std::fs::read_to_string(unremap_file_path(&p.bin("foo"))).unwrap(),
+    p.assert_file(
+        unremap_file_path(&p.bin("foo")),
         str![[r#"
 {
   "remaps": [

@@ -4,7 +4,6 @@
 use std::path::Path;
 
 use crate::prelude::*;
-use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::paths;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
@@ -659,9 +658,8 @@ fn non_local_build_script() {
         .build();
 
     p.cargo("build").run();
-    let contents = p.read_file("target/debug/foo.d");
-    assert_e2e().eq(
-        &contents,
+    p.assert_file(
+        p.bin("foo").with_extension("d"),
         str![[r#"
 [ROOT]/foo/target/debug/foo[EXE]: [ROOT]/foo/src/main.rs
 
@@ -693,10 +691,8 @@ fn no_trailing_separator_after_package_root_build_script() {
         .build();
 
     p.cargo("build").run();
-    let contents = p.read_file("target/debug/foo.d");
-
-    assert_e2e().eq(
-        &contents,
+    p.assert_file(
+        p.bin("foo").with_extension("d"),
         str![[r#"
 [ROOT]/foo/target/debug/foo[EXE]: [ROOT]/foo [ROOT]/foo/build.rs [ROOT]/foo/src/main.rs
 
@@ -758,10 +754,8 @@ fn no_trailing_separator_after_package_root_proc_macro() {
         .build();
 
     p.cargo("build").run();
-    let contents = p.read_file("target/debug/foo.d");
-
-    assert_e2e().eq(
-        &contents,
+    p.assert_file(
+        p.bin("foo").with_extension("d"),
         str![[r#"
 [ROOT]/foo/target/debug/foo[EXE]: [ROOT]/foo [ROOT]/foo/pm/src/lib.rs [ROOT]/foo/src/main.rs
 

@@ -8,7 +8,6 @@ use std::fs;
 
 use crate::prelude::*;
 use cargo_test_support::assert_deterministic_mtime;
-use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::git;
 use cargo_test_support::registry::{self, Package, RegistryBuilder};
 use cargo_test_support::str;
@@ -1093,9 +1092,8 @@ fn ignore_files() {
         .publish();
 
     p.cargo("vendor --respect-source-config").run();
-    let csum = p.read_file("vendor/url/.cargo-checksum.json");
-    assert_e2e().eq(
-        csum,
+    p.assert_file(
+        "vendor/url/.cargo-checksum.json",
         str![[r#"
 {
   "$comment": "This file only protects against accidental modifications. It is not a security mechanism and does not protect against malicious changes.",

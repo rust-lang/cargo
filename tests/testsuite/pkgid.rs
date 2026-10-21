@@ -417,9 +417,8 @@ fn pkgid_json_message_metadata_consistency() {
     };
 
     assert!(path.is_file());
-    let output = std::fs::read_to_string(&path).unwrap();
-    assert_e2e().eq(
-        output,
+    p.assert_file(
+        &path,
         cargo_test_support::str![[r#"
 {
   "crates": [

@@ -4478,12 +4478,7 @@ fn generate_good_d_files_for_external_tools() {
 
     p.cargo("build -v").run();
 
-    let dot_d_path = p.bin("meow").with_extension("d");
-    let dot_d = fs::read_to_string(&dot_d_path).unwrap();
-
-    println!("*.d file content with dep-info-basedir*: {}", &dot_d);
-
-    assert_e2e().eq(&dot_d, str![[r#"
+    p.assert_file(p.bin("meow").with_extension("d"), str![[r#"
 rust_things/foo/target/debug/meow[EXE]: rust_things/foo/awoo/barkbarkbark rust_things/foo/awoo/build.rs rust_things/foo/awoo/src/lib.rs rust_things/foo/src/main.rs
 
 "#]]);

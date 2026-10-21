@@ -5,7 +5,6 @@ use crate::prelude::*;
 use crate::utils::cross_compile::{
     can_run_on_host as cross_compile_can_run_on_host, disabled as cross_compile_disabled,
 };
-use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::registry::{Package, RegistryBuilder};
 use cargo_test_support::str;
 use cargo_test_support::{
@@ -622,11 +621,11 @@ fn build_script_with_bin_artifacts() {
         )
         .run();
 
-    let build_script_output = build_script_output_string(&p, "foo");
+    let output_path = build_script_output_path(&p, "foo");
     // we need the binary directory for this artifact along with all binary paths
     if cfg!(target_env = "msvc") {
-        assert_e2e().eq(
-            &build_script_output,
+        p.assert_file(
+            &output_path,
             str![[r#"
 [ROOT]/foo/target/debug/build/bar/[HASH]/artifact/bin/baz[EXE]
 [ROOT]/foo/target/debug/build/bar/[HASH]/artifact/staticlib/bar-[HASH].lib
@@ -638,8 +637,8 @@ fn build_script_with_bin_artifacts() {
 "#]],
         );
     } else {
-        assert_e2e().eq(
-            &build_script_output,
+        p.assert_file(
+            &output_path,
             str![[r#"
 [ROOT]/foo/target/debug/build/bar/[HASH]/artifact/bin/baz[EXE]
 [ROOT]/foo/target/debug/build/bar/[HASH]/artifact/staticlib/libbar-[HASH].a
@@ -815,11 +814,11 @@ fn build_script_with_selected_dashed_bin_artifact_and_lib_true() {
 "#]])
         .run();
 
-    let build_script_output = build_script_output_string(&p, "foo");
+    let output_path = build_script_output_path(&p, "foo");
     // we need the binary directory for this artifact and the binary itself
     if cfg!(target_env = "msvc") {
-        assert_e2e().eq(
-            &build_script_output,
+        p.assert_file(
+            &output_path,
             str![[r#"
 [ROOT]/foo/target/debug/build/bar-baz/[HASH]/artifact/bin
 [ROOT]/foo/target/debug/build/bar-baz/[HASH]/artifact/bin/baz_suffix[EXE]
@@ -827,8 +826,8 @@ fn build_script_with_selected_dashed_bin_artifact_and_lib_true() {
 "#]],
         );
     } else {
-        assert_e2e().eq(
-            &build_script_output,
+        p.assert_file(
+            &output_path,
             str![[r#"
 [ROOT]/foo/target/debug/build/bar-baz/[HASH]/artifact/bin
 [ROOT]/foo/target/debug/build/bar-baz/[HASH]/artifact/bin/baz_suffix[EXE]
@@ -1894,9 +1893,8 @@ fn allow_dep_renames_with_multiple_versions() {
             .unordered(),
         )
         .run();
-    let build_script_output = build_script_output_string(&p, "foo");
-    assert_e2e().eq(
-        &build_script_output,
+    p.assert_file(
+        build_script_output_path(&p, "foo"),
         str![[r#"
 0.5.0
 1.0.0
@@ -2587,13 +2585,13 @@ fn assert_artifact_executable_output(
     }
 }
 
-fn build_script_output_string(p: &Project, package_name: &str) -> String {
+fn build_script_output_path(p: &Project, package_name: &str) -> std::path::PathBuf {
     let paths = p
         .glob(format!("target/debug/build/{}/*/run/stdout", package_name))
         .collect::<Result<Vec<_>, _>>()
         .unwrap();
     assert_eq!(paths.len(), 1);
-    std::fs::read_to_string(&paths[0]).unwrap()
+    paths.into_iter().next().unwrap()
 }
 
 #[cargo_test]
@@ -3627,8 +3625,8 @@ fn build_only_specified_artifact_library() {
         .arg("-Zbindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .run();
-    assert_e2e().eq(
-        &build_script_output_string(&cdylib, "foo"),
+    cdylib.assert_file(
+        build_script_output_path(&cdylib, "foo"),
         str![[r#"
 cdylib present: true
 staticlib present: false
@@ -3642,8 +3640,8 @@ staticlib present: false
         .arg("-Zbindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .run();
-    assert_e2e().eq(
-        &build_script_output_string(&staticlib, "foo"),
+    staticlib.assert_file(
+        build_script_output_path(&staticlib, "foo"),
         str![[r#"
 cdylib present: false
 staticlib present: true
