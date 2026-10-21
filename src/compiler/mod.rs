@@ -224,9 +224,17 @@ fn compile<'gctx>(
         FingerprintMethod::Mtime => {}
     }
 
+    let deps = Vec::from(build_runner.unit_deps(unit));
+    for dep in deps {
+        // We only want to pass force_rebuild for roots.
+        // Normally roots won't take this path, but sometimes a root
+        // can also be a dep of another root
+        let force_rebuild = force_rebuild && build_runner.bcx.roots.contains(&dep.unit);
+        compile(build_runner, jobs, &dep.unit, exec, force_rebuild)?;
+    }
+
     // If we are in `--compile-time-deps` and the given unit is not a compile time
-    // dependency, skip compiling the unit and jumps to dependencies, which still
-    // have chances to be compile time dependencies
+    // dependency, skip compiling the unit
     if !unit.skip_non_compile_time_dep {
         // Build up the work to be done to compile this unit, enqueuing it once
         // we've got everything constructed.
@@ -238,6 +246,11 @@ fn compile<'gctx>(
             // We run these targets later, so this is just a no-op for now.
             Job::new_fresh()
         } else {
+            if unit.target.is_custom_build()
+                && let Some(deps) = unit.pkg.manifest().metabuild()
+            {
+                custom_build::prepare_metabuild(build_runner, unit, deps)?;
+            }
             let force = exec.force_rebuild(unit) || force_rebuild;
             let mut job = fingerprint::prepare_target(build_runner, unit, force)?;
             job.before(if job.freshness().is_dirty() {
@@ -281,12 +294,6 @@ fn compile<'gctx>(
             job
         };
         jobs.enqueue(build_runner, unit, job)?;
-    }
-
-    // Be sure to compile all dependencies of this target as well.
-    let deps = Vec::from(build_runner.unit_deps(unit)); // Create vec due to mutable borrow.
-    for dep in deps {
-        compile(build_runner, jobs, &dep.unit, exec, false)?;
     }
 
     Ok(())
