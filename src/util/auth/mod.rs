@@ -21,7 +21,9 @@ use crate::util::credential::adaptor::BasicProcessCredential;
 use crate::workspace::SourceId;
 
 use super::{credential::process::CredentialProcessCredential, credential::token::TokenCredential};
-use crate::context::{CredentialCacheValue, PathAndArgs, RegistryConfig};
+use crate::context::{
+    ConfigRelativePathResolveExt, CredentialCacheValue, PathAndArgs, RegistryConfig,
+};
 
 /// Get the list of credential providers for a registry source.
 fn credential_provider(

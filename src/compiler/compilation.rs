@@ -15,6 +15,7 @@ use crate::compiler::CompileTarget;
 use crate::compiler::RustdocFingerprint;
 use crate::compiler::apply_env_config;
 use crate::compiler::{CompileKind, Unit, UnitHash};
+use crate::context::ConfigRelativePathResolveExt;
 use crate::util::{CargoResult, GlobalContext};
 use crate::workspace::Package;
 

@@ -8,6 +8,7 @@ use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 
 use super::{BuildRunner, FileFlavor, Unit, fingerprint};
+use crate::context::ConfigRelativePathResolveExt;
 use crate::util::{CargoResult, internal};
 use cargo_util::paths;
 use tracing::debug;

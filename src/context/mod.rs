@@ -110,6 +110,7 @@ use crate::config::{ConfigReader, Env};
 mod path;
 pub use path::BracketType;
 pub use path::ConfigRelativePath;
+pub use path::ConfigRelativePathResolveExt;
 pub use path::PathAndArgs;
 pub use path::ResolveTemplateError;
 

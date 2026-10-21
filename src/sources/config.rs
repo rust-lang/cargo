@@ -6,7 +6,7 @@
 
 use crate::util::data_structures::HashMap;
 
-use crate::context::{self, OptValue, SourceConfigDef};
+use crate::context::{self, ConfigRelativePathResolveExt, OptValue, SourceConfigDef};
 use crate::sources::overlay::DependencyConfusionThreatOverlaySource;
 use crate::sources::source::Source;
 use crate::sources::{CRATES_IO_REGISTRY, ReplacedSource};

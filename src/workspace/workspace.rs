@@ -15,7 +15,8 @@ use url::Url;
 use crate::compiler::Unit;
 use crate::context;
 use crate::context::{
-    CargoResolverConfig, ConfigRelativePath, FeatureUnification, IncompatibleRustVersions, Value,
+    CargoResolverConfig, ConfigRelativePath, ConfigRelativePathResolveExt, FeatureUnification,
+    IncompatibleRustVersions, Value,
 };
 use crate::ops;
 use crate::ops::lockfile::LOCKFILE_NAME;
