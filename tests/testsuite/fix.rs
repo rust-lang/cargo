@@ -3,7 +3,6 @@
 use crate::prelude::*;
 use crate::utils::tools;
 use cargo::workspace::Edition;
-use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::git::{self, init};
 use cargo_test_support::paths;
 use cargo_test_support::registry::{Dependency, Package};
@@ -1449,8 +1448,8 @@ fn fix_to_broken_code() {
 "#]])
         .run();
 
-    assert_e2e().eq(
-        p.read_file("bar/src/lib.rs"),
+    p.assert_file(
+        "bar/src/lib.rs",
         str!["pub fn foo() { let x = 3; let _ = x; }"],
     );
 }
@@ -1472,10 +1471,7 @@ fn fix_with_common() {
 
     p.cargo("fix --edition --allow-no-vcs").run();
 
-    assert_e2e().eq(
-        p.read_file("tests/common/mod.rs"),
-        str!["pub fn r#try() {}"],
-    );
+    p.assert_file("tests/common/mod.rs", str!["pub fn r#try() {}"]);
 }
 
 #[cargo_test]
@@ -1712,8 +1708,8 @@ fn fix_shared_cross_workspace() {
         )
         .run();
 
-    assert_e2e().eq(
-        &p.read_file("foo/src/shared.rs"),
+    p.assert_file(
+        "foo/src/shared.rs",
         str!["pub fn fixme(_x: Box<&dyn Fn() -> ()>) {}"],
     );
 }
@@ -2456,8 +2452,8 @@ fn main() {
 "#]])
         .run();
 
-    assert_e2e().eq(
-        p.read_file("src/main.rs"),
+    p.assert_file(
+        "src/main.rs",
         str![[r#"
 
 macro_rules! foo {
@@ -2607,8 +2603,8 @@ fn main() {
 
 "#]])
         .run();
-    assert_e2e().eq(
-        p.read_file("foo.rs"),
+    p.assert_file(
+        "foo.rs",
         str![[r#"
 
 ---
@@ -3156,8 +3152,8 @@ fn script_without_frontmatter() {
 "#]])
         .run();
 
-    assert_e2e().eq(
-        p.read_file("echo.rs"),
+    p.assert_file(
+        "echo.rs",
         str![[r#"
 ---
 [package]
@@ -3196,8 +3192,8 @@ fn main() {}",
 "#]])
         .run();
 
-    assert_e2e().eq(
-        p.read_file("echo.rs"),
+    p.assert_file(
+        "echo.rs",
         str![[r##"
 #!/usr/bin/env cargo
 ---
@@ -3238,8 +3234,8 @@ fn main() {}"#,
 "#]])
         .run();
 
-    assert_e2e().eq(
-        p.read_file("echo.rs"),
+    p.assert_file(
+        "echo.rs",
         str![[r##"
 #!/usr/bin/env cargo
 ---
@@ -3279,8 +3275,8 @@ fn main() {}"#,
 "#]])
         .run();
 
-    assert_e2e().eq(
-        p.read_file("echo.rs"),
+    p.assert_file(
+        "echo.rs",
         str![[r##"
 #!/usr/bin/env cargo
 ---
@@ -3316,8 +3312,8 @@ fn main() {}"#,
 "#]])
         .run();
 
-    assert_e2e().eq(
-        p.read_file("echo.rs"),
+    p.assert_file(
+        "echo.rs",
         str![[r##"
 #!/usr/bin/env cargo
 ---

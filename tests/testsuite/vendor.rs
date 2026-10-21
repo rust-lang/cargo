@@ -1624,8 +1624,7 @@ fn git_update_rev() {
     p.cargo("vendor --respect-source-config --versioned-dirs")
         .run();
 
-    let lib = p.read_file("vendor/a-0.1.0/src/lib.rs");
-    assert_e2e().eq(lib, "");
+    p.assert_file("vendor/a-0.1.0/src/lib.rs", "");
 
     p.change_file(
         "Cargo.toml",
@@ -1644,8 +1643,7 @@ fn git_update_rev() {
     p.cargo("vendor --respect-source-config --versioned-dirs")
         .run();
 
-    let lib = p.read_file("vendor/a-0.1.0/src/lib.rs");
-    assert_e2e().eq(lib, "pub fn f() {}");
+    p.assert_file("vendor/a-0.1.0/src/lib.rs", "pub fn f() {}");
 }
 
 #[cargo_test]
@@ -2194,10 +2192,7 @@ To use vendored sources, add this to your .cargo/config.toml for this project:
 "#]],
     );
 
-    assert_e2e().eq(
-        p.read_file("vendor/bar/src/lib.rs"),
-        str!["pub fn bar() {}"],
-    );
+    p.assert_file("vendor/bar/src/lib.rs", str!["pub fn bar() {}"]);
 }
 
 #[cargo_test]
