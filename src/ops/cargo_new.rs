@@ -32,6 +32,7 @@ pub struct NewOptions {
 pub enum NewProjectKind {
     Bin,
     Lib,
+    Script,
 }
 
 impl NewProjectKind {
@@ -45,6 +46,7 @@ impl fmt::Display for NewProjectKind {
         match *self {
             NewProjectKind::Bin => "binary (application)",
             NewProjectKind::Lib => "library",
+            NewProjectKind::Script => "script",
         }
         .fmt(f)
     }
@@ -69,6 +71,7 @@ impl NewOptions {
         version_control: Option<VersionControl>,
         bin: bool,
         lib: bool,
+        script: bool,
         path: PathBuf,
         name: Option<String>,
         edition: Option<String>,
@@ -76,10 +79,13 @@ impl NewOptions {
     ) -> CargoResult<NewOptions> {
         let auto_detect_kind = !bin && !lib;
 
-        let kind = match (bin, lib) {
-            (true, true) => anyhow::bail!("can't specify both lib and binary outputs"),
-            (false, true) => NewProjectKind::Lib,
-            (_, false) => NewProjectKind::Bin,
+        let kind = match (bin, lib, script) {
+            (true, true, _) | (_, true, true) | (true, _, true) => {
+                anyhow::bail!("must specify exactly one of: lib, bin or script outputs")
+            }
+            (false, true, false) => NewProjectKind::Lib,
+            (false, false, true) => NewProjectKind::Script,
+            (_, false, false) => NewProjectKind::Bin,
         };
 
         let opts = NewOptions {
@@ -119,7 +125,7 @@ fn get_name<'a>(path: &'a Path, opts: &'a NewOptions) -> CargoResult<&'a str> {
 fn check_name(
     name: &str,
     show_name_help: bool,
-    has_bin: bool,
+    kind: NewProjectKind,
     shell: &mut Shell,
 ) -> CargoResult<()> {
     // If --name is already used to override, no point in suggesting it
@@ -133,7 +139,7 @@ fn check_name(
     let bin_help = || {
         let mut help = String::from(name_help);
         // Only suggest `bin.name` for valid crate names because it is used for `--crate`
-        if has_bin && validate_crate_name(name) {
+        if matches!(kind, NewProjectKind::Bin) && validate_crate_name(name) {
             help.push_str(&format!(
                 "\n\
                 help: to name the binary \"{name}\", use a valid package \
@@ -150,10 +156,12 @@ fn check_name(
         }
         help
     };
-    PackageName::new(name).map_err(|err| {
-        let help = bin_help();
-        anyhow::anyhow!("{err}{help}")
-    })?;
+    if matches!(kind, NewProjectKind::Bin | NewProjectKind::Lib) {
+        PackageName::new(name).map_err(|err| {
+            let help = bin_help();
+            anyhow::anyhow!("{err}{help}")
+        })?;
+    }
 
     if restricted_names::is_keyword(name) {
         anyhow::bail!(
@@ -163,7 +171,7 @@ fn check_name(
         );
     }
     if restricted_names::is_conflicting_artifact_name(name) {
-        if has_bin {
+        if matches!(kind, NewProjectKind::Bin) {
             anyhow::bail!(
                 "invalid package name `{}`: \
                 it conflicts with cargo's build directory names{}",
@@ -367,17 +375,20 @@ cannot automatically generate Cargo.toml as the main target would be ambiguous",
     Ok(())
 }
 
-fn plan_new_source_file(bin: bool) -> SourceFileInformation {
-    if bin {
-        SourceFileInformation {
+fn plan_new_source_file(kind: NewProjectKind) -> SourceFileInformation {
+    match kind {
+        NewProjectKind::Bin => SourceFileInformation {
             relative_path: "src/main.rs".to_string(),
             bin: true,
-        }
-    } else {
-        SourceFileInformation {
+        },
+        NewProjectKind::Lib => SourceFileInformation {
             relative_path: "src/lib.rs".to_string(),
             bin: false,
-        }
+        },
+        NewProjectKind::Script => SourceFileInformation {
+            relative_path: ".".to_string(),
+            bin: true,
+        },
     }
 }
 
@@ -416,15 +427,20 @@ pub fn new(opts: &NewOptions, gctx: &GlobalContext) -> CargoResult<()> {
     }
     check_path(path, &mut gctx.shell())?;
 
-    let is_bin = opts.kind.is_bin();
+    check_name(name, opts.name.is_none(), opts.kind, &mut gctx.shell())?;
 
-    check_name(name, opts.name.is_none(), is_bin, &mut gctx.shell())?;
+    let source_files = match opts.kind {
+        NewProjectKind::Bin | NewProjectKind::Lib => Some(plan_new_source_file(opts.kind)),
+        NewProjectKind::Script => None,
+    }
+    .into_iter()
+    .collect::<Vec<_>>();
 
     let mkopts = MkOptions {
         version_control: opts.version_control,
         path,
         name,
-        source_files: vec![plan_new_source_file(opts.kind.is_bin())],
+        source_files,
         edition: opts.edition.as_deref(),
         registry: opts.registry.as_deref(),
     };
@@ -470,10 +486,11 @@ pub fn init(opts: &NewOptions, gctx: &GlobalContext) -> CargoResult<NewProjectKi
     }
     check_path(path, &mut gctx.shell())?;
 
+    // TODO: convert this to handling `kind` across the board here as well
     let has_bin = kind.is_bin();
 
     if src_paths_types.is_empty() {
-        src_paths_types.push(plan_new_source_file(has_bin));
+        src_paths_types.push(plan_new_source_file(kind));
     } else if src_paths_types.len() == 1 && !src_paths_types.iter().any(|x| x.bin == has_bin) {
         // we've found the only file and it's not the type user wants. Change the type and warn
         let file_type = if src_paths_types[0].bin {
@@ -497,7 +514,7 @@ pub fn init(opts: &NewOptions, gctx: &GlobalContext) -> CargoResult<NewProjectKi
         )
     }
 
-    check_name(name, opts.name.is_none(), has_bin, &mut gctx.shell())?;
+    check_name(name, opts.name.is_none(), opts.kind, &mut gctx.shell())?;
 
     let mut version_control = opts.version_control;
 
@@ -726,6 +743,9 @@ fn mk(gctx: &GlobalContext, opts: &MkOptions<'_>) -> CargoResult<()> {
     let name = opts.name;
     let cfg = gctx.get::<CargoNewConfig>(["cargo-new"])?;
 
+    // TODO: cleaner way to detect it's a script? E.g. by passing the `kind` to `MkOptions`?
+    let is_script = name.ends_with(".rs") && opts.source_files.is_empty();
+
     // Using the push method with multiple arguments ensures that the entries
     // for all mutually-incompatible VCS in terms of syntax are in sync.
     let mut ignore = IgnoreList::new();
@@ -740,14 +760,18 @@ fn mk(gctx: &GlobalContext, opts: &MkOptions<'_>) -> CargoResult<()> {
         }
     });
 
-    init_vcs(path, vcs, gctx)?;
-    write_ignore_file(path, &ignore, vcs)?;
+    if !is_script {
+        init_vcs(path, vcs, gctx)?;
+        write_ignore_file(path, &ignore, vcs)?;
+    }
 
     // Create `Cargo.toml` file with necessary `[lib]` and `[[bin]]` sections, if needed.
     let mut manifest = toml_edit::DocumentMut::new();
     manifest["package"] = toml_edit::Item::Table(toml_edit::Table::new());
-    manifest["package"]["name"] = toml_edit::value(name);
-    manifest["package"]["version"] = toml_edit::value("0.1.0");
+    if !is_script {
+        manifest["package"]["name"] = toml_edit::value(name);
+        manifest["package"]["version"] = toml_edit::value("0.1.0");
+    }
     let edition = match opts.edition {
         Some(edition) => edition.to_string(),
         None => Edition::LATEST_STABLE.to_string(),
@@ -839,7 +863,9 @@ fn mk(gctx: &GlobalContext, opts: &MkOptions<'_>) -> CargoResult<()> {
         }
     }
 
-    paths::write(&manifest_path, manifest.to_string())?;
+    if !is_script {
+        paths::write(&manifest_path, manifest.to_string())?;
+    }
 
     // Create all specified source files (with respective parent directories) if they don't exist.
     for i in &opts.source_files {
@@ -887,13 +913,37 @@ mod tests {
         }
     }
 
-    if let Err(e) = Workspace::new(&manifest_path, gctx) {
-        crate::display_warning_with_error(
-            "compiling this new package may not work due to invalid \
-             workspace configuration",
-            &e,
-            &mut gctx.shell(),
+    if is_script {
+        let default_script_content = format!(
+            "\
+#!/usr/bin/env -S cargo +nightly -Zscript
+---
+{}
+---
+fn main() {{
+    println!(\"Hello, world!\");
+}}
+",
+            manifest.to_string()
         );
+        paths::write(&path, default_script_content)?;
+
+        // Format the newly created source file
+        if let Err(e) = cargo_util::ProcessBuilder::new("rustfmt")
+            .arg(&path)
+            .exec_with_output()
+        {
+            tracing::warn!("failed to call rustfmt: {:#}", e);
+        }
+    } else {
+        if let Err(e) = Workspace::new(&manifest_path, gctx) {
+            crate::display_warning_with_error(
+                "compiling this new package may not work due to invalid \
+             workspace configuration",
+                &e,
+                &mut gctx.shell(),
+            );
+        }
     }
 
     gctx.shell().note(
