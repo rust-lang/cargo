@@ -66,7 +66,7 @@ use std::borrow::Cow;
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fmt;
-use std::fs::{self, File};
+use std::fs::File;
 use std::io::SeekFrom;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
@@ -110,15 +110,11 @@ use de::Deserializer;
 mod error;
 pub use error::ConfigError;
 
+use crate::config::is_nonmergeable_list;
+pub use crate::config::{ConfigKey, ConfigStore, ConfigValue, Definition, DefinitionKind};
+
 mod value;
-pub use value::{Definition, OptValue, Value};
-
-mod key;
-pub use key::ConfigKey;
-
-mod config_value;
-pub use config_value::ConfigValue;
-use config_value::is_nonmergeable_list;
+pub use value::{OptValue, Value};
 
 mod path;
 pub use path::BracketType;
@@ -131,9 +127,6 @@ pub use target::{TargetCfgConfig, TargetConfig};
 
 mod environment;
 use environment::Env;
-
-mod config;
-pub use config::ConfigValues;
 
 mod schema;
 pub use schema::*;
@@ -185,18 +178,6 @@ pub const TOP_LEVEL_CONFIG_KEYS: &[&str] = &[
     "term",
 ];
 
-/// Indicates why a config value is being loaded.
-#[derive(Clone, Copy, Debug)]
-enum WhyLoad {
-    /// Loaded due to a request from the global cli arg `--config`
-    ///
-    /// Indirect configs loaded via [`ConfigInclude`] are also seen as from cli args,
-    /// if the initial config is being loaded from cli.
-    Cli,
-    /// Loaded due to config file discovery.
-    FileDiscovery,
-}
-
 /// A previously generated authentication token and the data needed to determine if it can be reused.
 #[derive(Debug)]
 pub struct CredentialCacheValue {
@@ -214,9 +195,9 @@ pub struct GlobalContext {
     /// Information about how to write messages to the shell
     shell: Mutex<Shell>,
     /// A collection of configuration options
-    config: OnceLock<ConfigValues>,
+    config: OnceLock<ConfigStore>,
     /// A collection of configuration options from the credentials file
-    credentials_config: OnceLock<ConfigValues>,
+    credentials_config: OnceLock<ConfigStore>,
     /// CLI config values, passed in via `configure`.
     cli_config: Option<Vec<String>>,
     /// The current working directory of cargo
@@ -691,7 +672,7 @@ impl GlobalContext {
     /// This will lazy-load the values as necessary. Callers are responsible
     /// for checking environment variables. Callers outside of the `config`
     /// module should avoid using this.
-    pub fn config(&self) -> CargoResult<&ConfigValues> {
+    pub fn config(&self) -> CargoResult<&ConfigStore> {
         self.config.try_borrow_with(|| self.load_config())
     }
 
@@ -701,7 +682,7 @@ impl GlobalContext {
     /// currently only exists for `cargo vendor` to remove the `source`
     /// entries. This doesn't respect environment variables. You should avoid
     /// using this if possible.
-    pub fn config_mut(&mut self) -> CargoResult<&mut ConfigValues> {
+    pub fn config_mut(&mut self) -> CargoResult<&mut ConfigStore> {
         let _ = self.config()?;
         Ok(self.config.get_mut().expect("already loaded config values"))
     }
@@ -1282,19 +1263,19 @@ impl GlobalContext {
     }
 
     /// Loads configuration from the filesystem.
-    pub fn load_config(&self) -> CargoResult<ConfigValues> {
+    pub fn load_config(&self) -> CargoResult<ConfigStore> {
         self.load_config_from(&self.cwd)
     }
 
     /// Like [`load_config`](GlobalContext::load_config) but without merging config values.
     ///
     /// This is primarily crafted for `cargo config` command.
-    pub(crate) fn load_config_unmerged(&self) -> CargoResult<Vec<ConfigValues>> {
+    pub(crate) fn load_config_unmerged(&self) -> CargoResult<Vec<ConfigStore>> {
         let mut result = Vec::new();
         let mut seen = HashSet::default();
         let home = self.home_path.clone().into_path_unlocked();
         self.walk_tree(&self.cwd, &home, |path| {
-            let mut config = self._load_file(path, &mut seen, false, WhyLoad::FileDiscovery)?;
+            let mut config = self._load_file(path, &mut seen, false, DefinitionKind::Path)?;
             self.load_unmerged_include(&mut config, &mut seen, &mut result)?;
             result.push(config);
             Ok(())
@@ -1308,9 +1289,9 @@ impl GlobalContext {
     /// This is primarily crafted for `cargo config` command.
     fn load_unmerged_include(
         &self,
-        config: &mut ConfigValues,
+        config: &mut ConfigStore,
         seen: &mut HashSet<PathBuf>,
-        output: &mut Vec<ConfigValues>,
+        output: &mut Vec<ConfigStore>,
     ) -> CargoResult<()> {
         let includes = self.include_paths(config, false)?;
         for include in includes {
@@ -1319,7 +1300,7 @@ impl GlobalContext {
             };
 
             let mut config = self
-                ._load_file(&abs_path, seen, false, WhyLoad::FileDiscovery)
+                ._load_file(&abs_path, seen, false, DefinitionKind::Path)
                 .with_context(|| {
                     format!(
                         "failed to load config include `{}` from `{}`",
@@ -1334,8 +1315,8 @@ impl GlobalContext {
     }
 
     /// Start a config file discovery from a path and merges all config values found.
-    fn load_config_from(&self, path: &Path) -> CargoResult<ConfigValues> {
-        let mut cfg = ConfigValues::default();
+    fn load_config_from(&self, path: &Path) -> CargoResult<ConfigStore> {
+        let mut cfg = ConfigStore::default();
         let home = self.home_path.clone().into_path_unlocked();
 
         self.walk_tree(path, &home, |path| {
@@ -1353,8 +1334,8 @@ impl GlobalContext {
     /// Loads configuration from a path.
     ///
     /// This is used during config file discovery.
-    fn load_file(&self, path: &Path) -> CargoResult<ConfigValues> {
-        self._load_file(path, &mut HashSet::default(), true, WhyLoad::FileDiscovery)
+    fn load_file(&self, path: &Path) -> CargoResult<ConfigStore> {
+        self._load_file(path, &mut HashSet::default(), true, DefinitionKind::Path)
     }
 
     /// Loads configuration from a path with options.
@@ -1363,55 +1344,29 @@ impl GlobalContext {
     ///
     /// * `includes` determines whether to load configs from [`ConfigInclude`].
     /// * `seen` is used to check for cyclic includes.
-    /// * `why_load` tells why a config is being loaded.
+    /// * `definition_kind` tells why a config is being loaded.
     fn _load_file(
         &self,
         path: &Path,
         seen: &mut HashSet<PathBuf>,
         includes: bool,
-        why_load: WhyLoad,
-    ) -> CargoResult<ConfigValues> {
+        definition_kind: DefinitionKind,
+    ) -> CargoResult<ConfigStore> {
         if !seen.insert(path.to_path_buf()) {
             bail!(
                 "config `include` cycle detected with path `{}`",
                 path.display()
             );
         }
-        tracing::debug!(?path, ?why_load, includes, "load config from file");
+        tracing::debug!(?path, ?definition_kind, includes, "load config from file");
 
-        let config = self.load_layer(path, why_load)?;
+        let config = ConfigStore::read_layer(path, definition_kind)?;
 
         if includes {
-            self.load_includes(config, seen, why_load)
+            self.load_includes(config, seen, definition_kind)
         } else {
             Ok(config)
         }
-    }
-
-    /// Loads configuration from a path with options.
-    ///
-    /// This makes no assumption of the schema, including include support.
-    ///
-    /// * `why_load` tells why a config is being loaded.
-    fn load_layer(&self, path: &Path, why_load: WhyLoad) -> CargoResult<ConfigValues> {
-        tracing::debug!(?path, ?why_load, "load config from file");
-
-        let contents = fs::read_to_string(path)
-            .with_context(|| format!("failed to read configuration file `{}`", path.display()))?;
-        let toml = contents.parse::<toml::Table>().with_context(|| {
-            format!("could not parse TOML configuration in `{}`", path.display())
-        })?;
-        let def = match why_load {
-            WhyLoad::Cli => Definition::Cli(Some(path.into())),
-            WhyLoad::FileDiscovery => Definition::Path(path.into()),
-        };
-        let value = CV::from_toml(def, toml::Value::Table(toml)).with_context(|| {
-            format!(
-                "failed to load TOML configuration from `{}`",
-                path.display()
-            )
-        })?;
-        Ok(ConfigValues::with_table_value(value).unwrap())
     }
 
     /// Load any `include` files listed in the given `config`.
@@ -1419,25 +1374,25 @@ impl GlobalContext {
     /// Returns `config` with the given include files merged into it.
     ///
     /// * `seen` is used to check for cyclic includes.
-    /// * `why_load` tells why a config is being loaded.
+    /// * `definition_kind` tells why a config is being loaded.
     fn load_includes(
         &self,
-        mut config: ConfigValues,
+        mut config: ConfigStore,
         seen: &mut HashSet<PathBuf>,
-        why_load: WhyLoad,
-    ) -> CargoResult<ConfigValues> {
+        definition_kind: DefinitionKind,
+    ) -> CargoResult<ConfigStore> {
         // Get the list of files to load.
         let includes = self.include_paths(&mut config, true)?;
 
         // Accumulate all values here.
         let root = CV::Table(HashMap::default(), config.definition().clone());
-        let mut root = ConfigValues::with_table_value(root).unwrap();
+        let mut root = ConfigStore::with_table_value(root).unwrap();
         for include in includes {
             let Some(abs_path) = include.resolve_path(self) else {
                 continue;
             };
 
-            self._load_file(&abs_path, seen, true, why_load)
+            self._load_file(&abs_path, seen, true, definition_kind)
                 .and_then(|include| root.merge(include, true))
                 .with_context(|| {
                     format!(
@@ -1454,7 +1409,7 @@ impl GlobalContext {
     /// Converts the `include` config value to a list of absolute paths.
     fn include_paths(
         &self,
-        config: &mut ConfigValues,
+        config: &mut ConfigStore,
         remove: bool,
     ) -> CargoResult<Vec<ConfigInclude>> {
         let table = config.values_mut();
@@ -1546,9 +1501,9 @@ impl GlobalContext {
     }
 
     /// Parses the CLI config args and returns them as a table.
-    pub(crate) fn cli_args_to_config(&self) -> CargoResult<ConfigValues> {
+    pub(crate) fn cli_args_to_config(&self) -> CargoResult<ConfigStore> {
         let mut loaded_args =
-            ConfigValues::with_table_value(CV::Table(HashMap::default(), Definition::Cli(None)))
+            ConfigStore::with_table_value(CV::Table(HashMap::default(), Definition::Cli(None)))
                 .unwrap();
         let Some(cli_args) = &self.cli_config else {
             return Ok(loaded_args);
@@ -1558,7 +1513,7 @@ impl GlobalContext {
             let arg_as_path = self.cwd.join(arg);
             let arg_config = if !arg.is_empty() && arg_as_path.exists() {
                 // --config path_to_file
-                self._load_file(&arg_as_path, &mut seen, true, WhyLoad::Cli)
+                self._load_file(&arg_as_path, &mut seen, true, DefinitionKind::Cli)
                     .with_context(|| {
                         format!("failed to load config from `{}`", arg_as_path.display())
                     })?
@@ -1589,10 +1544,10 @@ impl GlobalContext {
 
                 let table = CV::from_toml(Definition::Cli(None), doc)
                     .with_context(|| format!("failed to convert --config argument `{arg}`"))?;
-                ConfigValues::with_table_value(table).unwrap()
+                ConfigStore::with_table_value(table).unwrap()
             };
             let arg_config = self
-                .load_includes(arg_config, &mut HashSet::default(), WhyLoad::Cli)
+                .load_includes(arg_config, &mut HashSet::default(), DefinitionKind::Cli)
                 .context("failed to load --config include".to_string())?;
             loaded_args
                 .merge(arg_config, true)
@@ -1734,19 +1689,19 @@ impl GlobalContext {
     }
 
     /// Gets configuration values from the credentials file, loading them on first use.
-    fn credentials_config(&self) -> CargoResult<&ConfigValues> {
+    fn credentials_config(&self) -> CargoResult<&ConfigStore> {
         self.credentials_config
             .try_borrow_with(|| self.load_credentials())
     }
 
     /// Loads credentials config from the credentials file, if present.
-    fn load_credentials(&self) -> CargoResult<ConfigValues> {
+    fn load_credentials(&self) -> CargoResult<ConfigStore> {
         let home_path = self.home_path.clone().into_path_unlocked();
         let Some(credentials) = self.get_file_path(&home_path, "credentials", true)? else {
-            return Ok(ConfigValues::default());
+            return Ok(ConfigStore::default());
         };
 
-        let mut config = self.load_layer(&credentials, WhyLoad::FileDiscovery)?;
+        let mut config = ConfigStore::read_layer(&credentials, DefinitionKind::Path)?;
         // Backwards compatibility for old `.cargo/credentials` layout.
         {
             let def = config.definition().clone();

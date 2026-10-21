@@ -12,10 +12,8 @@ use anyhow::Context as _;
 use anyhow::anyhow;
 use anyhow::bail;
 
-use super::ConfigKey;
-use super::Definition;
-use super::key;
-use super::key::KeyOrIdx;
+use super::key::{KeyOrIdx, escape_key_part};
+use super::{ConfigKey, Definition};
 use crate::CargoResult;
 
 use self::ConfigValue as CV;
@@ -70,14 +68,14 @@ impl fmt::Debug for ConfigValue {
 }
 
 impl ConfigValue {
-    pub(super) fn from_toml(def: Definition, toml: toml::Value) -> CargoResult<ConfigValue> {
+    pub(crate) fn from_toml(def: Definition, toml: toml::Value) -> CargoResult<ConfigValue> {
         let mut error_path = Vec::new();
         Self::from_toml_inner(def, toml, &mut error_path).with_context(|| {
             let mut it = error_path.iter().rev().peekable();
             let mut key_path = String::with_capacity(error_path.len() * 3);
             while let Some(k) = it.next() {
                 match k {
-                    KeyOrIdx::Key(s) => key_path.push_str(&key::escape_key_part(&s)),
+                    KeyOrIdx::Key(s) => key_path.push_str(&escape_key_part(&s)),
                     KeyOrIdx::Idx(i) => key_path.push_str(&format!("[{i}]")),
                 }
                 if matches!(it.peek(), Some(KeyOrIdx::Key(_))) {
@@ -125,7 +123,7 @@ impl ConfigValue {
         }
     }
 
-    pub(super) fn into_toml(self) -> toml::Value {
+    pub(crate) fn into_toml(self) -> toml::Value {
         match self {
             CV::Boolean(s, _) => toml::Value::Boolean(s),
             CV::String(s, _) => toml::Value::String(s),
@@ -145,7 +143,7 @@ impl ConfigValue {
     /// Container types (tables and arrays) are merged with existing values.
     ///
     /// Container and non-container types cannot be mixed.
-    pub(super) fn merge(&mut self, from: ConfigValue, force: bool) -> CargoResult<()> {
+    pub(crate) fn merge(&mut self, from: ConfigValue, force: bool) -> CargoResult<()> {
         self.merge_helper(from, force, &mut ConfigKey::new())
     }
 
@@ -295,7 +293,7 @@ impl ConfigValue {
         }
     }
 
-    pub(super) fn expected<T>(&self, wanted: &str, key: &str) -> CargoResult<T> {
+    pub(crate) fn expected<T>(&self, wanted: &str, key: &str) -> CargoResult<T> {
         bail!(
             "expected a {}, but found a {} for `{}` in {}",
             wanted,
@@ -306,6 +304,6 @@ impl ConfigValue {
     }
 }
 
-pub(super) fn is_nonmergeable_list(key: &ConfigKey) -> bool {
+pub(crate) fn is_nonmergeable_list(key: &ConfigKey) -> bool {
     NON_MERGEABLE_LISTS.iter().any(|l| key.matches(l))
 }

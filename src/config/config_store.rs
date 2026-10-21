@@ -1,21 +1,22 @@
-use std::path::PathBuf;
+use std::fs;
+use std::path::{Path, PathBuf};
 
-use anyhow::bail;
+use anyhow::{Context as _, bail};
 
-use crate::context::{ConfigKey, ConfigValue, Definition};
+use super::{ConfigKey, ConfigValue, Definition, DefinitionKind};
 use crate::util::data_structures::HashMap;
 use crate::util::errors::CargoResult;
 
 use ConfigValue as CV;
 
 #[derive(Default, Debug)]
-pub struct ConfigValues {
+pub struct ConfigStore {
     /// A collection of configuration options
     values: HashMap<String, ConfigValue>,
     def: Definition,
 }
 
-impl ConfigValues {
+impl ConfigStore {
     pub fn with_values(values: HashMap<String, ConfigValue>) -> Self {
         Self {
             values,
@@ -28,6 +29,32 @@ impl ConfigValues {
             CV::Table(values, def) => Some(Self { values, def }),
             _ => None,
         }
+    }
+
+    /// Loads configuration from a path without processing includes.
+    pub fn read_layer(path: &Path, definition_kind: DefinitionKind) -> CargoResult<Self> {
+        tracing::debug!(?path, ?definition_kind, "load config from file");
+
+        let contents = fs::read_to_string(path)
+            .with_context(|| format!("failed to read configuration file `{}`", path.display()))?;
+        let toml = contents.parse::<toml::Table>().with_context(|| {
+            format!("could not parse TOML configuration in `{}`", path.display())
+        })?;
+        let def = match definition_kind {
+            DefinitionKind::Cli => Definition::Cli(Some(path.into())),
+            DefinitionKind::Path => Definition::Path(path.into()),
+            DefinitionKind::BuiltIn => Definition::BuiltIn,
+            DefinitionKind::Environment => {
+                unimplemented!("Environment defiinitions are not supported")
+            }
+        };
+        let value = CV::from_toml(def, toml::Value::Table(toml)).with_context(|| {
+            format!(
+                "failed to load TOML configuration from `{}`",
+                path.display()
+            )
+        })?;
+        Ok(Self::with_table_value(value).unwrap())
     }
 
     pub fn into_value(self) -> ConfigValue {
