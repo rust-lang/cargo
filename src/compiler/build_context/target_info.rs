@@ -15,6 +15,7 @@ use crate::compiler::apply_env_config;
 use crate::context::{GlobalContext, StringList, TargetConfig};
 use crate::util::interning::InternedString;
 use crate::util::{CargoResult, Rustc};
+use crate::workspace::features;
 use crate::workspace::{Dependency, Package, Target, TargetKind, Workspace};
 
 use anyhow::Context as _;
@@ -356,17 +357,8 @@ impl TargetInfo {
 
             let should_embed_metadata = match gctx.cli_unstable().embed_metadata {
                 Some(v) => v,
-                None => {
-                    let cargo_nightly = matches!(
-                        crate::version().release_channel.as_deref(),
-                        Some("nightly" | "dev")
-                    );
-                    let rustc_nightly = matches!(rustc.version.pre.as_str(), "dev" | "nightly");
-
-                    // Enable -Zembed-metadata=no by default if both cargo and rustc are nightly
-                    let is_nightly = cargo_nightly && rustc_nightly;
-                    !is_nightly
-                }
+                // Enable -Zembed-metadata=no by default if both cargo and rustc are nightly
+                None => !features::is_nightly_toolchain(&rustc.version),
             };
 
             return Ok(TargetInfo {

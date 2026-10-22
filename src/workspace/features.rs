@@ -1596,6 +1596,19 @@ pub fn channel() -> String {
         .unwrap_or_else(|| String::from("dev"))
 }
 
+/// Whether both Cargo and rustc are nightly/dev builds.
+///
+/// Unlike [`channel`], this ignores `RUSTC_BOOTSTRAP`,
+/// so that nightly-only changes we test against don't leak into stable when `RUSTC_BOOTSTRAP=1`.
+pub fn is_nightly_toolchain(rustc_version: &semver::Version) -> bool {
+    let cargo_nightly = matches!(
+        crate::version().release_channel.as_deref(),
+        Some("nightly" | "dev")
+    );
+    let rustc_nightly = matches!(rustc_version.pre.as_str(), "dev" | "nightly");
+    cargo_nightly && rustc_nightly
+}
+
 #[expect(
     clippy::disallowed_methods,
     reason = "Temporary opt out that is not part of the public interface"
