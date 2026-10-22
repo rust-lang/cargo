@@ -484,7 +484,7 @@ impl TargetInfo {
             }
         }
 
-        if target_tuple.starts_with("wasm32-") && crate_type == CrateType::Bin && suffix == ".js" {
+        if target_tuple.starts_with("wasm") && crate_type == CrateType::Bin && suffix == ".js" {
             // emscripten binaries generate a .js file, which loads a .wasm
             // file.
             ret.push(FileType {
