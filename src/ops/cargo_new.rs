@@ -429,6 +429,10 @@ pub fn new(opts: &NewOptions, gctx: &GlobalContext) -> CargoResult<()> {
 
     check_name(name, opts.name.is_none(), opts.kind, &mut gctx.shell())?;
 
+    if matches!(opts.kind, NewProjectKind::Script) && !gctx.cli_unstable().script {
+        anyhow::bail!("The `--script` flag is unstable and needs the `-Z script` flag.");
+    }
+
     let source_files = match opts.kind {
         NewProjectKind::Bin | NewProjectKind::Lib => Some(plan_new_source_file(opts.kind)),
         NewProjectKind::Script => None,
