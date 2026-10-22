@@ -25,6 +25,9 @@ ERROR_FILENAME_EXCED_RANGE = "ERROR_FILENAME_EXCED_RANGE"
 # `-Wwarnings`
 Wwarnings = "Wwarnings"
 
+# Windows system library (`secur32.dll`)
+secur32 = "secur32"
+
 # Name of a dependency
 flate2 = "flate2"
 
