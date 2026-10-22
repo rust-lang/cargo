@@ -490,7 +490,6 @@ pub fn init(opts: &NewOptions, gctx: &GlobalContext) -> CargoResult<NewProjectKi
     }
     check_path(path, &mut gctx.shell())?;
 
-    // TODO: convert this to handling `kind` across the board here as well
     let has_bin = kind.is_bin();
 
     if src_paths_types.is_empty() {
