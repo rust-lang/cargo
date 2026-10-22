@@ -153,7 +153,11 @@ fn rustc_bootstrap() {
     // RUSTC_BOOTSTRAP set to the name of the library should warn
     p.cargo("check")
         .env("RUSTC_BOOTSTRAP", "has_dashes")
+        // Omit first few lines because without masquerade_as_nightly_cargo cargo is considered stable,
+        // and it starts embedding metadata again and emits some rebuild status message.
+        // TODO(embed-metadata): omission should be removed when stabilized.
         .with_stderr_data(str![[r#"
+...
 [WARNING] has-dashes@0.0.1: cannot set `RUSTC_BOOTSTRAP=1` from build script of `has-dashes v0.0.1 ([ROOT]/foo)`.
 [NOTE] crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -198,7 +202,11 @@ fn rustc_bootstrap() {
     // RUSTC_BOOTSTRAP conditionally set when there's no library should error (regardless of the value)
     p.cargo("check")
         .env("RUSTC_BOOTSTRAP", "foo")
+        // Omit first few lines because without masquerade_as_nightly_cargo cargo is considered stable,
+        // and it starts embedding metadata again and emits some rebuild status message.
+        // TODO(embed-metadata): omission should be removed when stabilized.
         .with_stderr_data(str![[r#"
+...
 [ERROR] cannot set `RUSTC_BOOTSTRAP=1` from build script of `foo v0.0.1 ([ROOT]/foo)`.
 [NOTE] crates cannot set `RUSTC_BOOTSTRAP` themselves, as doing so would subvert the stability guarantees of Rust for your project.
 [HELP] If you're sure you want to do this in your project, set the environment variable `RUSTC_BOOTSTRAP=1` before running cargo instead.

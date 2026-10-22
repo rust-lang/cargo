@@ -732,6 +732,7 @@ src/lib.rs:3:13: [WARNING] type `FromDep` from private dependency 'dep' in publi
         .run();
 
     p.cargo("check --message-format=short")
+        .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -742,6 +743,7 @@ src/lib.rs:3:13: [WARNING] type `FromDep` from private dependency 'dep' in publi
     p.cargo("clean").run();
 
     p.cargo("check --message-format=short")
+        .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_stderr_data(str![[r#"
 ...
 "#]])

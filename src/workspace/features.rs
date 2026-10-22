@@ -1596,6 +1596,31 @@ pub fn channel() -> String {
         .unwrap_or_else(|| String::from("dev"))
 }
 
+/// Whether both Cargo and rustc are nightly/dev builds.
+///
+/// Unlike [`channel`], this ignores `RUSTC_BOOTSTRAP`,
+/// so that nightly-only changes we test against don't leak into stable when `RUSTC_BOOTSTRAP=1`.
+pub fn is_nightly_toolchain(rustc_version: &semver::Version) -> bool {
+    #[expect(
+        clippy::disallowed_methods,
+        reason = "testing only, no reason for config support"
+    )]
+    let channel = env::var("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS")
+        .ok()
+        .or_else(|| crate::version().release_channel);
+    let cargo_nightly = matches!(channel.as_deref(), Some("nightly" | "dev"));
+    let rustc_nightly = matches!(rustc_version.pre.as_str(), "dev" | "nightly");
+    cargo_nightly && rustc_nightly
+}
+
+#[expect(
+    clippy::disallowed_methods,
+    reason = "Temporary opt out that is not part of the public interface"
+)]
+pub fn is_stop_rlib_uplift_opt_out() -> bool {
+    env::var("__CARGO_TEMPORARY_STOP_RLIB_UPLIFT_OPT_OUT").as_deref() == Ok("1")
+}
+
 #[expect(
     clippy::disallowed_methods,
     reason = "Temporary opt out that is not part of the public interface"
