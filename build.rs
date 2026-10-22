@@ -158,5 +158,14 @@ fn windows_manifest() {
         );
         // Turn linker warnings into errors.
         println!("cargo:rustc-link-arg-bin=cargo=/WX");
+        // Delay-load system DLLs to avoid unnecessary startup overhead
+        // from libraries that most Cargo commands don't use.
+        for dll in [
+            "user32", "shell32", "ole32", "winhttp", "iphlpapi", "crypt32", "secur32", "ws2_32",
+            "userenv",
+        ] {
+            println!("cargo:rustc-link-arg-bin=cargo=/DELAYLOAD:{dll}.dll");
+        }
+        println!("cargo:rustc-link-arg-bin=cargo=delayimp.lib");
     }
 }
