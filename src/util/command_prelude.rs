@@ -433,7 +433,6 @@ pub trait CommandExt: Sized {
         )
         ._arg(flag("bin", "Use a binary (application) template [default]"))
         ._arg(flag("lib", "Use a library template"))
-        ._arg(flag("script", "Generate a cargo-script file"))
         ._arg(
             opt("edition", "Edition to set for the crate generated")
                 .value_parser(Edition::CLI_VALUES)

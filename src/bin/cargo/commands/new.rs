@@ -12,6 +12,9 @@ pub fn cli() -> Command {
                 .required(true),
         )
         .arg_new_opts()
+        // NOTE: add the flag here instead of `arg_new_opts`, because it makes no sense for `cargo init`
+        // TODO: show the flag in `cargo help new`
+        ._arg(flag("script", "Generate a cargo-script file"))
         .arg_registry("Registry to use")
         .arg_silent_suggestion()
         .after_help(color_print::cstr!(
