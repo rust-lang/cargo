@@ -772,17 +772,6 @@ fn compute_metadata(
 
     METADATA_VERSION.hash(&mut shared_hasher);
 
-    let ws_root = if unit.is_std {
-        // SourceId for stdlib crates is an absolute path inside the sysroot.
-        // Pass the sysroot as workspace root so that we hash a relative path.
-        // This avoids the metadata hash changing depending on where the user installed rustc.
-        &bcx.target_data.get_info(unit.kind).unwrap().sysroot
-    } else {
-        bcx.ws.root()
-    };
-
-    hash_metadata(ws_root, &mut shared_hasher, unit);
-
     // Also mix in enabled features to our metadata. This'll ensure that
     // when changing feature sets each lib is separately cached.
     unit.features.hash(&mut shared_hasher);
@@ -854,6 +843,17 @@ fn compute_metadata(
                 != unit.links_overrides;
         target_configs_are_different.hash(&mut shared_hasher);
     }
+
+    let ws_root = if unit.is_std {
+        // SourceId for stdlib crates is an absolute path inside the sysroot.
+        // Pass the sysroot as workspace root so that we hash a relative path.
+        // This avoids the metadata hash changing depending on where the user installed rustc.
+        &bcx.target_data.get_info(unit.kind).unwrap().sysroot
+    } else {
+        bcx.ws.root()
+    };
+
+    hash_metadata(ws_root, &mut shared_hasher, unit);
 
     let mut c_metadata_hasher = shared_hasher.clone();
     // Mix in the target-metadata of all the dependencies of this target.
