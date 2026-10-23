@@ -304,7 +304,7 @@ mod cfg {
 
     /// The [target family](https://doc.rust-lang.org/stable/reference/conditional-compilation.html#target_family).
     #[track_caller]
-    pub fn cargo_target_family() -> Vec<String> {
+    pub fn cargo_cfg_target_family() -> Vec<String> {
         to_strings(var_or_panic(&cargo_cfg_var("target_family")), ',')
     }
 
