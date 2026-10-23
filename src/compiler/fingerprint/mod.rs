@@ -857,7 +857,7 @@ enum LocalFingerprint {
     /// build script. The exact env var and value are hashed here. There's no
     /// filesystem dependence here, and if the values are changed the hash will
     /// change forcing a recompile.
-    RerunIfEnvChanged { var: String, val: Option<String> },
+    RerunIfEnvChanged { var: String, val: BuildEnvValue },
 }
 
 /// See [`FsStatus::StaleItem`].
@@ -905,9 +905,9 @@ impl LocalFingerprint {
     /// Read the environment variable of the given env `key`, and creates a new
     /// [`LocalFingerprint::RerunIfEnvChanged`] for it. The `env_config` is used firstly
     /// to check if the env var is set in the config system as some envs need to be overridden.
-    /// If not, it will fallback to `std::env::var`.
+    /// If not, it will fallback to `std::env::var_os`.
     ///
-    // TODO: `std::env::var` is allowed at this moment. Should figure out
+    // TODO: `std::env::var_os` is allowed at this moment. Should figure out
     // if it makes sense if permitting to read env from the env snapshot.
     #[allow(clippy::disallowed_methods)]
     fn from_env<K: AsRef<str>>(
@@ -916,10 +916,11 @@ impl LocalFingerprint {
     ) -> LocalFingerprint {
         let key = key.as_ref();
         let var = key.to_owned();
-        let val = if let Some(val) = env_config.get(key) {
-            val.to_str().map(ToOwned::to_owned)
-        } else {
-            env::var(key).ok()
+        let val = env_config.get(key).cloned().or_else(|| env::var_os(key));
+        let val = match val.map(OsString::into_string) {
+            Some(Ok(text)) => BuildEnvValue::Text(text),
+            Some(Err(value)) => BuildEnvValue::Bytes(value.into_encoded_bytes()),
+            None => BuildEnvValue::Unset {},
         };
         LocalFingerprint::RerunIfEnvChanged { var, val }
     }
@@ -1035,6 +1036,39 @@ impl LocalFingerprint {
             LocalFingerprint::RerunIfEnvChanged { .. } => "rerun-if-env-changed",
         }
     }
+}
+
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[serde(untagged)]
+enum BuildEnvValue {
+    Bytes(Vec<u8>),
+    Text(String),
+    Unset {},
+}
+
+impl BuildEnvValue {
+    fn diagnostic_value(&self) -> Option<String> {
+        match self {
+            Self::Bytes(bytes) => Some(format!("0x{}", hex::encode(bytes))),
+            Self::Text(text) => Some(text.clone()),
+            Self::Unset {} => None,
+        }
+    }
+}
+
+#[test]
+fn build_env_value_hash_compatibility() {
+    let text = "value".to_owned();
+    assert_eq!(
+        util::hash_u64(BuildEnvValue::Text(text.clone())),
+        util::hash_u64(Some(text)),
+    );
+    // Old null values represented both unset and non-Unicode.
+    assert!(serde_json::from_str::<BuildEnvValue>("null").is_err());
+    assert_ne!(
+        util::hash_u64(BuildEnvValue::Unset {}),
+        util::hash_u64(None::<String>)
+    );
 }
 
 impl Fingerprint {
@@ -1199,8 +1233,8 @@ impl Fingerprint {
                     if *a_value != *b_value {
                         return DirtyReason::EnvVarChanged {
                             name: a_key.clone(),
-                            old_value: b_value.clone(),
-                            new_value: a_value.clone(),
+                            old_value: b_value.diagnostic_value(),
+                            new_value: a_value.diagnostic_value(),
                         };
                     }
                 }

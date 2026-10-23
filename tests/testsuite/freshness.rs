@@ -1489,6 +1489,43 @@ fn rerun_if_changes() {
         .run();
 }
 
+#[cfg(unix)]
+#[cargo_test]
+fn rerun_if_env_changed_non_unicode() {
+    use std::os::unix::ffi::OsStrExt as _;
+
+    let p = project()
+        .file(
+            "build.rs",
+            r#"
+                fn main() {
+                    println!("cargo::rerun-if-env-changed=FOO");
+                    let value = std::env::var_os("FOO");
+                    let bytes = value.as_ref().map(|v| v.as_encoded_bytes());
+                    println!("cargo::rustc-env=SEEN={bytes:?}");
+                }
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"fn main() { println!("{}", env!("SEEN")); }"#,
+        )
+        .build();
+
+    p.cargo("run --quiet")
+        .env("FOO", std::ffi::OsStr::from_bytes(b"\xff"))
+        .with_stdout_data("Some([255])\n")
+        .run();
+    p.cargo("run --quiet")
+        .env("FOO", std::ffi::OsStr::from_bytes(b"\xfe"))
+        .with_stdout_data("Some([254])\n")
+        .run();
+    p.cargo("run --quiet")
+        .env_remove("FOO")
+        .with_stdout_data("None\n")
+        .run();
+}
+
 #[cargo_test]
 fn channel_shares_filenames() {
     // Test that different "nightly" releases use the same output filename.
