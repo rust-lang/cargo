@@ -771,15 +771,13 @@ fn mk(gctx: &GlobalContext, opts: &MkOptions<'_>) -> CargoResult<()> {
     // Create `Cargo.toml` file with necessary `[lib]` and `[[bin]]` sections, if needed.
     let mut manifest = toml_edit::DocumentMut::new();
     manifest["package"] = toml_edit::Item::Table(toml_edit::Table::new());
-    if !is_script {
-        manifest["package"]["name"] = toml_edit::value(name);
-        manifest["package"]["version"] = toml_edit::value("0.1.0");
-    }
+    manifest["package"]["name"] = toml_edit::value(name);
+    manifest["package"]["version"] = toml_edit::value("0.1.0");
     let edition = match opts.edition {
         Some(edition) => edition.to_string(),
         None => Edition::LATEST_STABLE.to_string(),
     };
-    manifest["package"]["edition"] = toml_edit::value(edition);
+    manifest["package"]["edition"] = toml_edit::value(&edition);
     if let Some(registry) = opts.registry {
         let mut array = toml_edit::Array::default();
         array.push(registry);
@@ -921,13 +919,14 @@ mod tests {
             "\
 #!/usr/bin/env -S cargo +nightly -Zscript
 ---
-{}
+package.edition = \"{}\"
+[dependencies]
 ---
 fn main() {{
     println!(\"Hello, world!\");
 }}
 ",
-            manifest.to_string()
+            edition,
         );
         paths::write(&path, default_script_content)?;
 
