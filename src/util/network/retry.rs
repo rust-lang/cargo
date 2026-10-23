@@ -230,10 +230,8 @@ fn maybe_spurious(err: &Error) -> bool {
         }
     }
 
-    use gix::protocol::transport::IsSpuriousError;
-
     if let Some(err) = err.downcast_ref::<crate::sources::git::fetch::Error>() {
-        if err.is_spurious() {
+        if err.can_retry_lenient() {
             return true;
         }
     }
@@ -274,6 +272,23 @@ where
             RetryResult::Err(e) => return Err(e),
             RetryResult::Retry(sleep) => std::thread::sleep(Duration::from_millis(sleep)),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::maybe_spurious;
+    use gix::error::ErrorExt;
+
+    #[test]
+    fn gitoxide_retry_classification_preserves_cancellation() {
+        let transient = std::io::Error::from(std::io::ErrorKind::ConnectionReset).raise();
+        assert!(maybe_spurious(&anyhow::Error::from(transient)));
+        let permanent = gix::error::validation("invalid refspec").raise();
+        assert!(!maybe_spurious(&anyhow::Error::from(permanent)));
+        let cancelled = std::io::Error::from(std::io::ErrorKind::ConnectionReset)
+            .and_raise(gix::error::cancelled("cancelled"));
+        assert!(!maybe_spurious(&anyhow::Error::from(cancelled)));
     }
 }
 

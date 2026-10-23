@@ -62,11 +62,11 @@ impl RepoMode {
         match self {
             RepoMode::Shallow => {
                 assert_eq!(commit_count, shallow_depth,);
-                assert!(repo.is_shallow());
+                assert!(repo.is_shallow().unwrap());
             }
             RepoMode::Complete => {
                 assert_eq!(commit_count, complete_depth,);
-                assert!(!repo.is_shallow());
+                assert!(!repo.is_shallow().unwrap());
             }
         }
     }
@@ -231,7 +231,7 @@ fn fetch_shallow_dep_branch_and_rev(backend: Backend) -> anyhow::Result<()> {
     );
     let db_clone = gix::open_opts(&db_paths[0], gix::open::Options::isolated())?;
     assert!(
-        db_clone.is_shallow(),
+        db_clone.is_shallow()?,
         "the repo is shallow while having all data it needs"
     );
 
@@ -293,7 +293,7 @@ fn fetch_shallow_dep_branch_to_rev(backend: Backend) -> anyhow::Result<()> {
         find_bar_db(RepoMode::Shallow),
         gix::open::Options::isolated(),
     )?;
-    assert!(db_clone.is_shallow());
+    assert!(db_clone.is_shallow()?);
 
     let p = project()
         .file(
@@ -323,7 +323,7 @@ fn fetch_shallow_dep_branch_to_rev(backend: Backend) -> anyhow::Result<()> {
         .run();
 
     assert!(
-        db_clone.is_shallow(),
+        db_clone.is_shallow()?,
         "we maintain shallowness and never unshallow"
     );
 
@@ -544,7 +544,7 @@ fn fetch_shallow_dep_then_fetch_complete(
         find_bar_db(RepoMode::Shallow),
         gix::open::Options::isolated(),
     )?;
-    assert!(db_clone.is_shallow());
+    assert!(db_clone.is_shallow()?);
     assert_eq!(
         db_clone
             .rev_parse_single("origin/master")?
@@ -559,7 +559,7 @@ fn fetch_shallow_dep_then_fetch_complete(
         find_lexicographically_first_bar_checkout(),
         gix::open::Options::isolated(),
     )?;
-    assert!(dep_checkout.is_shallow());
+    assert!(dep_checkout.is_shallow()?);
     assert_eq!(
         dep_checkout.head_id()?.ancestors().all()?.count(),
         1,
@@ -600,7 +600,7 @@ fn fetch_shallow_dep_then_fetch_complete(
         "the db clone was re-initialized and has all commits"
     );
     assert!(
-        !db_clone.is_shallow(),
+        !db_clone.is_shallow()?,
         "shallow-ness was removed as git2 does not support it"
     );
     assert_eq!(
@@ -618,7 +618,7 @@ fn fetch_shallow_dep_then_fetch_complete(
         .map(|path| -> anyhow::Result<usize> {
             let dep_checkout = gix::open_opts(path?, gix::open::Options::isolated())?;
             let depth = dep_checkout.head_id()?.ancestors().all()?.count();
-            assert_eq!(dep_checkout.is_shallow(), depth == 1, "the first checkout is done with gitoxide and shallow, the second one is git2 non-shallow");
+            assert_eq!(dep_checkout.is_shallow()?, depth == 1, "the first checkout is done with gitoxide and shallow, the second one is git2 non-shallow");
             Ok(depth)
         })
         .map(Result::unwrap)
@@ -676,7 +676,7 @@ fn fetch_shallow_index_then_preserve_shallow(backend: Backend) -> anyhow::Result
         1,
         "shallow fetches always start at depth of 1 to minimize download size"
     );
-    assert!(repo.is_shallow());
+    assert!(repo.is_shallow()?);
 
     Package::new("bar", "1.1.0").publish();
     p.cargo("update")
@@ -695,7 +695,7 @@ fn fetch_shallow_index_then_preserve_shallow(backend: Backend) -> anyhow::Result
         1,
         "subsequent shallow fetches wont' fetch what's inbetween, only the single commit that we need while leveraging existing commits"
     );
-    assert!(repo.is_shallow());
+    assert!(repo.is_shallow()?);
 
     Package::new("bar", "1.2.0").publish();
     Package::new("bar", "1.3.0").publish();
@@ -715,7 +715,7 @@ fn fetch_shallow_index_then_preserve_shallow(backend: Backend) -> anyhow::Result
         1,
         "shallow boundaries are moved with each fetch to maintain only a single commit of history"
     );
-    assert!(repo.is_shallow());
+    assert!(repo.is_shallow()?);
 
     Ok(())
 }
@@ -763,7 +763,7 @@ fn fetch_complete_index_then_shallow(backend: Backend) -> anyhow::Result<()> {
         2,
         "initial commit and the first crate"
     );
-    assert!(!repo.is_shallow());
+    assert!(!repo.is_shallow()?);
 
     Package::new("bar", "1.1.0").publish();
     p.cargo("update")
@@ -787,7 +787,7 @@ fn fetch_complete_index_then_shallow(backend: Backend) -> anyhow::Result<()> {
         1,
         "the follow up fetch an entirely new index which is now shallow and which is in its own location"
     );
-    assert!(shallow_repo.is_shallow());
+    assert!(shallow_repo.is_shallow()?);
 
     Package::new("bar", "1.2.0").publish();
     Package::new("bar", "1.3.0").publish();
@@ -808,7 +808,7 @@ fn fetch_complete_index_then_shallow(backend: Backend) -> anyhow::Result<()> {
         1,
         "subsequent shallow fetches wont' fetch what's inbetween, only the single commit that we need while leveraging existing commits"
     );
-    assert!(shallow_repo.is_shallow());
+    assert!(shallow_repo.is_shallow()?);
 
     p.cargo("update")
         .arg_line(backend.to_arg())
@@ -886,12 +886,12 @@ fn fetch_shallow_index_then_abort_and_update(backend: Backend) -> anyhow::Result
         1,
         "shallow fetches always start at depth of 1 to minimize download size"
     );
-    assert!(repo.is_shallow());
-    let shallow_lock = repo.shallow_file().with_extension("lock");
+    assert!(repo.is_shallow()?);
+    let shallow_lock = repo.shallow_file()?.with_extension("lock");
     // adding a lock file and deleting the original simulates a left-over fetch that was aborted, leaving a lock file
     // in place without ever having moved it to the right location.
     std::fs::write(&shallow_lock, &[])?;
-    std::fs::remove_file(repo.shallow_file())?;
+    std::fs::remove_file(repo.shallow_file()?)?;
 
     Package::new("bar", "1.1.0").publish();
     p.cargo("update")
@@ -903,7 +903,7 @@ fn fetch_shallow_index_then_abort_and_update(backend: Backend) -> anyhow::Result
         .run();
 
     assert!(!shallow_lock.is_file(), "the repository was re-initialized");
-    assert!(repo.is_shallow());
+    assert!(repo.is_shallow()?);
     assert_eq!(
         repo.rev_parse_single("origin/HEAD")?
             .ancestors()
