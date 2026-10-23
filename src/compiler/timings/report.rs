@@ -314,11 +314,21 @@ fn write_unit_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<
     )?;
 
     for (i, (unit, aggregated_sections)) in units.iter().zip(aggregated).enumerate() {
+        let UnitData {
+            name,
+            version,
+            target,
+            duration,
+            peak_memory,
+            features,
+            ..
+        } = unit;
+
         let section_cell = |section: Option<&SectionData>| match section {
             Some(section) => {
-                let duration = section.duration();
-                let pct = (duration / unit.duration) * 100.0;
-                format!("<td>{duration:.1}s ({pct:.0}%)</td>")
+                let section_duration = section.duration();
+                let pct = (section_duration / duration) * 100.0;
+                format!("<td>{section_duration:.1}s ({pct:.0}%)</td>")
             }
             None => "<td></td>".to_string(),
         };
@@ -337,29 +347,26 @@ fn write_unit_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<
             .map(|header| section_cell(cells.remove(header)))
             .join("\n");
 
-        let memory = match (show_memory, unit.peak_memory) {
+        let memory = match (show_memory, *peak_memory) {
             (false, _) => String::new(),
             (true, Some(bytes)) => format!("<td>{:.1}</td>", HumanBytes(bytes)),
             (true, None) => "<td></td>".to_string(),
         };
 
-        let features = unit.features.join(", ");
+        let features = features.join(", ");
         write!(
             f,
             r#"
 <tr>
 <td>{}.</td>
-<td>{}{}</td>
-<td>{:.1}s</td>
+<td>{name} v{version}{target}</td>
+<td>{duration:.1}s</td>
 {cells}
 {memory}
 <td>{features}</td>
 </tr>
 "#,
             i + 1,
-            format_args!("{} v{}", unit.name, unit.version),
-            unit.target,
-            unit.duration,
         )?;
     }
     write!(f, "</tbody>\n</table>\n")?;
