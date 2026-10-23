@@ -46,7 +46,7 @@ fn unused_dep_normal() {
  --> Cargo.toml:9:13
   |
 9 |             unused = "0.1.0"
-  |             ^^^^^^^^^^^^^^^^
+  |             ^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused`
@@ -104,7 +104,7 @@ fn unused_dep_build() {
  --> Cargo.toml:9:13
   |
 9 |             unused = "0.1.0"
-  |             ^^^^^^^^^^^^^^^^
+  |             ^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused`
@@ -233,7 +233,7 @@ fn unused_dep_lib_bins() {
  --> Cargo.toml:9:13
   |
 9 |             unused = "0.1.0"
-  |             ^^^^^^^^^^^^^^^^
+  |             ^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused`
@@ -272,7 +272,7 @@ fn unused_dep_lib_bins() {
  --> Cargo.toml:9:13
   |
 9 |             unused = "0.1.0"
-  |             ^^^^^^^^^^^^^^^^
+  |             ^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused`
@@ -293,7 +293,7 @@ fn unused_dep_lib_bins() {
  --> Cargo.toml:9:13
   |
 9 |             unused = "0.1.0"
-  |             ^^^^^^^^^^^^^^^^
+  |             ^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused`
@@ -378,7 +378,7 @@ fn unused_dep_static_lib_only() {
   --> Cargo.toml:12:13
    |
 12 |             unused = "0.1.0"
-   |             ^^^^^^^^^^^^^^^^
+   |             ^^^^^^
    |
    = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused`
@@ -418,7 +418,7 @@ fn unused_dep_static_lib_only() {
   --> Cargo.toml:12:13
    |
 12 |             unused = "0.1.0"
-   |             ^^^^^^^^^^^^^^^^
+   |             ^^^^^^
    |
    = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused`
@@ -499,7 +499,7 @@ fn unused_dep_build_with_used_dep_normal() {
  --> Cargo.toml:9:13
   |
 9 |             unused_build = "0.1.0"
-  |             ^^^^^^^^^^^^^^^^^^^^^^
+  |             ^^^^^^^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused_build`
@@ -560,7 +560,7 @@ fn unused_dep_normal_but_implicit_used_dep_dev() {
  --> Cargo.toml:9:13
   |
 9 |             used_dev = "0.1.0"
-  |             ^^^^^^^^^^^^^^^^^^
+  |             ^^^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `used_dev`
@@ -577,7 +577,7 @@ fn unused_dep_normal_but_implicit_used_dep_dev() {
  --> Cargo.toml:9:13
   |
 9 |             used_dev = "0.1.0"
-  |             ^^^^^^^^^^^^^^^^^^
+  |             ^^^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `used_dev`
@@ -642,7 +642,7 @@ fn unused_dep_normal_but_explicit_used_dep_dev() {
  --> Cargo.toml:9:13
   |
 9 |             used_once = "0.1.0"
-  |             ^^^^^^^^^^^^^^^^^^^
+  |             ^^^^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `used_once`
@@ -770,7 +770,7 @@ fn optional_dependency() {
  --> Cargo.toml:9:13
   |
 9 |             unused = { version = "0.1.0", optional = true }
-  |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |             ^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused`
@@ -831,7 +831,7 @@ fn unused_dep_renamed() {
  --> Cargo.toml:9:13
   |
 9 |             baz = { package = "bar", version = "0.1.0" }
-  |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |             ^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `baz`
@@ -885,7 +885,7 @@ fn warning_replay() {
  --> Cargo.toml:9:13
   |
 9 |             unused = "0.1.0"
-  |             ^^^^^^^^^^^^^^^^
+  |             ^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused`
@@ -901,7 +901,7 @@ fn warning_replay() {
  --> Cargo.toml:9:13
   |
 9 |             unused = "0.1.0"
-  |             ^^^^^^^^^^^^^^^^
+  |             ^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused`
@@ -964,7 +964,7 @@ fn unused_dep_target() {
  --> Cargo.toml:9:13
   |
 9 |             unused = "0.1.0"
-  |             ^^^^^^^^^^^^^^^^
+  |             ^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused`
@@ -1246,7 +1246,7 @@ fn package_selection() {
  --> bar/Cargo.toml:9:13
   |
 9 |             unused_bar = "0.1.0"
-  |             ^^^^^^^^^^^^^^^^^^^^
+  |             ^^^^^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused_bar`
@@ -1270,7 +1270,7 @@ fn package_selection() {
 [WARNING] unused dependency `unused_foo`
  --> foo/Cargo.toml:9:13
 9 |             unused_foo = "0.1.0"
-  |             ^^^^^^^^^^^^^^^^^^^^
+  |             ^^^^^^^^^^
 [HELP] consider removing the dependency on `unused_foo`
 [WARNING] `bar` (manifest) generated 1 warning
 [WARNING] `foo` (manifest) generated 3 warnings
@@ -1303,7 +1303,7 @@ fn package_selection() {
  --> foo/Cargo.toml:9:13
   |
 9 |             unused_foo = "0.1.0"
-  |             ^^^^^^^^^^^^^^^^^^^^
+  |             ^^^^^^^^^^
   |
 [HELP] consider removing the dependency on `unused_foo`
 [WARNING] `foo` (manifest) generated 3 warnings
@@ -1321,7 +1321,7 @@ fn package_selection() {
  --> bar/Cargo.toml:9:13
   |
 9 |             unused_bar = "0.1.0"
-  |             ^^^^^^^^^^^^^^^^^^^^
+  |             ^^^^^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused_bar`
@@ -1512,7 +1512,7 @@ fn allow_rustflags() {
  --> Cargo.toml:9:13
   |
 9 |             unused = "0.1.0"
-  |             ^^^^^^^^^^^^^^^^
+  |             ^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused`
@@ -1566,7 +1566,7 @@ fn allow_attribute() {
  --> Cargo.toml:9:13
   |
 9 |             unused = "0.1.0"
-  |             ^^^^^^^^^^^^^^^^
+  |             ^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused`
@@ -1619,7 +1619,7 @@ fn deny_in_manifest() {
  --> Cargo.toml:9:13
   |
 9 |             unused = "0.1.0"
-  |             ^^^^^^^^^^^^^^^^
+  |             ^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `deny` in `[lints]`
 [HELP] consider removing the dependency on `unused`
@@ -1672,7 +1672,7 @@ fn deny_rustflags() {
  --> Cargo.toml:9:13
   |
 9 |             unused = "0.1.0"
-  |             ^^^^^^^^^^^^^^^^
+  |             ^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused`
@@ -1726,7 +1726,7 @@ fn deny_attribute() {
  --> Cargo.toml:9:13
   |
 9 |             unused = "0.1.0"
-  |             ^^^^^^^^^^^^^^^^
+  |             ^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused`
@@ -1780,7 +1780,7 @@ fn forbid_rustflags() {
  --> Cargo.toml:9:13
   |
 9 |             unused = "0.1.0"
-  |             ^^^^^^^^^^^^^^^^
+  |             ^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused`
@@ -1834,7 +1834,59 @@ fn forbid_attribute() {
  --> Cargo.toml:9:13
   |
 9 |             unused = "0.1.0"
-  |             ^^^^^^^^^^^^^^^^
+  |             ^^^^^^
+  |
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
+[HELP] consider removing the dependency on `unused`
+[WARNING] `foo` (manifest) generated 1 warning
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn unused_dep_table_format() {
+    Package::new("unused", "0.1.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+[package]
+name = "foo"
+version = "0.1.0"
+authors = []
+edition = "2018"
+
+[dependencies.unused]
+version = "0.1.0"
+
+[lints.cargo]
+default = { level = "allow", priority = -1 }
+unused_dependencies = "warn"
+"#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {}
+            "#,
+        )
+        .build();
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to highest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] unused v0.1.0 (registry `dummy-registry`)
+[CHECKING] unused v0.1.0
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[WARNING] unused dependency `unused`
+ --> Cargo.toml:8:15
+  |
+8 | [dependencies.unused]
+  |               ^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused`

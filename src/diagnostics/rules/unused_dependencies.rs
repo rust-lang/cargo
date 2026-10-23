@@ -316,11 +316,10 @@ fn lint_package_build_results(
                     && let Some(contents) = contents
                     && let Some(span) = get_key_value_span(document, &toml_path)
                 {
-                    let span = span.key.start..span.value.end;
                     primary = primary.element(
                         Snippet::source(contents)
                             .path(&manifest_path)
-                            .annotation(AnnotationKind::Primary.span(span)),
+                            .annotation(AnnotationKind::Primary.span(span.key)),
                     );
                 } else {
                     primary = primary.element(Origin::path(&manifest_path));
