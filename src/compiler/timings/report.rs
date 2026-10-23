@@ -137,7 +137,6 @@ pub fn write_html(ctx: RenderContext<'_>, f: &mut impl Write) -> CargoResult<()>
     write_summary_table(&ctx, f, duration)?;
     f.write_all(HTML_CANVAS.as_bytes())?;
     write_unit_table(&ctx, f)?;
-    write_memory_table(&ctx, f)?;
     // It helps with pixel alignment to use whole numbers.
     writeln!(
         f,
@@ -285,6 +284,8 @@ fn write_unit_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<
         })
         .unwrap_or_default();
 
+    let show_memory = units.iter().any(|u| u.peak_memory.is_some());
+
     write!(
         f,
         r#"
@@ -295,6 +296,7 @@ fn write_unit_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<
   <th>Unit</th>
   <th>Total</th>
   {headers}
+  {memory_header}
   <th>Features</th>
 </tr>
 </thead>
@@ -303,7 +305,12 @@ fn write_unit_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<
         headers = headers
             .iter()
             .map(|h| format!("<th>{}</th>", h.capitalized_name()))
-            .join("\n")
+            .join("\n"),
+        memory_header = if show_memory {
+            r#"<th title="Peak memory (RSS)">Memory</th>"#
+        } else {
+            ""
+        },
     )?;
 
     for (i, (unit, aggregated_sections)) in units.iter().zip(aggregated).enumerate() {
@@ -330,6 +337,12 @@ fn write_unit_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<
             .map(|header| format!("<td>{}</td>", format_duration(cells.remove(header))))
             .join("\n");
 
+        let memory = match (show_memory, unit.peak_memory) {
+            (false, _) => String::new(),
+            (true, Some(bytes)) => format!("<td>{:.1}</td>", HumanBytes(bytes)),
+            (true, None) => "<td></td>".to_string(),
+        };
+
         let features = unit.features.join(", ");
         write!(
             f,
@@ -339,6 +352,7 @@ fn write_unit_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<
 <td>{}{}</td>
 <td>{:.1}s</td>
 {cells}
+{memory}
 <td>{features}</td>
 </tr>
 "#,
@@ -346,56 +360,6 @@ fn write_unit_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<
             format_args!("{} v{}", unit.name, unit.version),
             unit.target,
             unit.duration,
-        )?;
-    }
-    write!(f, "</tbody>\n</table>\n")?;
-    Ok(())
-}
-
-/// Render a table of peak memory usage per unit, sorted from most to least.
-///
-/// Skipped when no unit has a [`UnitData::peak_memory`] value (e.g. without
-/// `-Zmem-stats`, or on an unsupported platform).
-fn write_memory_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<()> {
-    let mut units: Vec<_> = ctx
-        .unit_data
-        .iter()
-        .filter(|u| u.peak_memory.is_some())
-        .collect();
-    if units.is_empty() {
-        return Ok(());
-    }
-    units.sort_unstable_by(|a, b| b.peak_memory.cmp(&a.peak_memory));
-
-    write!(
-        f,
-        r#"
-<h2>Peak memory usage per unit</h2>
-<table class="my-table">
-<thead>
-<tr>
-  <th></th>
-  <th>Unit</th>
-  <th>Peak memory</th>
-</tr>
-</thead>
-<tbody>
-"#
-    )?;
-    for (i, unit) in units.iter().enumerate() {
-        write!(
-            f,
-            r#"
-<tr>
-<td>{}.</td>
-<td>{}{}</td>
-<td>{}</td>
-</tr>
-"#,
-            i + 1,
-            format_args!("{} v{}", unit.name, unit.version),
-            unit.target,
-            format_args!("{:.1}", HumanBytes(unit.peak_memory.unwrap())),
         )?;
     }
     write!(f, "</tbody>\n</table>\n")?;

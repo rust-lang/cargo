@@ -152,10 +152,10 @@ fn peak_memory_reported() {
         .run();
 
     let html = p.read_file("target/cargo-timings/cargo-timing.html");
-    // Assert that peak memory was captured and that the memory table is rendered.
+    // Assert that peak memory was captured and that the memory column is rendered.
     assert!(html.contains(r#""peak_memory": "#));
     assert!(!html.contains(r#""peak_memory": null"#));
-    assert!(html.contains("Peak memory usage per unit"));
+    assert!(html.contains(r#"<th title="Peak memory (RSS)">Memory</th>"#));
 }
 
 /// Without `-Zmem-stats`, `--timings` should not display peak memory.
@@ -170,7 +170,7 @@ fn peak_memory_not_reported_without_flag() {
 
     let html = p.read_file("target/cargo-timings/cargo-timing.html");
     assert!(!html.contains("peak_memory"));
-    assert!(!html.contains("Peak memory usage per unit"));
+    assert!(!html.contains("Peak memory (RSS)"));
 }
 
 /// Peak memory is reported even for a unit whose compilation fails
@@ -191,5 +191,5 @@ fn peak_memory_reported_on_failure() {
     let html = p.read_file("target/cargo-timings/cargo-timing.html");
     assert!(html.contains(r#""peak_memory": "#));
     assert!(!html.contains(r#""peak_memory": null"#));
-    assert!(html.contains("Peak memory usage per unit"));
+    assert!(html.contains(r#"<th title="Peak memory (RSS)">Memory</th>"#));
 }
