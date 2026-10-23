@@ -736,3 +736,53 @@ try {
     });
   });
 }
+
+// Sort the unit table by the clicked column.
+{
+  const table = document.getElementById('unit-table');
+  const headers = Array.from(table.tHead.rows[0].cells);
+  headers.forEach((th, col) => {
+    // The first column is the row number.
+    if (col === 0) {
+      return;
+    }
+    th.addEventListener('click', () => {
+      const tbody = table.tBodies[0];
+      const rows = Array.from(tbody.rows);
+      // Numeric cells carry their raw value in `data-sort`; others sort by text.
+      const numeric = rows.some(row => row.cells[col].dataset.sort !== undefined);
+      const key = row => {
+        const cell = row.cells[col];
+        if (!numeric) {
+          return cell.textContent || null;
+        }
+        return cell.dataset.sort === undefined ? null : Number(cell.dataset.sort);
+      };
+      const current = th.getAttribute('aria-sort');
+      // Numbers start biggest-first, text starts A-Z.
+      const descending = current ? current === 'ascending' : numeric;
+      const dir = descending ? -1 : 1;
+      rows.sort((a, b) => {
+        const x = key(a);
+        const y = key(b);
+        if (x === y) {
+          return 0;
+        }
+        // Empty cells always go last.
+        if (x === null) {
+          return 1;
+        }
+        if (y === null) {
+          return -1;
+        }
+        return (x < y ? -1 : 1) * dir;
+      });
+      rows.forEach((row, i) => {
+        row.cells[0].textContent = `${i + 1}.`;
+      });
+      rows.forEach(row => tbody.appendChild(row));
+      headers.forEach(h => h.removeAttribute('aria-sort'));
+      th.setAttribute('aria-sort', descending ? 'descending' : 'ascending');
+    });
+  });
+}

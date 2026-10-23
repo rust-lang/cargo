@@ -137,7 +137,6 @@ pub fn write_html(ctx: RenderContext<'_>, f: &mut impl Write) -> CargoResult<()>
     write_summary_table(&ctx, f, duration)?;
     f.write_all(HTML_CANVAS.as_bytes())?;
     write_unit_table(&ctx, f)?;
-    write_memory_table(&ctx, f)?;
     // It helps with pixel alignment to use whole numbers.
     writeln!(
         f,
@@ -285,16 +284,19 @@ fn write_unit_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<
         })
         .unwrap_or_default();
 
+    let show_memory = units.iter().any(|u| u.peak_memory.is_some());
+
     write!(
         f,
         r#"
-<table class="my-table">
+<table class="my-table" id="unit-table">
 <thead>
 <tr>
   <th></th>
   <th>Unit</th>
-  <th>Total</th>
+  <th aria-sort="descending">Total</th>
   {headers}
+  {memory_header}
   <th>Features</th>
 </tr>
 </thead>
@@ -303,17 +305,34 @@ fn write_unit_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<
         headers = headers
             .iter()
             .map(|h| format!("<th>{}</th>", h.capitalized_name()))
-            .join("\n")
+            .join("\n"),
+        memory_header = if show_memory {
+            r#"<th title="Peak memory (RSS)">Memory</th>"#
+        } else {
+            ""
+        },
     )?;
 
     for (i, (unit, aggregated_sections)) in units.iter().zip(aggregated).enumerate() {
-        let format_duration = |section: Option<&SectionData>| match section {
+        let UnitData {
+            name,
+            version,
+            target,
+            duration,
+            peak_memory,
+            features,
+            ..
+        } = unit;
+
+        let section_cell = |section: Option<&SectionData>| match section {
             Some(section) => {
-                let duration = section.duration();
-                let pct = (duration / unit.duration) * 100.0;
-                format!("{duration:.1}s ({:.0}%)", pct)
+                let section_duration = section.duration();
+                let pct = (section_duration / duration) * 100.0;
+                format!(
+                    r#"<td data-sort="{section_duration}">{section_duration:.1}s ({pct:.0}%)</td>"#
+                )
             }
-            None => "".to_string(),
+            None => "<td></td>".to_string(),
         };
 
         // This is a bit complex, as we assume the most general option - we can have an
@@ -327,75 +346,31 @@ fn write_unit_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<
 
         let cells = headers
             .iter()
-            .map(|header| format!("<td>{}</td>", format_duration(cells.remove(header))))
+            .map(|header| section_cell(cells.remove(header)))
             .join("\n");
 
-        let features = unit.features.join(", ");
+        let memory = match (show_memory, *peak_memory) {
+            (false, _) => String::new(),
+            (true, Some(bytes)) => {
+                format!(r#"<td data-sort="{bytes}">{:.1}</td>"#, HumanBytes(bytes))
+            }
+            (true, None) => "<td></td>".to_string(),
+        };
+
+        let features = features.join(", ");
         write!(
             f,
             r#"
 <tr>
 <td>{}.</td>
-<td>{}{}</td>
-<td>{:.1}s</td>
+<td>{name} v{version}{target}</td>
+<td data-sort="{duration}">{duration:.1}s</td>
 {cells}
+{memory}
 <td>{features}</td>
 </tr>
 "#,
             i + 1,
-            format_args!("{} v{}", unit.name, unit.version),
-            unit.target,
-            unit.duration,
-        )?;
-    }
-    write!(f, "</tbody>\n</table>\n")?;
-    Ok(())
-}
-
-/// Render a table of peak memory usage per unit, sorted from most to least.
-///
-/// Skipped when no unit has a [`UnitData::peak_memory`] value (e.g. without
-/// `-Zmem-stats`, or on an unsupported platform).
-fn write_memory_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<()> {
-    let mut units: Vec<_> = ctx
-        .unit_data
-        .iter()
-        .filter(|u| u.peak_memory.is_some())
-        .collect();
-    if units.is_empty() {
-        return Ok(());
-    }
-    units.sort_unstable_by(|a, b| b.peak_memory.cmp(&a.peak_memory));
-
-    write!(
-        f,
-        r#"
-<h2>Peak memory usage per unit</h2>
-<table class="my-table">
-<thead>
-<tr>
-  <th></th>
-  <th>Unit</th>
-  <th>Peak memory</th>
-</tr>
-</thead>
-<tbody>
-"#
-    )?;
-    for (i, unit) in units.iter().enumerate() {
-        write!(
-            f,
-            r#"
-<tr>
-<td>{}.</td>
-<td>{}{}</td>
-<td>{}</td>
-</tr>
-"#,
-            i + 1,
-            format_args!("{} v{}", unit.name, unit.version),
-            unit.target,
-            format_args!("{:.1}", HumanBytes(unit.peak_memory.unwrap())),
         )?;
     }
     write!(f, "</tbody>\n</table>\n")?;
@@ -778,6 +753,44 @@ h1 {
 .summary-table td:first-child {
   vertical-align: top;
   text-align: right;
+}
+
+#unit-table th:not(:first-child) {
+  cursor: pointer;
+  position: relative;
+  /* Room for the sort arrows. */
+  padding-right: 28px;
+}
+
+/*
+ * Sort arrows:
+ * an up and a down triangle drawn with borders in the text color.
+ */
+#unit-table th:not(:first-child)::before,
+#unit-table th:not(:first-child)::after {
+  content: "";
+  position: absolute;
+  right: 10px;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  opacity: 0.3;
+}
+
+#unit-table th:not(:first-child)::before {
+  bottom: 50%;
+  margin-bottom: 1px;
+  border-bottom: 5px solid currentColor;
+}
+
+#unit-table th:not(:first-child)::after {
+  top: 50%;
+  margin-top: 1px;
+  border-top: 5px solid currentColor;
+}
+
+#unit-table th[aria-sort="ascending"]::before,
+#unit-table th[aria-sort="descending"]::after {
+  opacity: 1;
 }
 
 .input-table td {
