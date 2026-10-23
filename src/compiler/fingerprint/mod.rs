@@ -963,9 +963,14 @@ impl LocalFingerprint {
                 };
                 for (key, previous) in info.env.iter() {
                     if let Some(value) = pkg.manifest().metadata().env_var(key.as_str()) {
-                        if Some(value.as_ref()) == previous.as_deref() {
-                            continue;
+                        if Some(value.as_ref()) != previous.as_deref() {
+                            return Ok(Some(StaleItem::ChangedEnv {
+                                var: key.clone(),
+                                previous: previous.clone(),
+                                current: Some(value.into_owned()),
+                            }));
                         }
+                        continue;
                     }
 
                     let current = if key == CARGO_ENV {

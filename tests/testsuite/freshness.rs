@@ -709,6 +709,7 @@ old desc
     );
 
     p.cargo("run -v")
+        .env("CARGO_PKG_DESCRIPTION", "old desc")
         .with_stdout_data(str![[r#"
 new desc
 
