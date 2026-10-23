@@ -314,13 +314,13 @@ fn write_unit_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<
     )?;
 
     for (i, (unit, aggregated_sections)) in units.iter().zip(aggregated).enumerate() {
-        let format_duration = |section: Option<&SectionData>| match section {
+        let section_cell = |section: Option<&SectionData>| match section {
             Some(section) => {
                 let duration = section.duration();
                 let pct = (duration / unit.duration) * 100.0;
-                format!("{duration:.1}s ({:.0}%)", pct)
+                format!("<td>{duration:.1}s ({pct:.0}%)</td>")
             }
-            None => "".to_string(),
+            None => "<td></td>".to_string(),
         };
 
         // This is a bit complex, as we assume the most general option - we can have an
@@ -334,7 +334,7 @@ fn write_unit_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<
 
         let cells = headers
             .iter()
-            .map(|header| format!("<td>{}</td>", format_duration(cells.remove(header))))
+            .map(|header| section_cell(cells.remove(header)))
             .join("\n");
 
         let memory = match (show_memory, unit.peak_memory) {
