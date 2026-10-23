@@ -2664,13 +2664,13 @@ a = {path = "a", default_features = false}
 # After build_dependencies table
 
 # Before dev_dependencies
-[ target.'cfg(any())'.dev_dependencies ] # After dev_dependencies header
+[ target.'cfg(false)'.dev_dependencies ] # After dev_dependencies header
 # After dev_dependencies line
 a = {path = "a", default_features = false}
 # After dev_dependencies table
 
 # Before build_dependencies
-[ target.'cfg(any())'.build_dependencies ] # After build_dependencies header
+[ target.'cfg(false)'.build_dependencies ] # After build_dependencies header
 # After build_dependencies line
 a = {path = "a", default_features = false}
 # After build_dependencies table
@@ -2755,13 +2755,13 @@ a = {path = "a", default-features = false}
 # After build_dependencies table
 
 # Before dev_dependencies
-[ target.'cfg(any())'.dev-dependencies ] # After dev_dependencies header
+[ target.'cfg(false)'.dev-dependencies ] # After dev_dependencies header
 # After dev_dependencies line
 a = {path = "a", default-features = false}
 # After dev_dependencies table
 
 # Before build_dependencies
-[ target.'cfg(any())'.build-dependencies ] # After build_dependencies header
+[ target.'cfg(false)'.build-dependencies ] # After build_dependencies header
 # After build_dependencies line
 a = {path = "a", default-features = false}
 # After build_dependencies table

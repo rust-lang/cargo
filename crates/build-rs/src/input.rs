@@ -155,7 +155,7 @@ pub use self::cfg::*;
 mod cfg {
     use super::*;
 
-    // those disabled with #[cfg(any())] don't seem meaningfully useful
+    // those disabled with #[cfg(false)] don't seem meaningfully useful
     // but we list all cfg that are default known to check-cfg
 
     /// Each activated feature of the package being built
@@ -165,7 +165,7 @@ mod cfg {
         to_strings(var_or_panic(&cargo_cfg_var("feature")), ',')
     }
 
-    #[cfg(any())]
+    #[cfg(false)]
     #[track_caller]
     pub fn cargo_cfg_clippy() -> bool {
         ENV.is_present("CARGO_CFG_CLIPPY")
@@ -177,19 +177,19 @@ mod cfg {
         ENV.is_present("CARGO_CFG_DEBUG_ASSERTIONS")
     }
 
-    #[cfg(any())]
+    #[cfg(false)]
     #[track_caller]
     pub fn cargo_cfg_doc() -> bool {
         ENV.is_present("CARGO_CFG_DOC")
     }
 
-    #[cfg(any())]
+    #[cfg(false)]
     #[track_caller]
     pub fn cargo_cfg_docsrs() -> bool {
         ENV.is_present("CARGO_CFG_DOCSRS")
     }
 
-    #[cfg(any())]
+    #[cfg(false)]
     #[track_caller]
     pub fn cargo_cfg_doctest() -> bool {
         ENV.is_present("CARGO_CFG_DOCTEST")
@@ -203,7 +203,7 @@ mod cfg {
         to_string(var_or_panic("CARGO_CFG_FMT_DEBUG"))
     }
 
-    #[cfg(any())]
+    #[cfg(false)]
     #[track_caller]
     pub fn cargo_cfg_miri() -> bool {
         ENV.is_present("CARGO_CFG_MIRI")
@@ -237,7 +237,7 @@ mod cfg {
         to_string(var_or_panic("CARGO_CFG_RELOCATION_MODEL"))
     }
 
-    #[cfg(any())]
+    #[cfg(false)]
     #[track_caller]
     pub fn cargo_cfg_rustfmt() -> bool {
         ENV.is_present("CARGO_CFG_RUSTFMT")
@@ -368,7 +368,7 @@ mod cfg {
         to_string(var_or_panic("CARGO_CFG_TARGET_VENDOR"))
     }
 
-    #[cfg(any())]
+    #[cfg(false)]
     #[track_caller]
     pub fn cargo_cfg_test() -> bool {
         ENV.is_present("CARGO_CFG_TEST")
