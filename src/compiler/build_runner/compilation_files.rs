@@ -853,9 +853,8 @@ fn compute_metadata(
         bcx.ws.root()
     };
 
-    hash_metadata(ws_root, &mut shared_hasher, unit);
-
     let mut c_metadata_hasher = shared_hasher.clone();
+    hash_metadata(ws_root, &mut c_metadata_hasher, unit);
     // Mix in the target-metadata of all the dependencies of this target.
     let mut dep_c_metadata_hashes = deps_metadata
         .iter()
@@ -865,6 +864,7 @@ fn compute_metadata(
     dep_c_metadata_hashes.hash(&mut c_metadata_hasher);
 
     let mut unit_id_hasher = shared_hasher.clone();
+    hash_metadata(ws_root, &mut unit_id_hasher, unit);
     // Mix in the target-metadata of all the dependencies of this target.
     let mut dep_unit_id_hashes = deps_metadata.iter().map(|m| m.unit_id).collect::<Vec<_>>();
     dep_unit_id_hashes.sort();
