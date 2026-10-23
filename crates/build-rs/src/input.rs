@@ -294,12 +294,12 @@ mod cfg {
     /// The [target environment](https://doc.rust-lang.org/stable/reference/conditional-compilation.html#target_env) ABI.
     /// This value is similar to the fourth element of the platform's target tuple.
     ///
-    /// For historical reasons, this value is only defined as not the empty-string when
+    /// For historical reasons, this value is only defined as `Some` when
     /// actually needed for disambiguation. Thus, for example, on many GNU platforms,
-    /// this value will be empty.
+    /// this value will be `None`.
     #[track_caller]
-    pub fn cargo_cfg_target_env() -> String {
-        to_string(var_or_panic("CARGO_CFG_TARGET_ENV"))
+    pub fn cargo_cfg_target_env() -> Option<String> {
+        to_opt(var_or_panic("CARGO_CFG_TARGET_ENV")).map(to_string)
     }
 
     /// The [target family](https://doc.rust-lang.org/stable/reference/conditional-compilation.html#target_family).
