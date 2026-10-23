@@ -289,12 +289,12 @@ fn write_unit_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<
     write!(
         f,
         r#"
-<table class="my-table">
+<table class="my-table" id="unit-table">
 <thead>
 <tr>
   <th></th>
   <th>Unit</th>
-  <th>Total</th>
+  <th aria-sort="descending">Total</th>
   {headers}
   {memory_header}
   <th>Features</th>
@@ -328,7 +328,9 @@ fn write_unit_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<
             Some(section) => {
                 let section_duration = section.duration();
                 let pct = (section_duration / duration) * 100.0;
-                format!("<td>{section_duration:.1}s ({pct:.0}%)</td>")
+                format!(
+                    r#"<td data-sort="{section_duration}">{section_duration:.1}s ({pct:.0}%)</td>"#
+                )
             }
             None => "<td></td>".to_string(),
         };
@@ -349,7 +351,9 @@ fn write_unit_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<
 
         let memory = match (show_memory, *peak_memory) {
             (false, _) => String::new(),
-            (true, Some(bytes)) => format!("<td>{:.1}</td>", HumanBytes(bytes)),
+            (true, Some(bytes)) => {
+                format!(r#"<td data-sort="{bytes}">{:.1}</td>"#, HumanBytes(bytes))
+            }
             (true, None) => "<td></td>".to_string(),
         };
 
@@ -360,7 +364,7 @@ fn write_unit_table(ctx: &RenderContext<'_>, f: &mut impl Write) -> CargoResult<
 <tr>
 <td>{}.</td>
 <td>{name} v{version}{target}</td>
-<td>{duration:.1}s</td>
+<td data-sort="{duration}">{duration:.1}s</td>
 {cells}
 {memory}
 <td>{features}</td>
@@ -749,6 +753,44 @@ h1 {
 .summary-table td:first-child {
   vertical-align: top;
   text-align: right;
+}
+
+#unit-table th:not(:first-child) {
+  cursor: pointer;
+  position: relative;
+  /* Room for the sort arrows. */
+  padding-right: 28px;
+}
+
+/*
+ * Sort arrows:
+ * an up and a down triangle drawn with borders in the text color.
+ */
+#unit-table th:not(:first-child)::before,
+#unit-table th:not(:first-child)::after {
+  content: "";
+  position: absolute;
+  right: 10px;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  opacity: 0.3;
+}
+
+#unit-table th:not(:first-child)::before {
+  bottom: 50%;
+  margin-bottom: 1px;
+  border-bottom: 5px solid currentColor;
+}
+
+#unit-table th:not(:first-child)::after {
+  top: 50%;
+  margin-top: 1px;
+  border-top: 5px solid currentColor;
+}
+
+#unit-table th[aria-sort="ascending"]::before,
+#unit-table th[aria-sort="descending"]::after {
+  opacity: 1;
 }
 
 .input-table td {
