@@ -373,6 +373,7 @@ dependencies = [
  "async-trait",
  "base64 0.23.1",
  "blake3",
+ "build-rs",
  "cargo-credential",
  "cargo-credential-libsecret",
  "cargo-credential-macos-keychain",
@@ -529,6 +530,7 @@ name = "cargo-test-support"
 version = "0.12.1"
 dependencies = [
  "anyhow",
+ "build-rs",
  "cargo-test-macro",
  "cargo-util",
  "crates-io",

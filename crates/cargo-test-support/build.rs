@@ -1,10 +1,9 @@
 #![allow(clippy::disallowed_methods)]
 
+use build_rs::{input, output};
+
 fn main() {
-    println!("cargo:rustc-check-cfg=cfg(emulate_second_only_system)");
-    println!(
-        "cargo:rustc-env=NATIVE_ARCH={}",
-        std::env::var("TARGET").unwrap()
-    );
-    println!("cargo:rerun-if-changed=build.rs");
+    output::rustc_check_cfgs(&["emulate_second_only_system"]);
+    output::rustc_env("NATIVE_ARCH", &input::target());
+    output::rerun_if_changed("build.rs");
 }

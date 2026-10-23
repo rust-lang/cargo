@@ -1,3 +1,4 @@
+use build_rs::{input, output};
 use flate2::{Compression, GzBuilder};
 use std::ffi::OsStr;
 use std::fs;
@@ -8,20 +9,12 @@ fn main() {
     commit_info();
     compress_man();
     windows_manifest();
-    #[expect(
-        clippy::disallowed_methods,
-        reason = "not `cargo`, not needing to load from config"
-    )]
-    let target = std::env::var("TARGET").unwrap();
-    println!("cargo:rustc-env=RUST_HOST_TARGET={target}");
+    let target = input::target();
+    output::rustc_env("RUST_HOST_TARGET", &target);
 }
 
 fn compress_man() {
-    #[expect(
-        clippy::disallowed_methods,
-        reason = "not `cargo`, not needing to load from config"
-    )]
-    let out_path = Path::new(&std::env::var("OUT_DIR").unwrap()).join("man.tgz");
+    let out_path = input::out_dir().join("man.tgz");
     let dst = fs::File::create(out_path).unwrap();
     let encoder = GzBuilder::new()
         .filename("man.tar")
@@ -39,7 +32,7 @@ fn compress_man() {
             if path.extension() != Some(extension) {
                 continue;
             }
-            println!("cargo:rerun-if-changed={}", path.display());
+            output::rerun_if_changed(&path);
             ar.append_path_with_name(&path, path.file_name().unwrap())
                 .unwrap();
         }
@@ -103,7 +96,7 @@ fn commit_info_from_rustc_source_tarball() -> Option<CommitInfo> {
     // Dependency tracking is a nice to have for this (git doesn't do it), so if the path is not
     // valid UTF-8 just avoid doing it rather than erroring out.
     if let Some(utf8) = path.to_str() {
-        println!("cargo:rerun-if-changed={utf8}");
+        output::rerun_if_changed(utf8);
     }
 
     let content = std::fs::read_to_string(&path).ok()?;
@@ -117,11 +110,8 @@ fn commit_info_from_rustc_source_tarball() -> Option<CommitInfo> {
 
 fn commit_info() {
     // Var set by bootstrap whenever omit-git-hash is enabled in rust-lang/rust's config.toml.
-    println!("cargo:rerun-if-env-changed=CFG_OMIT_GIT_HASH");
-    #[expect(
-        clippy::disallowed_methods,
-        reason = "not `cargo`, not needing to load from config"
-    )]
+    output::rerun_if_env_changed("CFG_OMIT_GIT_HASH");
+    #[expect(clippy::disallowed_methods, reason = "not a cargo buildscript input")]
     if std::env::var_os("CFG_OMIT_GIT_HASH").is_some() {
         return;
     }
@@ -130,33 +120,29 @@ fn commit_info() {
         return;
     };
 
-    println!("cargo:rustc-env=CARGO_COMMIT_HASH={}", git.hash);
-    println!("cargo:rustc-env=CARGO_COMMIT_SHORT_HASH={}", git.short_hash);
-    println!("cargo:rustc-env=CARGO_COMMIT_DATE={}", git.date);
+    output::rustc_env("CARGO_COMMIT_HASH", &git.hash);
+    output::rustc_env("CARGO_COMMIT_SHORT_HASH", &git.short_hash);
+    output::rustc_env("CARGO_COMMIT_DATE", &git.date);
 }
 
-#[expect(
-    clippy::disallowed_methods,
-    reason = "not `cargo`, not needing to load from config"
-)]
 fn windows_manifest() {
     use std::env;
-    let target_os = env::var("CARGO_CFG_TARGET_OS");
-    let target_env = env::var("CARGO_CFG_TARGET_ENV");
-    if Ok("windows") == target_os.as_deref() && Ok("msvc") == target_env.as_deref() {
+    let target_os = input::cargo_cfg_target_os();
+    let target_env = input::cargo_cfg_target_env();
+    if "windows" == &*target_os && Some("msvc") == target_env.as_deref() {
         static WINDOWS_MANIFEST_FILE: &str = "windows.manifest.xml";
 
         let mut manifest = env::current_dir().unwrap();
         manifest.push(WINDOWS_MANIFEST_FILE);
 
-        println!("cargo:rerun-if-changed={WINDOWS_MANIFEST_FILE}");
+        output::rerun_if_changed(WINDOWS_MANIFEST_FILE);
         // Embed the Windows application manifest file.
-        println!("cargo:rustc-link-arg-bin=cargo=/MANIFEST:EMBED");
-        println!(
-            "cargo:rustc-link-arg-bin=cargo=/MANIFESTINPUT:{}",
-            manifest.to_str().unwrap()
+        output::rustc_link_arg_bin("cargo", "/MANIFEST:EMBED");
+        output::rustc_link_arg_bin(
+            "cargo",
+            &format!("/MANIFESTINPUT:{}", manifest.to_str().unwrap()),
         );
         // Turn linker warnings into errors.
-        println!("cargo:rustc-link-arg-bin=cargo=/WX");
+        output::rustc_link_arg_bin("cargo", "/WX");
     }
 }
