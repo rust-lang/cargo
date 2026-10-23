@@ -1844,3 +1844,55 @@ fn forbid_attribute() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn unused_dep_table_format() {
+    Package::new("unused", "0.1.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+[package]
+name = "foo"
+version = "0.1.0"
+authors = []
+edition = "2018"
+
+[dependencies.unused]
+version = "0.1.0"
+
+[lints.cargo]
+default = { level = "allow", priority = -1 }
+unused_dependencies = "warn"
+"#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {}
+            "#,
+        )
+        .build();
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to highest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] unused v0.1.0 (registry `dummy-registry`)
+[CHECKING] unused v0.1.0
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[WARNING] unused dependency `unused`
+ --> Cargo.toml:8:15
+  |
+8 | [dependencies.unused]
+  |               ^^^^^^^
+  |
+  = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
+[HELP] consider removing the dependency on `unused`
+[WARNING] `foo` (manifest) generated 1 warning
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
