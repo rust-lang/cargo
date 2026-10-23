@@ -174,8 +174,12 @@ impl PackageId {
     /// packages. This helps with reproducible builds, since this hash is part
     /// of the symbol metadata, and we don't want the absolute path where the
     /// build is performed to affect the binary output.
-    pub fn stable_hash(self, workspace: &Path) -> PackageIdStableHash<'_> {
-        PackageIdStableHash(self, workspace)
+    pub fn stable_hash(self, workspace: &Path, trim_paths: bool) -> PackageIdStableHash<'_> {
+        PackageIdStableHash {
+            id: self,
+            workspace,
+            trim_paths,
+        }
     }
 
     /// Filename of the `.crate` tarball, e.g., `once_cell-1.18.0.crate`.
@@ -193,13 +197,23 @@ impl PackageId {
     }
 }
 
-pub struct PackageIdStableHash<'a>(PackageId, &'a Path);
+pub struct PackageIdStableHash<'a> {
+    id: PackageId,
+    /// Workspace root path.
+    workspace: &'a Path,
+    /// Whether trim-paths profile is enabled
+    /// i.e., paths are trimmed in rustc output artifacts.
+    trim_paths: bool,
+}
 
 impl<'a> Hash for PackageIdStableHash<'a> {
     fn hash<S: hash::Hasher>(&self, state: &mut S) {
-        self.0.inner.name.hash(state);
-        self.0.inner.version.hash(state);
-        self.0.inner.source_id.stable_hash(self.1, state);
+        self.id.inner.name.hash(state);
+        self.id.inner.version.hash(state);
+        self.id
+            .inner
+            .source_id
+            .stable_hash(self.workspace, self.trim_paths, state);
     }
 }
 

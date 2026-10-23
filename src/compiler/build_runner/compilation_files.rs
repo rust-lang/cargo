@@ -7,6 +7,7 @@ use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use cargo_util_schemas::manifest::TomlTrimPaths;
 use tracing::debug;
 
 use super::{BuildContext, BuildRunner, CompileKind, FileFlavor, Layout};
@@ -211,7 +212,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
     /// Gets the short hash based only on the `PackageId`.
     /// Used for the metadata when `c_extra_filename` returns `None`.
     fn target_short_hash(&self, unit: &Unit) -> String {
-        let hashable = unit.pkg.package_id().stable_hash(self.ws.root());
+        let hashable = unit.pkg.package_id().stable_hash(self.ws.root(), false);
         util::short_hash(&(METADATA_VERSION, hashable))
     }
 
@@ -854,7 +855,14 @@ fn compute_metadata(
     };
 
     let mut c_metadata_hasher = shared_hasher.clone();
-    hash_metadata(ws_root, &mut c_metadata_hasher, unit);
+    // With trim-paths,
+    // rustc doesn't embed absolute paths of path dependencies outside workspace,
+    // so `-C metadata` doesn't need to hash it either.
+    let trim_paths = match unit.profile.trim_paths {
+        TomlTrimPaths::None => false,
+        TomlTrimPaths::Object | TomlTrimPaths::All => true,
+    };
+    hash_metadata(ws_root, trim_paths, &mut c_metadata_hasher, unit);
     // Mix in the target-metadata of all the dependencies of this target.
     let mut dep_c_metadata_hashes = deps_metadata
         .iter()
@@ -864,7 +872,7 @@ fn compute_metadata(
     dep_c_metadata_hashes.hash(&mut c_metadata_hasher);
 
     let mut unit_id_hasher = shared_hasher.clone();
-    hash_metadata(ws_root, &mut unit_id_hasher, unit);
+    hash_metadata(ws_root, false, &mut unit_id_hasher, unit);
     // Mix in the target-metadata of all the dependencies of this target.
     let mut dep_unit_id_hashes = deps_metadata.iter().map(|m| m.unit_id).collect::<Vec<_>>();
     dep_unit_id_hashes.sort();
@@ -957,8 +965,11 @@ fn hash_rustc_version(bcx: &BuildContext<'_, '_>, hasher: &mut StableHasher, uni
 /// Hash unique metadata per (name, source, version) triple.
 ///
 /// This'll allow us to pull crates from anywhere without worrying about conflicts.
-fn hash_metadata(ws_root: &Path, hasher: &mut StableHasher, unit: &Unit) {
-    unit.pkg.package_id().stable_hash(ws_root).hash(hasher);
+fn hash_metadata(ws_root: &Path, trim_paths: bool, hasher: &mut StableHasher, unit: &Unit) {
+    unit.pkg
+        .package_id()
+        .stable_hash(ws_root, trim_paths)
+        .hash(hasher);
 }
 
 /// Returns whether or not this unit should use a hash in the filename to make it unique.

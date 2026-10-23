@@ -2196,10 +2196,10 @@ fn path_dependency_outside_workspace_moved_trim_paths_none() {
 
 #[cargo_test]
 fn path_dependency_outside_workspace_moved_trim_paths_object() {
-    path_dep_outside_ws_and_move("object", false);
+    path_dep_outside_ws_and_move("object", true);
 }
 
 #[cargo_test]
 fn path_dependency_outside_workspace_moved_trim_paths_all() {
-    path_dep_outside_ws_and_move("all", false);
+    path_dep_outside_ws_and_move("all", true);
 }
