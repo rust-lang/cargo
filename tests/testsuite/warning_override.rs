@@ -390,7 +390,7 @@ fn lint_build_result_pass() {
  --> Cargo.toml:9:13
   |
 9 |             unused = "0.1.0"
-  |             ^^^^^^^^^^^^^^^^
+  |             ^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused`
@@ -418,7 +418,7 @@ fn lint_build_result_pass() {
  --> Cargo.toml:9:13
   |
 9 |             unused = "0.1.0"
-  |             ^^^^^^^^^^^^^^^^
+  |             ^^^^^^
   |
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused`
