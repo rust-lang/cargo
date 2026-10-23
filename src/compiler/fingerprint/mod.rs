@@ -383,6 +383,7 @@ mod rustdoc;
 use crate::util::data_structures::HashMap;
 use std::collections::hash_map::Entry;
 use std::env;
+use std::ffi::OsStr;
 use std::ffi::OsString;
 use std::fs;
 use std::fs::File;
@@ -394,7 +395,6 @@ use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
 use anyhow::Context as _;
-use anyhow::format_err;
 use cargo_util::paths;
 use filetime::FileTime;
 use serde::de;
@@ -969,26 +969,20 @@ impl LocalFingerprint {
                     }
 
                     let current = if key == CARGO_ENV {
-                        Some(cargo_exe.to_str().ok_or_else(|| {
-                            format_err!(
-                                "cargo exe path {} must be valid UTF-8",
-                                cargo_exe.display()
-                            )
-                        })?)
+                        Some(cargo_exe.as_os_str())
                     } else {
-                        if let Some(value) = gctx.env_config()?.get(key) {
-                            value.to_str()
-                        } else {
-                            gctx.get_env(key).ok()
-                        }
+                        gctx.env_config()?
+                            .get(key)
+                            .map(OsString::as_os_str)
+                            .or_else(|| gctx.get_env_os(key))
                     };
-                    if current == previous.as_deref() {
+                    if current == previous.as_deref().map(OsStr::new) {
                         continue;
                     }
                     return Ok(Some(StaleItem::ChangedEnv {
                         var: key.clone(),
                         previous: previous.clone(),
-                        current: current.map(Into::into),
+                        current: current.map(|value| value.to_string_lossy().into_owned()),
                     }));
                 }
                 match fingerprint {

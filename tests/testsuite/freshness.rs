@@ -1825,6 +1825,26 @@ fn lld_is_fresh() {
         .run();
 }
 
+#[cfg(unix)]
+#[cargo_test]
+fn option_env_rechecks_non_unicode_value() {
+    use std::os::unix::ffi::OsStrExt as _;
+
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"pub const VALUE: Option<&str> = option_env!("PROBE");"#,
+        )
+        .build();
+
+    p.cargo("check").env_remove("PROBE").run();
+    p.cargo("check")
+        .env("PROBE", std::ffi::OsStr::from_bytes(b"\xff"))
+        .with_status(101)
+        .with_stderr_contains("[ERROR] environment variable `PROBE` is not a valid Unicode string")
+        .run();
+}
+
 #[cargo_test]
 fn env_in_code_causes_rebuild() {
     let p = project()
