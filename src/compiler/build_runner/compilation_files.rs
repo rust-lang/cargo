@@ -781,12 +781,7 @@ fn compute_metadata(
         bcx.ws.root()
     };
 
-    // Unique metadata per (name, source, version) triple. This'll allow us
-    // to pull crates from anywhere without worrying about conflicts.
-    unit.pkg
-        .package_id()
-        .stable_hash(ws_root)
-        .hash(&mut shared_hasher);
+    hash_metadata(ws_root, &mut shared_hasher, unit);
 
     // Also mix in enabled features to our metadata. This'll ensure that
     // when changing feature sets each lib is separately cached.
@@ -957,6 +952,13 @@ fn hash_rustc_version(bcx: &BuildContext<'_, '_>, hasher: &mut StableHasher, uni
     // The backend version ("LLVM version") might become more relevant in
     // the future when cranelift sees more use, and people want to switch
     // between different backends without recompiling.
+}
+
+/// Hash unique metadata per (name, source, version) triple.
+///
+/// This'll allow us to pull crates from anywhere without worrying about conflicts.
+fn hash_metadata(ws_root: &Path, hasher: &mut StableHasher, unit: &Unit) {
+    unit.pkg.package_id().stable_hash(ws_root).hash(hasher);
 }
 
 /// Returns whether or not this unit should use a hash in the filename to make it unique.
