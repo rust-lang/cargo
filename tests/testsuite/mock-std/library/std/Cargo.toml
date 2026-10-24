@@ -6,7 +6,11 @@ edition = "2018"
 
 [dependencies]
 registry-dep-using-alloc = { version = "*", features = ['mockbuild'] }
+panic_unwind = { path = "../panic_unwind", optional = true }
+panic_abort = { path = "../panic_abort" }
 dep_test = { path = "../../dep_test" }
 
 [features]
+default = []
+panic-unwind = ["dep:panic_unwind"]
 feature1 = []
