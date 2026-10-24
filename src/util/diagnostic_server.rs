@@ -43,6 +43,11 @@ pub enum Message {
         krate: Option<String>,
         errors: Vec<String>,
         abnormal_exit: Option<String>,
+        started_broken: bool,
+        /// Whether `--broken-code` was passed by the user.
+        allow_broken_code: bool,
+        /// Whether any fixes were actually applied.
+        fixes_applied: bool,
     },
     ReplaceFailed {
         file: String,
@@ -146,6 +151,9 @@ impl<'a> DiagnosticPrinter<'a> {
                 krate,
                 errors,
                 abnormal_exit,
+                started_broken,
+                allow_broken_code,
+                fixes_applied,
             } => {
                 let to_crate = if let Some(ref krate) = *krate {
                     format!(" to crate `{krate}`",)
@@ -160,9 +168,15 @@ impl<'a> DiagnosticPrinter<'a> {
                     None
                 };
 
-                let report = &[
+                let title = if !*fixes_applied {
+                    format!("cargo fix could not apply any fixes{to_crate}")
+                } else {
+                    format!("errors present after applying fixes{to_crate}")
+                };
+
+                let mut report = vec![
                     Level::ERROR
-                        .secondary_title(format!("errors present after applying fixes{to_crate}"))
+                        .secondary_title(title)
                         .elements(files.iter().map(|f| Origin::path(f)))
                         .elements(
                             cause_message
@@ -174,14 +188,38 @@ impl<'a> DiagnosticPrinter<'a> {
                                 .with_name("cause")
                                 .message(format!("rustc exited abnormally: {exit}"))
                         })),
-                    gen_please_report_this_bug_group(issue_link),
-                    gen_suggest_broken_code_group(),
-                    Group::with_title(
-                        Level::NOTE.secondary_title("original diagnostics will follow:"),
-                    ),
                 ];
 
-                self.gctx.shell().print_report(report, false)?;
+                if *started_broken && !*allow_broken_code {
+                    report.push(Group::with_title(Level::HELP.secondary_title(
+                        "cargo fix requires the code to compile before fixes can be applied; the code has errors that must be fixed manually",
+                    )));
+                    report.push(gen_suggest_broken_code_group());
+                } else if *started_broken && *allow_broken_code {
+                    if !*fixes_applied {
+                        report.push(Group::with_title(Level::HELP.secondary_title(
+                            "no fixes were applicable; the code already had errors prior to cargo fix",
+                        )));
+                    } else {
+                        report.push(Group::with_title(Level::HELP.secondary_title(
+                            "the broken code has been saved as requested via `--broken-code`; the code already had errors prior to cargo fix",
+                        )));
+                    }
+                } else if !*started_broken && *allow_broken_code {
+                    report.push(gen_please_report_this_bug_group(issue_link));
+                    report.push(Group::with_title(Level::HELP.secondary_title(
+                        "the broken code has been saved as requested via `--broken-code`",
+                    )));
+                } else {
+                    report.push(gen_please_report_this_bug_group(issue_link));
+                    report.push(gen_suggest_broken_code_group());
+                }
+
+                report.push(Group::with_title(
+                    Level::NOTE.secondary_title("original diagnostics will follow:"),
+                ));
+
+                self.gctx.shell().print_report(&report, false)?;
                 Ok(())
             }
             Message::EditionAlreadyEnabled { message, edition } => {
