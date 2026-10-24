@@ -4,15 +4,13 @@ use crate::command_prelude::*;
 use cargo::drop_println;
 use cargo::util::errors::CargoResult;
 use cargo_util::paths::resolve_executable;
-use flate2::read::GzDecoder;
 
 use std::ffi::OsStr;
-use std::ffi::OsString;
-use std::io::Read;
 use std::io::Write;
 use std::path::Path;
 
-const COMPRESSED_MAN: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/man.tgz"));
+mod man_pages;
+use man_pages::extract_man;
 
 pub fn cli() -> Command {
     subcommand("help")
@@ -143,28 +141,6 @@ fn try_help(subcommand: &str) -> CargoResult<bool> {
         }
     }
     Ok(true)
-}
-
-/// Extracts the given man page from the compressed archive.
-///
-/// Returns None if the command wasn't found.
-fn extract_man(subcommand: &str, extension: &str) -> Option<Vec<u8>> {
-    let extract_name = OsString::from(format!("cargo-{}.{}", subcommand, extension));
-    let gz = GzDecoder::new(COMPRESSED_MAN);
-    let mut ar = tar::Archive::new(gz);
-    // Unwraps should be safe here, since this is a static archive generated
-    // by our build script. It should never be an invalid format!
-    for entry in ar.entries().unwrap() {
-        let mut entry = entry.unwrap();
-        let path = entry.path().unwrap();
-        if path.file_name().unwrap() != extract_name {
-            continue;
-        }
-        let mut result = Vec::new();
-        entry.read_to_end(&mut result).unwrap();
-        return Some(result);
-    }
-    None
 }
 
 /// Write the contents of a man page to disk and spawn the given command to
