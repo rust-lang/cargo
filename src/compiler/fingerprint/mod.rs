@@ -74,7 +74,7 @@
 //! `TargetKind` (bin/lib/etc.)                | ✓           | ✓                        | ✓
 //! Enabled Features                           | ✓           | ✓                        | ✓
 //! Declared Features                          | ✓           |                          |
-//! Immediate dependency’s hashes              | ✓[^1]       | ✓                        | ✓
+//! Immediate dependency’s hashes              | ✓[^1]       | ✓                        | ✓[^9]
 //! [`CompileKind`] (host/target)              | ✓           | ✓                        | ✓
 //! `__CARGO_DEFAULT_LIB_METADATA`[^4]         |             | ✓                        | ✓
 //! `__CARGO_RUSTC_BOOTSTRAP_WS_REMAP`[^2]     | ✓           |                          |
@@ -91,7 +91,7 @@
 //! `[lints.rust.unexpected_cfgs.check-cfg]`   | ✓           |                          |
 //! `--extern priv:`                           | ✓           |                          |
 //!
-//! [^1]: Bin dependencies are not included.
+//! [^1]: Bin dependencies other than artifact dependencies are not included.
 //!
 //! [^2]: `__CARGO_RUSTC_BOOTSTRAP_WS_REMAP` is set by rustc bootstrap
 //!       to customize remap-path-prefix
@@ -110,6 +110,9 @@
 //!       present to avoid breaking build reproducibility while we wait for trim-paths
 //!
 //! [^8]: including `-Cextra-filename`
+//!
+//! [^9]: For a target-kind unit, host-kind dependencies (build scripts,
+//!       proc-macros) contribute only their `package_id`.
 //!
 //! When deciding what should go in the Metadata vs the Fingerprint, consider
 //! that some files (like dylibs) do not have a hash in their filename. Thus,
