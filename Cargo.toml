@@ -129,6 +129,9 @@ winnow = "1.0.1"
 
 [workspace.lints.rust]
 rust_2018_idioms = "warn" # TODO: could this be removed?
+# filetime uses the `emulate_second_only_system` cfg.
+# https://crates.io/crates/filetime/0.2.29/code/src/lib.rs#L82
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(emulate_second_only_system)'] }
 
 [workspace.lints.rustdoc]
 private_intra_doc_links = "allow"
