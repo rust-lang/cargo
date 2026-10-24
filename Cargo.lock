@@ -530,7 +530,6 @@ name = "cargo-test-support"
 version = "0.12.1"
 dependencies = [
  "anyhow",
- "build-rs",
  "cargo-test-macro",
  "cargo-util",
  "crates-io",

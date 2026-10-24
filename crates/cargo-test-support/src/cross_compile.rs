@@ -9,11 +9,9 @@
 //!
 //! These tests are all disabled on rust-lang/rust's CI, but run in Cargo's CI.
 
-use std::env;
-
-/// The arch tuple of the test-running host.
+/// The host tuple of the compiler used to build test projects.
 pub fn native() -> &'static str {
-    env!("NATIVE_ARCH")
+    crate::rustc_host()
 }
 
 pub fn native_arch() -> &'static str {
