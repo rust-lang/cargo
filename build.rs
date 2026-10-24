@@ -1,47 +1,12 @@
 use build_rs::{input, output};
-use flate2::{Compression, GzBuilder};
-use std::ffi::OsStr;
-use std::fs;
 use std::path::Path;
 use std::process::Command;
 
 fn main() {
     commit_info();
-    compress_man();
     windows_manifest();
     let target = input::target();
     output::rustc_env("RUST_HOST_TARGET", &target);
-}
-
-fn compress_man() {
-    let out_path = input::out_dir().join("man.tgz");
-    let dst = fs::File::create(out_path).unwrap();
-    let encoder = GzBuilder::new()
-        .filename("man.tar")
-        .write(dst, Compression::best());
-    let mut ar = tar::Builder::new(encoder);
-    ar.mode(tar::HeaderMode::Deterministic);
-
-    let mut add_files = |dir, extension| {
-        let mut files = fs::read_dir(dir)
-            .unwrap()
-            .map(|e| e.unwrap().path())
-            .collect::<Vec<_>>();
-        files.sort();
-        for path in files {
-            if path.extension() != Some(extension) {
-                continue;
-            }
-            output::rerun_if_changed(&path);
-            ar.append_path_with_name(&path, path.file_name().unwrap())
-                .unwrap();
-        }
-    };
-
-    add_files(Path::new("etc/man"), OsStr::new("1"));
-    add_files(Path::new("doc/man/generated_txt"), OsStr::new("txt"));
-    let encoder = ar.into_inner().unwrap();
-    encoder.finish().unwrap();
 }
 
 struct CommitInfo {

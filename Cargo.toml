@@ -278,8 +278,6 @@ snapbox.workspace = true
 memfd.workspace = true
 
 [build-dependencies]
-flate2.workspace = true
-tar.workspace = true
 build-rs.workspace = true
 
 [[bin]]

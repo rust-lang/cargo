@@ -2,6 +2,7 @@
 #
 # The goal is to help people find the right file to edit
 doc/man/generated_txt
+doc/man/man.tgz
 doc/book/src/commands/*
 etc/man
 !doc/book/src/commands/build-commands.md

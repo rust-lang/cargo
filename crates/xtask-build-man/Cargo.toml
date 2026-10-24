@@ -5,6 +5,8 @@ edition.workspace = true
 publish = false
 
 [dependencies]
+flate2.workspace = true
+tar.workspace = true
 
 [lints]
 workspace = true
