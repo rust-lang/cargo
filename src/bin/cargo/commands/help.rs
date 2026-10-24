@@ -12,7 +12,8 @@ use std::io::Read;
 use std::io::Write;
 use std::path::Path;
 
-const COMPRESSED_MAN: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/man.tgz"));
+const COMPRESSED_MAN: &[u8] =
+    include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/doc/man/man.tgz"));
 
 pub fn cli() -> Command {
     subcommand("help")
@@ -153,7 +154,7 @@ fn extract_man(subcommand: &str, extension: &str) -> Option<Vec<u8>> {
     let gz = GzDecoder::new(COMPRESSED_MAN);
     let mut ar = tar::Archive::new(gz);
     // Unwraps should be safe here, since this is a static archive generated
-    // by our build script. It should never be an invalid format!
+    // by `cargo build-man`. It should never be an invalid format!
     for entry in ar.entries().unwrap() {
         let mut entry = entry.unwrap();
         let path = entry.path().unwrap();

@@ -12,11 +12,16 @@
 
 #![allow(clippy::print_stderr)]
 
+use std::ffi::OsStr;
 use std::fs;
 use std::io;
+use std::path::Path;
 use std::path::PathBuf;
 use std::process;
 use std::process::Command;
+
+use flate2::Compression;
+use flate2::GzBuilder;
 
 fn main() -> io::Result<()> {
     build_mdman()?;
@@ -44,6 +49,9 @@ fn build_mdman() -> io::Result<()> {
 /// are also expanded into markdown (after being expanded by handlebars) and
 /// saved in the doc/book/src/commands/ directory. These are included in the
 /// Cargo book, which is converted to HTML by mdbook.
+///
+/// The troff and plain text files are also bundled in `doc/man/man.tgz`,
+/// which is embedded in the main `cargo` executable.
 fn build_cargo() -> io::Result<()> {
     // Find all `doc/man/cargo*.md`
     let src_paths = {
@@ -71,7 +79,9 @@ fn build_cargo() -> io::Result<()> {
         "--man",
         "rustdoc:1=https://doc.rust-lang.org/rustdoc/index.html",
     ];
-    build_man("cargo", &src_paths[..], &outs, &args)
+    build_man("cargo", &src_paths[..], &outs, &args)?;
+    compress_man()?;
+    Ok(())
 }
 
 /// Change to workspace root.
@@ -106,5 +116,36 @@ fn build_man(
         }
     }
 
+    Ok(())
+}
+
+/// Compresses man pages for later embedding into the `cargo` executable.
+fn compress_man() -> io::Result<()> {
+    let out_path = Path::new("doc/man/man.tgz");
+    let dst = fs::File::create(out_path)?;
+    let encoder = GzBuilder::new()
+        .filename("man.tar")
+        .write(dst, Compression::best());
+    let mut ar = tar::Builder::new(encoder);
+    ar.mode(tar::HeaderMode::Deterministic);
+
+    let mut add_files = |dir, extension| -> io::Result<()> {
+        let mut files = fs::read_dir(dir)?
+            .map(|entry| entry.map(|entry| entry.path()))
+            .collect::<io::Result<Vec<_>>>()?;
+        files.sort();
+        for path in files {
+            if path.extension() != Some(extension) {
+                continue;
+            }
+            ar.append_path_with_name(&path, path.file_name().unwrap())?;
+        }
+        Ok(())
+    };
+
+    add_files(Path::new("etc/man"), OsStr::new("1"))?;
+    add_files(Path::new("doc/man/generated_txt"), OsStr::new("txt"))?;
+    let encoder = ar.into_inner()?;
+    encoder.finish()?;
     Ok(())
 }
