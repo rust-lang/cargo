@@ -2116,3 +2116,90 @@ fn unremap_substitutions(artifact: &std::path::Path) -> Vec<(String, String)> {
 
     pairs
 }
+
+fn path_dep_outside_ws_and_move(trim_paths: &str, reproducible: bool) {
+    let _bar = project()
+        .at("one/bar")
+        .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("src/lib.rs", r#"pub fn f() { println!("{}", file!()); }"#)
+        .build();
+    let p = project()
+        .at("one/foo")
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+
+                [dependencies]
+                bar = {{ path = "../bar" }}
+
+                [profile.dev]
+                # turning off debug because on macOS OSO stub contain absolute paths
+                # (a known issue when trim-paths != all)
+                debug = false
+                trim-paths = "{trim_paths}"
+           "#
+            ),
+        )
+        .file("src/main.rs", "fn main() { bar::f(); }")
+        .file(
+            ".cargo/config.toml",
+            r#"
+                # On MSVC we need this otherwise linker insert a timestamp
+                # though this hurts incremental linking so we only enable for testing purpose
+                # See https://github.com/rust-lang/rust/pull/158873
+                [target.'cfg(target_env = "msvc")']
+                rustflags = ["-Clink-arg=/Brepro"]
+
+                # On Windows GNU the PE format insert a timestamp by default
+                # so that we need to opt-out.
+                # See https://sourceware.org/binutils/docs/ld.html#index-_002d_002dinsert_002dtimestamp
+                [target.'cfg(all(target_os = "windows", target_env = "gnu"))']
+                rustflags = ["-Clink-arg=-Wl,--no-insert-timestamp"]
+            "#,
+        )
+        .build();
+
+    p.cargo("build").run();
+    let before = std::fs::read(p.bin("foo")).unwrap();
+
+    let new_root = paths::root().join("two");
+    std::fs::rename(paths::root().join("one"), &new_root).unwrap();
+
+    p.cargo("build")
+        .cwd(new_root.join("foo"))
+        .with_stderr_data(str![[r#"
+[COMPILING] bar v0.0.1 ([ROOT]/two/bar)
+[COMPILING] foo v0.0.1 ([ROOT]/two/foo)
+[FINISHED] `dev` profile [unoptimized] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+    let after = std::fs::read(
+        new_root
+            .join("foo/target/debug")
+            .join(format!("foo{}", std::env::consts::EXE_SUFFIX)),
+    )
+    .unwrap();
+
+    assert_eq!(before == after, reproducible);
+}
+
+#[cargo_test]
+fn path_dependency_outside_workspace_moved_trim_paths_none() {
+    path_dep_outside_ws_and_move("none", false);
+}
+
+#[cargo_test]
+fn path_dependency_outside_workspace_moved_trim_paths_object() {
+    path_dep_outside_ws_and_move("object", true);
+}
+
+#[cargo_test]
+fn path_dependency_outside_workspace_moved_trim_paths_all() {
+    path_dep_outside_ws_and_move("all", true);
+}
