@@ -718,6 +718,7 @@ fn check_filters() {
     p.root().join("target").rm_rf();
     p.cargo("check --tests -v")
         .with_stderr_contains("[..] --crate-name foo [..] src/lib.rs [..] --test [..]")
+        .with_stderr_contains("[..] src/main.rs [..] --test --crate-type bin [..]")
         .with_stderr_contains("[..] --crate-name foo [..] src/lib.rs [..] --crate-type lib [..]")
         .with_stderr_contains("[..] --crate-name foo [..] src/main.rs [..] --test [..]")
         .with_stderr_contains("[..]unused_unit_lib[..]")
@@ -729,7 +730,7 @@ fn check_filters() {
         .with_stderr_does_not_contain("[..]unused_unit_ex1[..]")
         .with_stderr_does_not_contain("[..]unused_normal_b1[..]")
         .with_stderr_does_not_contain("[..]unused_unit_b1[..]")
-        .with_stderr_does_not_contain("[..]--crate-type bin[..]")
+        .with_stderr_contains("[..] tests/t1.rs [..] --test --crate-type bin [..]")
         .run();
     p.root().join("target").rm_rf();
     p.cargo("check --test t1 -v")

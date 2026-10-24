@@ -1489,6 +1489,13 @@ fn build_base_args(
     if test && unit.target.harness() {
         cmd.arg("--test");
 
+        // Preserve the original crate kind for binary-like test targets.
+        // Without this, rustc cannot distinguish them from library unit
+        // tests when checking `dead_code_pub_in_binary`.
+        if unit.target.rustc_crate_types() == [CrateType::Bin] {
+            cmd.arg("--crate-type").arg("bin");
+        }
+
         // Cargo has historically never compiled `--test` binaries with
         // `panic=abort` because the `test` crate itself didn't support it.
         // Support is now upstream, however, but requires an unstable flag to be
