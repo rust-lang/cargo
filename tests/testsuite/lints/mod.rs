@@ -37,7 +37,7 @@ authors = []
 im-a-teapot = true
 
 [lints.cargo]
-im_a_teapot = "warn"
+im-a-teapot = "warn"
             "#,
         )
         .file("src/lib.rs", "")
@@ -46,13 +46,14 @@ im_a_teapot = "warn"
     foo.cargo("fetch")
         .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
         .with_stderr_data(str![[r#"
-[WARNING] `im_a_teapot` is specified
- --> Cargo.toml:9:1
-  |
-9 | im-a-teapot = true
-  | ^^^^^^^^^^^^^^^^^^
-  |
-  = [NOTE] `cargo::im_a_teapot` is set to `warn` in `[lints]`
+[WARNING] unknown lint: `im-a-teapot`
+  --> Cargo.toml:12:1
+   |
+12 | im-a-teapot = "warn"
+   | ^^^^^^^^^^^
+   |
+   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
+   = [HELP] there is a lint with a similar name: `im_a_teapot`
 [WARNING] `foo` (manifest) generated 1 warning
 
 "#]])
