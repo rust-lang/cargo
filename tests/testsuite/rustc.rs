@@ -17,7 +17,7 @@ fn build_lib_for_foo() {
 
     p.cargo("rustc --lib -v").with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=2 [..]-C metadata=[..]`
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=line-tables-only [..]-C metadata=[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]]).run();
@@ -33,7 +33,7 @@ fn lib() {
     p.cargo("rustc --lib -v -- -C debug-assertions=off")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=2 [..]-C metadata=[..]`
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=line-tables-only [..]-C metadata=[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -50,8 +50,8 @@ fn build_main_and_allow_unstable_options() {
     p.cargo("rustc -v --bin foo -- -C debug-assertions")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=2 [..]-C metadata=[..]`
-[RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]--crate-type bin --emit=[..]link[..]-C debuginfo=2 [..]-C metadata=[..]`
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=line-tables-only [..]-C metadata=[..]`
+[RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]--crate-type bin --emit=[..]link[..]-C debuginfo=line-tables-only [..]-C metadata=[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -87,8 +87,8 @@ fn build_with_args_to_one_of_multiple_binaries() {
     p.cargo("rustc -v --bin bar -- -C debug-assertions")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=2 [..]-C metadata=[..] --out-dir [..]`
-[RUNNING] `rustc --crate-name bar --edition=2015 src/bin/bar.rs [..]--crate-type bin --emit=[..]link[..]-C debuginfo=2 [..]-C debug-assertions[..]`
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=line-tables-only [..]-C metadata=[..] --out-dir [..]`
+[RUNNING] `rustc --crate-name bar --edition=2015 src/bin/bar.rs [..]--crate-type bin --emit=[..]link[..]-C debuginfo=line-tables-only [..]-C debug-assertions[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -362,8 +362,8 @@ fn build_with_args_to_one_of_multiple_tests() {
     p.cargo("rustc -v --test bar -- -C debug-assertions")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=2 [..]-C metadata=[..] --out-dir [..]`
-[RUNNING] `rustc --crate-name bar --edition=2015 tests/bar.rs [..]--emit=[..]link[..]-C debuginfo=2 [..]--test[..]-C debug-assertions[..]`
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=line-tables-only [..]-C metadata=[..] --out-dir [..]`
+[RUNNING] `rustc --crate-name bar --edition=2015 tests/bar.rs [..]--emit=[..]link[..]-C debuginfo=line-tables-only [..]--test[..]-C debug-assertions[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -398,9 +398,9 @@ fn build_foo_with_bar_dependency() {
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.1.0 ([ROOT]/bar)
-[RUNNING] `rustc --crate-name bar [..] -C debuginfo=2[..]`
+[RUNNING] `rustc --crate-name bar [..] -C debuginfo=line-tables-only[..]`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo [..] -C debuginfo=2 [..]-C debug-assertions[..]`
+[RUNNING] `rustc --crate-name foo [..] -C debuginfo=line-tables-only [..]-C debug-assertions[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -473,7 +473,7 @@ fn targets_selected_all() {
             str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]--crate-type bin --emit=[..]link[..]`
-[RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]--emit[..]link[..] -C debuginfo=2 [..]--test [..]`
+[RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]--emit[..]link[..] -C debuginfo=line-tables-only [..]--test [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]].unordered()
