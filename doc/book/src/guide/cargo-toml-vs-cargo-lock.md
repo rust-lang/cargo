@@ -24,6 +24,7 @@ depend on another package:
 [package]
 name = "hello_world"
 version = "0.1.0"
+edition = "2024"
 
 [dependencies]
 regex = { git = "https://github.com/rust-lang/regex.git" }
@@ -60,6 +61,7 @@ manifest like this:
 [package]
 name = "hello_world"
 version = "0.1.0"
+edition = "2024"
 
 [dependencies]
 regex = { git = "https://github.com/rust-lang/regex.git" }
