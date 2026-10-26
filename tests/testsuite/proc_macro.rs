@@ -469,6 +469,118 @@ Caused by:
 }
 
 #[cargo_test]
+fn proc_macro_conflicting_crate_types() {
+    for crate_types in [r#"["lib"]"#, r#"["cdylib", "lib"]"#] {
+        let foo = project()
+            .file(
+                "Cargo.toml",
+                &format!(
+                    r#"
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+                    edition = "2021"
+
+                    [lib]
+                    proc-macro = true
+                    crate-type = {crate_types}
+                "#
+                ),
+            )
+            .file("src/lib.rs", "pub fn ordinary_library() {}")
+            .build();
+
+        foo.cargo("check")
+            .with_stderr_data(str![[r#"
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+            .run();
+    }
+}
+
+#[cargo_test]
+fn proc_macro_false_with_proc_macro_crate_type_warns() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+
+                [lib]
+                proc-macro = false
+                crate-type = ["proc-macro"]
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                extern crate proc_macro;
+
+                #[cfg(not(from_rustflags))]
+                compile_error!("RUSTFLAGS should apply to this target");
+
+                #[proc_macro]
+                pub fn noop(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+                    input
+                }
+            "#,
+        )
+        .build();
+
+    foo.cargo("check --target")
+        .arg(cargo_test_support::rustc_host())
+        .env(
+            "RUSTFLAGS",
+            "--cfg from_rustflags --check-cfg=cfg(from_rustflags)",
+        )
+        .with_stderr_data(str![[r#"
+[WARNING] Cargo.toml: library `foo` should only specify `proc-macro = true` instead of setting `crate-type`
+[WARNING] `foo` (manifest) generated 1 warning
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn proc_macro_with_example_crate_type() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+
+                [lib]
+                proc-macro = true
+
+                [[example]]
+                name = "ex"
+                crate-type = ["lib"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("examples/ex.rs", "pub fn example() {}")
+        .build();
+
+    foo.cargo("check --examples")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn proc_macro_extern_prelude() {
     // Check that proc_macro is in the extern prelude.
     let p = project()
