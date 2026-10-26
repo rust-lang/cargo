@@ -81,9 +81,7 @@ fn output_checksum_touching_dependency_output_stays_fresh() {
         true,
         str![[r#"
 [FRESH] bar v0.0.1 ([ROOT]/foo/bar)
-[DIRTY] foo v0.0.1 ([ROOT]/foo): [..]
-[COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo [..]
+[FRESH] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]],
@@ -168,11 +166,12 @@ fn output_checksum_changed_dependency_output_rebuilds_consumer() {
     fs::write(&rlib, original_rlib).unwrap();
 
     // Validate the unit and its consumer rebuild
-    // NOTE: The current behavior is wrong! It missed the fact that bar should be rebuilt!
     output_checksum_cargo(&p, "build -v", true)
         .with_stderr_data(str![[r#"
-[FRESH] bar v0.0.1 ([ROOT]/foo/bar)
-[DIRTY] foo v0.0.1 ([ROOT]/foo): the dependency `bar` was rebuilt ([TIME_DIFF_AFTER_LAST_BUILD])
+[DIRTY] bar v0.0.1 ([ROOT]/foo/bar): [..]
+[COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
+[RUNNING] `rustc --crate-name bar [..]
+[DIRTY] foo v0.0.1 ([ROOT]/foo): the dependency `bar` was rebuilt
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
