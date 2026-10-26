@@ -540,7 +540,7 @@ version in `Cargo.toml` like this:
 [package]
 name = "my-package"
 version = "1.0.0"
-resolver = "2"
+resolver = "3"
 ```
 - `"1"` (default)
 - `"2"` ([`edition = "2021"`](manifest.md#the-edition-field) default): Introduces changes in [feature
@@ -556,7 +556,7 @@ specified in the `[workspace]` table, for example:
 ```toml
 [workspace]
 members = ["member1", "member2"]
-resolver = "2"
+resolver = "3"
 ```
 
 > **MSRV:** Requires 1.51+
