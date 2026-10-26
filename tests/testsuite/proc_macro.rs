@@ -469,7 +469,7 @@ Caused by:
 }
 
 #[cargo_test]
-fn proc_macro_conflicting_crate_types() {
+fn proc_macro_conflicting_crate_types_warning() {
     for crate_types in [r#"["lib"]"#, r#"["cdylib", "lib"]"#] {
         let foo = project()
             .file(
@@ -492,6 +492,10 @@ fn proc_macro_conflicting_crate_types() {
 
         foo.cargo("check")
             .with_stderr_data(str![[r#"
+[WARNING] Cargo.toml: library `foo` has conflicting `proc-macro = true` and `crate-type` settings
+[NOTE] this was previously accepted but will become a hard error in the future; see <https://github.com/rust-lang/cargo/issues/17579>
+[HELP] remove `proc-macro` if this library is not intended to be a proc macro
+[WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -540,7 +544,10 @@ fn proc_macro_false_with_proc_macro_crate_type_warns() {
         )
         .with_stderr_data(str![[r#"
 [WARNING] Cargo.toml: library `foo` should only specify `proc-macro = true` instead of setting `crate-type`
-[WARNING] `foo` (manifest) generated 1 warning
+[WARNING] Cargo.toml: library `foo` has conflicting `proc-macro = false` and `crate-type` settings
+[NOTE] this was previously accepted but will become a hard error in the future; see <https://github.com/rust-lang/cargo/issues/17579>
+[HELP] set `proc-macro = true` and remove `crate-type` if this library is intended to be a proc macro
+[WARNING] `foo` (manifest) generated 2 warnings
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 

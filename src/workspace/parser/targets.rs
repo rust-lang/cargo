@@ -239,7 +239,8 @@ fn to_lib_target(
     //
     // A plugin requires exporting plugin_registrar so a crate cannot be
     // both at once.
-    let crate_types = match (lib.crate_types(), lib.proc_macro()) {
+    let proc_macro = lib.proc_macro().unwrap_or(false);
+    let crate_types = match (lib.crate_types(), proc_macro) {
         (Some(kinds), _)
             if kinds.contains(&CrateType::Dylib.as_str().to_owned())
                 && kinds.contains(&CrateType::Cdylib.as_str().to_owned()) =>
@@ -260,9 +261,25 @@ fn to_lib_target(
             vec![CrateType::ProcMacro]
         }
         (Some(kinds), _) => kinds.iter().map(|s| s.into()).collect(),
-        (None, Some(true)) => vec![CrateType::ProcMacro],
-        (None, _) => vec![CrateType::Lib],
+        (None, true) => vec![CrateType::ProcMacro],
+        (None, false) => vec![CrateType::Lib],
     };
+
+    if proc_macro != crate_types.contains(&CrateType::ProcMacro) {
+        let help = if proc_macro {
+            "remove `proc-macro` if this library is not intended to be a proc macro"
+        } else {
+            "set `proc-macro = true` and remove `crate-type` \
+             if this library is intended to be a proc macro"
+        };
+        warnings.push(format!(
+            "library `{}` has conflicting `proc-macro = {proc_macro}` and `crate-type` settings\n\
+             note: this was previously accepted but will become a hard error in the future; \
+             see <https://github.com/rust-lang/cargo/issues/17579>\n\
+             help: {help}",
+            name_or_panic(lib)
+        ));
+    }
 
     let mut target = Target::lib_target(name_or_panic(lib), crate_types, path, edition);
     configure(lib, &mut target, TARGET_KIND_HUMAN_LIB, warnings)?;
