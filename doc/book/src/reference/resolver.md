@@ -559,7 +559,9 @@ members = ["member1", "member2"]
 resolver = "3"
 ```
 
-> **MSRV:** Requires 1.51+
+> **MSRV:**
+> - `"2"` requires 1.51+
+> - `"3"` requires 1.84+
 
 [virtual workspace]: workspaces.md#virtual-workspace
 [features-2]: features.md#feature-resolver-version-2
