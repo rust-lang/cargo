@@ -55,6 +55,7 @@
 //! [source implementations]: crate::sources
 //! [`Downloads`]: crate::workspace::package::Downloads
 
+use crate::GlobalContext;
 use crate::compiler::{CompileKind, RustcTargetData};
 use crate::context::FeatureUnification;
 use crate::ops;
@@ -122,6 +123,66 @@ Check that the patched package version and available features are compatible
 with the dependency requirements. If the patch has a different version from
 what is locked in the Cargo.lock file, run `cargo update` to use the new
 version. This may also occur with an optional dependency that is not enabled.";
+
+/// Runs the feature resolver for the workspace members selected by `specs`
+/// and `cli_features`, and compares the result against the dependency
+/// resolver's feature unification when `-Zfeatures=compare` is enabled.
+pub(crate) fn resolve_features<'gctx>(
+    ws: &Workspace<'gctx>,
+    target_data: &mut RustcTargetData<'gctx>,
+    resolve: &Resolve,
+    pkg_set: &PackageSet<'gctx>,
+    specs: &[PackageIdSpec],
+    cli_features: &CliFeatures,
+    requested_targets: &[CompileKind],
+    opts: FeatureOpts,
+) -> CargoResult<ResolvedFeatures> {
+    let members = ws
+        .members_with_features(specs, cli_features)?
+        .into_iter()
+        .map(|(member, features)| (member.package_id(), features))
+        .collect::<Vec<_>>();
+    let compare = opts.compare;
+    let resolved_features = FeatureResolver::resolve(
+        target_data,
+        resolve,
+        pkg_set,
+        &members,
+        requested_targets,
+        opts,
+    )?;
+    if compare {
+        compare_with_resolver(ws.gctx(), &resolved_features, resolve);
+    }
+    Ok(resolved_features)
+}
+
+/// Compares the activated features to the dependency resolver's. Used for
+/// testing with `-Zfeatures=compare`.
+fn compare_with_resolver(
+    gctx: &GlobalContext,
+    resolved_features: &ResolvedFeatures,
+    resolve: &Resolve,
+) {
+    let mut found = false;
+    for ((pkg_id, dep_kind), features) in &resolved_features.activated_features {
+        let r_features = resolve.features(*pkg_id);
+        if !r_features.iter().eq(features.iter()) {
+            crate::drop_eprintln!(
+                gctx,
+                "{}/{:?} features mismatch\nresolve: {:?}\nnew: {:?}\n",
+                pkg_id,
+                dep_kind,
+                r_features,
+                features
+            );
+            found = true;
+        }
+    }
+    if found {
+        panic!("feature mismatch");
+    }
+}
 
 /// Resolves all dependencies for the workspace using the previous
 /// lock file as a guide if present.
@@ -299,13 +360,13 @@ pub fn resolve_ws_with_opts<'gctx>(
 
                 Ok(SpecsAndResolvedFeatures {
                     specs: vec![package.clone()],
-                    resolved_features: FeatureResolver::resolve(
+                    resolved_features: resolve_features(
                         ws,
                         target_data,
                         &resolved_with_overrides,
                         &pkg_set,
-                        &narrowed_features,
                         std::slice::from_ref(package),
+                        &narrowed_features,
                         requested_targets,
                         FeatureOpts::new(ws, has_dev_units, force_all_targets)?,
                     )?,
@@ -315,13 +376,13 @@ pub fn resolve_ws_with_opts<'gctx>(
         FeatureUnification::Selected | FeatureUnification::Workspace => {
             vec![SpecsAndResolvedFeatures {
                 specs: specs.to_vec(),
-                resolved_features: FeatureResolver::resolve(
+                resolved_features: resolve_features(
                     ws,
                     target_data,
                     &resolved_with_overrides,
                     &pkg_set,
-                    cli_features,
                     specs_to_resolve,
+                    cli_features,
                     requested_targets,
                     FeatureOpts::new(ws, has_dev_units, force_all_targets)?,
                 )?,
