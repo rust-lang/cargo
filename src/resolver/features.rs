@@ -45,7 +45,7 @@ use crate::util::CargoResult;
 use crate::util::data_structures::{HashMap, HashSet};
 use crate::util::interning::{INTERNED_DEFAULT, InternedString};
 use crate::workspace::dependency::{ArtifactTarget, DepKind, Dependency};
-use crate::workspace::{FeatureValue, PackageId, PackageIdSpec, PackageSet, Workspace};
+use crate::workspace::{FeatureValue, PackageId, PackageSet, Workspace};
 use anyhow::{Context, bail};
 use itertools::Itertools;
 use std::collections::{BTreeMap, BTreeSet};
@@ -82,7 +82,9 @@ pub struct FeatureOpts {
     /// Targets that are not in use will not activate features.
     ignore_inactive_targets: bool,
     /// If enabled, compare against old resolver (for testing).
-    compare: bool,
+    pub(crate) compare: bool,
+    /// Whether `.json` target specs are accepted (`-Zjson-target-spec`).
+    pub(crate) json_target_spec: bool,
 }
 
 /// Flag to indicate if Cargo is building *any* dev units (tests, examples, etc.).
@@ -208,6 +210,7 @@ impl FeatureOpts {
         if let ForceAllTargets::Yes = force_all_targets {
             opts.ignore_inactive_targets = false;
         }
+        opts.json_target_spec = unstable_flags.json_target_spec;
         Ok(opts)
     }
 
@@ -220,6 +223,7 @@ impl FeatureOpts {
                 decouple_dev_deps: has_dev_units == HasDevUnits::No,
                 ignore_inactive_targets: true,
                 compare: false,
+                json_target_spec: false,
             },
         }
     }
@@ -407,7 +411,6 @@ pub type DiffMap = BTreeMap<PackageFeaturesKey, BTreeSet<InternedString>>;
 /// [`resolve`]: Self::resolve
 /// [module-level documentation]: crate::resolver::features
 pub struct FeatureResolver<'a, 'gctx> {
-    ws: &'a Workspace<'gctx>,
     target_data: &'a mut RustcTargetData<'gctx>,
     /// The platforms to build for, requested by the user.
     requested_targets: &'a [CompileKind],
@@ -445,20 +448,20 @@ pub struct FeatureResolver<'a, 'gctx> {
 impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
     /// Runs the resolution algorithm and returns a new [`ResolvedFeatures`]
     /// with the result.
+    ///
+    /// `members` are the workspace members to resolve features for, each with
+    /// the features requested for it (see `Workspace::members_with_features`).
     #[tracing::instrument(skip_all)]
     pub fn resolve(
-        ws: &Workspace<'gctx>,
         target_data: &'a mut RustcTargetData<'gctx>,
         resolve: &Resolve,
         package_set: &'a PackageSet<'gctx>,
-        cli_features: &CliFeatures,
-        specs: &[PackageIdSpec],
+        members: &[(PackageId, CliFeatures)],
         requested_targets: &[CompileKind],
         opts: FeatureOpts,
     ) -> CargoResult<ResolvedFeatures> {
         let track_for_host = opts.decouple_host_deps || opts.ignore_inactive_targets;
         let mut r = FeatureResolver {
-            ws,
             target_data,
             requested_targets,
             resolve,
@@ -470,11 +473,8 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
             track_for_host,
             deferred_weak_dependencies: HashMap::default(),
         };
-        r.do_resolve(specs, cli_features)?;
+        r.do_resolve(members)?;
         tracing::debug!("features={:#?}", r.activated_features);
-        if r.opts.compare {
-            r.compare();
-        }
         Ok(ResolvedFeatures {
             activated_features: r.activated_features,
             activated_dependencies: r.activated_dependencies,
@@ -483,15 +483,11 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
     }
 
     /// Performs the process of resolving all features for the resolve graph.
-    fn do_resolve(
-        &mut self,
-        specs: &[PackageIdSpec],
-        cli_features: &CliFeatures,
-    ) -> CargoResult<()> {
-        let member_features = self.ws.members_with_features(specs, cli_features)?;
-        for (member, cli_features) in &member_features {
-            let fvs = self.fvs_from_requested(member.package_id(), cli_features);
-            let fk = if self.track_for_host && self.has_any_proc_macro(member.package_id()) {
+    fn do_resolve(&mut self, members: &[(PackageId, CliFeatures)]) -> CargoResult<()> {
+        for (member, cli_features) in members {
+            let member = *member;
+            let fvs = self.fvs_from_requested(member, cli_features);
+            let fk = if self.track_for_host && self.has_any_proc_macro(member) {
                 // Also activate for normal dependencies. This is needed if the
                 // proc-macro includes other targets (like binaries or tests),
                 // or running in `cargo test`. Note that in a workspace, if
@@ -499,12 +495,12 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
                 // `--workspace`), this forces feature unification with normal
                 // dependencies. This is part of the bigger problem where
                 // features depend on which packages are built.
-                self.activate_pkg(member.package_id(), FeaturesFor::default(), &fvs)?;
+                self.activate_pkg(member, FeaturesFor::default(), &fvs)?;
                 FeaturesFor::HostDep
             } else {
                 FeaturesFor::default()
             };
-            self.activate_pkg(member.package_id(), fk, &fvs)?;
+            self.activate_pkg(member, fk, &fvs)?;
         }
         Ok(())
     }
@@ -863,7 +859,7 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
             Ok(result)
         }
 
-        let unstable_json_spec = self.ws.gctx().cli_unstable().json_target_spec;
+        let unstable_json_spec = self.opts.json_target_spec;
         self.resolve
             .deps(pkg_id)
             .map(|(dep_id, deps)| {
@@ -930,28 +926,6 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
             })
             .filter(|res| res.as_ref().map_or(true, |(_id, deps)| !deps.is_empty()))
             .collect()
-    }
-
-    /// Compare the activated features to the resolver. Used for testing.
-    fn compare(&self) {
-        let mut found = false;
-        for ((pkg_id, dep_kind), features) in &self.activated_features {
-            let r_features = self.resolve.features(*pkg_id);
-            if !r_features.iter().eq(features.iter()) {
-                crate::drop_eprintln!(
-                    self.ws.gctx(),
-                    "{}/{:?} features mismatch\nresolve: {:?}\nnew: {:?}\n",
-                    pkg_id,
-                    dep_kind,
-                    r_features,
-                    features
-                );
-                found = true;
-            }
-        }
-        if found {
-            panic!("feature mismatch");
-        }
     }
 
     /// Whether the given package has any proc macro target, including proc-macro examples.

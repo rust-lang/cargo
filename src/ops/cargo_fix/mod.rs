@@ -55,9 +55,9 @@ use tracing::{debug, trace, warn};
 pub use self::fix_edition::fix_edition;
 use crate::compiler::CompileKind;
 use crate::compiler::RustcTargetData;
-use crate::ops::resolve::WorkspaceResolve;
+use crate::ops::resolve::{WorkspaceResolve, resolve_features};
 use crate::ops::{self, CompileOptions};
-use crate::resolver::features::{DiffMap, FeatureOpts, FeatureResolver, FeaturesFor};
+use crate::resolver::features::{DiffMap, FeatureOpts, FeaturesFor};
 use crate::resolver::{HasDevUnits, Resolve, ResolveBehavior};
 use crate::util::GlobalContext;
 use crate::util::diagnostic_server::{Message, RustfixDiagnosticServer};
@@ -607,14 +607,15 @@ fn check_resolver_change<'gctx>(
             dry_run,
         )?;
 
-        let feature_opts = FeatureOpts::new_behavior(ResolveBehavior::V2, has_dev_units);
-        let v2_features = FeatureResolver::resolve(
+        let mut feature_opts = FeatureOpts::new_behavior(ResolveBehavior::V2, has_dev_units);
+        feature_opts.json_target_spec = ws.gctx().cli_unstable().json_target_spec;
+        let v2_features = resolve_features(
             ws,
             target_data,
             &ws_resolve.targeted_resolve,
             &ws_resolve.pkg_set,
-            &opts.compile_opts.cli_features,
             &specs,
+            &opts.compile_opts.cli_features,
             &opts.compile_opts.build_config.requested_kinds,
             feature_opts,
         )?;
