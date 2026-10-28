@@ -421,6 +421,7 @@ use super::UnitIndex;
 use super::Work;
 use super::custom_build::BuildDeps;
 
+pub use self::dep_info::CHECKSUM_ALGO;
 pub use self::dep_info::Checksum;
 pub use self::dep_info::parse_dep_info;
 pub use self::dep_info::parse_rustc_dep_info;

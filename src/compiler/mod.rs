@@ -888,7 +888,10 @@ fn prepare_rustc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResult
             .unwrap_or_default()
         {
             FingerprintMethod::Content => {
-                base.arg("-Z").arg("checksum-hash-algorithm=blake3");
+                base.arg("-Z").arg(format!(
+                    "checksum-hash-algorithm={}",
+                    fingerprint::CHECKSUM_ALGO
+                ));
             }
             FingerprintMethod::Mtime => {}
         }
@@ -989,7 +992,10 @@ fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResu
                 .unwrap_or_default()
             {
                 FingerprintMethod::Content => {
-                    rustdoc.arg("-Z").arg("checksum-hash-algorithm=blake3");
+                    rustdoc.arg("-Z").arg(format!(
+                        "checksum-hash-algorithm={}",
+                        fingerprint::CHECKSUM_ALGO
+                    ));
                 }
                 FingerprintMethod::Mtime => {}
             }
