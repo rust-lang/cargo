@@ -1975,6 +1975,17 @@ fn local_fingerprints_deps(
     local
 }
 
+fn load_fingerprint(loc: &Path, short: &str) -> CargoResult<Fingerprint> {
+    let json = paths::read(&loc.with_extension("json"))?;
+    let fingerprint: Fingerprint =
+        serde_json::from_str(&json).with_context(|| internal("failed to deserialize json"))?;
+    // Fingerprint can be empty after a failed rebuild (see comment in prepare_target).
+    if !short.is_empty() {
+        debug_assert_eq!(util::to_hex(fingerprint.hash_u64()), short);
+    }
+    Ok(fingerprint)
+}
+
 /// Writes the short fingerprint hash value to `<loc>`
 /// and logs detailed JSON information to `<loc>.json`.
 fn write_fingerprint(loc: &Path, fingerprint: &Fingerprint) -> CargoResult<()> {
@@ -2080,16 +2091,7 @@ fn _compare_old_fingerprint(
         return Ok(FingerprintComparison::Fresh);
     }
 
-    let old_fingerprint_json = paths::read(&old_hash_path.with_extension("json"))?;
-    let old_fingerprint: Fingerprint = serde_json::from_str(&old_fingerprint_json)
-        .with_context(|| internal("failed to deserialize json"))?;
-    // Fingerprint can be empty after a failed rebuild (see comment in prepare_target).
-    if !old_fingerprint_short.is_empty() {
-        debug_assert_eq!(
-            util::to_hex(old_fingerprint.hash_u64()),
-            old_fingerprint_short
-        );
-    }
+    let old_fingerprint = load_fingerprint(old_hash_path, &old_fingerprint_short)?;
 
     let reason = new_fingerprint.compare(&old_fingerprint);
     Ok(FingerprintComparison::Dirty { reason })
