@@ -4,6 +4,7 @@ use std::env;
 use std::env::consts::{DLL_PREFIX, DLL_SUFFIX};
 use std::fs;
 use std::io::Read;
+use std::path::PathBuf;
 use std::process::Stdio;
 
 use crate::prelude::*;
@@ -7052,4 +7053,63 @@ fn should_include_deps_paths_of_lib_crate_type_with_proc_macro_true() {
 
 "#]].unordered())
         .run();
+}
+
+#[cargo_test]
+fn should_not_overwrite_hardlinked_files() {
+    let p = project()
+        .file("src/lib.rs", "mod old;")
+        .file("src/old.rs", "")
+        .file("src/new.rs", "")
+        .build();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo(&["new build-dir layout"])
+        .run();
+
+    struct Backup {
+        original: PathBuf,
+        backup: PathBuf,
+        original_content: Vec<u8>,
+    }
+
+    let backup_file = |glob: &str| -> Backup {
+        let mut outputs = p.glob(glob).map(Result::unwrap);
+        let original = outputs.next().expect(&format!("expected file at {glob}"));
+        assert!(outputs.next().is_none());
+        let file_name = original.file_name().unwrap();
+        let content = fs::read(&original).unwrap();
+        let backup = p.root().join(file_name);
+        fs::hard_link(&original, &backup).unwrap();
+
+        Backup {
+            original,
+            backup,
+            original_content: content,
+        }
+    };
+
+    let rlib = backup_file("target/debug/build/foo/*/out/*foo-*.rlib");
+    let rmeta = backup_file("target/debug/build/foo/*/out/*foo-*.rmeta");
+    let dep_info = backup_file("target/debug/build/foo/*/out/foo-*.d");
+
+    p.change_file("src/lib.rs", "mod new;");
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo(&["new build-dir layout"])
+        .run();
+
+    let assert_backup_unmodified = |backup: Backup| {
+        let updated = fs::read(&backup.original).unwrap();
+        assert_eq!(&fs::read(&backup.backup).unwrap(), &backup.original_content);
+        assert_ne!(&updated, &backup.original_content);
+    };
+
+    assert_backup_unmodified(rlib);
+    assert_backup_unmodified(rmeta);
+    // FIXME: Rebuilding should leave the hardlinked backup equal to the original.
+    assert_ne!(
+        fs::read(&dep_info.backup).unwrap(),
+        dep_info.original_content
+    );
 }
