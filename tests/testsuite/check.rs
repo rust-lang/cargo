@@ -1896,3 +1896,180 @@ fn check_build_should_not_uplift_proc_macro_dylib_deps() {
 
 "#]]);
 }
+
+#[cargo_test]
+fn dead_code_pub_in_binary_library_tests() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "lint_test"
+                version = "0.1.0"
+                edition = "2021"
+
+                [lints.rust]
+                dead_code_pub_in_binary = "warn"
+            "#,
+        )
+        .file("src/lib.rs", "pub fn unused_library_api() {}\n")
+        .build();
+
+    p.cargo("check --all-targets")
+        .with_stderr_data(str![[r#"
+[CHECKING] lint_test v0.1.0 ([ROOT]/foo)
+[WARNING] function `unused_library_api` is never used
+ --> src/lib.rs:1:8
+  |
+1 | pub fn unused_library_api() {}
+  |        ^^^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] in libraries, `pub` items can be used by dependent crates; in binaries, they cannot, so this `pub` item is unused
+  = [NOTE] requested on the command line with `-W dead-code-pub-in-binary`
+
+[WARNING] `lint_test` (lib test) generated 1 warning
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn dead_code_pub_in_binary_library_without_harness() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "lint_test_no_harness"
+                version = "0.1.0"
+                edition = "2021"
+
+                [lib]
+                harness = false
+
+                [lints.rust]
+                dead_code_pub_in_binary = "warn"
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            "pub fn unused_library_api() {}\n#[cfg(test)]\nfn main() {}\n",
+        )
+        .build();
+
+    p.cargo("check --all-targets")
+        .with_stderr_data(str![[r#"
+[CHECKING] lint_test_no_harness v0.1.0 ([ROOT]/foo)
+[WARNING] function `unused_library_api` is never used
+ --> src/lib.rs:1:8
+  |
+1 | pub fn unused_library_api() {}
+  |        ^^^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] in libraries, `pub` items can be used by dependent crates; in binaries, they cannot, so this `pub` item is unused
+  = [NOTE] requested on the command line with `-W dead-code-pub-in-binary`
+
+[WARNING] `lint_test_no_harness` (lib test) generated 1 warning
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn dead_code_pub_in_binary_rustflags() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "lint_rustflags"
+                version = "0.1.0"
+                edition = "2021"
+
+                [lints.rust]
+                dead_code_pub_in_binary = "warn"
+            "#,
+        )
+        .file("src/lib.rs", "pub fn unused_library_api() {}\n")
+        .build();
+
+    // Explicit user RUSTFLAGS are appended after Cargo's lint suppression.
+    // Verify whether they can restore the lint for library test units.
+    p.cargo("check --all-targets")
+        .env("RUSTFLAGS", "-Wdead_code_pub_in_binary")
+        .with_stderr_data(str![[r#"
+[CHECKING] lint_rustflags v0.1.0 ([ROOT]/foo)
+[WARNING] function `unused_library_api` is never used
+ --> src/lib.rs:1:8
+  |
+1 | pub fn unused_library_api() {}
+  |        ^^^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] in libraries, `pub` items can be used by dependent crates; in binaries, they cannot, so this `pub` item is unused
+  = [NOTE] requested on the command line with `-W dead-code-pub-in-binary`
+
+[WARNING] `lint_rustflags` (lib test) generated 1 warning
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn dead_code_pub_in_binary_custom_test_harness() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "lint_custom_harness"
+                version = "0.1.0"
+                edition = "2021"
+
+                [[test]]
+                name = "custom"
+                harness = false
+
+                [lints.rust]
+                dead_code_pub_in_binary = "warn"
+            "#,
+        )
+        .file("src/lib.rs", "pub fn unused_library_api() {}\n")
+        .file(
+            "tests/custom.rs",
+            "pub fn unused_custom_test_api() {}\nfn main() {}\n",
+        )
+        .build();
+
+    // A custom integration-test harness is still an executable target.
+    // Its unused public items should continue to trigger the lint.
+    p.cargo("check --all-targets")
+        .with_stderr_data(str![[r#"
+[CHECKING] lint_custom_harness v0.1.0 ([ROOT]/foo)
+[WARNING] function `unused_library_api` is never used
+ --> src/lib.rs:1:8
+  |
+1 | pub fn unused_library_api() {}
+  |        ^^^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] in libraries, `pub` items can be used by dependent crates; in binaries, they cannot, so this `pub` item is unused
+  = [NOTE] requested on the command line with `-W dead-code-pub-in-binary`
+
+[WARNING] `lint_custom_harness` (lib test) generated 1 warning
+[WARNING] function `unused_custom_test_api` is never used
+ --> tests/custom.rs:1:8
+  |
+1 | pub fn unused_custom_test_api() {}
+  |        ^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] in libraries, `pub` items can be used by dependent crates; in binaries, they cannot, so this `pub` item is unused
+  = [NOTE] requested on the command line with `-W dead-code-pub-in-binary`
+
+[WARNING] `lint_custom_harness` (test "custom") generated 1 warning
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
