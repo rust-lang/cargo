@@ -868,6 +868,12 @@ fn prepare_rustc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResult
         base.args(args);
     }
     base.args(&unit.rustflags);
+
+    // Library unit tests should not warn about unused public items,
+    // including when the lint is enabled through RUSTFLAGS.
+    if unit.target.is_lib() && unit.mode.is_rustc_test() {
+        base.arg("-Adead_code_pub_in_binary");
+    }
     if gctx.cli_unstable().binary_dep_depinfo {
         base.arg("-Z").arg("binary-dep-depinfo");
     }
