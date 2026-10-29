@@ -799,10 +799,6 @@
             "null"
           ]
         },
-        "builtin": {
-          "type": "boolean",
-          "const": true
-        },
         "registry": {
           "type": [
             "string",
@@ -851,6 +847,10 @@
             "string",
             "null"
           ]
+        },
+        "builtin": {
+          "type": "boolean",
+          "const": true
         },
         "features": {
           "type": [
