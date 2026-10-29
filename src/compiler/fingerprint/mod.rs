@@ -962,33 +962,38 @@ impl LocalFingerprint {
                     return Ok(Some(StaleItem::MissingFile { path: dep_info }));
                 };
                 for (key, previous) in info.env.iter() {
-                    if let Some(value) = pkg.manifest().metadata().env_var(key.as_str()) {
-                        if Some(value.as_ref()) == previous.as_deref() {
-                            continue;
-                        }
-                    }
-
-                    let current = if key == CARGO_ENV {
-                        Some(cargo_exe.to_str().ok_or_else(|| {
+                    // Environment variables tracked in dep-info can originate from several
+                    // sources. We resolve the `current` value using the following strict precedence:
+                    // 1. Special Cargo binary path (CARGO)
+                    // 2. Manifest metadata from Cargo.toml (e.g. CARGO_PKG_DESCRIPTION).
+                    //    Resolving metadata-injected variables before the host environment ensures
+                    //    that changes in `Cargo.toml` correctly trigger a recompile, even if the
+                    //    host environment has an older variable set.
+                    // 3. Cargo's config file `[env]` table
+                    // 4. The host process environment (the final fallback)
+                    let current: Option<std::borrow::Cow<'_, str>> = if key == CARGO_ENV {
+                        let s = cargo_exe.to_str().ok_or_else(|| {
                             format_err!(
                                 "cargo exe path {} must be valid UTF-8",
                                 cargo_exe.display()
                             )
-                        })?)
+                        })?;
+                        Some(std::borrow::Cow::Borrowed(s))
+                    } else if let Some(val) = pkg.manifest().metadata().env_var(key.as_str()) {
+                        Some(val)
+                    } else if let Some(val) = gctx.env_config()?.get(key.as_str()) {
+                        val.to_str().map(std::borrow::Cow::Borrowed)
                     } else {
-                        if let Some(value) = gctx.env_config()?.get(key) {
-                            value.to_str()
-                        } else {
-                            gctx.get_env(key).ok()
-                        }
+                        gctx.get_env(key).ok().map(std::borrow::Cow::Borrowed)
                     };
-                    if current == previous.as_deref() {
+
+                    if current.as_deref() == previous.as_deref() {
                         continue;
                     }
                     return Ok(Some(StaleItem::ChangedEnv {
                         var: key.clone(),
                         previous: previous.clone(),
-                        current: current.map(Into::into),
+                        current: current.map(|c| c.into_owned()),
                     }));
                 }
                 match fingerprint {

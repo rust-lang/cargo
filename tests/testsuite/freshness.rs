@@ -770,11 +770,13 @@ old desc
     p.cargo("run -v")
         .env("CARGO_PKG_DESCRIPTION", "old desc")
         .with_stdout_data(str![[r#"
-old desc
+new desc
 
 "#]])
         .with_stderr_data(str![[r#"
-[FRESH] foo v0.0.1 ([ROOT]/foo)
+[DIRTY] foo v0.0.1 ([ROOT]/foo): the environment variable CARGO_PKG_DESCRIPTION changed
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/foo[EXE]`
 
