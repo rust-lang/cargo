@@ -212,21 +212,9 @@ fn nonexistent_http_410() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[ERROR] failed to get `bar` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `bar`
-
-Caused by:
-  unable to update registry `crates-io`
-
-Caused by:
-  failed to query replaced source registry `crates-io`
-
-Caused by:
-  failed to get successful HTTP response from `[..]/index/3/b/bar` ([..]), got 410
-  body:
-  not found
+[ERROR] no matching package named `bar` found
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `foo v0.1.0 ([ROOT]/foo)`
 
 "#]])
         .run();
@@ -264,21 +252,9 @@ fn nonexistent_http_451() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[ERROR] failed to get `bar` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `bar`
-
-Caused by:
-  unable to update registry `crates-io`
-
-Caused by:
-  failed to query replaced source registry `crates-io`
-
-Caused by:
-  failed to get successful HTTP response from `[..]/index/3/b/bar` ([..]), got 451
-  body:
-  not found
+[ERROR] no matching package named `bar` found
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `foo v0.1.0 ([ROOT]/foo)`
 
 "#]])
         .run();
