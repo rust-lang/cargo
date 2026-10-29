@@ -504,7 +504,7 @@ is equivalent to `[dependencies]`:
 
 ```toml
 [dev-dependencies]
-tempdir = "0.3"
+tempfile = "3"
 ```
 
 Dev-dependencies are not used when compiling
