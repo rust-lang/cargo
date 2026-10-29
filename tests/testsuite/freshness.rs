@@ -723,7 +723,64 @@ new desc
 "#]])
         .run();
 }
+#[cargo_test]
+fn rebuild_metadata_env_var_overrides_host_env() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                description = "old desc"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {
+                    println!("{}", env!("CARGO_PKG_DESCRIPTION"));
+                }
+            "#,
+        )
+        .build();
 
+    p.cargo("run")
+        .env("CARGO_PKG_DESCRIPTION", "old desc")
+        .with_stdout_data(str![[r#"
+old desc
+
+"#]])
+        .run();
+
+    p.change_file(
+        "Cargo.toml",
+        r#"
+            [package]
+            name = "foo"
+            description = "new desc"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+        "#,
+    );
+
+    p.cargo("run -v")
+        .env("CARGO_PKG_DESCRIPTION", "old desc")
+        .with_stdout_data(str![[r#"
+old desc
+
+"#]])
+        .with_stderr_data(str![[r#"
+[FRESH] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo[EXE]`
+
+"#]])
+        .run();
+}
 #[cargo_test]
 fn unused_optional_dep() {
     Package::new("registry1", "0.1.0").publish();
