@@ -563,7 +563,9 @@ impl<'gctx> HttpBackend<'gctx> {
                 // Not Modified: the data in the cache is still the latest.
                 Ok(LoadResponse::CacheValid)
             }
-            http::StatusCode::NOT_FOUND => {
+            http::StatusCode::NOT_FOUND
+            | http::StatusCode::GONE
+            | http::StatusCode::UNAVAILABLE_FOR_LEGAL_REASONS => {
                 // The crate was not found or deleted from the registry.
                 return Ok(LoadResponse::NotFound);
             }
