@@ -7107,9 +7107,5 @@ fn should_not_overwrite_hardlinked_files() {
 
     assert_backup_unmodified(rlib);
     assert_backup_unmodified(rmeta);
-    // FIXME: Rebuilding should leave the hardlinked backup equal to the original.
-    assert_ne!(
-        fs::read(&dep_info.backup).unwrap(),
-        dep_info.original_content
-    );
+    assert_backup_unmodified(dep_info);
 }
