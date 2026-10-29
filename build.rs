@@ -5,6 +5,7 @@ use std::process::Command;
 fn main() {
     commit_info();
     windows_manifest();
+    windows_delay_load();
     let target = input::target();
     output::rustc_env("RUST_HOST_TARGET", &target);
 }
@@ -109,5 +110,33 @@ fn windows_manifest() {
         );
         // Turn linker warnings into errors.
         output::rustc_link_arg_bin("cargo", "/WX");
+    }
+}
+
+fn windows_delay_load() {
+    let target_os = input::cargo_cfg_target_os();
+    let target_env = input::cargo_cfg_target_env();
+    if "windows" == &*target_os && Some("msvc") == target_env.as_deref() {
+        // Delay-load system DLLs that most Cargo commands never call, so
+        // they are loaded on first use instead of at every process start.
+        //
+        // The list is the system DLLs `cargo.exe` imports (see
+        // `dumpbin /dependents target\release\cargo.exe`), minus those every
+        // process loads anyway (kernel32, ntdll, advapi32, bcrypt). Most come
+        // from curl and libgit2. To update it, rerun dumpbin on a release
+        // build and adjust the list.
+        //
+        // When curl or libgit2 is linked from a system DLL instead of being
+        // built in, cargo.exe no longer imports some of these, so ignore the
+        // "/DELAYLOAD ignored; no imports found" warning (LNK4199), which
+        // `/WX` (set in `windows_manifest`) would otherwise turn into an error.
+        for dll in [
+            "user32", "shell32", "ole32", "winhttp", "iphlpapi", "crypt32", "secur32", "ws2_32",
+            "userenv",
+        ] {
+            output::rustc_link_arg_bin("cargo", &format!("/DELAYLOAD:{dll}.dll"));
+        }
+        output::rustc_link_arg_bin("cargo", "delayimp.lib");
+        output::rustc_link_arg_bin("cargo", "/IGNORE:4199");
     }
 }
