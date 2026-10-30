@@ -224,70 +224,78 @@ fn compile<'gctx>(
         FingerprintMethod::Mtime => {}
     }
 
-    // If we are in `--compile-time-deps` and the given unit is not a compile time
-    // dependency, skip compiling the unit and jumps to dependencies, which still
-    // have chances to be compile time dependencies
-    if !unit.skip_non_compile_time_dep {
-        // Build up the work to be done to compile this unit, enqueuing it once
-        // we've got everything constructed.
-        fingerprint::prepare_init(build_runner, unit)?;
-
-        let job = if unit.mode.is_run_custom_build() {
-            custom_build::prepare(build_runner, unit)?
-        } else if unit.mode.is_doc_test() {
-            // We run these targets later, so this is just a no-op for now.
-            Job::new_fresh()
-        } else {
-            let force = exec.force_rebuild(unit) || force_rebuild;
-            let mut job = fingerprint::prepare_target(build_runner, unit, force)?;
-            job.before(if job.freshness().is_dirty() {
-                let work = if unit.mode.is_doc() || unit.mode.is_doc_scrape() {
-                    rustdoc(build_runner, unit)?
-                } else {
-                    rustc(build_runner, unit, exec)?
-                };
-                work.then(link_targets(build_runner, unit, false)?)
-            } else {
-                let output_options = OutputOptions::for_fresh(build_runner, unit);
-                let manifest = ManifestErrorContext::new(build_runner, unit);
-                let work = replay_output_cache(
-                    unit.pkg.package_id(),
-                    manifest,
-                    &unit.target,
-                    build_runner.files().message_cache_path(unit),
-                    output_options,
-                );
-                // Need to link targets on both the dirty and fresh.
-                work.then(link_targets(build_runner, unit, true)?)
-            });
-
-            // If -Zfine-grain-locking is enabled, we wrap the job with an upgrade to exclusive
-            // lock before starting, then downgrade to a shared lock after the job is finished.
-            if build_runner.bcx.gctx.cli_unstable().fine_grain_locking && job.freshness().is_dirty()
-            {
-                if let Some(lock) = lock {
-                    // Here we unlock the current shared lock to avoid deadlocking with other cargo
-                    // processes. Then we configure our compile job to take an exclusive lock
-                    // before starting. Once we are done compiling (including both rmeta and rlib)
-                    // we downgrade to a shared lock to allow other cargo's to read the build unit.
-                    // We will hold this shared lock for the remainder of compilation to prevent
-                    // other cargo from re-compiling while we are still using the unit.
-                    build_runner.lock_manager.unlock(&lock)?;
-                    job.before(prebuild_lock_exclusive(lock.clone()));
-                    job.after(downgrade_lock_to_shared(lock));
-                }
-            }
-
-            job
-        };
-        jobs.enqueue(build_runner, unit, job)?;
-    }
-
-    // Be sure to compile all dependencies of this target as well.
-    let deps = Vec::from(build_runner.unit_deps(unit)); // Create vec due to mutable borrow.
+    let deps = Vec::from(build_runner.unit_deps(unit));
     for dep in deps {
-        compile(build_runner, jobs, &dep.unit, exec, false)?;
+        // We only want to pass force_rebuild for roots.
+        // Normally roots won't take this path, but sometimes a root
+        // can also be a dep of another root
+        let force_rebuild = force_rebuild && build_runner.bcx.roots.contains(&dep.unit);
+        compile(build_runner, jobs, &dep.unit, exec, force_rebuild)?;
     }
+
+    // If we are in `--compile-time-deps` and the given unit is not a compile time
+    // dependency, skip compiling the unit
+    if unit.skip_non_compile_time_dep {
+        return Ok(());
+    }
+
+    // Build up the work to be done to compile this unit, enqueuing it once
+    // we've got everything constructed.
+    fingerprint::prepare_init(build_runner, unit)?;
+
+    let job = if unit.mode.is_run_custom_build() {
+        custom_build::prepare(build_runner, unit)?
+    } else if unit.mode.is_doc_test() {
+        // We run these targets later, so this is just a no-op for now.
+        Job::new_fresh()
+    } else {
+        if unit.target.is_custom_build()
+            && let Some(deps) = unit.pkg.manifest().metabuild()
+        {
+            custom_build::prepare_metabuild(build_runner, unit, deps)?;
+        }
+        let force = exec.force_rebuild(unit) || force_rebuild;
+        let mut job = fingerprint::prepare_target(build_runner, unit, force)?;
+        job.before(if job.freshness().is_dirty() {
+            let work = if unit.mode.is_doc() || unit.mode.is_doc_scrape() {
+                rustdoc(build_runner, unit)?
+            } else {
+                rustc(build_runner, unit, exec)?
+            };
+            work.then(link_targets(build_runner, unit, false)?)
+        } else {
+            let output_options = OutputOptions::for_fresh(build_runner, unit);
+            let manifest = ManifestErrorContext::new(build_runner, unit);
+            let work = replay_output_cache(
+                unit.pkg.package_id(),
+                manifest,
+                &unit.target,
+                build_runner.files().message_cache_path(unit),
+                output_options,
+            );
+            // Need to link targets on both the dirty and fresh.
+            work.then(link_targets(build_runner, unit, true)?)
+        });
+
+        // If -Zfine-grain-locking is enabled, we wrap the job with an upgrade to exclusive
+        // lock before starting, then downgrade to a shared lock after the job is finished.
+        if build_runner.bcx.gctx.cli_unstable().fine_grain_locking && job.freshness().is_dirty() {
+            if let Some(lock) = lock {
+                // Here we unlock the current shared lock to avoid deadlocking with other cargo
+                // processes. Then we configure our compile job to take an exclusive lock
+                // before starting. Once we are done compiling (including both rmeta and rlib)
+                // we downgrade to a shared lock to allow other cargo's to read the build unit.
+                // We will hold this shared lock for the remainder of compilation to prevent
+                // other cargo from re-compiling while we are still using the unit.
+                build_runner.lock_manager.unlock(&lock)?;
+                job.before(prebuild_lock_exclusive(lock.clone()));
+                job.after(downgrade_lock_to_shared(lock));
+            }
+        }
+
+        job
+    };
+    jobs.enqueue(build_runner, unit, job)?;
 
     Ok(())
 }
@@ -886,7 +894,10 @@ fn prepare_rustc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResult
             .unwrap_or_default()
         {
             FingerprintMethod::Content => {
-                base.arg("-Z").arg("checksum-hash-algorithm=blake3");
+                base.arg("-Z").arg(format!(
+                    "checksum-hash-algorithm={}",
+                    fingerprint::CHECKSUM_ALGO
+                ));
             }
             FingerprintMethod::Mtime => {}
         }
@@ -987,7 +998,10 @@ fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResu
                 .unwrap_or_default()
             {
                 FingerprintMethod::Content => {
-                    rustdoc.arg("-Z").arg("checksum-hash-algorithm=blake3");
+                    rustdoc.arg("-Z").arg(format!(
+                        "checksum-hash-algorithm={}",
+                        fingerprint::CHECKSUM_ALGO
+                    ));
                 }
                 FingerprintMethod::Mtime => {}
             }

@@ -546,6 +546,9 @@ impl ChecksumAlgo {
     }
 }
 
+/// At the time of writing, the checksum algorithm is not configurable by users.
+pub const CHECKSUM_ALGO: ChecksumAlgo = ChecksumAlgo::Blake3;
+
 impl FromStr for ChecksumAlgo {
     type Err = InvalidChecksum;
 
