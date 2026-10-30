@@ -51,7 +51,7 @@ The build will automatically use vendored versions of the following libraries. H
 
 * [`libcurl`](https://curl.se/libcurl/) — Used for network transfers.
 * [`libgit2`](https://libgit2.org/) — Used for fetching git dependencies.
-* [`libssh2`](https://www.libssh2.org/) — Used for SSH access to git repositories.
+* [`libssh2`](https://www.libssh2.org/) — Used for SSH access to Git repositories. The minimum version should be 1.8.1 for [CVE-2019-3855](https://www.libssh2.org/CVE-2019-3855.html) and 1.10.0 for [CVE-2019-17498](https://nvd.nist.gov/vuln/detail/CVE-2019-17498). On 32-bit targets, builds using a system-installed `libssh2` (e.g., via `LIBSSH2_SYS_USE_PKG_CONFIG=1`) may link against an older version.
 * [`libz`](https://zlib.net/) (AKA zlib) — Used by the above C libraries for data compression. (Rust code uses [`zlib-rs`](https://github.com/trifectatechfoundation/zlib-rs) instead.)
 
 It is recommended to use the vendored versions as they are the versions that are tested to work with Cargo.
