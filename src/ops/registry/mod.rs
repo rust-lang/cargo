@@ -99,9 +99,8 @@ impl RegistryCredentialConfig {
 ///   the replacement source ID.
 /// * `token_from_cmdline`: The token from the command-line. If not set, uses the token
 ///   from the config.
-/// * `index`: The index URL from the command-line.
-/// * `registry`: The registry name from the command-line. If neither
-///   `registry`, or `index` are set, then uses `crates-io`.
+/// * `reg_or_index`: The registry name or index URL from the command-line. If not set,
+///    uses `crates-io`.
 /// * `force_update`: If `true`, forces the index to be updated.
 /// * `token_required`: If `true`, the token will be set.
 fn registry<'gctx>(
@@ -156,14 +155,14 @@ fn registry<'gctx>(
 
 /// Gets the `SourceId` for an index or registry setting.
 ///
-/// The `index` and `reg` values are from the command-line or config settings.
-/// If both are None, and no source-replacement is configured, returns the source for crates.io.
-/// If both are None, and source replacement is configured, returns an error.
+/// The `reg_or_index` value is from the command-line or config settings.
+/// If it's None, and no source-replacement is configured, returns the source for crates.io.
+/// If it's None, and source replacement is configured, returns an error.
 ///
 /// The source for crates.io may be GitHub, index.crates.io, or a test-only registry depending
 /// on configuration.
 ///
-/// If `reg` is set, source replacement is not followed.
+/// If `reg_or_index` is set, source replacement is not followed.
 ///
 /// The return value is a pair of `SourceId`s: The first may be a built-in replacement of
 /// crates.io (such as index.crates.io), while the second is always the original source.
