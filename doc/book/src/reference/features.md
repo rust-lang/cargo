@@ -32,8 +32,18 @@ included:
 ```toml
 [features]
 # Defines a feature named `webp` that does not enable any other features.
-webp = []
+webp = { enables = [] }
 ```
+
+> [!TIP]
+> If only the `enables` key is used, the array syntax can be used instead:
+>
+> ```toml
+> [features]
+> webp = []
+> ```
+>
+> The table syntax is newer and only available starting with Rust TODO.
 
 With this feature defined, [`cfg` expressions] can be used to conditionally
 include code to support the requested feature at compile time. For example,
@@ -54,10 +64,10 @@ those other features are enabled, too:
 
 ```toml
 [features]
-bmp = []
-png = []
-ico = ["bmp", "png"]
-webp = []
+bmp = { enables = [] }
+png = { enables = [] }
+ico = { enables = ["bmp", "png"] }
+webp = { enables = [] }
 ```
 
 Feature names may include characters from the [Unicode XID standard] (which
@@ -84,11 +94,11 @@ changed by specifying the `default` feature:
 
 ```toml
 [features]
-default = ["ico", "webp"]
-bmp = []
-png = []
-ico = ["bmp", "png"]
-webp = []
+default = { enables = ["ico", "webp"] }
+bmp = { enables = [] }
+png = { enables = [] }
+ico = { enables = ["bmp", "png"] }
+webp = { enables = [] }
 ```
 
 When the package is built, the `default` feature is enabled which in turn
@@ -131,7 +141,7 @@ like this:
 
 ```toml
 [features]
-gif = ["dep:gif"]
+gif = { enables = ["dep:gif"] }
 ```
 
 This means that this dependency will only be included if the `gif`
@@ -161,7 +171,7 @@ ravif = { version = "0.6.3", optional = true }
 rgb = { version = "0.8.25", optional = true }
 
 [features]
-avif = ["dep:ravif", "dep:rgb"]
+avif = { enables = ["dep:ravif", "dep:rgb"] }
 ```
 
 In this example, the `avif` feature will enable the two listed dependencies.
@@ -210,7 +220,7 @@ jpeg-decoder = { version = "0.1.20", default-features = false }
 
 [features]
 # Enables parallel processing support by enabling the "rayon" feature of jpeg-decoder.
-parallel = ["jpeg-decoder/rayon"]
+parallel = { enables = ["jpeg-decoder/rayon"] }
 ```
 
 The `"package-name/feature-name"` syntax will also enable `package-name`
@@ -232,7 +242,7 @@ serde = { version = "1.0.133", optional = true }
 rgb = { version = "0.8.25", optional = true }
 
 [features]
-serde = ["dep:serde", "rgb?/serde"]
+serde = { enables = ["dep:serde", "rgb?/serde"] }
 ```
 
 In this example, enabling the `serde` feature will enable the serde
