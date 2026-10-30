@@ -14,8 +14,6 @@ use crate::workspace::{PackageId, PackageSet, Workspace};
 use crate::util::data_structures::{HashMap, HashSet};
 use std::path::PathBuf;
 
-use super::BuildConfig;
-
 fn std_crates<'a>(crates: &'a [String], default: &'static str, units: &[Unit]) -> HashSet<&'a str> {
     let mut crates = HashSet::from_iter(crates.iter().map(|s| s.as_str()));
     // This is a temporary hack until there is a more principled way to
@@ -50,7 +48,6 @@ fn std_crates<'a>(crates: &'a [String], default: &'static str, units: &[Unit]) -
 pub fn resolve_std<'gctx>(
     ws: &Workspace<'gctx>,
     target_data: &mut RustcTargetData<'gctx>,
-    build_config: &BuildConfig,
     crates: &[String],
     kinds: &[CompileKind],
 ) -> CargoResult<(PackageSet<'gctx>, Resolve, ResolvedFeatures)> {
@@ -94,7 +91,7 @@ pub fn resolve_std<'gctx>(
     let mut resolve = ops::resolve_ws_with_opts(
         &std_ws,
         target_data,
-        &build_config.requested_kinds,
+        kinds,
         &cli_features,
         &specs,
         HasDevUnits::No,
@@ -111,6 +108,52 @@ pub fn resolve_std<'gctx>(
             .expect("resolve should have a single spec with resolved features")
             .resolved_features,
     ))
+}
+
+pub fn resolve_std_kinds<'gctx>(
+    target_data: &mut RustcTargetData<'gctx>,
+    requested_kinds: &[CompileKind],
+    resolve: &Resolve,
+) -> CargoResult<Vec<CompileKind>> {
+    let host_kind_requested = requested_kinds.iter().any(CompileKind::is_host);
+    let mut kinds = Vec::new();
+
+    // With no explicit `--target`, Cargo represents the root package as
+    // `CompileKind::Host` but internally also loads target data for the host
+    // triple. Avoid returning both, otherwise build-std would resolve and
+    // generate duplicate std roots for the same platform.
+    let mut add_kind =
+        |target_data: &mut RustcTargetData<'gctx>, kind: CompileKind| -> CargoResult<()> {
+            if host_kind_requested
+                && matches!(kind, CompileKind::Target(_))
+                && target_data.rustc.host == target_data.short_name(&kind)
+            {
+                return Ok(());
+            }
+
+            target_data.merge_compile_kind(kind)?;
+            kinds.push(kind);
+            Ok(())
+        };
+
+    for kind in requested_kinds.iter().copied() {
+        add_kind(target_data, kind)?;
+    }
+    for kind in target_data.manifest_target_kinds().to_vec() {
+        add_kind(target_data, kind)?;
+    }
+    for kind in resolve.iter().flat_map(|pkg_id| {
+        resolve
+            .deps(pkg_id)
+            .flat_map(|(_, deps)| deps.iter())
+            .filter_map(|dep| dep.artifact()?.target()?.to_compile_kind())
+    }) {
+        add_kind(target_data, kind)?;
+    }
+
+    kinds.sort();
+    kinds.dedup();
+    Ok(kinds)
 }
 
 /// Generates a map of root units for the standard library for each kind requested.
