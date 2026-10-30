@@ -245,8 +245,9 @@ The `license` field contains the name of the software license that the package
 is released under. The `license-file` field contains the path to a file
 containing the text of the license (relative to this `Cargo.toml`).
 
-[crates.io] interprets the `license` field as an [SPDX 2.3 license
-expression][spdx-2.3-license-expressions]. The name must be a known license
+Cargo accepts any string for the value of the `license` field. When publishing
+to [crates.io], the `license` field value must be a valid [SPDX 2.3 license
+expression][spdx-2.3-license-expressions] containing known license names
 from the [SPDX license list 3.20][spdx-license-list-3.20]. See the [SPDX site]
 for more information.
 
