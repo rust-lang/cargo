@@ -123,13 +123,17 @@ fn feature_resolver(c: &mut Criterion) {
             } = lazy_info.get_or_insert_with(|| do_resolve(&gctx, &ws_root));
             b.iter(|| {
                 let feature_opts = FeatureOpts::new_behavior(ResolveBehavior::V2, *has_dev_units);
+                let members = ws
+                    .members_with_features(specs, cli_features)
+                    .unwrap()
+                    .into_iter()
+                    .map(|(member, features)| (member.package_id(), features))
+                    .collect::<Vec<_>>();
                 FeatureResolver::resolve(
-                    ws,
                     target_data,
                     &ws_resolve.targeted_resolve,
                     &ws_resolve.pkg_set,
-                    cli_features,
-                    specs,
+                    &members,
                     requested_kinds,
                     feature_opts,
                 )
