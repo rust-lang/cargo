@@ -93,6 +93,10 @@ pub struct BuildContext<'a, 'gctx> {
 
     /// The list of all kinds that are involved in this build
     pub all_kinds: HashSet<CompileKind>,
+
+    /// Units whose `CompileKind::Target(host_target)` was canonicalized to `CompileKind::Host`
+    /// by `rebuild_unit_graph_shared`.
+    pub canonicalized_units: HashSet<Unit>,
 }
 
 impl<'a, 'gctx> BuildContext<'a, 'gctx> {
@@ -109,6 +113,7 @@ impl<'a, 'gctx> BuildContext<'a, 'gctx> {
         unit_graph: UnitGraph,
         unit_to_index: HashMap<Unit, UnitIndex>,
         scrape_units: Vec<Unit>,
+        canonicalized_units: HashSet<Unit>,
     ) -> CargoResult<BuildContext<'a, 'gctx>> {
         let all_kinds = unit_graph
             .keys()
@@ -132,7 +137,19 @@ impl<'a, 'gctx> BuildContext<'a, 'gctx> {
             unit_to_index,
             scrape_units,
             all_kinds,
+            canonicalized_units,
         })
+    }
+
+    /// Returns the effective `CompileKind` for a unit, mapping units whose compile kind was
+    /// canonicalized from `CompileKind::Target(host_target)` to `CompileKind::Host` back to
+    /// their target kind.
+    pub fn unit_compile_kind(&self, unit: &Unit) -> CompileKind {
+        if self.canonicalized_units.contains(unit) {
+            CompileKind::Target(self.target_data.host_target())
+        } else {
+            unit.kind
+        }
     }
 
     /// Information of the `rustc` this build task will use.
