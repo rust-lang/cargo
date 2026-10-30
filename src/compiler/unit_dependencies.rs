@@ -59,6 +59,8 @@ struct State<'a, 'gctx> {
     target_data: &'a RustcTargetData<'gctx>,
     profiles: &'a Profiles,
     interner: &'a UnitInterner,
+    /// Root units, used for deciding which dependencies to document.
+    roots: &'a [Unit],
     // Units for `-Zrustdoc-scrape-examples`.
     scrape_units: &'a [Unit],
 
@@ -123,6 +125,7 @@ pub fn build_unit_dependencies<'a, 'gctx>(
         target_data,
         profiles,
         interner,
+        roots,
         scrape_units,
         dev_dependency_edges: HashSet::default(),
     };
@@ -666,6 +669,15 @@ fn compute_deps_doc(
     // built. If we're documenting *all* libraries, then we also depend on
     // the documentation of the library being built.
     let mut ret = Vec::new();
+
+    let public_deps_enabled = state.gctx.cli_unstable().public_dependency
+        || unit
+            .pkg
+            .manifest()
+            .unstable_features()
+            .is_enabled(Feature::public_dependency());
+    let is_root = state.roots.contains(unit);
+
     for (id, deps) in state.deps(unit, unit_for) {
         let Some(dep_lib) = calc_artifact_deps(unit, unit_for, id, &deps, state, &mut ret)? else {
             continue;
@@ -687,7 +699,17 @@ fn compute_deps_doc(
             IS_NO_ARTIFACT_DEP,
         )?;
         ret.push(lib_unit_dep);
-        if dep_lib.documented() && state.intent.wants_deps_docs() {
+
+        // Decide whether to document this dependency. When
+        // public-dependency is enabled, only document direct deps of roots
+        // and public deps (recursively).
+        let should_doc_dep = if is_root || !public_deps_enabled {
+            true
+        } else {
+            state.resolve().is_public_dep(unit.pkg.package_id(), id)
+        };
+
+        if dep_lib.documented() && state.intent.wants_deps_docs() && should_doc_dep {
             // Document this lib as well.
             let doc_unit_dep = new_unit_dep(
                 state,
