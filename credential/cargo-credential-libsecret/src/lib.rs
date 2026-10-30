@@ -2,7 +2,17 @@
 //! > and not intended for external use (except as a transitive dependency). This
 //! > crate may make major changes to its APIs or be deprecated without warning.
 
-#[cfg(target_os = "linux")]
+#[cfg(all(
+    unix,
+    not(any(
+        target_os = "macos",
+        target_os = "ios",
+        target_os = "tvos",
+        target_os = "watchos",
+        target_os = "visionos",
+        target_os = "android"
+    ))
+))]
 mod linux {
     //! Implementation of the libsecret credential helper.
 
@@ -259,7 +269,27 @@ mod linux {
     }
 }
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(all(
+    unix,
+    not(any(
+        target_os = "macos",
+        target_os = "ios",
+        target_os = "tvos",
+        target_os = "watchos",
+        target_os = "visionos",
+        target_os = "android"
+    ))
+)))]
 pub use cargo_credential::UnsupportedCredential as LibSecretCredential;
-#[cfg(target_os = "linux")]
+#[cfg(all(
+    unix,
+    not(any(
+        target_os = "macos",
+        target_os = "ios",
+        target_os = "tvos",
+        target_os = "watchos",
+        target_os = "visionos",
+        target_os = "android"
+    ))
+))]
 pub use linux::LibSecretCredential;
