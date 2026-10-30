@@ -116,7 +116,7 @@
 
 use crate::ops::CleanContext;
 use crate::util::cache_lock::CacheLockMode;
-use crate::util::data_structures::HashMap;
+use crate::util::data_structures::{HashMap, HashSet};
 use crate::util::interning::InternedString;
 use crate::util::sqlite::{self, Migration, basic_migration};
 use crate::util::{Filesystem, Progress, ProgressStyle};
@@ -125,8 +125,9 @@ use crate::{CargoResult, GlobalContext};
 use anyhow::{Context as _, bail};
 use cargo_util::paths;
 use cargo_util_terminal::Verbosity;
-use rusqlite::{Connection, ErrorCode, params};
+use rusqlite::{Connection, ErrorCode, Transaction, params};
 use std::collections::hash_map;
+use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 use tracing::{debug, trace};
@@ -208,6 +209,15 @@ pub struct GitCheckout {
     /// This can be None when the size is unknown. See [`RegistrySrc::size`]
     /// for an explanation.
     pub size: Option<u64>,
+}
+
+/// The key for a workspace's target and build directories stored in the
+/// database.
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
+pub struct WorkspaceBuild {
+    pub workspace_manifest_path: PathBuf,
+    pub target_dir: PathBuf,
+    pub build_dir: PathBuf,
 }
 
 /// Filesystem paths in the global cache.
@@ -304,6 +314,15 @@ fn migrations() -> Vec<Migration> {
             )?;
             Ok(())
         }),
+        basic_migration(
+            "CREATE TABLE workspace_build (
+                workspace_manifest_path BLOB NOT NULL,
+                target_dir BLOB NOT NULL,
+                build_dir BLOB NOT NULL,
+                timestamp INTEGER NOT NULL,
+                PRIMARY KEY (workspace_manifest_path, target_dir, build_dir)
+            )",
+        ),
     ]
 }
 
@@ -648,12 +667,170 @@ impl GlobalCacheTracker {
             Self::get_registry_items_to_clean_size_both(&tx, max_size, &base, &mut delete_paths)?;
         }
 
+        Self::remove_paths(tx, clean_ctx, &delete_paths)
+    }
+
+    /// Deletes workspace target and build directories that have not been
+    /// used since the given age.
+    pub fn clean_workspace_builds(
+        &mut self,
+        clean_ctx: &mut CleanContext<'_>,
+        max_age: Duration,
+    ) -> CargoResult<()> {
+        self.clean_workspace_builds_inner(clean_ctx, max_age)
+            .context("failed to clean workspace target and build directories")
+    }
+
+    #[tracing::instrument(skip_all)]
+    fn clean_workspace_builds_inner(
+        &mut self,
+        clean_ctx: &mut CleanContext<'_>,
+        max_age: Duration,
+    ) -> CargoResult<()> {
+        let max_age = now().saturating_sub(max_age.as_secs());
+        let tx = self.conn.transaction()?;
+        let delete_paths = Self::get_workspace_builds_to_clean(&tx, clean_ctx.gctx, max_age)?;
         clean_ctx.remove_paths(&delete_paths)?;
+        Self::update_db_for_removed_workspace_builds(&tx, max_age)?;
 
         if clean_ctx.dry_run {
             tx.rollback()?;
         } else {
             tx.commit()?;
+        }
+        Ok(())
+    }
+
+    /// Deletes the given paths, then commits the transaction, or rolls it
+    /// back for `--dry-run`.
+    fn remove_paths(
+        tx: Transaction<'_>,
+        clean_ctx: &mut CleanContext<'_>,
+        delete_paths: &[PathBuf],
+    ) -> CargoResult<()> {
+        clean_ctx.remove_paths(delete_paths)?;
+
+        if clean_ctx.dry_run {
+            tx.rollback()?;
+        } else {
+            tx.commit()?;
+        }
+        Ok(())
+    }
+
+    /// Returns workspace target and build directories to delete that have not
+    /// been used since the given timestamp.
+    ///
+    /// Recent usage counts even if the workspace manifest is missing, because
+    /// its drive may be temporarily disconnected.
+    fn get_workspace_builds_to_clean(
+        conn: &Connection,
+        gctx: &GlobalContext,
+        max_age: Timestamp,
+    ) -> CargoResult<Vec<PathBuf>> {
+        debug!(target: "gc", "cleaning workspace_build since {max_age:?}");
+        let mut stmt = conn.prepare_cached(
+            "SELECT target_dir, build_dir, timestamp
+             FROM workspace_build",
+        )?;
+        let rows = stmt
+            .query_map([], |row| {
+                let target_dir: Vec<u8> = row.get_unwrap(0);
+                let build_dir: Vec<u8> = row.get_unwrap(1);
+                let timestamp: Timestamp = row.get_unwrap(2);
+                Ok((target_dir, build_dir, timestamp))
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let mut keep_dirs = Vec::new();
+        let mut stale_dirs = HashSet::default();
+        for (target_dir, build_dir, timestamp) in rows {
+            let recorded = if target_dir == build_dir {
+                vec![target_dir]
+            } else {
+                vec![target_dir, build_dir]
+            };
+            for blob in recorded {
+                // Remove trailing separators and `.` so `link/` and `link/.` become
+                // `link`. Otherwise, `symlink_metadata` can report the directory that
+                // the link points to instead of the link itself. This could cause
+                // cleanup to delete that directory instead of protecting it.
+                let path: PathBuf = paths::bytes2path(&blob)?.components().collect();
+                let inspected = crate::util::try_canonicalize(&path).and_then(|canonical| {
+                    let metadata = std::fs::symlink_metadata(&path)?;
+                    Ok((canonical, metadata.is_dir()))
+                });
+                let (canonical, real_dir) = match inspected {
+                    Ok(inspected) => inspected,
+                    Err(e)
+                        if matches!(e.kind(), ErrorKind::NotFound | ErrorKind::NotADirectory) =>
+                    {
+                        continue;
+                    }
+                    Err(e) => {
+                        crate::display_warning_with_error(
+                            &format!("failed to inspect workspace output `{}`", path.display()),
+                            &e.into(),
+                            &mut gctx.shell(),
+                        );
+                        continue;
+                    }
+                };
+                // Deleting a directory referenced by a symlink would break that
+                // link.
+                if timestamp >= max_age || !real_dir {
+                    keep_dirs.push(canonical);
+                } else {
+                    stale_dirs.insert(canonical);
+                }
+            }
+        }
+
+        // Deleting a directory also deletes everything in it, such as
+        // `target/rust-analyzer` inside `target`. So a stale directory is not
+        // deleted if it is or contains a kept path, including one that
+        // resolves to it through a symlink.
+        let kept_ancestors: HashSet<&Path> =
+            keep_dirs.iter().flat_map(|path| path.ancestors()).collect();
+        Ok(stale_dirs
+            .into_iter()
+            .filter(|dir| !kept_ancestors.contains(dir.as_path()))
+            // A missing or invalid tag removes only this directory from the
+            // deletion list, not its parents. Deleting a parent also deletes
+            // this directory.
+            .filter(|dir| crate::ops::validate_target_dir_tag(dir).is_ok())
+            .collect())
+    }
+
+    fn update_db_for_removed_workspace_builds(
+        conn: &Connection,
+        max_age: Timestamp,
+    ) -> CargoResult<()> {
+        fn is_missing(path: &Path) -> bool {
+            // An inspection error must not make Cargo forget a path that may still exist.
+            matches!(
+                std::fs::metadata(path),
+                Err(e) if matches!(e.kind(), ErrorKind::NotFound | ErrorKind::NotADirectory)
+            )
+        }
+
+        // The timestamp filter preserves recent usage if a drive is temporarily disconnected.
+        let mut stmt = conn.prepare_cached(
+            "SELECT rowid, target_dir, build_dir FROM workspace_build WHERE timestamp < ?1",
+        )?;
+        let mut delete_stmt =
+            conn.prepare_cached("DELETE FROM workspace_build WHERE rowid = ?1")?;
+        let mut rows = stmt.query([max_age])?;
+        while let Some(row) = rows.next()? {
+            let rowid: i64 = row.get_unwrap(0);
+            let target_dir: Vec<u8> = row.get_unwrap(1);
+            let build_dir: Vec<u8> = row.get_unwrap(2);
+            let target_dir: PathBuf = paths::bytes2path(&target_dir)?.components().collect();
+            let build_dir: PathBuf = paths::bytes2path(&build_dir)?.components().collect();
+            // Keep the row until both paths are missing.
+            if is_missing(&target_dir) && (target_dir == build_dir || is_missing(&build_dir)) {
+                delete_stmt.execute([rowid])?;
+            }
         }
         Ok(())
     }
@@ -1443,6 +1620,8 @@ pub struct DeferredGlobalLastUse {
     git_db_timestamps: HashMap<GitDb, Timestamp>,
     /// New git checkout entries to insert.
     git_checkout_timestamps: HashMap<GitCheckout, Timestamp>,
+    /// New workspace target and build directory entries to insert.
+    workspace_build_timestamps: HashMap<WorkspaceBuild, Timestamp>,
     /// This is used so that a warning about failing to update the database is
     /// only displayed once.
     save_err_has_warned: bool,
@@ -1461,6 +1640,7 @@ impl DeferredGlobalLastUse {
             registry_src_timestamps: HashMap::default(),
             git_db_timestamps: HashMap::default(),
             git_checkout_timestamps: HashMap::default(),
+            workspace_build_timestamps: HashMap::default(),
             save_err_has_warned: false,
             now: now(),
         }
@@ -1472,6 +1652,7 @@ impl DeferredGlobalLastUse {
             && self.registry_src_timestamps.is_empty()
             && self.git_db_timestamps.is_empty()
             && self.git_checkout_timestamps.is_empty()
+            && self.workspace_build_timestamps.is_empty()
     }
 
     fn clear(&mut self) {
@@ -1480,6 +1661,7 @@ impl DeferredGlobalLastUse {
         self.registry_src_timestamps.clear();
         self.git_db_timestamps.clear();
         self.git_checkout_timestamps.clear();
+        self.workspace_build_timestamps.clear();
     }
 
     /// Indicates the given [`RegistryIndex`] has been used right now.
@@ -1572,6 +1754,12 @@ impl DeferredGlobalLastUse {
         self.git_checkout_timestamps.insert(git_checkout, timestamp);
     }
 
+    /// Indicates the given [`WorkspaceBuild`] has been used right now.
+    pub fn mark_workspace_build_used(&mut self, workspace_build: WorkspaceBuild) {
+        self.workspace_build_timestamps
+            .insert(workspace_build, self.now);
+    }
+
     /// Saves all of the deferred information to the database.
     ///
     /// This will also clear the state of `self`.
@@ -1588,6 +1776,7 @@ impl DeferredGlobalLastUse {
         self.insert_registry_crate_from_cache(&tx)?;
         self.insert_registry_src_from_cache(&tx)?;
         self.insert_git_checkout_from_cache(&tx)?;
+        self.insert_workspace_build_from_cache(&tx)?;
         tx.commit()?;
         trace!(target: "gc", "last-use save complete");
         Ok(())
@@ -1723,6 +1912,37 @@ impl DeferredGlobalLastUse {
             ])?;
         }
 
+        Ok(())
+    }
+
+    fn insert_workspace_build_from_cache(&mut self, conn: &Connection) -> CargoResult<()> {
+        let workspace_build_timestamps = std::mem::take(&mut self.workspace_build_timestamps);
+        for (workspace_build, timestamp) in workspace_build_timestamps {
+            trace!(target: "gc", "insert workspace build {workspace_build:?} {timestamp}");
+            // Failing here would also drop the global cache entries saved in
+            // the same transaction, so a build whose paths cannot be stored is
+            // skipped instead.
+            let (Ok(workspace_manifest_path), Ok(target_dir), Ok(build_dir)) = (
+                paths::path2bytes(&workspace_build.workspace_manifest_path),
+                paths::path2bytes(&workspace_build.target_dir),
+                paths::path2bytes(&workspace_build.build_dir),
+            ) else {
+                continue;
+            };
+            let mut stmt = conn.prepare_cached(
+                "INSERT INTO workspace_build (workspace_manifest_path, target_dir, build_dir, timestamp)
+                      VALUES (?1, ?2, ?3, ?4)
+                      ON CONFLICT DO UPDATE SET timestamp=excluded.timestamp
+                         WHERE timestamp < ?5",
+            )?;
+            stmt.execute(params![
+                workspace_manifest_path,
+                target_dir,
+                build_dir,
+                timestamp,
+                timestamp - UPDATE_RESOLUTION
+            ])?;
+        }
         Ok(())
     }
 
