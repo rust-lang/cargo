@@ -2,6 +2,7 @@
 //!
 //! [1]: https://doc.rust-lang.org/nightly/cargo/reference/registry-web-api.html#search
 
+use crate::sources::CRATES_IO_DOMAIN;
 use std::cmp;
 
 use anyhow::Context as _;
@@ -48,6 +49,22 @@ pub fn search(
     });
 
     let mut shell = gctx.shell();
+
+    let links = crates
+        .iter()
+        .map(|krate| {
+            registry
+                .host_is_crates_io()
+                .then(|| {
+                    shell.out_hyperlink(format!(
+                        "https://{CRATES_IO_DOMAIN}/crates/{}/{}",
+                        krate.name, krate.max_version
+                    ))
+                })
+                .unwrap_or_default()
+        })
+        .collect::<Vec<_>>();
+
     let stdout = shell.out();
     let good = style::GOOD;
 
@@ -61,12 +78,18 @@ pub fn search(
         }
     };
 
-    for (name, description) in names.into_iter().zip(descriptions) {
-        let line = match description {
-            Some(desc) => format!("{name: <description_margin$}# {desc}"),
-            None => name,
-        };
-        write_with_highlighting(stdout, &line);
+    for (name, (description, link)) in names.into_iter().zip(descriptions.zip(links)) {
+        // name with hyperlink
+        let _ = write!(stdout, "{link}");
+        write_with_highlighting(stdout, &name);
+        let _ = write!(stdout, "{link:#}");
+
+        if let Some(description) = description {
+            let margin = " ".repeat(description_margin.saturating_sub(name.len()));
+            let _ = write!(stdout, "{margin}# ");
+            write_with_highlighting(stdout, &description);
+        }
+
         let _ = writeln!(stdout);
     }
 
