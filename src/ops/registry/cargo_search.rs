@@ -51,18 +51,22 @@ pub fn search(
     let stdout = shell.out();
     let good = style::GOOD;
 
-    for (name, description) in names.into_iter().zip(descriptions) {
-        let line = match description {
-            Some(desc) => format!("{name: <description_margin$}# {desc}"),
-            None => name,
-        };
-        let mut fragments = line.split(query).peekable();
+    let write_with_highlighting = |stdout: &mut dyn std::io::Write, text: &str| {
+        let mut fragments = text.split(query).peekable();
         while let Some(fragment) = fragments.next() {
             let _ = write!(stdout, "{fragment}");
             if fragments.peek().is_some() {
                 let _ = write!(stdout, "{good}{query}{good:#}");
             }
         }
+    };
+
+    for (name, description) in names.into_iter().zip(descriptions) {
+        let line = match description {
+            Some(desc) => format!("{name: <description_margin$}# {desc}"),
+            None => name,
+        };
+        write_with_highlighting(stdout, &line);
         let _ = writeln!(stdout);
     }
 
