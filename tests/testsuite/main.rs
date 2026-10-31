@@ -90,6 +90,7 @@ mod cross_publish;
 mod custom_target;
 mod death;
 mod dep_info;
+mod dependency_manifest;
 mod diagnostics;
 mod direct_minimal_versions;
 mod directory;
