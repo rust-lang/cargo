@@ -16,5 +16,8 @@ serde_core.workspace = true
 [target.'cfg(false)'.dependencies]
 serde.workspace = true
 
+[dev-dependencies]
+serde_test.workspace = true
+
 [lints]
 workspace = true
