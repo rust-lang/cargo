@@ -760,11 +760,12 @@ fn strip_with_transitive_debuginfo() {
 [COMPILING] mid v0.0.0 ([ROOT]/foo/mid)
 [RUNNING] `rustc --crate-name mid [..]--crate-type lib [..]--extern leaf=[..]`
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo [..]--crate-type bin [..]--out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out -C strip=debuginfo -L dependency=[..] --extern mid=[..]`
+[RUNNING] `rustc --crate-name foo [..]--crate-type bin [..]--out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out -L dependency=[..] --extern mid=[..]`
 [FINISHED] `dev` profile [unoptimized] target(s) in [ELAPSED]s
 
 "#]])
         .with_stderr_does_not_contain("[RUNNING] `rustc --crate-name mid [..]-C debuginfo=[..]`")
+        .with_stderr_does_not_contain("[RUNNING] `rustc --crate-name foo [..]-C strip=[..]`")
         .run();
 }
 
@@ -822,7 +823,7 @@ fn strip_with_transitive_build_dep_debuginfo() {
 [COMPILING] mid v0.0.0 ([ROOT]/foo/mid)
 [RUNNING] `rustc --crate-name mid [..]--crate-type lib [..]--extern leaf=[..]`
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name build_script_build [..]--crate-type bin [..]--out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out -C strip=debuginfo -L dependency=[..] --extern mid=[..]`
+[RUNNING] `rustc --crate-name build_script_build [..]--crate-type bin [..]--out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out -L dependency=[..] --extern mid=[..]`
 [RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/build_script_build`
 [RUNNING] `rustc --crate-name foo [..]--crate-type bin [..]--out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out -C strip=debuginfo --force-warn=unused_crate_dependencies`
 [FINISHED] `dev` profile [unoptimized] target(s) in [ELAPSED]s
@@ -831,6 +832,9 @@ fn strip_with_transitive_build_dep_debuginfo() {
             .unordered(),
         )
         .with_stderr_does_not_contain("[RUNNING] `rustc --crate-name mid [..]-C debuginfo=[..]`")
+        .with_stderr_does_not_contain(
+            "[RUNNING] `rustc --crate-name build_script_build [..]-C strip=[..]`",
+        )
         .run();
 }
 
@@ -875,11 +879,10 @@ fn strip_with_proc_macro_debuginfo() {
 [COMPILING] macros v0.0.0 ([ROOT]/foo/macros)
 [RUNNING] `rustc --crate-name macros [..]--crate-type proc-macro [..]-C debuginfo=2 [..]`
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo [..]--crate-type bin [..]--out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out --extern macros=[..]`
+[RUNNING] `rustc --crate-name foo [..]--crate-type bin [..]--out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out -C strip=debuginfo --extern macros=[..]`
 [FINISHED] `dev` profile [unoptimized] target(s) in [ELAPSED]s
 
 "#]])
-        .with_stderr_does_not_contain("[RUNNING] `rustc --crate-name foo [..]-C strip=[..]`")
         .run();
 }
 
