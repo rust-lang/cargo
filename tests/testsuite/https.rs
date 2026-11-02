@@ -37,7 +37,7 @@ fn self_signed_should_fail() {
         .with_stderr_data(&format!(
             "\
 [UPDATING] git repository `https://127.0.0.1:[..]/repos/bar.git`
-fatal: unable to access 'https://127.0.0.1:[..]/repos/bar.git/': server certificate verification failed. CAfile: none CRLfile: none
+fatal: unable to access 'https://127.0.0.1:[..]/repos/bar.git/': [..]certificate verification failed[..]
 [ERROR] failed to get `bar` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
 
 Caused by:
@@ -122,7 +122,7 @@ fn self_signed_with_cacert() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `https://127.0.0.1:[..]/repos/bar.git`
-fatal: unable to access 'https://127.0.0.1:[..]/repos/bar.git/': server certificate verification failed. CAfile: none CRLfile: none
+fatal: unable to access 'https://127.0.0.1:[..]/repos/bar.git/': [..]certificate verification failed[..]
 [ERROR] failed to get `bar` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
 
 Caused by:
