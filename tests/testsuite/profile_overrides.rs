@@ -48,6 +48,116 @@ fn profile_override_basic() {
 }
 
 #[cargo_test]
+fn strip_inherited_by_build_override() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [profile.release]
+                strip = false
+
+                [profile.release.build-override]
+                opt-level = 1
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("build.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build --release -v")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name build_script_build [..]--crate-type bin [..]-C opt-level=1 [..]--out-dir [ROOT]/foo/target/release/build/foo/[HASH]/out -C strip=debuginfo --force-warn=unused_crate_dependencies`
+[RUNNING] `[ROOT]/foo/target/release/build/foo/[HASH]/out/build_script_build`
+[RUNNING] `rustc --crate-name foo [..]--crate-type bin [..]--out-dir [ROOT]/foo/target/release/build/foo/[HASH]/out --force-warn=unused_crate_dependencies`
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn strip_inherited_by_package_overrides() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [workspace]
+                exclude = ["bar", "baz"]
+
+                [dependencies]
+                bar = { path = "bar" }
+                baz = { path = "baz" }
+
+                [profile.release]
+                strip = "symbols"
+
+                [profile.release.package."*"]
+                opt-level = 1
+
+                [profile.release.package.bar]
+                opt-level = 2
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            "extern crate bar; extern crate baz; fn main() {}",
+        )
+        .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
+        .file("bar/src/lib.rs", "")
+        .file("baz/Cargo.toml", &basic_lib_manifest("baz"))
+        .file("baz/src/lib.rs", "")
+        .build();
+
+    p.cargo("build --release -v")
+        .with_stderr_data(
+            str![[r#"
+[LOCKING] 2 packages to highest compatible versions
+[COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
+[COMPILING] baz v0.5.0 ([ROOT]/foo/baz)
+[RUNNING] `rustc --crate-name bar [..]--crate-type lib [..]-C opt-level=2 [..]--out-dir [ROOT]/foo/target/release/build/bar/[HASH]/out -C strip=debuginfo --force-warn=unused_crate_dependencies`
+[RUNNING] `rustc --crate-name baz [..]--crate-type lib [..]-C opt-level=1 [..]--out-dir [ROOT]/foo/target/release/build/baz/[HASH]/out -C strip=debuginfo --force-warn=unused_crate_dependencies`
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]--crate-type bin [..]--out-dir [ROOT]/foo/target/release/build/foo/[HASH]/out -C strip=symbols --extern bar=[..]--extern baz=[..]`
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered(),
+        )
+        .run();
+
+    p.cargo("build --release -v")
+        .arg("--config")
+        .arg("profile.release.package.bar.strip=false")
+        .arg("--config")
+        .arg("profile.release.package.baz.strip=false")
+        .with_stderr_data(
+            str![[r#"
+[COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
+[COMPILING] baz v0.5.0 ([ROOT]/foo/baz)
+[RUNNING] `rustc --crate-name bar [..]--crate-type lib [..]-C opt-level=2 [..]--out-dir [ROOT]/foo/target/release/build/bar/[HASH]/out --force-warn=unused_crate_dependencies`
+[RUNNING] `rustc --crate-name baz [..]--crate-type lib [..]-C opt-level=1 [..]--out-dir [ROOT]/foo/target/release/build/baz/[HASH]/out --force-warn=unused_crate_dependencies`
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]--crate-type bin [..]--out-dir [ROOT]/foo/target/release/build/foo/[HASH]/out -C strip=symbols --extern bar=[..]--extern baz=[..]`
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered(),
+        )
+        .run();
+}
+
+#[cargo_test]
 fn profile_override_warnings() {
     let p = project()
         .file(
