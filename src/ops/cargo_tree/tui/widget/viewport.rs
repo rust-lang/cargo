@@ -40,7 +40,7 @@ impl Viewport {
     /// reusing the previous offset to keep the view stable.
     ///
     /// The returned `offset` may exceed `max_offset` — the render pipeline
-    /// calls [`clamp_offset`] after accounting for context/breadcrumb lines.
+    /// calls `clamp_offset` after accounting for context/breadcrumb lines.
     pub fn scroll_into_view(
         mut self,
         focus_line: usize,

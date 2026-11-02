@@ -215,6 +215,7 @@ impl DependencyNode {
 /// `- bar
 ///    `- baz
 ///
+/// ```text
 /// nodes:
 ///   0 = app(children = [1, 2])
 ///   1 = foo(children = [3])
@@ -226,6 +227,7 @@ impl DependencyNode {
 ///   1 -> [0]
 ///   2 -> [0]
 ///   3 -> [1, 2]
+/// ```
 #[derive(Debug, Clone)]
 pub struct DependencyTree {
     /// Name of the root package (or workspace placeholder when missing).

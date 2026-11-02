@@ -140,7 +140,7 @@ impl TreeWidgetState {
     /// Returns the `NodeId` of the currently selected visible position.
     ///
     /// Returns `None` if nothing is selected or the cache doesn't contain the
-    /// selected position (call [`ensure_visible_nodes`] first).
+    /// selected position (call `ensure_visible_nodes` first).
     pub fn selected_node_id(&self) -> Option<NodeId> {
         let vpos = self.selected_virtual_pos?;
         self.find_by_vpos(vpos).map(|(_, n)| n.id)
