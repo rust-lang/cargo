@@ -648,7 +648,7 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
             Strip::Resolved(StripInner::None)
         }
         Some(StringOrBool::String(ref n)) => Strip::Resolved(StripInner::Named(n.into())),
-        None => Strip::Deferred(StripInner::None),
+        None => profile.strip,
     };
 }
 
