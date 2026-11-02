@@ -3,3 +3,4 @@ mod dupe;
 mod edge_kind;
 mod features;
 mod help;
+mod tui;
