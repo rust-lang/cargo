@@ -842,15 +842,21 @@ fn rebuild_unit_graph_shared(
     compile_time_deps_only: bool,
 ) -> (Vec<Unit>, Vec<Unit>, UnitGraph) {
     let mut result = UnitGraph::default();
+
     // Map of the old unit to the new unit, used to avoid recursing into units
     // that have already been computed to improve performance.
     let mut memo = HashMap::default();
+
+    // Map of the unit to whether the unit requires debuginfo
+    let mut debuginfo_memo = HashMap::default();
+
     let new_roots = roots
         .iter()
         .map(|root| {
             traverse_and_share(
                 interner,
                 &mut memo,
+                &mut debuginfo_memo,
                 &mut result,
                 &unit_graph,
                 root,
@@ -879,6 +885,7 @@ fn rebuild_unit_graph_shared(
 fn traverse_and_share(
     interner: &UnitInterner,
     memo: &mut HashMap<Unit, Unit>,
+    debuginfo_memo: &mut HashMap<Unit, bool>,
     new_graph: &mut UnitGraph,
     unit_graph: &UnitGraph,
     unit: &Unit,
@@ -903,6 +910,7 @@ fn traverse_and_share(
             let new_dep_unit = traverse_and_share(
                 interner,
                 memo,
+                debuginfo_memo,
                 new_graph,
                 unit_graph,
                 &dep.unit,
@@ -941,7 +949,9 @@ fn traverse_and_share(
         // If strip was not manually set, and all dependencies of this unit together
         // with this unit have debuginfo turned off, we enable debuginfo stripping.
         // This will remove pre-existing debug symbols coming from the standard library.
-        if !profile.debuginfo.is_turned_on() && !deps_have_debuginfo(&new_deps) {
+        if !profile.debuginfo.is_turned_on()
+            && !deps_have_debuginfo(&new_deps, new_graph, debuginfo_memo)
+        {
             profile.strip = profile.strip.strip_debuginfo();
         }
     }
@@ -1014,14 +1024,26 @@ fn traverse_and_share(
     new_unit
 }
 
-fn deps_have_debuginfo(deps: &[UnitDep]) -> bool {
+fn deps_have_debuginfo(
+    deps: &[UnitDep],
+    graph: &UnitGraph,
+    memo: &mut HashMap<Unit, bool>,
+) -> bool {
     deps.iter().any(|dep| {
         let unit = &dep.unit;
         // Host deps are linked separately from their dependents.
         if unit.target.for_host() {
             return false;
         }
-        unit.profile.debuginfo.is_turned_on()
+        if unit.profile.debuginfo.is_turned_on() {
+            return true;
+        }
+        if let Some(&has_debuginfo) = memo.get(unit) {
+            return has_debuginfo;
+        }
+        let has_debuginfo = deps_have_debuginfo(&graph[unit], graph, memo);
+        memo.insert(unit.clone(), has_debuginfo);
+        has_debuginfo
     })
 }
 
