@@ -641,7 +641,7 @@ fn strip_inherited_by_build_override() {
     p.cargo("build --release -v")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name build_script_build [..]--crate-type bin [..]-C opt-level=1 [..]--out-dir [ROOT]/foo/target/release/build/foo/[HASH]/out -C strip=debuginfo --force-warn=unused_crate_dependencies`
+[RUNNING] `rustc --crate-name build_script_build [..]--crate-type bin [..]-C opt-level=1 [..]--out-dir [ROOT]/foo/target/release/build/foo/[HASH]/out --force-warn=unused_crate_dependencies`
 [RUNNING] `[ROOT]/foo/target/release/build/foo/[HASH]/out/build_script_build`
 [RUNNING] `rustc --crate-name foo [..]--crate-type bin [..]--out-dir [ROOT]/foo/target/release/build/foo/[HASH]/out --force-warn=unused_crate_dependencies`
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
@@ -694,8 +694,8 @@ fn strip_inherited_by_package_overrides() {
 [LOCKING] 2 packages to highest compatible versions
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] baz v0.5.0 ([ROOT]/foo/baz)
-[RUNNING] `rustc --crate-name bar [..]--crate-type lib [..]-C opt-level=2 [..]--out-dir [ROOT]/foo/target/release/build/bar/[HASH]/out -C strip=debuginfo --force-warn=unused_crate_dependencies`
-[RUNNING] `rustc --crate-name baz [..]--crate-type lib [..]-C opt-level=1 [..]--out-dir [ROOT]/foo/target/release/build/baz/[HASH]/out -C strip=debuginfo --force-warn=unused_crate_dependencies`
+[RUNNING] `rustc --crate-name bar [..]--crate-type lib [..]-C opt-level=2 [..]--out-dir [ROOT]/foo/target/release/build/bar/[HASH]/out -C strip=symbols --force-warn=unused_crate_dependencies`
+[RUNNING] `rustc --crate-name baz [..]--crate-type lib [..]-C opt-level=1 [..]--out-dir [ROOT]/foo/target/release/build/baz/[HASH]/out -C strip=symbols --force-warn=unused_crate_dependencies`
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]--crate-type bin [..]--out-dir [ROOT]/foo/target/release/build/foo/[HASH]/out -C strip=symbols --extern bar=[..]--extern baz=[..]`
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
