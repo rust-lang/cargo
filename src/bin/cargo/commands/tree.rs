@@ -3,7 +3,7 @@ use crate::command_prelude::*;
 use crate::util::data_structures::HashSet;
 use anyhow::{bail, format_err};
 use cargo::ops::Packages;
-use cargo::ops::cargo_tree::{self, DisplayDepth, EdgeKind};
+use cargo::ops::cargo_tree::{self, Charset, DisplayDepth, EdgeKind};
 use cargo::util::CargoResult;
 use cargo::util::print_available_packages;
 use cargo::workspace::dependency::DepKind;
@@ -14,6 +14,11 @@ use std::str::FromStr;
 pub fn cli() -> Command {
     subcommand("tree")
         .about("Display a tree visualization of a dependency graph")
+        .arg(flag("tui", "Launch the interactive dependency tree"))
+        .arg(flag(
+            "inline",
+            "Render the TUI inline and keep the content visible after exiting",
+        ))
         .arg(
             flag("all", "Deprecated, use --no-dedupe instead")
                 .short('a')
@@ -119,24 +124,6 @@ pub fn cli() -> Command {
         ))
 }
 
-#[derive(Copy, Clone)]
-pub enum Charset {
-    Utf8,
-    Ascii,
-}
-
-impl FromStr for Charset {
-    type Err = &'static str;
-
-    fn from_str(s: &str) -> Result<Charset, &'static str> {
-        match s {
-            "utf8" => Ok(Charset::Utf8),
-            "ascii" => Ok(Charset::Ascii),
-            _ => Err("invalid charset"),
-        }
-    }
-}
-
 pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     if args.flag("version") {
         let verbose = args.verbose() > 0;
@@ -179,7 +166,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     } else {
         args.targets()?
     };
-    let target = cargo_tree::Target::from_cli(targets);
+    let target = cargo_tree::Target::from_cli(targets.clone());
 
     let (edge_kinds, no_proc_macro, public) = parse_edge_kinds(gctx, args)?;
     let graph_features = edge_kinds.contains(&EdgeKind::Feature);
@@ -244,7 +231,7 @@ help: if you are in a workspace and want to search across all members, use:
         packages,
         target,
         edge_kinds,
-        invert,
+        invert: invert.clone(),
         pkgs_to_prune,
         prefix,
         no_dedupe,
@@ -258,6 +245,58 @@ help: if you are in a workspace and want to search across all members, use:
 
     if opts.graph_features && opts.duplicates {
         return Err(format_err!("the `-e features` flag does not support `--duplicates`").into());
+    }
+
+    if args.flag("inline") && !args.flag("tui") {
+        return Err(format_err!("`--inline` requires `--tui`").into());
+    }
+    if args.flag("tui") {
+        use cargo::ops::cargo_tree::tui::{
+            app, dependency::ResolutionOptions, state::TreeOptions as TuiTreeOptions,
+            widget::TreeFormat,
+        };
+
+        let values = |name: &str| args._values_of(name).into_iter().collect();
+        let tui_options = TuiTreeOptions {
+            manifest_path: args.get_one::<std::path::PathBuf>("manifest-path").cloned(),
+            resolution: ResolutionOptions {
+                workspace: args.flag("workspace"),
+                packages: values("package"),
+                exclude: values("exclude"),
+                edges: values("edges"),
+                no_dev_dependencies: args.flag("no-dev-dependencies"),
+                prune: values("prune"),
+                invert: (!args._values_of("invert").is_empty()
+                    || args.is_present_with_zero_values("invert"))
+                .then(|| invert.clone()),
+                duplicates: args.flag("duplicates"),
+                display_depth,
+                targets: targets.clone(),
+                all_targets: args.flag("all-targets")
+                    || (targets.len() == 1 && targets[0] == "all"),
+                features: values("features"),
+                all_features: args.flag("all-features"),
+                no_default_features: args.flag("no-default-features"),
+            },
+            no_dedupe,
+        };
+        let charset = match args.get_one::<String>("charset").map(String::as_str) {
+            Some("ascii") => Charset::Ascii,
+            Some("utf8") => Charset::Utf8,
+            _ if gctx.shell().out_unicode() => Charset::Utf8,
+            _ => Charset::Ascii,
+        };
+        let format = TreeFormat::parse(args.get_one::<String>("format").unwrap())?;
+        drop(ws);
+        return app::run(
+            gctx,
+            tui_options,
+            prefix,
+            charset,
+            format,
+            args.flag("inline"),
+        )
+        .map_err(Into::into);
     }
 
     cargo_tree::build_and_print(&ws, &opts)?;
