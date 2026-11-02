@@ -708,8 +708,8 @@ fn strip_debuginfo_for_build_script_and_proc_macro() {
 [LOCKING] 1 package to highest compatible version
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
 [COMPILING] pm v0.0.0 ([ROOT]/foo/pm)
-[RUNNING] `rustc --crate-name build_script_build [..] --out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out --force-warn=unused_crate_dependencies`
-[RUNNING] `rustc --crate-name pm [..] --out-dir [ROOT]/foo/target/debug/build/pm/[HASH]/out --extern proc_macro --force-warn=unused_crate_dependencies`
+[RUNNING] `rustc --crate-name build_script_build [..] --out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out -C strip=debuginfo --force-warn=unused_crate_dependencies`
+[RUNNING] `rustc --crate-name pm [..] --out-dir [ROOT]/foo/target/debug/build/pm/[HASH]/out -C strip=debuginfo --extern proc_macro --force-warn=unused_crate_dependencies`
 [RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/build_script_build`
 [RUNNING] `rustc --crate-name foo [..] -C debuginfo=2 [..] --out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out --extern pm=[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
