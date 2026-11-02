@@ -709,6 +709,245 @@ fn do_not_strip_debuginfo_with_requested_debug() {
 }
 
 #[cargo_test]
+fn strip_with_transitive_debuginfo() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2021"
+
+                [dependencies]
+                mid = { path = "mid" }
+
+                [profile.dev]
+                debug = 0
+
+                [profile.dev.package.leaf]
+                debug = 2
+            "#,
+        )
+        .file("src/main.rs", "use mid as _; fn main() {}")
+        .file(
+            "mid/Cargo.toml",
+            r#"
+                [package]
+                name = "mid"
+                edition = "2021"
+
+                [dependencies]
+                leaf = { path = "../leaf" }
+            "#,
+        )
+        .file("mid/src/lib.rs", "use leaf as _;")
+        .file(
+            "leaf/Cargo.toml",
+            r#"
+                [package]
+                name = "leaf"
+                edition = "2021"
+            "#,
+        )
+        .file("leaf/src/lib.rs", "")
+        .build();
+
+    p.cargo("build -v")
+        .with_stderr_data(str![[r#"
+[LOCKING] 2 packages to highest compatible versions
+[COMPILING] leaf v0.0.0 ([ROOT]/foo/leaf)
+[RUNNING] `rustc --crate-name leaf [..]--crate-type lib [..]-C debuginfo=2 [..]`
+[COMPILING] mid v0.0.0 ([ROOT]/foo/mid)
+[RUNNING] `rustc --crate-name mid [..]--crate-type lib [..]--extern leaf=[..]`
+[COMPILING] foo v0.0.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]--crate-type bin [..]--out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out -C strip=debuginfo -L dependency=[..] --extern mid=[..]`
+[FINISHED] `dev` profile [unoptimized] target(s) in [ELAPSED]s
+
+"#]])
+        .with_stderr_does_not_contain("[RUNNING] `rustc --crate-name mid [..]-C debuginfo=[..]`")
+        .run();
+}
+
+#[cargo_test]
+fn strip_with_transitive_build_dep_debuginfo() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2021"
+
+                [build-dependencies]
+                mid = { path = "mid" }
+
+                [profile.dev]
+                debug = 0
+
+                [profile.dev.package.leaf]
+                debug = 2
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("build.rs", "use mid as _; fn main() {}")
+        .file(
+            "mid/Cargo.toml",
+            r#"
+                [package]
+                name = "mid"
+                edition = "2021"
+
+                [dependencies]
+                leaf = { path = "../leaf" }
+            "#,
+        )
+        .file("mid/src/lib.rs", "use leaf as _;")
+        .file(
+            "leaf/Cargo.toml",
+            r#"
+                [package]
+                name = "leaf"
+                edition = "2021"
+            "#,
+        )
+        .file("leaf/src/lib.rs", "")
+        .build();
+
+    p.cargo("build -v")
+        .with_stderr_data(
+            str![[r#"
+[LOCKING] 2 packages to highest compatible versions
+[COMPILING] leaf v0.0.0 ([ROOT]/foo/leaf)
+[RUNNING] `rustc --crate-name leaf [..]--crate-type lib [..]-C debuginfo=2 [..]`
+[COMPILING] mid v0.0.0 ([ROOT]/foo/mid)
+[RUNNING] `rustc --crate-name mid [..]--crate-type lib [..]--extern leaf=[..]`
+[COMPILING] foo v0.0.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name build_script_build [..]--crate-type bin [..]--out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out -C strip=debuginfo -L dependency=[..] --extern mid=[..]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/build_script_build`
+[RUNNING] `rustc --crate-name foo [..]--crate-type bin [..]--out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out -C strip=debuginfo --force-warn=unused_crate_dependencies`
+[FINISHED] `dev` profile [unoptimized] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered(),
+        )
+        .with_stderr_does_not_contain("[RUNNING] `rustc --crate-name mid [..]-C debuginfo=[..]`")
+        .run();
+}
+
+#[cargo_test]
+fn strip_with_proc_macro_debuginfo() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2021"
+
+                [dependencies]
+                macros = { path = "macros" }
+
+                [profile.dev]
+                debug = 0
+
+                [profile.dev.package.macros]
+                debug = 2
+            "#,
+        )
+        .file("src/main.rs", "use macros as _; fn main() {}")
+        .file(
+            "macros/Cargo.toml",
+            r#"
+                [package]
+                name = "macros"
+                edition = "2021"
+
+                [lib]
+                proc-macro = true
+            "#,
+        )
+        .file("macros/src/lib.rs", "")
+        .build();
+
+    p.cargo("build -v")
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to highest compatible version
+[COMPILING] macros v0.0.0 ([ROOT]/foo/macros)
+[RUNNING] `rustc --crate-name macros [..]--crate-type proc-macro [..]-C debuginfo=2 [..]`
+[COMPILING] foo v0.0.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]--crate-type bin [..]--out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out --extern macros=[..]`
+[FINISHED] `dev` profile [unoptimized] target(s) in [ELAPSED]s
+
+"#]])
+        .with_stderr_does_not_contain("[RUNNING] `rustc --crate-name foo [..]-C strip=[..]`")
+        .run();
+}
+
+#[cargo_test]
+fn strip_with_transitive_proc_macro_debuginfo() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2021"
+
+                [dependencies]
+                macros = { path = "macros" }
+
+                [profile.dev]
+                debug = 0
+
+                [profile.dev.package.leaf]
+                debug = 2
+            "#,
+        )
+        .file("src/main.rs", "use macros as _; fn main() {}")
+        .file(
+            "macros/Cargo.toml",
+            r#"
+                [package]
+                name = "macros"
+                edition = "2021"
+
+                [lib]
+                proc-macro = true
+
+                [dependencies]
+                leaf = { path = "../leaf" }
+            "#,
+        )
+        .file("macros/src/lib.rs", "use leaf as _;")
+        .file(
+            "leaf/Cargo.toml",
+            r#"
+                [package]
+                name = "leaf"
+                edition = "2021"
+            "#,
+        )
+        .file("leaf/src/lib.rs", "")
+        .build();
+
+    p.cargo("build -v")
+        .with_stderr_data(str![[r#"
+[LOCKING] 2 packages to highest compatible versions
+[COMPILING] leaf v0.0.0 ([ROOT]/foo/leaf)
+[RUNNING] `rustc --crate-name leaf [..]--crate-type lib [..]-C debuginfo=2 [..]`
+[COMPILING] macros v0.0.0 ([ROOT]/foo/macros)
+[RUNNING] `rustc --crate-name macros [..]--crate-type proc-macro [..]--extern leaf=[..]`
+[COMPILING] foo v0.0.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]--crate-type bin [..]--out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out -C strip=debuginfo --extern macros=[..]`
+[FINISHED] `dev` profile [unoptimized] target(s) in [ELAPSED]s
+
+"#]])
+        .with_stderr_does_not_contain("[RUNNING] `rustc --crate-name macros [..]-C debuginfo=[..]`")
+        .with_stderr_does_not_contain("[RUNNING] `rustc --crate-name macros [..]-C strip=[..]`")
+        .run();
+}
+
+#[cargo_test]
 fn rustflags_works() {
     let p = project()
         .file(
