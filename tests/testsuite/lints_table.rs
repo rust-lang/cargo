@@ -707,6 +707,7 @@ fn doctest_respects_lints() {
 
                 [lints.rust]
                 confusable_idents = 'allow'
+                uncommon_codepoints = 'allow'
             "#,
         )
         .file(
