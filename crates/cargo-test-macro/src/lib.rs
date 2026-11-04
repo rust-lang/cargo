@@ -39,6 +39,8 @@ use std::sync::LazyLock;
 ///   These tests are run in Cargo's CI when CARGO_TEST_REQUIRE_EXTERNAL_TOOLS is set.
 ///   Other environments, including rust-lang/rust's CI, ignore the test when the command is unavailable.
 ///   This is mainly used to avoid requiring contributors from having every dependency installed.
+/// * `requires_rustup_stable` --- This requires `rustup` on `PATH` and an installed stable toolchain.
+///   These tests are disabled in rust-lang/rust CI.
 /// * `requires_host_split_debuginfo = "<value>"` --- This indicates a `-Csplit-debuginfo` value
 ///   that is required to be supported by the host `rustc`.
 /// * `build_std_real` --- This is a "real" `-Zbuild-std` test (in the `build_std` integration test).
@@ -434,16 +436,10 @@ fn has_rustup_stable() -> bool {
         // This cannot run on rust-lang/rust CI due to the lack of rustup.
         return false;
     }
-    // Cargo mucks with PATH on Windows, adding sysroot host libdir, which is
-    // "bin", which circumvents the rustup wrapper. Use the path directly from
-    // CARGO_HOME.
-    let home = match option_env!("CARGO_HOME") {
-        Some(home) => home,
-        None if is_ci() => panic!("expected to run under rustup"),
-        None => return false,
-    };
-    let cargo = Path::new(home).join("bin/cargo");
-    check_command(&cargo, &["+stable", "--version"])
+    check_command(
+        Path::new("rustup"),
+        &["run", "stable", "cargo", "--version"],
+    )
 }
 
 /// Whether or not this running in a Continuous Integration environment.

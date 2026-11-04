@@ -179,7 +179,7 @@ The [`--offline`](commands/cargo.html#option-cargo---offline) or
  touch the network. It returns an error in case it would access the network.
 You can use [`cargo fetch`] in one project to download
 dependencies before going offline, and then use those same dependencies in
-another project. Refer to [configuration value][offline config]) to set via
+another project. Refer to [configuration value][offline config] to set via
 Cargo configuration.
 
 

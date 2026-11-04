@@ -1896,3 +1896,150 @@ fn check_build_should_not_uplift_proc_macro_dylib_deps() {
 
 "#]]);
 }
+
+#[cargo_test]
+fn dead_code_pub_in_binary_library_tests() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "lint_test"
+                version = "0.1.0"
+                edition = "2021"
+
+                [lints.rust]
+                dead_code_pub_in_binary = "warn"
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            "pub fn unused_library_api() {}
+",
+        )
+        .build();
+
+    p.cargo("check --all-targets")
+        .with_stderr_data(str![[r#"
+[CHECKING] lint_test v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn dead_code_pub_in_binary_library_without_harness() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "lint_test_no_harness"
+                version = "0.1.0"
+                edition = "2021"
+
+                [lib]
+                harness = false
+
+                [lints.rust]
+                dead_code_pub_in_binary = "warn"
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            "pub fn unused_library_api() {}
+#[cfg(test)]
+fn main() {}
+",
+        )
+        .build();
+
+    p.cargo("check --all-targets")
+        .with_stderr_data(str![[r#"
+[CHECKING] lint_test_no_harness v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn dead_code_pub_in_binary_rustflags() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "lint_rustflags"
+                version = "0.1.0"
+                edition = "2021"
+
+                [lints.rust]
+                dead_code_pub_in_binary = "warn"
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            "pub fn unused_library_api() {}
+",
+        )
+        .build();
+
+    // Library test units should not warn even when RUSTFLAGS enables the lint.
+    p.cargo("check --all-targets")
+        .env("RUSTFLAGS", "-Wdead_code_pub_in_binary")
+        .with_stderr_data(str![[r#"
+[CHECKING] lint_rustflags v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn dead_code_pub_in_binary_custom_test_harness() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "lint_custom_harness"
+                version = "0.1.0"
+                edition = "2021"
+
+                [[test]]
+                name = "custom"
+                harness = false
+
+                [lints.rust]
+                dead_code_pub_in_binary = "warn"
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            "pub fn unused_library_api() {}
+",
+        )
+        .file(
+            "tests/custom.rs",
+            "pub fn unused_custom_test_api() {}
+fn main() {}
+",
+        )
+        .build();
+
+    // A custom integration-test harness is still an executable target.
+    // Its unused public items should continue to trigger the lint.
+    p.cargo("check --all-targets")
+        .with_stderr_data(str![[r#"
+[CHECKING] lint_custom_harness v0.1.0 ([ROOT]/foo)
+[WARNING] function `unused_custom_test_api` is never used
+...
+
+[WARNING] `lint_custom_harness` (test "custom") generated 1 warning
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}

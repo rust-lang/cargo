@@ -147,7 +147,7 @@ examples, etc.
 ```toml
 [package]
 # ...
-edition = '2024'
+edition = "2024"
 ```
 
 Most manifests have the `edition` field filled in automatically by [`cargo new`]
