@@ -3437,6 +3437,10 @@ fn bin_and_example_flags_without_a_value() {
 
     cargo_process("install foo --force --bin foo --bin")
         .with_stderr_data(str![[r#"
+[WARNING] `--bin` without a value is ignored
+  |
+  = [NOTE] this was previously accepted but will become a hard error in the future
+  = [HELP] pass a value to `--bin` or remove it
 [UPDATING] `dummy-registry` index
 [INSTALLING] foo v0.0.1
 [COMPILING] foo v0.0.1

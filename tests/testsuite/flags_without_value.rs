@@ -38,6 +38,10 @@ fn repeated_occurrence_without_a_value() {
 
     p.cargo("check -p foo -p")
         .with_stderr_data(str![[r#"
+[WARNING] `--package` without a value is ignored
+  |
+  = [NOTE] this was previously accepted but will become a hard error in the future
+  = [HELP] pass a value to `--package` or remove it
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -46,6 +50,10 @@ fn repeated_occurrence_without_a_value() {
 
     p.cargo("check --bin foo --bin")
         .with_stderr_data(str![[r#"
+[WARNING] `--bin` without a value is ignored
+  |
+  = [NOTE] this was previously accepted but will become a hard error in the future
+  = [HELP] pass a value to `--bin` or remove it
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -53,6 +61,10 @@ fn repeated_occurrence_without_a_value() {
 
     p.cargo("check --example a --example")
         .with_stderr_data(str![[r#"
+[WARNING] `--example` without a value is ignored
+  |
+  = [NOTE] this was previously accepted but will become a hard error in the future
+  = [HELP] pass a value to `--example` or remove it
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -61,6 +73,10 @@ fn repeated_occurrence_without_a_value() {
 
     p.cargo("check --test test1 --test")
         .with_stderr_data(str![[r#"
+[WARNING] `--test` without a value is ignored
+  |
+  = [NOTE] this was previously accepted but will become a hard error in the future
+  = [HELP] pass a value to `--test` or remove it
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -69,6 +85,10 @@ fn repeated_occurrence_without_a_value() {
 
     p.cargo("check --bench bench1 --bench")
         .with_stderr_data(str![[r#"
+[WARNING] `--bench` without a value is ignored
+  |
+  = [NOTE] this was previously accepted but will become a hard error in the future
+  = [HELP] pass a value to `--bench` or remove it
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -77,6 +97,10 @@ fn repeated_occurrence_without_a_value() {
 
     p.cargo("check --target host-tuple --target")
         .with_stderr_data(str![[r#"
+[WARNING] `--target` without a value is ignored
+  |
+  = [NOTE] this was previously accepted but will become a hard error in the future
+  = [HELP] pass a value to `--target` or remove it
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -85,6 +109,10 @@ fn repeated_occurrence_without_a_value() {
 
     p.cargo("clean -p foo -p")
         .with_stderr_data(str![[r#"
+[WARNING] `--package` without a value is ignored
+  |
+  = [NOTE] this was previously accepted but will become a hard error in the future
+  = [HELP] pass a value to `--package` or remove it
 [REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
 
 "#]])
@@ -92,6 +120,10 @@ fn repeated_occurrence_without_a_value() {
 
     p.cargo("update -p foo -p")
         .with_stderr_data(str![[r#"
+[WARNING] `--package` without a value is ignored
+  |
+  = [NOTE] this was previously accepted but will become a hard error in the future
+  = [HELP] pass a value to `--package` or remove it
 [LOCKING] 0 packages to highest compatible versions
 
 "#]])
@@ -100,6 +132,10 @@ fn repeated_occurrence_without_a_value() {
     p.cargo("uninstall -p foo -p")
         .with_status(101)
         .with_stderr_data(str![[r#"
+[WARNING] `--package` without a value is ignored
+  |
+  = [NOTE] this was previously accepted but will become a hard error in the future
+  = [HELP] pass a value to `--package` or remove it
 [ERROR] package ID specification `foo` did not match any packages
 
 "#]])
@@ -110,11 +146,21 @@ fn repeated_occurrence_without_a_value() {
 foo v0.0.1 ([ROOT]/foo)
 
 "#]])
-        .with_stderr_data(str![[r#""#]])
+        .with_stderr_data(str![[r#"
+[WARNING] `--package` without a value is ignored
+  |
+  = [NOTE] this was previously accepted but will become a hard error in the future
+  = [HELP] pass a value to `--package` or remove it
+
+"#]])
         .run();
 
     p.cargo("package --no-verify -p foo -p")
         .with_stderr_data(str![[r#"
+[WARNING] `--package` without a value is ignored
+  |
+  = [NOTE] this was previously accepted but will become a hard error in the future
+  = [HELP] pass a value to `--package` or remove it
 [WARNING] manifest has no documentation, homepage or repository
   |
   = [NOTE] see https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info
@@ -128,6 +174,10 @@ foo v0.0.1 ([ROOT]/foo)
         .arg("--index")
         .arg(registry.index_url().as_str())
         .with_stderr_data(str![[r#"
+[WARNING] `--package` without a value is ignored
+  |
+  = [NOTE] this was previously accepted but will become a hard error in the future
+  = [HELP] pass a value to `--package` or remove it
 [UPDATING] `[ROOT]/registry` index
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 7 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
@@ -142,7 +192,13 @@ foo v0.0.1 ([ROOT]/foo)
 foo v0.0.1 ([ROOT]/foo)
 
 "#]])
-        .with_stderr_data(str![[r#""#]])
+        .with_stderr_data(str![[r#"
+[WARNING] `--invert` without a value is ignored
+  |
+  = [NOTE] this was previously accepted but will become a hard error in the future
+  = [HELP] pass a value to `--invert` or remove it
+
+"#]])
         .run();
 }
 
@@ -155,6 +211,10 @@ fn repeated_occurrence_without_a_value_and_one_next_arg() {
         .arg(config)
         .with_status(101)
         .with_stderr_data(str![[r#"
+[WARNING] `--package` without a value is ignored
+  |
+  = [NOTE] this was previously accepted but will become a hard error in the future
+  = [HELP] pass a value to `--package` or remove it
 [ERROR] could not execute process `does-not-exist rustc -vV` (never executed)
 
 Caused by:
@@ -169,6 +229,10 @@ Caused by:
         .arg("foo")
         .with_status(101)
         .with_stderr_data(str![[r#"
+[WARNING] `--package` without a value is ignored
+  |
+  = [NOTE] this was previously accepted but will become a hard error in the future
+  = [HELP] pass a value to `--package` or remove it
 [ERROR] could not execute process `does-not-exist rustc -vV` (never executed)
 
 Caused by:
