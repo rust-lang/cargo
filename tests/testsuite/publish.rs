@@ -4922,3 +4922,35 @@ fn workspace_circular_publish_dependency_with_non_cycle_package() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn package_flag_without_a_value() {
+    let registry = registry::init();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                license = "MIT"
+                description = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("publish --no-verify --dry-run -p")
+        .arg("--index")
+        .arg(registry.index_url().as_str())
+        .with_stderr_data(str![[r#"
+[UPDATING] `[ROOT]/registry` index
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[UPLOADING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] aborting upload due to dry run
+
+"#]])
+        .run();
+}
