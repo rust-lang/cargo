@@ -225,6 +225,12 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         ProfileChecking::Custom,
     )?;
 
+    for name in ["bin", "example"] {
+        if args.is_present_with_zero_values(name) {
+            warn_ignored_zero_values(gctx, name)?;
+        }
+    }
+
     let default_profile = gctx.get::<Option<ProfileName>>(["install", "profile"])?;
     let default_profile = default_profile
         .as_ref()

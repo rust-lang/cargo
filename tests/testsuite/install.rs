@@ -3409,6 +3409,10 @@ fn bin_and_example_flags_without_a_value() {
 
     cargo_process("install foo --bin")
         .with_stderr_data(str![[r#"
+[WARNING] `--bin` without a value is ignored
+  |
+  = [NOTE] this was previously accepted but will become a hard error in the future
+  = [HELP] pass a value to `--bin` or remove it
 [UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
@@ -3424,6 +3428,10 @@ fn bin_and_example_flags_without_a_value() {
 
     cargo_process("install foo --force --bin --bin")
         .with_stderr_data(str![[r#"
+[WARNING] `--bin` without a value is ignored
+  |
+  = [NOTE] this was previously accepted but will become a hard error in the future
+  = [HELP] pass a value to `--bin` or remove it
 [UPDATING] `dummy-registry` index
 [INSTALLING] foo v0.0.1
 [COMPILING] foo v0.0.1
@@ -3454,6 +3462,10 @@ fn bin_and_example_flags_without_a_value() {
 
     cargo_process("install bar --example")
         .with_stderr_data(str![[r#"
+[WARNING] `--example` without a value is ignored
+  |
+  = [NOTE] this was previously accepted but will become a hard error in the future
+  = [HELP] pass a value to `--example` or remove it
 [UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
