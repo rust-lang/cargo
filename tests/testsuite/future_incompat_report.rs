@@ -725,3 +725,16 @@ fn correct_report_id_when_cached() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn package_flag_without_a_value() {
+    let p = project().file("src/lib.rs", "").build();
+
+    p.cargo("report future-incompatibilities -p")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] no reports are currently available
+
+"#]])
+        .run();
+}
