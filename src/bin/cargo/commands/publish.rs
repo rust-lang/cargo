@@ -51,6 +51,10 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         .into());
     }
 
+    if args.is_present_with_zero_values("package") {
+        warn_ignored_zero_values(gctx, "package")?;
+    }
+
     let token = args.get_one::<String>("token").cloned().map(Secret::from);
     if token.is_some() {
         let _ = gctx.shell().warn("`cargo publish --token` is deprecated in favor of using `cargo login` and environment variables");

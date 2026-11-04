@@ -4945,6 +4945,10 @@ fn package_flag_without_a_value() {
         .arg("--index")
         .arg(registry.index_url().as_str())
         .with_stderr_data(str![[r#"
+[WARNING] `--package` without a value is ignored
+  |
+  = [NOTE] this was previously accepted but will become a hard error in the future
+  = [HELP] pass a value to `--package` or remove it
 [UPDATING] `[ROOT]/registry` index
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
