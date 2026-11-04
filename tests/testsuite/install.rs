@@ -3393,3 +3393,73 @@ im_a_teapot = "deny"
 "#]])
         .run();
 }
+
+/// `cargo install` checks `--bin` and `--example` for a missing value
+/// only when there is a local workspace,
+/// so a registry install is enough to trigger the bad parse.
+#[cargo_test]
+fn bin_and_example_flags_without_a_value() {
+    Package::new("foo", "0.0.1")
+        .file("src/main.rs", "fn main() {}")
+        .publish();
+    Package::new("bar", "0.0.1")
+        .file("src/main.rs", "fn main() {}")
+        .file("examples/a.rs", "fn main() {}")
+        .publish();
+
+    cargo_process("install foo --bin")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
+[INSTALLING] foo v0.0.1
+[COMPILING] foo v0.0.1
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
+        .run();
+
+    cargo_process("install foo --force --bin --bin")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[INSTALLING] foo v0.0.1
+[COMPILING] foo v0.0.1
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[REPLACING] [ROOT]/home/.cargo/bin/foo[EXE]
+[REPLACED] package `foo v0.0.1` with `foo v0.0.1` (executable `foo[EXE]`)
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
+        .run();
+
+    cargo_process("install foo --force --bin foo --bin")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[INSTALLING] foo v0.0.1
+[COMPILING] foo v0.0.1
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[REPLACING] [ROOT]/home/.cargo/bin/foo[EXE]
+[REPLACED] package `foo v0.0.1` with `foo v0.0.1` (executable `foo[EXE]`)
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
+        .run();
+
+    cargo_process("install bar --example")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
+[INSTALLING] bar v0.0.1
+[COMPILING] bar v0.0.1
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[INSTALLING] [ROOT]/home/.cargo/bin/bar[EXE]
+[INSTALLED] package `bar v0.0.1` (executable `bar[EXE]`)
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
+        .run();
+}
