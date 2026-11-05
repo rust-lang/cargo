@@ -941,11 +941,7 @@ fn traverse_and_share(
         // If strip was not manually set, and all dependencies of this unit together
         // with this unit have debuginfo turned off, we enable debuginfo stripping.
         // This will remove pre-existing debug symbols coming from the standard library.
-        if !profile.debuginfo.is_turned_on()
-            && new_deps
-                .iter()
-                .all(|dep| !dep.unit.profile.debuginfo.is_turned_on())
-        {
+        if !profile.debuginfo.is_turned_on() && !deps_have_debuginfo(&new_deps) {
             profile.strip = profile.strip.strip_debuginfo();
         }
     }
@@ -1016,6 +1012,11 @@ fn traverse_and_share(
     }
     new_graph.entry(new_unit.clone()).or_insert(new_deps);
     new_unit
+}
+
+fn deps_have_debuginfo(deps: &[UnitDep]) -> bool {
+    deps.iter()
+        .any(|dep| dep.unit.profile.debuginfo.is_turned_on())
 }
 
 /// Removes duplicate `CompileMode::Doc` units that would cause problems with
