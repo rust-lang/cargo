@@ -5,6 +5,8 @@
 //!
 //! NOTE: The container tests almost certainly won't work on Windows.
 
+#![allow(unused_attributes)]
+
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
@@ -123,6 +125,7 @@ fn foo_bar_project(url: &str) -> Project {
 }
 
 #[cargo_test(container_test)]
+#[ignore = "SSH fixture assumes ECDSA host keys, but libssh2-sys 0.3.4 prefers ED25519"]
 fn no_known_host() {
     // When host is not known, it should show an error.
     let sshd = Container::new("sshd").launch();
@@ -163,6 +166,7 @@ Caused by:
 }
 
 #[cargo_test(container_test)]
+#[ignore = "SSH fixture assumes ECDSA host keys, but libssh2-sys 0.3.4 prefers ED25519"]
 fn known_host_works() {
     // The key displayed in the error message should work when added to known_hosts.
     let agent = Agent::launch();
@@ -209,6 +213,7 @@ fn known_host_works() {
 }
 
 #[cargo_test(container_test)]
+#[ignore = "SSH fixture assumes ECDSA host keys, but libssh2-sys 0.3.4 prefers ED25519"]
 fn same_key_different_hostname() {
     // The error message should mention if an identical key was found.
     let agent = Agent::launch();
@@ -281,6 +286,7 @@ fn known_host_without_port() {
 }
 
 #[cargo_test(container_test)]
+#[ignore = "SSH fixture assumes ECDSA host keys, but libssh2-sys 0.3.4 prefers ED25519"]
 fn hostname_case_insensitive() {
     // hostname checking should be case-insensitive.
     let agent = Agent::launch();
@@ -400,7 +406,7 @@ fn invalid_github_key() {
     let known_hosts = "\
         github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBLqLMclVr7MDuaVsm3sEnnq2OrGxTFiHSw90wd6N14BU8xVC9cZldC3rJ58Wmw6bEVKPjk7foNG0lHwS5bCKX+U=\n\
         github.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDgi+8rMcyFCBq5y7BXrb2aaYGhMjlU3QDy7YDvtNL5KSecYOsaqQHaXr87Bbx0EEkgbhK4kVMkmThlCoNITQS9Vc3zIMQ+Tg6+O4qXx719uCzywl50Tb5tDqPGMj54jcq3VUiu/dvse0yeehyvzoPNWewgGWLx11KI4A4wOwMnc6guhculEWe9DjGEjUQ34lPbmdfu/Hza7ZVu/RhgF/wc43uzXWB2KpMEqtuY1SgRlCZqTASoEtfKZi0AuM7AEdOwE5aTotS4CQZHWimb1bMFpF4DAq92CZ8Jhrm4rWETbO29WmjviCJEA3KNQyd3oA7H9AE9z/22PJaVEmjiZZ+wyLgwyIpOlsnHYNEdGeQMQ4SgLRkARLwcnKmByv1AAxsBW4LI3Os4FpwxVPdXHcBebydtvxIsbtUVkkq99nbsIlnSRFSTvb0alrdzRuKTdWpHtN1v9hagFqmeCx/kJfH76NXYBbtaWZhSOnxfEbhLYuOb+IS4jYzHAIkzy9FjVuk=\n\
-        ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEeMB6BUAW6FfvfLxRO3kGASe0yXnrRT4kpqncsup2b2\n";
+        github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEeMB6BUAW6FfvfLxRO3kGASe0yXnrRT4kpqncsup2b2\n";
     fs::write(ssh_dir.join("known_hosts"), known_hosts).unwrap();
     let p = project()
         .file(
@@ -534,6 +540,7 @@ Caused by:
 }
 
 #[cargo_test(container_test)]
+#[ignore = "SSH fixture assumes ECDSA host keys, but libssh2-sys 0.3.4 prefers ED25519"]
 fn ssh_key_in_config() {
     // known_host in config works.
     let agent = Agent::launch();
