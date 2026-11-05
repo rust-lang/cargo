@@ -393,7 +393,7 @@ fn invalid_github_key() {
     let known_hosts = "\
         github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBLqLMclVr7MDuaVsm3sEnnq2OrGxTFiHSw90wd6N14BU8xVC9cZldC3rJ58Wmw6bEVKPjk7foNG0lHwS5bCKX+U=\n\
         github.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDgi+8rMcyFCBq5y7BXrb2aaYGhMjlU3QDy7YDvtNL5KSecYOsaqQHaXr87Bbx0EEkgbhK4kVMkmThlCoNITQS9Vc3zIMQ+Tg6+O4qXx719uCzywl50Tb5tDqPGMj54jcq3VUiu/dvse0yeehyvzoPNWewgGWLx11KI4A4wOwMnc6guhculEWe9DjGEjUQ34lPbmdfu/Hza7ZVu/RhgF/wc43uzXWB2KpMEqtuY1SgRlCZqTASoEtfKZi0AuM7AEdOwE5aTotS4CQZHWimb1bMFpF4DAq92CZ8Jhrm4rWETbO29WmjviCJEA3KNQyd3oA7H9AE9z/22PJaVEmjiZZ+wyLgwyIpOlsnHYNEdGeQMQ4SgLRkARLwcnKmByv1AAxsBW4LI3Os4FpwxVPdXHcBebydtvxIsbtUVkkq99nbsIlnSRFSTvb0alrdzRuKTdWpHtN1v9hagFqmeCx/kJfH76NXYBbtaWZhSOnxfEbhLYuOb+IS4jYzHAIkzy9FjVuk=\n\
-        ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEeMB6BUAW6FfvfLxRO3kGASe0yXnrRT4kpqncsup2b2\n";
+        github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEeMB6BUAW6FfvfLxRO3kGASe0yXnrRT4kpqncsup2b2\n";
     fs::write(ssh_dir.join("known_hosts"), known_hosts).unwrap();
     let p = project()
         .file(
