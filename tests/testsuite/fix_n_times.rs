@@ -532,6 +532,10 @@ fn starts_with_error() {
         },
         str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
+[ERROR] cargo fix could not apply any fixes to crate `foo`
+[HELP] cargo fix requires the code to compile before fixes can be applied; the code has errors that must be fixed manually
+[HELP] to possibly apply more fixes, pass in the `--broken-code` flag
+[NOTE] original diagnostics will follow:
 rustc fix shim error count=1
 [ERROR] could not compile `foo` (lib) due to 1 previous error
 
@@ -550,6 +554,9 @@ fn broken_code_no_suggestions() {
         },
         str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
+[ERROR] cargo fix could not apply any fixes to crate `foo`
+[HELP] no fixes were applicable; the code already had errors prior to cargo fix
+[NOTE] original diagnostics will follow:
 rustc fix shim error count=1
 [ERROR] could not compile `foo` (lib) due to 1 previous error
 
@@ -571,8 +578,7 @@ fn broken_code_one_suggestion() {
 [ERROR] errors present after applying fixes to crate `foo`
  --> src/lib.rs
   = cause: rustc fix shim error count=2
-[HELP] to report this as a bug, open an issue at https://github.com/rust-lang/rust/issues, quoting the full output of this command
-[HELP] to possibly apply more fixes, pass in the `--broken-code` flag
+[HELP] the broken code has been saved as requested via `--broken-code`; the code already had errors prior to cargo fix
 [NOTE] original diagnostics will follow:
 rustc fix shim comment 1
 rustc fix shim error count=2
