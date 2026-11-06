@@ -10,7 +10,6 @@
 use crate::compiler::CompileKind;
 use crate::compiler::CompileMode;
 use crate::compiler::CompileTarget;
-use crate::compiler::CrateType;
 use crate::compiler::apply_env_config;
 use crate::context::{GlobalContext, StringList, TargetConfig};
 use crate::util::interning::InternedString;
@@ -21,6 +20,7 @@ use crate::workspace::{Dependency, Package, Target, TargetKind, Workspace};
 use anyhow::Context as _;
 use cargo_platform::{Cfg, CfgExpr};
 use cargo_util::ProcessBuilder;
+use cargo_util_schemas::core::CrateType;
 use serde::Deserialize;
 
 use crate::util::data_structures::HashMap;

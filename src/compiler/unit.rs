@@ -1,11 +1,12 @@
 //! Types and impls for [`Unit`].
 
+use cargo_util_schemas::core::CrateType;
 use serde::Deserialize;
 use serde::Serialize;
 
 use super::BuildOutput;
 use crate::compiler::unit_dependencies::IsArtifact;
-use crate::compiler::{CompileKind, CompileMode, CompileTarget, CrateType};
+use crate::compiler::{CompileKind, CompileMode, CompileTarget};
 use crate::util::GlobalContext;
 use crate::util::data_structures::HashSet;
 use crate::util::interning::InternedString;

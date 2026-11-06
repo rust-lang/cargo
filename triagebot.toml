@@ -129,7 +129,7 @@ trigger_files = [
 trigger_files = ["src/workspace/dependency.rs"]
 
 [autolabel."A-crate-types"]
-trigger_files = ["src/compiler/crate_type.rs"]
+trigger_files = ["crates/cargo-util-schemas/src/core/crate_type.rs"]
 
 [autolabel."A-credential-provider"]
 trigger_files = ["credential/"]

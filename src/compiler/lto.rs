@@ -1,4 +1,6 @@
-use crate::compiler::{BuildContext, CompileMode, CrateType, Unit};
+use cargo_util_schemas::core::CrateType;
+
+use crate::compiler::{BuildContext, CompileMode, Unit};
 use crate::util::interning::InternedString;
 use crate::workspace::profiles;
 use std::collections::hash_map::Entry;
