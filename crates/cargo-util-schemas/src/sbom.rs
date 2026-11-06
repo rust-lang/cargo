@@ -1,14 +1,14 @@
 use std::path::PathBuf;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::core::{CrateType, PackageIdSpec};
 
 /// Typed version of a SBOM format version number.
-#[derive(Serialize, Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
 pub struct SbomFormatVersion(pub u32);
 
-#[derive(Debug, Copy, Clone, PartialEq, PartialOrd, Eq, Ord, Serialize)]
+#[derive(Debug, Copy, Clone, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SbomDependencyType {
     /// A dependency linked to the artifact produced by this unit.
@@ -18,10 +18,10 @@ pub enum SbomDependencyType {
     Build,
 }
 
-#[derive(Serialize, Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
 pub struct SbomIndex(pub usize);
 
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
 pub struct SbomDependency {
     pub index: SbomIndex,
@@ -55,7 +55,26 @@ impl Serialize for SbomTargetKind {
     }
 }
 
-#[derive(Serialize, Clone, Debug)]
+impl<'de> Deserialize<'de> for SbomTargetKind {
+    fn deserialize<D>(d: D) -> Result<Self, D::Error>
+    where
+        D: serde::de::Deserializer<'de>,
+    {
+        use self::SbomTargetKind::*;
+        let kind: Vec<String> = Deserialize::deserialize(d)?;
+        let refs: Vec<&str> = kind.iter().map(|s| s.as_str()).collect();
+        Ok(match refs.as_slice() {
+            ["bin"] => Bin,
+            ["example"] => Example,
+            ["test"] => Test,
+            ["custom-build"] => CustomBuild,
+            ["bench"] => Bench,
+            [..] => Lib(kind.into_iter().map(|k| CrateType::from(k)).collect()),
+        })
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
 pub struct SbomCrate {
     pub id: PackageIdSpec,
@@ -75,7 +94,7 @@ impl SbomCrate {
     }
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "snake_case")]
 pub struct SbomRustc {
     pub version: String,
@@ -86,7 +105,7 @@ pub struct SbomRustc {
     pub verbose_version: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub struct Sbom {
     pub version: SbomFormatVersion,

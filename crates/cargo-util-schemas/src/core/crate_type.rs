@@ -127,6 +127,12 @@ impl<'a> From<&'a String> for CrateType {
     }
 }
 
+impl From<String> for CrateType {
+    fn from(s: String) -> Self {
+        CrateType::from(&s)
+    }
+}
+
 impl fmt::Debug for CrateType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.to_string().fmt(f)
