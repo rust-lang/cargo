@@ -3,6 +3,7 @@ use cargo::workspace::features;
 use cargo_util::{ProcessBuilder, ProcessError};
 use cargo_util_schemas::manifest::StringOrVec;
 use cargo_util_terminal::Shell;
+use same_file::is_same_file;
 use std::collections::BTreeMap;
 use std::env;
 use std::ffi::OsStr;
@@ -289,6 +290,19 @@ fn execute_external_subcommand(gctx: &GlobalContext, cmd: &str, args: &[&OsStr])
             return Err(CliError::new(err, 101));
         }
     };
+
+    let is_current_exe = env::current_exe()
+        .and_then(|exe| Ok(is_same_file(&command, &exe)?))
+        .unwrap_or_default();
+    if is_current_exe {
+        let err = anyhow::format_err!(
+            "no such command: `{cmd}`\n\n\
+            help: `cargo-{cmd}` exists but is cargo itself\n\
+            help: `cargo-{cmd} {cmd}` would infinitely recurse",
+        );
+        return Err(CliError::new(err, 101));
+    }
+
     execute_subcommand(gctx, Some(&command), args)
 }
 
