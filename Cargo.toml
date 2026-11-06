@@ -47,6 +47,7 @@ crates-io = { version = "0.41.3", path = "crates/crates-io" }
 criterion = { version = "0.8.2", features = ["html_reports"] }
 curl = "0.4.49"
 curl-sys = "0.4.88"
+divan = "0.1.21"
 filetime = "0.2.27"
 flate2 = { version = "1.1.9", default-features = false, features = ["zlib-rs"] }
 futures = { version = "0.3.32", default-features = false, features = ["std", "executor", "async-await"]}
@@ -98,7 +99,6 @@ semver = { version = "1.0.27", features = ["serde"] }
 serde = "1.0.228"
 serde_core = "1.0.228"
 serde-untagged = "0.1.9"
-serde-value = "0.7.0"
 serde_ignored = "0.1.14"
 serde_json = "1.0.149"
 serde_test = "1.0.177"

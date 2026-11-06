@@ -14,7 +14,6 @@ semver.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true, optional = true }
 serde-untagged.workspace = true
-serde-value.workspace = true
 thiserror.workspace = true
 toml = { workspace = true, features = ["serde"] }
 unicode-ident.workspace = true
@@ -24,8 +23,14 @@ url.workspace = true
 workspace = true
 
 [dev-dependencies]
+divan.workspace = true
 snapbox.workspace = true
 serde_json.workspace = true
+toml = { workspace = true, features = ["std", "serde", "parse", "preserve_order"] }
+
+[[bench]]
+name = "manifest"
+harness = false
 
 [features]
 unstable-schema = ["dep:schemars", "dep:serde_json"]

@@ -323,10 +323,30 @@ impl<'de> Deserialize<'de> for SslVersionConfig {
     where
         D: serde::Deserializer<'de>,
     {
-        UntaggedEnumVisitor::new()
-            .string(|single| Ok(SslVersionConfig::Single(single.to_owned())))
-            .map(|map| map.deserialize().map(SslVersionConfig::Range))
-            .deserialize(deserializer)
+        struct Visitor;
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = SslVersionConfig;
+
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.write_str("a string or map")
+            }
+
+            fn visit_str<E: de::Error>(self, value: &str) -> Result<Self::Value, E> {
+                Ok(SslVersionConfig::Single(value.to_owned()))
+            }
+
+            fn visit_string<E: de::Error>(self, value: String) -> Result<Self::Value, E> {
+                Ok(SslVersionConfig::Single(value))
+            }
+
+            fn visit_map<M: de::MapAccess<'de>>(self, map: M) -> Result<Self::Value, M::Error> {
+                SslVersionConfigRange::deserialize(de::value::MapAccessDeserializer::new(map))
+                    .map(SslVersionConfig::Range)
+            }
+        }
+
+        deserializer.deserialize_any(Visitor)
     }
 }
 
@@ -737,17 +757,34 @@ impl<'de> Deserialize<'de> for EnvConfigValueInner {
             relative: bool,
         }
 
-        UntaggedEnumVisitor::new()
-            .string(|simple| Ok(EnvConfigValueInner::Simple(simple.to_owned())))
-            .map(|map| {
-                let with_options: WithOptions = map.deserialize()?;
+        struct Visitor;
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = EnvConfigValueInner;
+
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.write_str("a string or map")
+            }
+
+            fn visit_str<E: de::Error>(self, value: &str) -> Result<Self::Value, E> {
+                Ok(EnvConfigValueInner::Simple(value.to_owned()))
+            }
+
+            fn visit_string<E: de::Error>(self, value: String) -> Result<Self::Value, E> {
+                Ok(EnvConfigValueInner::Simple(value))
+            }
+
+            fn visit_map<M: de::MapAccess<'de>>(self, map: M) -> Result<Self::Value, M::Error> {
+                let options = WithOptions::deserialize(de::value::MapAccessDeserializer::new(map))?;
                 Ok(EnvConfigValueInner::WithOptions {
-                    value: with_options.value,
-                    force: with_options.force,
-                    relative: with_options.relative,
+                    value: options.value,
+                    force: options.force,
+                    relative: options.relative,
                 })
-            })
-            .deserialize(deserializer)
+            }
+        }
+
+        deserializer.deserialize_any(Visitor)
     }
 }
 
