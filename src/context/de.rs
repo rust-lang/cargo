@@ -255,7 +255,7 @@ enum KeyKind {
 impl<'gctx> ConfigMapAccess<'gctx> {
     fn new_map(de: Deserializer<'gctx>) -> Result<ConfigMapAccess<'gctx>, ConfigError> {
         let mut fields = Vec::new();
-        if let Some(mut v) = de.gctx.get_table(&de.key)? {
+        if let Some(mut v) = de.gctx.config_reader()?.get_table(&de.key)? {
             // `v: Value<HashMap<String, CV>>`
             for (key, _value) in v.val.drain() {
                 fields.push(KeyKind::CaseSensitive(key));
@@ -285,7 +285,7 @@ impl<'gctx> ConfigMapAccess<'gctx> {
         de: Deserializer<'gctx>,
         given_fields: &'static [&'static str],
     ) -> Result<ConfigMapAccess<'gctx>, ConfigError> {
-        let table = de.gctx.get_table(&de.key)?;
+        let table = de.gctx.config_reader()?.get_table(&de.key)?;
 
         // Assume that if we're deserializing a struct it exhaustively lists all
         // possible fields on this key that we're *supposed* to use, so take

@@ -106,6 +106,7 @@ mod de;
 use de::Deserializer;
 
 mod reader;
+use reader::ConfigReader;
 
 mod error;
 pub use error::ConfigError;
@@ -824,6 +825,12 @@ impl GlobalContext {
         }
 
         Ok(Filesystem::new(path))
+    }
+
+    fn config_reader(&self) -> CargoResult<ConfigReader<'_>> {
+        Ok(ConfigReader {
+            store: self.config()?,
+        })
     }
 
     /// Helper primarily for testing.

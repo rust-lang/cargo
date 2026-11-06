@@ -180,7 +180,7 @@ fn load_config_table(gctx: &GlobalContext, prefix: &[&str]) -> CargoResult<Targe
         gctx.get(prefix.iter().copied().chain(["linker"]))?;
     // Links do not support environment variables.
     let target_key = ConfigKey::from_parts(prefix);
-    let links_overrides = match gctx.get_table(&target_key)? {
+    let links_overrides = match gctx.config_reader()?.get_table(&target_key)? {
         Some(links) => parse_links_overrides(&target_key, links.val)?,
         None => BTreeMap::new(),
     };

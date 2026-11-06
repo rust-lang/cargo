@@ -4,11 +4,30 @@ use std::str::FromStr;
 use anyhow::{anyhow, bail};
 
 use super::{ConfigError, GlobalContext, OptValue, Value};
-use crate::config::{ConfigKey, ConfigValue, Definition, is_nonmergeable_list};
+use crate::config::{ConfigKey, ConfigStore, ConfigValue, Definition, is_nonmergeable_list};
 use crate::util::data_structures::HashMap;
 use crate::util::errors::CargoResult;
 
 use ConfigValue as CV;
+
+/// Reads configuration values from the loaded store.
+#[derive(Clone, Copy)]
+pub(super) struct ConfigReader<'a> {
+    pub(super) store: &'a ConfigStore,
+}
+
+impl ConfigReader<'_> {
+    /// Low-level method for getting a config value as an `OptValue<HashMap<String, CV>>`.
+    ///
+    /// NOTE: This does not read from env. The caller is responsible for that.
+    pub(crate) fn get_table(&self, key: &ConfigKey) -> CargoResult<OptValue<HashMap<String, CV>>> {
+        match self.store.get_cv(key)? {
+            Some(CV::Table(val, definition)) => Ok(Some(Value { val, definition })),
+            Some(val) => expected("table", key, &val),
+            None => Ok(None),
+        }
+    }
+}
 
 /// Helper macro for creating typed access methods.
 macro_rules! get_value_typed {
@@ -232,17 +251,6 @@ impl GlobalContext {
         }
         output.sort_by(|a, b| a.definition().cmp(b.definition()));
         Ok(())
-    }
-
-    /// Low-level method for getting a config value as an `OptValue<HashMap<String, CV>>`.
-    ///
-    /// NOTE: This does not read from env. The caller is responsible for that.
-    pub(crate) fn get_table(&self, key: &ConfigKey) -> CargoResult<OptValue<HashMap<String, CV>>> {
-        match self.config()?.get_cv(key)? {
-            Some(CV::Table(val, definition)) => Ok(Some(Value { val, definition })),
-            Some(val) => expected("table", key, &val),
-            None => Ok(None),
-        }
     }
 
     get_value_typed! {get_integer, i64, Integer, "an integer"}
