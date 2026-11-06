@@ -1,9 +1,6 @@
 use std::fmt;
 
-use crate::config::ArrayItemKeyPath;
-use crate::context::ConfigKey;
-use crate::context::Definition;
-use crate::util::ConfigValue;
+use crate::config::{ArrayItemKeyPath, ConfigKey, ConfigValue, Definition};
 
 /// Internal error for serde errors.
 #[derive(Debug)]
