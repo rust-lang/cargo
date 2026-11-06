@@ -1,3 +1,6 @@
+#![feature(needs_panic_runtime)]
+#![needs_panic_runtime]
+
 #![feature(staged_api)]
 #![stable(since = "1.0.0", feature = "dummy")]
 
