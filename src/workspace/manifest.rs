@@ -8,6 +8,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use anyhow::Context as _;
+use cargo_util_schemas::core::CrateType;
 use cargo_util_schemas::manifest::RustVersion;
 use cargo_util_schemas::manifest::{Hints, TomlManifest, TomlProfiles};
 use semver::Version;
@@ -15,9 +16,9 @@ use serde::Serialize;
 use serde::ser;
 use url::Url;
 
+use crate::compiler::CompileKind;
 use crate::compiler::CrateTypeExt as _;
 use crate::compiler::rustdoc::RustdocScrapeExamples;
-use crate::compiler::{CompileKind, CrateType};
 use crate::resolver::ResolveBehavior;
 use crate::util::errors::*;
 use crate::util::interning::InternedString;

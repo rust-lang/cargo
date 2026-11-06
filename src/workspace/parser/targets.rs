@@ -17,12 +17,13 @@ use std::path::{Path, PathBuf};
 
 use anyhow::Context as _;
 use cargo_util::paths;
+use cargo_util_schemas::core::CrateType;
 use cargo_util_schemas::manifest::{
     PathValue, StringOrVec, TomlBenchTarget, TomlBinTarget, TomlExampleTarget, TomlLibTarget,
     TomlManifest, TomlPackageBuild, TomlTarget, TomlTestTarget,
 };
 
-use crate::compiler::{CrateType, rustdoc::RustdocScrapeExamples};
+use crate::compiler::rustdoc::RustdocScrapeExamples;
 use crate::util::{closest_msg, errors::CargoResult, restricted_names};
 use crate::workspace::parser::deprecated_underscore;
 use crate::workspace::{Edition, Feature, Features, Target};
