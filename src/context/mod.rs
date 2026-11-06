@@ -132,7 +132,7 @@ pub use schema::*;
 macro_rules! get_value_typed {
     ($name:ident, $ty:ty, $variant:ident, $expected:expr) => {
         /// Low-level private method for getting a config value as an [`OptValue`].
-        fn $name(&self, key: &ConfigKey) -> Result<OptValue<$ty>, ConfigError> {
+        pub(crate) fn $name(&self, key: &ConfigKey) -> Result<OptValue<$ty>, ConfigError> {
             let cv = self.config()?.get_cv(key)?;
             let env = self.get_config_env::<$ty>(key)?;
             match (cv, env) {
@@ -940,7 +940,7 @@ impl GlobalContext {
     }
 
     /// Returns all environment variable keys, filtering out keys that are not valid UTF-8.
-    fn env_keys(&self) -> impl Iterator<Item = &str> {
+    pub(crate) fn env_keys(&self) -> impl Iterator<Item = &str> {
         self.env.keys_str()
     }
 
@@ -985,7 +985,7 @@ impl GlobalContext {
     /// Check if the [`GlobalContext`] contains a given [`ConfigKey`].
     ///
     /// See `ConfigMapAccess` for a description of `env_prefix_ok`.
-    fn has_key(&self, key: &ConfigKey, env_prefix_ok: bool) -> CargoResult<bool> {
+    pub(crate) fn has_key(&self, key: &ConfigKey, env_prefix_ok: bool) -> CargoResult<bool> {
         if self.env.contains_key(key.as_env_key()) {
             return Ok(true);
         }
@@ -1035,7 +1035,11 @@ impl GlobalContext {
 
     /// Internal method for getting an environment variable as a list.
     /// If the key is a non-mergeable list and a value is found in the environment, existing values are cleared.
-    fn get_env_list(&self, key: &ConfigKey, output: &mut Vec<ConfigValue>) -> CargoResult<()> {
+    pub(crate) fn get_env_list(
+        &self,
+        key: &ConfigKey,
+        output: &mut Vec<ConfigValue>,
+    ) -> CargoResult<()> {
         let Some(env_val) = self.env.get_str(key.as_env_key()) else {
             self.check_environment_key_case_mismatch(key);
             return Ok(());
@@ -1095,7 +1099,7 @@ impl GlobalContext {
     /// Low-level method for getting a config value as an `OptValue<HashMap<String, CV>>`.
     ///
     /// NOTE: This does not read from env. The caller is responsible for that.
-    fn get_table(&self, key: &ConfigKey) -> CargoResult<OptValue<HashMap<String, CV>>> {
+    pub(crate) fn get_table(&self, key: &ConfigKey) -> CargoResult<OptValue<HashMap<String, CV>>> {
         match self.config()?.get_cv(key)? {
             Some(CV::Table(val, definition)) => Ok(Some(Value { val, definition })),
             Some(val) => self.expected("table", key, &val),
@@ -1108,7 +1112,7 @@ impl GlobalContext {
     get_value_typed! {get_string_priv, String, String, "a string"}
 
     /// Generate an error when the given value is the wrong type.
-    fn expected<T>(&self, ty: &str, key: &ConfigKey, val: &CV) -> CargoResult<T> {
+    pub(crate) fn expected<T>(&self, ty: &str, key: &ConfigKey, val: &CV) -> CargoResult<T> {
         val.expected(ty, &key.to_string())
             .map_err(|e| anyhow!("invalid configuration for key `{}`\n{}", key, e))
     }
