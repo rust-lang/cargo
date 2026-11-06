@@ -5,6 +5,7 @@ use std::fmt;
 ///
 /// See <https://doc.rust-lang.org/nightly/reference/linkage.html>.
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub enum CrateType {
     Bin,
     Lib,

@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Cargo SBOM precursor",
+  "description": "This is the schema used to generate `*.cargo-sbom.json` files with -Zsbom enabled.",
+  "type": "object",
+  "properties": {
+    "version": {
+      "$ref": "#/$defs/SbomFormatVersion"
+    },
+    "root": {
+      "$ref": "#/$defs/SbomIndex"
+    },
+    "crates": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/SbomCrate"
+      }
+    },
+    "rustc": {
+      "$ref": "#/$defs/SbomRustc"
+    },
+    "target": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "version",
+    "root",
+    "crates",
+    "rustc",
+    "target"
+  ],
+  "$defs": {
+    "SbomFormatVersion": {
+      "description": "Typed version of a SBOM format version number.",
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0
+    },
+    "SbomIndex": {
+      "description": "Zero-based index into `crates` array of the crate described by this SBOM.",
+      "type": "integer",
+      "format": "uint",
+      "minimum": 0
+    },
+    "SbomCrate": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/PackageIdSpec"
+        },
+        "features": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SbomDependency"
+          }
+        },
+        "kind": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "features",
+        "dependencies",
+        "kind"
+      ]
+    },
+    "PackageIdSpec": {
+      "type": "string"
+    },
+    "SbomDependency": {
+      "type": "object",
+      "properties": {
+        "index": {
+          "$ref": "#/$defs/SbomIndex"
+        },
+        "kind": {
+          "$ref": "#/$defs/SbomDependencyType"
+        }
+      },
+      "required": [
+        "index",
+        "kind"
+      ]
+    },
+    "SbomDependencyType": {
+      "oneOf": [
+        {
+          "description": "A dependency linked to the artifact produced by this unit.",
+          "type": "string",
+          "const": "normal"
+        },
+        {
+          "description": "A dependency needed to run the build for this unit (e.g. a build script or proc-macro).\nThe dependency is not linked to the artifact produced by this unit.",
+          "type": "string",
+          "const": "build"
+        }
+      ]
+    },
+    "SbomRustc": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "wrapper": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "workspace_wrapper": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "commit_hash": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "host": {
+          "type": "string"
+        },
+        "verbose_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "version",
+        "host",
+        "verbose_version"
+      ]
+    }
+  }
+}
