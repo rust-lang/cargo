@@ -422,7 +422,7 @@ The default settings for the `dev` profile are:
 ```toml
 [profile.dev]
 opt-level = 0
-debug = true
+debug = "line-tables-only"
 split-debuginfo = '...'  # Platform-specific.
 strip = "none"
 debug-assertions = true
@@ -444,6 +444,7 @@ The default settings for the `debug` profile are:
 ```toml
 [profile.debug]
 inherits = "dev"
+debug = true
 ```
 
 ### release
