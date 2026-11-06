@@ -7,12 +7,13 @@ use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use cargo_util_schemas::core::CrateType;
 use cargo_util_schemas::manifest::TomlTrimPaths;
 use tracing::debug;
 
 use super::{BuildContext, BuildRunner, CompileKind, FileFlavor, Layout};
 use crate::compiler::trim_paths;
-use crate::compiler::{CompileMode, CompileTarget, CrateType, FileType, Unit};
+use crate::compiler::{CompileMode, CompileTarget, FileType, Unit};
 use crate::util::{self, CargoResult, OnceExt, StableHasher};
 use crate::workspace::Target;
 use crate::workspace::TargetKind;

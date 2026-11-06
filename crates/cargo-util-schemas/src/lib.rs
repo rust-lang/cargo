@@ -13,6 +13,7 @@ pub mod index;
 pub mod lockfile;
 pub mod manifest;
 pub mod messages;
+pub mod sbom;
 #[cfg(feature = "unstable-schema")]
 pub mod schema;
 

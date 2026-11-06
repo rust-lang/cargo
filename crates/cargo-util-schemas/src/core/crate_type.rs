@@ -5,6 +5,7 @@ use std::fmt;
 ///
 /// See <https://doc.rust-lang.org/nightly/reference/linkage.html>.
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub enum CrateType {
     Bin,
     Lib,
@@ -64,9 +65,7 @@ impl CrateType {
     /// Returns whether production of this crate type requires the object files
     /// from dependencies to be available.
     ///
-    /// See also [`TargetKind::requires_upstream_objects`].
-    ///
-    /// [`TargetKind::requires_upstream_objects`]: crate::workspace::manifest::TargetKind::requires_upstream_objects
+    /// See also `TargetKind::requires_upstream_objects` in the `cargo` crate.
     pub fn requires_upstream_objects(&self) -> bool {
         // "lib" == "rlib" and is a compilation that doesn't actually
         // require upstream object files to exist, only upstream metadata
@@ -80,9 +79,7 @@ impl CrateType {
     /// Returns whether production of this crate type could benefit from splitting metadata
     /// into a .rmeta file.
     ///
-    /// See also [`TargetKind::benefits_from_no_embed_metadata`].
-    ///
-    /// [`TargetKind::benefits_from_no_embed_metadata`]: crate::workspace::manifest::TargetKind::benefits_from_no_embed_metadata
+    /// See also `TargetKind::benefits_from_no_embed_metadata` in the `cargo` crate.
     pub fn benefits_from_no_embed_metadata(&self) -> bool {
         match self {
             // rlib/libs generate .rmeta files for pipelined compilation.
@@ -128,6 +125,12 @@ impl<'a> From<&'a String> for CrateType {
             "proc-macro" => CrateType::ProcMacro,
             _ => CrateType::Other(s.clone()),
         }
+    }
+}
+
+impl From<String> for CrateType {
+    fn from(s: String) -> Self {
+        CrateType::from(&s)
     }
 }
 

@@ -3,74 +3,31 @@
 
 use crate::util::data_structures::{HashMap, HashSet};
 use std::collections::{BTreeMap, BTreeSet};
-use std::path::PathBuf;
 
-use cargo_util_schemas::core::PackageIdSpec;
+use cargo_util_schemas::sbom::{
+    Sbom, SbomCrate, SbomDependency, SbomDependencyType, SbomFormatVersion, SbomIndex, SbomRustc,
+    SbomTargetKind,
+};
 use itertools::Itertools;
-use serde::Serialize;
 
 use crate::CargoResult;
 use crate::util::Rustc;
-use crate::util::interning::InternedString;
 use crate::workspace::TargetKind;
 
 use super::{BuildRunner, CompileMode, Unit};
 
-/// Typed version of a SBOM format version number.
-#[derive(Serialize, Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
-pub struct SbomFormatVersion(u32);
-
-#[derive(Debug, Copy, Clone, PartialEq, PartialOrd, Eq, Ord, Serialize)]
-#[serde(rename_all = "snake_case")]
-enum SbomDependencyType {
-    /// A dependency linked to the artifact produced by this unit.
-    Normal,
-    /// A dependency needed to run the build for this unit (e.g. a build script or proc-macro).
-    /// The dependency is not linked to the artifact produced by this unit.
-    Build,
-}
-
-#[derive(Serialize, Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
-struct SbomIndex(usize);
-
-#[derive(Serialize, Clone, Debug)]
-#[serde(rename_all = "snake_case")]
-struct SbomDependency {
-    index: SbomIndex,
-    kind: SbomDependencyType,
-}
-
-#[derive(Serialize, Clone, Debug)]
-#[serde(rename_all = "snake_case")]
-struct SbomCrate {
-    id: PackageIdSpec,
-    features: Vec<String>,
-    dependencies: Vec<SbomDependency>,
-    kind: TargetKind,
-}
-
-impl SbomCrate {
-    pub fn new(unit: &Unit) -> Self {
-        let package_id = unit.pkg.package_id().to_spec();
-        let features = unit.features.iter().map(|f| f.to_string()).collect_vec();
-        Self {
-            id: package_id,
-            features,
-            dependencies: Vec::new(),
-            kind: unit.target.kind().clone(),
+impl From<TargetKind> for SbomTargetKind {
+    fn from(t: TargetKind) -> Self {
+        use TargetKind::*;
+        match t {
+            Lib(c) => SbomTargetKind::Lib(c),
+            Bin => SbomTargetKind::Bin,
+            Test => SbomTargetKind::Test,
+            Bench => SbomTargetKind::Bench,
+            ExampleBin | ExampleLib(_) => SbomTargetKind::Example,
+            CustomBuild => SbomTargetKind::CustomBuild,
         }
     }
-}
-
-#[derive(Serialize, Clone)]
-#[serde(rename_all = "snake_case")]
-struct SbomRustc {
-    version: String,
-    wrapper: Option<PathBuf>,
-    workspace_wrapper: Option<PathBuf>,
-    commit_hash: Option<String>,
-    host: String,
-    verbose_version: String,
 }
 
 impl From<&Rustc> for SbomRustc {
@@ -84,16 +41,6 @@ impl From<&Rustc> for SbomRustc {
             verbose_version: rustc.verbose_version.clone(),
         }
     }
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "snake_case")]
-pub struct Sbom {
-    version: SbomFormatVersion,
-    root: SbomIndex,
-    crates: Vec<SbomCrate>,
-    rustc: SbomRustc,
-    target: InternedString,
 }
 
 /// Build an [`Sbom`] for the given [`Unit`].
@@ -114,7 +61,11 @@ pub fn build_sbom(build_runner: &BuildRunner<'_, '_>, root: &Unit) -> CargoResul
 
     // Add a item to the crates list for each node in the graph.
     for (unit, edges) in sbom_graph {
-        let mut krate = SbomCrate::new(unit);
+        let package_id = unit.pkg.package_id().to_spec();
+        let features = unit.features.iter().map(|f| f.to_string()).collect_vec();
+        let target_kind = unit.target.kind().clone();
+
+        let mut krate = SbomCrate::new(package_id, features, SbomTargetKind::from(target_kind));
         for (dep, kind) in edges {
             krate.dependencies.push(SbomDependency {
                 index: indices[dep],
@@ -132,7 +83,7 @@ pub fn build_sbom(build_runner: &BuildRunner<'_, '_>, root: &Unit) -> CargoResul
         crates,
         root: indices[root],
         rustc,
-        target,
+        target: target.to_string(),
     })
 }
 

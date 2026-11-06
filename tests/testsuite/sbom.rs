@@ -368,6 +368,124 @@ fn with_build_dependencies() {
 }
 
 #[cargo_test]
+fn with_examples() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"[package]
+name = "foo"
+version = "0.1.0"
+
+[[example]]
+name = "ex_bin"
+
+[[example]]
+name = "ex_lib"
+crate-type = ["rlib", "dylib"]
+            "#,
+        )
+        .file("src/lib.rs", "pub fn give_five() -> i32 { 5 }")
+        .file(
+            "examples/ex_bin.rs",
+            "fn main() { let _i = foo::give_five(); }",
+        )
+        .file(
+            "examples/ex_lib.rs",
+            "pub fn give_ten() -> i32 { foo::give_five() * 2 }",
+        )
+        .build();
+
+    p.cargo("build")
+        .env("CARGO_BUILD_SBOM", "true")
+        .arg("-Zsbom")
+        .arg("--examples")
+        .masquerade_as_nightly_cargo(&["sbom"])
+        .run();
+
+    // assert example sbom file counts (1 ex_bin, 2 ex_lib)
+    assert_eq!(
+        3,
+        p.glob(p.target_debug_dir().join("examples/*.cargo-sbom.json"))
+            .count()
+    );
+
+    // assert example sbom contents
+    p.assert_file(
+        append_sbom_suffix(&p.bin("examples/ex_bin")),
+        cargo_test_support::str![[r#"
+{
+  "crates": [
+    {
+      "dependencies": [],
+      "features": [],
+      "id": "path+[ROOTURL]/foo#0.1.0",
+      "kind": [
+        "lib"
+      ]
+    },
+    {
+      "dependencies": [
+        {
+          "index": 0,
+          "kind": "normal"
+        }
+      ],
+      "features": [],
+      "id": "path+[ROOTURL]/foo#0.1.0",
+      "kind": [
+        "example"
+      ]
+    }
+  ],
+  "root": 1,
+  "rustc": "{...}",
+  "target": "[HOST_TARGET]",
+  "version": 1
+}
+"#]]
+        .is_json(),
+    );
+
+    for kind in ["rlib", "dylib"] {
+        p.assert_file(
+            append_sbom_suffix(&p.example_lib("ex_lib", kind)),
+            cargo_test_support::str![[r#"
+{
+  "crates": [
+    {
+      "dependencies": [],
+      "features": [],
+      "id": "path+[ROOTURL]/foo#0.1.0",
+      "kind": [
+        "lib"
+      ]
+    },
+    {
+      "dependencies": [
+        {
+          "index": 0,
+          "kind": "normal"
+        }
+      ],
+      "features": [],
+      "id": "path+[ROOTURL]/foo#0.1.0",
+      "kind": [
+        "example"
+      ]
+    }
+  ],
+  "root": 1,
+  "rustc": "{...}",
+  "target": "[HOST_TARGET]",
+  "version": 1
+}
+"#]]
+            .is_json(),
+        );
+    }
+}
+
+#[cargo_test]
 fn crate_uses_different_features_for_build_and_normal_dependencies() {
     let p = project()
         .file(
