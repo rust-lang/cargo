@@ -249,7 +249,6 @@ fn builtin_false_rejected() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] `builtin` cannot be false
-       
   --> Cargo.toml:10:24
    |
 10 |                 core = { version = "0.0.0", builtin = false }

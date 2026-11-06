@@ -367,16 +367,30 @@ impl<'de> de::Deserialize<'de> for InheritableSemverVersion {
     where
         D: de::Deserializer<'de>,
     {
-        UntaggedEnumVisitor::new()
-            .expecting("SemVer version")
-            .string(
-                |value| match value.trim().parse().map_err(de::Error::custom) {
-                    Ok(parsed) => Ok(InheritableField::Value(parsed)),
-                    Err(e) => Err(e),
-                },
-            )
-            .map(|value| value.deserialize().map(InheritableField::Inherit))
-            .deserialize(d)
+        struct Visitor;
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = InheritableSemverVersion;
+
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.write_str("SemVer version")
+            }
+
+            fn visit_str<E: de::Error>(self, value: &str) -> Result<Self::Value, E> {
+                value
+                    .trim()
+                    .parse()
+                    .map(InheritableField::Value)
+                    .map_err(E::custom)
+            }
+
+            fn visit_map<M: de::MapAccess<'de>>(self, map: M) -> Result<Self::Value, M::Error> {
+                TomlInheritedField::deserialize(de::value::MapAccessDeserializer::new(map))
+                    .map(InheritableField::Inherit)
+            }
+        }
+
+        d.deserialize_any(Visitor)
     }
 }
 
@@ -796,28 +810,45 @@ impl<'de, P: Deserialize<'de> + Clone> de::Deserialize<'de> for TomlDependency<P
     where
         D: de::Deserializer<'de>,
     {
-        use serde::de::Error as _;
-        let expected = "a version string like \"0.9.8\" or a \
-                     detailed dependency like { version = \"0.9.8\" }";
-        UntaggedEnumVisitor::new()
-            .expecting(expected)
-            .string(|value| Ok(TomlDependency::Simple(value.to_owned())))
-            .bool(|value| {
-                let expected = format!("invalid type: boolean `{value}`, expected {expected}");
-                let err = if value {
-                    format!(
-                        "{expected}\n\
-                    note: if you meant to use a workspace member, you can write\n \
-                      dep.workspace = {value}"
-                    )
-                } else {
-                    expected
-                };
+        struct Visitor<P>(std::marker::PhantomData<P>);
 
-                Err(serde_untagged::de::Error::custom(err))
-            })
-            .map(|value| value.deserialize().map(TomlDependency::Detailed))
-            .deserialize(deserializer)
+        impl<'de, P: Deserialize<'de> + Clone> de::Visitor<'de> for Visitor<P> {
+            type Value = TomlDependency<P>;
+
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.write_str(
+                    "a version string like \"0.9.8\" or a \
+-                     detailed dependency like { version = \"0.9.8\" }",
+                )
+            }
+
+            fn visit_str<E: de::Error>(self, value: &str) -> Result<Self::Value, E> {
+                Ok(TomlDependency::Simple(value.to_owned()))
+            }
+
+            fn visit_string<E: de::Error>(self, value: String) -> Result<Self::Value, E> {
+                Ok(TomlDependency::Simple(value))
+            }
+
+            fn visit_bool<E: de::Error>(self, value: bool) -> Result<Self::Value, E> {
+                let unexpected = Unexpected::Bool(value);
+                if value {
+                    Err(E::custom(format_args!(
+                        "invalid type: {unexpected}, expected {}\nnote: if you meant to use a workspace member, you can write\n dep.workspace = true",
+                        &self as &dyn de::Expected
+                    )))
+                } else {
+                    Err(E::invalid_type(unexpected, &self))
+                }
+            }
+
+            fn visit_map<M: de::MapAccess<'de>>(self, map: M) -> Result<Self::Value, M::Error> {
+                TomlDetailedDependency::deserialize(de::value::MapAccessDeserializer::new(map))
+                    .map(TomlDependency::Detailed)
+            }
+        }
+
+        deserializer.deserialize_any(Visitor(std::marker::PhantomData))
     }
 }
 
@@ -1497,16 +1528,27 @@ impl<'de> de::Deserialize<'de> for FeatureDefinition {
     where
         D: de::Deserializer<'de>,
     {
-        UntaggedEnumVisitor::new()
-            .seq(|seq| {
-                seq.deserialize::<Vec<String>>()
+        struct Visitor;
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = FeatureDefinition;
+
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.write_str("an array or map")
+            }
+
+            fn visit_seq<S: de::SeqAccess<'de>>(self, seq: S) -> Result<Self::Value, S::Error> {
+                Vec::deserialize(de::value::SeqAccessDeserializer::new(seq))
                     .map(FeatureDefinition::Array)
-            })
-            .map(|seq| {
-                seq.deserialize::<FeatureMetadata>()
+            }
+
+            fn visit_map<M: de::MapAccess<'de>>(self, map: M) -> Result<Self::Value, M::Error> {
+                FeatureMetadata::deserialize(de::value::MapAccessDeserializer::new(map))
                     .map(FeatureDefinition::Metadata)
-            })
-            .deserialize(d)
+            }
+        }
+
+        d.deserialize_any(Visitor)
     }
 }
 
@@ -1624,12 +1666,26 @@ impl<'de> Deserialize<'de> for TomlLint {
     where
         D: de::Deserializer<'de>,
     {
-        UntaggedEnumVisitor::new()
-            .string(|string| {
-                TomlLintLevel::deserialize(string.into_deserializer()).map(TomlLint::Level)
-            })
-            .map(|map| map.deserialize().map(TomlLint::Config))
-            .deserialize(deserializer)
+        struct Visitor;
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = TomlLint;
+
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.write_str("a string or map")
+            }
+
+            fn visit_str<E: de::Error>(self, value: &str) -> Result<Self::Value, E> {
+                TomlLintLevel::deserialize(value.into_deserializer()).map(TomlLint::Level)
+            }
+
+            fn visit_map<M: de::MapAccess<'de>>(self, map: M) -> Result<Self::Value, M::Error> {
+                TomlLintConfig::deserialize(de::value::MapAccessDeserializer::new(map))
+                    .map(TomlLint::Config)
+            }
+        }
+
+        deserializer.deserialize_any(Visitor)
     }
 }
 
