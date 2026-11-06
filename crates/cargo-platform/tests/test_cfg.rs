@@ -1,4 +1,5 @@
 use cargo_platform::{Cfg, CfgExpr, Ident, Platform};
+use serde_test::{Token, assert_de_tokens_error, assert_tokens};
 use std::fmt;
 use std::str::FromStr;
 
@@ -45,9 +46,14 @@ macro_rules! e {
     ($($t:tt)*) => (CfgExpr::Value(c!($($t)*)));
 }
 
-fn good<T>(s: &str, expected: T)
+#[track_caller]
+fn good_canon<T>(s: &'static str, canon: &'static str, expected: T)
 where
-    T: FromStr + PartialEq + fmt::Debug,
+    T: FromStr
+        + PartialEq
+        + fmt::Debug
+        + serde_core::Serialize
+        + for<'de> serde_core::Deserialize<'de>,
     T::Err: fmt::Display,
 {
     let c = match T::from_str(s) {
@@ -55,73 +61,127 @@ where
         Err(e) => panic!("failed to parse `{}`: {}", s, e),
     };
     assert_eq!(c, expected);
+
+    // Validate the serialization (this tests both directions).
+    assert_tokens(&c, &[Token::Str(canon)]);
 }
 
-fn bad<T>(s: &str, err: &str)
+#[track_caller]
+fn good<T>(s: &'static str, expected: T)
 where
-    T: FromStr + fmt::Display,
+    T: FromStr
+        + PartialEq
+        + fmt::Debug
+        + serde_core::Serialize
+        + for<'de> serde_core::Deserialize<'de>,
+    T::Err: fmt::Display,
+{
+    good_canon(s, s, expected);
+}
+
+#[track_caller]
+fn bad<T>(s: &'static str, err: &'static str)
+where
+    T: FromStr + fmt::Display + serde_core::Serialize + for<'de> serde_core::Deserialize<'de>,
     T::Err: fmt::Display,
 {
     let e = match T::from_str(s) {
         Ok(cfg) => panic!("expected `{}` to not parse but got {}", s, cfg),
         Err(e) => e.to_string(),
     };
-    assert!(
-        e.contains(err),
-        "when parsing `{}`,\n\"{}\" not contained \
-         inside: {}",
-        s,
-        err,
-        e
-    );
+    assert_eq!(&e, err);
+
+    assert_de_tokens_error::<T>(&[Token::Str(s)], err);
 }
 
 #[test]
 fn cfg_syntax() {
     good("foo", c!(foo));
     good("_bar", c!(_bar));
-    good(" foo", c!(foo));
-    good(" foo  ", c!(foo));
+    good_canon(" foo", "foo", c!(foo));
+    good_canon(" foo  ", "foo", c!(foo));
     good("r#foo", c!(r # foo));
-    good(" foo  = \"bar\"", c!(foo = "bar"));
-    good("foo=\"\"", c!(foo = ""));
-    good("r#foo=\"\"", c!(r # foo = ""));
-    good(" foo=\"3\"      ", c!(foo = "3"));
+    good_canon(" foo  = \"bar\"", "foo = \"bar\"", c!(foo = "bar"));
+    good_canon("foo=\"\"", "foo = \"\"", c!(foo = ""));
+    good_canon("r#foo=\"\"", "r#foo = \"\"", c!(r # foo = ""));
+    good_canon(" foo=\"3\"      ", "foo = \"3\"", c!(foo = "3"));
     good("foo = \"3 e\"", c!(foo = "3 e"));
-    good(" r#foo = \"3 e\"", c!(r # foo = "3 e"));
+    good_canon(" r#foo = \"3 e\"", "r#foo = \"3 e\"", c!(r # foo = "3 e"));
 }
 
 #[test]
 fn cfg_syntax_bad() {
-    bad::<Cfg>("", "but cfg expression ended");
-    bad::<Cfg>(" ", "but cfg expression ended");
-    bad::<Cfg>("\t", "unexpected character");
-    bad::<Cfg>("7", "unexpected character");
-    bad::<Cfg>("=", "expected identifier");
-    bad::<Cfg>(",", "expected identifier");
-    bad::<Cfg>("(", "expected identifier");
-    bad::<Cfg>("foo (", "unexpected content `(` found after cfg expression");
-    bad::<Cfg>("bar =", "expected a string");
-    bad::<Cfg>("bar = \"", "unterminated string");
+    bad::<Cfg>(
+        "",
+        "failed to parse `` as a cfg expression: expected identifier, but cfg expression ended",
+    );
+    bad::<Cfg>(
+        " ",
+        "failed to parse ` ` as a cfg expression: expected identifier, but cfg expression ended",
+    );
+    bad::<Cfg>(
+        "\t",
+        "failed to parse `\t` as a cfg expression: unexpected character `\t` in cfg, expected parens, a comma, an identifier, or a string",
+    );
+    bad::<Cfg>(
+        "7",
+        "failed to parse `7` as a cfg expression: unexpected character `7` in cfg, expected parens, a comma, an identifier, or a string",
+    );
+    bad::<Cfg>(
+        "=",
+        "failed to parse `=` as a cfg expression: expected identifier, found `=`",
+    );
+    bad::<Cfg>(
+        ",",
+        "failed to parse `,` as a cfg expression: expected identifier, found `,`",
+    );
+    bad::<Cfg>(
+        "(",
+        "failed to parse `(` as a cfg expression: expected identifier, found `(`",
+    );
+    bad::<Cfg>(
+        "foo (",
+        "failed to parse `foo (` as a cfg expression: unexpected content `(` found after cfg expression",
+    );
+    bad::<Cfg>(
+        "bar =",
+        "failed to parse `bar =` as a cfg expression: expected a string, but cfg expression ended",
+    );
+    bad::<Cfg>(
+        "bar = \"",
+        "failed to parse `bar = \"` as a cfg expression: unterminated string in cfg",
+    );
     bad::<Cfg>(
         "foo, bar",
-        "unexpected content `, bar` found after cfg expression",
+        "failed to parse `foo, bar` as a cfg expression: unexpected content `, bar` found after cfg expression",
     );
-    bad::<Cfg>("r# foo", "unexpected character");
-    bad::<Cfg>("r #foo", "unexpected content");
-    bad::<Cfg>("r#\"foo\"", "unexpected character");
-    bad::<Cfg>("foo = r#\"\"", "unexpected character");
+    bad::<Cfg>(
+        "r# foo",
+        "failed to parse `r# foo` as a cfg expression: unexpected character ` ` in cfg, expected parens, a comma, an identifier, or a string",
+    );
+    bad::<Cfg>(
+        "r #foo",
+        "failed to parse `r #foo` as a cfg expression: unexpected content `#foo` found after cfg expression",
+    );
+    bad::<Cfg>(
+        "r#\"foo\"",
+        "failed to parse `r#\"foo\"` as a cfg expression: unexpected character `\"` in cfg, expected parens, a comma, an identifier, or a string",
+    );
+    bad::<Cfg>(
+        "foo = r#\"\"",
+        "failed to parse `foo = r#\"\"` as a cfg expression: unexpected character `\"` in cfg, expected parens, a comma, an identifier, or a string",
+    );
 }
 
 #[test]
 fn cfg_expr() {
     good("foo", e!(foo));
     good("_bar", e!(_bar));
-    good(" foo", e!(foo));
-    good(" foo  ", e!(foo));
-    good(" foo  = \"bar\"", e!(foo = "bar"));
-    good("foo=\"\"", e!(foo = ""));
-    good(" foo=\"3\"      ", e!(foo = "3"));
+    good_canon(" foo", "foo", e!(foo));
+    good_canon(" foo  ", "foo", e!(foo));
+    good_canon(" foo  = \"bar\"", "foo = \"bar\"", e!(foo = "bar"));
+    good_canon("foo=\"\"", "foo = \"\"", e!(foo = ""));
+    good_canon(" foo=\"3\"      ", "foo = \"3\"", e!(foo = "3"));
     good("foo = \"3 e\"", e!(foo = "3 e"));
 
     good("true", e!(true));
@@ -130,23 +190,48 @@ fn cfg_expr() {
     good("all()", e!(all()));
     good("all(a)", e!(all(a)));
     good("all(a, b)", e!(all(a, b)));
-    good("all(a, )", e!(all(a)));
+    good_canon("all(a, )", "all(a)", e!(all(a)));
     good("not(a = \"b\")", e!(not(a = "b")));
     good("not(all(a))", e!(not(all(a))));
 }
 
 #[test]
 fn cfg_expr_bad() {
-    bad::<CfgExpr>(" ", "but cfg expression ended");
-    bad::<CfgExpr>(" all", "expected `(`");
-    bad::<CfgExpr>("all(a", "expected `)`");
-    bad::<CfgExpr>("not", "expected `(`");
-    bad::<CfgExpr>("not(a", "expected `)`");
-    bad::<CfgExpr>("a = ", "expected a string");
-    bad::<CfgExpr>("all(not())", "expected identifier");
+    bad::<CfgExpr>(
+        " ",
+        "failed to parse ` ` as a cfg expression: expected start of a cfg expression, but cfg expression ended",
+    );
+    bad::<CfgExpr>(
+        " all",
+        "failed to parse ` all` as a cfg expression: expected `(`, but cfg expression ended",
+    );
+    bad::<CfgExpr>(
+        "all(a",
+        "failed to parse `all(a` as a cfg expression: expected `)`, but cfg expression ended",
+    );
+    bad::<CfgExpr>(
+        "not",
+        "failed to parse `not` as a cfg expression: expected `(`, but cfg expression ended",
+    );
+    bad::<CfgExpr>(
+        "not(a",
+        "failed to parse `not(a` as a cfg expression: expected `)`, but cfg expression ended",
+    );
+    bad::<CfgExpr>(
+        "a = ",
+        "failed to parse `a = ` as a cfg expression: expected a string, but cfg expression ended",
+    );
+    bad::<CfgExpr>(
+        "all(not())",
+        "failed to parse `all(not())` as a cfg expression: expected identifier, found `)`",
+    );
     bad::<CfgExpr>(
         "foo(a)",
-        "unexpected content `(a)` found after cfg expression",
+        "failed to parse `foo(a)` as a cfg expression: unexpected content `(a)` found after cfg expression",
+    );
+    bad::<CfgExpr>(
+        "cfg(unix)",
+        "failed to parse `cfg(unix)` as a cfg expression: unexpected content `(unix)` found after cfg expression",
     );
 }
 

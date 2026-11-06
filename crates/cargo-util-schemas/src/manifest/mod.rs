@@ -7,8 +7,6 @@
 
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
-#[cfg(feature = "unstable-schema")]
-use std::collections::HashMap;
 use std::fmt::{self, Display, Write};
 use std::path::PathBuf;
 use std::str;
@@ -163,7 +161,6 @@ pub struct InheritablePackage {
     pub badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
     pub exclude: Option<Vec<String>>,
     pub include: Option<Vec<String>>,
-    #[cfg_attr(feature = "unstable-schema", schemars(with = "Option<String>"))]
     pub rust_version: Option<RustVersion>,
 }
 
@@ -178,7 +175,6 @@ pub struct InheritablePackage {
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub struct TomlPackage {
     pub edition: Option<InheritableString>,
-    #[cfg_attr(feature = "unstable-schema", schemars(with = "Option<String>"))]
     pub rust_version: Option<InheritableRustVersion>,
     #[cfg_attr(feature = "unstable-schema", schemars(with = "Option<String>"))]
     pub name: Option<PackageName>,
@@ -643,6 +639,7 @@ impl Default for TomlInheritedField {
 #[serde(try_from = "bool")]
 #[serde(into = "bool")]
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
+#[cfg_attr(feature = "unstable-schema", schemars(extend("type" = "boolean", "enum" = [true])))]
 struct WorkspaceValue;
 
 impl TryFrom<bool> for WorkspaceValue {
@@ -1104,6 +1101,7 @@ impl<'de> de::Deserialize<'de> for ProfilePackageSpec {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
+#[cfg_attr(feature = "unstable-schema", schemars(extend("type" = ["string", "integer"], "enum" = [0, 1, 2, 3, "s", "z"])))]
 pub struct TomlOptLevel(pub String);
 
 impl ser::Serialize for TomlOptLevel {
@@ -1145,7 +1143,8 @@ impl<'de> de::Deserialize<'de> for TomlOptLevel {
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 #[cfg_attr(feature = "unstable-schema", schemars(rename_all = "kebab-case"))]
-#[cfg_attr(feature = "unstable-schema", schemars(transform = Self::schema_add_aliases))]
+#[cfg_attr(feature = "unstable-schema", schemars(extend("type" = ["string", "integer", "boolean"])))]
+#[cfg_attr(feature = "unstable-schema", schemars(transform = Self::transform))]
 pub enum TomlDebugInfo {
     None,
     LineDirectivesOnly,
@@ -1154,26 +1153,14 @@ pub enum TomlDebugInfo {
     Full,
 }
 
+// Add extra enum variants, preserving existing such "line-tables-only"
 #[cfg(feature = "unstable-schema")]
 impl TomlDebugInfo {
-    fn schema_add_aliases(schema: &mut schemars::Schema) {
-        use serde_json::Value;
-
-        if let Some(obj) = schema.as_object_mut() {
-            obj.get_mut("type").map(|v| match v {
-                Value::Array(v) => v.extend_from_slice(&["integer".into(), "boolean".into()]),
-                Value::String(s) => {
-                    let s = std::mem::replace(s, String::with_capacity(0));
-                    *v = Value::Array(vec![s.into(), "integer".into(), "boolean".into()])
-                }
-                _ => *v = Value::Array(vec!["string".into(), "integer".into(), "boolean".into()]),
-            });
-
-            if let Some(variants) = obj.get_mut("enum").and_then(|v| v.as_array_mut()) {
-                variants.reserve(5);
-                variants.extend((0..=2).map(Into::into));
-                variants.extend_from_slice(&[false.into(), true.into()]);
-            }
+    fn transform(schema: &mut schemars::Schema) {
+        if let Some(serde_json::Value::Array(variants)) = schema.get_mut("enum") {
+            variants.reserve(5);
+            variants.extend((0..=2).map(Into::into));
+            variants.extend_from_slice(&[false.into(), true.into()]);
         }
     }
 }
@@ -1679,7 +1666,7 @@ pub struct TomlLintConfig {
     #[serde(flatten)]
     #[cfg_attr(
         feature = "unstable-schema",
-        schemars(with = "HashMap<String, TomlValueWrapper>")
+        schemars(with = "std::collections::HashMap<String, TomlValueWrapper>")
     )]
     pub config: toml::Table,
 }
@@ -1730,6 +1717,7 @@ impl<'de> de::Deserialize<'de> for InvalidCargoFeatures {
 /// but is always stored as a vector.
 #[derive(Clone, Debug, Serialize, Eq, PartialEq, PartialOrd, Ord)]
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
+#[cfg_attr(feature = "unstable-schema", schemars(extend("type" = ["array", "string"])))]
 pub struct StringOrVec(pub Vec<String>);
 
 impl StringOrVec {

@@ -180,6 +180,86 @@ required by package `foo v0.0.1 ([ROOT]/foo)`
 "#]]);
 }
 
+/// Like [`nonexistent_http`] but with HTTP status code 410
+#[cargo_test]
+fn nonexistent_http_410() {
+    let _registry = RegistryBuilder::new()
+        .http_index()
+        .not_found_handler(|_req, _server| Response {
+            code: 410,
+            headers: vec![],
+            body: b"not found".to_vec(),
+        })
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                bar = "1"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] no matching package named `bar` found
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `foo v0.1.0 ([ROOT]/foo)`
+
+"#]])
+        .run();
+}
+
+/// Like [`nonexistent_http`] but with HTTP status code 451
+#[cargo_test]
+fn nonexistent_http_451() {
+    let _registry = RegistryBuilder::new()
+        .http_index()
+        .not_found_handler(|_req, _server| Response {
+            code: 451,
+            headers: vec![],
+            body: b"not found".to_vec(),
+        })
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                bar = "1"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] no matching package named `bar` found
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `foo v0.1.0 ([ROOT]/foo)`
+
+"#]])
+        .run();
+}
+
 #[cargo_test]
 fn nonexistent_git() {
     nonexistent(str![[r#"

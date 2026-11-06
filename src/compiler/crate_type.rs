@@ -125,7 +125,7 @@ impl<'a> From<&'a String> for CrateType {
             "dylib" => CrateType::Dylib,
             "cdylib" => CrateType::Cdylib,
             "staticlib" => CrateType::Staticlib,
-            "procmacro" => CrateType::ProcMacro,
+            "proc-macro" => CrateType::ProcMacro,
             _ => CrateType::Other(s.clone()),
         }
     }

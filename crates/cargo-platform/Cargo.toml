@@ -1,6 +1,6 @@
 [package]
 name = "cargo-platform"
-version = "0.3.4"
+version = "0.3.5"
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
@@ -15,6 +15,9 @@ serde_core.workspace = true
 # This is required to avoid conflict with other `serde` users which may require an older version.
 [target.'cfg(false)'.dependencies]
 serde.workspace = true
+
+[dev-dependencies]
+serde_test.workspace = true
 
 [lints]
 workspace = true

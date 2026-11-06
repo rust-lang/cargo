@@ -7,6 +7,8 @@ use crate::core::PartialVersion;
 use crate::core::PartialVersionError;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Copy, Clone, Debug)]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
+#[cfg_attr(feature = "unstable-schema", schemars(with = "String"))]
 pub struct RustVersion {
     major: u64,
     minor: Option<u64>,
