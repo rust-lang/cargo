@@ -1569,12 +1569,12 @@ impl GlobalContext {
                     .into_iter()
                     .map(|cv| match cv {
                         CV::String(s, def) => Ok((s, def)),
-                        other => self.expected("string", &key, &other),
+                        other => reader::expected("string", &key, &other),
                     })
                     .collect::<CargoResult<Vec<_>>>()?;
                 Ok(Some(Value { val, definition }))
             }
-            Some(val) => self.expected("list", &key, &val),
+            Some(val) => reader::expected("list", &key, &val),
             None => Ok(None),
         }
     }

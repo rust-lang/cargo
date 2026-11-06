@@ -240,7 +240,7 @@ impl GlobalContext {
     pub(crate) fn get_table(&self, key: &ConfigKey) -> CargoResult<OptValue<HashMap<String, CV>>> {
         match self.config()?.get_cv(key)? {
             Some(CV::Table(val, definition)) => Ok(Some(Value { val, definition })),
-            Some(val) => self.expected("table", key, &val),
+            Some(val) => expected("table", key, &val),
             None => Ok(None),
         }
     }
@@ -248,10 +248,10 @@ impl GlobalContext {
     get_value_typed! {get_integer, i64, Integer, "an integer"}
     get_value_typed! {get_bool, bool, Boolean, "true/false"}
     get_value_typed! {get_string_priv, String, String, "a string"}
+}
 
-    /// Generate an error when the given value is the wrong type.
-    pub(crate) fn expected<T>(&self, ty: &str, key: &ConfigKey, val: &CV) -> CargoResult<T> {
-        val.expected(ty, &key.to_string())
-            .map_err(|e| anyhow!("invalid configuration for key `{}`\n{}", key, e))
-    }
+/// Generate an error when the given value is the wrong type.
+pub(crate) fn expected<T>(ty: &str, key: &ConfigKey, val: &CV) -> CargoResult<T> {
+    val.expected(ty, &key.to_string())
+        .map_err(|e| anyhow!("invalid configuration for key `{}`\n{}", key, e))
 }

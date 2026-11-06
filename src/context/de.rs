@@ -22,6 +22,7 @@
 //! [`ConfigValue`]: CV
 
 use crate::config::ArrayItemKeyPath;
+use crate::context::reader::expected;
 use crate::context::value;
 use crate::context::{ConfigError, ConfigKey, GlobalContext};
 use crate::context::{ConfigValue as CV, Definition, Value};
@@ -189,8 +190,7 @@ impl<'de, 'gctx> de::Deserializer<'de> for Deserializer<'gctx> {
                     res.extend(split_vs);
                 }
                 Some(val) => {
-                    self.gctx
-                        .expected("string or array of strings", &self.key, &val)?;
+                    expected("string or array of strings", &self.key, &val)?;
                 }
                 None => {}
             }
@@ -440,7 +440,7 @@ impl ConfigSeqAccess<'_> {
                 res.extend(val);
             }
             Some(val) => {
-                de.gctx.expected("list", &de.key, &val)?;
+                expected("list", &de.key, &val)?;
             }
             None => {}
         }
