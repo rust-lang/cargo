@@ -110,8 +110,8 @@ use de::Deserializer;
 mod error;
 pub use error::ConfigError;
 
-use crate::config::is_nonmergeable_list;
 pub use crate::config::{ConfigKey, ConfigStore, ConfigValue, Definition, DefinitionKind};
+use crate::config::{Env, is_nonmergeable_list};
 
 mod value;
 pub use value::{OptValue, Value};
@@ -124,9 +124,6 @@ pub use path::ResolveTemplateError;
 
 mod target;
 pub use target::{TargetCfgConfig, TargetConfig};
-
-mod environment;
-use environment::Env;
 
 mod schema;
 pub use schema::*;
