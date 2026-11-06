@@ -1,32 +1,25 @@
 use std::fmt;
 use std::str::FromStr;
+use std::sync::Mutex;
 
 use anyhow::{anyhow, bail};
+use cargo_util_terminal::Shell;
 
-use super::{ConfigError, GlobalContext, OptValue, Value};
-use crate::config::{ConfigKey, ConfigStore, ConfigValue, Definition, is_nonmergeable_list};
+use super::de::Deserializer;
+use super::{ConfigError, OptValue, Value};
+use crate::config::{ConfigKey, ConfigStore, ConfigValue, Definition, Env, is_nonmergeable_list};
 use crate::util::data_structures::HashMap;
 use crate::util::errors::CargoResult;
 
 use ConfigValue as CV;
 
-/// Reads configuration values from the loaded store.
+/// Reads configuration values from the loaded store and the environment.
 #[derive(Clone, Copy)]
 pub(super) struct ConfigReader<'a> {
     pub(super) store: &'a ConfigStore,
-}
-
-impl ConfigReader<'_> {
-    /// Low-level method for getting a config value as an `OptValue<HashMap<String, CV>>`.
-    ///
-    /// NOTE: This does not read from env. The caller is responsible for that.
-    pub(crate) fn get_table(&self, key: &ConfigKey) -> CargoResult<OptValue<HashMap<String, CV>>> {
-        match self.store.get_cv(key)? {
-            Some(CV::Table(val, definition)) => Ok(Some(Value { val, definition })),
-            Some(val) => expected("table", key, &val),
-            None => Ok(None),
-        }
-    }
+    pub(super) shell: &'a Mutex<Shell>,
+    pub(super) env: &'a Env,
+    pub(super) advanced_env: bool,
 }
 
 /// Helper macro for creating typed access methods.
@@ -34,7 +27,7 @@ macro_rules! get_value_typed {
     ($name:ident, $ty:ty, $variant:ident, $expected:expr) => {
         /// Low-level private method for getting a config value as an [`OptValue`].
         pub(crate) fn $name(&self, key: &ConfigKey) -> Result<OptValue<$ty>, ConfigError> {
-            let cv = self.config()?.get_cv(key)?;
+            let cv = self.store.get_cv(key)?;
             let env = self.get_config_env::<$ty>(key)?;
             match (cv, env) {
                 (Some(CV::$variant(val, definition)), Some(env)) => {
@@ -53,12 +46,25 @@ macro_rules! get_value_typed {
     };
 }
 
-impl GlobalContext {
+impl ConfigReader<'_> {
+    pub(super) fn get<'de, T: serde::Deserialize<'de>>(self, key: ConfigKey) -> CargoResult<T> {
+        let de = Deserializer {
+            reader: self,
+            key,
+            env_prefix_ok: true,
+        };
+        Ok(T::deserialize(de)?)
+    }
+
+    pub(super) fn warn(&self, message: String) -> CargoResult<()> {
+        self.shell.lock().unwrap().warn(message)
+    }
+
     /// This is a helper for getting a CV from a file or env var.
-    pub(crate) fn get_cv_with_env(&self, key: &ConfigKey) -> CargoResult<Option<CV>> {
+    pub(super) fn get_cv_with_env(&self, key: &ConfigKey) -> CargoResult<Option<CV>> {
         // Determine if value comes from env, cli, or file, and merge env if
         // possible.
-        let cv = self.config()?.get_cv(key)?;
+        let cv = self.store.get_cv(key)?;
         if key.is_root() {
             // Root table can't have env value.
             return Ok(cv);
@@ -87,7 +93,7 @@ impl GlobalContext {
             Ok(Some(CV::Boolean(false, env_def)))
         } else if let Ok(i) = env.parse::<i64>() {
             Ok(Some(CV::Integer(i, env_def)))
-        } else if self.cli_unstable().advanced_env && env.starts_with('[') && env.ends_with(']') {
+        } else if self.advanced_env && env.starts_with('[') && env.ends_with(']') {
             match cv {
                 Some(CV::List(mut cv_list, cv_def)) => {
                     // Merge with config file.
@@ -132,11 +138,6 @@ impl GlobalContext {
         }
     }
 
-    /// Returns all environment variable keys, filtering out keys that are not valid UTF-8.
-    pub(crate) fn env_keys(&self) -> impl Iterator<Item = &str> {
-        self.env.keys_str()
-    }
-
     fn get_config_env<T>(&self, key: &ConfigKey) -> Result<OptValue<T>, ConfigError>
     where
         T: FromStr,
@@ -159,7 +160,7 @@ impl GlobalContext {
         }
     }
 
-    /// Check if the [`GlobalContext`] contains a given [`ConfigKey`].
+    /// Check if the configuration contains a given [`ConfigKey`].
     ///
     /// See `ConfigMapAccess` for a description of `env_prefix_ok`.
     pub(crate) fn has_key(&self, key: &ConfigKey, env_prefix_ok: bool) -> CargoResult<bool> {
@@ -168,11 +169,11 @@ impl GlobalContext {
         }
         if env_prefix_ok {
             let env_prefix = format!("{}_", key.as_env_key());
-            if self.env_keys().any(|k| k.starts_with(&env_prefix)) {
+            if self.env.keys_str().any(|k| k.starts_with(&env_prefix)) {
                 return Ok(true);
             }
         }
-        if self.config()?.get_cv(key)?.is_some() {
+        if self.store.get_cv(key)?.is_some() {
             return Ok(true);
         }
         self.check_environment_key_case_mismatch(key);
@@ -182,7 +183,7 @@ impl GlobalContext {
 
     fn check_environment_key_case_mismatch(&self, key: &ConfigKey) {
         if let Some(env_key) = self.env.get_normalized(key.as_env_key()) {
-            let _ = self.shell().warn(format!(
+            let _ = self.warn(format!(
                 "environment variables are expected to use uppercase letters and underscores, \
                 the variable `{}` will be ignored and have no effect",
                 env_key
@@ -225,7 +226,7 @@ impl GlobalContext {
             }
         }
 
-        if self.cli_unstable().advanced_env && env_val.starts_with('[') && env_val.ends_with(']') {
+        if self.advanced_env && env_val.starts_with('[') && env_val.ends_with(']') {
             // Parse an environment string as a TOML array.
             let toml_v = env_val.parse::<toml::Value>().map_err(|e| {
                 ConfigError::new(format!("could not parse TOML list: {}", e), env_def.clone())
@@ -251,6 +252,17 @@ impl GlobalContext {
         }
         output.sort_by(|a, b| a.definition().cmp(b.definition()));
         Ok(())
+    }
+
+    /// Low-level method for getting a config value as an `OptValue<HashMap<String, CV>>`.
+    ///
+    /// NOTE: This does not read from env. The caller is responsible for that.
+    pub(crate) fn get_table(&self, key: &ConfigKey) -> CargoResult<OptValue<HashMap<String, CV>>> {
+        match self.store.get_cv(key)? {
+            Some(CV::Table(val, definition)) => Ok(Some(Value { val, definition })),
+            Some(val) => expected("table", key, &val),
+            None => Ok(None),
+        }
     }
 
     get_value_typed! {get_integer, i64, Integer, "an integer"}

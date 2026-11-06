@@ -161,7 +161,7 @@ impl Env {
     /// Looks up a normalized `key` in the `normalized_env`.
     /// Returns the corresponding (non-normalized) env key if it exists, else `None`.
     ///
-    /// This is used by [`crate::GlobalContext::check_environment_key_case_mismatch`].
+    /// Used to diagnose configuration environment variables with mismatched case.
     pub(crate) fn get_normalized(&self, key: &str) -> Option<&str> {
         self.normalized_env.get(key).map(|s| s.as_ref())
     }

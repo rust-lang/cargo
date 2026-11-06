@@ -34,7 +34,7 @@
 //!    These parsed results are stored in [`GlobalContext`].
 //!
 //! 2. **`ConfigValue` → Target types** ---
-//!    The [`GlobalContext::get`] method uses a [custom serde deserializer](Deserializer)
+//!    The [`GlobalContext::get`] method uses a [custom serde deserializer](de::Deserializer)
 //!    to convert [`ConfigValue`] instances to the caller's desired type.
 //!    Precedence between [`ConfigValue`] sources is resolved during retrieval
 //!    based on [`Definition`] priority.
@@ -103,7 +103,6 @@ use toml_edit::Item;
 use url::Url;
 
 mod de;
-use de::Deserializer;
 
 mod reader;
 use reader::ConfigReader;
@@ -830,7 +829,14 @@ impl GlobalContext {
     fn config_reader(&self) -> CargoResult<ConfigReader<'_>> {
         Ok(ConfigReader {
             store: self.config()?,
+            shell: &self.shell,
+            env: &self.env,
+            advanced_env: self.cli_unstable().advanced_env,
         })
+    }
+
+    pub(crate) fn get_cv_with_env(&self, key: &ConfigKey) -> CargoResult<Option<CV>> {
+        self.config_reader()?.get_cv_with_env(key)
     }
 
     /// Helper primarily for testing.
@@ -1769,12 +1775,7 @@ impl GlobalContext {
 
         key: impl IntoIterator<Item = impl AsRef<str>>,
     ) -> CargoResult<T> {
-        let d = Deserializer {
-            gctx: self,
-            key: ConfigKey::from_parts(key),
-            env_prefix_ok: true,
-        };
-        T::deserialize(d).map_err(|e| e.into())
+        self.config_reader()?.get(ConfigKey::from_parts(key))
     }
 
     /// Obtain a [`Path`] from a [`Filesystem`], verifying that the
