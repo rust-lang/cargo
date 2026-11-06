@@ -14,7 +14,6 @@ semver.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true, optional = true }
 serde-untagged.workspace = true
-serde-value.workspace = true
 thiserror.workspace = true
 toml = { workspace = true, features = ["serde"] }
 unicode-ident.workspace = true

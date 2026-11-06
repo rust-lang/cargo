@@ -582,7 +582,6 @@ dependencies = [
  "semver",
  "serde",
  "serde-untagged",
- "serde-value",
  "serde_json",
  "snapbox",
  "thiserror 2.0.18",
@@ -4234,16 +4233,6 @@ dependencies = [
  "serde",
  "serde_core",
  "typeid",
-]
-
-[[package]]
-name = "serde-value"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f3a1a3341211875ef120e117ea7fd5228530ae7e7036a779fdc9117be6b3282c"
-dependencies = [
- "ordered-float",
- "serde",
 ]
 
 [[package]]
