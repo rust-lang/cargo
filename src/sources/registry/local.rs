@@ -1,12 +1,14 @@
 //! Access to a registry on the local filesystem. See [`LocalRegistry`] for more.
 
-use crate::sources::registry::{LoadResponse, MaybeLock, RegistryConfig, RegistryData};
+use crate::sources::registry::{
+    LoadResponse, LockMetadata, MaybeLock, PACKAGE_SOURCE_LOCK, RegistryConfig, RegistryData,
+};
 use crate::util::errors::CargoResult;
 use crate::util::{Filesystem, GlobalContext};
 use crate::workspace::PackageId;
 use cargo_util::{Sha256, paths};
 use std::cell::Cell;
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::SeekFrom;
 use std::io::{self, prelude::*};
 use std::path::Path;
@@ -178,10 +180,21 @@ impl<'gctx> RegistryData for LocalRegistry<'gctx> {
         let path = self.root.join(&pkg.tarball_name()).into_path_unlocked();
         let mut crate_file = paths::open(&path)?;
 
-        // If we've already got an unpacked version of this crate, then skip the
-        // checksum below as it is in theory already verified.
+        // If this exact archive has already been unpacked, then its checksum was
+        // verified before the source lock was written.
         let dst = path.file_stem().unwrap();
-        if self.src_path.join(dst).into_path_unlocked().exists() {
+        let source_lock = self
+            .src_path
+            .join(dst)
+            .into_path_unlocked()
+            .join(PACKAGE_SOURCE_LOCK);
+        let checksum_is_verified = fs::read_to_string(source_lock)
+            .ok()
+            .and_then(|contents| serde_json::from_str::<LockMetadata>(&contents).ok())
+            .map_or(false, |metadata| {
+                metadata.is_valid_for_checksum(checksum, true)
+            });
+        if checksum_is_verified {
             return Ok(MaybeLock::Ready(crate_file));
         }
 
