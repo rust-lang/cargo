@@ -9,6 +9,7 @@ use std::fs;
 use std::io::prelude::*;
 use std::net::TcpListener;
 use std::process::Stdio;
+use std::time::Duration;
 
 use crate::prelude::*;
 use cargo_test_support::registry::Package;
@@ -57,6 +58,167 @@ fn checksum_build_compatible_with_mtime_build() {
 
 "#]])
         .run();
+}
+
+#[cargo_test]
+fn touching_dependency_output_rebuilds_consumer() {
+    check_touching_dependency_output(
+        false,
+        str![[r#"
+[FRESH] bar v0.0.1 ([ROOT]/foo/bar)
+[DIRTY] foo v0.0.1 ([ROOT]/foo): [..]
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]],
+    );
+}
+
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
+fn output_checksum_touching_dependency_output_stays_fresh() {
+    check_touching_dependency_output(
+        true,
+        str![[r#"
+[FRESH] bar v0.0.1 ([ROOT]/foo/bar)
+[FRESH] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]],
+    );
+}
+
+fn check_touching_dependency_output(
+    enable_checksum_freshness: bool,
+    expected: impl snapbox::IntoData,
+) {
+    let p = output_checksum_project();
+    output_checksum_cargo(&p, "build", enable_checksum_freshness)
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to highest compatible version
+[COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    output_checksum_cargo(&p, "build -v", enable_checksum_freshness)
+        .with_stderr_data(str![[r#"
+[FRESH] bar v0.0.1 ([ROOT]/foo/bar)
+[FRESH] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    let rlib = p
+        .glob("target/debug/build/bar/*/out/libbar-*.rlib")
+        .next()
+        .unwrap()
+        .unwrap();
+    let consumer_mtime = fs::metadata(p.bin("foo")).unwrap().modified().unwrap();
+    // Change only the output timestamp, with enough separation for coarse filesystems.
+    filetime::set_file_mtime(
+        rlib,
+        filetime::FileTime::from_system_time(consumer_mtime + Duration::from_secs(2)),
+    )
+    .unwrap();
+
+    output_checksum_cargo(&p, "build -v", enable_checksum_freshness)
+        .with_stderr_data(expected)
+        .run();
+    p.process(&p.bin("foo")).with_stdout_data("7\n").run();
+}
+
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
+fn output_checksum_changed_dependency_output_rebuilds_consumer() {
+    let p = output_checksum_project();
+    output_checksum_cargo(&p, "build", true)
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to highest compatible version
+[COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    let rlib = p
+        .glob("target/debug/build/bar/*/out/libbar-*.rlib")
+        .next()
+        .unwrap()
+        .unwrap();
+    let original_rlib = fs::read(&rlib).unwrap();
+
+    p.change_file("bar/src/lib.rs", "pub fn value() -> u32 { 8 }");
+    output_checksum_cargo(&p, "build", true)
+        .with_stderr_data(str![[r#"
+[COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+    p.process(&p.bin("foo")).with_stdout_data("8\n").run();
+
+    // Swap in a valid rlib with different content while bar's sources stay unchanged.
+    fs::write(&rlib, original_rlib).unwrap();
+
+    // Validate the unit and its consumer rebuild
+    output_checksum_cargo(&p, "build -v", true)
+        .with_stderr_data(str![[r#"
+[DIRTY] bar v0.0.1 ([ROOT]/foo/bar): [..]
+[COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
+[RUNNING] `rustc --crate-name bar [..]
+[DIRTY] foo v0.0.1 ([ROOT]/foo): the dependency `bar` was rebuilt
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+    p.process(&p.bin("foo")).with_stdout_data("8\n").run();
+}
+
+fn output_checksum_cargo(
+    p: &cargo_test_support::Project,
+    args: &str,
+    enabled: bool,
+) -> cargo_test_support::Execs {
+    let mut command = p.cargo(args);
+    if enabled {
+        command
+            .env("CARGO_BUILD_FINGERPRINT", "content")
+            .arg("-Zchecksum-freshness")
+            .masquerade_as_nightly_cargo(&["checksum-freshness"]);
+    } else {
+        command.env("CARGO_BUILD_FINGERPRINT", "mtime");
+    }
+    command
+}
+
+fn output_checksum_project() -> cargo_test_support::Project {
+    project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2021"
+
+                [dependencies]
+                bar = { path = "bar" }
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            "fn main() { println!(\"{}\", bar::value()); }",
+        )
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("bar/src/lib.rs", "pub fn value() -> u32 { 7 }")
+        .build()
 }
 
 #[cargo_test]

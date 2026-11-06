@@ -346,10 +346,6 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
         build_runner.files().build_script_out_dir(unit)
     };
 
-    if let Some(deps) = unit.pkg.manifest().metabuild() {
-        prepare_metabuild(build_runner, build_script_unit, deps)?;
-    }
-
     // Building the command to execute
     let bin_name = if bcx.gctx.cli_unstable().build_dir_new_layout {
         unit.target.crate_name()
@@ -1211,7 +1207,7 @@ impl BuildOutput {
 /// Prepares the Rust script for the unstable feature [metabuild].
 ///
 /// [metabuild]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#metabuild
-fn prepare_metabuild(
+pub fn prepare_metabuild(
     build_runner: &BuildRunner<'_, '_>,
     unit: &Unit,
     deps: &[String],
