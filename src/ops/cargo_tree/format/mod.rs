@@ -5,7 +5,7 @@ use anyhow::{Error, bail};
 use self::parse::{Parser, RawChunk};
 use super::{Graph, Node, NodeId};
 
-mod parse;
+pub(super) mod parse;
 
 enum Chunk {
     Raw(String),

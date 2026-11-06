@@ -1,0 +1,80 @@
+<svg width="740px" height="470px" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .fg { fill: #AAAAAA }
+    .bg { fill: #000000 }
+    .bg-bright-green { stroke: #55FF55; fill: #55FF55; user-select: none;  }
+    .fg-black { fill: #000000 }
+    .fg-bright-green { fill: #55FF55 }
+    .fg-cyan { fill: #00AAAA }
+    .fg-yellow { fill: #AA5500 }
+    .container {
+      padding: 0 10px;
+      line-height: 18px;
+    }
+    .bold { font-weight: bold; }
+    .dimmed { opacity: 0.4; }
+    tspan {
+      font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+      white-space: pre;
+      line-height: 18px;
+    }
+  </style>
+
+  <rect width="100%" height="100%" y="0" rx="4.5" class="bg" />
+
+  <text xml:space="preserve" class="container fg">
+    <tspan x="10px" y="28px"><tspan class="dimmed">workspace</tspan><tspan class="fg-cyan dimmed"> v</tspan><tspan class="dimmed">                                                                    ▴</tspan>
+</tspan>
+    <tspan x="10px" y="46px"><tspan>├──• dependency-09</tspan><tspan class="fg-cyan"> v1.0.0</tspan><tspan>                                                      ┆</tspan>
+</tspan>
+    <tspan x="10px" y="64px"><tspan>├──• dependency-10</tspan><tspan class="fg-cyan"> v1.0.0</tspan><tspan>                                                      ┆</tspan>
+</tspan>
+    <tspan x="10px" y="82px"><tspan>├──• dependency-11</tspan><tspan class="fg-cyan"> v1.0.0</tspan><tspan>                                                      ┆</tspan>
+</tspan>
+    <tspan x="10px" y="100px"><tspan>├──• dependency-12</tspan><tspan class="fg-cyan"> v1.0.0</tspan><tspan>                                                      ┆</tspan>
+</tspan>
+    <tspan x="10px" y="118px"><tspan>├──• dependency-13</tspan><tspan class="fg-cyan"> v1.0.0</tspan><tspan>                                                      ┆</tspan>
+</tspan>
+    <tspan x="10px" y="136px"><tspan>├──• dependency-14</tspan><tspan class="fg-cyan"> v1.0.0</tspan><tspan>                                                      ┆</tspan>
+</tspan>
+    <tspan x="10px" y="154px"><tspan>├──• dependency-15</tspan><tspan class="fg-cyan"> v1.0.0</tspan><tspan>                                                      ▐</tspan>
+</tspan>
+    <tspan x="10px" y="172px"><tspan>├──• dependency-16</tspan><tspan class="fg-cyan"> v1.0.0</tspan><tspan>                                                      ▐</tspan>
+</tspan>
+    <tspan x="10px" y="190px"><tspan>├──• dependency-17</tspan><tspan class="fg-cyan"> v1.0.0</tspan><tspan>                                                      ▐</tspan>
+</tspan>
+    <tspan x="10px" y="208px"><tspan>├──• dependency-18</tspan><tspan class="fg-cyan"> v1.0.0</tspan><tspan>                                                      ▐</tspan>
+</tspan>
+    <tspan x="10px" y="226px"><tspan>├──• dependency-19</tspan><tspan class="fg-cyan"> v1.0.0</tspan><tspan>                                                      ▐</tspan>
+</tspan>
+    <tspan x="10px" y="244px"><tspan>├──• dependency-20</tspan><tspan class="fg-cyan"> v1.0.0</tspan><tspan>                                                      ▐</tspan>
+</tspan>
+    <tspan x="10px" y="262px"><tspan>├──• dependency-21</tspan><tspan class="fg-cyan"> v1.0.0</tspan><tspan>                                                      ▐</tspan>
+</tspan>
+    <tspan x="10px" y="280px"><tspan>├──• dependency-22</tspan><tspan class="fg-cyan"> v1.0.0</tspan><tspan>                                                      ▐</tspan>
+</tspan>
+    <tspan x="10px" y="298px"><tspan>├──• dependency-23</tspan><tspan class="fg-cyan"> v1.0.0</tspan><tspan>                                                      ▐</tspan>
+</tspan>
+    <tspan x="10px" y="316px"><tspan>├──• dependency-24</tspan><tspan class="fg-cyan"> v1.0.0</tspan><tspan>                                                      ▐</tspan>
+</tspan>
+    <tspan x="10px" y="334px"><tspan>├──• dependency-25</tspan><tspan class="fg-cyan"> v1.0.0</tspan><tspan>                                                      ▐</tspan>
+</tspan>
+    <tspan x="10px" y="352px"><tspan>├──• dependency-26</tspan><tspan class="fg-cyan"> v1.0.0</tspan><tspan>                                                      ▐</tspan>
+</tspan>
+    <tspan x="10px" y="370px"><tspan>├──• </tspan><tspan class="fg-yellow bold">dependency-27</tspan><tspan class="fg-cyan"> v1.0.0</tspan><tspan>                                                      ▐</tspan>
+</tspan>
+    <tspan x="10px" y="388px"><tspan>├──• dependency-28</tspan><tspan class="fg-cyan"> v1.0.0</tspan><tspan>                                                      ▐</tspan>
+</tspan>
+    <tspan x="10px" y="406px"><tspan>├──• dependency-29</tspan><tspan class="fg-cyan"> v1.0.0</tspan><tspan>                                                      ▐</tspan>
+</tspan>
+    <tspan x="10px" y="424px"><tspan>├──• dependency-30</tspan><tspan class="fg-cyan"> v1.0.0</tspan><tspan>                                                      ▐</tspan>
+</tspan>
+    <tspan x="10px" y="442px"><tspan>            </tspan><tspan>             </tspan><tspan>                                   </tspan><tspan>   </tspan><tspan class="bg-bright-green">██████</tspan><tspan>   </tspan><tspan class="bg-bright-green">██████</tspan><tspan>  </tspan>
+</tspan>
+    <tspan x="10px" y="442px"><tspan>workspace → </tspan><tspan class="fg-yellow bold">dependency-27</tspan><tspan>                                   </tspan><tspan class="fg-bright-green bold"> q </tspan><tspan class="fg-black bold"> QUIT </tspan><tspan class="fg-bright-green bold"> ? </tspan><tspan class="fg-black bold"> HELP </tspan><tspan> ▾</tspan>
+</tspan>
+    <tspan x="10px" y="460px">
+</tspan>
+  </text>
+
+</svg>

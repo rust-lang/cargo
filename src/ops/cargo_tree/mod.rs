@@ -17,6 +17,7 @@ use std::str::FromStr;
 
 mod format;
 mod graph;
+pub mod tui;
 
 pub use {graph::EdgeKind, graph::Node, graph::NodeId};
 
@@ -72,11 +73,42 @@ impl Target {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Prefix {
     None,
     Indent,
     Depth,
+}
+
+impl Default for Prefix {
+    fn default() -> Self {
+        Self::Indent
+    }
+}
+
+/// Character set used for dependency tree output.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Charset {
+    Utf8,
+    Ascii,
+}
+
+impl Default for Charset {
+    fn default() -> Self {
+        Self::Utf8
+    }
+}
+
+impl FromStr for Charset {
+    type Err = &'static str;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "utf8" => Ok(Self::Utf8),
+            "ascii" => Ok(Self::Ascii),
+            _ => Err("invalid charset"),
+        }
+    }
 }
 
 impl FromStr for Prefix {
@@ -92,10 +124,16 @@ impl FromStr for Prefix {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum DisplayDepth {
     MaxDisplayDepth(u32),
     Workspace,
+}
+
+impl Default for DisplayDepth {
+    fn default() -> Self {
+        Self::MaxDisplayDepth(u32::MAX)
+    }
 }
 
 impl FromStr for DisplayDepth {

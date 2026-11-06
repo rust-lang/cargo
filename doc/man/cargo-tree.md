@@ -197,6 +197,15 @@ Sets how each line is displayed. The _prefix_ value can be one of:
 
 {{#options}}
 
+{{#option "`--tui`" }}
+Display the dependency tree in an interactive terminal interface.
+{{/option}}
+
+{{#option "`--inline`" }}
+Render the interactive interface inline and keep its content visible after
+exiting. Requires `--tui`.
+{{/option}}
+
 {{> options-display }}
 
 {{/options}}
