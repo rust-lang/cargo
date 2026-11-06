@@ -1,3 +1,4 @@
+use crate::resolver::CliFeatures;
 use crate::util::data_structures::HashMap;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
@@ -312,7 +313,7 @@ impl<'gctx> InstallablePackage<'gctx> {
     fn no_track_duplicates(&self, dst: &Path) -> CargoResult<BTreeMap<String, Option<PackageId>>> {
         // Helper for --no-track flag to make sure it doesn't overwrite anything.
         let duplicates: BTreeMap<String, Option<PackageId>> =
-            exe_names(&self.pkg, &self.opts.filter)
+            exe_names(&self.pkg, &self.opts.filter, &self.opts.cli_features)
                 .into_iter()
                 .filter(|name| dst.join(name).exists())
                 .map(|name| (name, None))
@@ -962,7 +963,8 @@ fn remove_orphaned_bins(
     dry_run: bool,
 ) -> CargoResult<()> {
     let filter = ops::CompileFilter::new_all_targets();
-    let all_self_names = exe_names(pkg, &filter);
+    let cli_features = CliFeatures::new_all(true);
+    let all_self_names = exe_names(pkg, &filter, &cli_features);
     let mut to_remove: HashMap<PackageId, BTreeSet<String>> = HashMap::default();
     // For each package that we stomped on.
     for other_pkg in duplicates.values().flatten() {
