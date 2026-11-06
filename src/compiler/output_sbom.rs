@@ -1,6 +1,7 @@
 //! cargo-sbom precursor files for external tools to create SBOM files from.
 //! See [`build_sbom_graph`] for more.
 
+use crate::compiler::CrateType;
 use crate::util::data_structures::{HashMap, HashSet};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
@@ -11,7 +12,6 @@ use serde::Serialize;
 
 use crate::CargoResult;
 use crate::util::Rustc;
-use crate::util::interning::InternedString;
 use crate::workspace::TargetKind;
 
 use super::{BuildRunner, CompileMode, Unit};
@@ -40,24 +40,63 @@ struct SbomDependency {
     kind: SbomDependencyType,
 }
 
+#[derive(Clone, Debug)]
+pub enum SbomTargetKind {
+    Lib(Vec<CrateType>),
+    Bin,
+    Test,
+    Bench,
+    Example,
+    CustomBuild,
+}
+
+impl Serialize for SbomTargetKind {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::ser::Serializer,
+    {
+        use self::SbomTargetKind::*;
+        match self {
+            Lib(kinds) => s.collect_seq(kinds.iter().map(|t| t.to_string())),
+            Bin => ["bin"].serialize(s),
+            Example => ["example"].serialize(s),
+            Test => ["test"].serialize(s),
+            CustomBuild => ["custom-build"].serialize(s),
+            Bench => ["bench"].serialize(s),
+        }
+    }
+}
+
+impl From<TargetKind> for SbomTargetKind {
+    fn from(t: TargetKind) -> Self {
+        use TargetKind::*;
+        match t {
+            Lib(c) => SbomTargetKind::Lib(c),
+            Bin => SbomTargetKind::Bin,
+            Test => SbomTargetKind::Test,
+            Bench => SbomTargetKind::Bench,
+            ExampleBin | ExampleLib(_) => SbomTargetKind::Example,
+            CustomBuild => SbomTargetKind::CustomBuild,
+        }
+    }
+}
+
 #[derive(Serialize, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
 struct SbomCrate {
     id: PackageIdSpec,
     features: Vec<String>,
     dependencies: Vec<SbomDependency>,
-    kind: TargetKind,
+    kind: SbomTargetKind,
 }
 
 impl SbomCrate {
-    pub fn new(unit: &Unit) -> Self {
-        let package_id = unit.pkg.package_id().to_spec();
-        let features = unit.features.iter().map(|f| f.to_string()).collect_vec();
+    pub fn new(package_id: PackageIdSpec, features: Vec<String>, kind: SbomTargetKind) -> Self {
         Self {
             id: package_id,
             features,
             dependencies: Vec::new(),
-            kind: unit.target.kind().clone(),
+            kind,
         }
     }
 }
@@ -93,7 +132,7 @@ pub struct Sbom {
     root: SbomIndex,
     crates: Vec<SbomCrate>,
     rustc: SbomRustc,
-    target: InternedString,
+    target: String,
 }
 
 /// Build an [`Sbom`] for the given [`Unit`].
@@ -114,7 +153,11 @@ pub fn build_sbom(build_runner: &BuildRunner<'_, '_>, root: &Unit) -> CargoResul
 
     // Add a item to the crates list for each node in the graph.
     for (unit, edges) in sbom_graph {
-        let mut krate = SbomCrate::new(unit);
+        let package_id = unit.pkg.package_id().to_spec();
+        let features = unit.features.iter().map(|f| f.to_string()).collect_vec();
+        let target_kind = unit.target.kind().clone();
+
+        let mut krate = SbomCrate::new(package_id, features, SbomTargetKind::from(target_kind));
         for (dep, kind) in edges {
             krate.dependencies.push(SbomDependency {
                 index: indices[dep],
@@ -132,7 +175,7 @@ pub fn build_sbom(build_runner: &BuildRunner<'_, '_>, root: &Unit) -> CargoResul
         crates,
         root: indices[root],
         rustc,
-        target,
+        target: target.to_string(),
     })
 }
 
