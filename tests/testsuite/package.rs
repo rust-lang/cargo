@@ -8120,3 +8120,36 @@ fn repackage_smaller_local_dep_tmp_registry_checksum_match() {
         "tmp-registry crate checksum should match index entry"
     );
 }
+
+#[cargo_test]
+fn package_flag_without_a_value() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                license = "MIT"
+                description = "foo"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("package --no-verify -p")
+        .with_stderr_data(str![[r#"
+[WARNING] `--package` without a value is ignored
+  |
+  = [NOTE] this was previously accepted but will become a hard error in the future
+  = [HELP] pass a value to `--package` or remove it
+[WARNING] manifest has no documentation, homepage or repository
+  |
+  = [NOTE] see https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+
+"#]])
+        .run();
+}

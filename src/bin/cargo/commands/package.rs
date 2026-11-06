@@ -67,6 +67,11 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         )
         .into());
     }
+
+    if args.is_present_with_zero_values("package") {
+        warn_ignored_zero_values(gctx, "package")?;
+    }
+
     let specs = args.packages_from_flags()?;
 
     let fmt = if let Some(fmt) = args._value_of("message-format") {

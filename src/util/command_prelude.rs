@@ -23,6 +23,7 @@ use cargo_util_schemas::manifest::ProfileName;
 use cargo_util_schemas::manifest::RegistryName;
 use cargo_util_schemas::manifest::StringOrVec;
 use cargo_util_terminal as shell;
+use cargo_util_terminal::report::Level;
 use clap::builder::PossibleValuesParser;
 use clap::builder::UnknownArgumentValueParser;
 use clap_complete::ArgValueCandidates;
@@ -1545,4 +1546,19 @@ pub enum CommandInfo {
     BuiltIn { about: Option<String> },
     External { path: PathBuf },
     Alias { target: StringOrVec },
+}
+
+/// Warns that an occurrence of a flag without a value is ignored.
+pub fn warn_ignored_zero_values(gctx: &GlobalContext, name: &str) -> CargoResult<()> {
+    gctx.shell().print_report(
+        &[Level::WARNING
+            .secondary_title(format!("`--{name}` without a value is ignored"))
+            .elements([
+                Level::NOTE.message(
+                    "this was previously accepted but will become a hard error in the future",
+                ),
+                Level::HELP.message(format!("pass a value to `--{name}` or remove it")),
+            ])],
+        false,
+    )
 }

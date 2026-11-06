@@ -108,6 +108,10 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
 }
 
 fn report_future_incompatibilities(gctx: &GlobalContext, args: &ArgMatches) -> CliResult {
+    if args.is_present_with_zero_values("package") {
+        warn_ignored_zero_values(gctx, "package")?;
+    }
+
     let ws = args.workspace(gctx)?;
     let reports = OnDiskReports::load(&ws)?;
     let id = args
