@@ -40,6 +40,13 @@ impl HttpServerHandle {
             let _ = stream.flush();
         }
     }
+
+    pub fn join(mut self) {
+        self.stop();
+        if let Some(handle) = self.handle.take() {
+            let _ = handle.join();
+        }
+    }
 }
 
 impl Drop for HttpServerHandle {
