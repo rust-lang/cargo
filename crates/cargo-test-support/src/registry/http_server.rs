@@ -388,8 +388,8 @@ impl HttpServer {
             // Mimic the publish behavior for local registries by writing out the request
             // so tests can verify publishes made to either registry type.
             let path = self.api_path.join("api/v1/crates/new");
-            t!(fs::create_dir_all(path.parent().unwrap()));
-            t!(fs::write(&path, body));
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(&path, body).unwrap();
 
             // Get the metadata of the package
             let (len, remaining) = body.split_at(4);
@@ -442,8 +442,8 @@ fn save_new_crate(
     registry_path: &Path,
 ) {
     // Write the `.crate`
-    t!(fs::create_dir_all(dst.parent().unwrap()));
-    t!(fs::write(&dst, file));
+    fs::create_dir_all(dst.parent().unwrap()).unwrap();
+    fs::write(&dst, file).unwrap();
 
     let deps = new_crate
         .deps
