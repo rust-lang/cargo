@@ -489,7 +489,7 @@ pub fn create_index_line(
     vers: &str,
     deps: Vec<serde_json::Value>,
     cksum: &str,
-    features: crate::registry::FeatureMap,
+    features: FeatureMap,
     yanked: bool,
     links: Option<String>,
     rust_version: Option<&str>,
@@ -534,30 +534,31 @@ pub fn write_to_index(registry_path: &Path, name: &str, line: String, local: boo
         registry_path.join(&file)
     };
     let prev = fs::read_to_string(&dst).unwrap_or_default();
-    t!(fs::create_dir_all(dst.parent().unwrap()));
-    t!(fs::write(&dst, prev + &line[..] + "\n"));
+    fs::create_dir_all(dst.parent().unwrap()).unwrap();
+    fs::write(&dst, prev + &line[..] + "\n").unwrap();
 
     // Add the new file to the index.
     if !local {
-        let repo = t!(git2::Repository::open(&registry_path));
-        let mut index = t!(repo.index());
-        t!(index.add_path(Path::new(&file)));
-        t!(index.write());
-        let id = t!(index.write_tree());
+        let repo = git2::Repository::open(&registry_path).unwrap();
+        let mut index = repo.index().unwrap();
+        index.add_path(Path::new(&file)).unwrap();
+        index.write().unwrap();
+        let id = index.write_tree().unwrap();
 
         // Commit this change.
-        let tree = t!(repo.find_tree(id));
-        let sig = t!(repo.signature());
-        let parent = t!(repo.refname_to_id("refs/heads/master"));
-        let parent = t!(repo.find_commit(parent));
-        t!(repo.commit(
+        let tree = repo.find_tree(id).unwrap();
+        let sig = repo.signature().unwrap();
+        let parent = repo.refname_to_id("refs/heads/master").unwrap();
+        let parent = repo.find_commit(parent).unwrap();
+        repo.commit(
             Some("HEAD"),
             &sig,
             &sig,
             "Another commit",
             &tree,
-            &[&parent]
-        ));
+            &[&parent],
+        )
+        .unwrap();
     }
 }
 

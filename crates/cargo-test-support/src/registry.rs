@@ -122,8 +122,8 @@ fn generate_url(name: &str) -> Url {
 
 mod http_server;
 pub use http_server::{
-    HttpServer, HttpServerHandle, Request, RequestCallback, Response, create_index_line,
-    write_to_index,
+    FeatureMap, HttpServer, HttpServerHandle, Request, RequestCallback, Response,
+    create_index_line, write_to_index,
 };
 
 /// Prepare a local [`TestRegistry`] fixture
@@ -524,8 +524,6 @@ pub struct Package {
     pubtime: Option<String>,
     v: Option<u32>,
 }
-
-pub(crate) type FeatureMap = BTreeMap<String, Vec<String>>;
 
 /// Published package dependency builder, see [`Package::add_dep`]
 #[derive(Clone)]
