@@ -44,7 +44,6 @@
 
 use crate::git::repo;
 use crate::paths;
-use crate::publish::{create_index_line, write_to_index};
 use cargo_util::Sha256;
 use cargo_util::paths::append;
 use flate2::Compression;
@@ -122,7 +121,10 @@ fn generate_url(name: &str) -> Url {
 }
 
 mod http_server;
-pub use http_server::{HttpServer, HttpServerHandle, Request, RequestCallback, Response};
+pub use http_server::{
+    HttpServer, HttpServerHandle, Request, RequestCallback, Response, create_index_line,
+    write_to_index,
+};
 
 /// Prepare a local [`TestRegistry`] fixture
 ///
