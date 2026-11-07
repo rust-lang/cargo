@@ -1090,12 +1090,10 @@ fn invalid_base() {
         .with_stderr_data(
             "\
 [ERROR] invalid character `^` in path base name: `^^not-valid^^`, the first character must be a Unicode XID start character (most letters or `_`)
-       
-       
-  --> Cargo.toml:10:23
+  --> Cargo.toml:10:32
    |
 10 |                 bar = { base = '^^not-valid^^', path = 'bar' }
-   |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |                                ^^^^^^^^^^^^^^^
 ",
         )
         .run();
