@@ -17,7 +17,7 @@ pub type RequestCallback = Box<dyn Send + Fn(&Request, &HttpServer) -> Response>
 
 pub struct HttpServerHandle {
     addr: SocketAddr,
-    pub(super) handle: Option<JoinHandle<()>>,
+    handle: Option<JoinHandle<()>>,
 }
 
 impl HttpServerHandle {
@@ -38,6 +38,13 @@ impl HttpServerHandle {
             // shutdown the server
             let _ = stream.write_all(b"stop");
             let _ = stream.flush();
+        }
+    }
+
+    pub fn join(mut self) {
+        self.stop();
+        if let Some(handle) = self.handle.take() {
+            let _ = handle.join();
         }
     }
 }

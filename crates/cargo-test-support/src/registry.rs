@@ -180,13 +180,9 @@ impl TestRegistry {
     }
 
     /// Shutdown the server thread and wait for it to stop.
-    /// `Drop` automatically stops the server, but this additionally
-    /// waits for the thread to stop.
     pub fn join(self) {
-        if let Some(mut server) = self.server {
-            server.stop();
-            let handle = server.handle.take().unwrap();
-            handle.join().unwrap();
+        if let Some(server) = self.server {
+            server.join();
         }
     }
 }
