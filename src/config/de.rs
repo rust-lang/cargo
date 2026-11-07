@@ -21,11 +21,11 @@
 //!
 //! [`ConfigValue`]: CV
 
-use crate::config::ArrayItemKeyPath;
-use crate::context::reader::{ConfigReader, expected};
-use crate::context::value;
-use crate::context::{ConfigError, ConfigKey};
-use crate::context::{ConfigValue as CV, Definition, Value};
+use crate::config::value;
+use crate::config::{
+    ArrayItemKeyPath, ConfigError, ConfigKey, ConfigReader, ConfigValue as CV, Definition, Value,
+    expected,
+};
 use crate::util::data_structures::HashSet;
 use serde::{de, de::IntoDeserializer};
 use std::vec;

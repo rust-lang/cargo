@@ -11,7 +11,7 @@
 //!
 //! There are a variety of helper types for deserializing some common formats:
 //!
-//! - [`value::Value`]: This type provides access to the location where the
+//! - [`Value`]: This type provides access to the location where the
 //!   config value was defined.
 //! - [`ConfigRelativePath`]: For a path that is relative to where it is
 //!   defined.
@@ -34,11 +34,11 @@
 //!    These parsed results are stored in [`GlobalContext`].
 //!
 //! 2. **`ConfigValue` → Target types** ---
-//!    The [`GlobalContext::get`] method uses a [custom serde deserializer](de::Deserializer)
+//!    The [`GlobalContext::get`] method uses a [custom serde deserializer](crate::config::de)
 //!    to convert [`ConfigValue`] instances to the caller's desired type.
 //!    Precedence between [`ConfigValue`] sources is resolved during retrieval
 //!    based on [`Definition`] priority.
-//!    See the top-level documentation of the [`de`] module for more.
+//!    See the top-level documentation of the [`crate::config::de`] module for more.
 //!
 //! ## Map key recommendations
 //!
@@ -102,19 +102,10 @@ use time::OffsetDateTime;
 use toml_edit::Item;
 use url::Url;
 
-pub(crate) mod de;
-
-mod reader;
-use reader::ConfigReader;
-
-mod error;
-pub use error::ConfigError;
-
-use crate::config::Env;
-pub use crate::config::{ConfigKey, ConfigStore, ConfigValue, Definition, DefinitionKind};
-
-mod value;
-pub use value::{OptValue, Value};
+pub use crate::config::{
+    ConfigError, ConfigKey, ConfigStore, ConfigValue, Definition, DefinitionKind, OptValue, Value,
+};
+use crate::config::{ConfigReader, Env};
 
 mod path;
 pub use path::BracketType;
@@ -1582,12 +1573,12 @@ impl GlobalContext {
                     .into_iter()
                     .map(|cv| match cv {
                         CV::String(s, def) => Ok((s, def)),
-                        other => reader::expected("string", &key, &other),
+                        other => crate::config::expected("string", &key, &other),
                     })
                     .collect::<CargoResult<Vec<_>>>()?;
                 Ok(Some(Value { val, definition }))
             }
-            Some(val) => reader::expected("list", &key, &val),
+            Some(val) => crate::config::expected("list", &key, &val),
             None => Ok(None),
         }
     }
