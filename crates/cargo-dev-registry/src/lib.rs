@@ -1,4 +1,8 @@
 //! Mock HTTP registry server for Cargo testing and development.
+//!
+//! > This crate is marked as **Experimental** per the [Rust Crate Ownership Policy](https://forge.rust-lang.org/policies/crate-ownership.html).
+//! > It is maintained by the Cargo team, primarily for use by Cargo and not intended for external use.
+//! > This crate may make major changes to its APIs or be deprecated without warning.
 
 #![allow(clippy::disallowed_methods)]
 #![allow(clippy::disallowed_types)]
