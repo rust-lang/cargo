@@ -17,7 +17,7 @@ impl ConfigError {
         }
     }
 
-    pub(super) fn expected(key: &ConfigKey, expected: &str, found: &ConfigValue) -> ConfigError {
+    pub(crate) fn expected(key: &ConfigKey, expected: &str, found: &ConfigValue) -> ConfigError {
         ConfigError {
             error: anyhow::anyhow!(
                 "`{}` expected {}, but found a {}",

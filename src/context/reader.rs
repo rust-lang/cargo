@@ -15,11 +15,11 @@ use ConfigValue as CV;
 
 /// Reads configuration values from the loaded store and the environment.
 #[derive(Clone, Copy)]
-pub(super) struct ConfigReader<'a> {
-    pub(super) store: &'a ConfigStore,
-    pub(super) shell: &'a Mutex<Shell>,
-    pub(super) env: &'a Env,
-    pub(super) advanced_env: bool,
+pub(crate) struct ConfigReader<'a> {
+    pub(crate) store: &'a ConfigStore,
+    pub(crate) shell: &'a Mutex<Shell>,
+    pub(crate) env: &'a Env,
+    pub(crate) advanced_env: bool,
 }
 
 /// Helper macro for creating typed access methods.
@@ -47,7 +47,7 @@ macro_rules! get_value_typed {
 }
 
 impl ConfigReader<'_> {
-    pub(super) fn get<'de, T: serde::Deserialize<'de>>(self, key: ConfigKey) -> CargoResult<T> {
+    pub(crate) fn get<'de, T: serde::Deserialize<'de>>(self, key: ConfigKey) -> CargoResult<T> {
         let de = Deserializer {
             reader: self,
             key,
@@ -61,7 +61,7 @@ impl ConfigReader<'_> {
     }
 
     /// This is a helper for getting a CV from a file or env var.
-    pub(super) fn get_cv_with_env(&self, key: &ConfigKey) -> CargoResult<Option<CV>> {
+    pub(crate) fn get_cv_with_env(&self, key: &ConfigKey) -> CargoResult<Option<CV>> {
         // Determine if value comes from env, cli, or file, and merge env if
         // possible.
         let cv = self.store.get_cv(key)?;

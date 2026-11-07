@@ -102,7 +102,7 @@ use time::OffsetDateTime;
 use toml_edit::Item;
 use url::Url;
 
-mod de;
+pub(crate) mod de;
 
 mod reader;
 use reader::ConfigReader;
