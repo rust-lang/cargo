@@ -751,7 +751,7 @@ dependencies = [
 ]
 
 [[patch.unused]]
-name = "zzz"
+name = "aaa"
 version = "0.1.0"
 
 [[patch.unused]]
@@ -759,7 +759,7 @@ name = "ccc"
 version = "0.1.0"
 
 [[patch.unused]]
-name = "aaa"
+name = "zzz"
 version = "0.1.0"
 
 "##]],
