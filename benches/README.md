@@ -1,8 +1,7 @@
 # Cargo Benchmarking
 
 This directory contains some benchmarks for cargo itself. This uses
-[Criterion] for running benchmarks. It is recommended to read the Criterion
-book to get familiar with how to use it. A basic usage would be:
+[Divan] for running benchmarks. A basic usage would be:
 
 ```sh
 cd benches/benchsuite
@@ -37,7 +36,7 @@ faster. You can (and probably should) specify individual benchmarks to run to
 narrow it down to a more reasonable set, for example:
 
 ```sh
-cargo bench -p benchsuite --bench resolve -- resolve_ws/rust
+cargo bench -p benchsuite --bench resolve -- resolve_ws::rust
 ```
 
 This will only download what's necessary for the rust-lang/rust workspace
@@ -65,40 +64,31 @@ cache in your cargo home directory.
 cargo bench -p benchsuite --bench global_cache_tracker
 ```
 
-## Viewing reports
-
-The benchmarks display some basic information on the command-line while they
-run. A more complete HTML report can be found at
-`target/criterion/report/index.html` which contains links to all the
-benchmarks and summaries. Check out the Criterion book for more information on
-the extensive reporting capabilities.
-
 ## Comparing implementations
 
 Knowing the raw numbers can be useful, but what you're probably most
 interested in is checking if your changes help or hurt performance. To do
 that, you need to run the benchmarks multiple times.
 
-First, run the benchmarks from the master branch of cargo without any changes.
-To make it easier to compare, Criterion supports naming the baseline so that
-you can iterate on your code and compare against it multiple times.
+Divan prints timing statistics for each benchmark in the terminal. To compare
+two revisions, run the same benchmark on each and save the output. For example,
+run this on the base revision:
 
 ```sh
-cargo bench -- --save-baseline master
+cargo bench | tee /tmp/cache-base.txt
 ```
 
 Now you can switch to your branch with your changes. Re-run the benchmarks
 compared against the baseline:
 
 ```sh
-cargo bench -- --baseline master
+cargo bench | tee /tmp/cache-changed.txt
 ```
+
+Then compare the median times for each case.
 
 You can repeat the last command as you make changes to re-compare against the
 master baseline.
-
-Without the baseline arguments, it will compare against the last run, which
-can be helpful for comparing incremental changes.
 
 ## Capturing workspaces
 
@@ -154,4 +144,4 @@ a lot that can be added. Some ideas:
   [`resolve::resolve`](https://github.com/rust-lang/cargo/blob/a821e2cb24d7b6013433f069ab3bad53d160e100/src/resolver/mod.rs#L122)
   without anything else. This can help focus on just the resolver.
 
-[Criterion]: https://bheisler.github.io/criterion.rs/book/
+[Divan]: https://github.com/nvzqz/divan

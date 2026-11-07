@@ -1,29 +1,22 @@
 use benchsuite::{Fixtures, fixtures};
 use cargo::workspace::Workspace;
-use criterion::{Criterion, criterion_group, criterion_main};
 use std::sync::LazyLock;
 
 static FIXTURES: LazyLock<Fixtures> = LazyLock::new(|| fixtures!());
 
-fn workspace_initialization(c: &mut Criterion) {
-    let mut group = c.benchmark_group("workspace_initialization");
-    for (ws_name, ws_root) in FIXTURES.workspaces() {
+#[divan::bench(args = FIXTURES.workspaces().into_iter().map(|(n, _)| n))]
+fn workspace_initialization(b: divan::Bencher<'_, '_>, ws_name: &String) {
+    {
+        let ws_root = FIXTURES
+            .workspaces()
+            .into_iter()
+            .find_map(|(n, r)| (n == *ws_name).then_some(r))
+            .unwrap();
         let gctx = FIXTURES.make_context(&ws_root);
-        // The resolver info is initialized only once in a lazy fashion. This
-        // allows criterion to skip this workspace if the user passes a filter
-        // on the command-line (like `cargo bench -- workspace_initialization/tikv`).
-        group.bench_function(ws_name, |b| {
-            b.iter(|| Workspace::new(&ws_root.join("Cargo.toml"), &gctx).unwrap())
-        });
+        b.bench_local(|| Workspace::new(&ws_root.join("Cargo.toml"), &gctx).unwrap());
     }
-    group.finish();
 }
 
-// Criterion complains about the measurement time being too small, but the
-// measurement time doesn't seem important to me, what is more important is
-// the number of iterations which defaults to 100, which seems like a
-// reasonable default. Otherwise, the measurement time would need to be
-// changed per workspace. We wouldn't want to spend 60s on every workspace,
-// that would take too long and isn't necessary for the smaller workspaces.
-criterion_group!(benches, workspace_initialization);
-criterion_main!(benches);
+fn main() {
+    divan::main();
+}
