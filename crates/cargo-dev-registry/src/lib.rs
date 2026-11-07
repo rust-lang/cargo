@@ -1,4 +1,11 @@
-use std::collections::HashMap;
+//! Mock HTTP registry server for Cargo testing and development.
+
+#![allow(clippy::disallowed_methods)]
+#![allow(clippy::disallowed_types)]
+#![allow(clippy::print_stderr)]
+#![allow(clippy::print_stdout)]
+
+use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 use std::fs;
 use std::io::{BufRead, BufReader, Read, Write};
@@ -10,7 +17,7 @@ use url::Url;
 
 use cargo_util::Sha256;
 
-use super::FeatureMap;
+pub type FeatureMap = BTreeMap<String, Vec<String>>;
 
 pub type RequestCallback = Box<dyn Send + Fn(&Request, &HttpServer) -> Response>;
 
@@ -32,7 +39,7 @@ impl HttpServerHandle {
         Url::parse(&format!("http://{}/dl", self.addr)).unwrap()
     }
 
-    pub(super) fn stop(&self) {
+    pub fn stop(&self) {
         if let Ok(mut stream) = TcpStream::connect(self.addr) {
             // shutdown the server
             let _ = stream.write_all(b"stop");

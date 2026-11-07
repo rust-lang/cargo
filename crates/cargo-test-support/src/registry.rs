@@ -120,8 +120,7 @@ fn generate_url(name: &str) -> Url {
     Url::from_file_path(generate_path(name)).ok().unwrap()
 }
 
-mod http_server;
-pub use http_server::{
+pub use cargo_dev_registry::{
     FeatureMap, HttpServer, HttpServerHandle, Request, RequestCallback, Response,
     create_index_line, write_to_index,
 };
