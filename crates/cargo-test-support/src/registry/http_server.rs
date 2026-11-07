@@ -8,7 +8,6 @@ use std::thread::{self, JoinHandle};
 
 use url::Url;
 
-use super::cksum;
 use cargo_util::Sha256;
 
 use crate::publish::{create_index_line, write_to_index};
@@ -401,8 +400,7 @@ impl HttpServer {
             let (len, remaining) = remaining.split_at(4);
             let file_len = u32::from_le_bytes(len.try_into().unwrap());
             let (file, _remaining) = remaining.split_at(file_len as usize);
-            let file_cksum = cksum(&file);
-
+            let file_cksum = Sha256::new().update(file).finish_hex();
             if !self.check_authorized(req, Some(Mutation {})) {
                 return self.unauthorized(req);
             }
