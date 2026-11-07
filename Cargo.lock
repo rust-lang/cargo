@@ -504,6 +504,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "cargo-dev-registry"
+version = "0.1.0"
+dependencies = [
+ "cargo-util",
+ "crates-io",
+ "git2",
+ "serde",
+ "serde_json",
+ "url",
+]
+
+[[package]]
 name = "cargo-platform"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -528,9 +540,10 @@ version = "0.4.16"
 
 [[package]]
 name = "cargo-test-support"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "anyhow",
+ "cargo-dev-registry",
  "cargo-test-macro",
  "cargo-util",
  "crates-io",
