@@ -307,6 +307,17 @@ be specified multiple times, which enables all specified features.</p>
 
 <dl>
 
+<dt class="option-term" id="option-cargo-tree---tui"><a class="option-anchor" href="#option-cargo-tree---tui"><code>--tui</code></a></dt>
+<dd class="option-desc"><p>Display the dependency tree in an interactive terminal interface.</p>
+</dd>
+
+
+<dt class="option-term" id="option-cargo-tree---inline"><a class="option-anchor" href="#option-cargo-tree---inline"><code>--inline</code></a></dt>
+<dd class="option-desc"><p>Render the interactive interface inline and keep its content visible after
+exiting. Requires <code>--tui</code>.</p>
+</dd>
+
+
 <dt class="option-term" id="option-cargo-tree--v"><a class="option-anchor" href="#option-cargo-tree--v"><code>-v</code></a></dt>
 <dt class="option-term" id="option-cargo-tree---verbose"><a class="option-anchor" href="#option-cargo-tree---verbose"><code>--verbose</code></a></dt>
 <dd class="option-desc"><p>Use verbose output. May be specified twice for “very verbose” output which
