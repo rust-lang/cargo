@@ -4,7 +4,6 @@ use cargo::util::GlobalContext;
 use cargo::util::cache_lock::CacheLockMode;
 use cargo::util::interning::InternedString;
 use cargo::workspace::global_cache_tracker::{self, DeferredGlobalLastUse, GlobalCacheTracker};
-use criterion::{Criterion, criterion_group, criterion_main};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -60,21 +59,21 @@ fn initialize_context() -> GlobalContext {
 
 /// Benchmarks how long it takes to initialize `GlobalCacheTracker` with an already
 /// existing full database.
-fn global_tracker_init(c: &mut Criterion) {
+#[divan::bench]
+fn global_tracker_init(b: divan::Bencher<'_, '_>) {
     let gctx = initialize_context();
     let _lock = gctx
         .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)
         .unwrap();
-    c.bench_function("global_tracker_init", |b| {
-        b.iter(|| {
-            GlobalCacheTracker::new(&gctx).unwrap();
-        })
+    b.bench_local(|| {
+        GlobalCacheTracker::new(&gctx).unwrap();
     });
 }
 
 /// Benchmarks how long it takes to save a `GlobalCacheTracker` when there are zero
 /// updates.
-fn global_tracker_empty_save(c: &mut Criterion) {
+#[divan::bench]
+fn global_tracker_empty_save(b: divan::Bencher<'_, '_>) {
     let gctx = initialize_context();
     let _lock = gctx
         .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)
@@ -82,10 +81,8 @@ fn global_tracker_empty_save(c: &mut Criterion) {
     let mut deferred = DeferredGlobalLastUse::new();
     let mut tracker = GlobalCacheTracker::new(&gctx).unwrap();
 
-    c.bench_function("global_tracker_empty_save", |b| {
-        b.iter(|| {
-            deferred.save(&mut tracker).unwrap();
-        })
+    b.bench_local(|| {
+        deferred.save(&mut tracker).unwrap();
     });
 }
 
@@ -110,49 +107,32 @@ fn load_random_sample() -> Vec<(InternedString, InternedString, u64)> {
 ///
 /// This runs for different sizes of number of crates to update (selecting
 /// from the random sample stored on disk).
-fn global_tracker_update(c: &mut Criterion) {
+#[divan::bench(args = [1, 10, 100, 500])]
+fn global_tracker_update(b: divan::Bencher<'_, '_>, size: usize) {
     let gctx = initialize_context();
     let _lock = gctx
         .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)
         .unwrap();
-    let sample = Path::new(env!("CARGO_MANIFEST_DIR")).join(GLOBAL_CACHE_SAMPLE);
-    let db_path = GlobalCacheTracker::db_path(&gctx).into_path_unlocked();
-
     let random_sample = load_random_sample();
-
-    let mut group = c.benchmark_group("global_tracker_update");
-    for size in [1, 10, 100, 500] {
-        if db_path.exists() {
-            fs::remove_file(&db_path).unwrap();
+    let mut deferred = DeferredGlobalLastUse::new();
+    let mut tracker = GlobalCacheTracker::new(&gctx).unwrap();
+    b.bench_local(|| {
+        for (encoded_registry_name, name, size) in &random_sample[..size] {
+            deferred.mark_registry_crate_used(global_cache_tracker::RegistryCrate {
+                encoded_registry_name: *encoded_registry_name,
+                crate_filename: format!("{}.crate", name).into(),
+                size: *size,
+            });
+            deferred.mark_registry_src_used(global_cache_tracker::RegistrySrc {
+                encoded_registry_name: *encoded_registry_name,
+                package_dir: *name,
+                size: Some(*size),
+            });
         }
-
-        fs::copy(&sample, &db_path).unwrap();
-        let mut deferred = DeferredGlobalLastUse::new();
-        let mut tracker = GlobalCacheTracker::new(&gctx).unwrap();
-        group.bench_with_input(size.to_string(), &size, |b, &size| {
-            b.iter(|| {
-                for (encoded_registry_name, name, size) in &random_sample[..size] {
-                    deferred.mark_registry_crate_used(global_cache_tracker::RegistryCrate {
-                        encoded_registry_name: *encoded_registry_name,
-                        crate_filename: format!("{}.crate", name).into(),
-                        size: *size,
-                    });
-                    deferred.mark_registry_src_used(global_cache_tracker::RegistrySrc {
-                        encoded_registry_name: *encoded_registry_name,
-                        package_dir: *name,
-                        size: Some(*size),
-                    });
-                }
-                deferred.save(&mut tracker).unwrap();
-            })
-        });
-    }
+        deferred.save(&mut tracker).unwrap();
+    });
 }
 
-criterion_group!(
-    benches,
-    global_tracker_init,
-    global_tracker_empty_save,
-    global_tracker_update
-);
-criterion_main!(benches);
+fn main() {
+    divan::main();
+}

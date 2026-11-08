@@ -1,12 +1,14 @@
-use benchsuite::fixtures;
+use benchsuite::{Fixtures, WorkspacePath, fixtures};
 use cargo::GlobalContext;
 use cargo::compiler::{CompileKind, RustcTargetData};
 use cargo::ops::WorkspaceResolve;
 use cargo::resolver::features::{FeatureOpts, FeatureResolver};
 use cargo::resolver::{CliFeatures, ForceAllTargets, HasDevUnits, ResolveBehavior};
 use cargo::workspace::{PackageIdSpec, Workspace};
-use criterion::{Criterion, criterion_group, criterion_main};
 use std::path::Path;
+use std::sync::LazyLock;
+
+static FIXTURES: LazyLock<Fixtures> = LazyLock::new(|| fixtures!());
 
 struct ResolveInfo<'gctx> {
     ws: Workspace<'gctx>,
@@ -32,7 +34,7 @@ fn do_resolve<'gctx>(gctx: &'gctx GlobalContext, ws_root: &Path) -> ResolveInfo<
     let has_dev_units = HasDevUnits::Yes;
     let force_all_targets = ForceAllTargets::No;
     // Do an initial run to download anything necessary so that it does
-    // not confuse criterion's warmup.
+    // not affect the benchmark.
     let dry_run = false;
     let ws_resolve = cargo::ops::resolve_ws_with_opts(
         &ws,
@@ -60,91 +62,65 @@ fn do_resolve<'gctx>(gctx: &'gctx GlobalContext, ws_root: &Path) -> ResolveInfo<
 /// Benchmark of the full `resolve_ws_with_opts` which runs the resolver
 /// twice, the feature resolver, and more. This is a major component of a
 /// regular cargo build.
-fn resolve_ws(c: &mut Criterion) {
-    let fixtures = fixtures!();
-    let mut group = c.benchmark_group("resolve_ws");
-    for (ws_name, ws_root) in fixtures.workspaces() {
-        let gctx = fixtures.make_context(&ws_root);
-        // The resolver info is initialized only once in a lazy fashion. This
-        // allows criterion to skip this workspace if the user passes a filter
-        // on the command-line (like `cargo bench -- resolve_ws/tikv`).
-        //
-        // Due to the way criterion works, it tends to only run the inner
-        // iterator once, and we don't want to call `do_resolve` in every
-        // "step", since that would just be some useless work.
-        let mut lazy_info = None;
-        let dry_run = false;
-        group.bench_function(&ws_name, |b| {
-            let ResolveInfo {
-                ws,
-                requested_kinds,
-                target_data,
-                cli_features,
-                specs,
-                has_dev_units,
-                force_all_targets,
-                ..
-            } = lazy_info.get_or_insert_with(|| do_resolve(&gctx, &ws_root));
-            b.iter(|| {
-                cargo::ops::resolve_ws_with_opts(
-                    ws,
-                    target_data,
-                    requested_kinds,
-                    cli_features,
-                    specs,
-                    *has_dev_units,
-                    *force_all_targets,
-                    dry_run,
-                )
-                .unwrap();
-            })
-        });
-    }
-    group.finish();
+#[divan::bench(args = FIXTURES.workspaces())]
+fn resolve_ws(b: divan::Bencher<'_, '_>, WorkspacePath(ws_root): &WorkspacePath) {
+    let gctx = FIXTURES.make_context(ws_root);
+    let dry_run = false;
+    let ResolveInfo {
+        ws,
+        requested_kinds,
+        target_data,
+        cli_features,
+        specs,
+        has_dev_units,
+        force_all_targets,
+        ..
+    } = &mut do_resolve(&gctx, ws_root);
+    b.bench_local(|| {
+        cargo::ops::resolve_ws_with_opts(
+            ws,
+            target_data,
+            requested_kinds,
+            cli_features,
+            specs,
+            *has_dev_units,
+            *force_all_targets,
+            dry_run,
+        )
+        .unwrap();
+    });
 }
 
 /// Benchmark of the feature resolver.
-fn feature_resolver(c: &mut Criterion) {
-    let fixtures = fixtures!();
-    let mut group = c.benchmark_group("feature_resolver");
-    for (ws_name, ws_root) in fixtures.workspaces() {
-        let gctx = fixtures.make_context(&ws_root);
-        let mut lazy_info = None;
-        group.bench_function(&ws_name, |b| {
-            let ResolveInfo {
-                ws,
-                requested_kinds,
-                target_data,
-                cli_features,
-                specs,
-                has_dev_units,
-                ws_resolve,
-                ..
-            } = lazy_info.get_or_insert_with(|| do_resolve(&gctx, &ws_root));
-            b.iter(|| {
-                let feature_opts = FeatureOpts::new_behavior(ResolveBehavior::V2, *has_dev_units);
-                FeatureResolver::resolve(
-                    ws,
-                    target_data,
-                    &ws_resolve.targeted_resolve,
-                    &ws_resolve.pkg_set,
-                    cli_features,
-                    specs,
-                    requested_kinds,
-                    feature_opts,
-                )
-                .unwrap();
-            })
-        });
-    }
-    group.finish();
+#[divan::bench(args = FIXTURES.workspaces())]
+fn feature_resolver(b: divan::Bencher<'_, '_>, WorkspacePath(ws_root): &WorkspacePath) {
+    let gctx = FIXTURES.make_context(ws_root);
+    let ResolveInfo {
+        ws,
+        requested_kinds,
+        target_data,
+        cli_features,
+        specs,
+        has_dev_units,
+        ws_resolve,
+        ..
+    } = &mut do_resolve(&gctx, ws_root);
+    b.bench_local(|| {
+        let feature_opts = FeatureOpts::new_behavior(ResolveBehavior::V2, *has_dev_units);
+        FeatureResolver::resolve(
+            ws,
+            target_data,
+            &ws_resolve.targeted_resolve,
+            &ws_resolve.pkg_set,
+            cli_features,
+            specs,
+            requested_kinds,
+            feature_opts,
+        )
+        .unwrap();
+    });
 }
 
-// Criterion complains about the measurement time being too small, but the
-// measurement time doesn't seem important to me, what is more important is
-// the number of iterations which defaults to 100, which seems like a
-// reasonable default. Otherwise, the measurement time would need to be
-// changed per workspace. We wouldn't want to spend 60s on every workspace,
-// that would take too long and isn't necessary for the smaller workspaces.
-criterion_group!(benches, resolve_ws, feature_resolver);
-criterion_main!(benches);
+fn main() {
+    divan::main();
+}

@@ -17,7 +17,7 @@ tar.workspace = true
 url.workspace = true
 
 [dev-dependencies]
-criterion.workspace = true
+divan.workspace = true
 
 [lib]
 bench = false

@@ -8,6 +8,7 @@ use cargo::GlobalContext;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::Once;
 use url::Url;
 
 #[macro_export]
@@ -24,18 +25,15 @@ const CRATES_IO_COMMIT: &str = "85f7bfd61ea4fee08ec68c468762e886b2aebec6";
 
 pub struct Fixtures {
     cargo_target_tmpdir: PathBuf,
+    prepared: Once,
 }
 
 impl Fixtures {
     pub fn new(cargo_target_tmpdir: &str) -> Self {
-        let bench = Self {
+        Self {
             cargo_target_tmpdir: PathBuf::from(cargo_target_tmpdir),
-        };
-        bench.create_home();
-        bench.create_target_dir();
-        bench.clone_index();
-        bench.unpack_workspaces();
-        bench
+            prepared: Once::new(),
+        }
     }
 
     fn root(&self) -> PathBuf {
@@ -136,17 +134,20 @@ impl Fixtures {
         git("branch -f main FETCH_HEAD");
     }
 
-    /// This unpacks the compressed workspace skeletons into tmp/workspaces.
-    fn unpack_workspaces(&self) {
+    fn workspace_archives() -> impl Iterator<Item = PathBuf> {
         let ws_dir = Path::new(env!("CARGO_MANIFEST_DIR"))
             .parent()
             .unwrap()
             .join("workspaces");
-        let archives = fs::read_dir(ws_dir)
+        fs::read_dir(ws_dir)
             .unwrap()
             .map(|e| e.unwrap().path())
-            .filter(|p| p.extension() == Some(std::ffi::OsStr::new("tgz")));
-        for archive in archives {
+            .filter(|p| p.extension() == Some(std::ffi::OsStr::new("tgz")))
+    }
+
+    /// This unpacks the compressed workspace skeletons into tmp/workspaces.
+    fn unpack_workspaces(&self) {
+        for archive in Self::workspace_archives() {
             let name = archive.file_stem().unwrap();
             let f = fs::File::open(&archive).unwrap();
             let f = flate2::read::GzDecoder::new(f);
@@ -159,15 +160,13 @@ impl Fixtures {
         }
     }
 
-    /// Vec of `(ws_name, ws_root)`.
-    pub fn workspaces(&self) -> Vec<(String, PathBuf)> {
+    pub fn workspaces(&self) -> Vec<WorkspacePath> {
         // CARGO_BENCH_WORKSPACES can be used to override, otherwise it just uses
         // the workspaces in the workspaces directory.
         let mut ps: Vec<_> = match std::env::var_os("CARGO_BENCH_WORKSPACES") {
             Some(s) => std::env::split_paths(&s).collect(),
-            None => fs::read_dir(self.workspaces_path())
-                .unwrap()
-                .map(|e| e.unwrap().path())
+            None => Self::workspace_archives()
+                .map(|archive| self.workspaces_path().join(archive.file_stem().unwrap()))
                 // These currently fail in most cases on Windows due to long
                 // filenames in the git checkouts.
                 .filter(|p| {
@@ -178,13 +177,17 @@ impl Fixtures {
         };
         // Sort so it is consistent.
         ps.sort();
-        ps.into_iter()
-            .map(|p| (p.file_name().unwrap().to_str().unwrap().to_owned(), p))
-            .collect()
+        ps.into_iter().map(WorkspacePath).collect()
     }
 
     /// Creates a new Context.
     pub fn make_context(&self, ws_root: &Path) -> GlobalContext {
+        self.prepared.call_once(|| {
+            self.create_home();
+            self.create_target_dir();
+            self.clone_index();
+            self.unpack_workspaces();
+        });
         let shell = cargo_util_terminal::Shell::new();
         let mut gctx = GlobalContext::new(shell, ws_root.to_path_buf(), self.cargo_home());
         // Configure is needed to set the target_dir which is needed to write
@@ -202,5 +205,14 @@ impl Fixtures {
         )
         .unwrap();
         gctx
+    }
+}
+
+/// A workspace path displayed by its basename in benchmark output and filters.
+pub struct WorkspacePath(pub PathBuf);
+
+impl std::fmt::Display for WorkspacePath {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.file_name().unwrap().display().fmt(f)
     }
 }

@@ -44,7 +44,6 @@ clap_complete = { version = "4.6.0", features = ["unstable-dynamic"] }
 color-print = "0.3.7"
 core-foundation = { version = "0.10.1", features = ["mac_os_10_7_support"] }
 crates-io = { version = "0.41.3", path = "crates/crates-io" }
-criterion = { version = "0.8.2", features = ["html_reports"] }
 curl = "0.4.49"
 curl-sys = "0.4.88"
 divan = "0.1.21"
