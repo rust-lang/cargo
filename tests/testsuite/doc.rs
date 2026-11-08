@@ -4354,7 +4354,7 @@ fn doc_fixable_warning_no_fix_suggestion() {
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] this URL is not a hyperlink
 ...
-[WARNING] `foo` (lib doc) generated 1 warning (run `cargo fix --lib -p foo` to apply 1 suggestion)
+[WARNING] `foo` (lib doc) generated 1 warning
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
