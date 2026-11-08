@@ -113,16 +113,7 @@ fn global_tracker_update(b: divan::Bencher<'_, '_>, size: usize) {
     let _lock = gctx
         .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)
         .unwrap();
-    let sample = Path::new(env!("CARGO_MANIFEST_DIR")).join(GLOBAL_CACHE_SAMPLE);
-    let db_path = GlobalCacheTracker::db_path(&gctx).into_path_unlocked();
-
     let random_sample = load_random_sample();
-
-    if db_path.exists() {
-        fs::remove_file(&db_path).unwrap();
-    }
-
-    fs::copy(&sample, &db_path).unwrap();
     let mut deferred = DeferredGlobalLastUse::new();
     let mut tracker = GlobalCacheTracker::new(&gctx).unwrap();
     b.bench_local(|| {
