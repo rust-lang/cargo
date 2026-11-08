@@ -8,6 +8,7 @@ use cargo::GlobalContext;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::Once;
 use url::Url;
 
 #[macro_export]
@@ -24,18 +25,15 @@ const CRATES_IO_COMMIT: &str = "85f7bfd61ea4fee08ec68c468762e886b2aebec6";
 
 pub struct Fixtures {
     cargo_target_tmpdir: PathBuf,
+    prepared: Once,
 }
 
 impl Fixtures {
     pub fn new(cargo_target_tmpdir: &str) -> Self {
-        let bench = Self {
+        Self {
             cargo_target_tmpdir: PathBuf::from(cargo_target_tmpdir),
-        };
-        bench.create_home();
-        bench.create_target_dir();
-        bench.clone_index();
-        bench.unpack_workspaces();
-        bench
+            prepared: Once::new(),
+        }
     }
 
     fn root(&self) -> PathBuf {
@@ -167,9 +165,8 @@ impl Fixtures {
         // the workspaces in the workspaces directory.
         let mut ps: Vec<_> = match std::env::var_os("CARGO_BENCH_WORKSPACES") {
             Some(s) => std::env::split_paths(&s).collect(),
-            None => fs::read_dir(self.workspaces_path())
-                .unwrap()
-                .map(|e| e.unwrap().path())
+            None => Self::workspace_archives()
+                .map(|archive| self.workspaces_path().join(archive.file_stem().unwrap()))
                 // These currently fail in most cases on Windows due to long
                 // filenames in the git checkouts.
                 .filter(|p| {
@@ -185,6 +182,12 @@ impl Fixtures {
 
     /// Creates a new Context.
     pub fn make_context(&self, ws_root: &Path) -> GlobalContext {
+        self.prepared.call_once(|| {
+            self.create_home();
+            self.create_target_dir();
+            self.clone_index();
+            self.unpack_workspaces();
+        });
         let shell = cargo_util_terminal::Shell::new();
         let mut gctx = GlobalContext::new(shell, ws_root.to_path_buf(), self.cargo_home());
         // Configure is needed to set the target_dir which is needed to write
