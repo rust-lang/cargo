@@ -159,8 +159,7 @@ impl Fixtures {
         }
     }
 
-    /// Vec of `(ws_name, ws_root)`.
-    pub fn workspaces(&self) -> Vec<(String, PathBuf)> {
+    pub fn workspaces(&self) -> Vec<WorkspacePath> {
         // CARGO_BENCH_WORKSPACES can be used to override, otherwise it just uses
         // the workspaces in the workspaces directory.
         let mut ps: Vec<_> = match std::env::var_os("CARGO_BENCH_WORKSPACES") {
@@ -178,9 +177,7 @@ impl Fixtures {
         };
         // Sort so it is consistent.
         ps.sort();
-        ps.into_iter()
-            .map(|p| (p.file_name().unwrap().to_str().unwrap().to_owned(), p))
-            .collect()
+        ps.into_iter().map(WorkspacePath).collect()
     }
 
     /// Creates a new Context.
@@ -202,5 +199,14 @@ impl Fixtures {
         )
         .unwrap();
         gctx
+    }
+}
+
+/// A workspace path displayed by its basename in benchmark output and filters.
+pub struct WorkspacePath(pub PathBuf);
+
+impl std::fmt::Display for WorkspacePath {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.file_name().unwrap().display().fmt(f)
     }
 }

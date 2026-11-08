@@ -1,4 +1,4 @@
-use benchsuite::{Fixtures, fixtures};
+use benchsuite::{Fixtures, WorkspacePath, fixtures};
 use cargo::GlobalContext;
 use cargo::compiler::{CompileKind, RustcTargetData};
 use cargo::ops::WorkspaceResolve;
@@ -62,14 +62,9 @@ fn do_resolve<'gctx>(gctx: &'gctx GlobalContext, ws_root: &Path) -> ResolveInfo<
 /// Benchmark of the full `resolve_ws_with_opts` which runs the resolver
 /// twice, the feature resolver, and more. This is a major component of a
 /// regular cargo build.
-#[divan::bench(args = FIXTURES.workspaces().into_iter().map(|(n, _)| n))]
-fn resolve_ws(b: divan::Bencher<'_, '_>, ws_name: &String) {
-    let ws_root = FIXTURES
-        .workspaces()
-        .into_iter()
-        .find_map(|(n, r)| (n == *ws_name).then_some(r))
-        .unwrap();
-    let gctx = FIXTURES.make_context(&ws_root);
+#[divan::bench(args = FIXTURES.workspaces())]
+fn resolve_ws(b: divan::Bencher<'_, '_>, WorkspacePath(ws_root): &WorkspacePath) {
+    let gctx = FIXTURES.make_context(ws_root);
     let dry_run = false;
     let ResolveInfo {
         ws,
@@ -80,7 +75,7 @@ fn resolve_ws(b: divan::Bencher<'_, '_>, ws_name: &String) {
         has_dev_units,
         force_all_targets,
         ..
-    } = &mut do_resolve(&gctx, &ws_root);
+    } = &mut do_resolve(&gctx, ws_root);
     b.bench_local(|| {
         cargo::ops::resolve_ws_with_opts(
             ws,
@@ -97,14 +92,9 @@ fn resolve_ws(b: divan::Bencher<'_, '_>, ws_name: &String) {
 }
 
 /// Benchmark of the feature resolver.
-#[divan::bench(args = FIXTURES.workspaces().into_iter().map(|(n, _)| n))]
-fn feature_resolver(b: divan::Bencher<'_, '_>, ws_name: &String) {
-    let ws_root = FIXTURES
-        .workspaces()
-        .into_iter()
-        .find_map(|(n, r)| (n == *ws_name).then_some(r))
-        .unwrap();
-    let gctx = FIXTURES.make_context(&ws_root);
+#[divan::bench(args = FIXTURES.workspaces())]
+fn feature_resolver(b: divan::Bencher<'_, '_>, WorkspacePath(ws_root): &WorkspacePath) {
+    let gctx = FIXTURES.make_context(ws_root);
     let ResolveInfo {
         ws,
         requested_kinds,
@@ -114,7 +104,7 @@ fn feature_resolver(b: divan::Bencher<'_, '_>, ws_name: &String) {
         has_dev_units,
         ws_resolve,
         ..
-    } = &mut do_resolve(&gctx, &ws_root);
+    } = &mut do_resolve(&gctx, ws_root);
     b.bench_local(|| {
         let feature_opts = FeatureOpts::new_behavior(ResolveBehavior::V2, *has_dev_units);
         FeatureResolver::resolve(
