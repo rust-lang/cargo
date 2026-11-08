@@ -1,0 +1,29 @@
+# Publish the home crate to crates.io.
+name: Publish the home crate
+on:
+  workflow_dispatch:
+
+jobs:
+  publish:
+    name: Publish on crates.io
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write     # Required for OIDC token exchange
+
+    # Required for trusted publishing to work.
+    environment:
+      name: release-home
+
+    steps:
+      - name: Checkout the source code
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
+
+      - uses: rust-lang/crates-io-auth-action@3268eb413133e2960fa4ae0e963ca76380c54cd9  # v1.0.6
+        id: auth
+
+      - name: Publish Cargo to crates.io
+        run: |
+          cd crates/home
+          cargo publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
