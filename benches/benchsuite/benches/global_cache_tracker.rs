@@ -118,32 +118,28 @@ fn global_tracker_update(b: divan::Bencher<'_, '_>, size: usize) {
 
     let random_sample = load_random_sample();
 
-    {
-        if db_path.exists() {
-            fs::remove_file(&db_path).unwrap();
-        }
-
-        fs::copy(&sample, &db_path).unwrap();
-        let mut deferred = DeferredGlobalLastUse::new();
-        let mut tracker = GlobalCacheTracker::new(&gctx).unwrap();
-        b.bench_local(|| {
-            if true {
-                for (encoded_registry_name, name, size) in &random_sample[..size] {
-                    deferred.mark_registry_crate_used(global_cache_tracker::RegistryCrate {
-                        encoded_registry_name: *encoded_registry_name,
-                        crate_filename: format!("{}.crate", name).into(),
-                        size: *size,
-                    });
-                    deferred.mark_registry_src_used(global_cache_tracker::RegistrySrc {
-                        encoded_registry_name: *encoded_registry_name,
-                        package_dir: *name,
-                        size: Some(*size),
-                    });
-                }
-                deferred.save(&mut tracker).unwrap();
-            }
-        });
+    if db_path.exists() {
+        fs::remove_file(&db_path).unwrap();
     }
+
+    fs::copy(&sample, &db_path).unwrap();
+    let mut deferred = DeferredGlobalLastUse::new();
+    let mut tracker = GlobalCacheTracker::new(&gctx).unwrap();
+    b.bench_local(|| {
+        for (encoded_registry_name, name, size) in &random_sample[..size] {
+            deferred.mark_registry_crate_used(global_cache_tracker::RegistryCrate {
+                encoded_registry_name: *encoded_registry_name,
+                crate_filename: format!("{}.crate", name).into(),
+                size: *size,
+            });
+            deferred.mark_registry_src_used(global_cache_tracker::RegistrySrc {
+                encoded_registry_name: *encoded_registry_name,
+                package_dir: *name,
+                size: Some(*size),
+            });
+        }
+        deferred.save(&mut tracker).unwrap();
+    });
 }
 
 fn main() {

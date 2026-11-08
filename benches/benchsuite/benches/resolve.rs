@@ -64,79 +64,71 @@ fn do_resolve<'gctx>(gctx: &'gctx GlobalContext, ws_root: &Path) -> ResolveInfo<
 /// regular cargo build.
 #[divan::bench(args = FIXTURES.workspaces().into_iter().map(|(n, _)| n))]
 fn resolve_ws(b: divan::Bencher<'_, '_>, ws_name: &String) {
-    {
-        let ws_root = FIXTURES
-            .workspaces()
-            .into_iter()
-            .find_map(|(n, r)| (n == *ws_name).then_some(r))
-            .unwrap();
-        let gctx = FIXTURES.make_context(&ws_root);
-        let dry_run = false;
-        {
-            let ResolveInfo {
-                ws,
-                requested_kinds,
-                target_data,
-                cli_features,
-                specs,
-                has_dev_units,
-                force_all_targets,
-                ..
-            } = &mut do_resolve(&gctx, &ws_root);
-            b.bench_local(|| {
-                cargo::ops::resolve_ws_with_opts(
-                    ws,
-                    target_data,
-                    requested_kinds,
-                    cli_features,
-                    specs,
-                    *has_dev_units,
-                    *force_all_targets,
-                    dry_run,
-                )
-                .unwrap();
-            });
-        }
-    }
+    let ws_root = FIXTURES
+        .workspaces()
+        .into_iter()
+        .find_map(|(n, r)| (n == *ws_name).then_some(r))
+        .unwrap();
+    let gctx = FIXTURES.make_context(&ws_root);
+    let dry_run = false;
+    let ResolveInfo {
+        ws,
+        requested_kinds,
+        target_data,
+        cli_features,
+        specs,
+        has_dev_units,
+        force_all_targets,
+        ..
+    } = &mut do_resolve(&gctx, &ws_root);
+    b.bench_local(|| {
+        cargo::ops::resolve_ws_with_opts(
+            ws,
+            target_data,
+            requested_kinds,
+            cli_features,
+            specs,
+            *has_dev_units,
+            *force_all_targets,
+            dry_run,
+        )
+        .unwrap();
+    });
 }
 
 /// Benchmark of the feature resolver.
 #[divan::bench(args = FIXTURES.workspaces().into_iter().map(|(n, _)| n))]
 fn feature_resolver(b: divan::Bencher<'_, '_>, ws_name: &String) {
-    {
-        let ws_root = FIXTURES
-            .workspaces()
-            .into_iter()
-            .find_map(|(n, r)| (n == *ws_name).then_some(r))
-            .unwrap();
-        let gctx = FIXTURES.make_context(&ws_root);
-        {
-            let ResolveInfo {
-                ws,
-                requested_kinds,
-                target_data,
-                cli_features,
-                specs,
-                has_dev_units,
-                ws_resolve,
-                ..
-            } = &mut do_resolve(&gctx, &ws_root);
-            b.bench_local(|| {
-                let feature_opts = FeatureOpts::new_behavior(ResolveBehavior::V2, *has_dev_units);
-                FeatureResolver::resolve(
-                    ws,
-                    target_data,
-                    &ws_resolve.targeted_resolve,
-                    &ws_resolve.pkg_set,
-                    cli_features,
-                    specs,
-                    requested_kinds,
-                    feature_opts,
-                )
-                .unwrap();
-            });
-        }
-    }
+    let ws_root = FIXTURES
+        .workspaces()
+        .into_iter()
+        .find_map(|(n, r)| (n == *ws_name).then_some(r))
+        .unwrap();
+    let gctx = FIXTURES.make_context(&ws_root);
+    let ResolveInfo {
+        ws,
+        requested_kinds,
+        target_data,
+        cli_features,
+        specs,
+        has_dev_units,
+        ws_resolve,
+        ..
+    } = &mut do_resolve(&gctx, &ws_root);
+    b.bench_local(|| {
+        let feature_opts = FeatureOpts::new_behavior(ResolveBehavior::V2, *has_dev_units);
+        FeatureResolver::resolve(
+            ws,
+            target_data,
+            &ws_resolve.targeted_resolve,
+            &ws_resolve.pkg_set,
+            cli_features,
+            specs,
+            requested_kinds,
+            feature_opts,
+        )
+        .unwrap();
+    });
 }
 
 fn main() {
