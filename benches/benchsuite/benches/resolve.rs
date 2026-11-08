@@ -1,4 +1,4 @@
-use benchsuite::fixtures;
+use benchsuite::{Fixtures, fixtures};
 use cargo::GlobalContext;
 use cargo::compiler::{CompileKind, RustcTargetData};
 use cargo::ops::WorkspaceResolve;
@@ -7,6 +7,9 @@ use cargo::resolver::{CliFeatures, ForceAllTargets, HasDevUnits, ResolveBehavior
 use cargo::workspace::{PackageIdSpec, Workspace};
 use criterion::{Criterion, criterion_group, criterion_main};
 use std::path::Path;
+use std::sync::LazyLock;
+
+static FIXTURES: LazyLock<Fixtures> = LazyLock::new(|| fixtures!());
 
 struct ResolveInfo<'gctx> {
     ws: Workspace<'gctx>,
@@ -61,10 +64,9 @@ fn do_resolve<'gctx>(gctx: &'gctx GlobalContext, ws_root: &Path) -> ResolveInfo<
 /// twice, the feature resolver, and more. This is a major component of a
 /// regular cargo build.
 fn resolve_ws(c: &mut Criterion) {
-    let fixtures = fixtures!();
     let mut group = c.benchmark_group("resolve_ws");
-    for (ws_name, ws_root) in fixtures.workspaces() {
-        let gctx = fixtures.make_context(&ws_root);
+    for (ws_name, ws_root) in FIXTURES.workspaces() {
+        let gctx = FIXTURES.make_context(&ws_root);
         // The resolver info is initialized only once in a lazy fashion. This
         // allows criterion to skip this workspace if the user passes a filter
         // on the command-line (like `cargo bench -- resolve_ws/tikv`).
@@ -105,10 +107,9 @@ fn resolve_ws(c: &mut Criterion) {
 
 /// Benchmark of the feature resolver.
 fn feature_resolver(c: &mut Criterion) {
-    let fixtures = fixtures!();
     let mut group = c.benchmark_group("feature_resolver");
-    for (ws_name, ws_root) in fixtures.workspaces() {
-        let gctx = fixtures.make_context(&ws_root);
+    for (ws_name, ws_root) in FIXTURES.workspaces() {
+        let gctx = FIXTURES.make_context(&ws_root);
         let mut lazy_info = None;
         group.bench_function(&ws_name, |b| {
             let ResolveInfo {

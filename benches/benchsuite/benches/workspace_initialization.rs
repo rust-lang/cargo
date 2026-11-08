@@ -1,12 +1,14 @@
-use benchsuite::fixtures;
+use benchsuite::{Fixtures, fixtures};
 use cargo::workspace::Workspace;
 use criterion::{Criterion, criterion_group, criterion_main};
+use std::sync::LazyLock;
+
+static FIXTURES: LazyLock<Fixtures> = LazyLock::new(|| fixtures!());
 
 fn workspace_initialization(c: &mut Criterion) {
-    let fixtures = fixtures!();
     let mut group = c.benchmark_group("workspace_initialization");
-    for (ws_name, ws_root) in fixtures.workspaces() {
-        let gctx = fixtures.make_context(&ws_root);
+    for (ws_name, ws_root) in FIXTURES.workspaces() {
+        let gctx = FIXTURES.make_context(&ws_root);
         // The resolver info is initialized only once in a lazy fashion. This
         // allows criterion to skip this workspace if the user passes a filter
         // on the command-line (like `cargo bench -- workspace_initialization/tikv`).
