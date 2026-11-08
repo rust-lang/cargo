@@ -4342,3 +4342,22 @@ fn doc_output_format_json_with_deps_and_mergeable_info() {
     assert!(!p.root().join("target/doc/foo/index.html").exists());
     assert!(!p.root().join("target/doc/bar/index.html").exists());
 }
+
+#[cargo_test]
+fn doc_fixable_warning_no_fix_suggestion() {
+    let p = project()
+        .file("src/lib.rs", "//! https://example.com\npub fn foo() {}")
+        .build();
+
+    p.cargo("doc")
+        .with_stderr_data(str![[r#"
+[DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] this URL is not a hyperlink
+...
+[WARNING] `foo` (lib doc) generated 1 warning (run `cargo fix --lib -p foo` to apply 1 suggestion)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]])
+        .run();
+}
