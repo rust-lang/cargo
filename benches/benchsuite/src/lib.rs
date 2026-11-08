@@ -136,17 +136,20 @@ impl Fixtures {
         git("branch -f main FETCH_HEAD");
     }
 
-    /// This unpacks the compressed workspace skeletons into tmp/workspaces.
-    fn unpack_workspaces(&self) {
+    fn workspace_archives() -> impl Iterator<Item = PathBuf> {
         let ws_dir = Path::new(env!("CARGO_MANIFEST_DIR"))
             .parent()
             .unwrap()
             .join("workspaces");
-        let archives = fs::read_dir(ws_dir)
+        fs::read_dir(ws_dir)
             .unwrap()
             .map(|e| e.unwrap().path())
-            .filter(|p| p.extension() == Some(std::ffi::OsStr::new("tgz")));
-        for archive in archives {
+            .filter(|p| p.extension() == Some(std::ffi::OsStr::new("tgz")))
+    }
+
+    /// This unpacks the compressed workspace skeletons into tmp/workspaces.
+    fn unpack_workspaces(&self) {
+        for archive in Self::workspace_archives() {
             let name = archive.file_stem().unwrap();
             let f = fs::File::open(&archive).unwrap();
             let f = flate2::read::GzDecoder::new(f);
