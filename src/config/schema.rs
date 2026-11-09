@@ -27,7 +27,7 @@ use serde_untagged::UntaggedEnumVisitor;
 
 use std::path::Path;
 
-use crate::CargoResult;
+use anyhow::Result;
 
 use super::OptValue;
 use super::Value;
@@ -576,7 +576,7 @@ impl<'de> Deserialize<'de> for BuildTargetConfigInner {
 
 impl BuildTargetConfig {
     /// Gets values of `build.target` as a list of strings.
-    pub fn values(&self, cwd: &Path) -> CargoResult<Vec<String>> {
+    pub fn values(&self, cwd: &Path) -> Result<Vec<String>> {
         let map = |s: &String| {
             if s.ends_with(".json") {
                 // Path to a target specification file (in JSON).

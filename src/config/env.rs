@@ -3,8 +3,7 @@
 use crate::util::data_structures::HashMap;
 use std::ffi::{OsStr, OsString};
 
-use crate::util::errors::CargoResult;
-use anyhow::{anyhow, bail};
+use anyhow::{Result, anyhow, bail};
 
 /// A snapshot of the environment variables available to [`GlobalContext`].
 ///
@@ -104,7 +103,7 @@ impl Env {
     ///
     /// This can be used similarly to `std::env::var`.
     /// On Windows, we check for case mismatch since environment keys are case-insensitive.
-    pub fn get_env(&self, key: impl AsRef<OsStr>) -> CargoResult<&str> {
+    pub fn get_env(&self, key: impl AsRef<OsStr>) -> Result<&str> {
         let key = key.as_ref();
         let s = self
             .get_env_os(key)

@@ -2,14 +2,13 @@ use std::fmt;
 use std::str::FromStr;
 use std::sync::Mutex;
 
-use anyhow::{anyhow, bail};
+use anyhow::{Result, anyhow, bail};
 use cargo_util_terminal::Shell;
 
 use super::de::Deserializer;
 use super::{ConfigError, OptValue, Value};
 use crate::config::{ConfigKey, ConfigStore, ConfigValue, Definition, Env, is_nonmergeable_list};
 use crate::util::data_structures::HashMap;
-use crate::util::errors::CargoResult;
 
 use ConfigValue as CV;
 
@@ -47,7 +46,7 @@ macro_rules! get_value_typed {
 }
 
 impl ConfigReader<'_> {
-    pub(crate) fn get<'de, T: serde::Deserialize<'de>>(self, key: ConfigKey) -> CargoResult<T> {
+    pub(crate) fn get<'de, T: serde::Deserialize<'de>>(self, key: ConfigKey) -> Result<T> {
         let de = Deserializer {
             reader: self,
             key,
@@ -56,12 +55,12 @@ impl ConfigReader<'_> {
         Ok(T::deserialize(de)?)
     }
 
-    pub(super) fn warn(&self, message: String) -> CargoResult<()> {
+    pub(super) fn warn(&self, message: String) -> Result<()> {
         self.shell.lock().unwrap().warn(message)
     }
 
     /// This is a helper for getting a CV from a file or env var.
-    pub(crate) fn get_cv_with_env(&self, key: &ConfigKey) -> CargoResult<Option<CV>> {
+    pub(crate) fn get_cv_with_env(&self, key: &ConfigKey) -> Result<Option<CV>> {
         // Determine if value comes from env, cli, or file, and merge env if
         // possible.
         let cv = self.store.get_cv(key)?;
@@ -163,7 +162,7 @@ impl ConfigReader<'_> {
     /// Check if the configuration contains a given [`ConfigKey`].
     ///
     /// See `ConfigMapAccess` for a description of `env_prefix_ok`.
-    pub(crate) fn has_key(&self, key: &ConfigKey, env_prefix_ok: bool) -> CargoResult<bool> {
+    pub(crate) fn has_key(&self, key: &ConfigKey, env_prefix_ok: bool) -> Result<bool> {
         if self.env.contains_key(key.as_env_key()) {
             return Ok(true);
         }
@@ -197,7 +196,7 @@ impl ConfigReader<'_> {
         &self,
         key: &ConfigKey,
         output: &mut Vec<ConfigValue>,
-    ) -> CargoResult<()> {
+    ) -> Result<()> {
         let Some(env_val) = self.env.get_str(key.as_env_key()) else {
             self.check_environment_key_case_mismatch(key);
             return Ok(());
@@ -257,7 +256,7 @@ impl ConfigReader<'_> {
     /// Low-level method for getting a config value as an `OptValue<HashMap<String, CV>>`.
     ///
     /// NOTE: This does not read from env. The caller is responsible for that.
-    pub(crate) fn get_table(&self, key: &ConfigKey) -> CargoResult<OptValue<HashMap<String, CV>>> {
+    pub(crate) fn get_table(&self, key: &ConfigKey) -> Result<OptValue<HashMap<String, CV>>> {
         match self.store.get_cv(key)? {
             Some(CV::Table(val, definition)) => Ok(Some(Value { val, definition })),
             Some(val) => expected("table", key, &val),
@@ -271,7 +270,7 @@ impl ConfigReader<'_> {
 }
 
 /// Generate an error when the given value is the wrong type.
-pub(crate) fn expected<T>(ty: &str, key: &ConfigKey, val: &CV) -> CargoResult<T> {
+pub(crate) fn expected<T>(ty: &str, key: &ConfigKey, val: &CV) -> Result<T> {
     val.expected(ty, &key.to_string())
         .map_err(|e| anyhow!("invalid configuration for key `{}`\n{}", key, e))
 }
