@@ -30,7 +30,6 @@ use std::path::Path;
 use crate::CargoResult;
 
 use super::OptValue;
-use super::StringList;
 use super::Value;
 
 #[derive(Debug, Default, Deserialize, PartialEq)]
@@ -978,5 +977,24 @@ impl PathAndArgs {
             path: ConfigRelativePath(crp),
             args,
         }
+    }
+}
+
+/// A type to deserialize a list of strings from a toml file.
+///
+/// Supports deserializing either a whitespace-separated list of arguments in a
+/// single string or a string list itself. For example these deserialize to
+/// equivalent values:
+///
+/// ```toml
+/// a = 'a b c'
+/// b = ['a', 'b', 'c']
+/// ```
+#[derive(Debug, Deserialize, Clone)]
+pub struct StringList(Vec<String>);
+
+impl StringList {
+    pub fn as_slice(&self) -> &[String] {
+        &self.0
     }
 }
