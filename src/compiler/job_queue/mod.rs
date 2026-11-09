@@ -1137,8 +1137,11 @@ impl<'gctx> DrainState<'gctx> {
         if unit.is_local() {
             // Do not show this if there are any errors or no fixable warnings
             if let FixableWarnings::Positive(fixable) = count.fixable {
-                // `cargo fix` doesn't have an option for custom builds
-                if !unit.target.is_custom_build() {
+                // `cargo fix` doesn't have an option for custom builds or rustdoc
+                if !unit.target.is_custom_build()
+                    && !unit.mode.is_doc()
+                    && !unit.mode.is_doc_scrape()
+                {
                     // To make sure the correct command is shown for `clippy` we
                     // check if `RUSTC_WORKSPACE_WRAPPER` is set and pointing towards
                     // `clippy-driver`.
