@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context as _, Result, bail};
 
 use super::{ConfigKey, ConfigValue, Definition, DefinitionKind};
-use crate::util::data_structures::HashMap;
+use cargo_util::collections::HashMap;
 
 use ConfigValue as CV;
 

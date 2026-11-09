@@ -8,8 +8,8 @@ use std::collections::VecDeque;
 use std::fmt::Write;
 use std::path::Path;
 
-use crate::util::data_structures::IndexSet;
 use anyhow::Context as _;
+use cargo_util::collections::IndexSet;
 use cargo_util::paths;
 use cargo_util_schemas::core::PartialVersion;
 use cargo_util_schemas::manifest::PathBaseName;

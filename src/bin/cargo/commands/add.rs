@@ -1,7 +1,7 @@
-use crate::util::data_structures::IndexMap;
-use crate::util::data_structures::IndexSet;
 use cargo::sources::CRATES_IO_REGISTRY;
 use cargo::util::print_available_packages;
+use cargo_util::collections::IndexMap;
+use cargo_util::collections::IndexSet;
 
 use cargo::CargoResult;
 use cargo::ops::cargo_add::AddOptions;

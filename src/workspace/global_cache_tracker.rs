@@ -116,13 +116,13 @@
 
 use crate::ops::CleanContext;
 use crate::util::cache_lock::CacheLockMode;
-use crate::util::data_structures::HashMap;
 use crate::util::interning::InternedString;
 use crate::util::sqlite::{self, Migration, basic_migration};
 use crate::util::{Filesystem, Progress, ProgressStyle};
 use crate::workspace::gc::GcOpts;
 use crate::{CargoResult, GlobalContext};
 use anyhow::{Context as _, bail};
+use cargo_util::collections::HashMap;
 use cargo_util::paths;
 use cargo_util_terminal::Verbosity;
 use rusqlite::{Connection, ErrorCode, params};

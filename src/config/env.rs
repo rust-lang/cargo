@@ -1,6 +1,6 @@
 //! Encapsulates snapshotting of environment variables.
 
-use crate::util::data_structures::HashMap;
+use cargo_util::collections::HashMap;
 use std::ffi::{OsStr, OsString};
 
 use anyhow::{Result, anyhow, bail};

@@ -12,6 +12,7 @@ pub use process_builder::{ExecStats, ProcessBuilder, Stdio};
 pub use process_error::{ProcessError, exit_status_to_string, is_simple_exit_code};
 pub use sha256::Sha256;
 
+pub mod collections;
 mod du;
 pub mod paths;
 mod process_builder;

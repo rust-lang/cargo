@@ -26,8 +26,8 @@ use crate::workspace::{
     Dependency, FeatureValue, PackageId, PackageIdSpec, PackageIdSpecQuery, Registry, Summary,
 };
 
-use crate::util::data_structures::{HashMap, HashSet};
 use anyhow::Context as _;
+use cargo_util::collections::{HashMap, HashSet};
 use std::cell::RefCell;
 use std::collections::BTreeSet;
 use std::fmt::Write;

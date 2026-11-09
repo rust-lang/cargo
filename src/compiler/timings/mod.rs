@@ -17,7 +17,7 @@ use crate::util::log_message::LogMessage;
 use crate::util::style;
 use crate::util::{CargoResult, GlobalContext};
 
-use crate::util::data_structures::HashMap;
+use cargo_util::collections::HashMap;
 use cargo_util::paths;
 use std::io::BufWriter;
 use std::time::{Duration, Instant};

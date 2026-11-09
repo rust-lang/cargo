@@ -8,8 +8,8 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
-use crate::util::data_structures::{HashMap, HashSet};
 use anyhow::Context as _;
+use cargo_util::collections::{HashMap, HashSet};
 use cargo_util_schemas::manifest::{FeatureDefinition, Hints, RustVersion};
 use futures::FutureExt;
 use futures::TryStreamExt;

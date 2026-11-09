@@ -1,6 +1,6 @@
 //! Type definitions for the result of a compilation.
 
-use crate::util::data_structures::HashMap;
+use cargo_util::collections::HashMap;
 use std::collections::BTreeSet;
 use std::ffi::{OsStr, OsString};
 use std::path::Path;

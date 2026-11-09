@@ -5,10 +5,10 @@ use crate::compiler::{CompileKind, RustcTargetData};
 use crate::resolver::Resolve;
 use crate::resolver::features::{CliFeatures, FeaturesFor, ResolvedFeatures};
 use crate::util::CargoResult;
-use crate::util::data_structures::{HashMap, HashSet};
 use crate::util::interning::{INTERNED_DEFAULT, InternedString};
 use crate::workspace::dependency::DepKind;
 use crate::workspace::{FeatureMap, FeatureValue, Package, PackageId, PackageIdSpec, Workspace};
+use cargo_util::collections::{HashMap, HashSet};
 
 #[derive(Debug, Copy, Clone)]
 pub struct NodeId {

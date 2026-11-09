@@ -1,6 +1,6 @@
 //! See [`CompilationFiles`].
 
-use crate::util::data_structures::HashMap;
+use cargo_util::collections::HashMap;
 use std::cell::OnceCell;
 use std::fmt;
 use std::hash::{Hash, Hasher};

@@ -26,7 +26,7 @@ use crate::config::{
     ArrayItemKeyPath, ConfigError, ConfigKey, ConfigReader, ConfigValue as CV, Definition, Value,
     expected,
 };
-use crate::util::data_structures::HashSet;
+use cargo_util::collections::HashSet;
 use serde::{de, de::IntoDeserializer};
 use std::vec;
 

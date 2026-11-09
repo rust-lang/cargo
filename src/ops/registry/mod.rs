@@ -10,7 +10,7 @@ mod cargo_publish;
 mod cargo_search;
 mod cargo_yank;
 
-use crate::util::data_structures::HashSet;
+use cargo_util::collections::HashSet;
 use std::str;
 
 use anyhow::{Context as _, bail, format_err};

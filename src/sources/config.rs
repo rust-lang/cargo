@@ -4,7 +4,7 @@
 //! structure usable by Cargo itself. Currently, this is primarily used to map
 //! sources to one another via the `replace-with` key in `.cargo/config`.
 
-use crate::util::data_structures::HashMap;
+use cargo_util::collections::HashMap;
 
 use crate::context::{self, ConfigRelativePathResolveExt, OptValue, SourceConfigDef};
 use crate::sources::overlay::DependencyConfusionThreatOverlaySource;

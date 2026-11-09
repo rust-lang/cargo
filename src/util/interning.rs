@@ -1,4 +1,4 @@
-use crate::util::data_structures::HashSet;
+use cargo_util::collections::HashSet;
 use serde::{Serialize, Serializer};
 use serde_untagged::UntaggedEnumVisitor;
 use std::borrow::Borrow;

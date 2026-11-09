@@ -380,7 +380,7 @@ mod dep_info;
 mod dirty_reason;
 mod rustdoc;
 
-use crate::util::data_structures::HashMap;
+use cargo_util::collections::HashMap;
 use std::collections::hash_map::Entry;
 use std::env;
 use std::ffi::OsString;

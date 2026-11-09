@@ -2,7 +2,7 @@ use tracing::debug;
 
 use super::source::{MaybePackage, Source};
 use crate::sources::IndexSummary;
-use crate::util::data_structures::HashSet;
+use cargo_util::collections::HashSet;
 
 /// A `Source` that overlays one source over another, pretending that the packages
 /// available in the overlay are actually available in the other one.

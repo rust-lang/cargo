@@ -1,6 +1,6 @@
 //! Tests for directory sources.
 
-use cargo::util::data_structures::HashMap;
+use cargo_util::collections::HashMap;
 
 use std::fs;
 use std::str;

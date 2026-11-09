@@ -1,6 +1,6 @@
 //! Tests for config settings.
 
-use cargo::util::data_structures::HashMap;
+use cargo_util::collections::HashMap;
 use std::borrow::Borrow;
 use std::collections::BTreeMap;
 use std::fs;

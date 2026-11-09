@@ -61,7 +61,7 @@
 //! read the environment variable due to ambiguity. (See `ConfigMapAccess` for
 //! more details.)
 
-use crate::util::data_structures::{HashMap, HashSet};
+use cargo_util::collections::{HashMap, HashSet};
 use std::borrow::Cow;
 use std::env;
 use std::ffi::{OsStr, OsString};

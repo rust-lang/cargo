@@ -1,6 +1,6 @@
 //! Tests for the --config CLI option.
 
-use cargo::util::data_structures::HashMap;
+use cargo_util::collections::HashMap;
 use std::fs;
 
 use crate::prelude::*;

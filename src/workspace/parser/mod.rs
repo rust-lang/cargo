@@ -1,4 +1,4 @@
-use crate::util::data_structures::HashMap;
+use cargo_util::collections::HashMap;
 use cargo_util_terminal::report::{AnnotationKind, Group, Level, Snippet};
 use std::borrow::Cow;
 use std::cell::OnceCell;

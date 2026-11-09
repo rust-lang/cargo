@@ -219,8 +219,8 @@ fn find_lint_or_group<'a>(
 
 #[cfg(test)]
 mod tests {
-    use crate::util::data_structures::HashSet;
-    use crate::util::data_structures::IndexMap;
+    use cargo_util::collections::HashSet;
+    use cargo_util::collections::IndexMap;
     use itertools::Itertools;
     use snapbox::ToDebug;
     use std::cmp::Reverse;

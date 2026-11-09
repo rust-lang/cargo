@@ -3,11 +3,11 @@ use super::dep_cache::RegistryQueryer;
 use super::errors::ActivateResult;
 use super::types::{ActivationsKey, ConflictMap, ConflictReason, FeaturesSet, ResolveOpts};
 use crate::util::Graph;
-use crate::util::data_structures::HashMap;
-use crate::util::data_structures::HashSet;
 use crate::util::interning::{INTERNED_DEFAULT, InternedString};
 use crate::workspace::{Dependency, PackageId, Registry, Summary};
 use anyhow::format_err;
+use cargo_util::collections::HashMap;
+use cargo_util::collections::HashSet;
 use std::collections::BTreeSet;
 use tracing::debug;
 

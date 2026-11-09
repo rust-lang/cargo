@@ -1,7 +1,7 @@
 use std::collections::BTreeSet;
 
-use crate::util::data_structures::IndexMap;
-use crate::util::data_structures::IndexSet;
+use cargo_util::collections::IndexMap;
+use cargo_util::collections::IndexSet;
 use tracing::{instrument, trace};
 
 use super::BuildContext;

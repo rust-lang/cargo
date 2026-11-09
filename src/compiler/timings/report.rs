@@ -1,11 +1,11 @@
 //! Render HTML report from timing tracking data.
 
-use crate::util::data_structures::HashMap;
-use crate::util::data_structures::HashSet;
+use cargo_util::collections::HashMap;
+use cargo_util::collections::HashSet;
 use std::borrow::Cow;
 use std::io::Write;
 
-use crate::util::data_structures::IndexMap;
+use cargo_util::collections::IndexMap;
 use itertools::Itertools as _;
 
 use crate::CargoResult;

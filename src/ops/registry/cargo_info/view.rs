@@ -1,4 +1,4 @@
-use crate::util::data_structures::HashMap;
+use cargo_util::collections::HashMap;
 use std::io::Write;
 
 use crate::util::style::{CONTEXT, ERROR, HEADER, LITERAL, NOP, WARN};

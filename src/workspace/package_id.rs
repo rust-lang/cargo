@@ -1,4 +1,4 @@
-use crate::util::data_structures::HashSet;
+use cargo_util::collections::HashSet;
 use std::fmt::{self, Formatter};
 use std::hash;
 use std::hash::Hash;

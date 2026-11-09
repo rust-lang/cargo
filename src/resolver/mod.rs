@@ -58,7 +58,7 @@
 //! that we're implementing something that probably shouldn't be allocating all
 //! over the place.
 
-use crate::util::data_structures::{HashMap, HashSet};
+use cargo_util::collections::{HashMap, HashSet};
 use rustc_hash::FxBuildHasher;
 use std::collections::BTreeMap;
 use std::rc::Rc;
