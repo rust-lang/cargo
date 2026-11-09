@@ -22,7 +22,7 @@
 //!
 //! # Config schemas
 //!
-//! Configuration schemas are defined in the [`schema`] module.
+//! Configuration schemas are defined in the [`crate::config::schema`] module.
 //!
 //! ## Config deserialization
 //!
@@ -115,8 +115,7 @@ pub use path::ResolveTemplateError;
 mod target;
 pub use target::{TargetCfgConfig, TargetConfig};
 
-mod schema;
-pub use schema::*;
+pub use crate::config::schema::*;
 
 pub const TOP_LEVEL_CONFIG_KEYS: &[&str] = &[
     "paths",

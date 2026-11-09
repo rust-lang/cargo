@@ -3,12 +3,12 @@
 //! This module contains types that define the schema for various configuration
 //! sections found in Cargo configuration.
 //!
-//! These types are mostly used by [`GlobalContext::get`](super::GlobalContext::get)
+//! These types are mostly used by [`GlobalContext::get`](crate::context::GlobalContext::get)
 //! to deserialize configuration values from TOML files, environment variables,
 //! and CLI arguments.
 //!
 //! Schema types here should only contain data and simple accessor methods.
-//! Avoid depending on [`GlobalContext`](super::GlobalContext) directly.
+//! Avoid depending on [`GlobalContext`](crate::context::GlobalContext) directly.
 
 use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::data_structures::HashMap;
@@ -927,7 +927,7 @@ impl ConfigRelativePath {
 /// This expects the first value to be the path to the program to run.
 /// Subsequent values are strings of arguments to pass to the program.
 ///
-/// Typically you should use [`super::ConfigRelativePathResolveExt::resolve_program`] on the path
+/// Typically you should use [`ConfigRelativePathResolveExt::resolve_program`](crate::context::ConfigRelativePathResolveExt::resolve_program) on the path
 /// to get the actual program.
 ///
 /// **Note**: Any usage of this type in config needs to be listed in

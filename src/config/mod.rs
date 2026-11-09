@@ -6,6 +6,7 @@ mod env;
 mod error;
 mod key;
 mod reader;
+pub mod schema;
 mod value;
 
 pub use config_store::ConfigStore;
