@@ -40,7 +40,7 @@
 //! the `Definition::deserialize` implementation here and the
 //! `MapAccess::next_value_seed` implementation in `ValueDeserializer`.
 //!
-//! [`de`]: crate::config::de
+//! [`de`]: super::de
 
 use super::Definition;
 use serde::de;

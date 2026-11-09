@@ -34,11 +34,11 @@
 //!    These parsed results are stored in [`GlobalContext`].
 //!
 //! 2. **`ConfigValue` → Target types** ---
-//!    The [`GlobalContext::get`] method uses a [custom serde deserializer](crate::config::de)
+//!    The [`GlobalContext::get`] method uses a custom Serde deserializer
 //!    to convert [`ConfigValue`] instances to the caller's desired type.
 //!    Precedence between [`ConfigValue`] sources is resolved during retrieval
 //!    based on [`Definition`] priority.
-//!    See the top-level documentation of the [`crate::config::de`] module for more.
+//!    See [`ConfigReader::get`] for the typed lookup API.
 //!
 //! ## Map key recommendations
 //!

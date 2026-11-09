@@ -5,20 +5,18 @@ use std::ffi::{OsStr, OsString};
 
 use anyhow::{Result, anyhow, bail};
 
-/// A snapshot of the environment variables available to [`GlobalContext`].
+/// A snapshot of the environment variables available to `GlobalContext`.
 ///
-/// Currently, the [`GlobalContext`] supports lookup of environment variables
+/// Currently, the `GlobalContext` supports lookup of environment variables
 /// through two different means:
 ///
-/// - [`GlobalContext::get_env`](crate::GlobalContext::get_env)
-///   and [`GlobalContext::get_env_os`](crate::GlobalContext::get_env_os)
+/// - `GlobalContext::get_env`
+///   and `GlobalContext::get_env_os`
 ///   for process environment variables (similar to [`std::env::var`] and [`std::env::var_os`]),
-/// - Typed Config Value API via [`GlobalContext::get`](crate::GlobalContext::get).
+/// - Typed Config Value API via `GlobalContext::get`.
 ///   This is only available for `CARGO_` prefixed environment keys.
 ///
 /// This type contains the env var snapshot and helper methods for both APIs.
-///
-/// [`GlobalContext`]: crate::GlobalContext
 #[derive(Debug)]
 pub struct Env {
     /// A snapshot of the process's environment variables.
@@ -30,7 +28,7 @@ pub struct Env {
     /// to the actual keys in the environment.
     /// The normalized format is the one expected by Cargo.
     ///
-    /// This only holds env keys that are valid UTF-8, since [`crate::config::ConfigKey`] only supports UTF-8 keys.
+    /// This only holds env keys that are valid UTF-8, since [`super::ConfigKey`] only supports UTF-8 keys.
     /// In addition, this only holds env keys whose value in the environment is also valid UTF-8,
     /// since the typed Config value API only supports UTF-8 values.
     normalized_env: HashMap<String, String>,
@@ -84,7 +82,7 @@ impl Env {
     }
 
     /// Get the value of environment variable `key` through the snapshot in
-    /// [`GlobalContext`](crate::GlobalContext).
+    /// `GlobalContext`.
     ///
     /// This can be used similarly to [`std::env::var_os`].
     /// On Windows, we check for case mismatch since environment keys are case-insensitive.
@@ -130,7 +128,7 @@ impl Env {
     /// Get the value of environment variable `key` as a `&str`.
     /// Returns `None` if `key` is not in `self.env` or if the value is not valid UTF-8.
     ///
-    /// This is intended for use in private methods of [`GlobalContext`](crate::GlobalContext),
+    /// This is intended for use in private methods of `GlobalContext`,
     /// and does not check for env key case mismatch.
     ///
     /// This is case-sensitive on Windows (even though environment keys on Windows are usually
@@ -150,7 +148,7 @@ impl Env {
 
     /// Check if the environment contains `key`.
     ///
-    /// This is intended for use in private methods of [`GlobalContext`](crate::GlobalContext),
+    /// This is intended for use in private methods of `GlobalContext`,
     /// and does not check for env key case mismatch.
     /// See the docstring of [`Env::get_str`] for more context.
     pub(crate) fn contains_key(&self, key: impl AsRef<OsStr>) -> bool {
