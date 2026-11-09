@@ -78,7 +78,11 @@ pub fn read_manifest(
     let original_toml = deserialize_toml(&document)
         .map_err(|e| emit_toml_diagnostic(e.into(), &contents, path, gctx))?;
 
-    let document = make_document_owned(document);
+    let document = if source_id.is_path() {
+        Some(make_document_owned(document))
+    } else {
+        None
+    };
 
     let mut manifest = (|| {
         let empty = Vec::new();
@@ -105,7 +109,7 @@ pub fn read_manifest(
         if normalized_toml.package().is_some() {
             to_real_manifest(
                 Some(contents),
-                Some(document),
+                document,
                 original_toml,
                 normalized_toml,
                 features,
@@ -122,7 +126,7 @@ pub fn read_manifest(
             assert!(!is_embedded);
             to_virtual_manifest(
                 Some(contents),
-                Some(document),
+                document,
                 original_toml,
                 normalized_toml,
                 features,
