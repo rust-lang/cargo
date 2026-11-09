@@ -68,7 +68,7 @@ impl fmt::Debug for ConfigValue {
 }
 
 impl ConfigValue {
-    pub(crate) fn from_toml(def: Definition, toml: toml::Value) -> Result<ConfigValue> {
+    pub fn from_toml(def: Definition, toml: toml::Value) -> Result<ConfigValue> {
         let mut error_path = Vec::new();
         Self::from_toml_inner(def, toml, &mut error_path).with_context(|| {
             let mut it = error_path.iter().rev().peekable();
@@ -123,7 +123,7 @@ impl ConfigValue {
         }
     }
 
-    pub(crate) fn into_toml(self) -> toml::Value {
+    pub fn into_toml(self) -> toml::Value {
         match self {
             CV::Boolean(s, _) => toml::Value::Boolean(s),
             CV::String(s, _) => toml::Value::String(s),
@@ -143,7 +143,7 @@ impl ConfigValue {
     /// Container types (tables and arrays) are merged with existing values.
     ///
     /// Container and non-container types cannot be mixed.
-    pub(crate) fn merge(&mut self, from: ConfigValue, force: bool) -> Result<()> {
+    pub fn merge(&mut self, from: ConfigValue, force: bool) -> Result<()> {
         self.merge_helper(from, force, &mut ConfigKey::new())
     }
 

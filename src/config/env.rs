@@ -53,7 +53,7 @@ impl Env {
 
     /// Set the env directly from a `HashMap`.
     /// This should be used for debugging purposes only.
-    pub(crate) fn from_map(env: HashMap<String, String>) -> Self {
+    pub fn from_map(env: HashMap<String, String>) -> Self {
         let env = env.into_iter().map(|(k, v)| (k.into(), v.into())).collect();
         Self::from_map_os(env)
     }

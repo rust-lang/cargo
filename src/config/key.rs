@@ -97,7 +97,7 @@ impl ConfigKey {
     }
 
     /// Returns an iterator of the key parts as strings.
-    pub(crate) fn parts(&self) -> impl Iterator<Item = &str> {
+    pub fn parts(&self) -> impl Iterator<Item = &str> {
         self.parts.iter().map(|p| p.0.as_ref())
     }
 
