@@ -22,6 +22,7 @@ use cargo_util_schemas::manifest::ProfileName;
 use serde::Deserialize;
 use serde::Serialize;
 use serde::de;
+use serde::de::Error;
 use serde_untagged::UntaggedEnumVisitor;
 
 use std::path::Path;
@@ -29,10 +30,8 @@ use std::path::Path;
 use crate::CargoResult;
 
 use super::OptValue;
-use super::PathAndArgs;
 use super::StringList;
 use super::Value;
-use super::path::ConfigRelativePath;
 
 #[derive(Debug, Default, Deserialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
@@ -894,6 +893,90 @@ impl GlobalRegistryConfig {
             // `min-publish-age` is per-registry config only.
             min_publish_age: None,
             _protocol: None,
+        }
+    }
+}
+
+/// Use with the `get` API to fetch a string that will be converted to a
+/// `PathBuf`. Relative paths are converted to absolute paths based on the
+/// location of the config file.
+#[derive(Debug, Deserialize, PartialEq, Clone)]
+#[serde(transparent)]
+pub struct ConfigRelativePath(Value<String>);
+
+impl ConfigRelativePath {
+    pub fn new(path: Value<String>) -> ConfigRelativePath {
+        ConfigRelativePath(path)
+    }
+
+    /// Returns the underlying value.
+    pub fn value(&self) -> &Value<String> {
+        &self.0
+    }
+
+    /// Returns the raw underlying configuration value for this key.
+    pub fn raw_value(&self) -> &str {
+        &self.0.val
+    }
+}
+
+/// A config type that is a program to run.
+///
+/// This supports a list of strings like `['/path/to/program', 'somearg']`
+/// or a space separated string like `'/path/to/program somearg'`.
+///
+/// This expects the first value to be the path to the program to run.
+/// Subsequent values are strings of arguments to pass to the program.
+///
+/// Typically you should use [`super::ConfigRelativePathResolveExt::resolve_program`] on the path
+/// to get the actual program.
+///
+/// **Note**: Any usage of this type in config needs to be listed in
+/// the `NON_MERGEABLE_LISTS` check to prevent list merging
+/// from multiple config files.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PathAndArgs {
+    pub path: ConfigRelativePath,
+    pub args: Vec<String>,
+}
+
+impl<'de> serde::Deserialize<'de> for PathAndArgs {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let vsl = Value::<StringList>::deserialize(deserializer)?;
+        let mut strings = vsl.val.0;
+        if strings.is_empty() {
+            return Err(D::Error::invalid_length(0, &"at least one element"));
+        }
+        let first = strings.remove(0);
+        let crp = Value {
+            val: first,
+            definition: vsl.definition,
+        };
+        Ok(PathAndArgs {
+            path: ConfigRelativePath(crp),
+            args: strings,
+        })
+    }
+}
+
+impl PathAndArgs {
+    /// Construct a `PathAndArgs` from a string. The string will be split on ascii whitespace,
+    /// with the first item being treated as a `ConfigRelativePath` to the executable, and subsequent
+    /// items as arguments.
+    pub fn from_whitespace_separated_string(p: &Value<String>) -> PathAndArgs {
+        let mut iter = p.val.split_ascii_whitespace().map(str::to_string);
+        let val = iter.next().unwrap_or_default();
+        let args = iter.collect();
+        let crp = Value {
+            val,
+            definition: p.definition.clone(),
+        };
+        PathAndArgs {
+            path: ConfigRelativePath(crp),
+            args,
         }
     }
 }
