@@ -7,5 +7,19 @@ license.workspace = true
 repository.workspace = true
 description = "Cargo's layered config system"
 
+[dependencies]
+anyhow.workspace = true
+cargo-credential.workspace = true
+cargo-util.workspace = true
+cargo-util-schemas.workspace = true
+cargo-util-terminal.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde-untagged.workspace = true
+toml = { workspace = true, features = ["std", "serde", "parse", "display", "preserve_order"] }
+tracing.workspace = true
+
+[dev-dependencies]
+snapbox.workspace = true
+
 [lints]
 workspace = true

@@ -366,6 +366,7 @@ dependencies = [
  "cargo-platform 0.3.5",
  "cargo-test-support",
  "cargo-util",
+ "cargo-util-config",
  "cargo-util-schemas",
  "cargo-util-terminal",
  "clap",
@@ -562,6 +563,18 @@ dependencies = [
 [[package]]
 name = "cargo-util-config"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "cargo-credential",
+ "cargo-util",
+ "cargo-util-schemas",
+ "cargo-util-terminal",
+ "serde",
+ "serde-untagged",
+ "snapbox",
+ "toml",
+ "tracing",
+]
 
 [[package]]
 name = "cargo-util-schemas"

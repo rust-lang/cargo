@@ -55,8 +55,7 @@
 //!   This directory contains generally-useful utility modules.
 //! - [`context`]:
 //!   This directory contains the global application context.
-//!   This includes the config parser which makes heavy use of
-//!   [serde](https://serde.rs/) to merge and translate config values.
+//!   It uses [`cargo_util_config`](crate::config) to merge and deserialize config values.
 //!   The [`util::GlobalContext`] is usually accessed from the
 //!   [`workspace::Workspace`]
 //!   though references to it are scattered around for more convenient access.
@@ -163,7 +162,7 @@ pub const CARGO_ENV: &str = "CARGO";
 mod macros;
 
 pub mod compiler;
-pub mod config;
+pub use cargo_util_config as config;
 pub mod context;
 pub mod diagnostics;
 pub mod ops;

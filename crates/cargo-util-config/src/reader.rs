@@ -7,7 +7,7 @@ use cargo_util_terminal::Shell;
 
 use super::de::Deserializer;
 use super::{ConfigError, OptValue, Value};
-use crate::config::{ConfigKey, ConfigStore, ConfigValue, Definition, Env, is_nonmergeable_list};
+use crate::{ConfigKey, ConfigStore, ConfigValue, Definition, Env, is_nonmergeable_list};
 use cargo_util::collections::HashMap;
 
 use ConfigValue as CV;

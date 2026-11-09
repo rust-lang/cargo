@@ -10,7 +10,6 @@
 //! Schema types here should only contain data and simple accessor methods.
 //! Avoid depending on Cargo's `GlobalContext` directly.
 
-use crate::sources::CRATES_IO_REGISTRY;
 use cargo_util::collections::HashMap;
 use std::borrow::Cow;
 use std::ffi::OsStr;
@@ -29,6 +28,7 @@ use std::path::Path;
 
 use anyhow::Result;
 
+use super::CRATES_IO_REGISTRY;
 use super::OptValue;
 use super::Value;
 

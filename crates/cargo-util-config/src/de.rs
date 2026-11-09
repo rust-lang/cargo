@@ -21,8 +21,8 @@
 //!
 //! [`ConfigValue`]: CV
 
-use crate::config::value;
-use crate::config::{
+use crate::value;
+use crate::{
     ArrayItemKeyPath, ConfigError, ConfigKey, ConfigReader, ConfigValue as CV, Definition, Value,
     expected,
 };

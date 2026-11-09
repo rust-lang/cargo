@@ -159,7 +159,7 @@ trigger_files = ["doc/"]
 [autolabel."A-environment-variables"]
 trigger_files = [
   "crates/home/",
-  "src/config/env.rs",
+  "crates/cargo-util-config/src/env.rs",
 ]
 
 [autolabel."A-features2"]

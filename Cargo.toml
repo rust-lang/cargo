@@ -173,6 +173,7 @@ cargo-platform.workspace = true
 cargo-util-schemas.workspace = true
 cargo-util-terminal.workspace = true
 cargo-util.workspace = true
+cargo-util-config.workspace = true
 clap = { workspace = true, features = ["wrap_help"] }
 clap_complete.workspace = true
 color-print.workspace = true
