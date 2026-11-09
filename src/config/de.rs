@@ -3,10 +3,10 @@
 //! The [`Deserializer`] type is the main driver of deserialization.
 //! The workflow is roughly:
 //!
-//! 1. [`GlobalContext::get<T>()`] creates [`Deserializer`] and calls `T::deserialize()`
+//! 1. [`ConfigReader::get`] creates [`Deserializer`] and calls `T::deserialize()`
 //! 2. Then call type-specific deserialize methods as in normal serde deserialization.
 //!     - For primitives, `deserialize_*` methods look up [`ConfigValue`] instances
-//!       in [`GlobalContext`] and convert.
+//!       through [`ConfigReader`] and convert.
 //!     - Structs and maps are handled by [`ConfigMapAccess`].
 //!     - Sequences are handled by [`ConfigSeqAccess`],
 //!       which later uses [`ArrayItemDeserializer`] for each array item.
@@ -21,19 +21,20 @@
 //!
 //! [`ConfigValue`]: CV
 
-use crate::config::ArrayItemKeyPath;
-use crate::context::value;
-use crate::context::{ConfigError, ConfigKey, GlobalContext};
-use crate::context::{ConfigValue as CV, Definition, Value};
+use crate::config::value;
+use crate::config::{
+    ArrayItemKeyPath, ConfigError, ConfigKey, ConfigReader, ConfigValue as CV, Definition, Value,
+    expected,
+};
 use crate::util::data_structures::HashSet;
 use serde::{de, de::IntoDeserializer};
 use std::vec;
 
 /// Serde deserializer used to convert config values to a target type using
-/// [`GlobalContext::get`].
+/// [`ConfigReader::get`].
 #[derive(Clone)]
-pub(super) struct Deserializer<'gctx> {
-    pub(super) gctx: &'gctx GlobalContext,
+pub(super) struct Deserializer<'reader> {
+    pub(super) reader: ConfigReader<'reader>,
     /// The current key being deserialized.
     pub(super) key: ConfigKey,
     /// Whether or not this key part is allowed to be an inner table. For
@@ -52,7 +53,7 @@ macro_rules! deserialize_method {
             V: de::Visitor<'de>,
         {
             let v = self
-                .gctx
+                .reader
                 .$getter(&self.key)?
                 .ok_or_else(|| ConfigError::missing(&self.key))?;
             let Value { val, definition } = v;
@@ -62,14 +63,14 @@ macro_rules! deserialize_method {
     };
 }
 
-impl<'de, 'gctx> de::Deserializer<'de> for Deserializer<'gctx> {
+impl<'de, 'reader> de::Deserializer<'de> for Deserializer<'reader> {
     type Error = ConfigError;
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
-        let cv = self.gctx.get_cv_with_env(&self.key)?;
+        let cv = self.reader.get_cv_with_env(&self.key)?;
         if let Some(cv) = cv {
             let res: (Result<V::Value, ConfigError>, Definition) = match cv {
                 CV::Integer(i, def) => (visitor.visit_i64(i), def),
@@ -86,7 +87,7 @@ impl<'de, 'gctx> de::Deserializer<'de> for Deserializer<'gctx> {
         }
 
         // The effect here is the same as in `deserialize_option`.
-        if self.gctx.has_key(&self.key, self.env_prefix_ok)? {
+        if self.reader.has_key(&self.key, self.env_prefix_ok)? {
             return visitor.visit_some(self);
         }
 
@@ -108,7 +109,7 @@ impl<'de, 'gctx> de::Deserializer<'de> for Deserializer<'gctx> {
     where
         V: de::Visitor<'de>,
     {
-        if self.gctx.has_key(&self.key, self.env_prefix_ok)? {
+        if self.reader.has_key(&self.key, self.env_prefix_ok)? {
             visitor.visit_some(self)
         } else {
             // Treat missing values as `None`.
@@ -180,7 +181,7 @@ impl<'de, 'gctx> de::Deserializer<'de> for Deserializer<'gctx> {
         if name == "StringList" {
             let mut res = Vec::new();
 
-            match self.gctx.config()?.get_cv(&self.key)? {
+            match self.reader.store.get_cv(&self.key)? {
                 Some(CV::List(val, _def)) => res.extend(val),
                 Some(CV::String(val, def)) => {
                     let split_vs = val
@@ -189,13 +190,12 @@ impl<'de, 'gctx> de::Deserializer<'de> for Deserializer<'gctx> {
                     res.extend(split_vs);
                 }
                 Some(val) => {
-                    self.gctx
-                        .expected("string or array of strings", &self.key, &val)?;
+                    expected("string or array of strings", &self.key, &val)?;
                 }
                 None => {}
             }
 
-            self.gctx.get_env_list(&self.key, &mut res)?;
+            self.reader.get_env_list(&self.key, &mut res)?;
 
             let vals: Vec<String> = res
                 .into_iter()
@@ -220,7 +220,7 @@ impl<'de, 'gctx> de::Deserializer<'de> for Deserializer<'gctx> {
         V: de::Visitor<'de>,
     {
         let value = self
-            .gctx
+            .reader
             .get_string_priv(&self.key)?
             .ok_or_else(|| ConfigError::missing(&self.key))?;
 
@@ -238,8 +238,8 @@ impl<'de, 'gctx> de::Deserializer<'de> for Deserializer<'gctx> {
     }
 }
 
-struct ConfigMapAccess<'gctx> {
-    de: Deserializer<'gctx>,
+struct ConfigMapAccess<'reader> {
+    de: Deserializer<'reader>,
     /// The fields that this map should deserialize.
     fields: Vec<KeyKind>,
     /// Current field being deserialized.
@@ -252,19 +252,19 @@ enum KeyKind {
     CaseSensitive(String),
 }
 
-impl<'gctx> ConfigMapAccess<'gctx> {
-    fn new_map(de: Deserializer<'gctx>) -> Result<ConfigMapAccess<'gctx>, ConfigError> {
+impl<'reader> ConfigMapAccess<'reader> {
+    fn new_map(de: Deserializer<'reader>) -> Result<ConfigMapAccess<'reader>, ConfigError> {
         let mut fields = Vec::new();
-        if let Some(mut v) = de.gctx.get_table(&de.key)? {
+        if let Some(mut v) = de.reader.get_table(&de.key)? {
             // `v: Value<HashMap<String, CV>>`
             for (key, _value) in v.val.drain() {
                 fields.push(KeyKind::CaseSensitive(key));
             }
         }
-        if de.gctx.cli_unstable().advanced_env {
+        if de.reader.advanced_env {
             // `CARGO_PROFILE_DEV_PACKAGE_`
             let env_prefix = format!("{}_", de.key.as_env_key());
-            for env_key in de.gctx.env_keys() {
+            for env_key in de.reader.env.keys_str() {
                 // `CARGO_PROFILE_DEV_PACKAGE_bar_OPT_LEVEL = 3`
                 if let Some(rest) = env_key.strip_prefix(&env_prefix) {
                     // `rest = bar_OPT_LEVEL`
@@ -282,10 +282,10 @@ impl<'gctx> ConfigMapAccess<'gctx> {
     }
 
     fn new_struct(
-        de: Deserializer<'gctx>,
+        de: Deserializer<'reader>,
         given_fields: &'static [&'static str],
-    ) -> Result<ConfigMapAccess<'gctx>, ConfigError> {
-        let table = de.gctx.get_table(&de.key)?;
+    ) -> Result<ConfigMapAccess<'reader>, ConfigError> {
+        let table = de.reader.get_table(&de.key)?;
 
         // Assume that if we're deserializing a struct it exhaustively lists all
         // possible fields on this key that we're *supposed* to use, so take
@@ -297,7 +297,7 @@ impl<'gctx> ConfigMapAccess<'gctx> {
                 .iter()
                 .filter(|(k, _v)| !given_fields.iter().any(|gk| gk == k));
             for (unused_key, unused_value) in unused_keys {
-                de.gctx.shell().warn(format!(
+                de.reader.warn(format!(
                     "unused config key `{}.{}` in `{}`",
                     de.key,
                     unused_key,
@@ -313,7 +313,7 @@ impl<'gctx> ConfigMapAccess<'gctx> {
         for field in given_fields {
             let mut field_key = de.key.clone();
             field_key.push(field);
-            for env_key in de.gctx.env_keys() {
+            for env_key in de.reader.env.keys_str() {
                 let Some(nested_field) = env_key.strip_prefix(field_key.as_env_key()) else {
                     continue;
                 };
@@ -344,7 +344,7 @@ impl<'gctx> ConfigMapAccess<'gctx> {
     }
 }
 
-impl<'de, 'gctx> de::MapAccess<'de> for ConfigMapAccess<'gctx> {
+impl<'de, 'reader> de::MapAccess<'de> for ConfigMapAccess<'reader> {
     type Error = ConfigError;
 
     fn next_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>, Self::Error>
@@ -404,7 +404,7 @@ impl<'de, 'gctx> de::MapAccess<'de> for ConfigMapAccess<'gctx> {
 
         let result = seed
             .deserialize(Deserializer {
-                gctx: self.de.gctx,
+                reader: self.de.reader,
                 key: self.de.key.clone(),
                 env_prefix_ok,
             })
@@ -415,7 +415,7 @@ impl<'de, 'gctx> de::MapAccess<'de> for ConfigMapAccess<'gctx> {
                 e.with_key_context(
                     &self.de.key,
                     self.de
-                        .gctx
+                        .reader
                         .get_cv_with_env(&self.de.key)
                         .ok()
                         .and_then(|cv| cv.map(|cv| cv.definition().clone())),
@@ -426,8 +426,8 @@ impl<'de, 'gctx> de::MapAccess<'de> for ConfigMapAccess<'gctx> {
     }
 }
 
-struct ConfigSeqAccess<'gctx> {
-    de: Deserializer<'gctx>,
+struct ConfigSeqAccess<'reader> {
+    de: Deserializer<'reader>,
     list_iter: std::iter::Enumerate<vec::IntoIter<CV>>,
 }
 
@@ -435,17 +435,17 @@ impl ConfigSeqAccess<'_> {
     fn new(de: Deserializer<'_>) -> Result<ConfigSeqAccess<'_>, ConfigError> {
         let mut res = Vec::new();
 
-        match de.gctx.config()?.get_cv(&de.key)? {
+        match de.reader.store.get_cv(&de.key)? {
             Some(CV::List(val, _definition)) => {
                 res.extend(val);
             }
             Some(val) => {
-                de.gctx.expected("list", &de.key, &val)?;
+                expected("list", &de.key, &val)?;
             }
             None => {}
         }
 
-        de.gctx.get_env_list(&de.key, &mut res)?;
+        de.reader.get_env_list(&de.key, &mut res)?;
 
         Ok(ConfigSeqAccess {
             de,
@@ -454,7 +454,7 @@ impl ConfigSeqAccess<'_> {
     }
 }
 
-impl<'de, 'gctx> de::SeqAccess<'de> for ConfigSeqAccess<'gctx> {
+impl<'de, 'reader> de::SeqAccess<'de> for ConfigSeqAccess<'reader> {
     type Error = ConfigError;
 
     fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
@@ -484,10 +484,10 @@ impl<'de, 'gctx> de::SeqAccess<'de> for ConfigSeqAccess<'gctx> {
 }
 
 /// Source of data for [`ValueDeserializer`]
-enum ValueSource<'gctx, 'err> {
+enum ValueSource<'reader, 'err> {
     /// The deserializer used to actually deserialize a Value struct.
     Deserializer {
-        de: Deserializer<'gctx>,
+        de: Deserializer<'reader>,
         definition: Definition,
     },
     /// A [`ConfigValue`](CV).
@@ -502,15 +502,17 @@ enum ValueSource<'gctx, 'err> {
     },
 }
 
-impl<'gctx, 'err> ValueSource<'gctx, 'err> {
-    fn with_deserializer(de: Deserializer<'gctx>) -> Result<ValueSource<'gctx, 'err>, ConfigError> {
+impl<'reader, 'err> ValueSource<'reader, 'err> {
+    fn with_deserializer(
+        de: Deserializer<'reader>,
+    ) -> Result<ValueSource<'reader, 'err>, ConfigError> {
         // Figure out where this key is defined.
         let definition = {
             let env = de.key.as_env_key();
             let env_def = Definition::Environment(env.to_string());
             match (
-                de.gctx.env.contains_key(env),
-                de.gctx.config()?.get_cv(&de.key)?,
+                de.reader.env.contains_key(env),
+                de.reader.store.get_cv(&de.key)?,
             ) {
                 (true, Some(cv)) => {
                     // Both, pick highest priority.
@@ -531,7 +533,7 @@ impl<'gctx, 'err> ValueSource<'gctx, 'err> {
         Ok(Self::Deserializer { de, definition })
     }
 
-    fn with_cv(cv: CV, key_path: &'err mut ArrayItemKeyPath) -> ValueSource<'gctx, 'err> {
+    fn with_cv(cv: CV, key_path: &'err mut ArrayItemKeyPath) -> ValueSource<'reader, 'err> {
         ValueSource::ConfigValue { cv, key_path }
     }
 }
@@ -543,13 +545,13 @@ impl<'gctx, 'err> ValueSource<'gctx, 'err> {
 /// fields into the location that this configuration value was defined in.
 ///
 /// See more comments in `value.rs` for the protocol used here.
-struct ValueDeserializer<'gctx, 'err> {
+struct ValueDeserializer<'reader, 'err> {
     hits: u32,
-    source: ValueSource<'gctx, 'err>,
+    source: ValueSource<'reader, 'err>,
 }
 
-impl<'gctx, 'err> ValueDeserializer<'gctx, 'err> {
-    fn new(source: ValueSource<'gctx, 'err>) -> ValueDeserializer<'gctx, 'err> {
+impl<'reader, 'err> ValueDeserializer<'reader, 'err> {
+    fn new(source: ValueSource<'reader, 'err>) -> ValueDeserializer<'reader, 'err> {
         Self { hits: 0, source }
     }
 
@@ -561,7 +563,7 @@ impl<'gctx, 'err> ValueDeserializer<'gctx, 'err> {
     }
 }
 
-impl<'de, 'gctx, 'err> de::MapAccess<'de> for ValueDeserializer<'gctx, 'err> {
+impl<'de, 'reader, 'err> de::MapAccess<'de> for ValueDeserializer<'reader, 'err> {
     type Error = ConfigError;
 
     fn next_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>, Self::Error>

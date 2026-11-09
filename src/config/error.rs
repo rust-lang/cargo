@@ -1,9 +1,6 @@
 use std::fmt;
 
-use crate::config::ArrayItemKeyPath;
-use crate::context::ConfigKey;
-use crate::context::Definition;
-use crate::util::ConfigValue;
+use crate::config::{ArrayItemKeyPath, ConfigKey, ConfigValue, Definition};
 
 /// Internal error for serde errors.
 #[derive(Debug)]
@@ -20,7 +17,7 @@ impl ConfigError {
         }
     }
 
-    pub(super) fn expected(key: &ConfigKey, expected: &str, found: &ConfigValue) -> ConfigError {
+    pub(crate) fn expected(key: &ConfigKey, expected: &str, found: &ConfigValue) -> ConfigError {
         ConfigError {
             error: anyhow::anyhow!(
                 "`{}` expected {}, but found a {}",
