@@ -136,7 +136,7 @@ fn bump_check(args: &clap::ArgMatches, gctx: &cargo::util::GlobalContext) -> Car
     // Skip both the version-bump check and SemVer checks entirely.
     //
     // Use this for crates with no prior published release to baseline against.
-    let crates_not_checked: [&str; 0] = [];
+    let crates_not_checked: [&str; _] = ["cargo-util-config"];
 
     status(&format!("base commit `{}`", base_commit.id()))?;
     status(&format!("head commit `{}`", head_commit.id()))?;

@@ -560,6 +560,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "cargo-util-config"
+version = "0.1.0"
+
+[[package]]
 name = "cargo-util-schemas"
 version = "0.16.1"
 dependencies = [
