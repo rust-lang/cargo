@@ -559,7 +559,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-util-schemas"
-version = "0.16.0"
+version = "0.16.1"
 dependencies = [
  "divan",
  "jiff",
