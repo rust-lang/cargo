@@ -3,7 +3,7 @@
 //! Requests are executed in parallel using cURL [`Multi`] on
 //! a worker thread that is owned by the Client.
 
-use crate::util::data_structures::HashMap;
+use cargo_util::collections::HashMap;
 use std::io::Cursor;
 use std::io::Read;
 use std::str::FromStr;

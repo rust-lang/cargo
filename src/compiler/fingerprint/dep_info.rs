@@ -3,7 +3,7 @@
 //!
 //! [the documentation]: crate::compiler::fingerprint#dep-info-files
 
-use crate::util::data_structures::HashMap;
+use cargo_util::collections::HashMap;
 use std::ffi::OsString;
 use std::fmt;
 use std::io;

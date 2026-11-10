@@ -10,7 +10,7 @@
 //! It is a bit tricky because we need match explicit information from `Cargo.toml`
 //! with implicit info in directory layout.
 
-use crate::util::data_structures::{HashMap, HashSet};
+use cargo_util::collections::{HashMap, HashSet};
 use std::fmt::Write;
 use std::fs::{self, DirEntry};
 use std::path::{Path, PathBuf};

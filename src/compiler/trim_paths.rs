@@ -16,10 +16,10 @@ use tracing::debug;
 
 use super::BuildRunner;
 use super::Unit;
-use crate::util::data_structures::HashSet;
 use crate::util::errors::CargoResult;
 use crate::util::hex;
 use crate::util::path_args;
+use cargo_util::collections::HashSet;
 
 /// The current version of the unremap file.
 const CURRENT_UNREMAP_VERSION: u8 = 1;

@@ -1,4 +1,5 @@
-// Here we define wrappers for some of those types
+//! Collection aliases using a custom hasher
+
 #![allow(clippy::disallowed_types)]
 
 pub use rustc_hash::FxHashMap as HashMap;

@@ -5,9 +5,9 @@ use cargo_util_schemas::core::CrateType;
 use crate::CargoResult;
 use crate::compiler::unit_graph::UnitDep;
 use crate::compiler::{BuildRunner, FileFlavor, Unit};
-use crate::util::data_structures::{HashMap, HashSet};
 use crate::workspace::dependency::ArtifactKind;
 use crate::workspace::{Dependency, Target, TargetKind};
+use cargo_util::collections::{HashMap, HashSet};
 use std::ffi::OsString;
 
 /// Return all environment variables for the given unit-dependencies

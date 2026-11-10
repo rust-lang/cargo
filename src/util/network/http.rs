@@ -15,6 +15,7 @@ use tracing::trace;
 
 use crate::CargoResult;
 use crate::GlobalContext;
+use crate::context::ConfigRelativePathResolveExt;
 use crate::context::SslVersionConfig;
 use crate::context::SslVersionConfigRange;
 

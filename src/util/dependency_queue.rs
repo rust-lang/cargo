@@ -9,7 +9,7 @@
 //! some nodes may only require one of the outputs and can start before the
 //! whole node is finished.
 
-use crate::util::data_structures::{HashMap, HashSet};
+use cargo_util::collections::{HashMap, HashSet};
 use std::hash::Hash;
 
 #[derive(Debug)]

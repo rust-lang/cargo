@@ -11,7 +11,7 @@ use crate::util::errors::CargoResult;
 use crate::workspace::profiles::{Profiles, UnitFor};
 use crate::workspace::{PackageId, PackageSet, Workspace};
 
-use crate::util::data_structures::{HashMap, HashSet};
+use cargo_util::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
 use super::BuildConfig;

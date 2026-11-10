@@ -1,6 +1,6 @@
 //! Helpers to verify a packaged `.crate` file.
 
-use crate::util::data_structures::HashMap;
+use cargo_util::collections::HashMap;
 use std::fs;
 use std::fs::File;
 use std::io::SeekFrom;

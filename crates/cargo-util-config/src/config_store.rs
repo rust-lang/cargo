@@ -1,11 +1,10 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use anyhow::{Context as _, bail};
+use anyhow::{Context as _, Result, bail};
 
 use super::{ConfigKey, ConfigValue, Definition, DefinitionKind};
-use crate::util::data_structures::HashMap;
-use crate::util::errors::CargoResult;
+use cargo_util::collections::HashMap;
 
 use ConfigValue as CV;
 
@@ -32,7 +31,7 @@ impl ConfigStore {
     }
 
     /// Loads configuration from a path without processing includes.
-    pub fn read_layer(path: &Path, definition_kind: DefinitionKind) -> CargoResult<Self> {
+    pub fn read_layer(path: &Path, definition_kind: DefinitionKind) -> Result<Self> {
         tracing::debug!(?path, ?definition_kind, "load config from file");
 
         let contents = fs::read_to_string(path)
@@ -74,7 +73,7 @@ impl ConfigStore {
     /// Container types (tables and arrays) are merged with existing values.
     ///
     /// Container and non-container types cannot be mixed.
-    pub fn merge(&mut self, from: Self, force: bool) -> CargoResult<()> {
+    pub fn merge(&mut self, from: Self, force: bool) -> Result<()> {
         let mut root_cv = std::mem::take(self).into_value();
         let from = from.into_value();
         root_cv.merge(from, force)?;
@@ -95,7 +94,7 @@ impl ConfigStore {
     ///
     /// This does NOT look at environment variables. See `get_cv_with_env` for
     /// a variant that supports environment variables.
-    pub fn get_cv(&self, key: &ConfigKey) -> CargoResult<Option<ConfigValue>> {
+    pub fn get_cv(&self, key: &ConfigKey) -> Result<Option<ConfigValue>> {
         let vals = self.values();
         tracing::trace!("get cv {:?}", key);
         if key.is_root() {

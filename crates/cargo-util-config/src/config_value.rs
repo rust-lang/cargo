@@ -1,20 +1,20 @@
 //! [`ConfigValue`] represents Cargo configuration values loaded from TOML.
 //!
-//! See [the module-level doc](crate::context)
+//! See [the deserializer documentation](super::de)
 //! for how configuration is parsed and deserialized.
 
-use crate::util::data_structures::HashMap;
+use cargo_util::collections::HashMap;
 use std::collections::hash_map::Entry;
 use std::fmt;
 use std::mem;
 
 use anyhow::Context as _;
+use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
 
 use super::key::{KeyOrIdx, escape_key_part};
 use super::{ConfigKey, Definition};
-use crate::CargoResult;
 
 use self::ConfigValue as CV;
 
@@ -68,7 +68,7 @@ impl fmt::Debug for ConfigValue {
 }
 
 impl ConfigValue {
-    pub(crate) fn from_toml(def: Definition, toml: toml::Value) -> CargoResult<ConfigValue> {
+    pub fn from_toml(def: Definition, toml: toml::Value) -> Result<ConfigValue> {
         let mut error_path = Vec::new();
         Self::from_toml_inner(def, toml, &mut error_path).with_context(|| {
             let mut it = error_path.iter().rev().peekable();
@@ -90,7 +90,7 @@ impl ConfigValue {
         def: Definition,
         toml: toml::Value,
         path: &mut Vec<KeyOrIdx>,
-    ) -> CargoResult<ConfigValue> {
+    ) -> Result<ConfigValue> {
         match toml {
             toml::Value::String(val) => Ok(CV::String(val, def)),
             toml::Value::Boolean(b) => Ok(CV::Boolean(b, def)),
@@ -102,7 +102,7 @@ impl ConfigValue {
                         CV::from_toml_inner(def.clone(), toml, path)
                             .inspect_err(|_| path.push(KeyOrIdx::Idx(i)))
                     })
-                    .collect::<CargoResult<_>>()?,
+                    .collect::<Result<_>>()?,
                 def,
             )),
             toml::Value::Table(val) => Ok(CV::Table(
@@ -116,14 +116,14 @@ impl ConfigValue {
                             }
                         },
                     )
-                    .collect::<CargoResult<_>>()?,
+                    .collect::<Result<_>>()?,
                 def,
             )),
             v => bail!("unsupported TOML configuration type `{}`", v.type_str()),
         }
     }
 
-    pub(crate) fn into_toml(self) -> toml::Value {
+    pub fn into_toml(self) -> toml::Value {
         match self {
             CV::Boolean(s, _) => toml::Value::Boolean(s),
             CV::String(s, _) => toml::Value::String(s),
@@ -143,7 +143,7 @@ impl ConfigValue {
     /// Container types (tables and arrays) are merged with existing values.
     ///
     /// Container and non-container types cannot be mixed.
-    pub(crate) fn merge(&mut self, from: ConfigValue, force: bool) -> CargoResult<()> {
+    pub fn merge(&mut self, from: ConfigValue, force: bool) -> Result<()> {
         self.merge_helper(from, force, &mut ConfigKey::new())
     }
 
@@ -152,7 +152,7 @@ impl ConfigValue {
         from: ConfigValue,
         force: bool,
         parts: &mut ConfigKey,
-    ) -> CargoResult<()> {
+    ) -> Result<()> {
         let is_higher_priority = from.definition().is_higher_priority(self.definition());
         match (self, from) {
             (&mut CV::List(ref mut old, _), CV::List(ref mut new, _)) => {
@@ -218,21 +218,21 @@ impl ConfigValue {
         Ok(())
     }
 
-    pub fn i64(&self, key: &str) -> CargoResult<(i64, &Definition)> {
+    pub fn i64(&self, key: &str) -> Result<(i64, &Definition)> {
         match self {
             CV::Integer(i, def) => Ok((*i, def)),
             _ => self.expected("integer", key),
         }
     }
 
-    pub fn string(&self, key: &str) -> CargoResult<(&str, &Definition)> {
+    pub fn string(&self, key: &str) -> Result<(&str, &Definition)> {
         match self {
             CV::String(s, def) => Ok((s, def)),
             _ => self.expected("string", key),
         }
     }
 
-    pub fn table(&self, key: &str) -> CargoResult<(&HashMap<String, ConfigValue>, &Definition)> {
+    pub fn table(&self, key: &str) -> Result<(&HashMap<String, ConfigValue>, &Definition)> {
         match self {
             CV::Table(table, def) => Ok((table, def)),
             _ => self.expected("table", key),
@@ -242,7 +242,7 @@ impl ConfigValue {
     pub fn table_mut(
         &mut self,
         key: &str,
-    ) -> CargoResult<(&mut HashMap<String, ConfigValue>, &mut Definition)> {
+    ) -> Result<(&mut HashMap<String, ConfigValue>, &mut Definition)> {
         match self {
             CV::Table(table, def) => Ok((table, def)),
             _ => self.expected("table", key),
@@ -253,7 +253,7 @@ impl ConfigValue {
         matches!(self, CV::Table(..))
     }
 
-    pub fn string_list(&self, key: &str) -> CargoResult<Vec<(String, Definition)>> {
+    pub fn string_list(&self, key: &str) -> Result<Vec<(String, Definition)>> {
         match self {
             CV::List(list, _) => list
                 .iter()
@@ -261,12 +261,12 @@ impl ConfigValue {
                     CV::String(s, def) => Ok((s.clone(), def.clone())),
                     _ => self.expected("string", key),
                 })
-                .collect::<CargoResult<_>>(),
+                .collect::<Result<_>>(),
             _ => self.expected("list", key),
         }
     }
 
-    pub fn boolean(&self, key: &str) -> CargoResult<(bool, &Definition)> {
+    pub fn boolean(&self, key: &str) -> Result<(bool, &Definition)> {
         match self {
             CV::Boolean(b, def) => Ok((*b, def)),
             _ => self.expected("bool", key),
@@ -293,7 +293,7 @@ impl ConfigValue {
         }
     }
 
-    pub(crate) fn expected<T>(&self, wanted: &str, key: &str) -> CargoResult<T> {
+    pub(crate) fn expected<T>(&self, wanted: &str, key: &str) -> Result<T> {
         bail!(
             "expected a {}, but found a {} for `{}` in {}",
             wanted,

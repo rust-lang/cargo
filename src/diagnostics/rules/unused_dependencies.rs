@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 use std::path::Path;
 
-use crate::util::data_structures::{HashSet, IndexMap};
+use cargo_util::collections::{HashSet, IndexMap};
 use cargo_util_schemas::manifest;
 use cargo_util_schemas::manifest::TomlPackageBuild;
 use cargo_util_terminal::report::AnnotationKind;

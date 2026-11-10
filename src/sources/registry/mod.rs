@@ -182,7 +182,7 @@
 //! ```
 //!
 
-use crate::util::data_structures::HashSet;
+use cargo_util::collections::HashSet;
 use std::cell::RefCell;
 use std::fs;
 use std::fs::{File, OpenOptions};

@@ -23,12 +23,12 @@
 use crate::sources::registry::{LoadResponse, RegistryData};
 use crate::util::IntoUrl;
 use crate::util::VersionReqMatchMode;
-use crate::util::data_structures::HashMap;
 use crate::util::interning::InternedString;
 use crate::util::{CargoResult, Filesystem, GlobalContext, OptVersionReq, internal};
 use crate::workspace::dependency::{Artifact, DepKind};
 use crate::workspace::{CliUnstable, Dependency};
 use crate::workspace::{PackageId, SourceId, Summary};
+use cargo_util::collections::HashMap;
 use cargo_util::registry::make_dep_path;
 use cargo_util_schemas::index::{IndexPackage, RegistryDependency};
 use cargo_util_schemas::manifest::RustVersion;

@@ -1,6 +1,6 @@
 //! [`Source`] trait for sources of Cargo packages.
 
-use crate::util::data_structures::HashMap;
+use cargo_util::collections::HashMap;
 
 use std::fmt;
 use std::rc::Rc;

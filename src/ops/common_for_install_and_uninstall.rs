@@ -13,7 +13,7 @@ use ops::FilterRule;
 use serde::{Deserialize, Serialize};
 
 use crate::compiler::{DirtyReason, Freshness};
-use crate::context::{ConfigRelativePath, Definition};
+use crate::context::{ConfigRelativePath, ConfigRelativePathResolveExt, Definition};
 use crate::ops::{self, CompileFilter, CompileOptions};
 use crate::sources::IndexSummary;
 use crate::sources::PathSource;

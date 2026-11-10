@@ -16,7 +16,7 @@ use cargo_util_terminal::Verbosity;
 use serde::Serialize;
 use walkdir::WalkDir;
 
-use crate::util::data_structures::{HashMap, HashSet};
+use cargo_util::collections::{HashMap, HashSet};
 use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::OsStr;
 use std::fs::{self, File, OpenOptions};

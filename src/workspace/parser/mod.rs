@@ -1,4 +1,4 @@
-use crate::util::data_structures::HashMap;
+use cargo_util::collections::HashMap;
 use cargo_util_terminal::report::{AnnotationKind, Group, Level, Snippet};
 use std::borrow::Cow;
 use std::cell::OnceCell;
@@ -24,7 +24,7 @@ use pathdiff::diff_paths;
 use url::Url;
 
 use crate::compiler::{CompileKind, CompileTarget};
-use crate::context::{ConfigRelativePath, TOP_LEVEL_CONFIG_KEYS};
+use crate::context::{ConfigRelativePath, ConfigRelativePathResolveExt, TOP_LEVEL_CONFIG_KEYS};
 use crate::diagnostics::cwd_rel_path;
 use crate::diagnostics::get_key_value_span;
 use crate::resolver::ResolveBehavior;

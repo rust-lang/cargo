@@ -6,8 +6,8 @@ use crate::util::interning::InternedString;
 use crate::workspace::profiles;
 use std::collections::hash_map::Entry;
 
-use crate::util::data_structures::HashMap;
 use crate::util::errors::CargoResult;
+use cargo_util::collections::HashMap;
 
 /// Possible ways to run rustc and request various parts of [LTO].
 ///

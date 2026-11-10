@@ -2,7 +2,6 @@ use crate::compiler::trim_paths;
 use crate::compiler::{CompileKind, CompileMode, Layout, RustcTargetData};
 use crate::ops;
 use crate::util::HumanBytes;
-use crate::util::data_structures::{HashSet, IndexMap, IndexSet};
 use crate::util::edit_distance;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
@@ -10,6 +9,7 @@ use crate::util::{GlobalContext, Progress, ProgressStyle};
 use crate::workspace::profiles::Profiles;
 use crate::workspace::{PackageIdSpec, PackageIdSpecQuery, TargetKind, Workspace};
 use anyhow::bail;
+use cargo_util::collections::{HashSet, IndexMap, IndexSet};
 use cargo_util::paths;
 use cargo_util_terminal::report::Level;
 

@@ -1,7 +1,7 @@
 //! cargo-sbom precursor files for external tools to create SBOM files from.
 //! See [`build_sbom_graph`] for more.
 
-use crate::util::data_structures::{HashMap, HashSet};
+use cargo_util::collections::{HashMap, HashSet};
 use std::collections::{BTreeMap, BTreeSet};
 
 use cargo_util_schemas::sbom::{

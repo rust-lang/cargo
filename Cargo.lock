@@ -366,6 +366,7 @@ dependencies = [
  "cargo-platform 0.3.5",
  "cargo-test-support",
  "cargo-util",
+ "cargo-util-config",
  "cargo-util-schemas",
  "cargo-util-terminal",
  "clap",
@@ -544,10 +545,12 @@ dependencies = [
  "filetime",
  "hex",
  "ignore",
+ "indexmap",
  "jobserver",
  "libc",
  "miow",
  "portable-atomic",
+ "rustc-hash 2.1.2",
  "same-file",
  "sha2 0.11.0",
  "shell-escape",
@@ -555,6 +558,22 @@ dependencies = [
  "tracing",
  "walkdir",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "cargo-util-config"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "cargo-credential",
+ "cargo-util",
+ "cargo-util-schemas",
+ "cargo-util-terminal",
+ "serde",
+ "serde-untagged",
+ "snapbox",
+ "toml",
+ "tracing",
 ]
 
 [[package]]

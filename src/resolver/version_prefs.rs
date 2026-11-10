@@ -1,7 +1,7 @@
 //! This module implements support for preferring some versions of a package
 //! over other versions.
 
-use crate::util::data_structures::{HashMap, HashSet};
+use cargo_util::collections::{HashMap, HashSet};
 use std::cmp::Ordering;
 use std::time::Duration;
 

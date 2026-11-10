@@ -15,7 +15,7 @@
 //! (for example, with and without tests), so we actually build a dependency
 //! graph of [`Unit`]s, which capture these properties.
 
-use crate::util::data_structures::{HashMap, HashSet};
+use cargo_util::collections::{HashMap, HashSet};
 
 use cargo_util_schemas::core::CrateType;
 use tracing::trace;

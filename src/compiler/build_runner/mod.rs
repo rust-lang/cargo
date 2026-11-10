@@ -1,6 +1,6 @@
 //! [`BuildRunner`] is the mutable state used during the build process.
 
-use crate::util::data_structures::{HashMap, HashSet};
+use cargo_util::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 

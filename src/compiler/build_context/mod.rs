@@ -7,7 +7,6 @@ use crate::compiler::UnitIndex;
 use crate::compiler::unit_graph::UnitGraph;
 use crate::context::GlobalContext;
 use crate::util::Rustc;
-use crate::util::data_structures::{HashMap, HashSet};
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::logger::BuildLogger;
@@ -15,6 +14,7 @@ use crate::workspace::PackageSet;
 use crate::workspace::Workspace;
 use crate::workspace::dependency::DepKind;
 use crate::workspace::profiles::Profiles;
+use cargo_util::collections::{HashMap, HashSet};
 
 mod target_info;
 pub use self::target_info::FileFlavor;

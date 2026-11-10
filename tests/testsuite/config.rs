@@ -1,6 +1,6 @@
 //! Tests for config settings.
 
-use cargo::util::data_structures::HashMap;
+use cargo_util::collections::HashMap;
 use std::borrow::Borrow;
 use std::collections::BTreeMap;
 use std::fs;
@@ -12,7 +12,10 @@ use crate::prelude::*;
 use cargo::CargoResult;
 use cargo::context::RegistryConfig;
 use cargo::context::Value;
-use cargo::context::{self, Definition, GlobalContext, JobsConfig, SslVersionConfig, StringList};
+use cargo::context::{
+    self, ConfigRelativePathResolveExt, Definition, GlobalContext, JobsConfig, SslVersionConfig,
+    StringList,
+};
 use cargo::workspace::PackageIdSpec;
 use cargo::workspace::features::{GitFeatures, GitoxideFeatures};
 use cargo_test_support::compare::assert_e2e;

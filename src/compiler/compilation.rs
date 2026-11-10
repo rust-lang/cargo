@@ -1,6 +1,6 @@
 //! Type definitions for the result of a compilation.
 
-use crate::util::data_structures::HashMap;
+use cargo_util::collections::HashMap;
 use std::collections::BTreeSet;
 use std::ffi::{OsStr, OsString};
 use std::path::Path;
@@ -15,6 +15,7 @@ use crate::compiler::CompileTarget;
 use crate::compiler::RustdocFingerprint;
 use crate::compiler::apply_env_config;
 use crate::compiler::{CompileKind, Unit, UnitHash};
+use crate::context::ConfigRelativePathResolveExt;
 use crate::util::{CargoResult, GlobalContext};
 use crate::workspace::Package;
 

@@ -1,12 +1,12 @@
 //! The `cargo report timings` command.
 
-use crate::util::data_structures::HashSet;
+use cargo_util::collections::HashSet;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
 
-use crate::util::data_structures::IndexMap;
 use anyhow::Context as _;
+use cargo_util::collections::IndexMap;
 use cargo_util::paths;
 use cargo_util_terminal::report::Level;
 use indexmap::map::Entry;

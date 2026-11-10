@@ -1,4 +1,4 @@
-use crate::util::data_structures::HashMap;
+use cargo_util::collections::HashMap;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::fs::File;

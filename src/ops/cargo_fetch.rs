@@ -8,8 +8,8 @@ use crate::ops;
 use crate::resolver::Resolve;
 use crate::util::CargoResult;
 use crate::util::GlobalContext;
-use crate::util::data_structures::HashSet;
 use crate::workspace::{PackageSet, Workspace};
+use cargo_util::collections::HashSet;
 
 pub struct FetchOptions<'a> {
     pub gctx: &'a GlobalContext,

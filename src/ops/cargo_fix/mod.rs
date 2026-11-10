@@ -36,7 +36,7 @@
 //!   break anything. The change will be backed out if it fails (unless
 //!   `--broken-code` is used).
 
-use crate::util::data_structures::{HashMap, HashSet};
+use cargo_util::collections::{HashMap, HashSet};
 use std::collections::BTreeSet;
 use std::ffi::OsString;
 use std::io::Write;

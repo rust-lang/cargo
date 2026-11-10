@@ -1,8 +1,8 @@
-use crate::util::data_structures::HashMap;
 use anyhow::{Context as _, anyhow};
 use cargo::context::TermConfig;
 use cargo::workspace::{CliUnstable, features};
 use cargo::{CargoResult, drop_print, drop_println};
+use cargo_util::collections::HashMap;
 use cargo_util_terminal::report::Level;
 use clap::builder::UnknownArgumentValueParser;
 use itertools::Itertools;

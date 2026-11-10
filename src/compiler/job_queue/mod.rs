@@ -113,7 +113,7 @@
 mod job;
 mod job_state;
 
-use crate::util::data_structures::{HashMap, HashSet};
+use cargo_util::collections::{HashMap, HashSet};
 use std::cell::RefCell;
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};

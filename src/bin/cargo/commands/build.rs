@@ -1,5 +1,6 @@
 use crate::command_prelude::*;
 
+use cargo::context::ConfigRelativePathResolveExt;
 use cargo::ops;
 
 pub fn cli() -> Command {

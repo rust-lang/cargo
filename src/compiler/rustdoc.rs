@@ -5,10 +5,10 @@ use crate::compiler::unit::Unit;
 use crate::compiler::{BuildContext, CompileKind};
 use crate::context::{RustdocExternMap, RustdocExternMode};
 use crate::sources::CRATES_IO_REGISTRY;
-use crate::util::data_structures::HashMap;
-use crate::util::data_structures::HashSet;
 use crate::util::errors::{CargoResult, internal};
 use cargo_util::ProcessBuilder;
+use cargo_util::collections::HashMap;
+use cargo_util::collections::HashSet;
 use url::Url;
 
 /// Recursively generate html root url for all units and their children.

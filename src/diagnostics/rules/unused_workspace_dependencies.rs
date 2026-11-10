@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::util::data_structures::IndexSet;
+use cargo_util::collections::IndexSet;
 use cargo_util_schemas::manifest::InheritableDependency;
 use cargo_util_terminal::report::AnnotationKind;
 use cargo_util_terminal::report::Group;

@@ -1,7 +1,7 @@
 use super::{CV, ConfigKey, ConfigRelativePath, GlobalContext, OptValue, PathAndArgs, StringList};
 use crate::compiler::{BuildOutput, LibraryPath, LinkArgTarget};
 use crate::util::CargoResult;
-use crate::util::data_structures::HashMap;
+use cargo_util::collections::HashMap;
 use cargo_util_terminal::report::Level;
 use serde::Deserialize;
 use std::collections::BTreeMap;

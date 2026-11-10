@@ -9,11 +9,11 @@ use crate::compiler::Unit;
 use crate::compiler::{CompileKind, CompileMode};
 use crate::util::CargoResult;
 use crate::util::Unhashed;
-use crate::util::data_structures::HashMap;
 use crate::util::interning::InternedString;
 use crate::workspace::Target;
 use crate::workspace::dependency::Dependency;
 use crate::workspace::profiles::{Profile, UnitFor};
+use cargo_util::collections::HashMap;
 
 /// The dependency graph of Units.
 pub type UnitGraph = HashMap<Unit, Vec<UnitDep>>;

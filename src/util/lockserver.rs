@@ -11,7 +11,7 @@
 //! the main server, inform the server what its name is, and then wait for the
 //! server to give it the lock (aka write a byte).
 
-use crate::util::data_structures::HashMap;
+use cargo_util::collections::HashMap;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::sync::atomic::{AtomicBool, Ordering};

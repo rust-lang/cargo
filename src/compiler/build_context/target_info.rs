@@ -24,7 +24,7 @@ use cargo_util::ProcessBuilder;
 use cargo_util_schemas::core::CrateType;
 use serde::Deserialize;
 
-use crate::util::data_structures::HashMap;
+use cargo_util::collections::HashMap;
 use std::cell::RefCell;
 use std::collections::hash_map::Entry;
 use std::path::PathBuf;

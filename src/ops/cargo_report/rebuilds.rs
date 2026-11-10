@@ -1,6 +1,6 @@
 //! The `cargo report rebuilds` command.
 
-use crate::util::data_structures::{HashMap, HashSet};
+use cargo_util::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;

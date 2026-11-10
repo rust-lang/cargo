@@ -1,4 +1,4 @@
-use crate::util::data_structures::{HashMap, HashSet};
+use cargo_util::collections::{HashMap, HashSet};
 use std::cell::{Cell, RefCell};
 use std::fmt::{self, Debug, Formatter};
 use std::fs;

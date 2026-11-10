@@ -22,7 +22,7 @@
 //!
 //! # Config schemas
 //!
-//! Configuration schemas are defined in the [`schema`] module.
+//! Configuration schemas are defined in the [`crate::config::schema`] module.
 //!
 //! ## Config deserialization
 //!
@@ -34,11 +34,11 @@
 //!    These parsed results are stored in [`GlobalContext`].
 //!
 //! 2. **`ConfigValue` → Target types** ---
-//!    The [`GlobalContext::get`] method uses a [custom serde deserializer](crate::config::de)
+//!    The [`GlobalContext::get`] method uses a custom Serde deserializer
 //!    to convert [`ConfigValue`] instances to the caller's desired type.
 //!    Precedence between [`ConfigValue`] sources is resolved during retrieval
 //!    based on [`Definition`] priority.
-//!    See the top-level documentation of the [`crate::config::de`] module for more.
+//!    See [`ConfigReader::get`] for the typed lookup API.
 //!
 //! ## Map key recommendations
 //!
@@ -61,7 +61,7 @@
 //! read the environment variable due to ambiguity. (See `ConfigMapAccess` for
 //! more details.)
 
-use crate::util::data_structures::{HashMap, HashSet};
+use cargo_util::collections::{HashMap, HashSet};
 use std::borrow::Cow;
 use std::env;
 use std::ffi::{OsStr, OsString};
@@ -109,15 +109,13 @@ use crate::config::{ConfigReader, Env};
 
 mod path;
 pub use path::BracketType;
-pub use path::ConfigRelativePath;
-pub use path::PathAndArgs;
+pub use path::ConfigRelativePathResolveExt;
 pub use path::ResolveTemplateError;
 
 mod target;
 pub use target::{TargetCfgConfig, TargetConfig};
 
-mod schema;
-pub use schema::*;
+pub use crate::config::schema::*;
 
 pub const TOP_LEVEL_CONFIG_KEYS: &[&str] = &[
     "paths",
@@ -2233,25 +2231,6 @@ fn toml_dotted_keys(arg: &str) -> CargoResult<toml_edit::DocumentMut> {
         );
     }
     Ok(doc)
-}
-
-/// A type to deserialize a list of strings from a toml file.
-///
-/// Supports deserializing either a whitespace-separated list of arguments in a
-/// single string or a string list itself. For example these deserialize to
-/// equivalent values:
-///
-/// ```toml
-/// a = 'a b c'
-/// b = ['a', 'b', 'c']
-/// ```
-#[derive(Debug, Deserialize, Clone)]
-pub struct StringList(Vec<String>);
-
-impl StringList {
-    pub fn as_slice(&self) -> &[String] {
-        &self.0
-    }
 }
 
 #[macro_export]

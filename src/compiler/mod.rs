@@ -54,7 +54,7 @@ pub mod unit_dependencies;
 pub mod unit_graph;
 pub mod unused_deps;
 
-use crate::util::data_structures::{HashMap, HashSet};
+use cargo_util::collections::{HashMap, HashSet};
 use std::borrow::Cow;
 use std::cell::OnceCell;
 use std::env;

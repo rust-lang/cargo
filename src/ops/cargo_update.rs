@@ -15,7 +15,7 @@ use crate::workspace::registry::PackageRegistry;
 use crate::workspace::{PackageId, PackageIdSpec, PackageIdSpecQuery};
 use crate::workspace::{SourceId, Workspace};
 
-use crate::util::data_structures::{HashSet, IndexMap};
+use cargo_util::collections::{HashSet, IndexMap};
 use cargo_util_schemas::core::PartialVersion;
 use cargo_util_terminal::Verbosity;
 use std::cmp::Ordering;
