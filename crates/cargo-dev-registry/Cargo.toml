@@ -1,0 +1,19 @@
+[package]
+name = "cargo-dev-registry"
+version = "0.1.0"
+edition.workspace = true
+rust-version = "1.99"  # MSRV:1
+license.workspace = true
+repository.workspace = true
+description = "Mock HTTP registry server for Cargo testing and development."
+
+[dependencies]
+cargo-util.workspace = true
+crates-io.workspace = true
+git2.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+url.workspace = true
+
+[lints]
+workspace = true
