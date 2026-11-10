@@ -1015,8 +1015,14 @@ fn traverse_and_share(
 }
 
 fn deps_have_debuginfo(deps: &[UnitDep]) -> bool {
-    deps.iter()
-        .any(|dep| dep.unit.profile.debuginfo.is_turned_on())
+    deps.iter().any(|dep| {
+        let unit = &dep.unit;
+        // Host deps are linked separately from their dependents.
+        if unit.target.for_host() {
+            return false;
+        }
+        unit.profile.debuginfo.is_turned_on()
+    })
 }
 
 /// Removes duplicate `CompileMode::Doc` units that would cause problems with

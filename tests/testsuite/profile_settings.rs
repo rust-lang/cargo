@@ -875,11 +875,10 @@ fn strip_with_proc_macro_debuginfo() {
 [COMPILING] macros v0.0.0 ([ROOT]/foo/macros)
 [RUNNING] `rustc --crate-name macros [..]--crate-type proc-macro [..]-C debuginfo=2 [..]`
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo [..]--crate-type bin [..]--out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out --extern macros=[..]`
+[RUNNING] `rustc --crate-name foo [..]--crate-type bin [..]--out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out -C strip=debuginfo --extern macros=[..]`
 [FINISHED] `dev` profile [unoptimized] target(s) in [ELAPSED]s
 
 "#]])
-        .with_stderr_does_not_contain("[RUNNING] `rustc --crate-name foo [..]-C strip=[..]`")
         .run();
 }
 
