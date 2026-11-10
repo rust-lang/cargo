@@ -3649,8 +3649,8 @@ fn dirty_submodule() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [WARNING] manifest has no description, license, license-file, documentation, homepage or repository
-  |
-  = [NOTE] see https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info
+ |
+ = [NOTE] see https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info
 [ERROR] 2 files in the working directory contain changes that were not yet committed into git:
 
 .gitmodules
@@ -3671,8 +3671,8 @@ to proceed despite this and include the uncommitted changes, pass the `--allow-d
         .with_status(101)
         .with_stderr_data(str![[r#"
 [WARNING] manifest has no description, license, license-file, documentation, homepage or repository
-  |
-  = [NOTE] see https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info
+ |
+ = [NOTE] see https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info
 [ERROR] 1 files in the working directory contain changes that were not yet committed into git:
 
 src/lib.rs
@@ -3698,8 +3698,8 @@ to proceed despite this and include the uncommitted changes, pass the `--allow-d
         .with_status(101)
         .with_stderr_data(str![[r#"
 [WARNING] manifest has no description, license, license-file, documentation, homepage or repository
-  |
-  = [NOTE] see https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info
+ |
+ = [NOTE] see https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info
 [ERROR] 2 files in the working directory contain changes that were not yet committed into git:
 
 src/.gitmodules
@@ -3722,8 +3722,8 @@ to proceed despite this and include the uncommitted changes, pass the `--allow-d
         .with_status(101)
         .with_stderr_data(str![[r#"
 [WARNING] manifest has no description, license, license-file, documentation, homepage or repository
-  |
-  = [NOTE] see https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info
+ |
+ = [NOTE] see https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info
 [ERROR] 1 files in the working directory contain changes that were not yet committed into git:
 
 src/bar/new_file.rs

@@ -439,8 +439,8 @@ fn fix_overlapping_max() {
         str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] error applying suggestions
- --> src/lib.rs
-  = cause: cannot replace slice of data that was already replaced
+--> src/lib.rs
+ = cause: cannot replace slice of data that was already replaced
 [HELP] to report this as a bug, open an issue at https://github.com/rust-lang/rust/issues, quoting the full output of this command
 [HELP] to possibly apply more fixes, pass in the `--broken-code` flag
 [FIXED] src/lib.rs (4 fixes)
@@ -464,8 +464,8 @@ fn fix_verification_failed() {
         str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] errors present after applying fixes to crate `foo`
- --> src/lib.rs
-  = cause: rustc fix shim error count=2
+--> src/lib.rs
+ = cause: rustc fix shim error count=2
 [HELP] to report this as a bug, open an issue at https://github.com/rust-lang/rust/issues, quoting the full output of this command
 [HELP] to possibly apply more fixes, pass in the `--broken-code` flag
 [NOTE] original diagnostics will follow:
@@ -491,8 +491,8 @@ fn fix_verification_failed_clippy() {
         str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] errors present after applying fixes to crate `foo`
- --> src/lib.rs
-  = cause: rustc fix shim error count=2
+--> src/lib.rs
+ = cause: rustc fix shim error count=2
 [HELP] to report this as a bug, open an issue at https://github.com/rust-lang/rust-clippy/issues, quoting the full output of this command
 [HELP] to possibly apply more fixes, pass in the `--broken-code` flag
 [NOTE] original diagnostics will follow:
@@ -569,8 +569,8 @@ fn broken_code_one_suggestion() {
         str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] errors present after applying fixes to crate `foo`
- --> src/lib.rs
-  = cause: rustc fix shim error count=2
+--> src/lib.rs
+ = cause: rustc fix shim error count=2
 [HELP] to report this as a bug, open an issue at https://github.com/rust-lang/rust/issues, quoting the full output of this command
 [HELP] to possibly apply more fixes, pass in the `--broken-code` flag
 [NOTE] original diagnostics will follow:
@@ -598,8 +598,8 @@ fn fix_exclusive_suggestions() {
         str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] error applying suggestions
- --> src/lib.rs
-  = cause: cannot replace slice of data that was already replaced
+--> src/lib.rs
+ = cause: cannot replace slice of data that was already replaced
 [HELP] to report this as a bug, open an issue at https://github.com/rust-lang/rust/issues, quoting the full output of this command
 [HELP] to possibly apply more fixes, pass in the `--broken-code` flag
 [FIXED] src/lib.rs (0 fixes)

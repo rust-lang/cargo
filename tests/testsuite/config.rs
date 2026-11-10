@@ -297,8 +297,8 @@ f1 = 1
     let output = read_output(gctx);
     let expected = str![[r#"
 [WARNING] `[ROOT]/.cargo/config` is deprecated in favor of `config.toml`
-  |
-  = [HELP] if you need to support cargo 1.38 or earlier, you can symlink `config` to `config.toml`
+ |
+ = [HELP] if you need to support cargo 1.38 or earlier, you can symlink `config` to `config.toml`
 
 "#]];
     assert_e2e().eq(&output, expected);
@@ -318,8 +318,8 @@ f1 = 1
     p.cargo("-vV")
         .with_stderr_data(str![[r#"
 [WARNING] `[ROOT]/home/.cargo/config` is deprecated in favor of `config.toml`
-  |
-  = [HELP] if you need to support cargo 1.38 or earlier, you can symlink `config` to `config.toml`
+ |
+ = [HELP] if you need to support cargo 1.38 or earlier, you can symlink `config` to `config.toml`
 
 "#]])
         .run();
@@ -2771,8 +2771,8 @@ linker = "foo"
     let output = read_output(gctx);
     let expected = str![[r#"
 [WARNING] unused config table `[target.some.dotted.tuple]`
-  |
-  = [HELP] to configure `some.dotted.tuple`, quote the key like `[target."some.dotted.tuple"]`
+ |
+ = [HELP] to configure `some.dotted.tuple`, quote the key like `[target."some.dotted.tuple"]`
 
 "#]];
     assert_e2e().eq(&output, expected);
@@ -2795,9 +2795,9 @@ linker = "foo"
     let output = read_output(gctx);
     let expected = str![[r#"
 [WARNING] reading config from `[target.thumbv8m.main-none-eabihf]`
-  |
-  = [NOTE] `[target.thumbv8m.main-none-eabihf]` will be ignored or error in a future version
-  = [HELP] to configure `thumbv8m.main-none-eabihf`, quote the key like `[target."thumbv8m.main-none-eabihf"]`
+ |
+ = [NOTE] `[target.thumbv8m.main-none-eabihf]` will be ignored or error in a future version
+ = [HELP] to configure `thumbv8m.main-none-eabihf`, quote the key like `[target."thumbv8m.main-none-eabihf"]`
 
 "#]];
     assert_e2e().eq(&output, expected);

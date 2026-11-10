@@ -61,8 +61,8 @@ fn all_flag() {
 
     p.cargo("tree --all").with_stderr_data(str![[r#"
 [WARNING] the `cargo tree` --all flag has been changed to --no-dedupe, and may be removed in a future version
-  |
-  = [HELP] if you are looking to display all workspace members, use the --workspace flag
+ |
+ = [HELP] if you are looking to display all workspace members, use the --workspace flag
 ...
 "#]]).run();
 }
