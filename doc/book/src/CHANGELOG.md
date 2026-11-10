@@ -1,5 +1,60 @@
 # Changelog
 
+## Cargo 1.102 (2027-02-04)
+[111443f3...HEAD](https://github.com/rust-lang/cargo/compare/111443f3...HEAD)
+
+### Added
+
+### Changed
+
+- Warn when certain flags are passed without a value,
+  like `cargo package -p` or `cargo install <pkg> --bin`.
+  Previously these were silently ignored,
+  and will become a hard error in the future.
+  [#17685](https://github.com/rust-lang/cargo/pull/17685)
+- `Cargo.toml` parsing is now faster
+  and got more precise deserialization errors.
+  [#17697](https://github.com/rust-lang/cargo/pull/17697)
+  [#17701](https://github.com/rust-lang/cargo/pull/17701)
+- Build scripts and proc macros no longer carry standard library's debuginfo
+  when Cargo turns off their debuginfo by default.
+  This saves disk space in the `dev` profile.
+  For example, about 210 MiB (12%) of the build directory when building Cargo itself.
+  [#17691](https://github.com/rust-lang/cargo/pull/17691)
+- Debuginfo turned on for a transitive dependency is no longer stripped from the final binary.
+  Previously only debuginfo of direct dependencies was kept.
+  [#17689](https://github.com/rust-lang/cargo/pull/17689)
+- cargo-doc: stop suggesting `cargo fix` for rustdoc warnings,
+  since `cargo fix` cannot apply rustdoc suggestions yet.
+  [#17702](https://github.com/rust-lang/cargo/pull/17702)
+
+### Fixed
+
+- `[[patch.unused]]` entries in `Cargo.lock` are now sorted,
+  so the lockfile no longer changes between runs.
+  [#17698](https://github.com/rust-lang/cargo/pull/17698)
+
+### Nightly only
+
+### Documentation
+
+### Internal
+
+- 🎉 New member crate [`cargo-util-config`](https://crates.io/crates/cargo-util-config)!
+  This contains Cargo's layered config system,
+  including config merging, reading, and schemas.
+  It follows Rust's [6-week release process](https://doc.crates.io/contrib/process/release.html#cratesio-publishing).
+  [#17699](https://github.com/rust-lang/cargo/pull/17699)
+  [#17705](https://github.com/rust-lang/cargo/pull/17705)
+- Reduce memory allocation in crate_type formatting code.
+  [#17706](https://github.com/rust-lang/cargo/pull/17706)
+- Port benchmark to divan
+  [#17700](https://github.com/rust-lang/cargo/pull/17700)
+- cargo-util-schemas: Expose Cargo SBOM precursor types from `-Zsbom`.
+  [#17683](https://github.com/rust-lang/cargo/pull/17683)
+- ci: Use trusted publishing for the home crate
+  [#17703](https://github.com/rust-lang/cargo/pull/17703)
+
 ## Cargo 1.101 (2026-12-24)
 [3d7cf6e9...rust-1.101.0](https://github.com/rust-lang/cargo/compare/3d7cf6e9...rust-1.101.0)
 
