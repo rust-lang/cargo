@@ -1333,8 +1333,8 @@ fn host_linker_does_not_apply_to_binary_build() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] linker `nonexistent-target-linker` not found
-  |
-  = [NOTE] [NOT_FOUND]
+[..]|
+[..]= [NOTE] [NOT_FOUND]
 ...
 "#]])
         .run();
@@ -1353,8 +1353,8 @@ fn host_linker_does_not_apply_to_binary_build() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] linker `nonexistent-target-linker` not found
-  |
-  = [NOTE] [NOT_FOUND]
+[..]|
+[..]= [NOTE] [NOT_FOUND]
 ...
 "#]])
         .run();
