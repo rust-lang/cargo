@@ -12,7 +12,6 @@ use serde::Serialize;
 
 use crate::CargoResult;
 use crate::util::Rustc;
-use crate::util::interning::InternedString;
 use crate::workspace::TargetKind;
 
 use super::{BuildRunner, CompileMode, Unit};
@@ -133,7 +132,7 @@ pub struct Sbom {
     pub root: SbomIndex,
     pub crates: Vec<SbomCrate>,
     pub rustc: SbomRustc,
-    pub target: InternedString,
+    pub target: String,
 }
 
 /// Build an [`Sbom`] for the given [`Unit`].
@@ -176,7 +175,7 @@ pub fn build_sbom(build_runner: &BuildRunner<'_, '_>, root: &Unit) -> CargoResul
         crates,
         root: indices[root],
         rustc,
-        target,
+        target: target.to_string(),
     })
 }
 
