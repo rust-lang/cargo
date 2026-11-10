@@ -19,11 +19,11 @@ use super::{BuildRunner, CompileMode, Unit};
 
 /// Typed version of a SBOM format version number.
 #[derive(Serialize, Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
-pub struct SbomFormatVersion(u32);
+pub struct SbomFormatVersion(pub u32);
 
 #[derive(Debug, Copy, Clone, PartialEq, PartialOrd, Eq, Ord, Serialize)]
 #[serde(rename_all = "snake_case")]
-enum SbomDependencyType {
+pub enum SbomDependencyType {
     /// A dependency linked to the artifact produced by this unit.
     Normal,
     /// A dependency needed to run the build for this unit (e.g. a build script or proc-macro).
@@ -32,13 +32,13 @@ enum SbomDependencyType {
 }
 
 #[derive(Serialize, Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
-struct SbomIndex(usize);
+pub struct SbomIndex(pub usize);
 
 #[derive(Serialize, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
-struct SbomDependency {
-    index: SbomIndex,
-    kind: SbomDependencyType,
+pub struct SbomDependency {
+    pub index: SbomIndex,
+    pub kind: SbomDependencyType,
 }
 
 #[derive(Clone, Debug)]
@@ -84,11 +84,11 @@ impl From<TargetKind> for SbomTargetKind {
 
 #[derive(Serialize, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
-struct SbomCrate {
-    id: PackageIdSpec,
-    features: Vec<String>,
-    dependencies: Vec<SbomDependency>,
-    kind: SbomTargetKind,
+pub struct SbomCrate {
+    pub id: PackageIdSpec,
+    pub features: Vec<String>,
+    pub dependencies: Vec<SbomDependency>,
+    pub kind: SbomTargetKind,
 }
 
 impl SbomCrate {
@@ -104,13 +104,13 @@ impl SbomCrate {
 
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "snake_case")]
-struct SbomRustc {
-    version: String,
-    wrapper: Option<PathBuf>,
-    workspace_wrapper: Option<PathBuf>,
-    commit_hash: Option<String>,
-    host: String,
-    verbose_version: String,
+pub struct SbomRustc {
+    pub version: String,
+    pub wrapper: Option<PathBuf>,
+    pub workspace_wrapper: Option<PathBuf>,
+    pub commit_hash: Option<String>,
+    pub host: String,
+    pub verbose_version: String,
 }
 
 impl From<&Rustc> for SbomRustc {
@@ -129,11 +129,11 @@ impl From<&Rustc> for SbomRustc {
 #[derive(Serialize)]
 #[serde(rename_all = "snake_case")]
 pub struct Sbom {
-    version: SbomFormatVersion,
-    root: SbomIndex,
-    crates: Vec<SbomCrate>,
-    rustc: SbomRustc,
-    target: InternedString,
+    pub version: SbomFormatVersion,
+    pub root: SbomIndex,
+    pub crates: Vec<SbomCrate>,
+    pub rustc: SbomRustc,
+    pub target: InternedString,
 }
 
 /// Build an [`Sbom`] for the given [`Unit`].
