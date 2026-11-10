@@ -304,6 +304,6 @@ edition = "2015"
         .arg("--config")
         .arg("term.hyperlinks=true")
         .masquerade_as_nightly_cargo(&["terminal-urls"])
-        .with_stderr_does_not_contain("[..]-Zterminal-urls=yes[..]")
+        .with_stderr_contains("[..]-Zterminal-urls=yes[..]")
         .run();
 }
