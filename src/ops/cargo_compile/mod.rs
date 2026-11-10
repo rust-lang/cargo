@@ -44,9 +44,9 @@ use crate::compiler::unit_dependencies::build_unit_dependencies;
 use crate::compiler::unit_graph::{self, UnitDep, UnitGraph};
 use crate::compiler::{BuildConfig, BuildContext, BuildRunner, Compilation};
 use crate::compiler::{CompileKind, CompileTarget, RustcTargetData, Unit};
-use crate::compiler::{CrateType, TargetInfo, apply_env_config, standard_lib};
 use crate::compiler::{DefaultExecutor, Executor, UnitInterner};
 use crate::compiler::{DepKindSet, UnitIndex};
+use crate::compiler::{TargetInfo, apply_env_config, standard_lib};
 use crate::context::{GlobalContext, WarningHandling};
 use crate::drop_println;
 use crate::ops;
@@ -63,6 +63,7 @@ use crate::workspace::profiles::Profiles;
 use crate::workspace::{PackageId, PackageSet, SourceId, TargetKind, Workspace};
 
 mod compile_filter;
+use cargo_util_schemas::core::CrateType;
 use cargo_util_terminal::report::{Group, Level, Origin};
 pub use compile_filter::{CompileFilter, FilterRule, LibRule};
 

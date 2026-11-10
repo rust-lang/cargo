@@ -1,36 +1,32 @@
-use std::fmt;
+use cargo_util_schemas::core::CrateType;
 
-/// Types of the output artifact that the compiler emits.
-/// Usually distributable or linkable either statically or dynamically.
-///
-/// See <https://doc.rust-lang.org/nightly/reference/linkage.html>.
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum CrateType {
-    Bin,
-    Lib,
-    Rlib,
-    Dylib,
-    Cdylib,
-    Staticlib,
-    ProcMacro,
-    Other(String),
+/// Compiler-specific queries on [`CrateType`].
+pub trait CrateTypeExt {
+    fn can_lto(&self) -> bool;
+
+    fn is_linkable(&self) -> bool;
+
+    fn is_dynamic(&self) -> bool;
+
+    /// Returns whether production of this crate type requires the object files
+    /// from dependencies to be available.
+    ///
+    /// See also [`TargetKind::requires_upstream_objects`].
+    ///
+    /// [`TargetKind::requires_upstream_objects`]: crate::workspace::manifest::TargetKind::requires_upstream_objects
+    fn requires_upstream_objects(&self) -> bool;
+
+    /// Returns whether production of this crate type could benefit from splitting metadata
+    /// into a .rmeta file.
+    ///
+    /// See also [`TargetKind::benefits_from_no_embed_metadata`].
+    ///
+    /// [`TargetKind::benefits_from_no_embed_metadata`]: crate::workspace::manifest::TargetKind::benefits_from_no_embed_metadata
+    fn benefits_from_no_embed_metadata(&self) -> bool;
 }
 
-impl CrateType {
-    pub fn as_str(&self) -> &str {
-        match self {
-            CrateType::Bin => "bin",
-            CrateType::Lib => "lib",
-            CrateType::Rlib => "rlib",
-            CrateType::Dylib => "dylib",
-            CrateType::Cdylib => "cdylib",
-            CrateType::Staticlib => "staticlib",
-            CrateType::ProcMacro => "proc-macro",
-            CrateType::Other(s) => s,
-        }
-    }
-
-    pub fn can_lto(&self) -> bool {
+impl CrateTypeExt for CrateType {
+    fn can_lto(&self) -> bool {
         match self {
             CrateType::Bin | CrateType::Staticlib | CrateType::Cdylib => true,
             CrateType::Lib
@@ -41,7 +37,7 @@ impl CrateType {
         }
     }
 
-    pub fn is_linkable(&self) -> bool {
+    fn is_linkable(&self) -> bool {
         match self {
             CrateType::Lib | CrateType::Rlib | CrateType::Dylib | CrateType::ProcMacro => true,
             CrateType::Bin | CrateType::Cdylib | CrateType::Staticlib | CrateType::Other(..) => {
@@ -50,7 +46,7 @@ impl CrateType {
         }
     }
 
-    pub fn is_dynamic(&self) -> bool {
+    fn is_dynamic(&self) -> bool {
         match self {
             CrateType::Dylib | CrateType::Cdylib | CrateType::ProcMacro => true,
             CrateType::Lib
@@ -61,13 +57,7 @@ impl CrateType {
         }
     }
 
-    /// Returns whether production of this crate type requires the object files
-    /// from dependencies to be available.
-    ///
-    /// See also [`TargetKind::requires_upstream_objects`].
-    ///
-    /// [`TargetKind::requires_upstream_objects`]: crate::workspace::manifest::TargetKind::requires_upstream_objects
-    pub fn requires_upstream_objects(&self) -> bool {
+    fn requires_upstream_objects(&self) -> bool {
         // "lib" == "rlib" and is a compilation that doesn't actually
         // require upstream object files to exist, only upstream metadata
         // files. As a result, it doesn't require upstream artifacts
@@ -77,13 +67,7 @@ impl CrateType {
         // something that requires upstream object files.
     }
 
-    /// Returns whether production of this crate type could benefit from splitting metadata
-    /// into a .rmeta file.
-    ///
-    /// See also [`TargetKind::benefits_from_no_embed_metadata`].
-    ///
-    /// [`TargetKind::benefits_from_no_embed_metadata`]: crate::workspace::manifest::TargetKind::benefits_from_no_embed_metadata
-    pub fn benefits_from_no_embed_metadata(&self) -> bool {
+    fn benefits_from_no_embed_metadata(&self) -> bool {
         match self {
             // rlib/libs generate .rmeta files for pipelined compilation.
             // If we also include metadata inside of them, we waste disk space, since the metadata
@@ -107,41 +91,5 @@ impl CrateType {
             CrateType::Bin |
             CrateType::Other(_) => false
         }
-    }
-}
-
-impl fmt::Display for CrateType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.as_str().fmt(f)
-    }
-}
-
-impl<'a> From<&'a String> for CrateType {
-    fn from(s: &'a String) -> Self {
-        match s.as_str() {
-            "bin" => CrateType::Bin,
-            "lib" => CrateType::Lib,
-            "rlib" => CrateType::Rlib,
-            "dylib" => CrateType::Dylib,
-            "cdylib" => CrateType::Cdylib,
-            "staticlib" => CrateType::Staticlib,
-            "proc-macro" => CrateType::ProcMacro,
-            _ => CrateType::Other(s.clone()),
-        }
-    }
-}
-
-impl fmt::Debug for CrateType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.as_str().fmt(f)
-    }
-}
-
-impl serde::Serialize for CrateType {
-    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::ser::Serializer,
-    {
-        s.serialize_str(self.as_str())
     }
 }
