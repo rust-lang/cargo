@@ -11,6 +11,7 @@ use crate::compiler::CompileKind;
 use crate::compiler::CompileMode;
 use crate::compiler::CompileTarget;
 use crate::compiler::CrateType;
+use crate::compiler::CrateTypeExt as _;
 use crate::compiler::apply_env_config;
 use crate::context::{GlobalContext, StringList, TargetConfig};
 use crate::util::interning::InternedString;

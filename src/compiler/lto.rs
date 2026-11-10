@@ -1,3 +1,4 @@
+use crate::compiler::CrateTypeExt as _;
 use crate::compiler::{BuildContext, CompileMode, CrateType, Unit};
 use crate::util::interning::InternedString;
 use crate::workspace::profiles;
