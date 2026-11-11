@@ -465,7 +465,10 @@
     },
     "StringList": {
       "description": "A type to deserialize a list of strings from a toml file.\n\nSupports deserializing either a whitespace-separated list of arguments in a\nsingle string or a string list itself. For example these deserialize to\nequivalent values:\n\n```toml\na = 'a b c'\nb = ['a', 'b', 'c']\n```",
-      "type": "array",
+      "type": [
+        "array",
+        "string"
+      ],
       "items": {
         "type": "string"
       }

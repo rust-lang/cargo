@@ -1078,6 +1078,7 @@ impl PathAndArgs {
 /// b = ['a', 'b', 'c']
 /// ```
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
+#[cfg_attr(feature = "unstable-schema", schemars(extend("type" = ["array", "string"])))]
 #[derive(Debug, Deserialize, Clone)]
 pub struct StringList(Vec<String>);
 
