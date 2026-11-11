@@ -14,10 +14,9 @@ import subprocess
 import urllib.request
 from urllib.error import HTTPError
 
-
-# Whenever you add a new crate to this list that does NOT start with "cargo-"
-# you must reach out to the infra team to add the crate to the list of crates
-# allowed to be published from the "cargo CI" crates.io token.
+# Whenever you add a new crate to this list, you have to modify a list
+# of publishable crates in the team repo:
+# https://github.com/rust-lang/team/blob/146a6452faa6731173cb51303030ed0dc2d497d7/repos/rust-lang/cargo.toml#L31
 TO_PUBLISH = [
     'credential/cargo-credential',
     'credential/cargo-credential-libsecret',
