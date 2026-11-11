@@ -7,6 +7,9 @@ license.workspace = true
 repository.workspace = true
 description = "Cargo's layered config system"
 
+[package.metadata.docs.rs]
+all-features = true
+
 [dependencies]
 anyhow.workspace = true
 cargo-credential.workspace = true
@@ -23,3 +26,6 @@ snapbox.workspace = true
 
 [lints]
 workspace = true
+
+[features]
+unstable-schema = []

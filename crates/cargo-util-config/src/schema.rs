@@ -32,6 +32,31 @@ use super::CRATES_IO_REGISTRY;
 use super::OptValue;
 use super::Value;
 
+/// Cargo's `.cargo/config.toml` file
+#[cfg(feature = "unstable-schema")]
+pub struct Config {
+    pub build: Option<CargoBuildConfig>,
+    pub cache: Option<CargoCacheConfig>,
+    pub cargo_new: Option<CargoNewConfig>,
+    pub doc: Option<DocConfig>,
+    pub env: Option<EnvConfig>,
+    pub future_incompat_report: Option<CargoFutureIncompatConfig>,
+    pub http: Option<CargoHttpConfig>,
+    pub net: Option<CargoNetConfig>,
+    pub registries: Option<HashMap<String, RegistryConfig>>,
+    pub registry: Option<GlobalRegistryConfig>,
+    pub resolver: Option<CargoResolverConfig>,
+    pub source: Option<HashMap<String, SourceConfigDef>>,
+    pub term: Option<TermConfig>,
+}
+
+/// Cargo's `credentials.toml` file
+#[cfg(feature = "unstable-schema")]
+pub struct Credentials {
+    pub registry: Option<RegistryCredential>,
+    pub registries: Option<HashMap<String, RegistryCredential>>,
+}
+
 #[derive(Debug, Default, Deserialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub struct CargoCacheConfig {
@@ -145,6 +170,12 @@ pub struct SourceConfigDef {
     pub tag: OptValue<String>,
     /// The git revision.
     pub rev: OptValue<String>,
+}
+
+#[cfg(feature = "unstable-schema")]
+pub struct DocConfig {
+    pub browser: Option<PathAndArgs>,
+    pub extern_map: Option<RustdocExternMap>,
 }
 
 /// A map of registry names to URLs where documentations are hosted.
