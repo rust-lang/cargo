@@ -236,9 +236,14 @@ fn add_regex_redactions(subs: &mut snapbox::Redactions) {
     .unwrap();
     subs.insert("[HASH]", regex!(r"/[a-z0-9\-_]+-(?<redacted>[0-9a-f]{16})"))
         .unwrap();
-    // Match multi-part hashes like `06/b451d0d6f88b1d` used in directory paths
-    subs.insert("[HASH]", regex!(r"/(?<redacted>[a-f0-9]{2}\/[0-9a-f]{14})"))
-        .unwrap();
+    // Match multi-part hashesused in directory paths like:
+    // - `06/b451d0d6f88b1d`
+    // - `8a/eb4ec270816bc328e37bebc463004b0f285b2348440f1d8a9f8cec9c74af92`
+    subs.insert(
+        "[HASH]",
+        regex!(r"/(?<redacted>[a-f0-9]{2}\/[0-9a-f]{14,62})"),
+    )
+    .unwrap();
     // Match file name hashes like `foo-06b451d0d6f88b1d`
     subs.insert("[HASH]", regex!(r"[a-z0-9]+-(?<redacted>[a-f0-9]{16})"))
         .unwrap();
