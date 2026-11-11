@@ -574,14 +574,18 @@
       ]
     },
     "StringOrVec": {
-      "description": "This can be parsed from either a TOML string or array,\nbut is always stored as a vector.",
-      "type": [
-        "array",
-        "string"
-      ],
-      "items": {
-        "type": "string"
-      }
+      "description": "A TOML string or an array of strings.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ]
     },
     "InheritableField4": {
       "description": "An enum that allows for inheriting keys from a workspace in a Cargo.toml.",

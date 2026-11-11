@@ -1860,7 +1860,10 @@ note: only a feature named `default` will be enabled by default"
     let custom_metadata = normalized_package.metadata.clone();
     let im_a_teapot = normalized_package.im_a_teapot;
     let default_run = normalized_package.default_run.clone();
-    let metabuild = normalized_package.metabuild.clone().map(|sov| sov.0);
+    let metabuild = normalized_package
+        .metabuild
+        .clone()
+        .map(manifest::StringOrVec::into_vec);
     let manifest = Manifest::new(
         contents.map(Rc::new),
         document.map(Arc::new),
@@ -2372,7 +2375,7 @@ fn dep_to_dependency<P: ResolveToPath + Clone>(
     ) {
         if manifest_ctx.gctx.cli_unstable().bindeps {
             let artifact = Artifact::parse(
-                &artifact.0,
+                artifact.as_slice(),
                 is_lib,
                 target,
                 manifest_ctx.gctx.cli_unstable().json_target_spec,

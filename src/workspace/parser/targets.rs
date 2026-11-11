@@ -125,7 +125,7 @@ pub(super) fn to_targets(
     if let Some(metabuild) = metabuild {
         // Verify names match available build deps.
         let bdeps = normalized_toml.build_dependencies.as_ref();
-        for name in &metabuild.0 {
+        for name in metabuild.iter() {
             if !bdeps.map_or(false, |bd| bd.contains_key(name.as_str())) {
                 anyhow::bail!(
                     "metabuild package `{}` must be specified in `build-dependencies`",

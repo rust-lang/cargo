@@ -2397,7 +2397,7 @@ path = "src/lib.rs"
 
 [dependencies.bar]
 version = "1.0"
-artifact = ["bin"]
+artifact = "bin"
 lib = true
 
 [build-dependencies.baz]

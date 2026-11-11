@@ -1036,10 +1036,7 @@ impl AnyDependencyTable<String> {
             ("tag", tag.map(Into::into)),
             ("rev", rev.map(Into::into)),
             ("package", package.map(|name| name.into_inner().into())),
-            (
-                "artifact",
-                artifact.map(|StringOrVec(values)| values.into()),
-            ),
+            ("artifact", artifact.map(|value| value.into_vec().into())),
             ("lib", lib.map(Into::into)),
             ("target", target.map(Into::into)),
         ] {
@@ -1921,16 +1918,32 @@ impl<'de> de::Deserialize<'de> for InvalidCargoFeatures {
     }
 }
 
-/// This can be parsed from either a TOML string or array,
-/// but is always stored as a vector.
+/// A TOML string or an array of strings.
 #[derive(Clone, Debug, Serialize, Eq, PartialEq, PartialOrd, Ord)]
+#[serde(untagged)]
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-#[cfg_attr(feature = "unstable-schema", schemars(extend("type" = ["array", "string"])))]
-pub struct StringOrVec(pub Vec<String>);
+pub enum StringOrVec {
+    String(String),
+    Vec(Vec<String>),
+}
 
 impl StringOrVec {
     pub fn iter<'a>(&'a self) -> std::slice::Iter<'a, String> {
-        self.0.iter()
+        self.as_slice().iter()
+    }
+
+    pub fn as_slice(&self) -> &[String] {
+        match self {
+            Self::String(value) => std::slice::from_ref(value),
+            Self::Vec(values) => values,
+        }
+    }
+
+    pub fn into_vec(self) -> Vec<String> {
+        match self {
+            Self::String(value) => vec![value],
+            Self::Vec(values) => values,
+        }
     }
 }
 
@@ -1941,8 +1954,8 @@ impl<'de> de::Deserialize<'de> for StringOrVec {
     {
         UntaggedEnumVisitor::new()
             .expecting("string or list of strings")
-            .string(|value| Ok(StringOrVec(vec![value.to_owned()])))
-            .seq(|value| value.deserialize().map(StringOrVec))
+            .string(|value| Ok(Self::String(value.to_owned())))
+            .seq(|value| value.deserialize().map(Self::Vec))
             .deserialize(deserializer)
     }
 }
