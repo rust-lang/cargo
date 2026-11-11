@@ -824,6 +824,14 @@ impl GlobalContext {
         })
     }
 
+    pub fn shared_storage_dir(&self) -> Option<PathBuf> {
+        if !self.cli_unstable().shared_blob_storage || !self.cli_unstable().build_dir_new_layout {
+            return None;
+        }
+
+        return Some(self.home_path.as_path_unlocked().join("shared-storage"));
+    }
+
     pub(crate) fn get_cv_with_env(&self, key: &ConfigKey) -> CargoResult<Option<CV>> {
         self.config_reader()?.get_cv_with_env(key)
     }
