@@ -1,6 +1,7 @@
 use cargo_util::collections::HashMap;
 use std::io::Write;
 
+use crate::sources::CRATES_IO_DOMAIN;
 use crate::util::style::{CONTEXT, ERROR, HEADER, LITERAL, NOP, WARN};
 use crate::workspace::Summary;
 use crate::{
@@ -29,7 +30,20 @@ pub(super) fn pretty_view(
 
     let mut shell = gctx.shell();
     let verbosity = shell.verbosity();
-    write!(shell.out(), "{header}{}{header:#}", package_id.name())?;
+    let name_link = is_package_from_crates_io
+        .then(|| {
+            shell.out_hyperlink(format!(
+                "https://{CRATES_IO_DOMAIN}/crates/{}/{}",
+                package_id.name(),
+                package_id.version()
+            ))
+        })
+        .unwrap_or_default();
+    write!(
+        shell.out(),
+        "{header}{name_link}{}{name_link:#}{header:#}",
+        package_id.name()
+    )?;
     if !metadata.keywords.is_empty() {
         let message = if is_package_from_crates_io {
             metadata
