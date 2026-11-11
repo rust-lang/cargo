@@ -1,11 +1,14 @@
+use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::bail;
 use blake3::Hash;
-use cargo_util::paths::create_dir_all;
+use cargo_util::paths::{self, create_dir_all};
 use filetime::FileTime;
+use serde::{Deserialize, Serialize};
 use tracing::{instrument, trace};
 
 use crate::CargoResult;
@@ -37,7 +40,9 @@ impl SharedStorage {
         })
     }
 
-    pub fn insert_or_dedup_out_dir(&self, out_dir: &Path) -> CargoResult<()> {
+    pub fn insert_or_dedup_out_dir(&self, out_dir: &Path) -> CargoResult<String> {
+        let mut hasher = blake3::Hasher::new();
+        let mut outputs: BTreeMap<PathBuf, Hash> = BTreeMap::default();
         for entry in walkdir::WalkDir::new(out_dir) {
             let Ok(entry) = entry else {
                 continue;
@@ -45,8 +50,66 @@ impl SharedStorage {
             if entry.file_type().is_file() {
                 let hash = self.insert_or_dedup(entry.path())?;
                 trace!(path = ?entry.path(), hash = hash.to_hex().to_string(), "inserted file into blob storage");
+                hasher.update(hash.as_bytes());
+                let path = entry.path().strip_prefix(out_dir)?.to_path_buf();
+                outputs.insert(path, hash);
             }
         }
+
+        // TODO: Do we want to keep this logic or make the entry itself content addressable?
+        //       The downside is that we have to serialize and hash it for every unit which could be
+        //       slow.
+        let unit_output_hash = hasher.finalize().to_hex().to_string();
+        let path = self
+            .layout
+            .unit_outputs
+            .join(&unit_output_hash[..2])
+            .join(&unit_output_hash[2..]);
+
+        if !path.exists() {
+            create_dir_all(&path.parent().unwrap())?;
+
+            let entry = UnitOutputEntry {
+                blobs: outputs
+                    .into_iter()
+                    .map(|(path, hash)| (path, hash.to_hex().to_string()))
+                    .collect::<BTreeMap<_, _>>(),
+            };
+
+            let buf = serde_json::to_vec(&entry)?;
+            paths::write_atomic(path, buf)?;
+        }
+
+        Ok(unit_output_hash)
+    }
+
+    pub fn save_build_outputs(&self, hashes: &[String]) -> CargoResult<()> {
+        let entry = BuildSnapshot {
+            unit_outputs: hashes.to_vec(),
+        };
+
+        let output = serde_json::to_vec(&entry)?;
+
+        let mut hasher = blake3::Hasher::new();
+        hasher.update(&output);
+        let hash = hasher.finalize().to_hex().to_string();
+
+        let path = self.layout.snapshots.join(&hash[..2]).join(&hash[2..]);
+
+        if !path.exists() {
+            create_dir_all(path.parent().unwrap())?;
+            paths::write_atomic(path, output)?;
+        }
+
+        let usage = self.layout.snapshot_usage.join(&hash[..2]).join(&hash[2..]);
+        create_dir_all(usage.parent().unwrap())?;
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis()
+            .to_string();
+
+        paths::write_atomic(usage, now.as_bytes())?;
 
         Ok(())
     }
@@ -193,4 +256,14 @@ fn is_same_filesystem(dir1: &Path, dir2: &Path) -> std::io::Result<bool> {
             Ok(volume_serial_number(dir1)? == volume_serial_number(dir2)?)
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UnitOutputEntry {
+    pub blobs: BTreeMap<PathBuf, String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BuildSnapshot {
+    pub unit_outputs: Vec<String>,
 }

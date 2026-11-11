@@ -192,10 +192,31 @@ fn should_save_build_snapshot() {
 [ROOT]/home/.cargo/shared-storage/blobs/[HASH]
 [ROOT]/home/.cargo/shared-storage/blobs/[HASH]
 [ROOT]/home/.cargo/shared-storage/blobs/[HASH]
+[ROOT]/home/.cargo/shared-storage/snapshots/[HASH]
+[ROOT]/home/.cargo/shared-storage/unit-output/[HASH]
+[ROOT]/home/.cargo/shared-storage/usage/[HASH]
 
 "#]],
         &[],
     );
+
+    // Find the snapshot file and verify it matches its hash
+    let snapshot_path = partitioned_file("snapshots");
+    let contents = t!(fs::read_to_string(&snapshot_path));
+    let snapshot_hash = partitioned_hash(&snapshot_path);
+    assert_eq!(
+        snapshot_hash,
+        blake3::hash(contents.as_bytes()).to_hex().as_str()
+    );
+
+    // Find the unit output and verify its in the snapshot
+    let snapshot: serde_json::Value = serde_json::from_str(&contents).unwrap();
+    let unit_output = partitioned_hash(&partitioned_file("unit-output"));
+    assert_eq!(snapshot, serde_json::json!({"unit_outputs": [unit_output]}));
+
+    // Verify the snapshot usage exists that matches the snapshot hash
+    let usage_path = partitioned_file("usage");
+    assert_eq!(partitioned_hash(&usage_path), snapshot_hash);
 }
 
 fn shared_storage() -> PathBuf {
@@ -207,6 +228,29 @@ fn blob(hash: &str) -> PathBuf {
         .join("blobs")
         .join(&hash[..2])
         .join(&hash[2..])
+}
+
+/// Returns the first file in a shared storage dir partitioned by `hash[..2]/hash[2..]`.
+fn partitioned_file(dir: &str) -> PathBuf {
+    let pattern = shared_storage().join(dir).join("*").join("*");
+    glob::glob(&pattern.to_string_lossy())
+        .unwrap()
+        .next()
+        .unwrap()
+        .unwrap()
+}
+
+/// Rebuilds the hash from a path partitioned by `hash[..2]/hash[2..]`.
+fn partitioned_hash(path: &Path) -> String {
+    let prefix = path
+        .parent()
+        .unwrap()
+        .file_name()
+        .unwrap()
+        .to_str()
+        .unwrap();
+    let suffix = path.file_name().unwrap().to_str().unwrap();
+    format!("{prefix}{suffix}")
 }
 
 #[track_caller]

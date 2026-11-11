@@ -264,15 +264,40 @@ fn compile<'gctx>(
                 work.then(link_targets(build_runner, unit, true)?)
             });
 
-            if job.freshness().is_dirty()
-                && should_dedup_out_dir(build_runner, unit)
+            if should_dedup_out_dir(build_runner, unit)
                 && let Some(shared_storage) = build_runner.files().shared_storage()
             {
+                let cached_hash_file = build_runner
+                    .files()
+                    .fingerprint_dir(unit)
+                    .join("output-hash");
                 let out_dir = build_runner.files().out_dir_new_layout(unit);
-                job.after(Work::new(move |_state| {
-                    deduplicate_out_dir(&out_dir, &shared_storage);
-                    Ok(())
-                }));
+
+                let add_deduplicate_step = |job: &mut Job| {
+                    let cached_hash_file = cached_hash_file.clone();
+                    let shared_storage = shared_storage.clone();
+                    job.after(Work::new(move |state| {
+                        if let Some(hash) = deduplicate_out_dir(&out_dir, &shared_storage) {
+                            let mut f = File::create(&cached_hash_file)?;
+                            f.write_all(hash.as_bytes())?;
+                            state.add_blob_storage_output(hash);
+                        }
+                        Ok(())
+                    }));
+                };
+
+                if job.freshness().is_dirty() {
+                    _ = std::fs::remove_file(&cached_hash_file);
+
+                    add_deduplicate_step(&mut job);
+                } else if cached_hash_file.exists() {
+                    let hash = std::fs::read_to_string(&cached_hash_file)?;
+                    build_runner.blob_storage_outputs.push(hash);
+                } else {
+                    // If the unit was not deduplicated for some reason, go ahead try to deduplicate
+                    // it now.
+                    add_deduplicate_step(&mut job);
+                }
             }
 
             // If -Zfine-grain-locking is enabled, we wrap the job with an upgrade to exclusive
@@ -715,10 +740,14 @@ fn should_dedup_out_dir(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> bool
 }
 
 #[tracing::instrument(skip_all)]
-fn deduplicate_out_dir(out_dir: &Path, shared_storage: &SharedStorage) {
-    if let Err(err) = shared_storage.insert_or_dedup_out_dir(out_dir) {
-        // couldn't deduplicate, but we can continue the build
-        debug!(?out_dir, ?err, "failed to insert file into blob storage");
+fn deduplicate_out_dir(out_dir: &Path, shared_storage: &SharedStorage) -> Option<String> {
+    match shared_storage.insert_or_dedup_out_dir(out_dir) {
+        Ok(hash) => Some(hash),
+        Err(err) => {
+            // couldn't deduplicate, but we can continue the build
+            debug!(?out_dir, ?err, "failed to insert file into blob storage");
+            None
+        }
     }
 }
 
