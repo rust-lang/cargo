@@ -32,6 +32,8 @@ use super::CRATES_IO_REGISTRY;
 use super::OptValue;
 use super::Value;
 
+pub use cargo_util_schemas::manifest::TomlProfiles;
+
 /// Cargo's `.cargo/config.toml` file
 #[cfg(feature = "unstable-schema")]
 #[derive(schemars::JsonSchema)]
@@ -45,6 +47,7 @@ pub struct Config {
     pub http: Option<CargoHttpConfig>,
     pub net: Option<CargoNetConfig>,
     pub patch: Option<HashMap<String, HashMap<String, PatchDependency>>>,
+    pub profile: Option<TomlProfiles>,
     pub registries: Option<HashMap<String, RegistryConfig>>,
     pub registry: Option<GlobalRegistryConfig>,
     pub resolver: Option<CargoResolverConfig>,

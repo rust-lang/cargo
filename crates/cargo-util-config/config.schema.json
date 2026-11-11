@@ -95,6 +95,16 @@
         }
       }
     },
+    "profile": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TomlProfiles"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "registries": {
       "type": [
         "object",
@@ -1134,6 +1144,238 @@
             "type": "string"
           }
         }
+      ]
+    },
+    "TomlProfiles": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/TomlProfile"
+      }
+    },
+    "TomlProfile": {
+      "type": "object",
+      "properties": {
+        "opt-level": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TomlOptLevel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "lto": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StringOrBool"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "codegen-backend": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "codegen-units": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0,
+          "default": null
+        },
+        "debug": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TomlDebugInfo"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "split-debuginfo": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "debug-assertions": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
+        },
+        "rpath": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
+        },
+        "panic": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "overflow-checks": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
+        },
+        "incremental": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
+        },
+        "dir-name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "inherits": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "strip": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StringOrBool"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "rustflags": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "default": null
+        },
+        "package": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "$ref": "#/$defs/TomlProfile"
+          },
+          "default": null
+        },
+        "build-override": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TomlProfile"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "trim-paths": {
+          "description": "Controls the scope of path sanitization in build outputs.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TomlTrimPaths"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "hint-mostly-unused": {
+          "description": "Unstable feature `hint-mostly-unused`",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
+        }
+      }
+    },
+    "TomlOptLevel": {
+      "type": [
+        "string",
+        "integer"
+      ],
+      "enum": [
+        0,
+        1,
+        2,
+        3,
+        "s",
+        "z"
+      ]
+    },
+    "StringOrBool": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "boolean"
+        }
+      ]
+    },
+    "TomlDebugInfo": {
+      "type": [
+        "string",
+        "integer",
+        "boolean"
+      ],
+      "enum": [
+        "none",
+        "line-directives-only",
+        "line-tables-only",
+        "limited",
+        "full",
+        0,
+        1,
+        2,
+        false,
+        true
+      ]
+    },
+    "PackageIdSpec": {
+      "type": "string"
+    },
+    "TomlTrimPaths": {
+      "type": "string",
+      "enum": [
+        "none",
+        "object",
+        "all"
       ]
     },
     "RegistryConfig": {
