@@ -1020,6 +1020,7 @@ impl ConfigRelativePath {
 /// the `NON_MERGEABLE_LISTS` check to prevent list merging
 /// from multiple config files.
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
+#[cfg_attr(feature = "unstable-schema", schemars(with = "StringList"))]
 #[derive(Debug, Clone, PartialEq)]
 pub struct PathAndArgs {
     pub path: ConfigRelativePath,
