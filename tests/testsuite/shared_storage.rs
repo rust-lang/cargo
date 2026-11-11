@@ -219,6 +219,84 @@ fn should_save_build_snapshot() {
     assert_eq!(partitioned_hash(&usage_path), snapshot_hash);
 }
 
+#[cargo_test]
+fn rebuilds_due_to_output_artifact_mtimes() {
+    Package::new("bar", "0.1.0")
+        .file("src/lib.rs", "pub fn foo() {}")
+        .file(
+            "build.rs",
+            r#"fn main() { println!("cargo::rerun-if-env-changed=FOO") }"#,
+        )
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                bar = "0.1.0"
+            "#,
+        )
+        .file("src/main.rs", "extern crate bar; fn main() { bar::foo(); }")
+        .build();
+
+    let check = |foo: &str, stderr_data: Option<snapbox::data::Inline>| {
+        let mut exec = p.cargo("check -v");
+        exec.env("FOO", foo)
+            .env("__CARGO_TEST_SHARED_STORAGE_FORCE_HARDLINK", "1")
+            .arg("-Zshared-blob-storage")
+            .masquerade_as_nightly_cargo(&["shared-blob-storage"]);
+
+        if let Some(stderr_data) = stderr_data {
+            exec.with_stderr_data(stderr_data);
+        }
+
+        exec.run();
+    };
+
+    check("1", None);
+
+    let past = filetime::FileTime::now().unix_seconds() - 3600;
+    p.root().move_in_time(|_, _| (past, 0));
+    p.build_dir().move_in_time(|_, _| (past, 0));
+
+    // Check again and verify that we are fresh
+    check(
+        "1",
+        Some(str![[r#"
+[FRESH] bar v0.1.0
+[FRESH] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]),
+    );
+
+    // Check again, this time changing FOO which will cause an expected rebuild
+    check("2", None);
+
+    // FIXME: Check again with the same FOO as previously, but instead of having a fresh build
+    //        we are stuck rebuilding due to the hardlinked outputs mtimes being older than the
+    //        mtime of the last build script run.
+    check(
+        "2",
+        Some(str![[r#"
+[DIRTY] bar v0.1.0: the dependency `bar` was rebuilt ([TIME_DIFF_AFTER_LAST_BUILD])
+[CHECKING] bar v0.1.0
+[RUNNING] `rustc --crate-name bar [..]`
+[DIRTY] foo v0.1.0 ([ROOT]/foo): the dependency `bar` was rebuilt
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]),
+    );
+}
+
 fn shared_storage() -> PathBuf {
     paths::home().join(".cargo/shared-storage")
 }
