@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use crate::prelude::*;
 use cargo_test_support::paths::ReadOnly;
 use cargo_test_support::registry::Package;
-use cargo_test_support::{paths, prelude::*, project, t};
+use cargo_test_support::{paths, prelude::*, project, str, t};
 
 #[cargo_test]
 fn disabled_without_unstable_flag() {
@@ -159,6 +159,43 @@ fn should_deduplicate_basic_rustc_artifacts() {
         .run();
 
     verify_files_deduplicated();
+}
+
+#[cargo_test]
+fn should_save_build_snapshot() {
+    Package::new("bar", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                bar = "0.1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .env("__CARGO_TEST_SHARED_STORAGE_FORCE_HARDLINK", "1")
+        .arg("-Zshared-blob-storage")
+        .masquerade_as_nightly_cargo(&["shared-blob-storage"])
+        .run();
+
+    shared_storage().assert_dir_layout(
+        str![[r#"
+[ROOT]/home/.cargo/shared-storage/blobs/[HASH]
+[ROOT]/home/.cargo/shared-storage/blobs/[HASH]
+[ROOT]/home/.cargo/shared-storage/blobs/[HASH]
+
+"#]],
+        &[],
+    );
 }
 
 fn shared_storage() -> PathBuf {
