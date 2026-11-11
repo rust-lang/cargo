@@ -1,0 +1,1306 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Config",
+  "description": "Cargo's `.cargo/config.toml` file",
+  "type": "object",
+  "properties": {
+    "build": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CargoBuildConfig"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "cache": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CargoCacheConfig"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "cargo_new": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CargoNewConfig"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "doc": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/DocConfig"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "env": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": {
+        "$ref": "#/$defs/EnvConfigValue"
+      }
+    },
+    "future_incompat_report": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CargoFutureIncompatConfig"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "http": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CargoHttpConfig"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "net": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CargoNetConfig"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "registries": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": {
+        "$ref": "#/$defs/RegistryConfig"
+      }
+    },
+    "registry": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/GlobalRegistryConfig"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "resolver": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CargoResolverConfig"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "source": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": {
+        "$ref": "#/$defs/SourceConfigDef"
+      }
+    },
+    "term": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TermConfig"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "CargoBuildConfig": {
+      "description": "The `[build]` table.\n\nExample configuration:\n\n```toml\n[build]\njobs = 4\ntarget = \"x86_64-unknown-linux-gnu\"\ntarget-dir = \"target\"\nrustflags = [\"-C\", \"link-arg=-fuse-ld=lld\"]\nincremental = true\n```",
+      "type": "object",
+      "properties": {
+        "pipelining": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "dep-info-basedir": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConfigRelativePath"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "target-dir": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConfigRelativePath"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "build-dir": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConfigRelativePath"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "incremental": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "target": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BuildTargetConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "profile": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ProfileName"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "jobs": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JobsConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rustflags": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StringList"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rustdocflags": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StringList"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rustc-wrapper": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConfigRelativePath"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rustc-workspace-wrapper": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConfigRelativePath"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rustc": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConfigRelativePath"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rustdoc": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConfigRelativePath"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "artifact-dir": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConfigRelativePath"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "warnings": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WarningHandling"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sbom": {
+          "description": "Unstable feature `-Zsbom`.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "analysis": {
+          "description": "Unstable feature `-Zbuild-analysis`.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CargoBuildAnalysis"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "fingerprint": {
+          "description": "Unstable feature `-Zchecksum-freshness`.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FingerprintMethod"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "build-std": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BuildStdConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "ConfigRelativePath": {
+      "description": "Use with the `get` API to fetch a string that will be converted to a\n`PathBuf`. Relative paths are converted to absolute paths based on the\nlocation of the config file.",
+      "$ref": "#/$defs/Value"
+    },
+    "Value": {
+      "description": "A type which can be deserialized as a configuration value which records\nwhere it was deserialized from.",
+      "type": "string"
+    },
+    "BuildTargetConfig": {
+      "description": "Configuration for `build.target`.\n\nAccepts in the following forms:\n\n```toml\ntarget = \"a\"\ntarget = [\"a\"]\ntarget = [\"a\", \"b\"]\n```",
+      "$ref": "#/$defs/Value2"
+    },
+    "Value2": {
+      "description": "A type which can be deserialized as a configuration value which records\nwhere it was deserialized from.",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "One": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "One"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "Many": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "Many"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "ProfileName": {
+      "description": "Verified string newtype",
+      "type": "string"
+    },
+    "JobsConfig": {
+      "description": "Configuration for `jobs` in `build` section. There are two\nways to configure: An integer or a simple string expression.\n\n```toml\n[build]\njobs = 1\n```\n\n```toml\n[build]\njobs = \"default\" # Currently only support \"default\".\n```",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "Integer": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          "required": [
+            "Integer"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "String": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "String"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "StringList": {
+      "description": "A type to deserialize a list of strings from a toml file.\n\nSupports deserializing either a whitespace-separated list of arguments in a\nsingle string or a string list itself. For example these deserialize to\nequivalent values:\n\n```toml\na = 'a b c'\nb = ['a', 'b', 'c']\n```",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "WarningHandling": {
+      "description": "Whether warnings should warn, be allowed, or cause an error.",
+      "oneOf": [
+        {
+          "description": "Output warnings.",
+          "type": "string",
+          "const": "warn"
+        },
+        {
+          "description": "Allow warnings (do not output them).",
+          "type": "string",
+          "const": "allow"
+        },
+        {
+          "description": "Error if  warnings are emitted.",
+          "type": "string",
+          "const": "deny"
+        }
+      ]
+    },
+    "CargoBuildAnalysis": {
+      "description": "Metrics collection for build analysis.",
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "enabled"
+      ]
+    },
+    "FingerprintMethod": {
+      "type": "string",
+      "enum": [
+        "mtime",
+        "content"
+      ]
+    },
+    "BuildStdConfig": {
+      "description": "Configuration for `build.build-std`.",
+      "type": "object",
+      "properties": {
+        "when": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BuildStdWhen"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "crates": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BuildStdCrates"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "BuildStdWhen": {
+      "description": "When to build the standard library.",
+      "type": "string",
+      "enum": [
+        "never",
+        "always"
+      ]
+    },
+    "BuildStdCrates": {
+      "description": "Which standard library crates to build.\nValid values are \"core\", \"alloc\", \"std\", or an array of crate names",
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "Core",
+            "Alloc",
+            "Std"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "List": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "List"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "CargoCacheConfig": {
+      "type": "object",
+      "properties": {
+        "auto-clean-frequency": {
+          "description": "How often to automatically clean unused cache data.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "global-clean": {
+          "description": "Settings for cleaning the global cache.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GlobalCleanConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "GlobalCleanConfig": {
+      "description": "Cache cleaning settings from the `cache.global-clean` config table.\n\nNOTE: Not all of these options may get stabilized. Some of them are very\nlow-level details, and may not be something typical users need.\n\nIf any of these options are `None`, the built-in default is used.",
+      "type": "object",
+      "properties": {
+        "max-src-age": {
+          "description": "Anything older than this duration will be deleted in the source cache.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "max-crate-age": {
+          "description": "Anything older than this duration will be deleted in the compressed crate cache.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "max-index-age": {
+          "description": "Any index older than this duration will be deleted from the index cache.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "max-git-co-age": {
+          "description": "Any git checkout older than this duration will be deleted from the checkout cache.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "max-git-db-age": {
+          "description": "Any git clone older than this duration will be deleted from the git cache.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "CargoNewConfig": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "deprecated": true
+        },
+        "email": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "deprecated": true
+        },
+        "vcs": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VersionControl"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "VersionControl": {
+      "type": "string",
+      "enum": [
+        "Git",
+        "Hg",
+        "Pijul",
+        "Fossil",
+        "NoVcs"
+      ]
+    },
+    "DocConfig": {
+      "type": "object",
+      "properties": {
+        "browser": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PathAndArgs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "extern_map": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RustdocExternMap"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "PathAndArgs": {
+      "description": "A config type that is a program to run.\n\nThis supports a list of strings like `['/path/to/program', 'somearg']`\nor a space separated string like `'/path/to/program somearg'`.\n\nThis expects the first value to be the path to the program to run.\nSubsequent values are strings of arguments to pass to the program.\n\nTypically you should use `ConfigRelativePathResolveExt::resolve_program` on the path\nto get the actual program.\n\n**Note**: Any usage of this type in config needs to be listed in\nthe `NON_MERGEABLE_LISTS` check to prevent list merging\nfrom multiple config files.",
+      "type": "object",
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/ConfigRelativePath"
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "path",
+        "args"
+      ]
+    },
+    "RustdocExternMap": {
+      "description": "A map of registry names to URLs where documentations are hosted.\nThis is for unstable feature [`-Zrustdoc-map`][1].\n\n[1]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#rustdoc-map",
+      "type": "object",
+      "properties": {
+        "registries": {
+          "description": "* Key is the registry name in the configuration `[registries.<name>]`.\n* Value is the URL where the documentation is hosted.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {
+            "crates-io": "https://docs.rs/"
+          }
+        },
+        "std": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RustdocExternMode"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "RustdocExternMode": {
+      "description": "Mode used for `std`. This is for unstable feature [`-Zrustdoc-map`][1].\n\n[1]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#rustdoc-map",
+      "oneOf": [
+        {
+          "description": "Use a local `file://` URL.",
+          "type": "string",
+          "const": "Local"
+        },
+        {
+          "description": "Use a remote URL to <https://doc.rust-lang.org/> (default).",
+          "type": "string",
+          "const": "Remote"
+        },
+        {
+          "description": "An arbitrary URL.",
+          "type": "object",
+          "properties": {
+            "Url": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "Url"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "EnvConfigValue": {
+      "description": "Configuration value for environment variables in `[env]` section.\n\nSupports two formats: simple string and with options.\n\n```toml\n[env]\nFOO = \"value\"\n```\n\n```toml\n[env]\nBAR = { value = \"relative/path\", relative = true }\nBAZ = { value = \"override\", force = true }\n```",
+      "$ref": "#/$defs/EnvConfigValueInner"
+    },
+    "EnvConfigValueInner": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "Simple": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "Simple"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "WithOptions": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "$ref": "#/$defs/ConfigRelativePath"
+                },
+                "force": {
+                  "type": "boolean"
+                },
+                "relative": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "value",
+                "force",
+                "relative"
+              ]
+            }
+          },
+          "required": [
+            "WithOptions"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "CargoFutureIncompatConfig": {
+      "description": "The `[future-incompat-report]` stable\n\nExample configuration:\n\n```toml\n[future-incompat-report]\nfrequency = \"always\"\n```",
+      "type": "object",
+      "properties": {
+        "frequency": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CargoFutureIncompatFrequencyConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "CargoFutureIncompatFrequencyConfig": {
+      "type": "string",
+      "enum": [
+        "always",
+        "never"
+      ]
+    },
+    "CargoHttpConfig": {
+      "description": "The `[http]` table.\n\nExample configuration:\n\n```toml\n[http]\nproxy = \"host:port\"\ntimeout = 30\ncainfo = \"/path/to/ca-bundle.crt\"\ncheck-revoke = true\nmultiplexing = true\nssl-version = \"tlsv1.3\"\n```",
+      "type": "object",
+      "properties": {
+        "proxy": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "low-speed-limit": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "timeout": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        },
+        "cainfo": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConfigRelativePath"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "proxy-cainfo": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConfigRelativePath"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "check-revoke": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "user-agent": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "debug": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "multiplexing": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "ssl-version": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SslVersionConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "SslVersionConfig": {
+      "description": "Configuration for `ssl-version` in `http` section\nThere are two ways to configure:\n\n```text\n[http]\nssl-version = \"tlsv1.3\"\n```\n\n```text\n[http]\nssl-version.min = \"tlsv1.2\"\nssl-version.max = \"tlsv1.3\"\n```",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "Single": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "Single"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "Range": {
+              "$ref": "#/$defs/SslVersionConfigRange"
+            }
+          },
+          "required": [
+            "Range"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "SslVersionConfigRange": {
+      "type": "object",
+      "properties": {
+        "min": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "max": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "CargoNetConfig": {
+      "description": "The `[net]` table.\n\nExample configuration:\n\n```toml\n[net]\nretry = 2\noffline = false\ngit-fetch-with-cli = true\n```",
+      "type": "object",
+      "properties": {
+        "retry": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "offline": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "git-fetch-with-cli": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "ssh": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CargoSshConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "CargoSshConfig": {
+      "type": "object",
+      "properties": {
+        "known-hosts": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/Value"
+          }
+        }
+      }
+    },
+    "RegistryConfig": {
+      "description": "`[registries.NAME]` tables.\n\nThe values here should be kept in sync with `GlobalRegistryConfig`",
+      "type": "object",
+      "properties": {
+        "index": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "token": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "deprecated": true
+        },
+        "credential-provider": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PathAndArgs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "min-publish-age": {
+          "description": "Minimum publish age threshold for RFC 3923",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "protocol": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "GlobalRegistryConfig": {
+      "description": "The `[registry]` table, which has more keys than the `[registries.NAME]` tables.\n\nNote: nesting `RegistryConfig` inside this struct and using `serde(flatten)` *should* work\nbut fails with \"invalid type: sequence, expected a value\" when attempting to deserialize.",
+      "type": "object",
+      "properties": {
+        "index": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "token": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "deprecated": true
+        },
+        "credential-provider": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PathAndArgs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "global-min-publish-age": {
+          "description": "Global default Minimum publish age threshold for RFC 3923",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "default": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "global-credential-providers": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "CargoResolverConfig": {
+      "description": "The `[resolver]` table.\n\nExample configuration:\n\n```toml\n[resolver]\nincompatible-rust-versions = \"fallback\"\nincompatible-publish-age = \"deny\"\nfeature-unification = \"workspace\"\nlockfile-path = \"my/Cargo.lock\"\n```",
+      "type": "object",
+      "properties": {
+        "incompatible-rust-versions": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/IncompatibleRustVersions"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "incompatible-publish-age": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/IncompatiblePublishAge"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "feature-unification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FeatureUnification"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "lockfile-path": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConfigRelativePath"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "IncompatibleRustVersions": {
+      "type": "string",
+      "enum": [
+        "allow",
+        "fallback"
+      ]
+    },
+    "IncompatiblePublishAge": {
+      "type": "string",
+      "enum": [
+        "allow",
+        "deny"
+      ]
+    },
+    "FeatureUnification": {
+      "type": "string",
+      "enum": [
+        "package",
+        "selected",
+        "workspace"
+      ]
+    },
+    "SourceConfigDef": {
+      "description": "Definition of a source in a config file.",
+      "type": "object",
+      "properties": {
+        "replace-with": {
+          "description": "Indicates this source should be replaced with another of the given name.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Value"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "directory": {
+          "description": "A directory source.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConfigRelativePath"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "registry": {
+          "description": "A registry source. Value is a URL.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Value"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "local-registry": {
+          "description": "A local registry source.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConfigRelativePath"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "git": {
+          "description": "A git source. Value is a URL.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Value"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "branch": {
+          "description": "The git branch.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Value"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tag": {
+          "description": "The git tag.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Value"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rev": {
+          "description": "The git revision.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Value"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "TermConfig": {
+      "description": "The `[term]` table.\n\nExample configuration:\n\n```toml\n[term]\nverbose = false\nquiet = false\ncolor = \"auto\"\nprogress.when = \"auto\"\n```",
+      "type": "object",
+      "properties": {
+        "verbose": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "quiet": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "color": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "hyperlinks": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "unicode": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "progress": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ProgressConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "ProgressConfig": {
+      "description": "The `term.progress` configuration.\n\nExample configuration:\n\n```toml\n[term]\nprogress.when = \"never\" # or \"auto\"\n```\n\n```toml\n# `when = \"always\"` requires a `width` field\n[term]\nprogress = { when = \"always\", width = 80 }\n```",
+      "type": "object",
+      "properties": {
+        "when": {
+          "$ref": "#/$defs/ProgressWhen"
+        },
+        "width": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint",
+          "minimum": 0
+        },
+        "term_integration": {
+          "description": "Communicate progress status with a terminal",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "when"
+      ]
+    },
+    "ProgressWhen": {
+      "type": "string",
+      "enum": [
+        "auto",
+        "never",
+        "always"
+      ]
+    }
+  }
+}
