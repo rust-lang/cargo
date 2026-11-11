@@ -61,7 +61,7 @@ fn build_dep_info_lib() {
         .build();
 
     p.cargo("build --example=ex").run();
-    assert!(p.example_lib("ex", "lib").with_extension("d").is_file());
+    assert!(!p.example_lib("ex", "lib").with_extension("d").exists());
 }
 
 #[cargo_test]
@@ -85,7 +85,7 @@ fn build_dep_info_rlib() {
         .build();
 
     p.cargo("build --example=ex").run();
-    assert!(p.example_lib("ex", "rlib").with_extension("d").is_file());
+    assert!(!p.example_lib("ex", "rlib").with_extension("d").exists());
 }
 
 #[cargo_test]

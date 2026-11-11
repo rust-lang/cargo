@@ -154,7 +154,7 @@ fn with_multiple_crate_types() {
         .run();
 
     assert_eq!(
-        4,
+        3,
         p.glob(p.target_debug_dir().join("*.cargo-sbom.json"))
             .count()
     );
@@ -404,7 +404,7 @@ crate-type = ["rlib", "dylib", "staticlib"]
         .run();
 
     assert_eq!(
-        4,
+        3,
         p.glob(p.target_debug_dir().join("examples/*.cargo-sbom.json"))
             .count()
     );
@@ -446,7 +446,7 @@ crate-type = ["rlib", "dylib", "staticlib"]
         .is_json(),
     );
 
-    for kind in ["rlib", "dylib", "staticlib"] {
+    for kind in ["dylib", "staticlib"] {
         p.assert_file(
             append_sbom_suffix(&p.example_lib("ex_lib", kind)),
             cargo_test_support::str![[r#"

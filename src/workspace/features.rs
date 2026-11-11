@@ -1613,6 +1613,11 @@ pub fn is_nightly_toolchain(rustc_version: &semver::Version) -> bool {
     cargo_nightly && rustc_nightly
 }
 
+/// Temporary escape hatch to keep uplifting rlibs into the target-dir.
+///
+/// Not part of the public interface.
+/// To be removed once it has shipped in one or two stable releases.
+/// See <https://github.com/rust-lang/cargo/issues/17278>.
 #[expect(
     clippy::disallowed_methods,
     reason = "Temporary opt out that is not part of the public interface"

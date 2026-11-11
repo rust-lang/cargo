@@ -488,13 +488,13 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
             return None;
         }
 
-        // We plan to stop the uplift for rlibs in future versions.
-        // Currently we do it for nightly channel only.
+        // rlibs are intermediate artifacts.
+        // They are unusable without rlibs of their dependencies,
+        // which are never uplifted.
+        // Their contents are also an implementation detail of rustc as of as of 2026-11.
         //
-        // See https://rust-lang.zulipchat.com/#narrow/channel/246057-t-cargo/topic/Usage.20of.20-Zno-embed-metadata/near/633481654
-        if file_type.crate_type == Some(CrateType::Rlib)
-            && features::is_nightly_toolchain(&bcx.rustc().version)
-            && !features::is_stop_rlib_uplift_opt_out()
+        // See https://github.com/rust-lang/cargo/issues/17278
+        if file_type.crate_type == Some(CrateType::Rlib) && !features::is_stop_rlib_uplift_opt_out()
         {
             return None;
         }
@@ -505,9 +505,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         //   latest copies (even if the dylib was built from a previous cargo
         //   build). There are complex reasons for this, see #8139, #6167, #6162.
         // - Things directly requested from the command-line (the "roots").
-        //   This one is a little questionable for rlibs (see #6131), but is
-        //   historically how Cargo has operated. This is primarily useful to
-        //   give the user access to staticlibs and cdylibs.
+        //   This is primarily useful to give the user access to staticlibs and cdylibs.
         if !unit.target.is_bin()
             && !unit.target.is_custom_build()
             && file_type.crate_type != Some(CrateType::Dylib)
