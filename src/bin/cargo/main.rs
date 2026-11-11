@@ -161,6 +161,13 @@ fn aliased_command(gctx: &GlobalContext, command: &str) -> CargoResult<Option<Ve
     Ok(result)
 }
 
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
+enum CommandInfo {
+    BuiltIn { about: Option<String> },
+    External { path: PathBuf },
+    Alias { target: StringOrVec },
+}
+
 /// List all runnable commands
 fn list_commands(gctx: &GlobalContext) -> BTreeMap<String, CommandInfo> {
     let mut commands = third_party_subcommands(gctx);

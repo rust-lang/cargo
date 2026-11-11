@@ -21,7 +21,6 @@ use cargo_util::collections::{IndexMap, IndexSet};
 use cargo_util::paths;
 use cargo_util_schemas::manifest::ProfileName;
 use cargo_util_schemas::manifest::RegistryName;
-use cargo_util_schemas::manifest::StringOrVec;
 use cargo_util_terminal as shell;
 use cargo_util_terminal::report::Level;
 use clap::builder::PossibleValuesParser;
@@ -1539,13 +1538,6 @@ pub fn ignore_unknown<T: Default>(r: Result<T, clap::parser::MatchesError>) -> T
             panic!("Mismatch between definition and access: {}", e);
         }
     }
-}
-
-#[derive(PartialEq, Eq, PartialOrd, Ord)]
-pub enum CommandInfo {
-    BuiltIn { about: Option<String> },
-    External { path: PathBuf },
-    Alias { target: StringOrVec },
 }
 
 /// Warns that an occurrence of a flag without a value is ignored.

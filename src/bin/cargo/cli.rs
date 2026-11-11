@@ -10,6 +10,7 @@ use std::ffi::OsStr;
 use std::ffi::OsString;
 use std::fmt::Write;
 
+use super::CommandInfo;
 use super::commands;
 use super::list_commands;
 use super::third_party_subcommands;
