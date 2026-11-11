@@ -96,6 +96,7 @@
   warning that these tables will be ignored or error in the future.
   [#17490](https://github.com/rust-lang/cargo/pull/17490)
   [#17536](https://github.com/rust-lang/cargo/pull/17536)
+  [#17594](https://github.com/rust-lang/cargo/pull/17594)
 - The automatic `git gc` run no longer fails
   when Git is configured with `safe.bareRepository=explicit`.
   [#17370](https://github.com/rust-lang/cargo/pull/17370)
@@ -200,6 +201,7 @@
   [#17390](https://github.com/rust-lang/cargo/pull/17390)
 - Avoid passing search path `-L` args when they are passed as `--extern`
   [#17410](https://github.com/rust-lang/cargo/pull/17410)
+  [#17589](https://github.com/rust-lang/cargo/pull/17589)
 - Micro-optimize two package dir functions
   [#17413](https://github.com/rust-lang/cargo/pull/17413)
 - build-rs: make `unstable` compile
@@ -221,6 +223,7 @@
   [#17417](https://github.com/rust-lang/cargo/pull/17417)
   [#17418](https://github.com/rust-lang/cargo/pull/17418)
   [#17427](https://github.com/rust-lang/cargo/pull/17427)
+  [#17692](https://github.com/rust-lang/cargo/pull/17692)
 
 ## Cargo 1.99 (2026-10-01)
 [f40cc7a1...rust-1.99.0](https://github.com/rust-lang/cargo/compare/f40cc7a1...rust-1.99.0)
