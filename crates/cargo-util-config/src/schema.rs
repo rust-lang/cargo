@@ -37,16 +37,22 @@ pub use cargo_util_schemas::manifest::TomlProfiles;
 /// Cargo's `.cargo/config.toml` file
 #[cfg(feature = "unstable-schema")]
 #[derive(schemars::JsonSchema)]
+#[schemars(rename_all = "kebab-case")]
 pub struct Config {
+    pub paths: Option<Vec<ConfigRelativePath>>,
+    pub target_applies_to_host: Option<bool>,
+
     pub build: Option<CargoBuildConfig>,
     pub cache: Option<CargoCacheConfig>,
     pub cargo_new: Option<CargoNewConfig>,
+    pub credential_alias: Option<HashMap<String, PathAndArgs>>,
     pub doc: Option<DocConfig>,
     pub env: Option<EnvConfig>,
     pub future_incompat_report: Option<CargoFutureIncompatConfig>,
     pub http: Option<CargoHttpConfig>,
     pub net: Option<CargoNetConfig>,
     pub patch: Option<HashMap<String, HashMap<String, PatchDependency>>>,
+    pub path_bases: Option<HashMap<String, ConfigRelativePath>>,
     pub profile: Option<TomlProfiles>,
     pub registries: Option<HashMap<String, RegistryConfig>>,
     pub registry: Option<GlobalRegistryConfig>,

@@ -4,6 +4,21 @@
   "description": "Cargo's `.cargo/config.toml` file",
   "type": "object",
   "properties": {
+    "paths": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "$ref": "#/$defs/ConfigRelativePath"
+      }
+    },
+    "target-applies-to-host": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
     "build": {
       "anyOf": [
         {
@@ -24,7 +39,7 @@
         }
       ]
     },
-    "cargo_new": {
+    "cargo-new": {
       "anyOf": [
         {
           "$ref": "#/$defs/CargoNewConfig"
@@ -33,6 +48,15 @@
           "type": "null"
         }
       ]
+    },
+    "credential-alias": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": {
+        "$ref": "#/$defs/PathAndArgs"
+      }
     },
     "doc": {
       "anyOf": [
@@ -53,7 +77,7 @@
         "$ref": "#/$defs/EnvConfigValue"
       }
     },
-    "future_incompat_report": {
+    "future-incompat-report": {
       "anyOf": [
         {
           "$ref": "#/$defs/CargoFutureIncompatConfig"
@@ -93,6 +117,15 @@
         "additionalProperties": {
           "$ref": "#/$defs/TomlDependency"
         }
+      }
+    },
+    "path-bases": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": {
+        "$ref": "#/$defs/ConfigRelativePath"
       }
     },
     "profile": {
@@ -155,6 +188,14 @@
     }
   },
   "$defs": {
+    "ConfigRelativePath": {
+      "description": "Use with the `get` API to fetch a string that will be converted to a\n`PathBuf`. Relative paths are converted to absolute paths based on the\nlocation of the config file.",
+      "$ref": "#/$defs/Value"
+    },
+    "Value": {
+      "description": "A type which can be deserialized as a configuration value which records\nwhere it was deserialized from.",
+      "type": "string"
+    },
     "CargoBuildConfig": {
       "description": "The `[build]` table.\n\nExample configuration:\n\n```toml\n[build]\njobs = 4\ntarget = \"x86_64-unknown-linux-gnu\"\ntarget-dir = \"target\"\nrustflags = [\"-C\", \"link-arg=-fuse-ld=lld\"]\nincremental = true\n```",
       "type": "object",
@@ -351,14 +392,6 @@
           ]
         }
       }
-    },
-    "ConfigRelativePath": {
-      "description": "Use with the `get` API to fetch a string that will be converted to a\n`PathBuf`. Relative paths are converted to absolute paths based on the\nlocation of the config file.",
-      "$ref": "#/$defs/Value"
-    },
-    "Value": {
-      "description": "A type which can be deserialized as a configuration value which records\nwhere it was deserialized from.",
-      "type": "string"
     },
     "BuildTargetConfig": {
       "description": "Configuration for `build.target`.\n\nAccepts in the following forms:\n\n```toml\ntarget = \"a\"\ntarget = [\"a\"]\ntarget = [\"a\", \"b\"]\n```",
@@ -641,6 +674,25 @@
         "NoVcs"
       ]
     },
+    "PathAndArgs": {
+      "description": "A config type that is a program to run.\n\nThis supports a list of strings like `['/path/to/program', 'somearg']`\nor a space separated string like `'/path/to/program somearg'`.\n\nThis expects the first value to be the path to the program to run.\nSubsequent values are strings of arguments to pass to the program.\n\nTypically you should use `ConfigRelativePathResolveExt::resolve_program` on the path\nto get the actual program.\n\n**Note**: Any usage of this type in config needs to be listed in\nthe `NON_MERGEABLE_LISTS` check to prevent list merging\nfrom multiple config files.",
+      "type": "object",
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/ConfigRelativePath"
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "path",
+        "args"
+      ]
+    },
     "DocConfig": {
       "type": "object",
       "properties": {
@@ -665,25 +717,6 @@
           ]
         }
       }
-    },
-    "PathAndArgs": {
-      "description": "A config type that is a program to run.\n\nThis supports a list of strings like `['/path/to/program', 'somearg']`\nor a space separated string like `'/path/to/program somearg'`.\n\nThis expects the first value to be the path to the program to run.\nSubsequent values are strings of arguments to pass to the program.\n\nTypically you should use `ConfigRelativePathResolveExt::resolve_program` on the path\nto get the actual program.\n\n**Note**: Any usage of this type in config needs to be listed in\nthe `NON_MERGEABLE_LISTS` check to prevent list merging\nfrom multiple config files.",
-      "type": "object",
-      "properties": {
-        "path": {
-          "$ref": "#/$defs/ConfigRelativePath"
-        },
-        "args": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        }
-      },
-      "required": [
-        "path",
-        "args"
-      ]
     },
     "RustdocExternMap": {
       "description": "A map of registry names to URLs where documentations are hosted.\nThis is for unstable feature [`-Zrustdoc-map`][1].\n\n[1]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#rustdoc-map",
