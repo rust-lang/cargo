@@ -231,10 +231,10 @@ after
 
 #[cargo_test]
 fn no_rewrite_if_no_change() {
-    let p = project().file("src/lib.rs", "").build();
+    let p = project().file("src/main.rs", "fn main() {}").build();
 
     p.cargo("build").run();
-    let dep_info = p.root().join("target/debug/libfoo.d");
+    let dep_info = p.root().join("target/debug/foo.d");
     let metadata1 = dep_info.metadata().unwrap();
     p.cargo("build").run();
     let metadata2 = dep_info.metadata().unwrap();
