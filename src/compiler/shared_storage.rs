@@ -114,6 +114,12 @@ impl SharedStorage {
         Ok(())
     }
 
+    pub fn unit_output_exists(&self, hash: &str) -> bool {
+        debug_assert_eq!(hash.len(), 64);
+        let output = self.layout.unit_outputs.join(&hash[..2]).join(&hash[2..]);
+        return output.exists();
+    }
+
     /// Inserts or deduplicates a file already in blob storage.
     ///
     /// This function will prefer reflink if available on the current filesystem but fallback to

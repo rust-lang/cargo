@@ -114,6 +114,8 @@
 //!
 //! There are checks for read-only filesystems, which is generally ignored.
 
+use crate::compiler::layout::SharedStorageLayout;
+use crate::compiler::shared_storage::{BuildSnapshot, UnitOutputEntry};
 use crate::ops::CleanContext;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::interning::InternedString;
@@ -122,7 +124,7 @@ use crate::util::{Filesystem, Progress, ProgressStyle};
 use crate::workspace::gc::GcOpts;
 use crate::{CargoResult, GlobalContext};
 use anyhow::{Context as _, bail};
-use cargo_util::collections::HashMap;
+use cargo_util::collections::{HashMap, HashSet};
 use cargo_util::paths;
 use cargo_util_terminal::Verbosity;
 use rusqlite::{Connection, ErrorCode, params};
@@ -130,6 +132,7 @@ use std::collections::hash_map;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 use tracing::{debug, trace};
+use walkdir::{DirEntry, WalkDir};
 
 /// The filename of the database.
 const GLOBAL_CACHE_FILENAME: &str = ".global-cache";
@@ -224,6 +227,7 @@ struct BasePaths {
     crate_dir: PathBuf,
     /// Root path to the `src` directories.
     src: PathBuf,
+    shared_storage: Option<PathBuf>,
 }
 
 /// Migrations which initialize the database, and can be used to evolve it over time.
@@ -560,6 +564,7 @@ impl GlobalCacheTracker {
             git_co: gctx.git_checkouts_path().into_path_unlocked(),
             crate_dir: gctx.registry_cache_path().into_path_unlocked(),
             src: gctx.registry_source_path().into_path_unlocked(),
+            shared_storage: gctx.shared_storage_dir(),
         };
         let now = now();
         trace!(target: "gc", "cleaning {gc_opts:?}");
@@ -646,6 +651,11 @@ impl GlobalCacheTracker {
         }
         if let Some(max_size) = gc_opts.max_download_size {
             Self::get_registry_items_to_clean_size_both(&tx, max_size, &base, &mut delete_paths)?;
+        }
+        if let Some(max_age) = gc_opts.max_shared_storage_age
+            && let Some(shared_storage) = &base.shared_storage
+        {
+            Self::get_shared_storage_items_to_clean(max_age, shared_storage, &mut delete_paths)?;
         }
 
         clean_ctx.remove_paths(&delete_paths)?;
@@ -1355,6 +1365,158 @@ impl GlobalCacheTracker {
         }
         Ok(())
     }
+
+    /// Get the paths to delete from shared storage.
+    fn get_shared_storage_items_to_clean(
+        max_age: Duration,
+        shared_storage: &Path,
+        delete_paths: &mut Vec<PathBuf>,
+    ) -> CargoResult<()> {
+        // The algorithm to garbage collect shared storage is basically
+        //  1. Walk snapshot usages
+        //  2. Walk all snapshots deleting those without usages
+        //  3. Create a set of all units being used
+        //  4. Wall all units deleting those not referenced.
+        //  5. Walk all blobs deleting those not referenced.
+        let storage = SharedStorageLayout::new(shared_storage);
+
+        if !storage.snapshot_usage.try_exists()? {
+            return Ok(());
+        }
+        let cutoff = Duration::from_secs(now())
+            .as_millis()
+            .saturating_sub(max_age.as_millis());
+        let used_snapshots = Self::walk_snapshot_usages(&storage, cutoff, delete_paths)?;
+
+        if !storage.snapshots.try_exists()? {
+            return Ok(());
+        }
+        let used_units = Self::walk_snapshots(&storage, &used_snapshots, delete_paths)?;
+
+        if !storage.unit_outputs.try_exists()? {
+            return Ok(());
+        }
+        let used_blobs = Self::walk_unit_outputs(&storage, &used_units, delete_paths)?;
+
+        if !storage.blobs.try_exists()? {
+            return Ok(());
+        }
+        Self::walk_blobs(&storage, &used_blobs, delete_paths)?;
+
+        Ok(())
+    }
+
+    fn walk_snapshot_usages(
+        storage: &SharedStorageLayout,
+        cutoff: u128,
+        delete_paths: &mut Vec<PathBuf>,
+    ) -> CargoResult<HashSet<PathBuf>> {
+        let mut used_snapshots = HashSet::default();
+        walk_partitioned_dir(&storage.snapshot_usage, |entry| {
+            let timestamp = paths::read(entry.path())?
+                .parse::<u128>()
+                .with_context(|| {
+                    format!(
+                        "invalid snapshot usage timestamp in `{}`",
+                        entry.path().display()
+                    )
+                })?;
+            if timestamp < cutoff {
+                delete_paths.push(entry.into_path());
+            } else {
+                used_snapshots.insert(
+                    entry
+                        .path()
+                        .strip_prefix(&storage.snapshot_usage)?
+                        .to_path_buf(),
+                );
+            }
+            Ok(())
+        })?;
+
+        Ok(used_snapshots)
+    }
+
+    fn walk_snapshots(
+        storage: &SharedStorageLayout,
+        used_snapshots: &HashSet<PathBuf>,
+        delete_paths: &mut Vec<PathBuf>,
+    ) -> CargoResult<HashSet<String>> {
+        let mut used_units = HashSet::default();
+        walk_partitioned_dir(&storage.snapshots, |entry| {
+            if !used_snapshots.contains(entry.path().strip_prefix(&storage.snapshots)?) {
+                delete_paths.push(entry.into_path());
+            } else {
+                let snapshot: BuildSnapshot = serde_json::from_str(&paths::read(entry.path())?)
+                    .with_context(|| {
+                        format!("failed to read snapshot `{}`", entry.path().display())
+                    })?;
+                used_units.extend(snapshot.unit_outputs);
+            }
+            Ok(())
+        })?;
+
+        Ok(used_units)
+    }
+
+    fn walk_unit_outputs(
+        storage: &SharedStorageLayout,
+        used_units: &HashSet<String>,
+        delete_paths: &mut Vec<PathBuf>,
+    ) -> CargoResult<HashSet<String>> {
+        let mut entry_hash = String::with_capacity(64);
+        let mut used_blobs = HashSet::default();
+        walk_partitioned_dir(&storage.unit_outputs, |entry| {
+            let prefix = entry.path().parent().unwrap().file_name().unwrap().to_str();
+            let suffix = entry.file_name().to_str();
+            let is_used = match (prefix, suffix) {
+                (Some(prefix), Some(suffix)) => {
+                    entry_hash.clear();
+                    entry_hash.push_str(prefix);
+                    entry_hash.push_str(suffix);
+                    used_units.contains(&entry_hash)
+                }
+                _ => false,
+            };
+            if !is_used {
+                delete_paths.push(entry.into_path());
+            } else {
+                let unit: UnitOutputEntry = serde_json::from_str(&paths::read(entry.path())?)
+                    .with_context(|| {
+                        format!("failed to read unit output `{}`", entry.path().display())
+                    })?;
+                used_blobs.extend(unit.blobs.into_values());
+            }
+            Ok(())
+        })?;
+
+        Ok(used_blobs)
+    }
+
+    fn walk_blobs(
+        storage: &SharedStorageLayout,
+        used_blobs: &HashSet<String>,
+        delete_paths: &mut Vec<PathBuf>,
+    ) -> CargoResult<()> {
+        let mut entry_hash = String::with_capacity(64);
+        walk_partitioned_dir(&storage.blobs, |entry| {
+            let prefix = entry.path().parent().unwrap().file_name().unwrap().to_str();
+            let suffix = entry.file_name().to_str();
+            let is_used = match (prefix, suffix) {
+                (Some(prefix), Some(suffix)) => {
+                    entry_hash.clear();
+                    entry_hash.push_str(prefix);
+                    entry_hash.push_str(suffix);
+                    used_blobs.contains(&entry_hash)
+                }
+                _ => false,
+            };
+            if !is_used {
+                delete_paths.push(entry.into_path());
+            }
+            Ok(())
+        })
+    }
 }
 
 /// Helper to generate the upsert for the parent tables.
@@ -1837,4 +1999,19 @@ fn du(path: &Path, table_name: &str) -> CargoResult<u64> {
     } else {
         cargo_util::du(&path, &[])
     }
+}
+
+/// Visits files in a directory partitioned by `hash[..2]/hash[2..]`.
+/// This is primarily meant for directories in [`SharedStorageLayout`].
+fn walk_partitioned_dir(
+    path: impl AsRef<Path>,
+    mut visit: impl FnMut(DirEntry) -> CargoResult<()>,
+) -> CargoResult<()> {
+    for entry in WalkDir::new(path).min_depth(2).max_depth(2) {
+        let entry = entry?;
+        if entry.file_type().is_file() {
+            visit(entry)?;
+        }
+    }
+    Ok(())
 }
