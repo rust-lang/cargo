@@ -523,10 +523,10 @@ fn relative_install_location_without_trailing_slash() {
     cmd.cwd(p.root());
     cmd.with_stderr_data(str![[r#"
 [WARNING] the `install.root` value `t1` defined in [ROOT]/.cargo/config.toml without a trailing slash is deprecated
-  |
-  = [NOTE] a future version of Cargo will treat it as relative to the configuration directory
-  = [HELP] add a trailing slash (`t1/`) to adopt the correct behavior and silence this warning
-  = [NOTE] see more at https://doc.rust-lang.org/cargo/reference/config.html#config-relative-paths
+ |
+ = [NOTE] a future version of Cargo will treat it as relative to the configuration directory
+ = [HELP] add a trailing slash (`t1/`) to adopt the correct behavior and silence this warning
+ = [NOTE] see more at https://doc.rust-lang.org/cargo/reference/config.html#config-relative-paths
 [INSTALLING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
@@ -635,10 +635,10 @@ fn relative_install_location_with_path_set() {
     cmd.env("PATH", new_path);
     cmd.with_stderr_data(str![[r#"
 [WARNING] the `install.root` value `t1` defined in [ROOT]/.cargo/config.toml without a trailing slash is deprecated
-  |
-  = [NOTE] a future version of Cargo will treat it as relative to the configuration directory
-  = [HELP] add a trailing slash (`t1/`) to adopt the correct behavior and silence this warning
-  = [NOTE] see more at https://doc.rust-lang.org/cargo/reference/config.html#config-relative-paths
+ |
+ = [NOTE] a future version of Cargo will treat it as relative to the configuration directory
+ = [HELP] add a trailing slash (`t1/`) to adopt the correct behavior and silence this warning
+ = [NOTE] see more at https://doc.rust-lang.org/cargo/reference/config.html#config-relative-paths
 [INSTALLING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
@@ -3410,9 +3410,9 @@ fn bin_and_example_flags_without_a_value() {
     cargo_process("install foo --bin")
         .with_stderr_data(str![[r#"
 [WARNING] `--bin` without a value is ignored
-  |
-  = [NOTE] this was previously accepted but will become a hard error in the future
-  = [HELP] pass a value to `--bin` or remove it
+ |
+ = [NOTE] this was previously accepted but will become a hard error in the future
+ = [HELP] pass a value to `--bin` or remove it
 [UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
@@ -3429,9 +3429,9 @@ fn bin_and_example_flags_without_a_value() {
     cargo_process("install foo --force --bin --bin")
         .with_stderr_data(str![[r#"
 [WARNING] `--bin` without a value is ignored
-  |
-  = [NOTE] this was previously accepted but will become a hard error in the future
-  = [HELP] pass a value to `--bin` or remove it
+ |
+ = [NOTE] this was previously accepted but will become a hard error in the future
+ = [HELP] pass a value to `--bin` or remove it
 [UPDATING] `dummy-registry` index
 [INSTALLING] foo v0.0.1
 [COMPILING] foo v0.0.1
@@ -3446,9 +3446,9 @@ fn bin_and_example_flags_without_a_value() {
     cargo_process("install foo --force --bin foo --bin")
         .with_stderr_data(str![[r#"
 [WARNING] `--bin` without a value is ignored
-  |
-  = [NOTE] this was previously accepted but will become a hard error in the future
-  = [HELP] pass a value to `--bin` or remove it
+ |
+ = [NOTE] this was previously accepted but will become a hard error in the future
+ = [HELP] pass a value to `--bin` or remove it
 [UPDATING] `dummy-registry` index
 [INSTALLING] foo v0.0.1
 [COMPILING] foo v0.0.1
@@ -3463,9 +3463,9 @@ fn bin_and_example_flags_without_a_value() {
     cargo_process("install bar --example")
         .with_stderr_data(str![[r#"
 [WARNING] `--example` without a value is ignored
-  |
-  = [NOTE] this was previously accepted but will become a hard error in the future
-  = [HELP] pass a value to `--example` or remove it
+ |
+ = [NOTE] this was previously accepted but will become a hard error in the future
+ = [HELP] pass a value to `--example` or remove it
 [UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)

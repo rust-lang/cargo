@@ -1003,8 +1003,8 @@ fn explicit_target_dir_tag_not_present() {
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
 [ERROR] cannot clean `[ROOT]/foo/bar`: missing or invalid `CACHEDIR.TAG` file
-  |
-  = [NOTE] cleaning has been aborted to prevent accidental deletion of unrelated files
+ |
+ = [NOTE] cleaning has been aborted to prevent accidental deletion of unrelated files
 
 "#]])
         .with_status(101)
@@ -1023,8 +1023,8 @@ fn explicit_target_dir_tag_invalid_signature() {
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
 [ERROR] cannot clean `[ROOT]/foo/bar`: invalid signature in `CACHEDIR.TAG` file
-  |
-  = [NOTE] cleaning has been aborted to prevent accidental deletion of unrelated files
+ |
+ = [NOTE] cleaning has been aborted to prevent accidental deletion of unrelated files
 
 "#]])
         .with_status(101)
@@ -1047,8 +1047,8 @@ fn explicit_target_dir_tag_symlink() {
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
 [ERROR] cannot clean `[ROOT]/foo/bar`: expect `CACHEDIR.TAG` to be a regular file, got a symlink
-  |
-  = [NOTE] cleaning has been aborted to prevent accidental deletion of unrelated files
+ |
+ = [NOTE] cleaning has been aborted to prevent accidental deletion of unrelated files
 
 "#]])
         .with_status(101)

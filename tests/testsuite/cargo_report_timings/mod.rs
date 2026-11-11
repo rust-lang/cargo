@@ -53,8 +53,8 @@ fn no_log() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no sessions found
-  |
-  = [NOTE] run command with `-Z build-analysis` to generate log files
+ |
+ = [NOTE] run command with `-Z build-analysis` to generate log files
 
 "#]])
         .run();
@@ -89,8 +89,8 @@ fn no_log_for_the_current_workspace() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no sessions found for workspace at `[ROOT]/bar`
-  |
-  = [NOTE] run command with `-Z build-analysis` to generate log files
+ |
+ = [NOTE] run command with `-Z build-analysis` to generate log files
 
 "#]])
         .run();
@@ -518,8 +518,8 @@ fn session_id_not_found() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] session `20260101T000000000Z-0000000000000000` not found for workspace at `[ROOT]/foo`
-  |
-  = [NOTE] run `cargo report sessions` to list available sessions
+ |
+ = [NOTE] run `cargo report sessions` to list available sessions
 
 "#]])
         .run();

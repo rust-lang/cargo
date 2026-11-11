@@ -491,9 +491,9 @@ fn cargo_install_with_toolchain_source_env() {
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.1
 [WARNING] default toolchain implicitly overridden with `test-toolchain` by environment variable
-  |
-  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
-  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
+ |
+ = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+ = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [COMPILING] foo v0.0.1
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
@@ -515,9 +515,9 @@ fn cargo_install_with_toolchain_source_path_override() {
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.1
 [WARNING] default toolchain implicitly overridden with `test-toolchain` by rustup directory override
-  |
-  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
-  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
+ |
+ = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+ = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [COMPILING] foo v0.0.1
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
@@ -539,9 +539,9 @@ fn cargo_install_with_toolchain_source_toolchain_file() {
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.1
 [WARNING] default toolchain implicitly overridden with `test-toolchain` by rustup toolchain file
-  |
-  = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
-  = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
+ |
+ = [HELP] use `cargo +stable install` if you meant to use the stable toolchain
+ = [NOTE] rustup selects the toolchain based on the parent environment and not the environment of the package being installed
 [COMPILING] foo v0.0.1
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]

@@ -42,8 +42,8 @@ fn no_logs() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no sessions found
-  |
-  = [NOTE] run build commands with `-Z build-analysis` to generate log files
+ |
+ = [NOTE] run build commands with `-Z build-analysis` to generate log files
 
 "#]])
         .run();
@@ -62,8 +62,8 @@ fn no_logs_in_workspace() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no sessions found for workspace at `[ROOT]/foo`
-  |
-  = [NOTE] run build commands with `-Z build-analysis` to generate log files
+ |
+ = [NOTE] run build commands with `-Z build-analysis` to generate log files
 
 "#]])
         .run();

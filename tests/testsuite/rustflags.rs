@@ -1443,8 +1443,8 @@ fn env_rustflags_misspelled() {
             .env("RUST_FLAGS", "foo")
             .with_stderr_data(str![[r#"
 [WARNING] ignoring environment variable `RUST_FLAGS`
-  |
-  = [HELP] rust flags are passed via `RUSTFLAGS`
+ |
+ = [HELP] rust flags are passed via `RUSTFLAGS`
 ...
 "#]])
             .run();
@@ -1472,8 +1472,8 @@ fn env_rustflags_misspelled_build_script() {
         .env("RUST_FLAGS", "foo")
         .with_stderr_data(str![[r#"
 [WARNING] ignoring environment variable `RUST_FLAGS`
-  |
-  = [HELP] rust flags are passed via `RUSTFLAGS`
+ |
+ = [HELP] rust flags are passed via `RUSTFLAGS`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1816,9 +1816,9 @@ fn target_rustflags_unquoted_dotted_tuple() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [WARNING] reading config from `[target.thumbv8m.main-none-eabihf]`
-  |
-  = [NOTE] `[target.thumbv8m.main-none-eabihf]` will be ignored or error in a future version
-  = [HELP] to configure `thumbv8m.main-none-eabihf`, quote the key like `[target."thumbv8m.main-none-eabihf"]`
+ |
+ = [NOTE] `[target.thumbv8m.main-none-eabihf]` will be ignored or error in a future version
+ = [HELP] to configure `thumbv8m.main-none-eabihf`, quote the key like `[target."thumbv8m.main-none-eabihf"]`
 [ERROR] failed to run `rustc` to learn about target-specific information
 
 Caused by:

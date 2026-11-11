@@ -1435,8 +1435,8 @@ fn precise_yanked() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [WARNING] selected package `bar@0.1.1` was yanked by the author
-  |
-  = [HELP] if possible, try a compatible non-yanked version
+ |
+ = [HELP] if possible, try a compatible non-yanked version
 [UPDATING] bar v0.1.0 -> v0.1.1
 
 "#]])
@@ -1476,8 +1476,8 @@ fn precise_yanked_multiple_presence() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [WARNING] selected package `bar@0.1.1` was yanked by the author
-  |
-  = [HELP] if possible, try a compatible non-yanked version
+ |
+ = [HELP] if possible, try a compatible non-yanked version
 [UPDATING] bar v0.1.0 -> v0.1.1
 
 "#]])

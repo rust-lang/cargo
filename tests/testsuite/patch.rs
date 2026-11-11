@@ -528,9 +528,9 @@ fn unused_with_mismatch_source_being_patched() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [WARNING] patch `bar v0.2.0 ([ROOT]/foo/bar)` was not used in the crate graph
-  |
-  = [HELP] perhaps you meant one of the following:
-          	crates-io
+ |
+ = [HELP] perhaps you meant one of the following:
+         	crates-io
 [WARNING] patch `bar v0.3.0 ([ROOT]/foo/baz)` was not used in the crate graph
 [HELP] Check that the patched package version and available features are compatible
       with the dependency requirements. If the patch has a different version from
@@ -1118,8 +1118,8 @@ fn add_patch_with_features() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [WARNING] unused field in patch for `bar`: `features`
-  |
-  = [HELP] configure `features` in the `dependencies` entry
+ |
+ = [HELP] configure `features` in the `dependencies` entry
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to highest compatible version
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
@@ -1131,8 +1131,8 @@ fn add_patch_with_features() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [WARNING] unused field in patch for `bar`: `features`
-  |
-  = [HELP] configure `features` in the `dependencies` entry
+ |
+ = [HELP] configure `features` in the `dependencies` entry
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -1171,8 +1171,8 @@ fn add_patch_with_setting_default_features() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [WARNING] unused field in patch for `bar`: `features`, `default-features`
-  |
-  = [HELP] configure `features`, `default-features` in the `dependencies` entry
+ |
+ = [HELP] configure `features`, `default-features` in the `dependencies` entry
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to highest compatible version
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
@@ -1184,8 +1184,8 @@ fn add_patch_with_setting_default_features() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [WARNING] unused field in patch for `bar`: `features`, `default-features`
-  |
-  = [HELP] configure `features`, `default-features` in the `dependencies` entry
+ |
+ = [HELP] configure `features`, `default-features` in the `dependencies` entry
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -2176,9 +2176,9 @@ fn two_semver_compatible() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [WARNING] patch `bar v0.1.1 ([ROOTURL]/override#[..])` was not used in the crate graph
-  |
-  = [HELP] perhaps you meant one of the following:
-          	[ROOT]/foo/bar
+ |
+ = [HELP] perhaps you meant one of the following:
+         	[ROOT]/foo/bar
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -2232,9 +2232,9 @@ fn multipatch_select_big() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [WARNING] patch `bar v0.1.0 ([ROOTURL]/override#[..])` was not used in the crate graph
-  |
-  = [HELP] perhaps you meant one of the following:
-          	[ROOT]/foo/bar
+ |
+ = [HELP] perhaps you meant one of the following:
+         	[ROOT]/foo/bar
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
