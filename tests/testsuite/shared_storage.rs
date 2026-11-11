@@ -122,6 +122,44 @@ fn should_deduplicate_basic_rustc_artifacts() {
 }
 
 #[cargo_test]
+fn should_save_build_manifest() {
+    Package::new("bar", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                bar = "0.1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .env("__CARGO_TEST_SHARED_STORAGE_FORCE_HARDLINK", "1")
+        .arg("-Zshared-object-storage")
+        .masquerade_as_nightly_cargo(&["shared-object-storage"])
+        .enable_mac_dsym()
+        .run();
+
+    shared_storage().assert_dir_layout(
+        str![[r#"
+[ROOT]/home/.cargo/storage/v1/objects/[HASH]
+[ROOT]/home/.cargo/storage/v1/objects/[HASH]
+[ROOT]/home/.cargo/storage/v1/objects/[HASH]
+
+"#]],
+        &[],
+    );
+}
+
+#[cargo_test]
 fn stores_dependency_artifact_by_content_hash() {
     Package::new("bar", "0.1.0").publish();
 
