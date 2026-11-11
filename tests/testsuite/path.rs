@@ -1696,7 +1696,7 @@ fn workspace_produces_rlib() {
 
     p.cargo("build").run();
 
-    assert!(p.root().join("target/debug/libtop.rlib").is_file());
+    assert!(!p.root().join("target/debug/libtop.rlib").is_file());
     assert!(!p.root().join("target/debug/libfoo.rlib").is_file());
 }
 

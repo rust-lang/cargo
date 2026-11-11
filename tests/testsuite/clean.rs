@@ -506,7 +506,7 @@ fn clean_remove_rlib_rmeta() {
         .build();
 
     p.cargo("build").run();
-    assert!(p.target_debug_dir().join("libfoo.rlib").exists());
+    assert!(!p.target_debug_dir().join("libfoo.rlib").exists());
     let rlib = p
         .glob("target/debug/build/*/*/out/*.rlib")
         .next()

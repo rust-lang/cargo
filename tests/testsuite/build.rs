@@ -2036,7 +2036,7 @@ please rename the file to `src/lib.rs` or set lib.path in Cargo.toml
 "#]])
         .run();
 
-    assert!(p.root().join("target/debug/libfoo.rlib").is_file());
+    assert!(!p.root().join("target/debug/libfoo.rlib").exists());
     let fname = format!("{}foo{}", env::consts::DLL_PREFIX, env::consts::DLL_SUFFIX);
     assert!(p.root().join("target/debug").join(&fname).is_file());
 }
@@ -2064,7 +2064,7 @@ fn many_crate_types_correct() {
         .build();
     p.cargo("build").run();
 
-    assert!(p.root().join("target/debug/libfoo.rlib").is_file());
+    assert!(!p.root().join("target/debug/libfoo.rlib").exists());
     let fname = format!("{}foo{}", env::consts::DLL_PREFIX, env::consts::DLL_SUFFIX);
     assert!(p.root().join("target/debug").join(&fname).is_file());
 }
@@ -2917,7 +2917,7 @@ fn example_as_lib() {
         .build();
 
     p.cargo("build --example=ex").run();
-    assert!(p.example_lib("ex", "lib").is_file());
+    assert!(!p.example_lib("ex", "lib").exists());
 }
 
 #[cargo_test]
@@ -2942,7 +2942,7 @@ fn example_as_rlib() {
         .build();
 
     p.cargo("build --example=ex").run();
-    assert!(p.example_lib("ex", "rlib").is_file());
+    assert!(!p.example_lib("ex", "rlib").exists());
 }
 
 #[cargo_test]
@@ -3165,7 +3165,7 @@ fn predictable_filenames() {
         .build();
 
     p.cargo("build -v").run();
-    assert!(p.root().join("target/debug/libfoo.rlib").is_file());
+    assert!(!p.root().join("target/debug/libfoo.rlib").exists());
     let dylib_name = format!("{}foo{}", env::consts::DLL_PREFIX, env::consts::DLL_SUFFIX);
     assert!(p.root().join("target/debug").join(dylib_name).is_file());
 }

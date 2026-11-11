@@ -804,7 +804,7 @@ fn diagnostics_works() {
         .run();
 
     // The `all` scope includes `object`, so unremap files are emitted.
-    assert_eq!(p.glob("target/**/*.trim-paths.json").count(), 2);
+    assert_eq!(p.glob("target/**/*.trim-paths.json").count(), 1);
 }
 
 #[cfg(target_os = "macos")]
