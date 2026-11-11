@@ -49,6 +49,8 @@ use std::marker;
 
 /// A type which can be deserialized as a configuration value which records
 /// where it was deserialized from.
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
+#[cfg_attr(feature = "unstable-schema", schemars(with = "T"))]
 #[derive(Debug, PartialEq, Clone)]
 pub struct Value<T> {
     /// The inner value that was deserialized.
