@@ -16,7 +16,7 @@ use crate::compiler::Unit;
 use crate::context;
 use crate::context::{
     CargoResolverConfig, ConfigRelativePath, ConfigRelativePathResolveExt, FeatureUnification,
-    IncompatibleRustVersions, Value,
+    IncompatibleRustVersions, PatchDependency, Value,
 };
 use crate::ops;
 use crate::ops::lockfile::LOCKFILE_NAME;
@@ -522,9 +522,8 @@ impl<'gctx> Workspace<'gctx> {
     }
 
     fn config_patch(&self) -> CargoResult<HashMap<Url, Vec<Patch>>> {
-        let config_patch: Option<
-            BTreeMap<String, BTreeMap<String, Value<TomlDependency<ConfigRelativePath>>>>,
-        > = self.gctx.get(["patch"])?;
+        let config_patch: Option<BTreeMap<String, BTreeMap<String, Value<PatchDependency>>>> =
+            self.gctx.get(["patch"])?;
 
         let source = SourceId::for_manifest_path(self.root_manifest())?;
 

@@ -83,6 +83,18 @@
         }
       ]
     },
+    "patch": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "$ref": "#/$defs/TomlDependency"
+        }
+      }
+    },
     "registries": {
       "type": [
         "object",
@@ -965,6 +977,164 @@
           }
         }
       }
+    },
+    "TomlDependency": {
+      "anyOf": [
+        {
+          "description": "In the simple format, only a version is specified, eg.\n`package = \"<version>\"`",
+          "type": "string"
+        },
+        {
+          "description": "The simple format is equivalent to a detailed dependency\nspecifying only a version, eg.\n`package = { version = \"<version>\" }`",
+          "$ref": "#/$defs/TomlDetailedDependency"
+        }
+      ]
+    },
+    "TomlDetailedDependency": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "registry": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "registry-index": {
+          "description": "The URL of the `registry` field.\nThis is an internal implementation detail. When Cargo creates a\npackage, it replaces `registry` with `registry-index` so that the\nmanifest contains the correct URL. All users won't have the same\nregistry names configured, so Cargo can't rely on just the name for\ncrates published by other users.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "path": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConfigRelativePath"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "base": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "git": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "branch": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tag": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "rev": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "builtin": {
+          "type": "boolean",
+          "const": true
+        },
+        "features": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "optional": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "default-features": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "default_features": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "package": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "public": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "artifact": {
+          "description": "One or more of `bin`, `cdylib`, `staticlib`, `bin:<name>`.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StringOrVec"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "lib": {
+          "description": "If set, the artifact should also be a dependency",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "target": {
+          "description": "A platform name, like `x86_64-apple-darwin`",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "StringOrVec": {
+      "description": "A TOML string or an array of strings.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ]
     },
     "RegistryConfig": {
       "description": "`[registries.NAME]` tables.\n\nThe values here should be kept in sync with `GlobalRegistryConfig`",

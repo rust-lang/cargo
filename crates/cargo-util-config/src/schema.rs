@@ -44,6 +44,7 @@ pub struct Config {
     pub future_incompat_report: Option<CargoFutureIncompatConfig>,
     pub http: Option<CargoHttpConfig>,
     pub net: Option<CargoNetConfig>,
+    pub patch: Option<HashMap<String, HashMap<String, PatchDependency>>>,
     pub registries: Option<HashMap<String, RegistryConfig>>,
     pub registry: Option<GlobalRegistryConfig>,
     pub resolver: Option<CargoResolverConfig>,
@@ -58,6 +59,8 @@ pub struct Credentials {
     pub registry: Option<RegistryCredential>,
     pub registries: Option<HashMap<String, RegistryCredential>>,
 }
+
+pub type PatchDependency = cargo_util_schemas::manifest::TomlDependency<ConfigRelativePath>;
 
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 #[derive(Debug, Default, Deserialize, PartialEq)]
