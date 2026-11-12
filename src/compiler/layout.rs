@@ -60,7 +60,7 @@
 //!             $pkgname-$META/
 //!                 # Set of source filenames for this package.
 //!                 dep-lib-$targetname
-//!                 # Timestamp when this package was last built.
+//!                 # Timestamp when this package was last built or execution for build scripts.
 //!                 invoked.timestamp
 //!                 # The fingerprint hash.
 //!                 lib-$targetname
@@ -106,8 +106,6 @@
 //!
 //!             # The package shows up twice with two different metadata hashes.
 //!             $pkgname-$META/  # For the output of the build script.
-//!                 # Timestamp when the build script was last executed.
-//!                 invoked.timestamp
 //!                 # Directory where script can output files ($OUT_DIR).
 //!                 out/
 //!                 # Output from the build script.
@@ -171,7 +169,7 @@
 //!                     fingerprint/
 //!                         # Set of source filenames for this package.
 //!                         dep-lib-$targetname
-//!                         # Timestamp when this package was last built.
+//!                         # Timestamp when this package was last built or execution for build scripts.
 //!                         invoked.timestamp
 //!                         # The fingerprint hash.
 //!                         lib-$targetname
@@ -187,8 +185,6 @@
 //!                     # Currently the only execution unit Cargo supports is running build script
 //!                     # binaries.
 //!                     run/
-//!                         # Timestamp of last execution.
-//!                         invoked.timestamp
 //!                         # Stdout output from the process.
 //!                         stdout
 //!                         # Stderr output from the process.
