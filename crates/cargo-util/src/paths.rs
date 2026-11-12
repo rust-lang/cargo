@@ -378,17 +378,16 @@ pub fn mtime_recursive(path: &Path) -> Result<FileTime> {
 }
 
 /// Record the current time on the filesystem (using the filesystem's clock)
-/// using a file at the given directory. Returns the current time.
-pub fn set_invocation_time(path: &Path) -> Result<FileTime> {
+/// using the given file. Returns the current time.
+pub fn set_invocation_time(timestamp: &Path) -> Result<FileTime> {
     // note that if `FileTime::from_system_time(SystemTime::now());` is determined to be sufficient,
     // then this can be removed.
-    let timestamp = path.join("invoked.timestamp");
     write(
         &timestamp,
         "This file has an mtime of when this was started.",
     )?;
     let ft = mtime(&timestamp)?;
-    tracing::debug!("invocation time for {:?} is {}", path, ft);
+    tracing::debug!("invocation time for {:?} is {}", timestamp, ft);
     Ok(ft)
 }
 
