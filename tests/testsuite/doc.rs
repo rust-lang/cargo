@@ -1194,6 +1194,19 @@ fn rerun_bin_doc_when_lib_rebuilt_after_lib_doc() {
             .unordered(),
         )
         .run();
+
+    p.cargo("doc --bin cli --no-deps -v")
+        .with_stderr_data(
+            str![[r#"
+[FRESH] bar v0.0.1 ([ROOT]/foo/bar)
+[FRESH] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/cli/index.html
+
+"#]]
+            .unordered(),
+        )
+        .run();
 }
 
 #[cargo_test]
