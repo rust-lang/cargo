@@ -682,7 +682,7 @@
             }
           ]
         },
-        "extern_map": {
+        "extern-map": {
           "anyOf": [
             {
               "$ref": "#/$defs/RustdocExternMap"
@@ -1703,7 +1703,7 @@
           "format": "uint",
           "minimum": 0
         },
-        "term_integration": {
+        "term-integration": {
           "description": "Communicate progress status with a terminal",
           "type": [
             "boolean",

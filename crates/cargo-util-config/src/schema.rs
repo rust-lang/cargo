@@ -193,6 +193,7 @@ pub struct SourceConfigDef {
 
 #[cfg(feature = "unstable-schema")]
 #[derive(schemars::JsonSchema)]
+#[schemars(rename_all = "kebab-case")]
 pub struct DocConfig {
     pub browser: Option<PathAndArgs>,
     pub extern_map: Option<RustdocExternMap>,
@@ -756,6 +757,7 @@ pub struct TermConfig {
 /// progress = { when = "always", width = 80 }
 /// ```
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
+#[cfg_attr(feature = "unstable-schema", schemars(rename_all = "kebab-case"))]
 #[derive(Debug, Default)]
 pub struct ProgressConfig {
     pub when: ProgressWhen,
