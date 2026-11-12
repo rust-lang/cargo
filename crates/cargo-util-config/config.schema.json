@@ -185,6 +185,16 @@
           "type": "null"
         }
       ]
+    },
+    "unstable": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TomlValue"
+        },
+        {
+          "type": "null"
+        }
+      ]
     }
   },
   "$defs": {
@@ -1722,6 +1732,7 @@
         "never",
         "always"
       ]
-    }
+    },
+    "TomlValue": true
   }
 }

@@ -59,6 +59,8 @@ pub struct Config {
     pub resolver: Option<CargoResolverConfig>,
     pub source: Option<HashMap<String, SourceConfigDef>>,
     pub term: Option<TermConfig>,
+    #[schemars(with = "Option<cargo_util_schemas::schema::TomlValueWrapper>")]
+    pub unstable: Option<toml::Value>,
 }
 
 /// Cargo's `credentials.toml` file
