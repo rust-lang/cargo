@@ -23,8 +23,8 @@ pub struct Shell {
     /// Flag that indicates the current line needs to be cleared before
     /// printing. Used when a progress bar is currently displayed.
     needs_clear: bool,
-    /// The progress line currently on screen, as last written by
-    /// [`Shell::transient_status`]. Used for redrawing.
+    /// The progress line currently shown, set by [`Shell::transient_status`].
+    /// Used for redrawing in a single write.
     transient_line: Option<Vec<u8>>,
 }
 
