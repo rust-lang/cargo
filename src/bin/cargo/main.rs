@@ -161,6 +161,13 @@ fn aliased_command(gctx: &GlobalContext, command: &str) -> CargoResult<Option<Ve
     Ok(result)
 }
 
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
+enum CommandInfo {
+    BuiltIn { about: Option<String> },
+    External { path: PathBuf },
+    Alias { target: StringOrVec },
+}
+
 /// List all runnable commands
 fn list_commands(gctx: &GlobalContext) -> BTreeMap<String, CommandInfo> {
     let mut commands = third_party_subcommands(gctx);
@@ -231,13 +238,8 @@ fn third_party_subcommands(gctx: &GlobalContext) -> BTreeMap<String, CommandInfo
 fn user_defined_aliases(gctx: &GlobalContext) -> BTreeMap<String, CommandInfo> {
     let mut commands = BTreeMap::new();
     if let Ok(aliases) = gctx.get::<BTreeMap<String, StringOrVec>>(["alias"]) {
-        for (name, target) in aliases.iter() {
-            commands.insert(
-                name.to_string(),
-                CommandInfo::Alias {
-                    target: target.clone(),
-                },
-            );
+        for (name, target) in aliases {
+            commands.insert(name, CommandInfo::Alias { target: target });
         }
     }
     commands
