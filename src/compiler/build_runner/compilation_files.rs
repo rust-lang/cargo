@@ -316,7 +316,8 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
 
     /// The file that stores the timestamp of a build in it's mtime
     pub fn timestamp_file(&self, unit: &Unit) -> PathBuf {
-        self.fingerprint_dir(unit).join("invoked.timestamp")
+        self.fingerprint_file_path(unit, "")
+            .with_added_extension("timestamp")
     }
 
     /// The lock location for a given build unit.

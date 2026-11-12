@@ -134,7 +134,7 @@
 //! - A "dep-info" file which is a translation of rustc's `*.d` dep-info files
 //!   to a Cargo-specific format that tweaks file names and is optimized for
 //!   reading quickly.
-//! - An `invoked.timestamp` file whose filesystem mtime is updated every time
+//! - A `.timestamp` file whose filesystem mtime is updated every time
 //!   the Unit is built. This is used for capturing the time when the build
 //!   starts, to detect if files are changed in the middle of the build. See
 //!   below for more details.
@@ -247,7 +247,7 @@
 //!
 //! When a build is complete, the mtime of the dep-info file in the
 //! fingerprint directory is modified to rewind it to the time when the build
-//! started. This is done by creating an `invoked.timestamp` file when the
+//! started. This is done by creating a `.timestamp` file when the
 //! build starts to capture the start time. The mtime is rewound to the start
 //! to handle the case where the user modifies a source file while a build is
 //! running. Cargo can't know whether or not the file was included in the

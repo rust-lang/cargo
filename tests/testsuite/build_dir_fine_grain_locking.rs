@@ -47,7 +47,7 @@ fn binary_with_debug() {
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo.json
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/dep-bin-foo
-[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/invoked.timestamp
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo.timestamp
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/output-bin-foo
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/foo[..][EXE]
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/foo[..].d
@@ -105,7 +105,7 @@ fn binary_with_release() {
 [ROOT]/foo/build-dir/release/build/foo/[HASH]/fingerprint/bin-foo
 [ROOT]/foo/build-dir/release/build/foo/[HASH]/fingerprint/bin-foo.json
 [ROOT]/foo/build-dir/release/build/foo/[HASH]/fingerprint/dep-bin-foo
-[ROOT]/foo/build-dir/release/build/foo/[HASH]/fingerprint/invoked.timestamp
+[ROOT]/foo/build-dir/release/build/foo/[HASH]/fingerprint/bin-foo.timestamp
 [ROOT]/foo/build-dir/release/build/foo/[HASH]/fingerprint/output-bin-foo
 [ROOT]/foo/build-dir/release/build/foo/[HASH]/out/foo[..][EXE]
 [ROOT]/foo/build-dir/release/build/foo/[HASH]/out/foo[..].d
@@ -221,7 +221,7 @@ fn should_default_to_target() {
 [ROOT]/foo/target/debug/build/foo/[HASH]/fingerprint/bin-foo
 [ROOT]/foo/target/debug/build/foo/[HASH]/fingerprint/bin-foo.json
 [ROOT]/foo/target/debug/build/foo/[HASH]/fingerprint/dep-bin-foo
-[ROOT]/foo/target/debug/build/foo/[HASH]/fingerprint/invoked.timestamp
+[ROOT]/foo/target/debug/build/foo/[HASH]/fingerprint/bin-foo.timestamp
 [ROOT]/foo/target/debug/build/foo/[HASH]/fingerprint/output-bin-foo
 [ROOT]/foo/target/debug/build/foo/[HASH]/out/foo[..][EXE]
 [ROOT]/foo/target/debug/build/foo/[HASH]/out/foo[..].d
@@ -252,7 +252,7 @@ fn should_respect_env_var() {
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo.json
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/dep-bin-foo
-[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/invoked.timestamp
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo.timestamp
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/foo[..][EXE]
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/foo[..].d
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/.lock
@@ -301,18 +301,18 @@ fn build_script_should_output_to_build_dir() {
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/build_script_build[EXE]
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/foo[..][EXE]
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/foo[..].d
-[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/invoked.timestamp
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo.timestamp
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/dep-bin-foo
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo.json
 [ROOT]/foo/build-dir/.rustc_info.json
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/run-build-script-build-script-build
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/run-build-script-build-script-build.json
-[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/invoked.timestamp
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/run-build-script-build-script-build.timestamp
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/dep-build-script-build-script-build
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/build-script-build-script-build
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/build-script-build-script-build.json
-[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/invoked.timestamp
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/build-script-build-script-build.timestamp
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/run/stdout
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/run/root-output
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/run/stderr
@@ -367,15 +367,15 @@ fn cargo_tmpdir_should_output_to_build_dir() {
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/foo-[HASH][EXE]
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/foo[EXE]
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/foo[..][EXE]
-[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/invoked.timestamp
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/test-bin-foo.timestamp
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/dep-test-bin-foo
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/test-bin-foo
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/test-bin-foo.json
-[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/invoked.timestamp
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/test-integration-test-foo.timestamp
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/dep-test-integration-test-foo
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/test-integration-test-foo
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/test-integration-test-foo.json
-[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/invoked.timestamp
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo.timestamp
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/dep-bin-foo
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo.json
@@ -429,7 +429,7 @@ fn examples_should_output_to_build_dir_and_uplift_to_target_dir() {
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/dep-example-foo
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/example-foo
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/example-foo.json
-[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/invoked.timestamp
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/example-foo.timestamp
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/output-example-foo
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/foo[..][EXE]
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/foo[..].d
@@ -479,11 +479,11 @@ fn benches_should_output_to_build_dir() {
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/foo[..].d
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/foo-[HASH][EXE]
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/foo[..][EXE]
-[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/invoked.timestamp
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/test-bench-foo.timestamp
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/dep-test-bench-foo
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/test-bench-foo
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/test-bench-foo.json
-[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/invoked.timestamp
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo.timestamp
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/dep-bin-foo
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo.json
@@ -566,7 +566,7 @@ fn cargo_rustdoc_json_should_output_to_target_dir() {
 [ROOT]/foo/build-dir/debug/.cargo-build-lock
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/doc-lib-foo
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/doc-lib-foo.json
-[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/invoked.timestamp
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/doc-lib-foo.timestamp
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/foo.json
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/.lock
 
@@ -607,7 +607,7 @@ fn cargo_package_should_build_in_build_dir_and_output_to_target_dir() {
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo.json
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/dep-bin-foo
-[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/invoked.timestamp
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo.timestamp
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/output-bin-foo
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/foo[..][EXE]
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/foo[..].d
@@ -691,7 +691,7 @@ fn cargo_clean_should_clean_the_target_dir_and_build_dir() {
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo.json
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/dep-bin-foo
-[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/invoked.timestamp
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo.timestamp
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/output-bin-foo
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/foo[..][EXE]
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/foo[..].d
@@ -766,7 +766,7 @@ fn cargo_clean_should_remove_correct_files() {
 [ROOT]/foo/build-dir/debug/build/bar/[HASH]/out/libbar-[HASH].rlib
 [ROOT]/foo/build-dir/debug/build/bar/[HASH]/out/libbar-[HASH].rmeta
 [ROOT]/foo/build-dir/debug/build/bar/[HASH]/fingerprint/dep-lib-bar
-[ROOT]/foo/build-dir/debug/build/bar/[HASH]/fingerprint/invoked.timestamp
+[ROOT]/foo/build-dir/debug/build/bar/[HASH]/fingerprint/lib-bar.timestamp
 [ROOT]/foo/build-dir/debug/build/bar/[HASH]/fingerprint/lib-bar
 [ROOT]/foo/build-dir/debug/build/bar/[HASH]/fingerprint/lib-bar.json
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/foo[..][EXE]
@@ -774,7 +774,7 @@ fn cargo_clean_should_remove_correct_files() {
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo.json
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/dep-bin-foo
-[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/invoked.timestamp
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo.timestamp
 [ROOT]/foo/build-dir/debug/build/bar/[HASH]/fingerprint/output-lib-bar
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/output-bin-foo
 [ROOT]/foo/build-dir/debug/build/bar/[HASH]/.lock
@@ -797,7 +797,7 @@ fn cargo_clean_should_remove_correct_files() {
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo.json
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/dep-bin-foo
-[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/invoked.timestamp
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo.timestamp
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/.lock
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/output-bin-foo
 
@@ -937,7 +937,7 @@ fn template_workspace_root() {
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo.json
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/dep-bin-foo
-[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/invoked.timestamp
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo.timestamp
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/output-bin-foo
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/foo[..][EXE]
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/foo[..].d
@@ -988,7 +988,7 @@ fn template_cargo_cache_home() {
 [ROOT]/home/.cargo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo
 [ROOT]/home/.cargo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo.json
 [ROOT]/home/.cargo/build-dir/debug/build/foo/[HASH]/fingerprint/dep-bin-foo
-[ROOT]/home/.cargo/build-dir/debug/build/foo/[HASH]/fingerprint/invoked.timestamp
+[ROOT]/home/.cargo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo.timestamp
 [ROOT]/home/.cargo/build-dir/debug/build/foo/[HASH]/fingerprint/output-bin-foo
 [ROOT]/home/.cargo/build-dir/debug/build/foo/[HASH]/out/foo[..][EXE]
 [ROOT]/home/.cargo/build-dir/debug/build/foo/[HASH]/out/foo[..].d
@@ -1053,7 +1053,7 @@ fn template_workspace_path_hash() {
 [ROOT]/foo/foo/[HASH]/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo
 [ROOT]/foo/foo/[HASH]/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo.json
 [ROOT]/foo/foo/[HASH]/build-dir/debug/build/foo/[HASH]/fingerprint/dep-bin-foo
-[ROOT]/foo/foo/[HASH]/build-dir/debug/build/foo/[HASH]/fingerprint/invoked.timestamp
+[ROOT]/foo/foo/[HASH]/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo.timestamp
 [ROOT]/foo/foo/[HASH]/build-dir/debug/build/foo/[HASH]/fingerprint/output-bin-foo
 [ROOT]/foo/foo/[HASH]/build-dir/debug/build/foo/[HASH]/out/foo[..][EXE]
 [ROOT]/foo/foo/[HASH]/build-dir/debug/build/foo/[HASH]/out/foo[..].d
@@ -1122,7 +1122,7 @@ fn template_workspace_path_hash_should_handle_symlink() {
 [ROOT]/foo/foo/[HASH]/build-dir/CACHEDIR.TAG
 [ROOT]/foo/foo/[HASH]/build-dir/debug/.cargo-build-lock
 [ROOT]/foo/foo/[HASH]/build-dir/debug/build/foo/[HASH]/fingerprint/dep-lib-foo
-[ROOT]/foo/foo/[HASH]/build-dir/debug/build/foo/[HASH]/fingerprint/invoked.timestamp
+[ROOT]/foo/foo/[HASH]/build-dir/debug/build/foo/[HASH]/fingerprint/lib-foo.timestamp
 [ROOT]/foo/foo/[HASH]/build-dir/debug/build/foo/[HASH]/fingerprint/lib-foo
 [ROOT]/foo/foo/[HASH]/build-dir/debug/build/foo/[HASH]/fingerprint/lib-foo.json
 [ROOT]/foo/foo/[HASH]/build-dir/debug/build/foo/[HASH]/fingerprint/output-lib-foo
@@ -1165,7 +1165,7 @@ fn template_workspace_path_hash_should_handle_symlink() {
 [ROOT]/foo/foo/[HASH]/build-dir/CACHEDIR.TAG
 [ROOT]/foo/foo/[HASH]/build-dir/debug/.cargo-build-lock
 [ROOT]/foo/foo/[HASH]/build-dir/debug/build/foo/[HASH]/fingerprint/dep-lib-foo
-[ROOT]/foo/foo/[HASH]/build-dir/debug/build/foo/[HASH]/fingerprint/invoked.timestamp
+[ROOT]/foo/foo/[HASH]/build-dir/debug/build/foo/[HASH]/fingerprint/lib-foo.timestamp
 [ROOT]/foo/foo/[HASH]/build-dir/debug/build/foo/[HASH]/fingerprint/lib-foo
 [ROOT]/foo/foo/[HASH]/build-dir/debug/build/foo/[HASH]/fingerprint/lib-foo.json
 [ROOT]/foo/foo/[HASH]/build-dir/debug/build/foo/[HASH]/fingerprint/output-lib-foo
@@ -1305,8 +1305,8 @@ CARGO_BIN_FILE_BAR_bar=[ROOT]/foo/build-dir/debug/build/bar/[HASH]/artifact/bin/
 [ROOT]/foo/build-dir/debug/build/bar/[HASH]/fingerprint/bin-bar
 [ROOT]/foo/build-dir/debug/build/bar/[HASH]/fingerprint/bin-bar.json
 [ROOT]/foo/build-dir/debug/build/bar/[HASH]/fingerprint/dep-bin-bar
-[ROOT]/foo/build-dir/debug/build/bar/[HASH]/fingerprint/invoked.timestamp
-[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/invoked.timestamp
+[ROOT]/foo/build-dir/debug/build/bar/[HASH]/fingerprint/bin-bar.timestamp
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo.timestamp
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo.json
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/dep-bin-foo
@@ -1363,7 +1363,7 @@ fn new_layout_opt_out() {
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo.json
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/dep-bin-foo
-[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/invoked.timestamp
+[ROOT]/foo/build-dir/debug/build/foo/[HASH]/fingerprint/bin-foo.timestamp
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/foo[..][EXE]
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/foo[..].d
 [ROOT]/foo/build-dir/debug/build/foo/[HASH]/.lock
