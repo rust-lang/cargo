@@ -288,12 +288,9 @@ impl State {
         // Only update if the line has changed.
         if shell.is_cleared() || self.last_line.as_ref() != Some(&line) {
             shell.set_needs_clear(false);
-            shell.transient_status(&self.name)?;
-            if let Some(tb) = report {
-                write!(shell.err(), "{line}{tb}\r")?;
-            } else {
-                write!(shell.err(), "{line}\r")?;
-            }
+            // Emit as single write.
+            let tb = report.unwrap_or(StatusValue::None);
+            shell.transient_status(&self.name, format_args!("{line}{tb}\r"))?;
             self.last_line = Some(line);
             shell.set_needs_clear(true);
         }
