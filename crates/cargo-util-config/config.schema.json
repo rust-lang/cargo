@@ -435,31 +435,13 @@
     },
     "JobsConfig": {
       "description": "Configuration for `jobs` in `build` section. There are two\nways to configure: An integer or a simple string expression.\n\n```toml\n[build]\njobs = 1\n```\n\n```toml\n[build]\njobs = \"default\" # Currently only support \"default\".\n```",
-      "oneOf": [
+      "anyOf": [
         {
-          "type": "object",
-          "properties": {
-            "Integer": {
-              "type": "integer",
-              "format": "int32"
-            }
-          },
-          "required": [
-            "Integer"
-          ],
-          "additionalProperties": false
+          "type": "integer",
+          "format": "int32"
         },
         {
-          "type": "object",
-          "properties": {
-            "String": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "String"
-          ],
-          "additionalProperties": false
+          "type": "string"
         }
       ]
     },

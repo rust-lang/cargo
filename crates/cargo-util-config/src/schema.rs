@@ -453,6 +453,7 @@ pub struct CargoSshConfig {
 /// jobs = "default" # Currently only support "default".
 /// ```
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
+#[cfg_attr(feature = "unstable-schema", schemars(untagged))]
 #[derive(Debug, Clone)]
 pub enum JobsConfig {
     Integer(i32),
