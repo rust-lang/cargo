@@ -140,7 +140,7 @@ fn with_multiple_crate_types() {
                 version = "1.2.3"
 
                 [lib]
-                crate-type = ["dylib", "rlib"]
+                crate-type = ["dylib", "staticlib", "rlib"]
             "#,
         )
         .file("src/main.rs", r#"fn main() { let _i = foo::give_five(); }"#)
@@ -154,7 +154,7 @@ fn with_multiple_crate_types() {
         .run();
 
     assert_eq!(
-        3,
+        4,
         p.glob(p.target_debug_dir().join("*.cargo-sbom.json"))
             .count()
     );
@@ -173,6 +173,7 @@ fn with_multiple_crate_types() {
       "id": "path+[ROOTURL]/foo#1.2.3",
       "kind": [
         "dylib",
+        "staticlib",
         "rlib"
       ]
     }
@@ -381,7 +382,7 @@ name = "ex_bin"
 
 [[example]]
 name = "ex_lib"
-crate-type = ["rlib", "dylib"]
+crate-type = ["rlib", "dylib", "staticlib"]
             "#,
         )
         .file("src/lib.rs", "pub fn give_five() -> i32 { 5 }")
@@ -403,7 +404,7 @@ crate-type = ["rlib", "dylib"]
         .run();
 
     assert_eq!(
-        3,
+        4,
         p.glob(p.target_debug_dir().join("examples/*.cargo-sbom.json"))
             .count()
     );
@@ -445,7 +446,7 @@ crate-type = ["rlib", "dylib"]
         .is_json(),
     );
 
-    for kind in ["rlib", "dylib"] {
+    for kind in ["rlib", "dylib", "staticlib"] {
         p.assert_file(
             append_sbom_suffix(&p.example_lib("ex_lib", kind)),
             cargo_test_support::str![[r#"
