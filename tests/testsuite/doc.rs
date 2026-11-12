@@ -1149,6 +1149,54 @@ fn rerun_when_dir_removed() {
 }
 
 #[cargo_test]
+fn rerun_bin_doc_when_lib_rebuilt_after_lib_doc() {
+    // Doc units of a package share a fingerprint directory, so documenting
+    // the lib must not make the bin docs look up to date.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+
+                [dependencies]
+                bar = { path = "bar" }
+            "#,
+        )
+        .file("src/lib.rs", "pub fn foo() {}")
+        .file("src/bin/cli.rs", "fn main() { foo::foo(); }")
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file("bar/src/lib.rs", "pub fn bar() {}")
+        .build();
+
+    p.cargo("doc --no-deps").run();
+
+    cargo_test_support::sleep_ms(1000);
+    p.change_file("bar/src/lib.rs", "pub fn bar() {} pub fn baz() {}");
+
+    // Rebuild the lib that the bin docs depend on, then only document the lib.
+    p.cargo("check --lib").run();
+    p.cargo("doc --lib --no-deps").run();
+
+    p.cargo("doc --bin cli --no-deps -v")
+        .with_stderr_data(
+            str![[r#"
+[FRESH] bar v0.0.1 ([ROOT]/foo/bar)
+[DIRTY] foo v0.0.1 ([ROOT]/foo): the dependency `foo` was rebuilt ([TIME_DIFF_AFTER_LAST_BUILD])
+[DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustdoc [..]--crate-name cli [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/cli/index.html
+
+"#]]
+            .unordered(),
+        )
+        .run();
+}
+
+#[cargo_test]
 fn document_only_lib() {
     let p = project()
         .file(
