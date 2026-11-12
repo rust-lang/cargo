@@ -364,7 +364,7 @@ fn rustc(
         .get_cwd()
         .unwrap_or_else(|| build_runner.bcx.gctx.cwd())
         .to_path_buf();
-    let fingerprint_dir = build_runner.files().fingerprint_dir(unit);
+    let timestamp_file = build_runner.files().timestamp_file(unit);
     let script_metadatas = build_runner.find_build_script_metadatas(unit);
     let is_local = unit.is_local();
     let artifact = unit.artifact;
@@ -475,7 +475,7 @@ fn rustc(
         }
 
         state.running(&rustc);
-        let timestamp = paths::set_invocation_time(&fingerprint_dir)?;
+        let timestamp = paths::set_invocation_time(&timestamp_file)?;
         if let Some(sbom) = sbom {
             for file in sbom_files {
                 tracing::debug!("writing sbom to {}", file.display());
@@ -1102,7 +1102,7 @@ fn rustdoc(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<W
         .get_cwd()
         .unwrap_or_else(|| build_runner.bcx.gctx.cwd())
         .to_path_buf();
-    let fingerprint_dir = build_runner.files().fingerprint_dir(unit);
+    let timestamp_file = build_runner.files().timestamp_file(unit);
     let is_local = unit.is_local();
     let env_config = Arc::clone(build_runner.bcx.gctx.env_config()?);
     let capture_rusage = build_runner.bcx.capture_rusage();
@@ -1175,7 +1175,7 @@ fn rustdoc(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<W
             }
         };
         state.running(&rustdoc);
-        let timestamp = paths::set_invocation_time(&fingerprint_dir)?;
+        let timestamp = paths::set_invocation_time(&timestamp_file)?;
 
         let (stats, result) = rustdoc.exec_with_streaming(
             &mut |line| on_stdout_line(state, line, package_id, &target),

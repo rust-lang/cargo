@@ -299,11 +299,11 @@ fn build_script_should_output_to_build_dir() {
 [ROOT]/foo/build-dir/debug/.fingerprint/foo-[HASH]/build-script-build-script-build
 [ROOT]/foo/build-dir/debug/.fingerprint/foo-[HASH]/build-script-build-script-build.json
 [ROOT]/foo/build-dir/debug/.fingerprint/foo-[HASH]/output-build-script-build-script-build
+[ROOT]/foo/build-dir/debug/.fingerprint/foo-[HASH]/invoked.timestamp
 [ROOT]/foo/build-dir/debug/build/foo-[HASH]/build_script_build[..].d
 [ROOT]/foo/build-dir/debug/build/foo-[HASH]/build_script_build[..][EXE]
 [ROOT]/foo/build-dir/debug/build/foo-[HASH]/build-script-build[EXE]
 [ROOT]/foo/build-dir/debug/build/foo-[HASH]/out/foo.txt
-[ROOT]/foo/build-dir/debug/build/foo-[HASH]/invoked.timestamp
 [ROOT]/foo/build-dir/debug/build/foo-[HASH]/output
 [ROOT]/foo/build-dir/debug/build/foo-[HASH]/stderr
 [ROOT]/foo/build-dir/debug/build/foo-[HASH]/root-output

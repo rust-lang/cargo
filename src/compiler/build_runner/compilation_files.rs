@@ -314,6 +314,11 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         self.layout(unit.kind).build_dir().fingerprint(&dir)
     }
 
+    /// The file that stores the timestamp of a build in it's mtime
+    pub fn timestamp_file(&self, unit: &Unit) -> PathBuf {
+        self.fingerprint_dir(unit).join("invoked.timestamp")
+    }
+
     /// The lock location for a given build unit.
     pub fn build_unit_lock(&self, unit: &Unit) -> PathBuf {
         let dir = self.pkg_dir(unit);

@@ -505,6 +505,7 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
     let build_script_outputs = Arc::clone(&build_runner.build_script_outputs);
     let id = unit.pkg.package_id();
     let run_files = BuildScriptRunFiles::for_unit(build_runner, unit);
+    let timestamp_file = build_runner.files().timestamp_file(unit);
     let host_target_root = build_runner.files().host_dest().map(|v| v.to_path_buf());
     let all = (
         id,
@@ -597,7 +598,7 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
 
         // And now finally, run the build command itself!
         state.running(&cmd);
-        let timestamp = paths::set_invocation_time(&run_files.root)?;
+        let timestamp = paths::set_invocation_time(&timestamp_file)?;
         let prefix = format!("[{} {}] ", id.name(), id.version());
         let mut log_messages_in_case_of_panic = Vec::new();
         let span = tracing::debug_span!("build_script", process = cmd.to_string());
