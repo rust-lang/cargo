@@ -505,7 +505,8 @@ fn main() {
 #### Major: Adding `repr(align)` to a struct, union, or enum {#repr-align-add}
 
 It is a breaking change to add `repr(align)` to a struct, union, or enum.
-Making a type `repr(align)` would break any use of that type in a `repr(packed)` type because that combination is not allowed.
+Raising a type's alignment above `N` of an `repr(packed(N))` type containing it
+would make references to that field unaligned, which is not allowed.
 
 <!-- TODO: This seems like it should be extraordinarily rare. Should there be any exceptions carved out for this? -->
 
@@ -529,8 +530,8 @@ pub struct Aligned {
 // Example usage that will break.
 use updated_crate::Aligned;
 
-#[repr(packed)]
-pub struct Packed { // Error: packed type cannot transitively contain a `#[repr(align)]` type
+#[repr(packed(4))]
+pub struct Packed {
     f1: Aligned,
 }
 
@@ -538,6 +539,7 @@ fn main() {
     let p = Packed {
         f1: Aligned { a: 123 },
     };
+    let f1 = &p.f1; // Error: reference to field of packed struct is unaligned
 }
 ```
 
