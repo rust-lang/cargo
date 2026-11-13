@@ -959,6 +959,21 @@ impl GlobalContext {
         self.shell()
             .set_unstable_flags_rustc_unicode(self.unstable_flags.rustc_unicode)?;
 
+        // Without this a user could set `NO_GRAPHICS=1` and be able to use an
+        // unstable feature without it being enabled
+        if !self.unstable_flags.term_graphics {
+            self.shell().set_graphics(true)?;
+        }
+
+        if let Some(graphics) = term.graphics {
+            if self.unstable_flags.term_graphics {
+                self.shell().set_graphics(graphics)?;
+            } else {
+                self.shell()
+                    .warn("ignoring `term.graphics` without `-Zterm-graphics`")?;
+            }
+        }
+
         Ok(())
     }
 

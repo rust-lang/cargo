@@ -123,6 +123,7 @@ Each new feature described below should explain how to use it.
     * [`cargo rustc --print`](#rustc---print) --- Calls rustc with `--print` to display information from rustc.
     * [Build analysis](#build-analysis) --- Record and persist detailed build metrics across runs, with new commands to query past builds.
     * [`rustc-unicode`](#rustc-unicode) --- Enables `rustc`'s unicode error format in Cargo's error messages
+    * [`term-graphics`](#term-graphics) --- Controls  graphics in its terminal output
 * Configuration
     * [`cargo config`](#cargo-config) --- Adds a new subcommand for viewing config files.
 * Registries
@@ -2046,6 +2047,15 @@ also useful for `#[no_std]` crates. See the RFC for further details.
 The Package ID specification can refer to builtin packages using the form
 `builtin://.#<name>`. For example, `builtin://.#core` identifies the builtin
 core package, distinguishing it from packages named "core" from other sources.
+
+## term-graphics
+* Tracking Issue: [rust-lang/rust#165164](https://github.com/rust-lang/rust/issues/165164)
+
+The `-Z term-graphics` enables the `term.graphics` configuration option to
+control whether Cargo and `rustc` use graphical decorations and source
+snippets in their diagnostic output.
+If the `-Z term-graphics` unstable flag is not enabled, then the
+`term.term-graphics` configuration will be ignored.
 
 # Stabilized and removed features
 

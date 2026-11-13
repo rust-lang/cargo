@@ -741,6 +741,7 @@ pub struct TermConfig {
     pub color: Option<String>,
     pub hyperlinks: Option<bool>,
     pub unicode: Option<bool>,
+    pub graphics: Option<bool>,
     pub progress: Option<ProgressConfig>,
 }
 

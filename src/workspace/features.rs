@@ -933,6 +933,7 @@ unstable_cli_options!(
     separate_nightlies: bool,
     skip_rustdoc_fingerprint: bool,
     target_applies_to_host: bool = ("Enable the `target-applies-to-host` key in the .cargo/config.toml file"),
+    term_graphics: bool = ("Enable the `term.graphics` key in the .cargo/config.toml file"),
     unstable_options: bool = ("Allow the usage of unstable options"),
 );
 
@@ -1477,6 +1478,7 @@ impl CliUnstable {
             "script" => self.script = parse_empty(k, v)?,
             "target-applies-to-host" => self.target_applies_to_host = parse_empty(k, v)?,
             "panic-immediate-abort" => self.panic_immediate_abort = parse_empty(k, v)?,
+            "term-graphics" => self.term_graphics = parse_empty(k, v)?,
             "unstable-options" => self.unstable_options = parse_empty(k, v)?,
             _ => bail!(
                 "\
