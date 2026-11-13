@@ -93,7 +93,7 @@ impl<'s> ScriptSource<'s> {
             .push_visible_span(open_start..open_end));
         };
         let info = input.next_slice(info_nl.start);
-        let info = info.strip_suffix('\r').unwrap_or(info); // already excludes `\n`
+        let info = info.trim_suffix('\r'); // already excludes `\n`
         let info = info.trim_matches(is_horizontal_whitespace);
         if !info.is_empty() {
             source.info = Some(raw.substr_range(info).unwrap().into());

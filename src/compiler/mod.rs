@@ -1738,9 +1738,7 @@ fn build_deps_args(
                     build_runner.files().build_script_out_dir(&dep.unit)
                 };
                 let target_name = dep.unit.target.name();
-                let out_dir_prefix = target_name
-                    .strip_prefix("build-script-")
-                    .unwrap_or(target_name);
+                let out_dir_prefix = target_name.trim_prefix("build-script-");
                 let out_dir_name = format!("{out_dir_prefix}_OUT_DIR");
                 cmd.env(&out_dir_name, &out_dir);
             }
