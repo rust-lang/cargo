@@ -1959,7 +1959,7 @@ fn local_fingerprints_deps(
         let paths = deps
             .rerun_if_changed
             .iter()
-            .map(|p| p.strip_prefix(pkg_root).unwrap_or(p).to_path_buf())
+            .map(|p| p.trim_prefix(pkg_root).to_path_buf())
             .collect();
         local.push(LocalFingerprint::RerunIfChanged { output, paths });
     }

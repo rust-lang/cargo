@@ -201,7 +201,7 @@ impl<'gctx> Source for PathSource<'gctx> {
         // Note that we try to strip the prefix of this package to get a
         // relative path to ensure that the fingerprint remains consistent
         // across entire project directory renames.
-        let max_path = max_path.strip_prefix(&self.path).unwrap_or(&max_path);
+        let max_path = max_path.trim_prefix(&self.path);
         Ok(format!("{} ({})", max, max_path.display()))
     }
 
@@ -398,7 +398,7 @@ impl<'gctx> Source for RecursivePathSource<'gctx> {
         // Note that we try to strip the prefix of this package to get a
         // relative path to ensure that the fingerprint remains consistent
         // across entire project directory renames.
-        let max_path = max_path.strip_prefix(&self.path).unwrap_or(&max_path);
+        let max_path = max_path.trim_prefix(&self.path);
         Ok(format!("{} ({})", max, max_path.display()))
     }
 

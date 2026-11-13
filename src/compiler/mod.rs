@@ -301,9 +301,7 @@ fn make_failed_scrape_diagnostic(
     top_line: impl Display,
 ) -> String {
     let manifest_path = unit.pkg.manifest_path();
-    let relative_manifest_path = manifest_path
-        .strip_prefix(build_runner.bcx.ws.root())
-        .unwrap_or(&manifest_path);
+    let relative_manifest_path = manifest_path.trim_prefix(build_runner.bcx.ws.root());
 
     format!(
         "\
