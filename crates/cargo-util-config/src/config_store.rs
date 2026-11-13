@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context as _, Result, bail};
 
 use super::{ConfigKey, ConfigValue, Definition, DefinitionKind};
-use cargo_util::collections::HashMap;
+use cargo_util::collections::{BuildHasher, HashMap};
 
 use ConfigValue as CV;
 
@@ -16,6 +16,13 @@ pub struct ConfigStore {
 }
 
 impl ConfigStore {
+    pub const fn new() -> Self {
+        Self {
+            values: HashMap::with_hasher(BuildHasher),
+            def: Definition::BuiltIn,
+        }
+    }
+
     pub fn with_values(values: HashMap<String, ConfigValue>) -> Self {
         Self {
             values,

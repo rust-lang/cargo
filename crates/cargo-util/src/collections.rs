@@ -2,6 +2,7 @@
 
 #![allow(clippy::disallowed_types)]
 
+pub use rustc_hash::FxBuildHasher as BuildHasher;
 pub use rustc_hash::FxHashMap as HashMap;
 pub use rustc_hash::FxHashSet as HashSet;
 
