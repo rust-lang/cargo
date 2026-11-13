@@ -484,3 +484,41 @@ fn explicit_lint_level_overrides_default() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn lint_rendering_respects_no_graphics() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+cargo-features = ["test-dummy-unstable"]
+
+[package]
+name = "foo"
+version = "0.0.1"
+edition = "2015"
+authors = []
+im-a-teapot = true
+
+[lints.cargo]
+im_a_teapot = "warn"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("fetch")
+        .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
+        .with_stderr_data(str![[r#"
+[WARNING] `im_a_teapot` is specified
+ --> Cargo.toml:9:1
+  |
+9 | im-a-teapot = true
+  | ^^^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::im_a_teapot` is set to `warn` in `[lints]`
+[WARNING] `foo` (manifest) generated 1 warning
+
+"#]])
+        .run();
+}
