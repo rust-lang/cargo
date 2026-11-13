@@ -816,12 +816,10 @@ impl GlobalContext {
     }
 
     fn config_reader(&self) -> CargoResult<ConfigReader<'_>> {
-        Ok(ConfigReader {
-            store: self.config()?,
-            shell: &self.shell,
-            env: &self.env,
-            unstable_advanced_env: self.cli_unstable().advanced_env,
-        })
+        Ok(ConfigReader::new(&self.shell)
+            .config(self.config()?)
+            .env(&self.env)
+            .unstable_advanced_env(self.cli_unstable().advanced_env))
     }
 
     pub(crate) fn get_cv_with_env(&self, key: &ConfigKey) -> CargoResult<Option<CV>> {

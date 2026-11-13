@@ -15,10 +15,10 @@ use ConfigValue as CV;
 /// Reads configuration values from the loaded store and the environment.
 #[derive(Clone, Copy)]
 pub struct ConfigReader<'a> {
-    pub store: &'a ConfigStore,
-    pub shell: &'a Mutex<Shell>,
-    pub env: &'a Env,
-    pub unstable_advanced_env: bool,
+    pub(crate) store: &'a ConfigStore,
+    pub(crate) shell: &'a Mutex<Shell>,
+    pub(crate) env: &'a Env,
+    pub(crate) unstable_advanced_env: bool,
 }
 
 /// Helper macro for creating typed access methods.
@@ -45,7 +45,36 @@ macro_rules! get_value_typed {
     };
 }
 
-impl ConfigReader<'_> {
+impl<'a> ConfigReader<'a> {
+    pub fn new(shell: &'a Mutex<Shell>) -> Self {
+        static STORE: ConfigStore = ConfigStore::new();
+        static ENV: Env = Env::new();
+        Self {
+            store: &STORE,
+            shell,
+            env: &ENV,
+            unstable_advanced_env: false,
+        }
+    }
+
+    #[must_use]
+    pub fn config(mut self, store: &'a ConfigStore) -> Self {
+        self.store = store;
+        self
+    }
+
+    #[must_use]
+    pub fn env(mut self, env: &'a Env) -> Self {
+        self.env = env;
+        self
+    }
+
+    #[must_use]
+    pub fn unstable_advanced_env(mut self, yes: bool) -> Self {
+        self.unstable_advanced_env = yes;
+        self
+    }
+
     pub fn get<'de, T: serde::Deserialize<'de>>(self, key: ConfigKey) -> Result<T> {
         let de = Deserializer {
             reader: self,
