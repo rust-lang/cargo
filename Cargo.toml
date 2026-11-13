@@ -79,7 +79,7 @@ memfd = "0.6.5"
 miow = "0.6.1"
 opener = "0.8.4"
 openssl = "0.10.76"
-openssl-src = "300.6.0"
+openssl-src = "400.0.0"
 os_info = { version = "3.14.0", default-features = false }
 pathdiff = "0.2.3"
 portable-atomic = "1.13.1"
