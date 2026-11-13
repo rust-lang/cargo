@@ -502,6 +502,29 @@ fn resolve_dependency(
             }
             dependency = dependency.set_source(latest.source.expect("latest always has a source"));
         }
+    } else if crate_spec
+        .as_ref()
+        .is_some_and(|spec| spec.version_req().is_some())
+    {
+        if let MaybeWorkspace::Other(query) = dependency.query(gctx)? {
+            let possibilities =
+                crate::util::block_on(registry.query_vec(&query, QueryKind::Normalized))?;
+            if let Some(normalized_name) = possibilities.iter().find_map(|is| {
+                if let IndexSummary::Candidate(s) = is {
+                    Some(s.name().as_str())
+                } else {
+                    None
+                }
+            }) {
+                if dependency.name != normalized_name {
+                    gctx.shell().warn(format!(
+                        "translating `{}` to `{}`",
+                        dependency.name, normalized_name,
+                    ))?;
+                    dependency.name = normalized_name.to_owned();
+                }
+            }
+        }
     }
 
     if let Some(Source::Workspace(_)) = dependency.source() {
