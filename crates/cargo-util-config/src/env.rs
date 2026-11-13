@@ -1,6 +1,6 @@
 //! Encapsulates snapshotting of environment variables.
 
-use cargo_util::collections::HashMap;
+use cargo_util::collections::{BuildHasher, HashMap};
 use std::ffi::{OsStr, OsString};
 
 use anyhow::{Result, anyhow, bail};
@@ -17,7 +17,7 @@ use anyhow::{Result, anyhow, bail};
 ///   This is only available for `CARGO_` prefixed environment keys.
 ///
 /// This type contains the env var snapshot and helper methods for both APIs.
-#[derive(Debug)]
+#[derive(Default, Debug)]
 pub struct Env {
     /// A snapshot of the process's environment variables.
     env: HashMap<OsString, OsString>,
@@ -42,6 +42,16 @@ pub struct Env {
 }
 
 impl Env {
+    /// Creates an empty environment.
+    pub const fn new() -> Self {
+        Self {
+            env: HashMap::with_hasher(BuildHasher),
+            normalized_env: HashMap::with_hasher(BuildHasher),
+            #[cfg(windows)]
+            case_insensitive_env: HashMap::with_hasher(BuildHasher),
+        }
+    }
+
     /// Takes a snapshot of the current process's environment variables.
     pub fn from_env() -> Self {
         #[expect(clippy::disallowed_methods, reason = "seeds `GlobalContext::get_env`")]
