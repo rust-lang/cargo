@@ -2342,6 +2342,14 @@ fn only_rerun_build_script() {
 
 "#]])
         .run();
+
+    p.cargo("check -v")
+        .with_stderr_data(str![[r#"
+[FRESH] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
 }
 
 #[cargo_test]

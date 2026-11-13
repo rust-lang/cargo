@@ -60,8 +60,8 @@
 //!             $pkgname-$META/
 //!                 # Set of source filenames for this package.
 //!                 dep-lib-$targetname
-//!                 # Timestamp when this package was last built or execution for build scripts.
-//!                 invoked.timestamp
+//!                 # Timestamp when this unit was last built or execution for build scripts.
+//!                 lib-$targetname.timestamp
 //!                 # The fingerprint hash.
 //!                 lib-$targetname
 //!                 # Detailed information used for logging the reason why
@@ -169,8 +169,8 @@
 //!                     fingerprint/
 //!                         # Set of source filenames for this package.
 //!                         dep-lib-$targetname
-//!                         # Timestamp when this package was last built or execution for build scripts.
-//!                         invoked.timestamp
+//!                         # Timestamp when this unit was last built or execution for build scripts.
+//!                         lib-$targetname.timestamp
 //!                         # The fingerprint hash.
 //!                         lib-$targetname
 //!                         # Detailed information used for logging the reason why
