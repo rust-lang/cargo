@@ -18,7 +18,7 @@ pub struct ConfigReader<'a> {
     pub store: &'a ConfigStore,
     pub shell: &'a Mutex<Shell>,
     pub env: &'a Env,
-    pub advanced_env: bool,
+    pub unstable_advanced_env: bool,
 }
 
 /// Helper macro for creating typed access methods.
@@ -92,7 +92,7 @@ impl ConfigReader<'_> {
             Ok(Some(CV::Boolean(false, env_def)))
         } else if let Ok(i) = env.parse::<i64>() {
             Ok(Some(CV::Integer(i, env_def)))
-        } else if self.advanced_env && env.starts_with('[') && env.ends_with(']') {
+        } else if self.unstable_advanced_env && env.starts_with('[') && env.ends_with(']') {
             match cv {
                 Some(CV::List(mut cv_list, cv_def)) => {
                     // Merge with config file.
@@ -225,7 +225,7 @@ impl ConfigReader<'_> {
             }
         }
 
-        if self.advanced_env && env_val.starts_with('[') && env_val.ends_with(']') {
+        if self.unstable_advanced_env && env_val.starts_with('[') && env_val.ends_with(']') {
             // Parse an environment string as a TOML array.
             let toml_v = env_val.parse::<toml::Value>().map_err(|e| {
                 ConfigError::new(format!("could not parse TOML list: {}", e), env_def.clone())

@@ -820,7 +820,7 @@ impl GlobalContext {
             store: self.config()?,
             shell: &self.shell,
             env: &self.env,
-            advanced_env: self.cli_unstable().advanced_env,
+            unstable_advanced_env: self.cli_unstable().advanced_env,
         })
     }
 

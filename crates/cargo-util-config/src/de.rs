@@ -261,7 +261,7 @@ impl<'reader> ConfigMapAccess<'reader> {
                 fields.push(KeyKind::CaseSensitive(key));
             }
         }
-        if de.reader.advanced_env {
+        if de.reader.unstable_advanced_env {
             // `CARGO_PROFILE_DEV_PACKAGE_`
             let env_prefix = format!("{}_", de.key.as_env_key());
             for env_key in de.reader.env.keys_str() {
