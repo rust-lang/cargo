@@ -485,9 +485,16 @@ fn explicit_lint_level_overrides_default() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "diagnostic-no-graphics is unstable")]
 fn lint_rendering_respects_no_graphics() {
     let p = project()
+        .file(
+            ".cargo/config.toml",
+            r#"
+[term]
+graphics = false
+            "#,
+        )
         .file(
             "Cargo.toml",
             r#"
@@ -508,15 +515,12 @@ im_a_teapot = "warn"
         .build();
 
     p.cargo("fetch")
-        .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
+        .arg("-Zterm-graphics")
+        .masquerade_as_nightly_cargo(&["test-dummy-unstable", "term-graphics"])
         .with_stderr_data(str![[r#"
 [WARNING] `im_a_teapot` is specified
- --> Cargo.toml:9:1
-  |
-9 | im-a-teapot = true
-  | ^^^^^^^^^^^^^^^^^^
-  |
-  = [NOTE] `cargo::im_a_teapot` is set to `warn` in `[lints]`
+ at Cargo.toml:9:1
+ [NOTE] `cargo::im_a_teapot` is set to `warn` in `[lints]`
 [WARNING] `foo` (manifest) generated 1 warning
 
 "#]])

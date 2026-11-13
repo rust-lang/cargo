@@ -1311,6 +1311,13 @@ fn add_error_format_and_color(build_runner: &BuildRunner<'_, '_>, cmd: &mut Proc
     {
         json.push_str(",diagnostic-unicode");
     }
+
+    if !build_runner.bcx.gctx.shell().graphics()
+        && build_runner.bcx.gctx.cli_unstable().term_graphics
+    {
+        json.push_str(",diagnostic-no-graphics");
+    }
+
     if enable_timings {
         json.push_str(",timings");
     }
