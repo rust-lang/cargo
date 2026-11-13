@@ -297,7 +297,7 @@ impl GlobalContext {
             }
         };
 
-        let env = Env::new();
+        let env = Env::from_env();
 
         let cache_key = "CARGO_CACHE_RUSTC_INFO";
         let cache_rustc_info = match env.get_env_os(cache_key) {
