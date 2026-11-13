@@ -1,8 +1,8 @@
 [package]
 name = "cargo-test-support"
-version = "0.12.1"
+version = "0.12.2"
 edition.workspace = true
-rust-version = "1.99"  # MSRV:1
+rust-version = "1.100"  # MSRV:1
 license.workspace = true
 repository.workspace = true
 description = "Testing framework for Cargo's testsuite."
