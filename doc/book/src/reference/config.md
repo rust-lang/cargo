@@ -1225,7 +1225,7 @@ Values include:
 
 See the [resolver](resolver.md#publish-age) chapter for more details.
 
-> **MSRV:** Respected as of 1.100+
+> **MSRV:** Respected as of 1.100
 
 ### `[registries]`
 
@@ -1284,7 +1284,7 @@ It supports the following values:
 
 Generally, `"0"`, `"N days"`, and `"N weeks"` will be used.
 
-> **MSRV:** Respected as of 1.100+
+> **MSRV:** Respected as of 1.100
 
 #### `registries.crates-io.protocol`
 * Type: string
@@ -1378,7 +1378,7 @@ It supports the following values:
 
 Generally, `"0"`, `"N days"`, and `"N weeks"` will be used.
 
-> **MSRV:** Respected as of 1.100+
+> **MSRV:** Respected as of 1.100
 
 ### `[source]`
 
