@@ -4,6 +4,21 @@
   "description": "Cargo's `.cargo/config.toml` file",
   "type": "object",
   "properties": {
+    "paths": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "$ref": "#/$defs/ConfigRelativePath"
+      }
+    },
+    "target-applies-to-host": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
     "build": {
       "anyOf": [
         {
@@ -24,7 +39,7 @@
         }
       ]
     },
-    "cargo_new": {
+    "cargo-new": {
       "anyOf": [
         {
           "$ref": "#/$defs/CargoNewConfig"
@@ -33,6 +48,15 @@
           "type": "null"
         }
       ]
+    },
+    "credential-alias": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": {
+        "$ref": "#/$defs/PathAndArgs"
+      }
     },
     "doc": {
       "anyOf": [
@@ -53,7 +77,7 @@
         "$ref": "#/$defs/EnvConfigValue"
       }
     },
-    "future_incompat_report": {
+    "future-incompat-report": {
       "anyOf": [
         {
           "$ref": "#/$defs/CargoFutureIncompatConfig"
@@ -77,6 +101,37 @@
       "anyOf": [
         {
           "$ref": "#/$defs/CargoNetConfig"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "patch": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "$ref": "#/$defs/TomlDependency"
+        }
+      }
+    },
+    "path-bases": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": {
+        "$ref": "#/$defs/ConfigRelativePath"
+      }
+    },
+    "profile": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TomlProfiles"
         },
         {
           "type": "null"
@@ -130,9 +185,27 @@
           "type": "null"
         }
       ]
+    },
+    "unstable": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TomlValue"
+        },
+        {
+          "type": "null"
+        }
+      ]
     }
   },
   "$defs": {
+    "ConfigRelativePath": {
+      "description": "Use with the `get` API to fetch a string that will be converted to a\n`PathBuf`. Relative paths are converted to absolute paths based on the\nlocation of the config file.",
+      "$ref": "#/$defs/Value"
+    },
+    "Value": {
+      "description": "A type which can be deserialized as a configuration value which records\nwhere it was deserialized from.",
+      "type": "string"
+    },
     "CargoBuildConfig": {
       "description": "The `[build]` table.\n\nExample configuration:\n\n```toml\n[build]\njobs = 4\ntarget = \"x86_64-unknown-linux-gnu\"\ntarget-dir = \"target\"\nrustflags = [\"-C\", \"link-arg=-fuse-ld=lld\"]\nincremental = true\n```",
       "type": "object",
@@ -330,14 +403,6 @@
         }
       }
     },
-    "ConfigRelativePath": {
-      "description": "Use with the `get` API to fetch a string that will be converted to a\n`PathBuf`. Relative paths are converted to absolute paths based on the\nlocation of the config file.",
-      "$ref": "#/$defs/Value"
-    },
-    "Value": {
-      "description": "A type which can be deserialized as a configuration value which records\nwhere it was deserialized from.",
-      "type": "string"
-    },
     "BuildTargetConfig": {
       "description": "Configuration for `build.target`.\n\nAccepts in the following forms:\n\n```toml\ntarget = \"a\"\ntarget = [\"a\"]\ntarget = [\"a\", \"b\"]\n```",
       "$ref": "#/$defs/Value2"
@@ -380,37 +445,22 @@
     },
     "JobsConfig": {
       "description": "Configuration for `jobs` in `build` section. There are two\nways to configure: An integer or a simple string expression.\n\n```toml\n[build]\njobs = 1\n```\n\n```toml\n[build]\njobs = \"default\" # Currently only support \"default\".\n```",
-      "oneOf": [
+      "anyOf": [
         {
-          "type": "object",
-          "properties": {
-            "Integer": {
-              "type": "integer",
-              "format": "int32"
-            }
-          },
-          "required": [
-            "Integer"
-          ],
-          "additionalProperties": false
+          "type": "integer",
+          "format": "int32"
         },
         {
-          "type": "object",
-          "properties": {
-            "String": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "String"
-          ],
-          "additionalProperties": false
+          "type": "string"
         }
       ]
     },
     "StringList": {
       "description": "A type to deserialize a list of strings from a toml file.\n\nSupports deserializing either a whitespace-separated list of arguments in a\nsingle string or a string list itself. For example these deserialize to\nequivalent values:\n\n```toml\na = 'a b c'\nb = ['a', 'b', 'c']\n```",
-      "type": "array",
+      "type": [
+        "array",
+        "string"
+      ],
       "items": {
         "type": "string"
       }
@@ -619,6 +669,16 @@
         "NoVcs"
       ]
     },
+    "PathAndArgs": {
+      "description": "A config type that is a program to run.\n\nThis supports a list of strings like `['/path/to/program', 'somearg']`\nor a space separated string like `'/path/to/program somearg'`.\n\nThis expects the first value to be the path to the program to run.\nSubsequent values are strings of arguments to pass to the program.\n\nTypically you should use `ConfigRelativePathResolveExt::resolve_program` on the path\nto get the actual program.\n\n**Note**: Any usage of this type in config needs to be listed in\nthe `NON_MERGEABLE_LISTS` check to prevent list merging\nfrom multiple config files.",
+      "type": [
+        "array",
+        "string"
+      ],
+      "items": {
+        "type": "string"
+      }
+    },
     "DocConfig": {
       "type": "object",
       "properties": {
@@ -632,7 +692,7 @@
             }
           ]
         },
-        "extern_map": {
+        "extern-map": {
           "anyOf": [
             {
               "$ref": "#/$defs/RustdocExternMap"
@@ -643,25 +703,6 @@
           ]
         }
       }
-    },
-    "PathAndArgs": {
-      "description": "A config type that is a program to run.\n\nThis supports a list of strings like `['/path/to/program', 'somearg']`\nor a space separated string like `'/path/to/program somearg'`.\n\nThis expects the first value to be the path to the program to run.\nSubsequent values are strings of arguments to pass to the program.\n\nTypically you should use `ConfigRelativePathResolveExt::resolve_program` on the path\nto get the actual program.\n\n**Note**: Any usage of this type in config needs to be listed in\nthe `NON_MERGEABLE_LISTS` check to prevent list merging\nfrom multiple config files.",
-      "type": "object",
-      "properties": {
-        "path": {
-          "$ref": "#/$defs/ConfigRelativePath"
-        },
-        "args": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        }
-      },
-      "required": [
-        "path",
-        "args"
-      ]
     },
     "RustdocExternMap": {
       "description": "A map of registry names to URLs where documentations are hosted.\nThis is for unstable feature [`-Zrustdoc-map`][1].\n\n[1]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#rustdoc-map",
@@ -965,6 +1006,396 @@
           }
         }
       }
+    },
+    "TomlDependency": {
+      "anyOf": [
+        {
+          "description": "In the simple format, only a version is specified, eg.\n`package = \"<version>\"`",
+          "type": "string"
+        },
+        {
+          "description": "The simple format is equivalent to a detailed dependency\nspecifying only a version, eg.\n`package = { version = \"<version>\" }`",
+          "$ref": "#/$defs/TomlDetailedDependency"
+        }
+      ]
+    },
+    "TomlDetailedDependency": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "registry": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "registry-index": {
+          "description": "The URL of the `registry` field.\nThis is an internal implementation detail. When Cargo creates a\npackage, it replaces `registry` with `registry-index` so that the\nmanifest contains the correct URL. All users won't have the same\nregistry names configured, so Cargo can't rely on just the name for\ncrates published by other users.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "path": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConfigRelativePath"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "base": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "git": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "branch": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tag": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "rev": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "builtin": {
+          "type": "boolean",
+          "const": true
+        },
+        "features": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "optional": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "default-features": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "default_features": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "package": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "public": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "artifact": {
+          "description": "One or more of `bin`, `cdylib`, `staticlib`, `bin:<name>`.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StringOrVec"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "lib": {
+          "description": "If set, the artifact should also be a dependency",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "target": {
+          "description": "A platform name, like `x86_64-apple-darwin`",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "StringOrVec": {
+      "description": "A TOML string or an array of strings.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "TomlProfiles": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/TomlProfile"
+      }
+    },
+    "TomlProfile": {
+      "type": "object",
+      "properties": {
+        "opt-level": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TomlOptLevel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "lto": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StringOrBool"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "codegen-backend": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "codegen-units": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0,
+          "default": null
+        },
+        "debug": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TomlDebugInfo"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "split-debuginfo": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "debug-assertions": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
+        },
+        "rpath": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
+        },
+        "panic": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "overflow-checks": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
+        },
+        "incremental": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
+        },
+        "dir-name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "inherits": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "strip": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StringOrBool"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "rustflags": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "default": null
+        },
+        "package": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "$ref": "#/$defs/TomlProfile"
+          },
+          "default": null
+        },
+        "build-override": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TomlProfile"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "trim-paths": {
+          "description": "Controls the scope of path sanitization in build outputs.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TomlTrimPaths"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "hint-mostly-unused": {
+          "description": "Unstable feature `hint-mostly-unused`",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
+        }
+      }
+    },
+    "TomlOptLevel": {
+      "type": [
+        "string",
+        "integer"
+      ],
+      "enum": [
+        0,
+        1,
+        2,
+        3,
+        "s",
+        "z"
+      ]
+    },
+    "StringOrBool": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "boolean"
+        }
+      ]
+    },
+    "TomlDebugInfo": {
+      "type": [
+        "string",
+        "integer",
+        "boolean"
+      ],
+      "enum": [
+        "none",
+        "line-directives-only",
+        "line-tables-only",
+        "limited",
+        "full",
+        0,
+        1,
+        2,
+        false,
+        true
+      ]
+    },
+    "PackageIdSpec": {
+      "type": "string"
+    },
+    "TomlTrimPaths": {
+      "type": "string",
+      "enum": [
+        "none",
+        "object",
+        "all"
+      ]
     },
     "RegistryConfig": {
       "description": "`[registries.NAME]` tables.\n\nThe values here should be kept in sync with `GlobalRegistryConfig`",
@@ -1282,7 +1713,7 @@
           "format": "uint",
           "minimum": 0
         },
-        "term_integration": {
+        "term-integration": {
           "description": "Communicate progress status with a terminal",
           "type": [
             "boolean",
@@ -1301,6 +1732,7 @@
         "never",
         "always"
       ]
-    }
+    },
+    "TomlValue": true
   }
 }

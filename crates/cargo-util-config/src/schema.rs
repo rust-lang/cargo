@@ -32,23 +32,35 @@ use super::CRATES_IO_REGISTRY;
 use super::OptValue;
 use super::Value;
 
+pub use cargo_util_schemas::manifest::TomlProfiles;
+
 /// Cargo's `.cargo/config.toml` file
 #[cfg(feature = "unstable-schema")]
 #[derive(schemars::JsonSchema)]
+#[schemars(rename_all = "kebab-case")]
 pub struct Config {
+    pub paths: Option<Vec<ConfigRelativePath>>,
+    pub target_applies_to_host: Option<bool>,
+
     pub build: Option<CargoBuildConfig>,
     pub cache: Option<CargoCacheConfig>,
     pub cargo_new: Option<CargoNewConfig>,
+    pub credential_alias: Option<HashMap<String, PathAndArgs>>,
     pub doc: Option<DocConfig>,
     pub env: Option<EnvConfig>,
     pub future_incompat_report: Option<CargoFutureIncompatConfig>,
     pub http: Option<CargoHttpConfig>,
     pub net: Option<CargoNetConfig>,
+    pub patch: Option<HashMap<String, HashMap<String, PatchDependency>>>,
+    pub path_bases: Option<HashMap<String, ConfigRelativePath>>,
+    pub profile: Option<TomlProfiles>,
     pub registries: Option<HashMap<String, RegistryConfig>>,
     pub registry: Option<GlobalRegistryConfig>,
     pub resolver: Option<CargoResolverConfig>,
     pub source: Option<HashMap<String, SourceConfigDef>>,
     pub term: Option<TermConfig>,
+    #[schemars(with = "Option<cargo_util_schemas::schema::TomlValueWrapper>")]
+    pub unstable: Option<toml::Value>,
 }
 
 /// Cargo's `credentials.toml` file
@@ -58,6 +70,8 @@ pub struct Credentials {
     pub registry: Option<RegistryCredential>,
     pub registries: Option<HashMap<String, RegistryCredential>>,
 }
+
+pub type PatchDependency = cargo_util_schemas::manifest::TomlDependency<ConfigRelativePath>;
 
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 #[derive(Debug, Default, Deserialize, PartialEq)]
@@ -181,6 +195,7 @@ pub struct SourceConfigDef {
 
 #[cfg(feature = "unstable-schema")]
 #[derive(schemars::JsonSchema)]
+#[schemars(rename_all = "kebab-case")]
 pub struct DocConfig {
     pub browser: Option<PathAndArgs>,
     pub extern_map: Option<RustdocExternMap>,
@@ -441,6 +456,7 @@ pub struct CargoSshConfig {
 /// jobs = "default" # Currently only support "default".
 /// ```
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
+#[cfg_attr(feature = "unstable-schema", schemars(untagged))]
 #[derive(Debug, Clone)]
 pub enum JobsConfig {
     Integer(i32),
@@ -743,6 +759,7 @@ pub struct TermConfig {
 /// progress = { when = "always", width = 80 }
 /// ```
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
+#[cfg_attr(feature = "unstable-schema", schemars(rename_all = "kebab-case"))]
 #[derive(Debug, Default)]
 pub struct ProgressConfig {
     pub when: ProgressWhen,
@@ -1008,6 +1025,7 @@ impl ConfigRelativePath {
 /// the `NON_MERGEABLE_LISTS` check to prevent list merging
 /// from multiple config files.
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
+#[cfg_attr(feature = "unstable-schema", schemars(with = "StringList"))]
 #[derive(Debug, Clone, PartialEq)]
 pub struct PathAndArgs {
     pub path: ConfigRelativePath,
@@ -1066,6 +1084,7 @@ impl PathAndArgs {
 /// b = ['a', 'b', 'c']
 /// ```
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
+#[cfg_attr(feature = "unstable-schema", schemars(extend("type" = ["array", "string"])))]
 #[derive(Debug, Deserialize, Clone)]
 pub struct StringList(Vec<String>);
 
