@@ -136,6 +136,21 @@ impl<'a, 'gctx> JobState<'a, 'gctx> {
         Ok(())
     }
 
+    /// Account for JSON lint diagnostics when warnings are denied.
+    pub fn count_json_warning(&self, lint: bool) {
+        // JSON diagnostics are forwarded to stdout rather than emitted through
+        // `emit_diag`. Track denied lint warnings so output formatting does not
+        // bypass `build.warnings`, without adding summaries for other modes.
+        if lint && self.warning_handling == WarningHandling::Deny {
+            self.messages.push(Message::WarningCount {
+                id: self.id,
+                lint,
+                emitted: true,
+                fixable: false,
+            });
+        }
+    }
+
     /// See [`Message::Warning`].
     pub fn warning(&self, warning: String) {
         self.messages.push_bounded(Message::Warning {
