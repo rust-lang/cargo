@@ -575,6 +575,7 @@ dependencies = [
  "serde_json",
  "snapbox",
  "toml",
+ "toml_edit",
  "tracing",
 ]
 

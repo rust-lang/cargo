@@ -20,6 +20,7 @@ schemars = { workspace = true, features = ["preserve_order", "semver1"], optiona
 serde = { workspace = true, features = ["derive"] }
 serde-untagged.workspace = true
 toml = { workspace = true, features = ["std", "serde", "parse", "display", "preserve_order"] }
+toml_edit.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]

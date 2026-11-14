@@ -15,10 +15,10 @@ use ConfigValue as CV;
 /// Reads configuration values from the loaded store and the environment.
 #[derive(Clone, Copy)]
 pub struct ConfigReader<'a> {
-    pub store: &'a ConfigStore,
-    pub shell: &'a Mutex<Shell>,
-    pub env: &'a Env,
-    pub advanced_env: bool,
+    pub(crate) store: &'a ConfigStore,
+    pub(crate) shell: &'a Mutex<Shell>,
+    pub(crate) env: &'a Env,
+    pub(crate) unstable_advanced_env: bool,
 }
 
 /// Helper macro for creating typed access methods.
@@ -45,7 +45,41 @@ macro_rules! get_value_typed {
     };
 }
 
-impl ConfigReader<'_> {
+impl<'a> ConfigReader<'a> {
+    pub fn new(shell: &'a Mutex<Shell>) -> Self {
+        static STORE: ConfigStore = ConfigStore::new();
+        static ENV: Env = Env::new();
+        Self {
+            store: &STORE,
+            shell,
+            env: &ENV,
+            unstable_advanced_env: false,
+        }
+    }
+
+    #[must_use]
+    pub fn config(mut self, store: &'a ConfigStore) -> Self {
+        self.store = store;
+        self
+    }
+
+    #[must_use]
+    pub fn env(mut self, env: &'a Env) -> Self {
+        self.env = env;
+        self
+    }
+
+    #[must_use]
+    pub fn unstable_advanced_env(mut self, yes: bool) -> Self {
+        self.unstable_advanced_env = yes;
+        self
+    }
+
+    /// Deserialize the value at `key` into `T`
+    ///
+    /// When reading env variables, the type will be inferred from `T`.
+    /// When `T` cannot provide a type hint (e.g. `#[serde(untagged)]`),
+    /// the type will be inferred from the structure of the env variable.
     pub fn get<'de, T: serde::Deserialize<'de>>(self, key: ConfigKey) -> Result<T> {
         let de = Deserializer {
             reader: self,
@@ -54,12 +88,13 @@ impl ConfigReader<'_> {
         };
         Ok(T::deserialize(de)?)
     }
+}
 
-    pub(super) fn warn(&self, message: String) -> Result<()> {
-        self.shell.lock().unwrap().warn(message)
-    }
-
-    /// This is a helper for getting a CV from a file or env var.
+/// Lower-level accessors
+impl ConfigReader<'_> {
+    /// Read a raw value, including from the environment
+    ///
+    /// When reading env variables,  the type will be inferred from the structure of the env variable.
     pub fn get_cv_with_env(&self, key: &ConfigKey) -> Result<Option<CV>> {
         // Determine if value comes from env, cli, or file, and merge env if
         // possible.
@@ -92,7 +127,7 @@ impl ConfigReader<'_> {
             Ok(Some(CV::Boolean(false, env_def)))
         } else if let Ok(i) = env.parse::<i64>() {
             Ok(Some(CV::Integer(i, env_def)))
-        } else if self.advanced_env && env.starts_with('[') && env.ends_with(']') {
+        } else if self.unstable_advanced_env && env.starts_with('[') && env.ends_with(']') {
             match cv {
                 Some(CV::List(mut cv_list, cv_def)) => {
                     // Merge with config file.
@@ -137,27 +172,20 @@ impl ConfigReader<'_> {
         }
     }
 
-    fn get_config_env<T>(&self, key: &ConfigKey) -> Result<OptValue<T>, ConfigError>
-    where
-        T: FromStr,
-        <T as FromStr>::Err: fmt::Display,
-    {
-        match self.env.get_str(key.as_env_key()) {
-            Some(value) => {
-                let definition = Definition::Environment(key.as_env_key().to_string());
-                Ok(Some(Value {
-                    val: value
-                        .parse()
-                        .map_err(|e| ConfigError::new(format!("{}", e), definition.clone()))?,
-                    definition,
-                }))
-            }
-            None => {
-                self.check_environment_key_case_mismatch(key);
-                Ok(None)
-            }
+    /// Low-level method for getting a config value as an `OptValue<HashMap<String, CV>>`.
+    ///
+    /// NOTE: This does not read from env. The caller is responsible for that.
+    pub fn get_table(&self, key: &ConfigKey) -> Result<OptValue<HashMap<String, CV>>> {
+        match self.store.get_cv(key)? {
+            Some(CV::Table(val, definition)) => Ok(Some(Value { val, definition })),
+            Some(val) => expected("table", key, &val),
+            None => Ok(None),
         }
     }
+
+    get_value_typed! {get_integer, i64, Integer, "an integer"}
+    get_value_typed! {get_bool, bool, Boolean, "true/false"}
+    get_value_typed! {get_string_priv, String, String, "a string"}
 
     /// Check if the configuration contains a given [`ConfigKey`].
     ///
@@ -178,16 +206,6 @@ impl ConfigReader<'_> {
         self.check_environment_key_case_mismatch(key);
 
         Ok(false)
-    }
-
-    fn check_environment_key_case_mismatch(&self, key: &ConfigKey) {
-        if let Some(env_key) = self.env.get_normalized(key.as_env_key()) {
-            let _ = self.warn(format!(
-                "environment variables are expected to use uppercase letters and underscores, \
-                the variable `{}` will be ignored and have no effect",
-                env_key
-            ));
-        }
     }
 
     /// Internal method for getting an environment variable as a list.
@@ -225,7 +243,7 @@ impl ConfigReader<'_> {
             }
         }
 
-        if self.advanced_env && env_val.starts_with('[') && env_val.ends_with(']') {
+        if self.unstable_advanced_env && env_val.starts_with('[') && env_val.ends_with(']') {
             // Parse an environment string as a TOML array.
             let toml_v = env_val.parse::<toml::Value>().map_err(|e| {
                 ConfigError::new(format!("could not parse TOML list: {}", e), env_def.clone())
@@ -253,20 +271,41 @@ impl ConfigReader<'_> {
         Ok(())
     }
 
-    /// Low-level method for getting a config value as an `OptValue<HashMap<String, CV>>`.
-    ///
-    /// NOTE: This does not read from env. The caller is responsible for that.
-    pub fn get_table(&self, key: &ConfigKey) -> Result<OptValue<HashMap<String, CV>>> {
-        match self.store.get_cv(key)? {
-            Some(CV::Table(val, definition)) => Ok(Some(Value { val, definition })),
-            Some(val) => expected("table", key, &val),
-            None => Ok(None),
+    pub(crate) fn warn(&self, message: String) -> Result<()> {
+        self.shell.lock().unwrap().warn(message)
+    }
+
+    fn get_config_env<T>(&self, key: &ConfigKey) -> Result<OptValue<T>, ConfigError>
+    where
+        T: FromStr,
+        <T as FromStr>::Err: fmt::Display,
+    {
+        match self.env.get_str(key.as_env_key()) {
+            Some(value) => {
+                let definition = Definition::Environment(key.as_env_key().to_string());
+                Ok(Some(Value {
+                    val: value
+                        .parse()
+                        .map_err(|e| ConfigError::new(format!("{}", e), definition.clone()))?,
+                    definition,
+                }))
+            }
+            None => {
+                self.check_environment_key_case_mismatch(key);
+                Ok(None)
+            }
         }
     }
 
-    get_value_typed! {get_integer, i64, Integer, "an integer"}
-    get_value_typed! {get_bool, bool, Boolean, "true/false"}
-    get_value_typed! {get_string_priv, String, String, "a string"}
+    fn check_environment_key_case_mismatch(&self, key: &ConfigKey) {
+        if let Some(env_key) = self.env.get_normalized(key.as_env_key()) {
+            let _ = self.warn(format!(
+                "environment variables are expected to use uppercase letters and underscores, \
+                the variable `{}` will be ignored and have no effect",
+                env_key
+            ));
+        }
+    }
 }
 
 /// Generate an error when the given value is the wrong type.

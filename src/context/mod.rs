@@ -96,16 +96,13 @@ use cargo_util_terminal::report::Level;
 use cargo_util_terminal::{Shell, Verbosity};
 use curl::easy::Easy;
 use itertools::Itertools;
-use serde::Deserialize;
-use serde::de::IntoDeserializer as _;
 use time::OffsetDateTime;
-use toml_edit::Item;
 use url::Url;
 
 pub use crate::config::{
     ConfigError, ConfigKey, ConfigStore, ConfigValue, Definition, DefinitionKind, OptValue, Value,
 };
-use crate::config::{ConfigReader, Env};
+use crate::config::{ConfigReader, Env, MergePriority};
 
 mod path;
 pub use path::BracketType;
@@ -297,7 +294,7 @@ impl GlobalContext {
             }
         };
 
-        let env = Env::new();
+        let env = Env::from_env();
 
         let cache_key = "CARGO_CACHE_RUSTC_INFO";
         let cache_rustc_info = match env.get_env_os(cache_key) {
@@ -816,12 +813,10 @@ impl GlobalContext {
     }
 
     fn config_reader(&self) -> CargoResult<ConfigReader<'_>> {
-        Ok(ConfigReader {
-            store: self.config()?,
-            shell: &self.shell,
-            env: &self.env,
-            advanced_env: self.cli_unstable().advanced_env,
-        })
+        Ok(ConfigReader::new(&self.shell)
+            .config(self.config()?)
+            .env(&self.env)
+            .unstable_advanced_env(self.cli_unstable().advanced_env))
     }
 
     pub(crate) fn get_cv_with_env(&self, key: &ConfigKey) -> CargoResult<Option<CV>> {
@@ -1080,9 +1075,10 @@ impl GlobalContext {
 
         self.walk_tree(path, &home, |path| {
             let config = self.load_file(path)?;
-            cfg.merge(config, false).with_context(|| {
-                format!("failed to merge configuration at `{}`", path.display())
-            })?;
+            cfg.merge(config, MergePriority::Definition)
+                .with_context(|| {
+                    format!("failed to merge configuration at `{}`", path.display())
+                })?;
             Ok(())
         })
         .context("could not load Cargo configuration")?;
@@ -1145,14 +1141,14 @@ impl GlobalContext {
 
         // Accumulate all values here.
         let root = CV::Table(HashMap::default(), config.definition().clone());
-        let mut root = ConfigStore::with_table_value(root).unwrap();
+        let mut root = ConfigStore::from_table_value(root).unwrap();
         for include in includes {
             let Some(abs_path) = include.resolve_path(self) else {
                 continue;
             };
 
             self._load_file(&abs_path, seen, true, definition_kind)
-                .and_then(|include| root.merge(include, true))
+                .and_then(|include| root.merge(include, MergePriority::From))
                 .with_context(|| {
                     format!(
                         "failed to load config include `{}` from `{}`",
@@ -1161,7 +1157,7 @@ impl GlobalContext {
                     )
                 })?;
         }
-        root.merge(config, true)?;
+        root.merge(config, MergePriority::From)?;
         Ok(root)
     }
 
@@ -1262,7 +1258,7 @@ impl GlobalContext {
     /// Parses the CLI config args and returns them as a table.
     pub(crate) fn cli_args_to_config(&self) -> CargoResult<ConfigStore> {
         let mut loaded_args =
-            ConfigStore::with_table_value(CV::Table(HashMap::default(), Definition::Cli(None)))
+            ConfigStore::from_table_value(CV::Table(HashMap::default(), Definition::Cli(None)))
                 .unwrap();
         let Some(cli_args) = &self.cli_config else {
             return Ok(loaded_args);
@@ -1277,39 +1273,13 @@ impl GlobalContext {
                         format!("failed to load config from `{}`", arg_as_path.display())
                     })?
             } else {
-                let doc = toml_dotted_keys(arg)?;
-                let doc: toml::Value = toml::Value::deserialize(doc.into_deserializer())
-                    .with_context(|| {
-                        format!("failed to parse value from --config argument `{arg}`")
-                    })?;
-
-                if doc
-                    .get("registry")
-                    .and_then(|v| v.as_table())
-                    .and_then(|t| t.get("token"))
-                    .is_some()
-                {
-                    bail!("registry.token cannot be set through --config for security reasons");
-                } else if let Some((k, _)) = doc
-                    .get("registries")
-                    .and_then(|v| v.as_table())
-                    .and_then(|t| t.iter().find(|(_, v)| v.get("token").is_some()))
-                {
-                    bail!(
-                        "registries.{}.token cannot be set through --config for security reasons",
-                        k
-                    );
-                }
-
-                let table = CV::from_toml(Definition::Cli(None), doc)
-                    .with_context(|| format!("failed to convert --config argument `{arg}`"))?;
-                ConfigStore::with_table_value(table).unwrap()
+                ConfigStore::parse_cli_key_value(arg)?
             };
             let arg_config = self
                 .load_includes(arg_config, &mut HashSet::default(), DefinitionKind::Cli)
                 .context("failed to load --config include".to_string())?;
             loaded_args
-                .merge(arg_config, true)
+                .merge(arg_config, MergePriority::From)
                 .with_context(|| format!("failed to merge --config argument `{arg}`"))?;
         }
         Ok(loaded_args)
@@ -1318,7 +1288,7 @@ impl GlobalContext {
     /// Add config arguments passed on the command line.
     fn merge_cli_args(&mut self) -> CargoResult<()> {
         let cli_config = self.cli_args_to_config()?;
-        self.config_mut()?.merge(cli_config, true)
+        self.config_mut()?.merge(cli_config, MergePriority::From)
     }
 
     /// The purpose of this function is to aid in the transition to using
@@ -2045,7 +2015,7 @@ pub fn save_credentials(
         if registry.is_some() {
             if let Some(table) = toml.remove("registries") {
                 let v = CV::from_toml(path_def, table)?;
-                value.merge(v, false)?;
+                value.merge(v, MergePriority::Definition)?;
             }
         }
         toml.insert(key, value.into_toml());
@@ -2149,88 +2119,6 @@ impl ConfigInclude {
             Some(abs_path)
         }
     }
-}
-
-fn toml_dotted_keys(arg: &str) -> CargoResult<toml_edit::DocumentMut> {
-    // We only want to allow "dotted key" (see https://toml.io/en/v1.0.0#keys)
-    // expressions followed by a value that's not an "inline table"
-    // (https://toml.io/en/v1.0.0#inline-table). Easiest way to check for that is to
-    // parse the value as a toml_edit::DocumentMut, and check that the (single)
-    // inner-most table is set via dotted keys.
-    let doc: toml_edit::DocumentMut = arg.parse().with_context(|| {
-        format!("failed to parse value from --config argument `{arg}` as a dotted key expression")
-    })?;
-    fn non_empty(d: Option<&toml_edit::RawString>) -> bool {
-        d.map_or(false, |p| !p.as_str().unwrap_or_default().trim().is_empty())
-    }
-    fn non_empty_decor(d: &toml_edit::Decor) -> bool {
-        non_empty(d.prefix()) || non_empty(d.suffix())
-    }
-    fn non_empty_key_decor(k: &toml_edit::Key) -> bool {
-        non_empty_decor(k.leaf_decor()) || non_empty_decor(k.dotted_decor())
-    }
-    let ok = {
-        let mut got_to_value = false;
-        let mut table = doc.as_table();
-        let mut is_root = true;
-        while table.is_dotted() || is_root {
-            is_root = false;
-            if table.len() != 1 {
-                break;
-            }
-            let (k, n) = table.iter().next().expect("len() == 1 above");
-            match n {
-                Item::Table(nt) => {
-                    if table.key(k).map_or(false, non_empty_key_decor)
-                        || non_empty_decor(nt.decor())
-                    {
-                        bail!(
-                            "--config argument `{arg}` \
-                                includes non-whitespace decoration"
-                        )
-                    }
-                    table = nt;
-                }
-                Item::Value(v) if v.is_inline_table() => {
-                    bail!(
-                        "--config argument `{arg}` \
-                        sets a value to an inline table, which is not accepted"
-                    );
-                }
-                Item::Value(v) => {
-                    if table
-                        .key(k)
-                        .map_or(false, |k| non_empty(k.leaf_decor().prefix()))
-                        || non_empty_decor(v.decor())
-                    {
-                        bail!(
-                            "--config argument `{arg}` \
-                                includes non-whitespace decoration"
-                        )
-                    }
-                    got_to_value = true;
-                    break;
-                }
-                Item::ArrayOfTables(_) => {
-                    bail!(
-                        "--config argument `{arg}` \
-                        sets a value to an array of tables, which is not accepted"
-                    );
-                }
-
-                Item::None => {
-                    bail!("--config argument `{arg}` doesn't provide a value")
-                }
-            }
-        }
-        got_to_value
-    };
-    if !ok {
-        bail!(
-            "--config argument `{arg}` was not a TOML dotted key expression (such as `build.jobs = 2`)"
-        );
-    }
-    Ok(doc)
 }
 
 #[macro_export]
