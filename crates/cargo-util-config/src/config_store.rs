@@ -2,6 +2,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context as _, Result, bail};
+use serde::Deserialize;
+use serde::de::IntoDeserializer as _;
+use toml_edit::Item;
 
 use super::{ConfigKey, ConfigValue, Definition, DefinitionKind, MergePriority};
 use cargo_util::collections::{BuildHasher, HashMap};
@@ -61,6 +64,35 @@ impl ConfigStore {
             )
         })?;
         Ok(Self::from_table_value(value).unwrap())
+    }
+
+    /// Parses a single inline `KEY=VALUE` argument into a configuration layer.
+    pub fn parse_cli_key_value(arg: &str) -> Result<Self> {
+        let doc = toml_dotted_keys(arg)?;
+        let doc: toml::Value = toml::Value::deserialize(doc.into_deserializer())
+            .with_context(|| format!("failed to parse value from --config argument `{arg}`"))?;
+
+        if doc
+            .get("registry")
+            .and_then(|v| v.as_table())
+            .and_then(|t| t.get("token"))
+            .is_some()
+        {
+            bail!("registry.token cannot be set through --config for security reasons");
+        } else if let Some((k, _)) = doc
+            .get("registries")
+            .and_then(|v| v.as_table())
+            .and_then(|t| t.iter().find(|(_, v)| v.get("token").is_some()))
+        {
+            bail!(
+                "registries.{}.token cannot be set through --config for security reasons",
+                k
+            );
+        }
+
+        let table = CV::from_toml(Definition::Cli(None), doc)
+            .with_context(|| format!("failed to convert --config argument `{arg}`"))?;
+        Ok(Self::from_table_value(table).unwrap())
     }
 
     pub fn into_value(self) -> ConfigValue {
@@ -138,4 +170,86 @@ impl ConfigStore {
         }
         Ok(Some(val.clone()))
     }
+}
+
+fn toml_dotted_keys(arg: &str) -> Result<toml_edit::DocumentMut> {
+    // We only want to allow "dotted key" (see https://toml.io/en/v1.0.0#keys)
+    // expressions followed by a value that's not an "inline table"
+    // (https://toml.io/en/v1.0.0#inline-table). Easiest way to check for that is to
+    // parse the value as a toml_edit::DocumentMut, and check that the (single)
+    // inner-most table is set via dotted keys.
+    let doc: toml_edit::DocumentMut = arg.parse().with_context(|| {
+        format!("failed to parse value from --config argument `{arg}` as a dotted key expression")
+    })?;
+    fn non_empty(d: Option<&toml_edit::RawString>) -> bool {
+        d.map_or(false, |p| !p.as_str().unwrap_or_default().trim().is_empty())
+    }
+    fn non_empty_decor(d: &toml_edit::Decor) -> bool {
+        non_empty(d.prefix()) || non_empty(d.suffix())
+    }
+    fn non_empty_key_decor(k: &toml_edit::Key) -> bool {
+        non_empty_decor(k.leaf_decor()) || non_empty_decor(k.dotted_decor())
+    }
+    let ok = {
+        let mut got_to_value = false;
+        let mut table = doc.as_table();
+        let mut is_root = true;
+        while table.is_dotted() || is_root {
+            is_root = false;
+            if table.len() != 1 {
+                break;
+            }
+            let (k, n) = table.iter().next().expect("len() == 1 above");
+            match n {
+                Item::Table(nt) => {
+                    if table.key(k).map_or(false, non_empty_key_decor)
+                        || non_empty_decor(nt.decor())
+                    {
+                        bail!(
+                            "--config argument `{arg}` \
+                                includes non-whitespace decoration"
+                        )
+                    }
+                    table = nt;
+                }
+                Item::Value(v) if v.is_inline_table() => {
+                    bail!(
+                        "--config argument `{arg}` \
+                        sets a value to an inline table, which is not accepted"
+                    );
+                }
+                Item::Value(v) => {
+                    if table
+                        .key(k)
+                        .map_or(false, |k| non_empty(k.leaf_decor().prefix()))
+                        || non_empty_decor(v.decor())
+                    {
+                        bail!(
+                            "--config argument `{arg}` \
+                                includes non-whitespace decoration"
+                        )
+                    }
+                    got_to_value = true;
+                    break;
+                }
+                Item::ArrayOfTables(_) => {
+                    bail!(
+                        "--config argument `{arg}` \
+                        sets a value to an array of tables, which is not accepted"
+                    );
+                }
+
+                Item::None => {
+                    bail!("--config argument `{arg}` doesn't provide a value")
+                }
+            }
+        }
+        got_to_value
+    };
+    if !ok {
+        bail!(
+            "--config argument `{arg}` was not a TOML dotted key expression (such as `build.jobs = 2`)"
+        );
+    }
+    Ok(doc)
 }
