@@ -75,6 +75,11 @@ impl<'a> ConfigReader<'a> {
         self
     }
 
+    /// Deserialize the value at `key` into `T`
+    ///
+    /// When reading env variables, the type will be inferred from `T`.
+    /// When `T` cannot provide a type hint (e.g. `#[serde(untagged)]`),
+    /// the type will be inferred from the structure of the env variable.
     pub fn get<'de, T: serde::Deserialize<'de>>(self, key: ConfigKey) -> Result<T> {
         let de = Deserializer {
             reader: self,
@@ -83,7 +88,13 @@ impl<'a> ConfigReader<'a> {
         };
         Ok(T::deserialize(de)?)
     }
+}
 
+/// Lower-level accessors
+impl ConfigReader<'_> {
+    /// Read a raw value, including from the environment
+    ///
+    /// When reading env variables,  the type will be inferred from the structure of the env variable.
     pub fn get_cv_with_env(&self, key: &ConfigKey) -> Result<Option<CV>> {
         // Determine if value comes from env, cli, or file, and merge env if
         // possible.
