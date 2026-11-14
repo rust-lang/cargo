@@ -1847,7 +1847,7 @@ fn github_fast_path(
 
     // Trim off the `.git` from the repository, if present, since that's
     // optional for GitHub and won't work when we try to use the API as well.
-    let repository = repository.strip_suffix(".git").unwrap_or(repository);
+    let repository = repository.trim_suffix(".git");
 
     let url = format!(
         "https://api.github.com/repos/{}/{}/commits/{}",

@@ -301,9 +301,7 @@ fn make_failed_scrape_diagnostic(
     top_line: impl Display,
 ) -> String {
     let manifest_path = unit.pkg.manifest_path();
-    let relative_manifest_path = manifest_path
-        .strip_prefix(build_runner.bcx.ws.root())
-        .unwrap_or(&manifest_path);
+    let relative_manifest_path = manifest_path.trim_prefix(build_runner.bcx.ws.root());
 
     format!(
         "\
@@ -1719,9 +1717,7 @@ fn build_deps_args(
                     build_runner.files().build_script_out_dir(&dep.unit)
                 };
                 let target_name = dep.unit.target.name();
-                let out_dir_prefix = target_name
-                    .strip_prefix("build-script-")
-                    .unwrap_or(target_name);
+                let out_dir_prefix = target_name.trim_prefix("build-script-");
                 let out_dir_name = format!("{out_dir_prefix}_OUT_DIR");
                 cmd.env(&out_dir_name, &out_dir);
             }
