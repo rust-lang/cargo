@@ -202,3 +202,85 @@ mod tests {
 "#]])
         .run();
 }
+
+#[cargo_test(nightly, reason = "diagnostic-no-graphics is unstable")]
+fn cargo_passes_no_graphics() {
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            r#"
+[term]
+graphics = false
+        "#,
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+[package]
+name = "foo"
+version = "0.0.1"
+edition = "2015"
+"#,
+        )
+        .file(
+            "src/lib.rs",
+            "\
+mod tests {
+    #[test]
+    fn t1() {
+        use std::io;
+    }
+}
+            ",
+        )
+        .build();
+
+    p.cargo("check -v")
+        .arg("-Zterm-graphics")
+        .masquerade_as_nightly_cargo(&["term-graphics"])
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc [..] --json=diagnostic-rendered-ansi,artifacts,future-incompat,unused-externs-silent,diagnostic-no-graphics [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "diagnostic-no-graphics is unstable")]
+fn cargo_respects_no_graphics_env_var() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+[package]
+name = "foo"
+version = "0.0.1"
+edition = "2015"
+"#,
+        )
+        .file(
+            "src/lib.rs",
+            "\
+mod tests {
+    #[test]
+    fn t1() {
+        use std::io;
+    }
+}
+            ",
+        )
+        .build();
+
+    p.cargo("check -v")
+        .env("NO_GRAPHICS", "1")
+        .arg("-Zterm-graphics")
+        .masquerade_as_nightly_cargo(&["term-graphics"])
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc [..] --json=diagnostic-rendered-ansi,artifacts,future-incompat,unused-externs-silent,diagnostic-no-graphics [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
