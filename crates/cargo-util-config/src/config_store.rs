@@ -23,14 +23,14 @@ impl ConfigStore {
         }
     }
 
-    pub fn with_values(values: HashMap<String, ConfigValue>) -> Self {
+    pub fn from_values(values: HashMap<String, ConfigValue>) -> Self {
         Self {
             values,
             def: Definition::BuiltIn,
         }
     }
 
-    pub fn with_table_value(value: ConfigValue) -> Option<Self> {
+    pub fn from_table_value(value: ConfigValue) -> Option<Self> {
         match value {
             CV::Table(values, def) => Some(Self { values, def }),
             _ => None,
@@ -60,7 +60,7 @@ impl ConfigStore {
                 path.display()
             )
         })?;
-        Ok(Self::with_table_value(value).unwrap())
+        Ok(Self::from_table_value(value).unwrap())
     }
 
     pub fn into_value(self) -> ConfigValue {
@@ -84,7 +84,7 @@ impl ConfigStore {
         let mut root_cv = std::mem::take(self).into_value();
         let from = from.into_value();
         root_cv.merge(from, force)?;
-        *self = Self::with_table_value(root_cv).unwrap();
+        *self = Self::from_table_value(root_cv).unwrap();
 
         Ok(())
     }

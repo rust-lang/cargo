@@ -1143,7 +1143,7 @@ impl GlobalContext {
 
         // Accumulate all values here.
         let root = CV::Table(HashMap::default(), config.definition().clone());
-        let mut root = ConfigStore::with_table_value(root).unwrap();
+        let mut root = ConfigStore::from_table_value(root).unwrap();
         for include in includes {
             let Some(abs_path) = include.resolve_path(self) else {
                 continue;
@@ -1260,7 +1260,7 @@ impl GlobalContext {
     /// Parses the CLI config args and returns them as a table.
     pub(crate) fn cli_args_to_config(&self) -> CargoResult<ConfigStore> {
         let mut loaded_args =
-            ConfigStore::with_table_value(CV::Table(HashMap::default(), Definition::Cli(None)))
+            ConfigStore::from_table_value(CV::Table(HashMap::default(), Definition::Cli(None)))
                 .unwrap();
         let Some(cli_args) = &self.cli_config else {
             return Ok(loaded_args);
@@ -1301,7 +1301,7 @@ impl GlobalContext {
 
                 let table = CV::from_toml(Definition::Cli(None), doc)
                     .with_context(|| format!("failed to convert --config argument `{arg}`"))?;
-                ConfigStore::with_table_value(table).unwrap()
+                ConfigStore::from_table_value(table).unwrap()
             };
             let arg_config = self
                 .load_includes(arg_config, &mut HashSet::default(), DefinitionKind::Cli)
