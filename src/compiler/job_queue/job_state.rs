@@ -167,6 +167,10 @@ impl<'a, 'gctx> JobState<'a, 'gctx> {
         self.messages.push(Message::SectionTiming(self.id, section));
     }
 
+    pub fn add_blob_storage_output(&self, hash: String) {
+        self.messages.push(Message::BlobStorageOutput(hash));
+    }
+
     /// Reports the peak resident set size (in bytes) of this unit's process,
     /// for the `--timings` report.
     pub fn peak_memory(&self, bytes: u64) {

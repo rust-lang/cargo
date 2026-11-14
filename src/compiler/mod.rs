@@ -46,6 +46,7 @@ mod lto;
 mod output_depinfo;
 mod output_sbom;
 pub mod rustdoc;
+pub(crate) mod shared_storage;
 pub mod standard_lib;
 pub mod timings;
 pub(crate) mod trim_paths;
@@ -54,6 +55,7 @@ pub mod unit_dependencies;
 pub mod unit_graph;
 pub mod unused_deps;
 
+use crate::compiler::shared_storage::SharedStorage;
 use cargo_util::collections::{HashMap, HashSet};
 use std::borrow::Cow;
 use std::cell::OnceCell;
@@ -261,6 +263,50 @@ fn compile<'gctx>(
                 // Need to link targets on both the dirty and fresh.
                 work.then(link_targets(build_runner, unit, true)?)
             });
+
+            if should_dedup_out_dir(build_runner, unit)
+                && let Some(shared_storage) = build_runner.files().shared_storage()
+            {
+                let cached_hash_file = build_runner
+                    .files()
+                    .fingerprint_dir(unit)
+                    .join("output-hash");
+                let out_dir = build_runner.files().out_dir_new_layout(unit);
+
+                let add_deduplicate_step = |job: &mut Job| {
+                    let cached_hash_file = cached_hash_file.clone();
+                    let shared_storage = shared_storage.clone();
+                    job.after(Work::new(move |state| {
+                        if let Some(hash) = deduplicate_out_dir(&out_dir, &shared_storage) {
+                            let mut f = File::create(&cached_hash_file)?;
+                            f.write_all(hash.as_bytes())?;
+                            state.add_blob_storage_output(hash);
+                        }
+                        Ok(())
+                    }));
+                };
+
+                if job.freshness().is_dirty() {
+                    _ = std::fs::remove_file(&cached_hash_file);
+
+                    add_deduplicate_step(&mut job);
+                } else if cached_hash_file.exists() {
+                    let hash = std::fs::read_to_string(&cached_hash_file)?;
+
+                    // If a previous build added blobs to shared storage and then they were
+                    // removed via GC, we need to re-link them into shared storage, otherwise the
+                    // snapshot would be created with "dangling pointers" to blobs that dont exist
+                    if !shared_storage.unit_output_exists(&hash) {
+                        add_deduplicate_step(&mut job);
+                    } else {
+                        build_runner.blob_storage_outputs.push(hash);
+                    }
+                } else {
+                    // If the unit was not deduplicated for some reason, go ahead try to deduplicate
+                    // it now.
+                    add_deduplicate_step(&mut job);
+                }
+            }
 
             // If -Zfine-grain-locking is enabled, we wrap the job with an upgrade to exclusive
             // lock before starting, then downgrade to a shared lock after the job is finished.
@@ -674,6 +720,24 @@ fn downgrade_lock_to_shared(lock: LockKey) -> Work {
         state.downgrade_to_shared(&lock)?;
         Ok(())
     })
+}
+
+fn should_dedup_out_dir(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> bool {
+    build_runner.bcx.gctx.cli_unstable().build_dir_new_layout
+        && build_runner.bcx.gctx.cli_unstable().shared_blob_storage
+        && !unit.is_local()
+}
+
+#[tracing::instrument(skip_all)]
+fn deduplicate_out_dir(out_dir: &Path, shared_storage: &SharedStorage) -> Option<String> {
+    match shared_storage.insert_or_dedup_out_dir(out_dir) {
+        Ok(hash) => Some(hash),
+        Err(err) => {
+            // couldn't deduplicate, but we can continue the build
+            debug!(?out_dir, ?err, "failed to insert file into blob storage");
+            None
+        }
+    }
 }
 
 /// Link the compiled target (often of form `foo-{metadata_hash}`) to the

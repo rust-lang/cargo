@@ -210,6 +210,8 @@ struct DrainState<'gctx> {
     /// How many jobs we've finished
     finished: usize,
     per_package_future_incompat_reports: Vec<FutureIncompatReportPackage>,
+
+    blob_storage_outputs: Vec<String>,
 }
 
 /// Count of warnings, used to print a summary after the job succeeds
@@ -392,6 +394,7 @@ enum Message {
     /// Peak resident set size (in bytes) of a unit's process, for `--timings`.
     PeakMemory(JobId, u64),
     UnusedExterns(JobId, std::collections::BTreeSet<InternedString>),
+    BlobStorageOutput(String),
 }
 
 impl<'gctx> JobQueue<'gctx> {
@@ -525,6 +528,7 @@ impl<'gctx> JobQueue<'gctx> {
             ),
             finished: 0,
             per_package_future_incompat_reports: Vec::new(),
+            blob_storage_outputs: build_runner.blob_storage_outputs.clone(),
         };
 
         // Create a helper thread for acquiring jobserver tokens
@@ -767,6 +771,9 @@ impl<'gctx> DrainState<'gctx> {
             Message::PeakMemory(id, bytes) => {
                 self.timings.unit_peak_memory(build_runner, id, bytes);
             }
+            Message::BlobStorageOutput(hash) => {
+                self.blob_storage_outputs.push(hash);
+            }
         }
 
         Ok(())
@@ -885,6 +892,21 @@ impl<'gctx> DrainState<'gctx> {
             .context("failed to render timing report")
         {
             self.handle_error(&mut build_runner.bcx.gctx.shell(), &mut errors, e);
+        }
+        if errors.count == 0
+            && self.queue.is_empty()
+            && self.pending_queue.is_empty()
+            && let Some(storage) = build_runner.files().shared_storage()
+        {
+            self.blob_storage_outputs.sort_unstable();
+            self.blob_storage_outputs.dedup();
+
+            if let Err(err) = storage
+                .save_build_outputs(&self.blob_storage_outputs)
+                .context("failed to save blob storage outputs")
+            {
+                self.handle_error(&mut build_runner.bcx.gctx.shell(), &mut errors, err);
+            }
         }
         if build_runner.bcx.build_config.emit_json() {
             let mut shell = build_runner.bcx.gctx.shell();

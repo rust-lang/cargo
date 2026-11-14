@@ -519,3 +519,21 @@ impl BuildDirLayout {
         Ok(&self.tmp)
     }
 }
+
+pub struct SharedStorageLayout {
+    pub blobs: PathBuf,
+    pub unit_outputs: PathBuf,
+    pub snapshots: PathBuf,
+    pub snapshot_usage: PathBuf,
+}
+
+impl SharedStorageLayout {
+    pub fn new(root: &Path) -> Self {
+        Self {
+            blobs: root.join("blobs"),
+            unit_outputs: root.join("unit-output"),
+            snapshots: root.join("snapshots"),
+            snapshot_usage: root.join("usage"),
+        }
+    }
+}
