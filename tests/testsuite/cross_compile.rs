@@ -494,7 +494,7 @@ fn linker() {
 please set bin.path in Cargo.toml
 [WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo --edition=2015 src/foo.rs [..]--crate-type bin --emit=[..]link[..]-C debuginfo=2 [..] -C metadata=[..] --out-dir [ROOT]/foo/target/[ALT_TARGET]/debug/build/foo/[HASH]/out --target [ALT_TARGET] -C linker=my-linker-tool -L dependency=[ROOT]/foo/target/debug/build/foo/[HASH]/out[..]`
+[RUNNING] `rustc --crate-name foo --edition=2015 src/foo.rs [..]--crate-type bin --emit=[..]link[..]-C debuginfo=line-tables-only [..] -C metadata=[..] --out-dir [ROOT]/foo/target/[ALT_TARGET]/debug/build/foo/[HASH]/out --target [ALT_TARGET] -C linker=my-linker-tool -L dependency=[ROOT]/foo/target/debug/build/foo/[HASH]/out[..]`
 [ERROR] linker `my-linker-tool` not found
 ...
 "#]])
