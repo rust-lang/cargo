@@ -48,11 +48,13 @@ impl Shell {
         let auto_clr = ColorChoice::CargoAuto;
         let stdout_choice = auto_clr.to_anstream_color_choice();
         let stderr_choice = auto_clr.to_anstream_color_choice();
+        let no_graphics = std::env::var_os("NO_GRAPHICS").is_some_and(|v| !v.is_empty());
         Shell {
             output: ShellOut::Stream {
                 stdout: AutoStream::new(std::io::stdout(), stdout_choice),
                 stderr: AutoStream::new(std::io::stderr(), stderr_choice),
                 color_choice: auto_clr,
+                graphics: !no_graphics,
                 hyperlinks: supports_hyperlinks(),
                 stderr_tty: std::io::stderr().is_terminal(),
                 stdout_unicode: supports_unicode(&std::io::stdout()),
@@ -399,6 +401,20 @@ impl Shell {
         Ok(())
     }
 
+    pub fn graphics(&self) -> bool {
+        match &self.output {
+            ShellOut::Write(_) => true,
+            ShellOut::Stream { graphics, .. } => *graphics,
+        }
+    }
+
+    pub fn set_graphics(&mut self, yes: bool) -> CargoResult<()> {
+        if let ShellOut::Stream { graphics, .. } = &mut self.output {
+            *graphics = yes;
+        }
+        Ok(())
+    }
+
     /// Prints a message to stderr and translates ANSI escape code into console colors.
     pub fn print_ansi_stderr(&mut self, message: &[u8]) -> CargoResult<()> {
         if self.needs_clear {
@@ -446,6 +462,7 @@ impl Shell {
         let rendered = Renderer::styled()
             .term_width(term_width)
             .decor_style(decor_style)
+            .no_graphics(!self.graphics())
             .render(report);
         self.err().write_all(rendered.as_bytes())?;
         self.err().write_all(b"\n")?;
@@ -469,6 +486,7 @@ enum ShellOut {
         stderr: AutoStream<std::io::Stderr>,
         stderr_tty: bool,
         color_choice: ColorChoice,
+        graphics: bool,
         hyperlinks: bool,
         stdout_unicode: bool,
         stderr_unicode: bool,

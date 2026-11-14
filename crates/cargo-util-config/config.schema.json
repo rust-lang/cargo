@@ -1695,6 +1695,12 @@
               "type": "null"
             }
           ]
+        },
+        "graphics": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       }
     },
