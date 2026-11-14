@@ -105,7 +105,7 @@ use url::Url;
 pub use crate::config::{
     ConfigError, ConfigKey, ConfigStore, ConfigValue, Definition, DefinitionKind, OptValue, Value,
 };
-use crate::config::{ConfigReader, Env};
+use crate::config::{ConfigReader, Env, MergePriority};
 
 mod path;
 pub use path::BracketType;
@@ -1078,9 +1078,10 @@ impl GlobalContext {
 
         self.walk_tree(path, &home, |path| {
             let config = self.load_file(path)?;
-            cfg.merge(config, false).with_context(|| {
-                format!("failed to merge configuration at `{}`", path.display())
-            })?;
+            cfg.merge(config, MergePriority::Definition)
+                .with_context(|| {
+                    format!("failed to merge configuration at `{}`", path.display())
+                })?;
             Ok(())
         })
         .context("could not load Cargo configuration")?;
@@ -1150,7 +1151,7 @@ impl GlobalContext {
             };
 
             self._load_file(&abs_path, seen, true, definition_kind)
-                .and_then(|include| root.merge(include, true))
+                .and_then(|include| root.merge(include, MergePriority::From))
                 .with_context(|| {
                     format!(
                         "failed to load config include `{}` from `{}`",
@@ -1159,7 +1160,7 @@ impl GlobalContext {
                     )
                 })?;
         }
-        root.merge(config, true)?;
+        root.merge(config, MergePriority::From)?;
         Ok(root)
     }
 
@@ -1307,7 +1308,7 @@ impl GlobalContext {
                 .load_includes(arg_config, &mut HashSet::default(), DefinitionKind::Cli)
                 .context("failed to load --config include".to_string())?;
             loaded_args
-                .merge(arg_config, true)
+                .merge(arg_config, MergePriority::From)
                 .with_context(|| format!("failed to merge --config argument `{arg}`"))?;
         }
         Ok(loaded_args)
@@ -1316,7 +1317,7 @@ impl GlobalContext {
     /// Add config arguments passed on the command line.
     fn merge_cli_args(&mut self) -> CargoResult<()> {
         let cli_config = self.cli_args_to_config()?;
-        self.config_mut()?.merge(cli_config, true)
+        self.config_mut()?.merge(cli_config, MergePriority::From)
     }
 
     /// The purpose of this function is to aid in the transition to using
@@ -2043,7 +2044,7 @@ pub fn save_credentials(
         if registry.is_some() {
             if let Some(table) = toml.remove("registries") {
                 let v = CV::from_toml(path_def, table)?;
-                value.merge(v, false)?;
+                value.merge(v, MergePriority::Definition)?;
             }
         }
         toml.insert(key, value.into_toml());

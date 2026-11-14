@@ -36,7 +36,7 @@ pub mod schema;
 mod value;
 
 pub use config_store::ConfigStore;
-pub use config_value::ConfigValue;
+pub use config_value::{ConfigValue, MergePriority};
 pub use definition::{Definition, DefinitionKind};
 pub use env::Env;
 pub use error::ConfigError;

@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context as _, Result, bail};
 
-use super::{ConfigKey, ConfigValue, Definition, DefinitionKind};
+use super::{ConfigKey, ConfigValue, Definition, DefinitionKind, MergePriority};
 use cargo_util::collections::{BuildHasher, HashMap};
 
 use ConfigValue as CV;
@@ -74,16 +74,13 @@ impl ConfigStore {
 
     /// Merge the given values into self.
     ///
-    /// If `force` is true, primitive (non-container) types will override existing values
-    /// of equal priority. For arrays, incoming values of equal priority will be placed later.
-    ///
-    /// Container types (tables and arrays) are merged with existing values.
+    /// Tables merge recursively. [`MergePriority`] controls value replacement and list ordering.
     ///
     /// Container and non-container types cannot be mixed.
-    pub fn merge(&mut self, from: Self, force: bool) -> Result<()> {
+    pub fn merge(&mut self, from: Self, priority: MergePriority) -> Result<()> {
         let mut root_cv = std::mem::take(self).into_value();
         let from = from.into_value();
-        root_cv.merge(from, force)?;
+        root_cv.merge(from, priority)?;
         *self = Self::from_table_value(root_cv).unwrap();
 
         Ok(())

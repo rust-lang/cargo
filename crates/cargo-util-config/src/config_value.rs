@@ -137,13 +137,14 @@ impl ConfigValue {
 
     /// Merge the given value into self.
     ///
-    /// If `force` is true, primitive (non-container) types will override existing values
-    /// of equal priority. For arrays, incoming values of equal priority will be placed later.
-    ///
-    /// Container types (tables and arrays) are merged with existing values.
+    /// Tables merge recursively. [`MergePriority`] controls value replacement and list ordering.
     ///
     /// Container and non-container types cannot be mixed.
-    pub fn merge(&mut self, from: ConfigValue, force: bool) -> Result<()> {
+    pub fn merge(&mut self, from: ConfigValue, priority: MergePriority) -> Result<()> {
+        let force = match priority {
+            MergePriority::Definition => false,
+            MergePriority::From => true,
+        };
         self.merge_helper(from, force, &mut ConfigKey::new())
     }
 
@@ -302,6 +303,25 @@ impl ConfigValue {
             self.definition()
         )
     }
+}
+
+/// Policy for merging [`ConfigValue`]s
+///
+/// For scalar or non-mergeable lists, controls which wins when merging configuration values.
+///
+/// For mergeable lists, retain both sides, ordered by definition priority.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MergePriority {
+    /// Defer to [`Definition`]
+    ///
+    /// Prefer the higher-priority definition, keeping the existing value on a tie.
+    /// For mergeable lists, incoming entries come first among entries of equal priority.
+    Definition,
+    /// Defer to the new layer.
+    ///
+    /// Prefer the incoming value regardless of its definition.
+    /// For mergeable lists, incoming entries come last among entries of equal priority.
+    From,
 }
 
 pub(crate) fn is_nonmergeable_list(key: &ConfigKey) -> bool {
