@@ -131,13 +131,7 @@ fn rlib_with_debug() {
         .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["artifact-dir"])
         .run();
-    check_dir_contents(
-        &p.root().join("out"),
-        &["libfoo.rlib"],
-        &["libfoo.rlib"],
-        &["libfoo.rlib"],
-        &["libfoo.rlib"],
-    );
+    assert!(!p.root().join("out").exists());
 }
 
 #[cargo_test]

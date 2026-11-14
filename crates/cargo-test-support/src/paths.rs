@@ -412,7 +412,7 @@ fn build_dir_ignored_path_patterns() -> Vec<String> {
 /// ```
 /// would return:
 /// - macOS: `"libfoo.dylib"`
-/// - Windows: `"foo.dll"`
+/// - Windows MSVC: `"foo.dll"`
 /// - Unix: `"libfoo.so"`
 pub fn get_lib_filename(name: &str, kind: &str) -> String {
     let prefix = get_lib_prefix(kind);
@@ -424,7 +424,14 @@ pub fn get_lib_filename(name: &str, kind: &str) -> String {
 pub fn get_lib_prefix(kind: &str) -> &str {
     match kind {
         "lib" | "rlib" => "lib",
-        "staticlib" | "dylib" | "proc-macro" => {
+        "staticlib" => {
+            if cfg!(target_env = "msvc") {
+                ""
+            } else {
+                "lib"
+            }
+        }
+        "dylib" | "proc-macro" => {
             if cfg!(windows) {
                 ""
             } else {
@@ -440,7 +447,7 @@ pub fn get_lib_extension(kind: &str) -> &str {
     match kind {
         "lib" | "rlib" => "rlib",
         "staticlib" => {
-            if cfg!(windows) {
+            if cfg!(target_env = "msvc") {
                 "lib"
             } else {
                 "a"

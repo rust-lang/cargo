@@ -728,13 +728,16 @@ fn clean_remove_rlib_rmeta() {
     p.cargo("build")
         .env("__CARGO_TEMPORARY_BUILD_DIR_NEW_LAYOUT_OPT_OUT", "1")
         .run();
-    assert!(p.target_debug_dir().join("libfoo.rlib").exists());
+    assert!(!p.target_debug_dir().join("libfoo.rlib").exists());
+    let rlib = p.glob("target/debug/deps/*.rlib").next().unwrap().unwrap();
+    assert!(rlib.exists());
     let rmeta = p.glob("target/debug/deps/*.rmeta").next().unwrap().unwrap();
     assert!(rmeta.exists());
     p.cargo("clean -p foo")
         .env("__CARGO_TEMPORARY_BUILD_DIR_NEW_LAYOUT_OPT_OUT", "1")
         .run();
     assert!(!p.target_debug_dir().join("libfoo.rlib").exists());
+    assert!(!rlib.exists());
     assert!(!rmeta.exists());
 }
 
