@@ -1276,33 +1276,7 @@ impl GlobalContext {
                         format!("failed to load config from `{}`", arg_as_path.display())
                     })?
             } else {
-                let doc = toml_dotted_keys(arg)?;
-                let doc: toml::Value = toml::Value::deserialize(doc.into_deserializer())
-                    .with_context(|| {
-                        format!("failed to parse value from --config argument `{arg}`")
-                    })?;
-
-                if doc
-                    .get("registry")
-                    .and_then(|v| v.as_table())
-                    .and_then(|t| t.get("token"))
-                    .is_some()
-                {
-                    bail!("registry.token cannot be set through --config for security reasons");
-                } else if let Some((k, _)) = doc
-                    .get("registries")
-                    .and_then(|v| v.as_table())
-                    .and_then(|t| t.iter().find(|(_, v)| v.get("token").is_some()))
-                {
-                    bail!(
-                        "registries.{}.token cannot be set through --config for security reasons",
-                        k
-                    );
-                }
-
-                let table = CV::from_toml(Definition::Cli(None), doc)
-                    .with_context(|| format!("failed to convert --config argument `{arg}`"))?;
-                ConfigStore::from_table_value(table).unwrap()
+                parse_cli_key_value(arg)?
             };
             let arg_config = self
                 .load_includes(arg_config, &mut HashSet::default(), DefinitionKind::Cli)
@@ -2146,6 +2120,42 @@ impl ConfigInclude {
             None
         } else {
             Some(abs_path)
+        }
+    }
+}
+
+fn parse_cli_key_value(arg: &str) -> CargoResult<ConfigStore> {
+    {
+        {
+            {
+                let doc = toml_dotted_keys(arg)?;
+                let doc: toml::Value = toml::Value::deserialize(doc.into_deserializer())
+                    .with_context(|| {
+                        format!("failed to parse value from --config argument `{arg}`")
+                    })?;
+
+                if doc
+                    .get("registry")
+                    .and_then(|v| v.as_table())
+                    .and_then(|t| t.get("token"))
+                    .is_some()
+                {
+                    bail!("registry.token cannot be set through --config for security reasons");
+                } else if let Some((k, _)) = doc
+                    .get("registries")
+                    .and_then(|v| v.as_table())
+                    .and_then(|t| t.iter().find(|(_, v)| v.get("token").is_some()))
+                {
+                    bail!(
+                        "registries.{}.token cannot be set through --config for security reasons",
+                        k
+                    );
+                }
+
+                let table = CV::from_toml(Definition::Cli(None), doc)
+                    .with_context(|| format!("failed to convert --config argument `{arg}`"))?;
+                Ok(ConfigStore::from_table_value(table).unwrap())
+            }
         }
     }
 }
