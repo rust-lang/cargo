@@ -256,6 +256,17 @@ fn do_package<'a>(
     opts: &PackageOpts<'a>,
     pkgs: Vec<(&Package, CliFeatures)>,
 ) -> CargoResult<Vec<(Package, PackageOpts<'a>, FileLock)>> {
+    if !opts.list && !pkgs.is_empty() {
+        // Verification builds a temporary workspace, which is not recorded.
+        // Save the original target and build directories even when resolution
+        // and verification are skipped.
+        let gctx = ws.gctx();
+        let _lock = gctx.acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
+        let mut deferred = gctx.deferred_global_last_use()?;
+        deferred.mark_workspace_build_used(ws);
+        deferred.save_no_error(gctx);
+    }
+
     if ws
         .lock_root()
         .as_path_unlocked()

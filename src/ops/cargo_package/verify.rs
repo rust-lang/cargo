@@ -92,7 +92,9 @@ pub fn run_verify(
     };
 
     let exec: Arc<dyn Executor> = Arc::new(DefaultExecutor);
-    ops::compile_with_exec(
+    // The workspace is temporary. `do_package` records the directories of the
+    // original workspace.
+    ops::cargo_compile::compile_without_workspace_build_tracking(
         &ws,
         &ops::CompileOptions {
             build_config: BuildConfig::new(

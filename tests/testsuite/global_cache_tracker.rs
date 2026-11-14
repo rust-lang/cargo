@@ -18,14 +18,16 @@ use crate::prelude::*;
 use crate::utils::cargo_process;
 use cargo::GlobalContext;
 use cargo::util::cache_lock::CacheLockMode;
-use cargo::workspace::global_cache_tracker::{self, DeferredGlobalLastUse, GlobalCacheTracker};
+use cargo::workspace::global_cache_tracker::{
+    self, DeferredGlobalLastUse, GlobalCacheTracker, WorkspaceBuildKind,
+};
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::paths;
 use cargo_test_support::paths::ReadOnly;
 use cargo_test_support::registry::{Package, RegistryBuilder};
 use cargo_test_support::{
     Execs, Project, basic_manifest, execs, git, process, project, retry, sleep_ms, str,
-    thread_wait_timeout,
+    symlink_supported, thread_wait_timeout,
 };
 use itertools::Itertools;
 
@@ -79,6 +81,22 @@ fn get_git_db_names() -> Vec<String> {
 
 fn get_git_checkout_names(db_name: &str) -> Vec<String> {
     get_names(&format!(".cargo/git/checkouts/{db_name}/*"))
+}
+
+fn workspace_build_dirs() -> Vec<(WorkspaceBuildKind, PathBuf)> {
+    let gctx = GlobalContextBuilder::new().build();
+    let _lock = gctx
+        .acquire_package_cache_lock(CacheLockMode::MutateExclusive)
+        .unwrap();
+    let tracker = GlobalCacheTracker::new(&gctx).unwrap();
+    let mut dirs: Vec<_> = tracker
+        .workspace_build_all()
+        .unwrap()
+        .into_iter()
+        .map(|(workspace_build, _timestamp)| (workspace_build.kind, workspace_build.path))
+        .collect();
+    dirs.sort();
+    dirs
 }
 
 fn days_ago(n: u64) -> SystemTime {
@@ -1527,6 +1545,32 @@ fn can_handle_future_schema() -> anyhow::Result<()> {
 }
 
 #[cargo_test]
+fn can_handle_future_workspace_build_kind() -> anyhow::Result<()> {
+    // It should work when a future version of cargo has recorded a kind of
+    // workspace directory that this version does not know.
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("check").run();
+    // Change a kind to pretend this is done by a future version of cargo.
+    let gctx = GlobalContextBuilder::new().build();
+    let db_path = GlobalCacheTracker::db_path(&gctx).into_path_unlocked();
+    rusqlite::Connection::open(&db_path)?.execute(
+        "UPDATE workspace_build SET kind = 'future' WHERE kind = 'build'",
+        [],
+    )?;
+    assert_eq!(
+        workspace_build_dirs(),
+        [
+            (WorkspaceBuildKind::Target, p.build_dir()),
+            (
+                WorkspaceBuildKind::Unknown("future".to_owned()),
+                p.build_dir()
+            ),
+        ]
+    );
+    Ok(())
+}
+
+#[cargo_test]
 fn clean_max_git_age() {
     // --max-git-*-age flags
     let (git_a, git_a_repo) = git::new_repo("git_a", |p| {
@@ -1710,6 +1754,472 @@ fn clean_max_src_crate_age() {
 
 "#]])
         .run();
+}
+
+#[cargo_test]
+fn clean_max_target_age() {
+    let old = project().at("old").file("src/lib.rs", "").build();
+    let new = project().at("new").file("src/lib.rs", "").build();
+    old.cargo("check")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+    new.cargo("check")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(2))
+        .run();
+
+    cargo_process("clean gc")
+        .arg("--max-target-age=3 days")
+        .arg("-Zgc")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_stderr_data(str![[r#"
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
+"#]])
+        .run();
+    assert!(!old.build_dir().is_dir());
+    assert!(new.build_dir().is_dir());
+    assert_eq!(
+        workspace_build_dirs(),
+        [
+            (WorkspaceBuildKind::Target, new.build_dir()),
+            (WorkspaceBuildKind::Build, new.build_dir()),
+        ]
+    );
+}
+
+#[cargo_test]
+fn clean_max_target_age_shared_dir() {
+    let new = project().at("new").file("src/lib.rs", "").build();
+    let split = project().at("split").file("src/lib.rs", "").build();
+    let shared = paths::root().join("shared");
+    split
+        .cargo("check")
+        .env("CARGO_BUILD_BUILD_DIR", &shared)
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+    new.cargo("check")
+        .env("CARGO_TARGET_DIR", &shared)
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(2))
+        .run();
+    // A use still counts when its workspace is gone.
+    new.root().rm_rf();
+    assert!(split.build_dir().is_dir());
+
+    cargo_process("clean gc")
+        .arg("--max-target-age=3 days")
+        .arg("-Zgc")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_stderr_data(str![[r#"
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
+"#]])
+        .run();
+    assert!(!split.build_dir().exists());
+    assert!(shared.is_dir());
+    // The row of the deleted `split` target dir is gone. `split` used `shared`
+    // only as its build dir, and `new` used it as both.
+    assert_eq!(
+        workspace_build_dirs(),
+        [
+            (WorkspaceBuildKind::Target, shared.clone()),
+            (WorkspaceBuildKind::Build, shared.clone()),
+            (WorkspaceBuildKind::Build, shared.clone()),
+        ]
+    );
+
+    cargo_process("clean gc")
+        .arg("--max-target-age=0 days")
+        .arg("-Zgc")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_stderr_data(str![[r#"
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
+"#]])
+        .run();
+    assert!(!shared.exists());
+    assert!(workspace_build_dirs().is_empty());
+}
+
+#[cargo_test]
+fn clean_max_target_age_missing_dirs() {
+    let old = project().at("old").file("src/lib.rs", "").build();
+    let new = project().at("new").file("src/lib.rs", "").build();
+    old.cargo("check")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+    new.cargo("check")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(2))
+        .run();
+    old.build_dir().rm_rf();
+    new.build_dir().rm_rf();
+    let before = workspace_build_dirs();
+    assert_eq!(before.len(), 4);
+
+    cargo_process("clean gc --dry-run")
+        .arg("--max-target-age=3 days")
+        .arg("-Zgc")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_stderr_data(str![[r#"
+[SUMMARY] 0 files
+[WARNING] no files deleted due to --dry-run
+
+"#]])
+        .run();
+    assert_eq!(workspace_build_dirs(), before);
+
+    cargo_process("clean gc")
+        .arg("--max-target-age=3 days")
+        .arg("-Zgc")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_stderr_data(str![[r#"
+[REMOVED] 0 files
+
+"#]])
+        .run();
+    assert_eq!(
+        workspace_build_dirs(),
+        [
+            (WorkspaceBuildKind::Target, new.build_dir()),
+            (WorkspaceBuildKind::Build, new.build_dir()),
+        ]
+    );
+}
+
+#[cargo_test]
+fn clean_max_target_age_keeps_existing_workspace() {
+    let existing = project().at("existing").file("src/lib.rs", "").build();
+    let deleted = project().at("deleted").file("src/lib.rs", "").build();
+    for p in [&existing, &deleted] {
+        p.cargo("check")
+            .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+            .run();
+    }
+    deleted.root().rm_rf();
+
+    cargo_process("clean gc")
+        .arg("--max-target-age=3 days")
+        .arg("-Zgc")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_stderr_data(str![[r#"
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
+"#]])
+        .run();
+    assert!(!existing.build_dir().is_dir());
+    assert!(workspace_build_dirs().is_empty());
+
+    // Neither workspace has a target or build directory record now, so only
+    // the manifest decides which workspace record stays.
+    let gctx = GlobalContextBuilder::new().build();
+    let db_path = GlobalCacheTracker::db_path(&gctx).into_path_unlocked();
+    let conn = rusqlite::Connection::open(&db_path).unwrap();
+    let manifest_paths: Vec<_> = conn
+        .prepare("SELECT manifest_path FROM workspace")
+        .unwrap()
+        .query_map([], |row| row.get::<_, Vec<u8>>(0))
+        .unwrap()
+        .map(|path| cargo_util::paths::bytes2path(&path.unwrap()).unwrap())
+        .collect();
+    assert_eq!(manifest_paths, [existing.root().join("Cargo.toml")]);
+}
+
+#[cargo_test]
+fn clean_max_target_age_dry_run() {
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("check")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+
+    p.cargo("clean gc --dry-run")
+        .arg("--max-target-age=3 days")
+        .arg("-Zgc")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_stderr_data(str![[r#"
+[SUMMARY] [FILE_NUM] files, [FILE_SIZE]B total
+[WARNING] no files deleted due to --dry-run
+
+"#]])
+        .run();
+    assert!(p.build_dir().is_dir());
+    assert_eq!(
+        workspace_build_dirs(),
+        [
+            (WorkspaceBuildKind::Target, p.build_dir()),
+            (WorkspaceBuildKind::Build, p.build_dir()),
+        ]
+    );
+}
+
+#[cargo_test]
+fn clean_max_target_age_untagged_dir() {
+    let p = project().file("src/lib.rs", "").build();
+    // Cargo does not add `CACHEDIR.TAG` to a directory that it did not create.
+    p.build_dir().mkdir_p();
+    p.cargo("check")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+
+    p.cargo("clean gc")
+        .arg("--max-target-age=3 days")
+        .arg("-Zgc")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_stderr_data(str![[r#"
+[REMOVED] 0 files
+
+"#]])
+        .run();
+    assert!(p.build_dir().is_dir());
+    assert_eq!(
+        workspace_build_dirs(),
+        [
+            (WorkspaceBuildKind::Target, p.build_dir()),
+            (WorkspaceBuildKind::Build, p.build_dir()),
+        ]
+    );
+}
+
+#[cargo_test]
+fn clean_max_target_age_nested_dir() {
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("check")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+    let nested = p.build_dir().join("rust-analyzer");
+    nested.mkdir_p();
+    p.cargo("check --target-dir target/rust-analyzer")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(2))
+        .run();
+    assert!(!nested.join("CACHEDIR.TAG").exists());
+    let before = workspace_build_dirs();
+    assert_eq!(before.len(), 4);
+
+    p.cargo("clean gc")
+        .arg("--max-target-age=3 days")
+        .arg("-Zgc")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_stderr_data(str![[r#"
+[REMOVED] 0 files
+
+"#]])
+        .run();
+    assert!(nested.is_dir());
+    assert_eq!(workspace_build_dirs(), before);
+
+    p.cargo("clean gc")
+        .arg("--max-target-age=0 days")
+        .arg("-Zgc")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_stderr_data(str![[r#"
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
+"#]])
+        .run();
+    assert!(!p.build_dir().exists());
+    assert!(workspace_build_dirs().is_empty());
+}
+
+#[cfg(unix)]
+#[cargo_test]
+fn clean_max_target_age_removal_error() {
+    let p = project().at("readonly").file("src/lib.rs", "").build();
+    let missing = project().at("missing").file("src/lib.rs", "").build();
+    for project in [&p, &missing] {
+        project
+            .cargo("check")
+            .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+            .run();
+    }
+    missing.build_dir().rm_rf();
+    let before = workspace_build_dirs();
+    let readonly = ReadOnly::new(p.build_dir());
+    // A privileged user may be able to write despite the permissions.
+    if std::fs::write(p.build_dir().join("permission-probe"), "").is_ok() {
+        return;
+    }
+
+    p.cargo("clean gc")
+        .arg("--max-target-age=3 days")
+        .arg("-Zgc")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to clean workspace target and build directories
+
+Caused by:
+  failed to remove [..] `[ROOT]/readonly/target/[..]`
+
+Caused by:
+  Permission denied (os error 13)
+
+"#]])
+        .run();
+    assert!(p.build_dir().is_dir());
+    assert_eq!(workspace_build_dirs(), before);
+    drop(readonly);
+
+    p.cargo("clean gc")
+        .arg("--max-target-age=3 days")
+        .arg("-Zgc")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .run();
+    assert!(!p.build_dir().exists());
+    assert!(workspace_build_dirs().is_empty());
+}
+
+#[cargo_test]
+fn clean_max_target_age_package() {
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("check")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+    p.cargo("package")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(2))
+        .run();
+
+    p.cargo("clean gc")
+        .arg("--max-target-age=3 days")
+        .arg("-Zgc")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_stderr_data(str![[r#"
+[REMOVED] 0 files
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
+fn clean_max_target_age_script() {
+    let p = project().file("echo.rs", "fn main() {}").build();
+    p.cargo("-Zscript echo.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+    assert_eq!(get_names(".cargo/build/*/*").len(), 1);
+
+    p.cargo("clean gc")
+        .arg("--max-target-age=3 days")
+        .arg("-Zgc")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_stderr_data(str![[r#"
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
+"#]])
+        .run();
+    assert!(get_names(".cargo/build/*/*").is_empty());
+}
+
+#[cargo_test]
+fn clean_max_target_age_dir_under_symlink() {
+    if !symlink_supported() {
+        return;
+    }
+    let p = project().file("src/lib.rs", "").build();
+    p.root().join("real").mkdir_p();
+    p.symlink("real", "alias");
+    p.cargo("check --target-dir alias/target")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+
+    // The symlink points to the parent `real`, not to `real/target`.
+    // Removing the stale, tagged target directory leaves `alias -> real`
+    // intact, so it does not break the symlink.
+    p.cargo("clean gc")
+        .arg("--max-target-age=3 days")
+        .arg("-Zgc")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_stderr_data(str![[r#"
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
+"#]])
+        .run();
+    assert!(workspace_build_dirs().is_empty());
+}
+
+#[cargo_test]
+fn clean_max_target_age_two_paths_one_dir() {
+    if !symlink_supported() {
+        return;
+    }
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("check --target-dir real/target")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+    p.symlink("real", "alias");
+    // This is a recent use of `real/target` through another path.
+    p.cargo("check --target-dir alias/target").run();
+
+    p.cargo("clean gc")
+        .arg("--max-target-age=3 days")
+        .arg("-Zgc")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_stderr_data(str![[r#"
+[REMOVED] 0 files
+
+"#]])
+        .run();
+    assert_eq!(workspace_build_dirs().len(), 4);
+}
+
+#[cargo_test]
+fn clean_max_target_age_dir_is_symlink() {
+    if !symlink_supported() {
+        return;
+    }
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("check")
+        .env("__CARGO_TEST_LAST_USE_NOW", days_ago_unix(4))
+        .run();
+    // Cargo created this directory, so it has a `CACHEDIR.TAG` and only the
+    // symlink keeps it.
+    std::fs::rename(p.build_dir(), p.root().join("real")).unwrap();
+    p.symlink("real", "target");
+
+    // Removing `real` would break `target -> real`, so cleanup must keep
+    // the directory even though it is stale and has a valid cache tag.
+    p.cargo("clean gc")
+        .arg("--max-target-age=3 days")
+        .arg("-Zgc")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .with_stderr_data(str![[r#"
+[REMOVED] 0 files
+
+"#]])
+        .run();
+    assert_eq!(
+        workspace_build_dirs(),
+        [
+            (WorkspaceBuildKind::Target, p.build_dir()),
+            (WorkspaceBuildKind::Build, p.build_dir()),
+        ]
+    );
+}
+
+#[cargo_test]
+fn install_temp_target_dir() {
+    Package::new("foo", "1.0.0")
+        .file("src/main.rs", "fn main() {}")
+        .publish();
+
+    cargo_process("install foo").run();
+    assert!(workspace_build_dirs().is_empty());
+}
+
+#[cargo_test]
+fn install_temp_target_dir_separate_build_dir() {
+    let git_project = git::new("foo", |p| {
+        p.file("Cargo.toml", &basic_manifest("foo", "1.0.0"))
+            .file("src/main.rs", "fn main() {}")
+    });
+    let build_dir = paths::root().join("build");
+
+    cargo_process("install --git")
+        .arg(git_project.url().to_string())
+        .env("CARGO_BUILD_BUILD_DIR", &build_dir)
+        .run();
+    assert_eq!(
+        workspace_build_dirs(),
+        [(WorkspaceBuildKind::Build, build_dir)]
+    );
 }
 
 #[cargo_test]
