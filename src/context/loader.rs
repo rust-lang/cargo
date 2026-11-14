@@ -117,7 +117,7 @@ impl<'a> ConfigLoader<'a> {
     }
 
     /// Converts the `include` config value to a list of absolute paths.
-    fn include_paths(&self, config: &ConfigStore) -> CargoResult<Vec<ConfigInclude>> {
+    fn include_paths(&self, config: &ConfigStore) -> CargoResult<Vec<DetailedIncludeConfig>> {
         let table = config.values();
         let include = table.get("include");
         let includes = match include.cloned() {
@@ -127,7 +127,7 @@ impl<'a> ConfigLoader<'a> {
                 .map(|(idx, cv)| match cv {
                     CV::String(val, definition) => {
                         let path = ConfigParentRelativePath::new(Value { val, definition });
-                        Ok(ConfigInclude::new(path))
+                        Ok(DetailedIncludeConfig::new(path))
                     }
                     CV::Table(mut table, def) => {
                         // Extract `include.path`
@@ -152,7 +152,7 @@ impl<'a> ConfigLoader<'a> {
                             None => false,
                         };
 
-                        let mut include = ConfigInclude::new(path);
+                        let mut include = DetailedIncludeConfig::new(path);
                         include.optional = optional;
                         Ok(include)
                     }
@@ -349,15 +349,15 @@ impl<'a> ConfigLoader<'a> {
 /// Represents a config-include value in the configuration.
 ///
 /// This intentionally doesn't derive serde deserialization
-/// to avoid any misuse of `GlobalContext::get::<ConfigInclude>()`,
+/// to avoid any misuse of `GlobalContext::get::<DetailedIncludeConfig>()`,
 /// which might lead to wrong config loading order.
-struct ConfigInclude {
+struct DetailedIncludeConfig {
     path: ConfigParentRelativePath,
     /// Whether this include is optional (missing files are silently ignored)
     optional: bool,
 }
 
-impl ConfigInclude {
+impl DetailedIncludeConfig {
     fn new(path: ConfigParentRelativePath) -> Self {
         Self {
             path,
