@@ -102,6 +102,7 @@ pub use crate::config::{
 use crate::config::{ConfigReader, Env, MergePriority};
 
 mod loader;
+use loader::ConfigLoader;
 
 mod path;
 pub use path::BracketType;
@@ -381,7 +382,7 @@ impl GlobalContext {
     /// such as recommending where to add a config value).
     pub fn diagnostic_home_config(&self) -> String {
         let home = self.home_path.as_path_unlocked();
-        let path = match self.get_file_path(home, "config", false) {
+        let path = match self.config_loader().get_file_path(home, "config", false) {
             Ok(Some(existing_path)) => existing_path,
             _ => home.join("config.toml"),
         };
@@ -675,7 +676,7 @@ impl GlobalContext {
     /// Reloads on-disk configuration values, starting at the given path and
     /// walking up its ancestors.
     pub fn reload_rooted_at<P: AsRef<Path>>(&mut self, path: P) -> CargoResult<()> {
-        let config = self.load_config_from(path.as_ref())?;
+        let config = self.config_loader().load_config_from(path.as_ref())?;
         self.config.replace(config);
         self.merge_cli_args()?;
         self.load_unstable_flags_from_config()?;
@@ -1032,13 +1033,28 @@ impl GlobalContext {
 
     /// Loads configuration from the filesystem.
     pub fn load_config(&self) -> CargoResult<ConfigStore> {
-        self.load_config_from(&self.cwd)
+        self.config_loader().load_config_from(&self.cwd)
+    }
+
+    /// Parses the CLI config args and returns them as a table.
+    pub(crate) fn cli_args_to_config(&self) -> CargoResult<ConfigStore> {
+        let cli_args = self.cli_config.as_deref().unwrap_or_default();
+        self.config_loader().cli_args_to_config(cli_args)
     }
 
     /// Add config arguments passed on the command line.
     fn merge_cli_args(&mut self) -> CargoResult<()> {
         let cli_config = self.cli_args_to_config()?;
         self.config_mut()?.merge(cli_config, MergePriority::From)
+    }
+
+    pub(crate) fn config_loader(&self) -> ConfigLoader<'_> {
+        ConfigLoader::new(
+            &self.shell,
+            &self.cwd,
+            self.home_path.as_path_unlocked(),
+            self.search_stop_path.as_deref(),
+        )
     }
 
     /// Gets the index for a registry.
@@ -1088,7 +1104,7 @@ impl GlobalContext {
     /// Gets configuration values from the credentials file, loading them on first use.
     fn credentials_config(&self) -> CargoResult<&ConfigStore> {
         self.credentials_config
-            .try_borrow_with(|| self.load_credentials())
+            .try_borrow_with(|| self.config_loader().load_credentials())
     }
 
     /// Looks for a path for `tool` in an environment variable or the given config, and returns
@@ -1599,7 +1615,10 @@ pub fn save_credentials(
     // Otherwise write to 'credentials.toml'. There's no need to print the
     // warning here, because it would already be printed at load time.
     let home_path = gctx.home_path.clone().into_path_unlocked();
-    let filename = match gctx.get_file_path(&home_path, "credentials", false)? {
+    let filename = match gctx
+        .config_loader()
+        .get_file_path(&home_path, "credentials", false)?
+    {
         Some(path) => match path.file_name() {
             Some(filename) => Path::new(filename).to_owned(),
             None => Path::new("credentials.toml").to_owned(),

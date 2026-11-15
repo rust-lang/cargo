@@ -4,34 +4,58 @@ use std::borrow::Cow;
 use std::ffi::OsStr;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::Mutex;
+use std::sync::MutexGuard;
 
 use anyhow::Context as _;
 use anyhow::bail;
 use cargo_util::collections::HashMap;
 use cargo_util::collections::HashSet;
 use cargo_util::paths;
+use cargo_util_terminal::Shell;
 use cargo_util_terminal::report::Level;
 
 use super::ConfigStore;
 use super::ConfigValue;
 use super::Definition;
 use super::DefinitionKind;
-use super::GlobalContext;
 use super::MergePriority;
 use crate::util::errors::CargoResult;
 use crate::util::restricted_names::is_glob_pattern;
 
 use ConfigValue as CV;
 
-impl GlobalContext {
-    /// Like [`load_config`](GlobalContext::load_config) but without merging config values.
+/// Discovers and loads config files from the filesystem.
+#[derive(Clone, Copy)]
+pub(crate) struct ConfigLoader<'a> {
+    shell: &'a Mutex<Shell>,
+    cwd: &'a Path,
+    home: &'a Path,
+    search_stop_path: Option<&'a Path>,
+}
+
+impl<'a> ConfigLoader<'a> {
+    pub(crate) fn new(
+        shell: &'a Mutex<Shell>,
+        cwd: &'a Path,
+        home: &'a Path,
+        search_stop_path: Option<&'a Path>,
+    ) -> Self {
+        Self {
+            shell,
+            cwd,
+            home,
+            search_stop_path,
+        }
+    }
+
+    /// Like [`ConfigLoader::load_config_from`] but without merging config values.
     ///
     /// This is primarily crafted for `cargo config` command.
     pub(crate) fn load_config_unmerged(&self) -> CargoResult<Vec<ConfigStore>> {
         let mut result = Vec::new();
         let mut seen = HashSet::default();
-        let home = self.home_path.clone().into_path_unlocked();
-        self.walk_tree(&self.cwd, &home, |path| {
+        self.walk_tree(self.cwd, self.home, |path| {
             let mut config = self._load_file(path, &mut seen, false, DefinitionKind::Path)?;
             self.load_unmerged_include(&mut config, &mut seen, &mut result)?;
             result.push(config);
@@ -41,7 +65,7 @@ impl GlobalContext {
         Ok(result)
     }
 
-    /// Like [`load_includes`](GlobalContext::load_includes) but without merging config values.
+    /// Like [`ConfigLoader::load_includes`] but without merging config values.
     ///
     /// This is primarily crafted for `cargo config` command.
     fn load_unmerged_include(
@@ -52,7 +76,7 @@ impl GlobalContext {
     ) -> CargoResult<()> {
         let includes = self.include_paths(config, false)?;
         for include in includes {
-            let Some(abs_path) = include.resolve_path(&self.cwd) else {
+            let Some(abs_path) = include.resolve_path(self.cwd) else {
                 continue;
             };
 
@@ -74,9 +98,8 @@ impl GlobalContext {
     /// Start a config file discovery from a path and merges all config values found.
     pub(crate) fn load_config_from(&self, path: &Path) -> CargoResult<ConfigStore> {
         let mut cfg = ConfigStore::default();
-        let home = self.home_path.clone().into_path_unlocked();
 
-        self.walk_tree(path, &home, |path| {
+        self.walk_tree(path, self.home, |path| {
             let config = self.load_file(path)?;
             cfg.merge(config, MergePriority::Definition)
                 .with_context(|| {
@@ -146,7 +169,7 @@ impl GlobalContext {
         let root = CV::Table(HashMap::default(), config.definition().clone());
         let mut root = ConfigStore::from_table_value(root).unwrap();
         for include in includes {
-            let Some(abs_path) = include.resolve_path(&self.cwd) else {
+            let Some(abs_path) = include.resolve_path(self.cwd) else {
                 continue;
             };
 
@@ -259,13 +282,10 @@ impl GlobalContext {
     }
 
     /// Parses the CLI config args and returns them as a table.
-    pub(crate) fn cli_args_to_config(&self) -> CargoResult<ConfigStore> {
+    pub(crate) fn cli_args_to_config(&self, cli_args: &[String]) -> CargoResult<ConfigStore> {
         let mut loaded_args =
             ConfigStore::from_table_value(CV::Table(HashMap::default(), Definition::Cli(None)))
                 .unwrap();
-        let Some(cli_args) = &self.cli_config else {
-            return Ok(loaded_args);
-        };
         let mut seen = HashSet::default();
         for arg in cli_args {
             let arg_as_path = self.cwd.join(arg);
@@ -346,7 +366,7 @@ impl GlobalContext {
     {
         let mut seen_dir = HashSet::default();
 
-        for current in paths::ancestors(pwd, self.search_stop_path.as_deref()) {
+        for current in paths::ancestors(pwd, self.search_stop_path) {
             let config_root = current.join(".cargo");
             if let Some(path) = self.get_file_path(&config_root, "config", true)? {
                 walk(&path)?;
@@ -372,8 +392,7 @@ impl GlobalContext {
 
     /// Loads credentials config from the credentials file, if present.
     pub(crate) fn load_credentials(&self) -> CargoResult<ConfigStore> {
-        let home_path = self.home_path.clone().into_path_unlocked();
-        let Some(credentials) = self.get_file_path(&home_path, "credentials", true)? else {
+        let Some(credentials) = self.get_file_path(self.home, "credentials", true)? else {
             return Ok(ConfigStore::default());
         };
 
@@ -392,6 +411,10 @@ impl GlobalContext {
         }
 
         Ok(config)
+    }
+
+    fn shell(&self) -> MutexGuard<'_, Shell> {
+        self.shell.lock().unwrap()
     }
 }
 
