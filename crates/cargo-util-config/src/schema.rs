@@ -1000,6 +1000,11 @@ impl ConfigRelativePath {
         ConfigRelativePath(path)
     }
 
+    /// Returns whether the configured path is an empty string.
+    pub fn is_empty(&self) -> bool {
+        self.as_str().is_empty()
+    }
+
     /// Returns the underlying value.
     pub fn as_value(&self) -> &Value<String> {
         &self.0
