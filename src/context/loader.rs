@@ -152,9 +152,7 @@ impl<'a> ConfigLoader<'a> {
                             None => false,
                         };
 
-                        let mut include = DetailedIncludeConfig::new(path);
-                        include.optional = optional;
-                        Ok(IncludeConfig::Detailed(include))
+                        Ok(IncludeConfig::Detailed(DetailedIncludeConfig { path, optional }))
                     }
                     other => bail!(
                         "expected a string or table, but found {} at `include[{idx}]` in {}",
@@ -355,7 +353,10 @@ enum IncludeConfig {
 impl IncludeConfig {
     fn into_detailed(self) -> DetailedIncludeConfig {
         match self {
-            Self::Simple(path) => DetailedIncludeConfig::new(path),
+            Self::Simple(path) => DetailedIncludeConfig {
+                path,
+                optional: false,
+            },
             Self::Detailed(include) => include,
         }
     }
@@ -373,13 +374,6 @@ struct DetailedIncludeConfig {
 }
 
 impl DetailedIncludeConfig {
-    fn new(path: ConfigParentRelativePath) -> Self {
-        Self {
-            path,
-            optional: false,
-        }
-    }
-
     /// Resolves the absolute path for this include.
     ///
     /// For file based include,
