@@ -1064,7 +1064,7 @@ impl GlobalContext {
     ) -> CargoResult<()> {
         let includes = self.include_paths(config, false)?;
         for include in includes {
-            let Some(abs_path) = include.resolve_path(self) else {
+            let Some(abs_path) = include.resolve_path(&self.cwd) else {
                 continue;
             };
 
@@ -1158,7 +1158,7 @@ impl GlobalContext {
         let root = CV::Table(HashMap::default(), config.definition().clone());
         let mut root = ConfigStore::from_table_value(root).unwrap();
         for include in includes {
-            let Some(abs_path) = include.resolve_path(self) else {
+            let Some(abs_path) = include.resolve_path(&self.cwd) else {
                 continue;
             };
 
@@ -2114,10 +2114,10 @@ impl ConfigInclude {
     ///
     /// Returns `None` if this is an optional include and the file doesn't exist.
     /// Otherwise returns `Some(PathBuf)` with the absolute path.
-    fn resolve_path(&self, gctx: &GlobalContext) -> Option<PathBuf> {
+    fn resolve_path(&self, cwd: &Path) -> Option<PathBuf> {
         let abs_path = match &self.def {
             Definition::Path(p) | Definition::Cli(Some(p)) => p.parent().unwrap(),
-            Definition::Environment(_) | Definition::Cli(None) | Definition::BuiltIn => gctx.cwd(),
+            Definition::Environment(_) | Definition::Cli(None) | Definition::BuiltIn => cwd,
         }
         .join(&self.path);
         let abs_path = paths::normalize_path(&abs_path);
