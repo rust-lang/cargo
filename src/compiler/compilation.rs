@@ -429,6 +429,11 @@ impl<'gctx> Compilation<'gctx> {
             }
             search_path.push(PathBuf::from("/usr/local/lib"));
             search_path.push(PathBuf::from("/usr/lib"));
+        } else if cfg!(target_os = "haiku") && dylib_path_is_empty {
+            // The runtime loader's defaults when LIBRARY_PATH isn't set; it expands `%A` itself.
+            search_path.push(PathBuf::from("%A/lib"));
+            search_path.push(PathBuf::from("/boot/system/non-packaged/lib"));
+            search_path.push(PathBuf::from("/boot/system/lib"));
         }
         let search_path = paths::join_paths(&search_path, paths::dylib_path_envvar())?;
 
