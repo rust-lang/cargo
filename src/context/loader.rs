@@ -14,11 +14,12 @@ use cargo_util::paths;
 use cargo_util_config::schema::ConfigParentRelativePath;
 use cargo_util_terminal::Shell;
 use cargo_util_terminal::report::Level;
+use serde::{Deserialize, Serialize, de};
 
-use super::ConfigStore;
 use super::ConfigValue;
 use super::DefinitionKind;
 use super::Value;
+use super::{ConfigKey, ConfigReader, ConfigStore};
 use crate::util::errors::CargoResult;
 use crate::util::restricted_names::is_glob_pattern;
 
@@ -118,59 +119,13 @@ impl<'a> ConfigLoader<'a> {
 
     /// Converts the `include` config value to a list of absolute paths.
     fn include_paths(&self, config: &ConfigStore) -> CargoResult<Vec<DetailedIncludeConfig>> {
-        let table = config.values();
-        let include = table.get("include");
-        let includes = match include.cloned() {
-            Some(CV::List(list, _def)) => list
-                .into_iter()
-                .enumerate()
-                .map(|(idx, cv)| match cv {
-                    CV::String(val, definition) => {
-                        let path = ConfigParentRelativePath::new(Value { val, definition });
-                        Ok(IncludeConfig::Simple(path))
-                    }
-                    CV::Table(mut table, def) => {
-                        // Extract `include.path`
-                        let path = match table.remove("path") {
-                            Some(CV::String(val, definition)) => {
-                                ConfigParentRelativePath::new(Value { val, definition })
-                            }
-                            Some(other) => bail!(
-                                "expected a string, but found {} at `include[{idx}].path` in `{def}`",
-                                other.desc()
-                            ),
-                            None => bail!("missing field `path` at `include[{idx}]` in `{def}`"),
-                        };
-
-                        // Extract optional `include.optional` field
-                        let optional = match table.remove("optional") {
-                            Some(CV::Boolean(b, _)) => b,
-                            Some(other) => bail!(
-                                "expected a boolean, but found {} at `include[{idx}].optional` in `{def}`",
-                                other.desc()
-                            ),
-                            None => false,
-                        };
-
-                        Ok(IncludeConfig::Detailed(DetailedIncludeConfig { path, optional }))
-                    }
-                    other => bail!(
-                        "expected a string or table, but found {} at `include[{idx}]` in {}",
-                        other.desc(),
-                        other.definition(),
-                    ),
-                })
-                .map(|entry| entry.map(IncludeConfig::into_detailed))
-                .collect::<CargoResult<Vec<_>>>()?,
-            Some(other) => bail!(
-                "expected a list of strings or a list of tables, but found {} at `include` in `{}",
-                other.desc(),
-                other.definition()
-            ),
-            None => {
-                return Ok(Vec::new());
-            }
-        };
+        let entries: Vec<IncludeConfig> = ConfigReader::new(self.shell)
+            .config(config)
+            .get(ConfigKey::from_parts(["include"]))?;
+        let includes: Vec<_> = entries
+            .into_iter()
+            .map(IncludeConfig::into_detailed)
+            .collect();
 
         for include in &includes {
             let path = &include.path;
@@ -345,9 +300,64 @@ impl<'a> ConfigLoader<'a> {
     }
 }
 
+#[derive(Serialize)]
+#[serde(untagged)]
 enum IncludeConfig {
     Simple(ConfigParentRelativePath),
     Detailed(DetailedIncludeConfig),
+}
+
+impl<'de> Deserialize<'de> for IncludeConfig {
+    fn deserialize<D: de::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        // HACK: Workaround the serialization protocol for `ConfigParentRelativePath` / `Value` is
+        // a newtype, making it messier to use in `IncludeConfig::Simple`.
+        enum RawIncludeConfig {
+            Simple(String),
+            Detailed(DetailedIncludeConfig),
+        }
+
+        impl<'de> Deserialize<'de> for RawIncludeConfig {
+            fn deserialize<D: de::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+                struct IncludeVisitor;
+
+                impl<'de> de::Visitor<'de> for IncludeVisitor {
+                    type Value = RawIncludeConfig;
+
+                    fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        f.write_str("a config include path or table")
+                    }
+
+                    fn visit_str<E: de::Error>(self, path: &str) -> Result<Self::Value, E> {
+                        self.visit_string(path.to_owned())
+                    }
+
+                    fn visit_string<E: de::Error>(self, path: String) -> Result<Self::Value, E> {
+                        Ok(RawIncludeConfig::Simple(path))
+                    }
+
+                    fn visit_map<M: de::MapAccess<'de>>(
+                        self,
+                        map: M,
+                    ) -> Result<Self::Value, M::Error> {
+                        DetailedIncludeConfig::deserialize(de::value::MapAccessDeserializer::new(
+                            map,
+                        ))
+                        .map(RawIncludeConfig::Detailed)
+                    }
+                }
+
+                deserializer.deserialize_any(IncludeVisitor)
+            }
+        }
+
+        let Value { val, definition } = Value::<RawIncludeConfig>::deserialize(deserializer)?;
+        Ok(match val {
+            RawIncludeConfig::Simple(val) => {
+                Self::Simple(ConfigParentRelativePath::new(Value { val, definition }))
+            }
+            RawIncludeConfig::Detailed(include) => Self::Detailed(include),
+        })
+    }
 }
 
 impl IncludeConfig {
@@ -363,13 +373,11 @@ impl IncludeConfig {
 }
 
 /// Represents a config-include value in the configuration.
-///
-/// This intentionally doesn't derive serde deserialization
-/// to avoid any misuse of `GlobalContext::get::<DetailedIncludeConfig>()`,
-/// which might lead to wrong config loading order.
+#[derive(Deserialize, Serialize)]
 struct DetailedIncludeConfig {
     path: ConfigParentRelativePath,
     /// Whether this include is optional (missing files are silently ignored)
+    #[serde(default)]
     optional: bool,
 }
 
