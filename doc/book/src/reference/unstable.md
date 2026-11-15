@@ -101,6 +101,7 @@ Each new feature described below should explain how to use it.
     * [json-target-spec](#json-target-spec) --- Allows the use of `.json` custom target specs.
     * [hint-msrv](#hint-msrv) --- Allows Cargo to set `-Zhint-msrv`
     * [mem-stats](#mem-stats) --- Reports peak memory usage per build unit in `--timings`.
+    * [shared-object-storage](#shared-object-storage) --- Deduplicates build artifacts between workspaces
 * rustdoc
     * [rustdoc-map](#rustdoc-map) --- Provides mappings for documentation to link to external sites like [docs.rs](https://docs.rs/).
     * [scrape-examples](#scrape-examples) --- Shows examples within documentation.
@@ -2028,6 +2029,24 @@ option:
 [unstable]
 hint-msrv = true
 ```
+
+## shared-object-storage
+* Tracking Issue: [rust-lang/cargo#17453](https://github.com/rust-lang/cargo/issues/17453)
+
+Enables Cargo to automatically deduplicate files across build units and workspaces by hardlink/reflinking
+against a shared content addressable object storage located in `~/.cargo/storage`.
+
+You can set this via your global `~/.cargo/config.toml`, and nightly Cargo will
+automatically use it, while stable Cargo will silently ignore the unstable
+option:
+
+```toml
+[unstable]
+shared-object-storage = true
+```
+
+Note that some configuration options can improve or degrade the storage reduction rate.
+A notable example of this [`profile.trim-paths`](profiles.md#trim-paths) which helps by reducing the number of absolute paths in compiler outputs making more deduplication possible.
 
 ## builtin-dependencies
 * Tracking Issue: [rust-lang/cargo#16960](https://github.com/rust-lang/cargo/issues/16960)
