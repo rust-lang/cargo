@@ -1,5 +1,9 @@
 //! Mock HTTP registry server for Cargo testing and development.
-
+//!
+//! > This crate is maintained by the Cargo team as a part of an experiment around mock HTTP
+//! > registries for Cargo testing and development. We encourage people to try to use this crate in
+//! > their projects and provide feedback through the Cargo issue tracker, but do not guarantee
+//! > long term maintenance.
 #![allow(clippy::disallowed_methods)]
 #![allow(clippy::disallowed_types)]
 #![allow(clippy::print_stderr)]
