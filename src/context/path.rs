@@ -34,7 +34,7 @@ pub trait ConfigRelativePathResolveExt {
 
 impl ConfigRelativePathResolveExt for ConfigRelativePath {
     fn resolve_path(&self, gctx: &GlobalContext) -> PathBuf {
-        let value = self.value();
+        let value = self.as_value();
         value.definition.root(gctx.cwd()).join(&value.val)
     }
 
@@ -43,7 +43,7 @@ impl ConfigRelativePathResolveExt for ConfigRelativePath {
         gctx: &GlobalContext,
         replacements: impl IntoIterator<Item = (impl AsRef<str>, impl AsRef<str>)>,
     ) -> Result<PathBuf, ResolveTemplateError> {
-        let path = self.value();
+        let path = self.as_value();
         let mut value = path.val.clone();
 
         for (from, to) in replacements {
@@ -77,7 +77,7 @@ impl ConfigRelativePathResolveExt for ConfigRelativePath {
     }
 
     fn resolve_program(&self, gctx: &GlobalContext) -> PathBuf {
-        let value = self.value();
+        let value = self.as_value();
         gctx.string_to_path(&value.val, &value.definition)
     }
 }
