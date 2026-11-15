@@ -100,13 +100,12 @@ use itertools::Itertools;
 use jiff::Timestamp;
 use url::Url;
 
+use crate::config::ConfigLoader;
+use crate::config::ConfigReader;
+use crate::config::Env;
 pub use crate::config::{
     ConfigError, ConfigKey, ConfigStore, ConfigValue, Definition, DefinitionKind, OptValue, Value,
 };
-use crate::config::{ConfigReader, Env};
-
-mod loader;
-use loader::ConfigLoader;
 
 mod target;
 pub use target::{TargetCfgConfig, TargetConfig};

@@ -12,12 +12,12 @@ use anyhow::bail;
 use cargo_util::collections::HashMap;
 use cargo_util::collections::HashSet;
 use cargo_util::paths;
-use cargo_util_config::schema::{DetailedIncludeConfig, IncludeConfig};
 use cargo_util_terminal::Shell;
 use cargo_util_terminal::report::Level;
 
 use super::ConfigValue;
 use super::DefinitionKind;
+use super::schema::{DetailedIncludeConfig, IncludeConfig};
 use super::{ConfigKey, ConfigReader, ConfigStore};
 use cargo_util::is_glob_pattern;
 

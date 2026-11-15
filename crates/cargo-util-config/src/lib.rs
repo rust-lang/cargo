@@ -31,6 +31,7 @@ mod definition;
 mod env;
 mod error;
 mod key;
+mod loader;
 mod reader;
 pub mod schema;
 mod value;
@@ -41,6 +42,7 @@ pub use definition::{Definition, DefinitionKind};
 pub use env::Env;
 pub use error::ConfigError;
 pub use key::ConfigKey;
+pub use loader::ConfigLoader;
 pub use reader::{ConfigReader, expected};
 pub use value::{OptValue, Value};
 
