@@ -29,6 +29,7 @@ use std::path::Path;
 use anyhow::Result;
 
 use super::CRATES_IO_REGISTRY;
+use super::Definition;
 use super::OptValue;
 use super::Value;
 
@@ -913,10 +914,10 @@ impl EnvConfigValue {
                 ..
             } => {
                 if relative {
-                    let p = value.value().definition.root(cwd).join(value.raw_value());
+                    let p = value.definition().root(cwd).join(value.as_str());
                     Cow::Owned(p.into_os_string())
                 } else {
-                    Cow::Borrowed(OsStr::new(value.raw_value()))
+                    Cow::Borrowed(OsStr::new(value.as_str()))
                 }
             }
         }
@@ -1000,13 +1001,23 @@ impl ConfigRelativePath {
         ConfigRelativePath(path)
     }
 
+    /// Returns whether the configured path is an empty string.
+    pub fn is_empty(&self) -> bool {
+        self.as_str().is_empty()
+    }
+
     /// Returns the underlying value.
-    pub fn value(&self) -> &Value<String> {
+    pub fn as_value(&self) -> &Value<String> {
         &self.0
     }
 
+    /// Returns where this path was defined.
+    pub fn definition(&self) -> &Definition {
+        &self.0.definition
+    }
+
     /// Returns the raw underlying configuration value for this key.
-    pub fn raw_value(&self) -> &str {
+    pub fn as_str(&self) -> &str {
         &self.0.val
     }
 }

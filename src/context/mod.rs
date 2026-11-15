@@ -710,10 +710,10 @@ impl GlobalContext {
             let path = val.resolve_path(self);
 
             // Check if the target directory is set to an empty string in the config.toml file.
-            if val.raw_value().is_empty() {
+            if val.is_empty() {
                 bail!(
                     "the target directory is set to an empty string in {}",
-                    val.value().definition
+                    val.definition()
                 )
             }
 
@@ -802,10 +802,10 @@ impl GlobalContext {
             })?;
 
         // Check if the target directory is set to an empty string in the config.toml file.
-        if val.raw_value().is_empty() {
+        if val.is_empty() {
             bail!(
                 "the build directory is set to an empty string in {}",
-                val.value().definition
+                val.definition()
             )
         }
 

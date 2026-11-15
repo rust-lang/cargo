@@ -550,7 +550,7 @@ pub fn resolve_root(flag: Option<&str>, gctx: &GlobalContext) -> CargoResult<Fil
         Some(p) => {
             let resolved = p.resolve_program(gctx);
             if resolved.is_relative() {
-                let definition = p.value().definition.clone();
+                let definition = p.definition();
                 if matches!(definition, Definition::Path(_)) {
                     let suggested = format!("{}/", resolved.display());
                     let notes = [

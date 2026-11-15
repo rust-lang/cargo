@@ -113,7 +113,7 @@ fn credential_provider(
 /// Use the `[credential-alias]` table to see if the provider name has been aliased.
 fn resolve_credential_alias(gctx: &GlobalContext, mut provider: PathAndArgs) -> Vec<String> {
     if provider.args.is_empty() {
-        let name = provider.path.raw_value();
+        let name = provider.path.as_str();
         let key = format!("credential-alias.{name}");
         if let Ok(alias) = gctx.get::<Value<PathAndArgs>>(["credential-alias", name]) {
             tracing::debug!("resolving credential alias '{key}' -> '{alias:?}'");
