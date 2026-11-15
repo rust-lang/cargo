@@ -713,7 +713,7 @@ impl GlobalContext {
             if val.as_str().is_empty() {
                 bail!(
                     "the target directory is set to an empty string in {}",
-                    val.as_value().definition
+                    val.definition()
                 )
             }
 
@@ -805,7 +805,7 @@ impl GlobalContext {
         if val.as_str().is_empty() {
             bail!(
                 "the build directory is set to an empty string in {}",
-                val.as_value().definition
+                val.definition()
             )
         }
 
