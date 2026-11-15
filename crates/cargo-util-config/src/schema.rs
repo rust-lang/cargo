@@ -915,7 +915,7 @@ impl EnvConfigValue {
                 ..
             } => {
                 if relative {
-                    let p = value.definition().root(cwd).join(value.as_str());
+                    let p = value.resolve(cwd);
                     Cow::Owned(p.into_os_string())
                 } else {
                     Cow::Borrowed(OsStr::new(value.as_str()))
