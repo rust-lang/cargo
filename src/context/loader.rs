@@ -76,8 +76,8 @@ impl<'a> ConfigLoader<'a> {
         seen: &mut HashSet<PathBuf>,
         output: &mut Vec<ConfigStore>,
     ) -> CargoResult<()> {
-        let mut config = self._load_file(path, seen, false, DefinitionKind::Path)?;
-        for include in self.include_paths(&mut config, false)? {
+        let config = self._load_file(path, seen, false, DefinitionKind::Path)?;
+        for include in self.include_paths(&config)? {
             let Some(abs_path) = include.resolve_path(self.cwd) else {
                 continue;
             };
@@ -138,7 +138,8 @@ impl<'a> ConfigLoader<'a> {
         definition_kind: DefinitionKind,
     ) -> CargoResult<ConfigStore> {
         // Get the list of files to load.
-        let includes = self.include_paths(&mut config, true)?;
+        let includes = self.include_paths(&config)?;
+        config.values_mut().remove("include");
 
         // Accumulate all values here.
         let root = CV::Table(HashMap::default(), config.definition().clone());
@@ -163,17 +164,9 @@ impl<'a> ConfigLoader<'a> {
     }
 
     /// Converts the `include` config value to a list of absolute paths.
-    fn include_paths(
-        &self,
-        config: &mut ConfigStore,
-        remove: bool,
-    ) -> CargoResult<Vec<ConfigInclude>> {
-        let table = config.values_mut();
-        let include = if remove {
-            table.remove("include").map(Cow::Owned)
-        } else {
-            table.get("include").map(Cow::Borrowed)
-        };
+    fn include_paths(&self, config: &ConfigStore) -> CargoResult<Vec<ConfigInclude>> {
+        let table = config.values();
+        let include = table.get("include").map(Cow::Borrowed);
         let includes = match include.map(|c| c.into_owned()) {
             Some(CV::List(list, _def)) => list
                 .into_iter()
