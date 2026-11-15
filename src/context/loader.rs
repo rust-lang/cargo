@@ -127,7 +127,7 @@ impl<'a> ConfigLoader<'a> {
                 .map(|(idx, cv)| match cv {
                     CV::String(val, definition) => {
                         let path = ConfigParentRelativePath::new(Value { val, definition });
-                        Ok(DetailedIncludeConfig::new(path))
+                        Ok(IncludeConfig::Simple(path))
                     }
                     CV::Table(mut table, def) => {
                         // Extract `include.path`
@@ -154,7 +154,7 @@ impl<'a> ConfigLoader<'a> {
 
                         let mut include = DetailedIncludeConfig::new(path);
                         include.optional = optional;
-                        Ok(include)
+                        Ok(IncludeConfig::Detailed(include))
                     }
                     other => bail!(
                         "expected a string or table, but found {} at `include[{idx}]` in {}",
@@ -162,6 +162,7 @@ impl<'a> ConfigLoader<'a> {
                         other.definition(),
                     ),
                 })
+                .map(|entry| entry.map(IncludeConfig::into_detailed))
                 .collect::<CargoResult<Vec<_>>>()?,
             Some(other) => bail!(
                 "expected a list of strings or a list of tables, but found {} at `include` in `{}",
@@ -343,6 +344,20 @@ impl<'a> ConfigLoader<'a> {
 
     fn shell(&self) -> MutexGuard<'_, Shell> {
         self.shell.lock().unwrap()
+    }
+}
+
+enum IncludeConfig {
+    Simple(ConfigParentRelativePath),
+    Detailed(DetailedIncludeConfig),
+}
+
+impl IncludeConfig {
+    fn into_detailed(self) -> DetailedIncludeConfig {
+        match self {
+            Self::Simple(path) => DetailedIncludeConfig::new(path),
+            Self::Detailed(include) => include,
+        }
     }
 }
 
