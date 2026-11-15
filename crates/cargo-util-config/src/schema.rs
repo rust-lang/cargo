@@ -912,14 +912,10 @@ impl EnvConfigValue {
                 ..
             } => {
                 if relative {
-                    let p = value
-                        .as_value()
-                        .definition
-                        .root(cwd)
-                        .join(value.raw_value());
+                    let p = value.as_value().definition.root(cwd).join(value.as_str());
                     Cow::Owned(p.into_os_string())
                 } else {
-                    Cow::Borrowed(OsStr::new(value.raw_value()))
+                    Cow::Borrowed(OsStr::new(value.as_str()))
                 }
             }
         }
@@ -1009,7 +1005,7 @@ impl ConfigRelativePath {
     }
 
     /// Returns the raw underlying configuration value for this key.
-    pub fn raw_value(&self) -> &str {
+    pub fn as_str(&self) -> &str {
         &self.0.val
     }
 }
