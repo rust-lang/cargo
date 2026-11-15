@@ -316,11 +316,11 @@ impl<'a> ConfigLoader<'a> {
     pub(crate) fn get_file_path(
         &self,
         dir: &Path,
-        filename_without_extension: &str,
+        file_stem: &str,
         warn: bool,
     ) -> CargoResult<Option<PathBuf>> {
-        let possible = dir.join(filename_without_extension);
-        let possible_with_extension = dir.join(format!("{}.toml", filename_without_extension));
+        let possible = dir.join(file_stem);
+        let possible_with_extension = dir.join(format!("{}.toml", file_stem));
 
         if let Ok(possible_handle) = same_file::Handle::from_path(&possible) {
             if warn {
@@ -344,10 +344,10 @@ impl<'a> ConfigLoader<'a> {
                     self.shell().print_report(&[
                         Level::WARNING.secondary_title(
                             format!(
-                                "`{}` is deprecated in favor of `{filename_without_extension}.toml`",
+                                "`{}` is deprecated in favor of `{file_stem}.toml`",
                                 possible.display(),
                             )).element(Level::HELP.message(
-                            format!("if you need to support cargo 1.38 or earlier, you can symlink `{filename_without_extension}` to `{filename_without_extension}.toml`")))
+                            format!("if you need to support cargo 1.38 or earlier, you can symlink `{file_stem}` to `{file_stem}.toml`")))
                     ], false)?;
                 }
             }
