@@ -52,10 +52,10 @@ impl<'a> ConfigLoader<'a> {
     /// Like [`ConfigLoader::load_from`] but without merging config values.
     ///
     /// This is primarily crafted for `cargo config` command.
-    pub(crate) fn load_unmerged(&self) -> CargoResult<Vec<ConfigStore>> {
+    pub(crate) fn load_unmerged_from(&self, path: &Path) -> CargoResult<Vec<ConfigStore>> {
         let mut result = Vec::new();
         let mut seen = HashSet::default();
-        self.walk_tree(self.cwd, self.home, |path| {
+        self.walk_tree(path, self.home, |path| {
             let mut config = self._load_file(path, &mut seen, false, DefinitionKind::Path)?;
             self.load_unmerged_include(&mut config, &mut seen, &mut result)?;
             result.push(config);
