@@ -766,3 +766,86 @@ fn default_erase_line_bytes() -> std::borrow::Cow<'static, [u8]> {
         _ => std::borrow::Cow::Borrowed(b""),
     }
 }
+
+// Erase sequences differ on Windows
+#[cfg(all(test, unix))]
+mod tests {
+    use std::io::Write;
+    use std::sync::{Arc, Mutex};
+
+    use anstream::AutoStream;
+
+    use super::{Shell, ShellOut, Verbosity};
+
+    /// Records every individual write made to it.
+    #[derive(Clone, Default)]
+    struct WriteRecorder(Arc<Mutex<Vec<String>>>);
+
+    impl WriteRecorder {
+        fn take(&self) -> Vec<String> {
+            std::mem::take(&mut *self.0.lock().unwrap())
+        }
+    }
+
+    impl Write for WriteRecorder {
+        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+            let write = String::from_utf8_lossy(buf).into_owned();
+            self.0.lock().unwrap().push(write);
+            Ok(buf.len())
+        }
+
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+
+    fn ansi_shell(recorder: &WriteRecorder) -> Shell {
+        Shell {
+            output: ShellOut::Write(AutoStream::always_ansi(Box::new(recorder.clone()))),
+            verbosity: Verbosity::Verbose,
+            needs_clear: false,
+        }
+    }
+
+    /// Draws a progress bar the same way `cargo::util::progress` does.
+    fn draw_progress(shell: &mut Shell, line: &str) {
+        if shell.is_cleared() {
+            shell.set_needs_clear(false);
+            shell.transient_status("Building").unwrap();
+            write!(shell.err(), "{line}\r").unwrap();
+            shell.set_needs_clear(true);
+        }
+    }
+
+    #[test]
+    fn progress_writes() {
+        let recorder = WriteRecorder::default();
+        let mut shell = ansi_shell(&recorder);
+
+        draw_progress(&mut shell, "[=>  ] 1/2: foo");
+        assert_eq!(
+            recorder.take(),
+            [
+                "\u{1b}[1m\u{1b}[96m    Building\u{1b}[0m ",
+                "[=>  ] 1/2: foo",
+                "\r",
+            ]
+        );
+
+        shell.status("Compiling", "foo").unwrap();
+        assert_eq!(
+            recorder.take(),
+            ["\u{1b}[K", "\u{1b}[1m\u{1b}[92m   Compiling\u{1b}[0m foo\n",]
+        );
+
+        draw_progress(&mut shell, "[=>  ] 1/2: foo");
+        assert_eq!(
+            recorder.take(),
+            [
+                "\u{1b}[1m\u{1b}[96m    Building\u{1b}[0m ",
+                "[=>  ] 1/2: foo",
+                "\r",
+            ]
+        );
+    }
+}
