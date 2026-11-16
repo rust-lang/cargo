@@ -199,7 +199,7 @@
   },
   "$defs": {
     "ConfigRelativePath": {
-      "description": "Use with the `get` API to fetch a string that will be converted to a\n`PathBuf`. Relative paths are converted to absolute paths based on the\nlocation of the config file.",
+      "description": "A path, potentially relative to the config, not current_dir",
       "$ref": "#/$defs/Value"
     },
     "Value": {

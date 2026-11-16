@@ -988,39 +988,43 @@ impl GlobalRegistryConfig {
     }
 }
 
-/// Use with the `get` API to fetch a string that will be converted to a
-/// `PathBuf`. Relative paths are converted to absolute paths based on the
-/// location of the config file.
-#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-#[derive(Debug, Deserialize, PartialEq, Clone)]
-#[serde(transparent)]
-pub struct ConfigRelativePath(Value<String>);
+macro_rules! rel_path {
+    ($name:ident) => {
+        /// A path, potentially relative to the config, not current_dir
+        #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
+        #[derive(Debug, Deserialize, PartialEq, Clone)]
+        #[serde(transparent)]
+        pub struct $name(Value<String>);
 
-impl ConfigRelativePath {
-    pub fn new(path: Value<String>) -> ConfigRelativePath {
-        ConfigRelativePath(path)
-    }
+        impl $name {
+            pub fn new(path: Value<String>) -> Self {
+                Self(path)
+            }
 
-    /// Returns whether the configured path is an empty string.
-    pub fn is_empty(&self) -> bool {
-        self.as_str().is_empty()
-    }
+            /// Returns whether the configured path is an empty string.
+            pub fn is_empty(&self) -> bool {
+                self.as_str().is_empty()
+            }
 
-    /// Returns the underlying value.
-    pub fn as_value(&self) -> &Value<String> {
-        &self.0
-    }
+            /// Returns the underlying value.
+            pub fn as_value(&self) -> &Value<String> {
+                &self.0
+            }
 
-    /// Returns where this path was defined.
-    pub fn definition(&self) -> &Definition {
-        &self.0.definition
-    }
+            /// Returns where this path was defined.
+            pub fn definition(&self) -> &Definition {
+                &self.0.definition
+            }
 
-    /// Returns the raw underlying configuration value for this key.
-    pub fn as_str(&self) -> &str {
-        &self.0.val
-    }
+            /// Returns the raw underlying configuration value for this key.
+            pub fn as_str(&self) -> &str {
+                &self.0.val
+            }
+        }
+    };
 }
+
+rel_path!(ConfigRelativePath);
 
 /// A config type that is a program to run.
 ///
