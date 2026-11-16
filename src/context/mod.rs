@@ -1084,7 +1084,7 @@ impl GlobalContext {
     }
 
     /// Start a config file discovery from a path and merges all config values found.
-    fn load_config_from(&self, path: &Path) -> CargoResult<ConfigStore> {
+    pub(crate) fn load_config_from(&self, path: &Path) -> CargoResult<ConfigStore> {
         let mut cfg = ConfigStore::default();
         let home = self.home_path.clone().into_path_unlocked();
 
@@ -1311,7 +1311,7 @@ impl GlobalContext {
     /// Both 'config.toml' and 'credentials.toml' should be valid with or without extension.
     /// When both exist, we want to prefer the one without an extension for
     /// backwards compatibility, but warn the user appropriately.
-    fn get_file_path(
+    pub(crate) fn get_file_path(
         &self,
         dir: &Path,
         filename_without_extension: &str,
@@ -1439,7 +1439,7 @@ impl GlobalContext {
     }
 
     /// Loads credentials config from the credentials file, if present.
-    fn load_credentials(&self) -> CargoResult<ConfigStore> {
+    pub(crate) fn load_credentials(&self) -> CargoResult<ConfigStore> {
         let home_path = self.home_path.clone().into_path_unlocked();
         let Some(credentials) = self.get_file_path(&home_path, "credentials", true)? else {
             return Ok(ConfigStore::default());
