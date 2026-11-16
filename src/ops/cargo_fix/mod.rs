@@ -304,7 +304,7 @@ fn fix_manifests(ws: &Workspace<'_>, pkgs: &[&Package]) -> CargoResult<()> {
 
         if 0 < fixes {
             let file = pkg.manifest_path();
-            let file = file.strip_prefix(ws.root()).unwrap_or(file);
+            let file = file.trim_prefix(ws.root());
             let file = file.display();
             let verb = if fixes == 1 { "fix" } else { "fixes" };
             let msg = format!("{file} ({fixes} {verb})");
@@ -359,7 +359,7 @@ fn migrate_manifests(
                 // HACK: As workspace migration is a special case, only report it if something
                 // happened
                 let file = ws.root_manifest();
-                let file = file.strip_prefix(ws.root()).unwrap_or(file);
+                let file = file.trim_prefix(ws.root());
                 let file = file.display();
                 ws.gctx().shell().status(
                     "Migrating",
@@ -384,7 +384,7 @@ fn migrate_manifests(
             continue;
         }
         let file = pkg.manifest_path();
-        let file = file.strip_prefix(ws.root()).unwrap_or(file);
+        let file = file.trim_prefix(ws.root());
         let file = file.display();
         ws.gctx().shell().status(
             "Migrating",

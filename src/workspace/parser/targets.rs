@@ -1101,8 +1101,8 @@ cannot infer path for `{}` {}
 Cargo doesn't know which to use because multiple target files found at `{}` and `{}`.",
                 name_or_panic(target),
                 target_kind,
-                p0.strip_prefix(package_root).unwrap_or(&p0).display(),
-                p1.strip_prefix(package_root).unwrap_or(&p1).display(),
+                p0.trim_prefix(package_root).display(),
+                p1.trim_prefix(package_root).display(),
             ))
         }
         (None, Some(_)) => unreachable!(),

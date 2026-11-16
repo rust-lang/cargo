@@ -148,7 +148,7 @@ impl RustdocFingerprint {
             rustc_vv: self.rustc_vv.clone(),
             doc_parts: doc_parts
                 .iter()
-                .map(|p| p.strip_prefix(base).unwrap_or(p).to_owned())
+                .map(|p| p.trim_prefix(base).to_owned())
                 .collect(),
         };
         paths::write(&self.path, serde_json::to_string(&json)?)?;

@@ -417,15 +417,15 @@ fn format_dirty_reason(
             FsStatus::Stale => "filesystem status stale".to_string(),
             FsStatus::StaleItem(item) => match item {
                 StaleItem::MissingFile { path } => {
-                    let path = path.strip_prefix(ws_root).unwrap_or(path).display();
+                    let path = path.trim_prefix(ws_root).display();
                     format!("file missing: {path}")
                 }
                 StaleItem::UnableToReadFile { path } => {
-                    let path = path.strip_prefix(ws_root).unwrap_or(path).display();
+                    let path = path.trim_prefix(ws_root).display();
                     format!("unable to read file: {path}")
                 }
                 StaleItem::FailedToReadMetadata { path } => {
-                    let path = path.strip_prefix(ws_root).unwrap_or(path).display();
+                    let path = path.trim_prefix(ws_root).display();
                     format!("failed to read file metadata: {path}")
                 }
                 StaleItem::FileSizeChanged {
@@ -433,11 +433,11 @@ fn format_dirty_reason(
                     old_size: old,
                     new_size: new,
                 } => {
-                    let path = path.strip_prefix(ws_root).unwrap_or(path).display();
+                    let path = path.trim_prefix(ws_root).display();
                     format!("file size changed: {path} ({old} -> {new} bytes)")
                 }
                 StaleItem::ChangedFile { stale, .. } => {
-                    let path = stale.strip_prefix(ws_root).unwrap_or(stale).display();
+                    let path = stale.trim_prefix(ws_root).display();
                     format!("file modified: {path}")
                 }
                 StaleItem::ChangedChecksum {
@@ -445,11 +445,11 @@ fn format_dirty_reason(
                     stored_checksum: old,
                     new_checksum: new,
                 } => {
-                    let path = source.strip_prefix(ws_root).unwrap_or(source).display();
+                    let path = source.trim_prefix(ws_root).display();
                     format!("file checksum changed: {path} ({old} -> {new})")
                 }
                 StaleItem::MissingChecksum { path } => {
-                    let path = path.strip_prefix(ws_root).unwrap_or(path).display();
+                    let path = path.trim_prefix(ws_root).display();
                     format!("checksum missing: {path}")
                 }
                 StaleItem::ChangedEnv {
@@ -505,13 +505,13 @@ fn format_dirty_reason(
             format!("fingerprinty changed: {old} -> {new}")
         }
         DirtyReason::DepInfoOutputChanged { old, new } => {
-            let old = old.strip_prefix(ws_root).unwrap_or(old).display();
-            let new = new.strip_prefix(ws_root).unwrap_or(new).display();
+            let old = old.trim_prefix(ws_root).display();
+            let new = new.trim_prefix(ws_root).display();
             format!("dependency info output changed: {old} -> {new}")
         }
         DirtyReason::RerunIfChangedOutputFileChanged { old, new } => {
-            let old = old.strip_prefix(ws_root).unwrap_or(old).display();
-            let new = new.strip_prefix(ws_root).unwrap_or(new).display();
+            let old = old.trim_prefix(ws_root).display();
+            let new = new.trim_prefix(ws_root).display();
             format!("rerun-if-changed output file changed: {old} -> {new}")
         }
         DirtyReason::RerunIfChangedOutputPathsChanged { old, new } => {

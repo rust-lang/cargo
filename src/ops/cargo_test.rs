@@ -326,22 +326,17 @@ fn cmd_builds(
     exec_type: &str,
 ) -> CargoResult<(String, ProcessBuilder)> {
     let test_path = unit.target.src_path().path().unwrap();
-    let short_test_path = test_path
-        .strip_prefix(unit.pkg.root())
-        .unwrap_or(test_path)
-        .display();
+    let short_test_path = test_path.trim_prefix(unit.pkg.root()).display();
 
     let exe_display = match unit.target.kind() {
-        TargetKind::Test | TargetKind::Bench => format!(
-            "{} ({})",
-            short_test_path,
-            path.strip_prefix(cwd).unwrap_or(path).display()
-        ),
+        TargetKind::Test | TargetKind::Bench => {
+            format!("{} ({})", short_test_path, path.trim_prefix(cwd).display())
+        }
         _ => format!(
             "{} {} ({})",
             exec_type,
             short_test_path,
-            path.strip_prefix(cwd).unwrap_or(path).display()
+            path.trim_prefix(cwd).display()
         ),
     };
 

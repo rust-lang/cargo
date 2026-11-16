@@ -231,21 +231,21 @@ impl DirtyReason {
                 FsStatus::Stale => s.dirty_because(unit, "stale, unknown reason"),
                 FsStatus::StaleItem(item) => match item {
                     StaleItem::MissingFile { path } => {
-                        let file = path.strip_prefix(root).unwrap_or(&path);
+                        let file = path.trim_prefix(root);
                         s.dirty_because(
                             unit,
                             format_args!("the file `{}` is missing", file.display()),
                         )
                     }
                     StaleItem::UnableToReadFile { path } => {
-                        let file = path.strip_prefix(root).unwrap_or(&path);
+                        let file = path.trim_prefix(root);
                         s.dirty_because(
                             unit,
                             format_args!("the file `{}` could not be read", file.display()),
                         )
                     }
                     StaleItem::FailedToReadMetadata { path } => {
-                        let file = path.strip_prefix(root).unwrap_or(&path);
+                        let file = path.trim_prefix(root);
                         s.dirty_because(
                             unit,
                             format_args!("couldn't read metadata for file `{}`", file.display()),
@@ -257,7 +257,7 @@ impl DirtyReason {
                         reference_mtime,
                         ..
                     } => {
-                        let file = stale.strip_prefix(root).unwrap_or(&stale);
+                        let file = stale.trim_prefix(root);
                         let after = Self::after(*reference_mtime, *stale_mtime, "last build");
                         s.dirty_because(
                             unit,
@@ -269,7 +269,7 @@ impl DirtyReason {
                         stored_checksum,
                         new_checksum,
                     } => {
-                        let file = source.strip_prefix(root).unwrap_or(&source);
+                        let file = source.trim_prefix(root);
                         s.dirty_because(
                             unit,
                             format_args!(
@@ -283,7 +283,7 @@ impl DirtyReason {
                         old_size,
                         new_size,
                     } => {
-                        let file = path.strip_prefix(root).unwrap_or(&path);
+                        let file = path.trim_prefix(root);
                         s.dirty_because(
                             unit,
                             format_args!(
@@ -293,7 +293,7 @@ impl DirtyReason {
                         )
                     }
                     StaleItem::MissingChecksum { path } => {
-                        let file = path.strip_prefix(root).unwrap_or(&path);
+                        let file = path.trim_prefix(root);
                         s.dirty_because(
                             unit,
                             format_args!("the checksum for file `{}` is missing", file.display()),

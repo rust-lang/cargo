@@ -65,7 +65,7 @@ fn doit() -> Result<(), Box<dyn Error>> {
                         break;
                     }
                     // Support rustdoc/mdbook hidden lines.
-                    let line = line.strip_prefix("# ").unwrap_or(line);
+                    let line = line.trim_prefix("# ");
                     if line == "#" {
                         block.push("");
                     } else {
