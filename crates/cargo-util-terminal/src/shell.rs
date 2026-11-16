@@ -23,6 +23,9 @@ pub struct Shell {
     /// Flag that indicates the current line needs to be cleared before
     /// printing. Used when a progress bar is currently displayed.
     needs_clear: bool,
+    /// The progress line currently shown, set by [`Shell::transient_status`].
+    /// Used for redrawing in a single write.
+    transient_line: Option<Vec<u8>>,
 }
 
 impl fmt::Debug for Shell {
@@ -64,6 +67,7 @@ impl Shell {
             },
             verbosity: Verbosity::Verbose,
             needs_clear: false,
+            transient_line: None,
         }
     }
 
@@ -73,6 +77,7 @@ impl Shell {
             output: ShellOut::Write(AutoStream::never(out)), // strip all formatting on write
             verbosity: Verbosity::Verbose,
             needs_clear: false,
+            transient_line: None,
         }
     }
 
@@ -88,6 +93,21 @@ impl Shell {
         match self.verbosity {
             Verbosity::Quiet => Ok(()),
             _ => {
+                if self.needs_clear
+                    && self.err_supports_color()
+                    && message.is_some()
+                    && let Some(transient) = &self.transient_line
+                {
+                    // Erase the progress line, print the message, and redraw the progress
+                    // line in a single write to avoid flickering.
+                    let erase = imp::erase_line_bytes();
+                    let mut buffer = Vec::with_capacity(erase.len() + 64 + transient.len());
+                    buffer.extend_from_slice(&erase);
+                    format_message(&mut buffer, status, message, color, justified)?;
+                    buffer.extend_from_slice(transient);
+                    self.output.stderr().write_all(&buffer)?;
+                    return Ok(());
+                }
                 if self.needs_clear {
                     self.err_erase_line();
                 }
@@ -158,6 +178,7 @@ impl Shell {
         if self.err_supports_color() {
             let _ = self.output.stderr().write_all(&imp::erase_line_bytes());
             self.needs_clear = false;
+            self.transient_line = None;
         }
     }
 
@@ -170,11 +191,26 @@ impl Shell {
         self.print(&status, Some(&message), &HEADER, true)
     }
 
-    pub fn transient_status<T>(&mut self, status: T) -> CargoResult<()>
+    /// Prints a transient status line, like a progress bar, in a single write.
+    pub fn transient_status<T, U>(&mut self, status: T, line: U) -> CargoResult<()>
     where
         T: fmt::Display,
+        U: fmt::Display,
     {
-        self.print(&status, None, &TRANSIENT, true)
+        if self.verbosity == Verbosity::Quiet {
+            return Ok(());
+        }
+        if self.needs_clear {
+            self.err_erase_line();
+        }
+
+        let mut buffer = self.transient_line.take().unwrap_or_default();
+        buffer.clear();
+        let style = &TRANSIENT;
+        write!(&mut buffer, "{style}{status:>12}{style:#} {line}")?;
+        self.output.stderr().write_all(&buffer)?;
+        self.transient_line = Some(buffer);
+        Ok(())
     }
 
     /// Shortcut to right-align a status message.
@@ -804,6 +840,7 @@ mod tests {
             output: ShellOut::Write(AutoStream::always_ansi(Box::new(recorder.clone()))),
             verbosity: Verbosity::Verbose,
             needs_clear: false,
+            transient_line: None,
         }
     }
 
@@ -811,8 +848,9 @@ mod tests {
     fn draw_progress(shell: &mut Shell, line: &str) {
         if shell.is_cleared() {
             shell.set_needs_clear(false);
-            shell.transient_status("Building").unwrap();
-            write!(shell.err(), "{line}\r").unwrap();
+            shell
+                .transient_status("Building", format_args!("{line}\r"))
+                .unwrap();
             shell.set_needs_clear(true);
         }
     }
@@ -825,27 +863,20 @@ mod tests {
         draw_progress(&mut shell, "[=>  ] 1/2: foo");
         assert_eq!(
             recorder.take(),
-            [
-                "\u{1b}[1m\u{1b}[96m    Building\u{1b}[0m ",
-                "[=>  ] 1/2: foo",
-                "\r",
-            ]
+            ["\u{1b}[1m\u{1b}[96m    Building\u{1b}[0m [=>  ] 1/2: foo\r"]
         );
 
         shell.status("Compiling", "foo").unwrap();
         assert_eq!(
             recorder.take(),
-            ["\u{1b}[K", "\u{1b}[1m\u{1b}[92m   Compiling\u{1b}[0m foo\n",]
+            [concat!(
+                "\u{1b}[K",
+                "\u{1b}[1m\u{1b}[92m   Compiling\u{1b}[0m foo\n",
+                "\u{1b}[1m\u{1b}[96m    Building\u{1b}[0m [=>  ] 1/2: foo\r",
+            )]
         );
 
         draw_progress(&mut shell, "[=>  ] 1/2: foo");
-        assert_eq!(
-            recorder.take(),
-            [
-                "\u{1b}[1m\u{1b}[96m    Building\u{1b}[0m ",
-                "[=>  ] 1/2: foo",
-                "\r",
-            ]
-        );
+        assert_eq!(recorder.take(), Vec::<String>::new());
     }
 }
