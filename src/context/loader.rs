@@ -49,10 +49,10 @@ impl<'a> ConfigLoader<'a> {
         }
     }
 
-    /// Like [`ConfigLoader::load_config_from`] but without merging config values.
+    /// Like [`ConfigLoader::load_from`] but without merging config values.
     ///
     /// This is primarily crafted for `cargo config` command.
-    pub(crate) fn load_config_unmerged(&self) -> CargoResult<Vec<ConfigStore>> {
+    pub(crate) fn load_unmerged(&self) -> CargoResult<Vec<ConfigStore>> {
         let mut result = Vec::new();
         let mut seen = HashSet::default();
         self.walk_tree(self.cwd, self.home, |path| {
@@ -96,7 +96,7 @@ impl<'a> ConfigLoader<'a> {
     }
 
     /// Start a config file discovery from a path and merges all config values found.
-    pub(crate) fn load_config_from(&self, path: &Path) -> CargoResult<ConfigStore> {
+    pub(crate) fn load_from(&self, path: &Path) -> CargoResult<ConfigStore> {
         let mut cfg = ConfigStore::default();
 
         self.walk_tree(path, self.home, |path| {
@@ -282,7 +282,7 @@ impl<'a> ConfigLoader<'a> {
     }
 
     /// Parses the CLI config args and returns them as a table.
-    pub(crate) fn cli_args_to_config(&self, cli_args: &[String]) -> CargoResult<ConfigStore> {
+    pub(crate) fn load_cli_args(&self, cli_args: &[String]) -> CargoResult<ConfigStore> {
         let mut loaded_args =
             ConfigStore::from_table_value(CV::Table(HashMap::default(), Definition::Cli(None)))
                 .unwrap();
