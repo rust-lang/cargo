@@ -676,7 +676,7 @@ impl GlobalContext {
     /// Reloads on-disk configuration values, starting at the given path and
     /// walking up its ancestors.
     pub fn reload_rooted_at<P: AsRef<Path>>(&mut self, path: P) -> CargoResult<()> {
-        let config = self.config_loader().load_config_from(path.as_ref())?;
+        let config = self.config_loader().load_from(path.as_ref())?;
         self.config.replace(config);
         self.merge_cli_args()?;
         self.load_unstable_flags_from_config()?;
@@ -1033,13 +1033,13 @@ impl GlobalContext {
 
     /// Loads configuration from the filesystem.
     pub fn load_config(&self) -> CargoResult<ConfigStore> {
-        self.config_loader().load_config_from(&self.cwd)
+        self.config_loader().load_from(&self.cwd)
     }
 
     /// Parses the CLI config args and returns them as a table.
     pub(crate) fn cli_args_to_config(&self) -> CargoResult<ConfigStore> {
         let cli_args = self.cli_config.as_deref().unwrap_or_default();
-        self.config_loader().cli_args_to_config(cli_args)
+        self.config_loader().load_cli_args(cli_args)
     }
 
     /// Add config arguments passed on the command line.

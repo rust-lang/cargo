@@ -49,13 +49,13 @@ impl<'a> ConfigLoader<'a> {
         }
     }
 
-    /// Like [`ConfigLoader::load_config_from`] but without merging config values.
+    /// Like [`ConfigLoader::load_from`] but without merging config values.
     ///
     /// This is primarily crafted for `cargo config` command.
-    pub(crate) fn load_config_unmerged(&self) -> CargoResult<Vec<ConfigStore>> {
+    pub(crate) fn load_unmerged_from(&self, path: &Path) -> CargoResult<Vec<ConfigStore>> {
         let mut result = Vec::new();
         let mut seen = HashSet::default();
-        self.walk_tree(self.cwd, self.home, |path| {
+        self.walk_tree(path, |path| {
             let mut config = self._load_file(path, &mut seen, false, DefinitionKind::Path)?;
             self.load_unmerged_include(&mut config, &mut seen, &mut result)?;
             result.push(config);
@@ -96,10 +96,10 @@ impl<'a> ConfigLoader<'a> {
     }
 
     /// Start a config file discovery from a path and merges all config values found.
-    pub(crate) fn load_config_from(&self, path: &Path) -> CargoResult<ConfigStore> {
+    pub(crate) fn load_from(&self, path: &Path) -> CargoResult<ConfigStore> {
         let mut cfg = ConfigStore::default();
 
-        self.walk_tree(path, self.home, |path| {
+        self.walk_tree(path, |path| {
             let config = self.load_file(path)?;
             cfg.merge(config, MergePriority::Definition)
                 .with_context(|| {
@@ -282,7 +282,7 @@ impl<'a> ConfigLoader<'a> {
     }
 
     /// Parses the CLI config args and returns them as a table.
-    pub(crate) fn cli_args_to_config(&self, cli_args: &[String]) -> CargoResult<ConfigStore> {
+    pub(crate) fn load_cli_args(&self, cli_args: &[String]) -> CargoResult<ConfigStore> {
         let mut loaded_args =
             ConfigStore::from_table_value(CV::Table(HashMap::default(), Definition::Cli(None)))
                 .unwrap();
@@ -316,11 +316,11 @@ impl<'a> ConfigLoader<'a> {
     pub(crate) fn get_file_path(
         &self,
         dir: &Path,
-        filename_without_extension: &str,
+        file_stem: &str,
         warn: bool,
     ) -> CargoResult<Option<PathBuf>> {
-        let possible = dir.join(filename_without_extension);
-        let possible_with_extension = dir.join(format!("{}.toml", filename_without_extension));
+        let possible = dir.join(file_stem);
+        let possible_with_extension = dir.join(format!("{}.toml", file_stem));
 
         if let Ok(possible_handle) = same_file::Handle::from_path(&possible) {
             if warn {
@@ -344,10 +344,10 @@ impl<'a> ConfigLoader<'a> {
                     self.shell().print_report(&[
                         Level::WARNING.secondary_title(
                             format!(
-                                "`{}` is deprecated in favor of `{filename_without_extension}.toml`",
+                                "`{}` is deprecated in favor of `{file_stem}.toml`",
                                 possible.display(),
                             )).element(Level::HELP.message(
-                            format!("if you need to support cargo 1.38 or earlier, you can symlink `{filename_without_extension}` to `{filename_without_extension}.toml`")))
+                            format!("if you need to support cargo 1.38 or earlier, you can symlink `{file_stem}` to `{file_stem}.toml`")))
                     ], false)?;
                 }
             }
@@ -360,10 +360,11 @@ impl<'a> ConfigLoader<'a> {
         }
     }
 
-    fn walk_tree<F>(&self, pwd: &Path, home: &Path, mut walk: F) -> CargoResult<()>
+    fn walk_tree<F>(&self, pwd: &Path, mut walk: F) -> CargoResult<()>
     where
         F: FnMut(&Path) -> CargoResult<()>,
     {
+        let home = self.home;
         let mut seen_dir = HashSet::default();
 
         for current in paths::ancestors(pwd, self.search_stop_path) {
