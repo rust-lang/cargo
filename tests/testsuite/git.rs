@@ -3280,6 +3280,146 @@ fn checkout_name_with_core_abbrev_config() {
     assert_eq!(rev.len(), 7);
 }
 
+#[cargo_test]
+fn checkout_long_path() {
+    // Longer than Windows' `MAX_PATH` (260 characters) wherever the checkout lives.
+    let long_path = format!("{}/file.txt", vec!["a".repeat(50); 6].join("/"));
+
+    let git_project = project()
+        .at("dep1")
+        .file("Cargo.toml", &basic_manifest("dep1", "0.5.0"))
+        .file("src/lib.rs", "")
+        .file(&long_path, "")
+        .build();
+    let repo = git::init(&git_project.root());
+    // libgit2 won't add the long path to the index on Windows without this.
+    t!(t!(repo.config()).set_bool("core.longpaths", true));
+    git::add(&repo);
+    git::commit(&repo);
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+                    edition = "2015"
+
+                    [dependencies]
+                    dep1 = {{ git = "{}" }}
+                "#,
+                git_project.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    if cfg!(windows) {
+        p.cargo("fetch")
+            .with_status(101)
+            .with_stderr_data(str![[r#"
+...
+[..]path too long[..]
+...
+"#]])
+            .run();
+        return;
+    }
+
+    p.cargo("fetch").run();
+
+    let mut co_paths = t!(glob::glob(
+        paths::home()
+            .join(".cargo/git/checkouts/dep1-*/*")
+            .to_str()
+            .unwrap()
+    ));
+    let co_path = co_paths.next().unwrap().unwrap();
+    assert!(co_path.join(&long_path).is_file());
+    let co_repo = t!(git2::Repository::open(&co_path));
+    let co_config = t!(t!(co_repo.config()).open_level(git2::ConfigLevel::Local));
+    let err = co_config.get_bool("core.longpaths").unwrap_err();
+    assert_eq!(err.code(), git2::ErrorCode::NotFound);
+}
+
+#[cargo_test]
+fn checkout_long_path_in_submodule() {
+    // Longer than Windows' `MAX_PATH` (260 characters) wherever the checkout lives.
+    let long_path = format!("{}/file.txt", vec!["a".repeat(50); 6].join("/"));
+
+    let git_project2 = project().at("dep2").file(&long_path, "").build();
+    let repo2 = git::init(&git_project2.root());
+    // libgit2 won't add the long path to the index on Windows without this.
+    t!(t!(repo2.config()).set_bool("core.longpaths", true));
+    git::add(&repo2);
+    git::commit(&repo2);
+
+    let (git_project, repo) = git::new_repo("dep1", |project| {
+        project
+            .file("Cargo.toml", &basic_manifest("dep1", "0.5.0"))
+            .file("src/lib.rs", "")
+    });
+    // Like `git::add_submodule`, but the submodule needs `core.longpaths` before its checkout.
+    let url = git_project2.url().to_string();
+    let mut submodule = t!(repo.submodule(&url, Path::new("dep2"), false));
+    let subrepo = t!(submodule.open());
+    t!(t!(subrepo.config()).set_bool("core.longpaths", true));
+    t!(subrepo.remote_add_fetch("origin", "refs/heads/*:refs/heads/*"));
+    let mut origin = t!(subrepo.find_remote("origin"));
+    t!(origin.fetch(&Vec::<String>::new(), None, None));
+    t!(subrepo.checkout_head(None));
+    t!(submodule.add_finalize());
+    git::commit(&repo);
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+                    edition = "2015"
+
+                    [dependencies]
+                    dep1 = {{ git = "{}" }}
+                "#,
+                git_project.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    if cfg!(windows) {
+        p.cargo("fetch")
+            .with_status(101)
+            .with_stderr_data(str![[r#"
+...
+[..]path too long[..]
+...
+"#]])
+            .run();
+        return;
+    }
+
+    p.cargo("fetch").run();
+
+    let mut co_paths = t!(glob::glob(
+        paths::home()
+            .join(".cargo/git/checkouts/dep1-*/*")
+            .to_str()
+            .unwrap()
+    ));
+    let co_path = co_paths.next().unwrap().unwrap().join("dep2");
+    assert!(co_path.join(&long_path).is_file());
+    let co_repo = t!(git2::Repository::open(&co_path));
+    let co_config = t!(t!(co_repo.config()).open_level(git2::ConfigLevel::Local));
+    let err = co_config.get_bool("core.longpaths").unwrap_err();
+    assert_eq!(err.code(), git2::ErrorCode::NotFound);
+}
+
 #[cargo_test(requires = "git")]
 fn git_with_cli_force() {
     // Supports a force-pushed repo.
