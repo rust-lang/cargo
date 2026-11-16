@@ -25,7 +25,7 @@ use ConfigValue as CV;
 
 /// Discovers and loads config files from the filesystem.
 #[derive(Clone, Copy)]
-pub(crate) struct ConfigLoader<'a> {
+pub struct ConfigLoader<'a> {
     shell: &'a Mutex<Shell>,
     cwd: &'a Path,
     home: &'a Path,
@@ -33,7 +33,7 @@ pub(crate) struct ConfigLoader<'a> {
 }
 
 impl<'a> ConfigLoader<'a> {
-    pub(crate) fn new(
+    pub fn new(
         shell: &'a Mutex<Shell>,
         cwd: &'a Path,
         home: &'a Path,
@@ -50,7 +50,7 @@ impl<'a> ConfigLoader<'a> {
     /// Discovers config files from a path without merging config values.
     ///
     /// Returns one [`ConfigStore`] per config file, from lowest to highest precedence.
-    pub(crate) fn load_unmerged_from(&self, path: &Path) -> Result<Vec<ConfigStore>> {
+    pub fn load_unmerged_from(&self, path: &Path) -> Result<Vec<ConfigStore>> {
         let mut result = Vec::new();
         self.walk_tree(path, |path| {
             let mut layers = Vec::new();
@@ -158,7 +158,7 @@ impl<'a> ConfigLoader<'a> {
     }
 
     /// Parses the CLI config args and returns them as a table.
-    pub(crate) fn load_cli_args(&self, cli_args: &[String]) -> Result<ConfigStore> {
+    pub fn load_cli_args(&self, cli_args: &[String]) -> Result<ConfigStore> {
         let mut loaded_args = ConfigStore::default();
         let mut seen = HashSet::default();
         for arg in cli_args {
@@ -192,7 +192,7 @@ impl<'a> ConfigLoader<'a> {
     /// Both 'config.toml' and 'credentials.toml' should be valid with or without extension.
     /// When both exist, we want to prefer the one without an extension for
     /// backwards compatibility, but warn the user appropriately.
-    pub(crate) fn get_file_path(
+    pub fn get_file_path(
         &self,
         dir: &Path,
         file_stem: &str,
@@ -271,7 +271,7 @@ impl<'a> ConfigLoader<'a> {
     }
 
     /// Loads credentials config from the credentials file, if present.
-    pub(crate) fn load_credentials(&self) -> Result<ConfigStore> {
+    pub fn load_credentials(&self) -> Result<ConfigStore> {
         let Some(credentials) = self.get_file_path(self.home, "credentials", true)? else {
             return Ok(ConfigStore::default());
         };
