@@ -132,7 +132,7 @@ pub struct RegistryDependency<'a> {
 pub fn parse_pubtime(s: &str) -> Result<jiff::Timestamp, jiff::Error> {
     let dt = jiff::civil::DateTime::strptime("%Y-%m-%dT%H:%M:%SZ", s)?;
     if s.len() == 20 {
-        let zoned = dt.to_zoned(jiff::tz::TimeZone::UTC)?;
+        let zoned = dt.to_zoned_datetime(jiff::tz::TimeZone::UTC)?;
         let timestamp = zoned.timestamp();
         Ok(timestamp)
     } else {

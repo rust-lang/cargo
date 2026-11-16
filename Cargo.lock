@@ -394,7 +394,7 @@ dependencies = [
  "im-rc",
  "indexmap",
  "itertools",
- "jiff",
+ "jiff 1.0.0",
  "jobserver",
  "libc",
  "libgit2-sys",
@@ -445,7 +445,7 @@ name = "cargo-credential"
 version = "0.5.0"
 dependencies = [
  "anyhow",
- "jiff",
+ "jiff 1.0.0",
  "libc",
  "serde",
  "serde_json",
@@ -580,10 +580,10 @@ dependencies = [
 
 [[package]]
 name = "cargo-util-schemas"
-version = "0.17.0"
+version = "0.18.0"
 dependencies = [
  "divan",
- "jiff",
+ "jiff 1.0.0",
  "schemars",
  "semver",
  "serde",
@@ -1628,7 +1628,7 @@ dependencies = [
  "bstr",
  "gix-error",
  "itoa 1.0.18",
- "jiff",
+ "jiff 0.2.31",
 ]
 
 [[package]]
@@ -2792,13 +2792,36 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ccfe6121cbe750cf81efa362d85c0bde7ea298ec43092d3a193baca59cdbd634"
 dependencies = [
  "defmt 1.1.0",
- "jiff-static",
+ "jiff-static 0.2.31",
  "jiff-tzdb-platform",
  "log",
  "portable-atomic",
  "portable-atomic-util",
  "serde_core",
  "windows-link",
+]
+
+[[package]]
+name = "jiff"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9cc767b5763de45e810109520123bb2829a653f3a7ed9be40b2bc4f81158f595"
+dependencies = [
+ "jiff-core",
+ "jiff-static 1.0.0",
+ "log",
+ "portable-atomic",
+ "portable-atomic-util",
+ "serde_core",
+]
+
+[[package]]
+name = "jiff-core"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "894f7ac42105f584100691b3bf6e6b92dd12fcfa225f6c397f95c8a94b47b68f"
+dependencies = [
+ "log",
 ]
 
 [[package]]
@@ -2810,6 +2833,18 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.118",
+]
+
+[[package]]
+name = "jiff-static"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "955491488dc99b572ea6d67b172dcd98787d00744b1fb44a5689b4e6413695a6"
+dependencies = [
+ "jiff-core",
+ "proc-macro2",
+ "quote",
+ "syn 3.0.10",
 ]
 
 [[package]]
