@@ -156,7 +156,7 @@ impl Shell {
     /// Erase from cursor to end of line.
     pub fn err_erase_line(&mut self) {
         if self.err_supports_color() {
-            imp::err_erase_line(self);
+            let _ = self.output.stderr().write_all(&imp::erase_line_bytes());
             self.needs_clear = false;
         }
     }
@@ -665,7 +665,8 @@ fn supports_term_integration(stream: &dyn IsTerminal) -> bool {
 
 #[cfg(unix)]
 mod imp {
-    use super::{Shell, TtyWidth};
+    use super::TtyWidth;
+    use std::borrow::Cow;
     use std::mem;
 
     pub fn stderr_width() -> TtyWidth {
@@ -684,11 +685,11 @@ mod imp {
         }
     }
 
-    pub fn err_erase_line(shell: &mut Shell) {
+    pub fn erase_line_bytes() -> Cow<'static, [u8]> {
         // This is the "EL - Erase in Line" sequence. It clears from the cursor
         // to the end of line.
         // https://en.wikipedia.org/wiki/ANSI_escape_code#CSI_sequences
-        let _ = shell.output.stderr().write_all(b"\x1B[K");
+        Cow::Borrowed(b"\x1B[K")
     }
 }
 
@@ -707,7 +708,7 @@ mod imp {
     };
     use windows_sys::core::PCSTR;
 
-    pub(super) use super::{TtyWidth, default_err_erase_line as err_erase_line};
+    pub(super) use super::{TtyWidth, default_erase_line_bytes as erase_line_bytes};
 
     pub fn stderr_width() -> TtyWidth {
         unsafe {
@@ -755,12 +756,13 @@ mod imp {
 }
 
 #[cfg(windows)]
-fn default_err_erase_line(shell: &mut Shell) {
+fn default_erase_line_bytes() -> std::borrow::Cow<'static, [u8]> {
     match imp::stderr_width() {
         TtyWidth::Known(max_width) | TtyWidth::Guess(max_width) => {
-            let blank = " ".repeat(max_width);
-            drop(write!(shell.output.stderr(), "{}\r", blank));
+            let mut blank = vec![b' '; max_width];
+            blank.push(b'\r');
+            blank.into()
         }
-        _ => (),
+        _ => std::borrow::Cow::Borrowed(b""),
     }
 }
