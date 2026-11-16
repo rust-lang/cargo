@@ -435,7 +435,7 @@ rpath = false
 trim-paths = "none"
 ```
 
-### debug
+### debug {#debug-profile}
 
 The `debug` profile is used for creating binaries to run with a debugger. It is used with `cargo build --profile debug` and `cargo install --debug`.
 
