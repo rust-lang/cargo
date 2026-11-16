@@ -55,7 +55,7 @@ impl<'a> ConfigLoader<'a> {
     pub(crate) fn load_unmerged_from(&self, path: &Path) -> CargoResult<Vec<ConfigStore>> {
         let mut result = Vec::new();
         let mut seen = HashSet::default();
-        self.walk_tree(path, self.home, |path| {
+        self.walk_tree(path, |path| {
             let mut config = self._load_file(path, &mut seen, false, DefinitionKind::Path)?;
             self.load_unmerged_include(&mut config, &mut seen, &mut result)?;
             result.push(config);
@@ -99,7 +99,7 @@ impl<'a> ConfigLoader<'a> {
     pub(crate) fn load_from(&self, path: &Path) -> CargoResult<ConfigStore> {
         let mut cfg = ConfigStore::default();
 
-        self.walk_tree(path, self.home, |path| {
+        self.walk_tree(path, |path| {
             let config = self.load_file(path)?;
             cfg.merge(config, MergePriority::Definition)
                 .with_context(|| {
@@ -360,10 +360,11 @@ impl<'a> ConfigLoader<'a> {
         }
     }
 
-    fn walk_tree<F>(&self, pwd: &Path, home: &Path, mut walk: F) -> CargoResult<()>
+    fn walk_tree<F>(&self, pwd: &Path, mut walk: F) -> CargoResult<()>
     where
         F: FnMut(&Path) -> CargoResult<()>,
     {
+        let home = self.home;
         let mut seen_dir = HashSet::default();
 
         for current in paths::ancestors(pwd, self.search_stop_path) {
