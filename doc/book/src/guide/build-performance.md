@@ -35,7 +35,7 @@ debug = false
 This will:
 - Change the [`dev` profile](../reference/profiles.md#dev) (default for development commands) to:
   - Avoid generating any [debug information](../reference/profiles.md#debug) for dependencies
-- Provide an opt-in for when debugging via [`--profile debugging`](../reference/profiles.md#custom-profiles)
+- Provide an opt-in for when debugging via [`--profile debug`](../reference/profiles.md#debug-profile)
 
 > **Note:**  The `dev` profile defaults to what is needed for useful panic backtraces
 

@@ -69,9 +69,9 @@ The valid options are:
 
 * `0`, `false`, or `"none"`: no debug info at all, default for [`release`](#release)
 * `"line-directives-only"`: line info directives only. For the nvptx* targets this enables [profiling]. For other use cases, `line-tables-only` is the better, more compatible choice.
-* `"line-tables-only"`: line tables only. Generates the minimal amount of debug info for backtraces with filename/line number info, but not anything else, i.e. no variable or function parameter info.
+* `"line-tables-only"`: line tables only. Generates the minimal amount of debug info for backtraces with filename/line number info, but not anything else, i.e. no variable or function parameter info. Default for [`dev`](#dev).
 * `1` or `"limited"`: debug info without type or variable-level information. Generates more detailed module-level info than `line-tables-only`.
-* `2`, `true`, or `"full"`: full debug info, default for [`dev`](#dev)
+* `2`, `true`, or `"full"`: full debug info, default for [`debug`](#debug-profile)
 
 For more information on what each option does see `rustc`'s docs on [debuginfo].
 
@@ -435,7 +435,7 @@ rpath = false
 trim-paths = "none"
 ```
 
-### debug
+### debug {#debug-profile}
 
 The `debug` profile is used for creating binaries to run with a debugger. It is used with `cargo build --profile debug` and `cargo install --debug`.
 
