@@ -3316,18 +3316,6 @@ fn checkout_long_path() {
         .file("src/lib.rs", "")
         .build();
 
-    if cfg!(windows) {
-        p.cargo("fetch")
-            .with_status(101)
-            .with_stderr_data(str![[r#"
-...
-[..]path too long[..]
-...
-"#]])
-            .run();
-        return;
-    }
-
     p.cargo("fetch").run();
 
     let mut co_paths = t!(glob::glob(
@@ -3340,8 +3328,7 @@ fn checkout_long_path() {
     assert!(co_path.join(&long_path).is_file());
     let co_repo = t!(git2::Repository::open(&co_path));
     let co_config = t!(t!(co_repo.config()).open_level(git2::ConfigLevel::Local));
-    let err = co_config.get_bool("core.longpaths").unwrap_err();
-    assert_eq!(err.code(), git2::ErrorCode::NotFound);
+    assert!(t!(co_config.get_bool("core.longpaths")));
 }
 
 #[cargo_test]
@@ -3392,18 +3379,6 @@ fn checkout_long_path_in_submodule() {
         .file("src/lib.rs", "")
         .build();
 
-    if cfg!(windows) {
-        p.cargo("fetch")
-            .with_status(101)
-            .with_stderr_data(str![[r#"
-...
-[..]path too long[..]
-...
-"#]])
-            .run();
-        return;
-    }
-
     p.cargo("fetch").run();
 
     let mut co_paths = t!(glob::glob(
@@ -3416,8 +3391,7 @@ fn checkout_long_path_in_submodule() {
     assert!(co_path.join(&long_path).is_file());
     let co_repo = t!(git2::Repository::open(&co_path));
     let co_config = t!(t!(co_repo.config()).open_level(git2::ConfigLevel::Local));
-    let err = co_config.get_bool("core.longpaths").unwrap_err();
-    assert_eq!(err.code(), git2::ErrorCode::NotFound);
+    assert!(t!(co_config.get_bool("core.longpaths")));
 }
 
 #[cargo_test(requires = "git")]
