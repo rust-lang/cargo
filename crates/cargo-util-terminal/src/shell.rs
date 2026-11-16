@@ -507,15 +507,7 @@ impl ShellOut {
         justified: bool,
     ) -> CargoResult<()> {
         let mut buffer = Vec::new();
-        if justified {
-            write!(&mut buffer, "{style}{status:>12}{style:#}")?;
-        } else {
-            write!(&mut buffer, "{style}{status}{style:#}:")?;
-        }
-        match message {
-            Some(message) => writeln!(buffer, " {message}")?,
-            None => write!(buffer, " ")?,
-        }
+        format_message(&mut buffer, status, message, style, justified)?;
         self.stderr().write_all(&buffer)?;
         Ok(())
     }
@@ -535,6 +527,28 @@ impl ShellOut {
             ShellOut::Write(w) => w,
         }
     }
+}
+
+/// Formats a message with a status. The status comes first, and is bold plus the given
+/// color. The status can be justified, in which case the max width that will right align is
+/// 12 chars.
+fn format_message(
+    buffer: &mut Vec<u8>,
+    status: &dyn fmt::Display,
+    message: Option<&dyn fmt::Display>,
+    style: &Style,
+    justified: bool,
+) -> CargoResult<()> {
+    if justified {
+        write!(buffer, "{style}{status:>12}{style:#}")?;
+    } else {
+        write!(buffer, "{style}{status}{style:#}:")?;
+    }
+    match message {
+        Some(message) => writeln!(buffer, " {message}")?,
+        None => write!(buffer, " ")?,
+    }
+    Ok(())
 }
 
 pub enum TtyWidth {
