@@ -93,7 +93,7 @@ use cargo_util_schemas::manifest::RegistryName;
 use cargo_util_terminal::{Shell, Verbosity};
 use curl::easy::Easy;
 use itertools::Itertools;
-use time::OffsetDateTime;
+use jiff::Timestamp;
 use url::Url;
 
 pub use crate::config::{
@@ -141,7 +141,7 @@ pub const TOP_LEVEL_CONFIG_KEYS: &[&str] = &[
 #[derive(Debug)]
 pub struct CredentialCacheValue {
     pub token_value: Secret<String>,
-    pub expiration: Option<OffsetDateTime>,
+    pub expiration: Option<Timestamp>,
     pub operation_independent: bool,
 }
 

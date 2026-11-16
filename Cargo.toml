@@ -28,10 +28,10 @@ base64 = "0.23.0"
 blake3 = "1.8.4"
 build-rs = { version = "0.4.0", path = "crates/build-rs" }
 cargo = { path = "" }
-cargo-credential = { version = "0.4.11", path = "credential/cargo-credential" }
-cargo-credential-libsecret = { version = "0.5.11", path = "credential/cargo-credential-libsecret" }
-cargo-credential-macos-keychain = { version = "0.4.26", path = "credential/cargo-credential-macos-keychain" }
-cargo-credential-wincred = { version = "0.4.26", path = "credential/cargo-credential-wincred" }
+cargo-credential = { version = "0.5.0", path = "credential/cargo-credential" }
+cargo-credential-libsecret = { version = "0.6.0", path = "credential/cargo-credential-libsecret" }
+cargo-credential-macos-keychain = { version = "0.5.0", path = "credential/cargo-credential-macos-keychain" }
+cargo-credential-wincred = { version = "0.5.0", path = "credential/cargo-credential-wincred" }
 cargo-platform = { path = "crates/cargo-platform", version = "0.3.3" }
 cargo-test-macro = { version = "0.4.15", path = "crates/cargo-test-macro" }
 cargo-test-support = { version = "0.12.0", path = "crates/cargo-test-support" }
@@ -111,7 +111,6 @@ snapbox = { version = "1.2.0", features = ["diff", "dir", "term-svg", "regex", "
 tar = { version = "0.4.45", default-features = false }
 tempfile = "3.27.0"
 thiserror = "2.0.18"
-time = { version = "0.3.47", features = ["parsing", "formatting", "serde"] }
 toml = { version = "1.1.5", default-features = false }
 toml_edit = { version = "0.25.10", features = ["serde"] }
 toml_parser = "1.1.2"
@@ -223,7 +222,6 @@ shell-escape.workspace = true
 tar.workspace = true
 tempfile.workspace = true
 thiserror.workspace = true
-time.workspace = true
 toml = { workspace = true, features = ["std", "serde", "parse", "display", "preserve_order"] }
 toml_edit.workspace = true
 toml_parser.workspace = true
