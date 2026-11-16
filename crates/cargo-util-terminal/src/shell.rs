@@ -315,14 +315,14 @@ impl Shell {
     /// Whether the shell supports color.
     pub fn err_supports_color(&self) -> bool {
         match &self.output {
-            ShellOut::Write(_) => false,
+            ShellOut::Write(w) => supports_color(w.current_choice()),
             ShellOut::Stream { stderr, .. } => supports_color(stderr.current_choice()),
         }
     }
 
     pub fn out_supports_color(&self) -> bool {
         match &self.output {
-            ShellOut::Write(_) => false,
+            ShellOut::Write(w) => supports_color(w.current_choice()),
             ShellOut::Stream { stdout, .. } => supports_color(stdout.current_choice()),
         }
     }
