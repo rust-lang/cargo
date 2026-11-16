@@ -7,7 +7,6 @@ use crate::resolver::{CliFeatures, ForceAllTargets, HasDevUnits};
 use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::interning::InternedString;
 use crate::util::is_rustup;
-use crate::util::restricted_names;
 use crate::util::{
     print_available_benches, print_available_binaries, print_available_examples,
     print_available_packages, print_available_tests,
@@ -896,7 +895,7 @@ Run `{cmd}` to see possible targets."
     ) -> CargoResult<CompileOptions> {
         let mut compile_opts = self.compile_options(gctx, intent, workspace, profile_checking)?;
         let spec = self._values_of("package");
-        if spec.iter().any(restricted_names::is_glob_pattern) {
+        if spec.iter().any(cargo_util::is_glob_pattern) {
             anyhow::bail!("glob patterns on package selection are not supported.")
         }
         compile_opts.spec = Packages::Packages(spec);

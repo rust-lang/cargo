@@ -19,7 +19,7 @@ use cargo_util_terminal::report::Level;
 use super::ConfigValue;
 use super::DefinitionKind;
 use super::{ConfigKey, ConfigReader, ConfigStore};
-use crate::util::restricted_names::is_glob_pattern;
+use cargo_util::is_glob_pattern;
 
 use ConfigValue as CV;
 

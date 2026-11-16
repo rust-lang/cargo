@@ -1,8 +1,8 @@
 //! Filters and their rules to select which Cargo targets will be built.
 
 use crate::compiler::UserIntent;
-use crate::util::restricted_names::is_glob_pattern;
 use crate::workspace::{Target, TargetKind};
+use cargo_util::is_glob_pattern;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 /// Indicates whether or not the library target gets included.
