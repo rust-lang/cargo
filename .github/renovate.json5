@@ -2,17 +2,21 @@
   schedule: [
     'before 5am on the first day of the month',
   ],
-  minimumReleaseAge: "3 days",
-  internalChecksFilter: "strict",
+  minimumReleaseAge: '3 days',
+  internalChecksFilter: 'strict',
   semanticCommits: 'enabled',
   configMigration: true,
-  dependencyDashboard: true,
+  dependencyDashboard: {
+    enabled: true,
+  },
   ignorePaths: [
     '**/tests/**',
   ],
   // Ignore curl-sys, for now
   // https://github.com/rust-lang/cargo/issues/16357
-  ignoreDeps: ['curl-sys'],
+  ignoreDeps: [
+    'curl-sys',
+  ],
   customManagers: [
     {
       customType: 'regex',
