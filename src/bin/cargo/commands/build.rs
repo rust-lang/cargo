@@ -1,6 +1,5 @@
 use crate::command_prelude::*;
 
-use cargo::context::ConfigRelativePathResolveExt;
 use cargo::ops;
 
 pub fn cli() -> Command {
@@ -57,7 +56,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     } else if let Some(artifact_dir) = gctx.build_config()?.artifact_dir.as_ref() {
         // If a CLI option is not specified for choosing the artifact dir, use the `artifact-dir` from the build config, if
         // present
-        let artifact_dir = artifact_dir.resolve_path(gctx);
+        let artifact_dir = artifact_dir.resolve(gctx.cwd());
         compile_opts.build_config.export_dir = Some(artifact_dir);
     }
 

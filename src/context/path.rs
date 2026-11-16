@@ -6,14 +6,7 @@ use super::{ConfigRelativePath, GlobalContext};
 
 /// Resolves configuration-relative paths using the global context.
 pub trait ConfigRelativePathResolveExt {
-    /// Resolves this configuration-relative path to an absolute path.
-    ///
-    /// This will always return an absolute path where it's relative to the
-    /// location for configuration for this value.
-    fn resolve_path(&self, gctx: &GlobalContext) -> PathBuf;
-
-    /// Same as [`Self::resolve_path`] but will make string replacements
-    /// before resolving the path.
+    /// Applies string replacements before resolving the path.
     ///
     /// `replacements` should be an [`IntoIterator`] of tuples with the "from" and "to" for the
     /// string replacement.
@@ -33,11 +26,6 @@ pub trait ConfigRelativePathResolveExt {
 }
 
 impl ConfigRelativePathResolveExt for ConfigRelativePath {
-    fn resolve_path(&self, gctx: &GlobalContext) -> PathBuf {
-        let value = self.as_value();
-        value.definition.root(gctx.cwd()).join(&value.val)
-    }
-
     fn resolve_templated_path(
         &self,
         gctx: &GlobalContext,

@@ -25,6 +25,7 @@ use serde::de::Error;
 use serde_untagged::UntaggedEnumVisitor;
 
 use std::path::Path;
+use std::path::PathBuf;
 
 use anyhow::Result;
 
@@ -40,7 +41,7 @@ pub use cargo_util_schemas::manifest::TomlProfiles;
 #[derive(schemars::JsonSchema)]
 #[schemars(rename_all = "kebab-case")]
 pub struct Config {
-    pub paths: Option<Vec<ConfigRelativePath>>,
+    pub paths: Option<Vec<ConfigRootRelativePath>>,
     pub target_applies_to_host: Option<bool>,
 
     pub build: Option<CargoBuildConfig>,
@@ -53,7 +54,7 @@ pub struct Config {
     pub http: Option<CargoHttpConfig>,
     pub net: Option<CargoNetConfig>,
     pub patch: Option<HashMap<String, HashMap<String, PatchDependency>>>,
-    pub path_bases: Option<HashMap<String, ConfigRelativePath>>,
+    pub path_bases: Option<HashMap<String, ConfigRootRelativePath>>,
     pub profile: Option<TomlProfiles>,
     pub registries: Option<HashMap<String, RegistryConfig>>,
     pub registry: Option<GlobalRegistryConfig>,
@@ -72,7 +73,7 @@ pub struct Credentials {
     pub registries: Option<HashMap<String, RegistryCredential>>,
 }
 
-pub type PatchDependency = cargo_util_schemas::manifest::TomlDependency<ConfigRelativePath>;
+pub type PatchDependency = cargo_util_schemas::manifest::TomlDependency<ConfigRootRelativePath>;
 
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 #[derive(Debug, Default, Deserialize, PartialEq)]
@@ -179,11 +180,11 @@ pub struct SourceConfigDef {
     /// Indicates this source should be replaced with another of the given name.
     pub replace_with: OptValue<String>,
     /// A directory source.
-    pub directory: Option<ConfigRelativePath>,
+    pub directory: Option<ConfigRootRelativePath>,
     /// A registry source. Value is a URL.
     pub registry: OptValue<String>,
     /// A local registry source.
-    pub local_registry: Option<ConfigRelativePath>,
+    pub local_registry: Option<ConfigRootRelativePath>,
     /// A git source. Value is a URL.
     pub git: OptValue<String>,
     /// The git branch.
@@ -312,8 +313,8 @@ pub struct CargoHttpConfig {
     pub proxy: Option<String>,
     pub low_speed_limit: Option<u32>,
     pub timeout: Option<u64>,
-    pub cainfo: Option<ConfigRelativePath>,
-    pub proxy_cainfo: Option<ConfigRelativePath>,
+    pub cainfo: Option<ConfigRootRelativePath>,
+    pub proxy_cainfo: Option<ConfigRootRelativePath>,
     pub check_revoke: Option<bool>,
     pub user_agent: Option<String>,
     pub debug: Option<bool>,
@@ -494,8 +495,8 @@ impl<'de> Deserialize<'de> for JobsConfig {
 pub struct CargoBuildConfig {
     // deprecated, but preserved for compatibility
     pub pipelining: Option<bool>,
-    pub dep_info_basedir: Option<ConfigRelativePath>,
-    pub target_dir: Option<ConfigRelativePath>,
+    pub dep_info_basedir: Option<ConfigRootRelativePath>,
+    pub target_dir: Option<ConfigRootRelativePath>,
     pub build_dir: Option<ConfigRelativePath>,
     pub incremental: Option<bool>,
     pub target: Option<BuildTargetConfig>,
@@ -507,7 +508,7 @@ pub struct CargoBuildConfig {
     pub rustc_workspace_wrapper: Option<ConfigRelativePath>,
     pub rustc: Option<ConfigRelativePath>,
     pub rustdoc: Option<ConfigRelativePath>,
-    pub artifact_dir: Option<ConfigRelativePath>,
+    pub artifact_dir: Option<ConfigRootRelativePath>,
     pub warnings: Option<WarningHandling>,
     /// Unstable feature `-Zsbom`.
     pub sbom: Option<bool>,
@@ -820,7 +821,7 @@ impl<'de> Deserialize<'de> for ProgressConfig {
 enum EnvConfigValueInner {
     Simple(String),
     WithOptions {
-        value: ConfigRelativePath,
+        value: ConfigRootRelativePath,
         force: bool,
         relative: bool,
     },
@@ -833,7 +834,7 @@ impl<'de> Deserialize<'de> for EnvConfigValueInner {
     {
         #[derive(Deserialize)]
         struct WithOptions {
-            value: ConfigRelativePath,
+            value: ConfigRootRelativePath,
             #[serde(default)]
             force: bool,
             #[serde(default)]
@@ -904,7 +905,7 @@ impl EnvConfigValue {
     /// Resolves the environment variable value.
     ///
     /// If `relative = true`,
-    /// the value is interpreted as a [`ConfigRelativePath`]-like path.
+    /// the value is interpreted as a [`ConfigRootRelativePath`]-like path.
     pub fn resolve<'a>(&'a self, cwd: &Path) -> Cow<'a, OsStr> {
         match self.inner {
             EnvConfigValueInner::Simple(ref s) => Cow::Borrowed(OsStr::new(s.as_str())),
@@ -1025,6 +1026,19 @@ macro_rules! rel_path {
 }
 
 rel_path!(ConfigRelativePath);
+
+rel_path!(ConfigRootRelativePath);
+
+impl ConfigRootRelativePath {
+    /// Resolves this configuration-root-relative path to an absolute path.
+    ///
+    /// This will always return an absolute path where it's relative to the
+    /// location for configuration for this value.
+    pub fn resolve(&self, cwd: &Path) -> PathBuf {
+        let value = self.as_value();
+        value.definition.root(cwd).join(&value.val)
+    }
+}
 
 /// A config type that is a program to run.
 ///

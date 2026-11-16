@@ -1,7 +1,6 @@
 //! This module contains all code sporting `gitoxide` for operations on `git` repositories and it mirrors
 //! `utils` closely for now. One day it can be renamed into `utils` once `git2` isn't required anymore.
 
-use crate::context::ConfigRelativePathResolveExt;
 use crate::util::HumanBytes;
 use crate::util::network::http::HttpTimeout;
 use crate::util::{MetricsCounter, Progress, network};
@@ -302,7 +301,7 @@ pub fn cargo_config_to_gitoxide_overrides(gctx: &GlobalContext) -> CargoResult<V
     }
     if let Some(cainfo) = &http.cainfo {
         values.push(
-            Http::SSL_CA_INFO.validated_assignment_fmt(&cainfo.resolve_path(gctx).display())?,
+            Http::SSL_CA_INFO.validated_assignment_fmt(&cainfo.resolve(gctx.cwd()).display())?,
         );
     }
 

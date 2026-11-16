@@ -24,7 +24,7 @@ use pathdiff::diff_paths;
 use url::Url;
 
 use crate::compiler::{CompileKind, CompileTarget};
-use crate::context::{ConfigRelativePath, ConfigRelativePathResolveExt, TOP_LEVEL_CONFIG_KEYS};
+use crate::context::{ConfigRootRelativePath, TOP_LEVEL_CONFIG_KEYS};
 use crate::diagnostics::cwd_rel_path;
 use crate::diagnostics::get_key_value_span;
 use crate::resolver::ResolveBehavior;
@@ -2597,9 +2597,9 @@ pub(crate) fn lookup_path_base<'a>(
 
     // Look up the relevant base in the Config and use that as the root.
     if let Some(path_bases) =
-        gctx.get::<Option<ConfigRelativePath>>(["path-bases", base.as_str()])?
+        gctx.get::<Option<ConfigRootRelativePath>>(["path-bases", base.as_str()])?
     {
-        Ok(path_bases.resolve_path(gctx))
+        Ok(path_bases.resolve(gctx.cwd()))
     } else {
         // Otherwise, check the built-in bases.
         match base.as_str() {
@@ -2622,9 +2622,9 @@ impl ResolveToPath for String {
     }
 }
 
-impl ResolveToPath for ConfigRelativePath {
+impl ResolveToPath for ConfigRootRelativePath {
     fn resolve(&self, gctx: &GlobalContext) -> PathBuf {
-        self.resolve_path(gctx)
+        self.resolve(gctx.cwd())
     }
 }
 

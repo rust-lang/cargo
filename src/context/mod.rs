@@ -13,9 +13,9 @@
 //!
 //! - [`Value`]: This type provides access to the location where the
 //!   config value was defined.
-//! - [`ConfigRelativePath`]: For a path that is relative to where it is
+//! - [`ConfigRootRelativePath`]: For a path that is relative to where it is
 //!   defined.
-//! - [`PathAndArgs`]: Similar to [`ConfigRelativePath`],
+//! - [`PathAndArgs`]: Similar to [`ConfigRootRelativePath`],
 //!   but also supports a list of arguments, useful for programs to execute.
 //! - [`StringList`]: Get a value that is either a list or a whitespace split
 //!   string.
@@ -707,7 +707,7 @@ impl GlobalContext {
 
             Ok(Some(Filesystem::new(self.cwd.join(dir))))
         } else if let Some(val) = &self.build_config()?.target_dir {
-            let path = val.resolve_path(self);
+            let path = val.resolve(self.cwd());
 
             // Check if the target directory is set to an empty string in the config.toml file.
             if val.is_empty() {

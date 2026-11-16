@@ -10,7 +10,7 @@
         "null"
       ],
       "items": {
-        "$ref": "#/$defs/ConfigRelativePath"
+        "$ref": "#/$defs/ConfigRootRelativePath"
       }
     },
     "target-applies-to-host": {
@@ -125,7 +125,7 @@
         "null"
       ],
       "additionalProperties": {
-        "$ref": "#/$defs/ConfigRelativePath"
+        "$ref": "#/$defs/ConfigRootRelativePath"
       }
     },
     "profile": {
@@ -198,7 +198,7 @@
     }
   },
   "$defs": {
-    "ConfigRelativePath": {
+    "ConfigRootRelativePath": {
       "description": "A path, potentially relative to the config, not current_dir",
       "$ref": "#/$defs/Value"
     },
@@ -219,7 +219,7 @@
         "dep-info-basedir": {
           "anyOf": [
             {
-              "$ref": "#/$defs/ConfigRelativePath"
+              "$ref": "#/$defs/ConfigRootRelativePath"
             },
             {
               "type": "null"
@@ -229,7 +229,7 @@
         "target-dir": {
           "anyOf": [
             {
-              "$ref": "#/$defs/ConfigRelativePath"
+              "$ref": "#/$defs/ConfigRootRelativePath"
             },
             {
               "type": "null"
@@ -345,7 +345,7 @@
         "artifact-dir": {
           "anyOf": [
             {
-              "$ref": "#/$defs/ConfigRelativePath"
+              "$ref": "#/$defs/ConfigRootRelativePath"
             },
             {
               "type": "null"
@@ -402,6 +402,10 @@
           ]
         }
       }
+    },
+    "ConfigRelativePath": {
+      "description": "A path, potentially relative to the config, not current_dir",
+      "$ref": "#/$defs/Value"
     },
     "BuildTargetConfig": {
       "description": "Configuration for `build.target`.\n\nAccepts in the following forms:\n\n```toml\ntarget = \"a\"\ntarget = [\"a\"]\ntarget = [\"a\", \"b\"]\n```",
@@ -783,7 +787,7 @@
               "type": "object",
               "properties": {
                 "value": {
-                  "$ref": "#/$defs/ConfigRelativePath"
+                  "$ref": "#/$defs/ConfigRootRelativePath"
                 },
                 "force": {
                   "type": "boolean"
@@ -858,7 +862,7 @@
         "cainfo": {
           "anyOf": [
             {
-              "$ref": "#/$defs/ConfigRelativePath"
+              "$ref": "#/$defs/ConfigRootRelativePath"
             },
             {
               "type": "null"
@@ -868,7 +872,7 @@
         "proxy-cainfo": {
           "anyOf": [
             {
-              "$ref": "#/$defs/ConfigRelativePath"
+              "$ref": "#/$defs/ConfigRootRelativePath"
             },
             {
               "type": "null"
@@ -1044,7 +1048,7 @@
         "path": {
           "anyOf": [
             {
-              "$ref": "#/$defs/ConfigRelativePath"
+              "$ref": "#/$defs/ConfigRootRelativePath"
             },
             {
               "type": "null"
@@ -1577,7 +1581,7 @@
           "description": "A directory source.",
           "anyOf": [
             {
-              "$ref": "#/$defs/ConfigRelativePath"
+              "$ref": "#/$defs/ConfigRootRelativePath"
             },
             {
               "type": "null"
@@ -1599,7 +1603,7 @@
           "description": "A local registry source.",
           "anyOf": [
             {
-              "$ref": "#/$defs/ConfigRelativePath"
+              "$ref": "#/$defs/ConfigRootRelativePath"
             },
             {
               "type": "null"
