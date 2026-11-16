@@ -1,6 +1,6 @@
 [package]
 name = "cargo-util-terminal"
-version = "0.1.5"
+version = "0.2.0"
 rust-version = "1.100"  # MSRV:1
 edition.workspace = true
 license.workspace = true
