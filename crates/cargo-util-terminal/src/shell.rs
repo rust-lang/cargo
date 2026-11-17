@@ -23,6 +23,9 @@ pub struct Shell {
     /// Flag that indicates the current line needs to be cleared before
     /// printing. Used when a progress bar is currently displayed.
     needs_clear: bool,
+    /// The progress line currently shown, set by [`Shell::transient_status`].
+    /// Used for redrawing in a single write.
+    transient_line: Option<Vec<u8>>,
 }
 
 impl fmt::Debug for Shell {
@@ -64,6 +67,7 @@ impl Shell {
             },
             verbosity: Verbosity::Verbose,
             needs_clear: false,
+            transient_line: None,
         }
     }
 
@@ -73,6 +77,7 @@ impl Shell {
             output: ShellOut::Write(AutoStream::never(out)), // strip all formatting on write
             verbosity: Verbosity::Verbose,
             needs_clear: false,
+            transient_line: None,
         }
     }
 
@@ -88,6 +93,21 @@ impl Shell {
         match self.verbosity {
             Verbosity::Quiet => Ok(()),
             _ => {
+                if self.needs_clear
+                    && self.err_supports_color()
+                    && message.is_some()
+                    && let Some(transient) = &self.transient_line
+                {
+                    // Erase the progress line, print the message, and redraw the progress
+                    // line in a single write to avoid flickering.
+                    let erase = imp::erase_line_bytes();
+                    let mut buffer = Vec::with_capacity(erase.len() + 64 + transient.len());
+                    buffer.extend_from_slice(&erase);
+                    format_message(&mut buffer, status, message, color, justified)?;
+                    buffer.extend_from_slice(transient);
+                    self.output.stderr().write_all(&buffer)?;
+                    return Ok(());
+                }
                 if self.needs_clear {
                     self.err_erase_line();
                 }
@@ -156,8 +176,9 @@ impl Shell {
     /// Erase from cursor to end of line.
     pub fn err_erase_line(&mut self) {
         if self.err_supports_color() {
-            imp::err_erase_line(self);
+            let _ = self.output.stderr().write_all(&imp::erase_line_bytes());
             self.needs_clear = false;
+            self.transient_line = None;
         }
     }
 
@@ -170,11 +191,26 @@ impl Shell {
         self.print(&status, Some(&message), &HEADER, true)
     }
 
-    pub fn transient_status<T>(&mut self, status: T) -> CargoResult<()>
+    /// Prints a transient status line, like a progress bar, in a single write.
+    pub fn transient_status<T, U>(&mut self, status: T, line: U) -> CargoResult<()>
     where
         T: fmt::Display,
+        U: fmt::Display,
     {
-        self.print(&status, None, &TRANSIENT, true)
+        if self.verbosity == Verbosity::Quiet {
+            return Ok(());
+        }
+        if self.needs_clear {
+            self.err_erase_line();
+        }
+
+        let mut buffer = self.transient_line.take().unwrap_or_default();
+        buffer.clear();
+        let style = &TRANSIENT;
+        write!(&mut buffer, "{style}{status:>12}{style:#} {line}")?;
+        self.output.stderr().write_all(&buffer)?;
+        self.transient_line = Some(buffer);
+        Ok(())
     }
 
     /// Shortcut to right-align a status message.
@@ -315,14 +351,14 @@ impl Shell {
     /// Whether the shell supports color.
     pub fn err_supports_color(&self) -> bool {
         match &self.output {
-            ShellOut::Write(_) => false,
+            ShellOut::Write(w) => supports_color(w.current_choice()),
             ShellOut::Stream { stderr, .. } => supports_color(stderr.current_choice()),
         }
     }
 
     pub fn out_supports_color(&self) -> bool {
         match &self.output {
-            ShellOut::Write(_) => false,
+            ShellOut::Write(w) => supports_color(w.current_choice()),
             ShellOut::Stream { stdout, .. } => supports_color(stdout.current_choice()),
         }
     }
@@ -507,15 +543,7 @@ impl ShellOut {
         justified: bool,
     ) -> CargoResult<()> {
         let mut buffer = Vec::new();
-        if justified {
-            write!(&mut buffer, "{style}{status:>12}{style:#}")?;
-        } else {
-            write!(&mut buffer, "{style}{status}{style:#}:")?;
-        }
-        match message {
-            Some(message) => writeln!(buffer, " {message}")?,
-            None => write!(buffer, " ")?,
-        }
+        format_message(&mut buffer, status, message, style, justified)?;
         self.stderr().write_all(&buffer)?;
         Ok(())
     }
@@ -535,6 +563,28 @@ impl ShellOut {
             ShellOut::Write(w) => w,
         }
     }
+}
+
+/// Formats a message with a status. The status comes first, and is bold plus the given
+/// color. The status can be justified, in which case the max width that will right align is
+/// 12 chars.
+fn format_message(
+    buffer: &mut Vec<u8>,
+    status: &dyn fmt::Display,
+    message: Option<&dyn fmt::Display>,
+    style: &Style,
+    justified: bool,
+) -> CargoResult<()> {
+    if justified {
+        write!(buffer, "{style}{status:>12}{style:#}")?;
+    } else {
+        write!(buffer, "{style}{status}{style:#}:")?;
+    }
+    match message {
+        Some(message) => writeln!(buffer, " {message}")?,
+        None => write!(buffer, " ")?,
+    }
+    Ok(())
 }
 
 pub enum TtyWidth {
@@ -651,7 +701,8 @@ fn supports_term_integration(stream: &dyn IsTerminal) -> bool {
 
 #[cfg(unix)]
 mod imp {
-    use super::{Shell, TtyWidth};
+    use super::TtyWidth;
+    use std::borrow::Cow;
     use std::mem;
 
     pub fn stderr_width() -> TtyWidth {
@@ -670,11 +721,11 @@ mod imp {
         }
     }
 
-    pub fn err_erase_line(shell: &mut Shell) {
+    pub fn erase_line_bytes() -> Cow<'static, [u8]> {
         // This is the "EL - Erase in Line" sequence. It clears from the cursor
         // to the end of line.
         // https://en.wikipedia.org/wiki/ANSI_escape_code#CSI_sequences
-        let _ = shell.output.stderr().write_all(b"\x1B[K");
+        Cow::Borrowed(b"\x1B[K")
     }
 }
 
@@ -693,7 +744,7 @@ mod imp {
     };
     use windows_sys::core::PCSTR;
 
-    pub(super) use super::{TtyWidth, default_err_erase_line as err_erase_line};
+    pub(super) use super::{TtyWidth, default_erase_line_bytes as erase_line_bytes};
 
     pub fn stderr_width() -> TtyWidth {
         unsafe {
@@ -741,12 +792,91 @@ mod imp {
 }
 
 #[cfg(windows)]
-fn default_err_erase_line(shell: &mut Shell) {
+fn default_erase_line_bytes() -> std::borrow::Cow<'static, [u8]> {
     match imp::stderr_width() {
         TtyWidth::Known(max_width) | TtyWidth::Guess(max_width) => {
-            let blank = " ".repeat(max_width);
-            drop(write!(shell.output.stderr(), "{}\r", blank));
+            let mut blank = vec![b' '; max_width];
+            blank.push(b'\r');
+            blank.into()
         }
-        _ => (),
+        _ => std::borrow::Cow::Borrowed(b""),
+    }
+}
+
+// Erase sequences differ on Windows
+#[cfg(all(test, unix))]
+mod tests {
+    use std::io::Write;
+    use std::sync::{Arc, Mutex};
+
+    use anstream::AutoStream;
+
+    use super::{Shell, ShellOut, Verbosity};
+
+    /// Records every individual write made to it.
+    #[derive(Clone, Default)]
+    struct WriteRecorder(Arc<Mutex<Vec<String>>>);
+
+    impl WriteRecorder {
+        fn take(&self) -> Vec<String> {
+            std::mem::take(&mut *self.0.lock().unwrap())
+        }
+    }
+
+    impl Write for WriteRecorder {
+        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+            let write = String::from_utf8_lossy(buf).into_owned();
+            self.0.lock().unwrap().push(write);
+            Ok(buf.len())
+        }
+
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+
+    fn ansi_shell(recorder: &WriteRecorder) -> Shell {
+        Shell {
+            output: ShellOut::Write(AutoStream::always_ansi(Box::new(recorder.clone()))),
+            verbosity: Verbosity::Verbose,
+            needs_clear: false,
+            transient_line: None,
+        }
+    }
+
+    /// Draws a progress bar the same way `cargo::util::progress` does.
+    fn draw_progress(shell: &mut Shell, line: &str) {
+        if shell.is_cleared() {
+            shell.set_needs_clear(false);
+            shell
+                .transient_status("Building", format_args!("{line}\r"))
+                .unwrap();
+            shell.set_needs_clear(true);
+        }
+    }
+
+    #[test]
+    fn progress_writes() {
+        let recorder = WriteRecorder::default();
+        let mut shell = ansi_shell(&recorder);
+
+        draw_progress(&mut shell, "[=>  ] 1/2: foo");
+        assert_eq!(
+            recorder.take(),
+            ["\u{1b}[1m\u{1b}[96m    Building\u{1b}[0m [=>  ] 1/2: foo\r"]
+        );
+
+        shell.status("Compiling", "foo").unwrap();
+        assert_eq!(
+            recorder.take(),
+            [concat!(
+                "\u{1b}[K",
+                "\u{1b}[1m\u{1b}[92m   Compiling\u{1b}[0m foo\n",
+                "\u{1b}[1m\u{1b}[96m    Building\u{1b}[0m [=>  ] 1/2: foo\r",
+            )]
+        );
+
+        draw_progress(&mut shell, "[=>  ] 1/2: foo");
+        assert_eq!(recorder.take(), Vec::<String>::new());
     }
 }
