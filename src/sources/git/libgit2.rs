@@ -1,9 +1,12 @@
 //! Git operations through libgit2.
 
+use crate::sources::git::utils::GitDatabase;
 use crate::sources::git::utils::note_github_pull_request;
 use crate::sources::git::utils::reinitialize;
+use crate::sources::git::utils::set_checkout_config;
 use crate::util::GlobalContext;
 use crate::util::HumanBytes;
+use crate::util::IntoUrl as _;
 use crate::util::MetricsCounter;
 use crate::util::Progress;
 use crate::util::errors::CargoResult;
@@ -13,8 +16,10 @@ use crate::util::network::http::needs_custom_http_transport;
 
 use git2::ErrorClass;
 use tracing::debug;
+use tracing::info;
 use url::Url;
 
+use std::path::Path;
 use std::sync::Once;
 use std::time::{Duration, Instant};
 
@@ -285,6 +290,80 @@ where
     }
 
     Err(err)
+}
+
+/// Checks out `revision` from the git `database` into a new repository at `into`.
+///
+/// This is a filesystem-to-filesystem clone.
+#[tracing::instrument(skip(database, gctx))]
+pub(crate) fn checkout_with_libgit2(
+    into: &Path,
+    database: &GitDatabase,
+    revision: git2::Oid,
+    gctx: &GlobalContext,
+) -> CargoResult<git2::Repository> {
+    // we're doing a local filesystem-to-filesystem clone so there should
+    // be no need to respect global configuration options, so pass in
+    // an empty instance of `git2::Config` below.
+    let git_config = git2::Config::new()?;
+
+    // Clone the repository, but make sure we use the "local" option in
+    // libgit2 which will attempt to use hardlinks to set up the database.
+    // This should speed up the clone operation quite a bit if it works.
+    //
+    // Note that we still use the same fetch options because while we don't
+    // need authentication information we may want progress bars and such.
+    let url = database.path().into_url()?;
+    let mut repo = None;
+    with_fetch_options(&git_config, url.as_str(), gctx, &mut |fopts| {
+        let mut checkout = git2::build::CheckoutBuilder::new();
+        checkout.dry_run(); // we'll do this below during a `reset`
+
+        let r = git2::build::RepoBuilder::new()
+            // use hard links and/or copy the database, we're doing a
+            // filesystem clone so this'll speed things up quite a bit.
+            .clone_local(git2::build::CloneLocal::Local)
+            .with_checkout(checkout)
+            .fetch_options(fopts)
+            .clone(url.as_str(), into)?;
+        // `git2` doesn't seem to handle shallow repos correctly when doing
+        // a local clone. Fortunately all that's needed is the copy of the
+        // one file that defines the shallow boundary, the commits which
+        // have their parents omitted as part of the shallow clone.
+        //
+        // TODO(git2): remove this when git2 supports shallow clone correctly
+        if database.repo().is_shallow() {
+            std::fs::copy(
+                database.repo().path().join("shallow"),
+                r.path().join("shallow"),
+            )?;
+        }
+        repo = Some(r);
+        Ok(())
+    })?;
+    let repo = repo.unwrap();
+
+    info!("reset {} to {}", repo.path().display(), revision);
+    set_checkout_config(&repo)?;
+
+    reset(&repo, &repo.find_object(revision, None)?, gctx)?;
+    Ok(repo)
+}
+
+/// `git reset --hard` to the given `obj` for the `repo`.
+///
+/// The `obj` is a commit-ish to which the head should be moved.
+#[tracing::instrument(skip_all)]
+fn reset(repo: &git2::Repository, obj: &git2::Object<'_>, gctx: &GlobalContext) -> CargoResult<()> {
+    let mut pb = Progress::new("Checkout", gctx);
+    let mut opts = git2::build::CheckoutBuilder::new();
+    opts.progress(|_, cur, max| {
+        drop(pb.tick(cur, max, ""));
+    });
+    debug!("doing reset");
+    repo.reset(obj, git2::ResetType::Hard, Some(&mut opts))?;
+    debug!("reset done");
+    Ok(())
 }
 
 /// Prepares the callbacks for fetching a git repository.
