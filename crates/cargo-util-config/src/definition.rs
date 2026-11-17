@@ -63,6 +63,17 @@ impl Definition {
         }
     }
 
+    /// Parent directory where this is defined.
+    ///
+    /// If from a file, it is the directory `.cargo/`.
+    /// CLI and env use the provided current working directory.
+    pub fn parent<'a>(&'a self, cwd: &'a Path) -> &'a Path {
+        match self {
+            Definition::Path(p) | Definition::Cli(Some(p)) => p.parent().unwrap(),
+            Definition::Environment(_) | Definition::Cli(None) | Definition::BuiltIn => cwd,
+        }
+    }
+
     /// Returns true if self is a higher priority to other.
     ///
     /// CLI is preferred over environment, which is preferred over files.

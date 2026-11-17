@@ -1123,6 +1123,19 @@ pub enum BracketType {
     Closing,
 }
 
+rel_path!(ConfigParentRelativePath);
+
+impl ConfigParentRelativePath {
+    /// Resolves this configuration-parent-relative path to an absolute path.
+    ///
+    /// This will always return an absolute path where it's relative to the
+    /// location for configuration for this value.
+    pub fn resolve(&self, cwd: &Path) -> PathBuf {
+        let value = self.as_value();
+        value.definition.parent(cwd).join(&value.val)
+    }
+}
+
 /// A config type that is a program to run.
 ///
 /// This supports a list of strings like `['/path/to/program', 'somearg']`

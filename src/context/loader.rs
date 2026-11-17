@@ -12,6 +12,7 @@ use anyhow::bail;
 use cargo_util::collections::HashMap;
 use cargo_util::collections::HashSet;
 use cargo_util::paths;
+use cargo_util_config::schema::ConfigParentRelativePath;
 use cargo_util_terminal::Shell;
 use cargo_util_terminal::report::Level;
 
@@ -20,6 +21,7 @@ use super::ConfigValue;
 use super::Definition;
 use super::DefinitionKind;
 use super::MergePriority;
+use super::Value;
 use crate::util::errors::CargoResult;
 use crate::util::restricted_names::is_glob_pattern;
 
@@ -85,8 +87,8 @@ impl<'a> ConfigLoader<'a> {
                 .with_context(|| {
                     format!(
                         "failed to load config include `{}` from `{}`",
-                        include.path.display(),
-                        include.def
+                        include.path.as_str(),
+                        include.path.definition()
                     )
                 })?;
             self.load_unmerged_include(&mut config, seen, output)?;
@@ -178,8 +180,8 @@ impl<'a> ConfigLoader<'a> {
                 .with_context(|| {
                     format!(
                         "failed to load config include `{}` from `{}`",
-                        include.path.display(),
-                        include.def
+                        include.path.as_str(),
+                        include.path.definition()
                     )
                 })?;
         }
@@ -204,11 +206,16 @@ impl<'a> ConfigLoader<'a> {
                 .into_iter()
                 .enumerate()
                 .map(|(idx, cv)| match cv {
-                    CV::String(s, def) => Ok(ConfigInclude::new(s, def)),
+                    CV::String(val, definition) => {
+                        let path = ConfigParentRelativePath::new(Value { val, definition });
+                        Ok(ConfigInclude::new(path))
+                    }
                     CV::Table(mut table, def) => {
                         // Extract `include.path`
-                        let s = match table.remove("path") {
-                            Some(CV::String(s, _)) => s,
+                        let path = match table.remove("path") {
+                            Some(CV::String(val, definition)) => {
+                                ConfigParentRelativePath::new(Value { val, definition })
+                            }
                             Some(other) => bail!(
                                 "expected a string, but found {} at `include[{idx}].path` in `{def}`",
                                 other.desc()
@@ -226,7 +233,7 @@ impl<'a> ConfigLoader<'a> {
                             None => false,
                         };
 
-                        let mut include = ConfigInclude::new(s, def);
+                        let mut include = ConfigInclude::new(path);
                         include.optional = optional;
                         Ok(include)
                     }
@@ -248,33 +255,31 @@ impl<'a> ConfigLoader<'a> {
         };
 
         for include in &includes {
-            if include.path.extension() != Some(OsStr::new("toml")) {
+            let path = include.path.as_str();
+            if Path::new(path).extension() != Some(OsStr::new("toml")) {
                 bail!(
                     "expected a config include path ending with `.toml`, \
                      but found `{}` from `{}`",
-                    include.path.display(),
-                    include.def,
+                    path,
+                    include.path.definition(),
                 )
             }
 
-            if let Some(path) = include.path.to_str() {
-                // Ignore non UTF-8 bytes as glob and template syntax are for textual config.
-                if is_glob_pattern(path) {
-                    bail!(
-                        "expected a config include path without glob patterns, \
-                         but found `{}` from `{}`",
-                        include.path.display(),
-                        include.def,
-                    )
-                }
-                if path.contains(&['{', '}']) {
-                    bail!(
-                        "expected a config include path without template braces, \
-                         but found `{}` from `{}`",
-                        include.path.display(),
-                        include.def,
-                    )
-                }
+            if is_glob_pattern(path) {
+                bail!(
+                    "expected a config include path without glob patterns, \
+                     but found `{}` from `{}`",
+                    path,
+                    include.path.definition(),
+                )
+            }
+            if path.contains(&['{', '}']) {
+                bail!(
+                    "expected a config include path without template braces, \
+                     but found `{}` from `{}`",
+                    path,
+                    include.path.definition(),
+                )
             }
         }
 
@@ -425,19 +430,15 @@ impl<'a> ConfigLoader<'a> {
 /// to avoid any misuse of `GlobalContext::get::<ConfigInclude>()`,
 /// which might lead to wrong config loading order.
 struct ConfigInclude {
-    /// Path to a config-include configuration file.
-    /// Could be either relative or absolute.
-    path: PathBuf,
-    def: Definition,
+    path: ConfigParentRelativePath,
     /// Whether this include is optional (missing files are silently ignored)
     optional: bool,
 }
 
 impl ConfigInclude {
-    fn new(p: impl Into<PathBuf>, def: Definition) -> Self {
+    fn new(path: ConfigParentRelativePath) -> Self {
         Self {
-            path: p.into(),
-            def,
+            path,
             optional: false,
         }
     }
@@ -455,18 +456,14 @@ impl ConfigInclude {
     /// Returns `None` if this is an optional include and the file doesn't exist.
     /// Otherwise returns `Some(PathBuf)` with the absolute path.
     fn resolve_path(&self, cwd: &Path) -> Option<PathBuf> {
-        let abs_path = match &self.def {
-            Definition::Path(p) | Definition::Cli(Some(p)) => p.parent().unwrap(),
-            Definition::Environment(_) | Definition::Cli(None) | Definition::BuiltIn => cwd,
-        }
-        .join(&self.path);
+        let abs_path = self.path.resolve(cwd);
         let abs_path = paths::normalize_path(&abs_path);
 
         if self.optional && !abs_path.exists() {
             tracing::info!(
                 "skipping optional include `{}` in `{}`:  file not found at `{}`",
-                self.path.display(),
-                self.def,
+                self.path.as_str(),
+                self.path.definition(),
                 abs_path.display(),
             );
             None
