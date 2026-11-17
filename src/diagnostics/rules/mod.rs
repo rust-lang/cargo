@@ -146,7 +146,7 @@ pub static LINT_GROUPS: &[LintGroup] = &[
 
 const DEFAULT: LintGroup = LintGroup {
     name: "default",
-    desc: "all lints that are on by default (correctness, suspicious, style, complexity, perf)",
+    desc: "all lints that are on by default (correctness, style, suspicious)",
     default_level: LintLevel::Warn,
     feature_gate: None,
     hidden: false,

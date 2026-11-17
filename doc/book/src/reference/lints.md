@@ -23,14 +23,14 @@ Cargo has the concept of a "lint group",
 where you can toggle several warnings through one name.
 
 
-| Group                | Description                                                                         | Default level |
-|----------------------|-------------------------------------------------------------------------------------|---------------|
-| `cargo::default`     | all lints that are on by default (correctness, suspicious, style, complexity, perf) | warn/deny     |
-| `cargo::correctness` | code that is outright wrong or useless                                              | deny          |
-| `cargo::style`       | code that should be written in a more idiomatic way                                 | warn          |
-| `cargo::suspicious`  | code that is most likely wrong or useless                                           | warn          |
-| `cargo::pedantic`    | lints which are rather strict or have occasional false positives                    | allow         |
-| `cargo::restriction` | lints which prevent the use of Cargo features                                       | allow         |
+| Group                | Description                                                       | Default level |
+|----------------------|-------------------------------------------------------------------|---------------|
+| `cargo::default`     | all lints that are on by default (correctness, style, suspicious) | warn/deny     |
+| `cargo::correctness` | code that is outright wrong or useless                            | deny          |
+| `cargo::style`       | code that should be written in a more idiomatic way               | warn          |
+| `cargo::suspicious`  | code that is most likely wrong or useless                         | warn          |
+| `cargo::pedantic`    | lints which are rather strict or have occasional false positives  | allow         |
+| `cargo::restriction` | lints which prevent the use of Cargo features                     | allow         |
 
 
 ## Allowed-by-default
