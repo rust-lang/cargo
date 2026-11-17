@@ -12,7 +12,7 @@ When in doubt, check `Cargo.lock` into the version control system (e.g. Git).
 For a better understanding of why and what the alternatives might be, see
 [“Why have Cargo.lock in version control?” in the FAQ](../faq.md#why-have-cargolock-in-version-control).
 We recommend pairing this with
-[Verifying Latest Dependencies](continuous-integration.md#verifying-latest-dependencies)
+[Verifying Latest Dependencies](continuous-integration.md#verifying-latest-dependencies).
 
 Let’s dig in a little bit more.
 
