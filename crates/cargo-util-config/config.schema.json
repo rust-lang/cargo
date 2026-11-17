@@ -239,7 +239,7 @@
         "build-dir": {
           "anyOf": [
             {
-              "$ref": "#/$defs/ConfigRelativePath"
+              "$ref": "#/$defs/ConfigRootRelativePathTemplate"
             },
             {
               "type": "null"
@@ -403,7 +403,7 @@
         }
       }
     },
-    "ConfigRelativePath": {
+    "ConfigRootRelativePathTemplate": {
       "description": "A path, potentially relative to the config, not current_dir",
       "$ref": "#/$defs/Value"
     },
@@ -1535,7 +1535,7 @@
         "lockfile-path": {
           "anyOf": [
             {
-              "$ref": "#/$defs/ConfigRelativePath"
+              "$ref": "#/$defs/ConfigRootRelativePathTemplate"
             },
             {
               "type": "null"

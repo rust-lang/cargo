@@ -17,6 +17,8 @@
 //!   defined.
 //! - [`ConfigRootRelativeProgramPath`]: For a path that is relative to where it is
 //!   defined unless it is a bin name to look up in `PATH`
+//! - [`ConfigRootRelativePathTemplate`]: For a templated path that is relative to where it is
+//!   defined.
 //! - [`PathAndArgs`]: Similar to [`ConfigRootRelativePath`],
 //!   but also supports a list of arguments, useful for programs to execute.
 //! - [`StringList`]: Get a value that is either a list or a whitespace split
@@ -105,11 +107,6 @@ use crate::config::{ConfigReader, Env, MergePriority};
 
 mod loader;
 use loader::ConfigLoader;
-
-mod path;
-pub use path::BracketType;
-pub use path::ConfigRelativePathResolveExt;
-pub use path::ResolveTemplateError;
 
 mod target;
 pub use target::{TargetCfgConfig, TargetConfig};
@@ -741,7 +738,7 @@ impl GlobalContext {
     /// Callers should prefer [`Workspace::build_dir`] instead.
     pub fn custom_build_dir(
         &self,
-        val: &ConfigRelativePath,
+        val: &ConfigRootRelativePathTemplate,
         workspace_manifest_path: &Path,
     ) -> CargoResult<Filesystem> {
         let replacements = [
@@ -776,9 +773,9 @@ impl GlobalContext {
             .collect_vec();
 
         let path = val
-            .resolve_templated_path(self, replacements)
+            .resolve(self.cwd(), replacements)
             .map_err(|e| match e {
-                path::ResolveTemplateError::UnexpectedVariable {
+                ResolveTemplateError::UnexpectedVariable {
                     variable,
                     raw_template,
                 } => {
@@ -791,10 +788,10 @@ impl GlobalContext {
                             "unexpected variable `{variable}` in build.build-dir path `{raw_template}`{suggestion}"
                         )
                 }
-                path::ResolveTemplateError::UnexpectedBracket { bracket_type, raw_template } => {
+                ResolveTemplateError::UnexpectedBracket { bracket_type, raw_template } => {
                     let (btype, literal) = match bracket_type {
-                        path::BracketType::Opening => ("opening", "{"),
-                        path::BracketType::Closing => ("closing", "}"),
+                        BracketType::Opening => ("opening", "{"),
+                        BracketType::Closing => ("closing", "}"),
                     };
 
                     anyhow!(

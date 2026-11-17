@@ -16,6 +16,7 @@ cargo-credential.workspace = true
 cargo-util.workspace = true
 cargo-util-schemas.workspace = true
 cargo-util-terminal.workspace = true
+regex.workspace = true
 schemars = { workspace = true, features = ["preserve_order", "semver1"], optional = true }
 serde = { workspace = true, features = ["derive"] }
 serde-untagged.workspace = true

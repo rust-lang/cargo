@@ -497,7 +497,7 @@ pub struct CargoBuildConfig {
     pub pipelining: Option<bool>,
     pub dep_info_basedir: Option<ConfigRootRelativePath>,
     pub target_dir: Option<ConfigRootRelativePath>,
-    pub build_dir: Option<ConfigRelativePath>,
+    pub build_dir: Option<ConfigRootRelativePathTemplate>,
     pub incremental: Option<bool>,
     pub target: Option<BuildTargetConfig>,
     pub profile: Option<ProfileName>,
@@ -695,7 +695,7 @@ pub struct CargoResolverConfig {
     pub incompatible_rust_versions: Option<IncompatibleRustVersions>,
     pub incompatible_publish_age: Option<IncompatiblePublishAge>,
     pub feature_unification: Option<FeatureUnification>,
-    pub lockfile_path: Option<ConfigRelativePath>,
+    pub lockfile_path: Option<ConfigRootRelativePathTemplate>,
 }
 
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
@@ -1025,8 +1025,6 @@ macro_rules! rel_path {
     };
 }
 
-rel_path!(ConfigRelativePath);
-
 rel_path!(ConfigRootRelativePath);
 
 impl ConfigRootRelativePath {
@@ -1059,6 +1057,70 @@ impl ConfigRootRelativeProgramPath {
             PathBuf::from(value)
         }
     }
+}
+
+rel_path!(ConfigRootRelativePathTemplate);
+
+impl ConfigRootRelativePathTemplate {
+    /// Applies string replacements before resolving the path.
+    ///
+    /// `replacements` should be an [`IntoIterator`] of tuples with the "from" and "to" for the
+    /// string replacement.
+    pub fn resolve(
+        &self,
+        cwd: &Path,
+        replacements: impl IntoIterator<Item = (impl AsRef<str>, impl AsRef<str>)>,
+    ) -> Result<PathBuf, ResolveTemplateError> {
+        let path = self.as_value();
+        let mut value = path.val.clone();
+
+        for (from, to) in replacements {
+            value = value.replace(from.as_ref(), to.as_ref());
+        }
+
+        // Check for expected variables
+        let re = regex::Regex::new(r"\{(.*)\}").unwrap();
+        if let Some(caps) = re.captures(&value) {
+            return Err(ResolveTemplateError::UnexpectedVariable {
+                variable: caps[1].to_string(),
+                raw_template: path.val.clone(),
+            });
+        };
+
+        if value.contains("{") {
+            return Err(ResolveTemplateError::UnexpectedBracket {
+                bracket_type: BracketType::Opening,
+                raw_template: path.val.clone(),
+            });
+        }
+
+        if value.contains("}") {
+            return Err(ResolveTemplateError::UnexpectedBracket {
+                bracket_type: BracketType::Closing,
+                raw_template: path.val.clone(),
+            });
+        }
+
+        Ok(path.definition.root(cwd).join(&value))
+    }
+}
+
+#[derive(Debug)]
+pub enum ResolveTemplateError {
+    UnexpectedVariable {
+        variable: String,
+        raw_template: String,
+    },
+    UnexpectedBracket {
+        bracket_type: BracketType,
+        raw_template: String,
+    },
+}
+
+#[derive(Debug)]
+pub enum BracketType {
+    Opening,
+    Closing,
 }
 
 /// A config type that is a program to run.
