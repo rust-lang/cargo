@@ -1,9 +1,11 @@
 //! Git operations through the `git` executable.
 
 use crate::context::ProgressWhen;
+use crate::sources::git::utils::GitDatabase;
 use crate::sources::git::utils::note_git_config;
 use crate::sources::git::utils::note_github_pull_request;
 use crate::sources::git::utils::note_ssh_config;
+use crate::sources::git::utils::set_checkout_config;
 use crate::util::GlobalContext;
 use crate::util::errors::CargoResult;
 use crate::util::errors::GitCliError;
@@ -11,8 +13,11 @@ use crate::util::network;
 
 use cargo_util::ProcessBuilder;
 use cargo_util::Stdio;
+use cargo_util::paths;
 use cargo_util_terminal::Verbosity;
 use tracing::debug;
+
+use std::path::Path;
 
 pub(crate) fn git_version() -> Option<GitVersion> {
     #[tracing::instrument(skip_all)]
@@ -268,6 +273,180 @@ fn git_cli_progress(gctx: &GlobalContext) -> bool {
             gctx.shell().progress_supported() && width.is_some()
         }
     }
+}
+
+/// Whether to check out git dependencies with `git` CLI.
+pub(crate) fn should_checkout_with_cli(gctx: &GlobalContext) -> bool {
+    let opt_out = gctx.get_env("__CARGO_TEMPORARY_GIT_CLI_CHECKOUT_OPT_OUT");
+    !matches!(opt_out, Ok("1")) && git_version().is_some()
+}
+
+/// Like [`checkout_with_libgit2`] but with `git` CLI.
+///
+/// [`checkout_with_libgit2`]: super::libgit2::checkout_with_libgit2
+#[tracing::instrument(skip(database, gctx))]
+pub(crate) fn checkout_with_cli(
+    into: &Path,
+    database: &GitDatabase,
+    revision: git2::Oid,
+    gctx: &GlobalContext,
+) -> CargoResult<git2::Repository> {
+    debug!(target: "git-checkout", backend = "git-cli");
+
+    // This is currently implemented as
+    //
+    // 1. `git init`
+    // 2. hardlink git database objects
+    // 3. `git checkout --detach`
+    //
+    // We don't use `git clone --local`
+    // because git doesn't hardlink from a shallow database
+    // but falls back to a regular clone,
+    // and it fetches nothing as our database has no `refs/heads/*`.
+
+    let git_version = git_version();
+
+    let git_dir = into.join(".git");
+
+    let mut init = local_git_cmd(&git_dir, git_version);
+    init.args(&["init", "--quiet", "--template="]);
+
+    // https://github.com/git/git/blob/b3d7a52fac39193503a0b6728771d1bf6a161464/Documentation/git-init.txt?plain=1#L51-L54
+    let min_version_object_format = GitVersion {
+        major: 2,
+        minor: 27,
+        patch: 0,
+    };
+    if git_version.is_some_and(|v| min_version_object_format <= v) {
+        let format = database.repo().object_format().str();
+        init.arg(format!("--object-format={format}"));
+    }
+
+    // in v3 reftable will be the new default, so pin in case there is incompatibility
+    // https://github.com/git/git/blob/3c2a3fdc388747b9eaf4a4a4f2035c1c9ddb26d0/Documentation/git-init.txt?plain=1#L61-L65
+    let min_version_ref_format = GitVersion {
+        major: 2,
+        minor: 44,
+        patch: 0,
+    };
+    if git_version.is_some_and(|v| min_version_ref_format <= v) {
+        init.arg("--ref-format=files");
+    }
+
+    init.arg(into);
+
+    gctx.shell()
+        .verbose(|s| s.status("Running", &init.to_string()))?;
+    init.exec_with_output()?;
+
+    // This is the same as `git clone --local` and libgit2's local clone.
+    // https://github.com/git/git/blob/1630431f326e15fcde608827b5ff38422528eb59/Documentation/git-clone.adoc?plain=1#L45-L52
+    let db_git_dir = database.repo().path();
+    link_or_copy_dir(&db_git_dir.join("objects"), &git_dir.join("objects"))?;
+    if database.repo().is_shallow() {
+        paths::copy(db_git_dir.join("shallow"), git_dir.join("shallow"))?;
+    }
+
+    let repo = git2::Repository::open(into)?;
+    set_checkout_config(&repo)?;
+
+    let mut checkout = local_git_cmd(&git_dir, git_version);
+
+    checkout.arg("-c").arg("advice.detachedHead=false");
+
+    checkout.args(&["checkout", "--quiet", "--force", "--detach"]);
+
+    // https://github.com/git/git/blob/1630431f326e15fcde608827b5ff38422528eb59/Documentation/RelNotes/2.7.0.adoc?plain=1#L67-L70
+    let min_version_progress = GitVersion {
+        major: 2,
+        minor: 7,
+        patch: 0,
+    };
+    if git_cli_progress(gctx) && git_version.is_some_and(|v| min_version_progress <= v) {
+        checkout.arg("--progress");
+    }
+
+    checkout.arg(revision.to_string()).cwd(into);
+
+    gctx.shell()
+        .verbose(|s| s.status("Running", &checkout.to_string()))?;
+
+    checkout.exec()?;
+
+    Ok(repo)
+}
+
+/// `git` command for isolated local operations in Cargo-managed Git repositories.
+///
+/// We should ignore user and system configurations as well as all `GIT_` env vars
+/// so checkouts don't depend on the host machine.
+fn local_git_cmd(git_dir: &Path, git_version: Option<GitVersion>) -> ProcessBuilder {
+    const NULL_DEVICE: &str = if cfg!(windows) { "NUL" } else { "/dev/null" };
+
+    let mut cmd = ProcessBuilder::new("git");
+
+    #[expect(
+        clippy::disallowed_methods,
+        reason = "isolate git process from inherited environment"
+    )]
+    for (key, _) in std::env::vars_os() {
+        let Some(key) = key.to_str() else {
+            continue;
+        };
+
+        // `GIT_EXEC_PATH` may be needed to locate git subcommands
+        if key.eq_ignore_ascii_case("GIT_EXEC_PATH") {
+            continue;
+        }
+
+        // ignore case for Windows
+        let git_prefix = "GIT_";
+        if key
+            .get(..git_prefix.len())
+            .is_some_and(|p| p.eq_ignore_ascii_case(git_prefix))
+        {
+            cmd.env_remove(key);
+        }
+    }
+
+    cmd.arg("-c").arg("core.fsmonitor=false");
+    cmd.arg("-c")
+        .arg(format!("core.attributesFile={NULL_DEVICE}"));
+
+    cmd.env("GIT_CONFIG_NOSYSTEM", "1")
+        .env("GIT_ATTR_NOSYSTEM", "1")
+        .env("GIT_CONFIG_GLOBAL", NULL_DEVICE);
+
+    // There is no way to skip per-user config until git 2.32.0 added `GIT_CONFIG_GLOBAL`,
+    // so hide `$HOME` and `$XDG_CONFIG_HOME` behind a nonexistent path.
+    // https://github.com/git/git/blob/1630431f326e15fcde608827b5ff38422528eb59/Documentation/RelNotes/2.32.0.adoc?plain=1#L88-L93
+    let min_version_config_global = GitVersion {
+        major: 2,
+        minor: 32,
+        patch: 0,
+    };
+    if !git_version.is_some_and(|v| min_version_config_global <= v) {
+        let no_home = git_dir.join("cargo-no-home");
+        cmd.env("HOME", &no_home).env("XDG_CONFIG_HOME", &no_home);
+    }
+
+    cmd
+}
+
+/// Recursively hardlinks files from `src` into `dst`,
+/// falling back to copying (e.g. across filesystems).
+fn link_or_copy_dir(src: &Path, dst: &Path) -> CargoResult<()> {
+    for entry in walkdir::WalkDir::new(src) {
+        let entry = entry?;
+        let rel = entry.path().strip_prefix(src).expect("walked from src");
+        let target = dst.join(rel);
+        if entry.file_type().is_dir() {
+            paths::create_dir_all(&target)?;
+        } else if std::fs::hard_link(entry.path(), &target).is_err() {
+            paths::copy(entry.path(), &target)?;
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]

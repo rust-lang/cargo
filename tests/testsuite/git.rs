@@ -3167,6 +3167,8 @@ fn use_the_cli() {
 [RUNNING] `git[..] fetch --no-tags --verbose[..] --force --update-head-ok [..][ROOTURL]/dep1[..] [..]+HEAD:refs/remotes/origin/HEAD[..]`
 From [ROOTURL]/dep1
  * [new ref] [..] -> origin/HEAD[..]
+[RUNNING] `git [..] init --quiet --template= [..][ROOT]/home/.cargo/git/checkouts/dep1-[HASH]/[..]`
+[RUNNING] `git [..] checkout --quiet --force --detach [..]`
 [LOCKING] 1 package to highest compatible version
 [CHECKING] dep1 v0.5.0 ([ROOTURL]/dep1#[..])
 [RUNNING] `rustc --crate-name dep1 [..]`

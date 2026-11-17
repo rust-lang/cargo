@@ -1,8 +1,10 @@
 //! Utilities for handling git repositories, mainly around
 //! authentication/cloning.
 
+use crate::sources::git::cli::checkout_with_cli;
 use crate::sources::git::cli::fetch_with_cli;
 use crate::sources::git::cli::git_version;
+use crate::sources::git::cli::should_checkout_with_cli;
 use crate::sources::git::fetch::RemoteKind;
 use crate::sources::git::libgit2::checkout_with_libgit2;
 use crate::sources::git::libgit2::fetch_with_libgit2;
@@ -12,6 +14,7 @@ use crate::sources::source::Source as _;
 use crate::util::GlobalContext;
 use crate::util::IntoUrl;
 use crate::util::errors::CargoResult;
+use crate::util::errors::GitCliError;
 use crate::workspace::{GitReference, SourceId};
 
 use anyhow::{Context as _, anyhow};
@@ -316,7 +319,20 @@ impl<'a> GitCheckout<'a> {
             paths::remove_dir_all(into)?;
         }
 
-        let repo = checkout_with_libgit2(into, database, revision, gctx)?;
+        let repo = if should_checkout_with_cli(gctx) {
+            checkout_with_cli(into, database, revision, gctx).map_err(|err| {
+                GitCliError::new(err.context(format!(
+                    "failed to check out `{revision}` into `{}`",
+                    into.display()
+                )))
+                .workaround(
+                    "help: re-try with `__CARGO_TEMPORARY_GIT_CLI_CHECKOUT_OPT_OUT=1` to check out with the built-in git
+note: please report this at <https://github.com/rust-lang/cargo/issues/17758>",
+                )
+            })?
+        } else {
+            checkout_with_libgit2(into, database, revision, gctx)?
+        };
         let checkout = GitCheckout::new(database, revision, repo);
         let guard = CheckoutGuard::guard(&checkout.path);
         Ok((checkout, guard))
@@ -502,9 +518,9 @@ impl CheckoutGuard {
 /// Configures the repository of a fresh checkout before files are checked out.
 pub(crate) fn set_checkout_config(repo: &git2::Repository) -> CargoResult<()> {
     if let Ok(mut git_config) = repo.config() {
-        // Ensure libgit2 won't mess with newlines when we vendor.
+        // Ensure git won't mess with newlines when we vendor.
         git_config.set_bool("core.autocrlf", false)?;
-        // Allow libgit2 to check out paths longer than `MAX_PATH` on Windows.
+        // Allow checking out paths longer than `MAX_PATH` on Windows.
         git_config.set_bool("core.longpaths", true)?;
     }
     Ok(())
