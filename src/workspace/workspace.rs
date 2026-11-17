@@ -15,7 +15,7 @@ use url::Url;
 use crate::compiler::Unit;
 use crate::context;
 use crate::context::{
-    CargoResolverConfig, ConfigRelativePath, ConfigRelativePathResolveExt, FeatureUnification,
+    CargoResolverConfig, ConfigRootRelativePathTemplate, FeatureUnification,
     IncompatibleRustVersions, PatchDependency, Value,
 };
 use crate::ops;
@@ -358,7 +358,7 @@ impl<'gctx> Workspace<'gctx> {
             // Reserve the ability to add templates in the future.
             let replacements: [(&str, &str); 0] = [];
             let path = lockfile_path
-                    .resolve_templated_path(self.gctx(), replacements)
+                    .resolve(self.gctx().cwd(), replacements)
                     .map_err(|e| match e {
                         context::ResolveTemplateError::UnexpectedVariable {
                             variable,
@@ -498,7 +498,7 @@ impl<'gctx> Workspace<'gctx> {
 
     fn default_build_dir(&self) -> Filesystem {
         if self.root_maybe().is_embedded() {
-            let default = ConfigRelativePath::new(
+            let default = ConfigRootRelativePathTemplate::new(
                 "{cargo-cache-home}/build/{workspace-path-hash}"
                     .to_owned()
                     .into(),

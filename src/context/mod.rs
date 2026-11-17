@@ -13,9 +13,13 @@
 //!
 //! - [`Value`]: This type provides access to the location where the
 //!   config value was defined.
-//! - [`ConfigRelativePath`]: For a path that is relative to where it is
+//! - [`ConfigRootRelativePath`]: For a path that is relative to where it is
 //!   defined.
-//! - [`PathAndArgs`]: Similar to [`ConfigRelativePath`],
+//! - [`ConfigRootRelativeProgramPath`]: For a path that is relative to where it is
+//!   defined unless it is a bin name to look up in `PATH`
+//! - [`ConfigRootRelativePathTemplate`]: For a templated path that is relative to where it is
+//!   defined.
+//! - [`PathAndArgs`]: Similar to [`ConfigRootRelativePath`],
 //!   but also supports a list of arguments, useful for programs to execute.
 //! - [`StringList`]: Get a value that is either a list or a whitespace split
 //!   string.
@@ -103,11 +107,6 @@ use crate::config::{ConfigReader, Env, MergePriority};
 
 mod loader;
 use loader::ConfigLoader;
-
-mod path;
-pub use path::BracketType;
-pub use path::ConfigRelativePathResolveExt;
-pub use path::ResolveTemplateError;
 
 mod target;
 pub use target::{TargetCfgConfig, TargetConfig};
@@ -707,7 +706,7 @@ impl GlobalContext {
 
             Ok(Some(Filesystem::new(self.cwd.join(dir))))
         } else if let Some(val) = &self.build_config()?.target_dir {
-            let path = val.resolve_path(self);
+            let path = val.resolve(self.cwd());
 
             // Check if the target directory is set to an empty string in the config.toml file.
             if val.is_empty() {
@@ -739,7 +738,7 @@ impl GlobalContext {
     /// Callers should prefer [`Workspace::build_dir`] instead.
     pub fn custom_build_dir(
         &self,
-        val: &ConfigRelativePath,
+        val: &ConfigRootRelativePathTemplate,
         workspace_manifest_path: &Path,
     ) -> CargoResult<Filesystem> {
         let replacements = [
@@ -774,9 +773,9 @@ impl GlobalContext {
             .collect_vec();
 
         let path = val
-            .resolve_templated_path(self, replacements)
+            .resolve(self.cwd(), replacements)
             .map_err(|e| match e {
-                path::ResolveTemplateError::UnexpectedVariable {
+                ResolveTemplateError::UnexpectedVariable {
                     variable,
                     raw_template,
                 } => {
@@ -789,10 +788,10 @@ impl GlobalContext {
                             "unexpected variable `{variable}` in build.build-dir path `{raw_template}`{suggestion}"
                         )
                 }
-                path::ResolveTemplateError::UnexpectedBracket { bracket_type, raw_template } => {
+                ResolveTemplateError::UnexpectedBracket { bracket_type, raw_template } => {
                     let (btype, literal) = match bracket_type {
-                        path::BracketType::Opening => ("opening", "{"),
-                        path::BracketType::Closing => ("closing", "}"),
+                        BracketType::Opening => ("opening", "{"),
+                        BracketType::Closing => ("closing", "}"),
                     };
 
                     anyhow!(
@@ -858,16 +857,6 @@ impl GlobalContext {
         key: impl IntoIterator<Item = impl AsRef<str>>,
     ) -> CargoResult<OptValue<String>> {
         self.get::<OptValue<String>>(key)
-    }
-
-    fn string_to_path(&self, value: &str, definition: &Definition) -> PathBuf {
-        let is_path = value.contains('/') || (cfg!(windows) && value.contains('\\'));
-        if is_path {
-            definition.root(self.cwd()).join(value)
-        } else {
-            // A pathless name.
-            PathBuf::from(value)
-        }
     }
 
     /// Update the instance based on settings typically passed in on
@@ -1112,7 +1101,7 @@ impl GlobalContext {
     fn maybe_get_tool(
         &self,
         tool: &str,
-        from_config: &Option<ConfigRelativePath>,
+        from_config: &Option<ConfigRootRelativeProgramPath>,
     ) -> Option<PathBuf> {
         let var = tool.to_uppercase();
 
@@ -1127,7 +1116,7 @@ impl GlobalContext {
                 Some(path)
             }
 
-            None => from_config.as_ref().map(|p| p.resolve_program(self)),
+            None => from_config.as_ref().map(|p| p.resolve(self.cwd())),
         }
     }
 
@@ -1141,7 +1130,7 @@ impl GlobalContext {
     ///
     /// This is intended for tools that are rustup proxies. If you need to get
     /// a tool that is not a rustup proxy, use `maybe_get_tool` instead.
-    fn get_tool(&self, tool: Tool, from_config: &Option<ConfigRelativePath>) -> PathBuf {
+    fn get_tool(&self, tool: Tool, from_config: &Option<ConfigRootRelativeProgramPath>) -> PathBuf {
         let tool_str = tool.as_str();
         self.maybe_get_tool(tool_str, from_config)
             .or_else(|| {

@@ -8,7 +8,6 @@ use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 
 use super::{BuildRunner, FileFlavor, Unit, fingerprint};
-use crate::context::ConfigRelativePathResolveExt;
 use crate::util::{CargoResult, internal};
 use cargo_util::paths;
 use tracing::debug;
@@ -141,7 +140,7 @@ pub fn output_depinfo(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> Ca
     let basedir = match bcx.gctx.build_config()?.dep_info_basedir.clone() {
         Some(value) => {
             basedir_string = value
-                .resolve_path(bcx.gctx)
+                .resolve(bcx.gctx.cwd())
                 .as_os_str()
                 .to_str()
                 .ok_or_else(|| anyhow::format_err!("build.dep-info-basedir path not utf-8"))?

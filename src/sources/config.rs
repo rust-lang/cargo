@@ -6,7 +6,7 @@
 
 use cargo_util::collections::HashMap;
 
-use crate::context::{self, ConfigRelativePathResolveExt, OptValue, SourceConfigDef};
+use crate::context::{self, OptValue, SourceConfigDef};
 use crate::sources::overlay::DependencyConfusionThreatOverlaySource;
 use crate::sources::source::Source;
 use crate::sources::{CRATES_IO_REGISTRY, ReplacedSource};
@@ -240,11 +240,11 @@ restore the source replacement configuration to continue the build
             srcs.push(SourceId::for_source_replacement_registry(&url, &name)?);
         }
         if let Some(local_registry) = def.local_registry {
-            let path = local_registry.resolve_path(self.gctx);
+            let path = local_registry.resolve(self.gctx.cwd());
             srcs.push(SourceId::for_local_registry(&path)?);
         }
         if let Some(directory) = def.directory {
-            let path = directory.resolve_path(self.gctx);
+            let path = directory.resolve(self.gctx.cwd());
             srcs.push(SourceId::for_directory(&path)?);
         }
         if let Some(git) = def.git {

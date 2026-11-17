@@ -25,6 +25,7 @@ use serde::de::Error;
 use serde_untagged::UntaggedEnumVisitor;
 
 use std::path::Path;
+use std::path::PathBuf;
 
 use anyhow::Result;
 
@@ -40,7 +41,7 @@ pub use cargo_util_schemas::manifest::TomlProfiles;
 #[derive(schemars::JsonSchema)]
 #[schemars(rename_all = "kebab-case")]
 pub struct Config {
-    pub paths: Option<Vec<ConfigRelativePath>>,
+    pub paths: Option<Vec<ConfigRootRelativePath>>,
     pub target_applies_to_host: Option<bool>,
 
     pub build: Option<CargoBuildConfig>,
@@ -53,7 +54,7 @@ pub struct Config {
     pub http: Option<CargoHttpConfig>,
     pub net: Option<CargoNetConfig>,
     pub patch: Option<HashMap<String, HashMap<String, PatchDependency>>>,
-    pub path_bases: Option<HashMap<String, ConfigRelativePath>>,
+    pub path_bases: Option<HashMap<String, ConfigRootRelativePath>>,
     pub profile: Option<TomlProfiles>,
     pub registries: Option<HashMap<String, RegistryConfig>>,
     pub registry: Option<GlobalRegistryConfig>,
@@ -72,7 +73,7 @@ pub struct Credentials {
     pub registries: Option<HashMap<String, RegistryCredential>>,
 }
 
-pub type PatchDependency = cargo_util_schemas::manifest::TomlDependency<ConfigRelativePath>;
+pub type PatchDependency = cargo_util_schemas::manifest::TomlDependency<ConfigRootRelativePath>;
 
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 #[derive(Debug, Default, Deserialize, PartialEq)]
@@ -179,11 +180,11 @@ pub struct SourceConfigDef {
     /// Indicates this source should be replaced with another of the given name.
     pub replace_with: OptValue<String>,
     /// A directory source.
-    pub directory: Option<ConfigRelativePath>,
+    pub directory: Option<ConfigRootRelativePath>,
     /// A registry source. Value is a URL.
     pub registry: OptValue<String>,
     /// A local registry source.
-    pub local_registry: Option<ConfigRelativePath>,
+    pub local_registry: Option<ConfigRootRelativePath>,
     /// A git source. Value is a URL.
     pub git: OptValue<String>,
     /// The git branch.
@@ -312,8 +313,8 @@ pub struct CargoHttpConfig {
     pub proxy: Option<String>,
     pub low_speed_limit: Option<u32>,
     pub timeout: Option<u64>,
-    pub cainfo: Option<ConfigRelativePath>,
-    pub proxy_cainfo: Option<ConfigRelativePath>,
+    pub cainfo: Option<ConfigRootRelativePath>,
+    pub proxy_cainfo: Option<ConfigRootRelativePath>,
     pub check_revoke: Option<bool>,
     pub user_agent: Option<String>,
     pub debug: Option<bool>,
@@ -494,20 +495,20 @@ impl<'de> Deserialize<'de> for JobsConfig {
 pub struct CargoBuildConfig {
     // deprecated, but preserved for compatibility
     pub pipelining: Option<bool>,
-    pub dep_info_basedir: Option<ConfigRelativePath>,
-    pub target_dir: Option<ConfigRelativePath>,
-    pub build_dir: Option<ConfigRelativePath>,
+    pub dep_info_basedir: Option<ConfigRootRelativePath>,
+    pub target_dir: Option<ConfigRootRelativePath>,
+    pub build_dir: Option<ConfigRootRelativePathTemplate>,
     pub incremental: Option<bool>,
     pub target: Option<BuildTargetConfig>,
     pub profile: Option<ProfileName>,
     pub jobs: Option<JobsConfig>,
     pub rustflags: Option<StringList>,
     pub rustdocflags: Option<StringList>,
-    pub rustc_wrapper: Option<ConfigRelativePath>,
-    pub rustc_workspace_wrapper: Option<ConfigRelativePath>,
-    pub rustc: Option<ConfigRelativePath>,
-    pub rustdoc: Option<ConfigRelativePath>,
-    pub artifact_dir: Option<ConfigRelativePath>,
+    pub rustc_wrapper: Option<ConfigRootRelativeProgramPath>,
+    pub rustc_workspace_wrapper: Option<ConfigRootRelativeProgramPath>,
+    pub rustc: Option<ConfigRootRelativeProgramPath>,
+    pub rustdoc: Option<ConfigRootRelativeProgramPath>,
+    pub artifact_dir: Option<ConfigRootRelativePath>,
     pub warnings: Option<WarningHandling>,
     /// Unstable feature `-Zsbom`.
     pub sbom: Option<bool>,
@@ -694,7 +695,7 @@ pub struct CargoResolverConfig {
     pub incompatible_rust_versions: Option<IncompatibleRustVersions>,
     pub incompatible_publish_age: Option<IncompatiblePublishAge>,
     pub feature_unification: Option<FeatureUnification>,
-    pub lockfile_path: Option<ConfigRelativePath>,
+    pub lockfile_path: Option<ConfigRootRelativePathTemplate>,
 }
 
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
@@ -820,7 +821,7 @@ impl<'de> Deserialize<'de> for ProgressConfig {
 enum EnvConfigValueInner {
     Simple(String),
     WithOptions {
-        value: ConfigRelativePath,
+        value: ConfigRootRelativePath,
         force: bool,
         relative: bool,
     },
@@ -833,7 +834,7 @@ impl<'de> Deserialize<'de> for EnvConfigValueInner {
     {
         #[derive(Deserialize)]
         struct WithOptions {
-            value: ConfigRelativePath,
+            value: ConfigRootRelativePath,
             #[serde(default)]
             force: bool,
             #[serde(default)]
@@ -904,7 +905,7 @@ impl EnvConfigValue {
     /// Resolves the environment variable value.
     ///
     /// If `relative = true`,
-    /// the value is interpreted as a [`ConfigRelativePath`]-like path.
+    /// the value is interpreted as a [`ConfigRootRelativePath`]-like path.
     pub fn resolve<'a>(&'a self, cwd: &Path) -> Cow<'a, OsStr> {
         match self.inner {
             EnvConfigValueInner::Simple(ref s) => Cow::Borrowed(OsStr::new(s.as_str())),
@@ -988,38 +989,138 @@ impl GlobalRegistryConfig {
     }
 }
 
-/// Use with the `get` API to fetch a string that will be converted to a
-/// `PathBuf`. Relative paths are converted to absolute paths based on the
-/// location of the config file.
-#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-#[derive(Debug, Deserialize, PartialEq, Clone)]
-#[serde(transparent)]
-pub struct ConfigRelativePath(Value<String>);
+macro_rules! rel_path {
+    ($name:ident) => {
+        /// A path, potentially relative to the config, not current_dir
+        #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
+        #[derive(Debug, Deserialize, PartialEq, Clone)]
+        #[serde(transparent)]
+        pub struct $name(Value<String>);
 
-impl ConfigRelativePath {
-    pub fn new(path: Value<String>) -> ConfigRelativePath {
-        ConfigRelativePath(path)
-    }
+        impl $name {
+            pub fn new(path: Value<String>) -> Self {
+                Self(path)
+            }
 
-    /// Returns whether the configured path is an empty string.
-    pub fn is_empty(&self) -> bool {
-        self.as_str().is_empty()
-    }
+            /// Returns whether the configured path is an empty string.
+            pub fn is_empty(&self) -> bool {
+                self.as_str().is_empty()
+            }
 
-    /// Returns the underlying value.
-    pub fn as_value(&self) -> &Value<String> {
-        &self.0
-    }
+            /// Returns the underlying value.
+            pub fn as_value(&self) -> &Value<String> {
+                &self.0
+            }
 
-    /// Returns where this path was defined.
-    pub fn definition(&self) -> &Definition {
-        &self.0.definition
-    }
+            /// Returns where this path was defined.
+            pub fn definition(&self) -> &Definition {
+                &self.0.definition
+            }
 
-    /// Returns the raw underlying configuration value for this key.
-    pub fn as_str(&self) -> &str {
-        &self.0.val
+            /// Returns the raw underlying configuration value for this key.
+            pub fn as_str(&self) -> &str {
+                &self.0.val
+            }
+        }
+    };
+}
+
+rel_path!(ConfigRootRelativePath);
+
+impl ConfigRootRelativePath {
+    /// Resolves this configuration-root-relative path to an absolute path.
+    ///
+    /// This will always return an absolute path where it's relative to the
+    /// location for configuration for this value.
+    pub fn resolve(&self, cwd: &Path) -> PathBuf {
+        let value = self.as_value();
+        value.definition.root(cwd).join(&value.val)
     }
+}
+
+rel_path!(ConfigRootRelativeProgramPath);
+
+impl ConfigRootRelativeProgramPath {
+    /// Resolves this configuration-relative path to either an absolute path or
+    /// something appropriate to execute from `PATH`.
+    ///
+    /// Values which don't look like a filesystem path (don't contain `/` or
+    /// `\`) will be returned as-is, and everything else will fall through to an
+    /// absolute path.
+    pub fn resolve(&self, cwd: &Path) -> PathBuf {
+        let value = self.as_str();
+        let is_path = value.contains('/') || (cfg!(windows) && value.contains('\\'));
+        if is_path {
+            self.definition().root(cwd).join(value)
+        } else {
+            // A pathless name.
+            PathBuf::from(value)
+        }
+    }
+}
+
+rel_path!(ConfigRootRelativePathTemplate);
+
+impl ConfigRootRelativePathTemplate {
+    /// Applies string replacements before resolving the path.
+    ///
+    /// `replacements` should be an [`IntoIterator`] of tuples with the "from" and "to" for the
+    /// string replacement.
+    pub fn resolve(
+        &self,
+        cwd: &Path,
+        replacements: impl IntoIterator<Item = (impl AsRef<str>, impl AsRef<str>)>,
+    ) -> Result<PathBuf, ResolveTemplateError> {
+        let path = self.as_value();
+        let mut value = path.val.clone();
+
+        for (from, to) in replacements {
+            value = value.replace(from.as_ref(), to.as_ref());
+        }
+
+        // Check for expected variables
+        let re = regex::Regex::new(r"\{(.*)\}").unwrap();
+        if let Some(caps) = re.captures(&value) {
+            return Err(ResolveTemplateError::UnexpectedVariable {
+                variable: caps[1].to_string(),
+                raw_template: path.val.clone(),
+            });
+        };
+
+        if value.contains("{") {
+            return Err(ResolveTemplateError::UnexpectedBracket {
+                bracket_type: BracketType::Opening,
+                raw_template: path.val.clone(),
+            });
+        }
+
+        if value.contains("}") {
+            return Err(ResolveTemplateError::UnexpectedBracket {
+                bracket_type: BracketType::Closing,
+                raw_template: path.val.clone(),
+            });
+        }
+
+        Ok(path.definition.root(cwd).join(&value))
+    }
+}
+
+#[derive(Debug)]
+pub enum ResolveTemplateError {
+    UnexpectedVariable {
+        variable: String,
+        raw_template: String,
+    },
+    UnexpectedBracket {
+        bracket_type: BracketType,
+        raw_template: String,
+    },
+}
+
+#[derive(Debug)]
+pub enum BracketType {
+    Opening,
+    Closing,
 }
 
 /// A config type that is a program to run.
@@ -1030,7 +1131,7 @@ impl ConfigRelativePath {
 /// This expects the first value to be the path to the program to run.
 /// Subsequent values are strings of arguments to pass to the program.
 ///
-/// Typically you should use `ConfigRelativePathResolveExt::resolve_program` on the path
+/// Typically you should use [`ConfigRootRelativeProgramPath::resolve`] on the path
 /// to get the actual program.
 ///
 /// **Note**: Any usage of this type in config needs to be listed in
@@ -1040,7 +1141,7 @@ impl ConfigRelativePath {
 #[cfg_attr(feature = "unstable-schema", schemars(with = "StringList"))]
 #[derive(Debug, Clone, PartialEq)]
 pub struct PathAndArgs {
-    pub path: ConfigRelativePath,
+    pub path: ConfigRootRelativeProgramPath,
     pub args: Vec<String>,
 }
 
@@ -1060,7 +1161,7 @@ impl<'de> serde::Deserialize<'de> for PathAndArgs {
             definition: vsl.definition,
         };
         Ok(PathAndArgs {
-            path: ConfigRelativePath(crp),
+            path: ConfigRootRelativeProgramPath(crp),
             args: strings,
         })
     }
@@ -1068,7 +1169,7 @@ impl<'de> serde::Deserialize<'de> for PathAndArgs {
 
 impl PathAndArgs {
     /// Construct a `PathAndArgs` from a string. The string will be split on ascii whitespace,
-    /// with the first item being treated as a `ConfigRelativePath` to the executable, and subsequent
+    /// with the first item being treated as a `ConfigRootRelativeProgramPath` to the executable, and subsequent
     /// items as arguments.
     pub fn from_whitespace_separated_string(p: &Value<String>) -> PathAndArgs {
         let mut iter = p.val.split_ascii_whitespace().map(str::to_string);
@@ -1079,7 +1180,7 @@ impl PathAndArgs {
             definition: p.definition.clone(),
         };
         PathAndArgs {
-            path: ConfigRelativePath(crp),
+            path: ConfigRootRelativeProgramPath(crp),
             args,
         }
     }

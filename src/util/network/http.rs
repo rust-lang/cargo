@@ -15,7 +15,6 @@ use tracing::trace;
 
 use crate::CargoResult;
 use crate::GlobalContext;
-use crate::context::ConfigRelativePathResolveExt;
 use crate::context::SslVersionConfig;
 use crate::context::SslVersionConfigRange;
 
@@ -98,12 +97,12 @@ impl HandleConfiguration {
             handle.proxy = Some(proxy);
         }
         if let Some(cainfo) = &http.cainfo {
-            let cainfo = cainfo.resolve_path(gctx);
+            let cainfo = cainfo.resolve(gctx.cwd());
             handle.cainfo = Some(cainfo);
         }
         // Use `proxy_cainfo` if explicitly set; otherwise, fall back to `cainfo` as curl does #15376.
         if let Some(proxy_cainfo) = http.proxy_cainfo.as_ref().or(http.cainfo.as_ref()) {
-            let proxy_cainfo = proxy_cainfo.resolve_path(gctx);
+            let proxy_cainfo = proxy_cainfo.resolve(gctx.cwd());
             handle.proxy_cainfo = Some(format!("{}", proxy_cainfo.display()));
         }
         if let Some(check) = http.check_revoke {

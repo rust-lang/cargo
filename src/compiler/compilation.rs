@@ -15,7 +15,6 @@ use crate::compiler::CompileTarget;
 use crate::compiler::RustdocFingerprint;
 use crate::compiler::apply_env_config;
 use crate::compiler::{CompileKind, Unit, UnitHash};
-use crate::context::ConfigRelativePathResolveExt;
 use crate::util::{CargoResult, GlobalContext};
 use crate::workspace::Package;
 
@@ -523,7 +522,7 @@ fn target_runner(
     kind: CompileKind,
 ) -> CargoResult<Option<(PathBuf, Vec<String>)>> {
     if let Some(runner) = bcx.target_data.target_config(kind).runner.as_ref() {
-        let path = runner.val.path.clone().resolve_program(bcx.gctx);
+        let path = runner.val.path.resolve(bcx.gctx.cwd());
         return Ok(Some((path, runner.val.args.clone())));
     }
 
@@ -556,7 +555,7 @@ fn target_runner(
     }
     Ok(matching_runner.map(|(_k, runner)| {
         (
-            runner.val.path.clone().resolve_program(bcx.gctx),
+            runner.val.path.resolve(bcx.gctx.cwd()),
             runner.val.args.clone(),
         )
     }))
@@ -570,7 +569,7 @@ fn target_linker(bcx: &BuildContext<'_, '_>, kind: CompileKind) -> CargoResult<O
         .target_config(kind)
         .linker
         .as_ref()
-        .map(|l| l.val.clone().resolve_program(bcx.gctx))
+        .map(|l| l.val.resolve(bcx.gctx.cwd()))
     {
         return Ok(Some(path));
     }
@@ -602,7 +601,7 @@ fn target_linker(bcx: &BuildContext<'_, '_>, kind: CompileKind) -> CargoResult<O
             linker.definition
         );
     }
-    Ok(matching_linker.map(|(_k, linker)| linker.val.clone().resolve_program(bcx.gctx)))
+    Ok(matching_linker.map(|(_k, linker)| linker.val.resolve(bcx.gctx.cwd())))
 }
 
 fn explicit_host_kind(host: &str) -> CompileKind {

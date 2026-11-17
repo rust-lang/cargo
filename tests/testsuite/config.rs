@@ -12,10 +12,7 @@ use crate::prelude::*;
 use cargo::CargoResult;
 use cargo::context::RegistryConfig;
 use cargo::context::Value;
-use cargo::context::{
-    self, ConfigRelativePathResolveExt, Definition, GlobalContext, JobsConfig, SslVersionConfig,
-    StringList,
-};
+use cargo::context::{self, Definition, GlobalContext, JobsConfig, SslVersionConfig, StringList};
 use cargo::workspace::PackageIdSpec;
 use cargo::workspace::features::{GitFeatures, GitoxideFeatures};
 use cargo_test_support::compare::assert_e2e;
@@ -1041,33 +1038,33 @@ abs = '{}'
         .build();
 
     assert_eq!(
-        gctx.get::<context::ConfigRelativePath>(["p1"])
+        gctx.get::<context::ConfigRootRelativePath>(["p1"])
             .unwrap()
-            .resolve_path(&gctx),
+            .resolve(gctx.cwd()),
         paths::root().join("foo/bar")
     );
     assert_eq!(
-        gctx.get::<context::ConfigRelativePath>(["p2"])
+        gctx.get::<context::ConfigRootRelativePath>(["p2"])
             .unwrap()
-            .resolve_path(&gctx),
+            .resolve(gctx.cwd()),
         paths::root().join("../abc")
     );
     assert_eq!(
-        gctx.get::<context::ConfigRelativePath>(["p3"])
+        gctx.get::<context::ConfigRootRelativePath>(["p3"])
             .unwrap()
-            .resolve_path(&gctx),
+            .resolve(gctx.cwd()),
         paths::root().join("d/e")
     );
     assert_eq!(
-        gctx.get::<context::ConfigRelativePath>(["abs"])
+        gctx.get::<context::ConfigRootRelativePath>(["abs"])
             .unwrap()
-            .resolve_path(&gctx),
+            .resolve(gctx.cwd()),
         paths::home()
     );
     assert_eq!(
-        gctx.get::<context::ConfigRelativePath>(["epath"])
+        gctx.get::<context::ConfigRootRelativePath>(["epath"])
             .unwrap()
-            .resolve_path(&gctx),
+            .resolve(gctx.cwd()),
         paths::root().join("a/b")
     );
 }
