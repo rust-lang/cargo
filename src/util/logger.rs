@@ -205,7 +205,7 @@ impl std::str::FromStr for RunId {
             anyhow::bail!(msg());
         }
         let timestamp = jiff::civil::DateTime::strptime(Self::FORMAT, timestamp)
-            .and_then(|dt| dt.to_zoned(jiff::tz::TimeZone::UTC))
+            .and_then(|dt| dt.to_zoned_datetime(jiff::tz::TimeZone::UTC))
             .map(|zoned| zoned.timestamp())
             .with_context(msg)?;
 

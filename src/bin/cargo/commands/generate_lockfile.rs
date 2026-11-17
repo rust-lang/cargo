@@ -35,7 +35,7 @@ fn datetime_completer(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
         let timestamp = jiff::Timestamp::now();
         completions.push(CompletionCandidate::new(timestamp.to_string()));
     } else if let Ok(date) = current.parse::<jiff::civil::Date>() {
-        if let Ok(zoned) = jiff::Zoned::default().with().date(date).build() {
+        if let Ok(zoned) = jiff::ZonedDateTime::default().with().date(date).build() {
             let timestamp = zoned.timestamp();
             completions.push(CompletionCandidate::new(timestamp.to_string()));
         }

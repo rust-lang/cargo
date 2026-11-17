@@ -1,6 +1,6 @@
 [package]
 name = "cargo-util-schemas"
-version = "0.17.0"
+version = "0.18.0"
 rust-version = "1.100"  # MSRV:1
 edition.workspace = true
 license.workspace = true
