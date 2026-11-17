@@ -177,21 +177,9 @@ https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli"
         cmd.arg(format!("--depth={depth}"));
     }
 
-    let progress_config = gctx.progress_config();
-    let progress = match progress_config.when {
-        ProgressWhen::Always => true,
-        ProgressWhen::Never => false,
-        ProgressWhen::Auto => {
-            // Recreate the same conditions used with `Progress`
-            let width = progress_config
-                .width
-                .or_else(|| gctx.shell().err_width().progress_max_width());
-            gctx.shell().progress_supported() && width.is_some()
-        }
-    };
     if gctx.shell().verbosity() == Verbosity::Verbose {
         cmd.arg("--verbose");
-    } else if progress {
+    } else if git_cli_progress(gctx) {
         cmd.arg("--progress");
         // https://github.com/git/git/blob/1630431f326e15fcde608827b5ff38422528eb59/Documentation/RelNotes/2.41.0.adoc?plain=1#L113-L114
         let min_version_porcelain = GitVersion {
@@ -264,6 +252,22 @@ https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli",
     })?;
 
     Ok(())
+}
+
+/// Whether `git` CLI should report progress.
+fn git_cli_progress(gctx: &GlobalContext) -> bool {
+    let progress_config = gctx.progress_config();
+    match progress_config.when {
+        ProgressWhen::Always => true,
+        ProgressWhen::Never => false,
+        ProgressWhen::Auto => {
+            // Recreate the same conditions used with `Progress`
+            let width = progress_config
+                .width
+                .or_else(|| gctx.shell().err_width().progress_max_width());
+            gctx.shell().progress_supported() && width.is_some()
+        }
+    }
 }
 
 #[cfg(test)]
