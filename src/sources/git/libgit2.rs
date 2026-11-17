@@ -302,6 +302,8 @@ pub(crate) fn checkout_with_libgit2(
     revision: git2::Oid,
     gctx: &GlobalContext,
 ) -> CargoResult<git2::Repository> {
+    debug!(target: "git-checkout", backend = "libgit2");
+
     // we're doing a local filesystem-to-filesystem clone so there should
     // be no need to respect global configuration options, so pass in
     // an empty instance of `git2::Config` below.

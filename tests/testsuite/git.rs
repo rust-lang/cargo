@@ -5499,3 +5499,121 @@ rev2
     assert!(lock.contains(&format!("?branch=master#{rev1}")));
     assert!(lock.contains(&format!("?branch=master#{rev2}")));
 }
+
+#[cargo_test(requires = "git")]
+fn checkout_backend_with_opt_out() {
+    let git_project = git::new("dep1", |project| {
+        project
+            .file("Cargo.toml", &basic_manifest("dep1", "0.5.0"))
+            .file("src/lib.rs", "")
+    });
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+                    edition = "2015"
+
+                    [dependencies]
+                    dep1 = {{ git = "{}" }}
+                "#,
+                git_project.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("fetch")
+        .env("__CARGO_TEMPORARY_GIT_CLI_CHECKOUT_OPT_OUT", "1")
+        .env("CARGO_LOG", "git-checkout=debug")
+        .with_stderr_contains(r#"[..]git-checkout: backend="libgit2"[..]"#)
+        .run();
+}
+
+#[cargo_test]
+fn checkout_ignores_user_git_config() {
+    let git_project = git::new("dep1", |project| {
+        project
+            .file("Cargo.toml", &basic_manifest("dep1", "0.5.0"))
+            .file("src/lib.rs", "")
+    });
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+                    edition = "2015"
+
+                    [dependencies]
+                    dep1 = {{ git = "{}" }}
+                "#,
+                git_project.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // `core.splitIndex` is a good candidate making sure git CLI checkout works because
+    //
+    // * libgit2 can't read a split index.
+    // * `core.splitIndex` exists since git 2.13, which is old enough
+    //   https://github.com/git/git/blob/1630431f326e15fcde608827b5ff38422528eb59/Documentation/RelNotes/2.13.0.adoc?plain=1#L100-L101
+    fs::write(
+        paths::home().join(".gitconfig"),
+        r#"
+            [core]
+            splitIndex = true
+        "#,
+    )
+    .unwrap();
+
+    p.cargo("fetch").run();
+}
+
+#[cargo_test]
+fn checkout_applies_gitattributes() {
+    let git_project = git::new("dep1", |project| {
+        project
+            .file("Cargo.toml", &basic_manifest("dep1", "0.5.0"))
+            .file("src/lib.rs", "")
+            .file(".gitattributes", "crlf.txt eol=crlf\n")
+            .file("crlf.txt", "a\nb\n")
+    });
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+                    edition = "2015"
+
+                    [dependencies]
+                    dep1 = {{ git = "{}" }}
+                "#,
+                git_project.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("fetch").run();
+
+    let mut co_paths = glob::glob(
+        paths::home()
+            .join(".cargo/git/checkouts/dep1-*/*")
+            .to_str()
+            .unwrap(),
+    )
+    .unwrap();
+    let co_path = co_paths.next().unwrap().unwrap();
+    let crlf = fs::read_to_string(co_path.join("crlf.txt")).unwrap();
+    assert_eq!(crlf, "a\r\nb\r\n");
+}
