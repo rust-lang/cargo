@@ -224,6 +224,105 @@ fn stores_dependency_artifact_by_content_hash() {
 }
 
 #[cargo_test]
+fn gc_preserves_artifacts_shared_with_live_manifest() {
+    Package::new("bar", "0.1.0").publish();
+    Package::new("baz", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                bar = "0.1.0"
+                baz = { version = "0.1.0", optional = true }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    let storage_files = || {
+        shared_storage()
+            .ls_r()
+            .into_iter()
+            .filter(|path| path.is_file())
+            .collect::<Vec<_>>()
+    };
+
+    p.cargo("build")
+        .arg("-Zshared-object-storage")
+        .masquerade_as_nightly_cargo(&["shared-object-storage"])
+        .enable_mac_dsym()
+        .run();
+
+    let live_usage = partitioned_file("build-index");
+
+    // Both manifests reference bar, but only this manifest references baz.
+    p.cargo("build --features baz")
+        .arg("-Zshared-object-storage")
+        .masquerade_as_nightly_cargo(&["shared-object-storage"])
+        .enable_mac_dsym()
+        .run();
+
+    let all_files = storage_files();
+
+    shared_storage().assert_dir_layout(
+        str![[r#"
+[ROOT]/home/.cargo/storage/v1/build-index/[HASH]
+[ROOT]/home/.cargo/storage/v1/build-index/[HASH]
+[ROOT]/home/.cargo/storage/v1/objects/[HASH]
+[ROOT]/home/.cargo/storage/v1/objects/[HASH]
+[ROOT]/home/.cargo/storage/v1/objects/[HASH]
+[ROOT]/home/.cargo/storage/v1/objects/[HASH]
+[ROOT]/home/.cargo/storage/v1/objects/[HASH]
+[ROOT]/home/.cargo/storage/v1/objects/[HASH]
+[ROOT]/home/.cargo/storage/v1/objects/[HASH]
+[ROOT]/home/.cargo/storage/v1/objects/[HASH]
+[ROOT]/home/.cargo/storage/v1/objects/[HASH]
+[ROOT]/home/.cargo/storage/v1/objects/[HASH]
+
+"#]],
+        &[],
+    );
+
+    // Set the time of the usage to be in the past for the manifest that references baz
+    for usage in shared_storage().join("build-index").ls_r() {
+        if usage.is_file() && usage != live_usage {
+            t!(fs::write(usage, "0"));
+        }
+    }
+
+    p.cargo("clean gc")
+        .args(&["-Zgc", "-Zshared-object-storage"])
+        .masquerade_as_nightly_cargo(&["gc", "shared-object-storage"])
+        .run();
+
+    shared_storage().assert_dir_layout(
+        str![[r#"
+[ROOT]/home/.cargo/storage/v1/build-index/[HASH]
+[ROOT]/home/.cargo/storage/v1/build-index/[HASH]
+[ROOT]/home/.cargo/storage/v1/objects/[HASH]
+[ROOT]/home/.cargo/storage/v1/objects/[HASH]
+[ROOT]/home/.cargo/storage/v1/objects/[HASH]
+[ROOT]/home/.cargo/storage/v1/objects/[HASH]
+[ROOT]/home/.cargo/storage/v1/objects/[HASH]
+[ROOT]/home/.cargo/storage/v1/objects/[HASH]
+[ROOT]/home/.cargo/storage/v1/objects/[HASH]
+[ROOT]/home/.cargo/storage/v1/objects/[HASH]
+[ROOT]/home/.cargo/storage/v1/objects/[HASH]
+[ROOT]/home/.cargo/storage/v1/objects/[HASH]
+
+"#]],
+        &[],
+    );
+    assert_eq!(storage_files(), all_files);
+}
+
+#[cargo_test]
 fn should_not_rebuild_when_output_mtimes_are_older_than_dependencies() {
     Package::new("bar", "0.1.0")
         .file("src/lib.rs", "pub fn foo() {}")
