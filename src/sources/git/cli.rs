@@ -354,6 +354,15 @@ pub(crate) fn checkout_with_cli(
 
     checkout.arg("-c").arg("advice.detachedHead=false");
 
+    // https://github.com/git/git/blob/1630431f326e15fcde608827b5ff38422528eb59/Documentation/RelNotes/2.32.0.adoc?plain=1#L191-L192
+    let checkout_workers = std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(1)
+        .min(8);
+    checkout
+        .arg("-c")
+        .arg(format!("checkout.workers={checkout_workers}"));
+
     checkout.args(&["checkout", "--quiet", "--force", "--detach"]);
 
     // https://github.com/git/git/blob/1630431f326e15fcde608827b5ff38422528eb59/Documentation/RelNotes/2.7.0.adoc?plain=1#L67-L70
