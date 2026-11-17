@@ -1,4 +1,6 @@
-use super::{CV, ConfigKey, ConfigRelativePath, GlobalContext, OptValue, PathAndArgs, StringList};
+use super::{
+    CV, ConfigKey, ConfigRootRelativeProgramPath, GlobalContext, OptValue, PathAndArgs, StringList,
+};
 use crate::compiler::{BuildOutput, LibraryPath, LinkArgTarget};
 use crate::util::CargoResult;
 use cargo_util::collections::HashMap;
@@ -16,7 +18,7 @@ pub struct TargetCfgConfig {
     pub runner: OptValue<PathAndArgs>,
     pub rustflags: OptValue<StringList>,
     pub rustdocflags: OptValue<StringList>,
-    pub linker: OptValue<ConfigRelativePath>,
+    pub linker: OptValue<ConfigRootRelativeProgramPath>,
     // This is here just to ignore fields from normal `TargetConfig` because
     // all `[target]` tables are getting deserialized, whether they start with
     // `cfg(` or not.
@@ -34,7 +36,7 @@ pub struct TargetConfig {
     /// Additional rustdoc flags to pass.
     pub rustdocflags: OptValue<StringList>,
     /// The path of the linker for this target.
-    pub linker: OptValue<ConfigRelativePath>,
+    pub linker: OptValue<ConfigRootRelativeProgramPath>,
     /// Build script override for the given library name.
     ///
     /// Any package with a `links` value for the given library name will skip
@@ -176,7 +178,7 @@ fn load_config_table(gctx: &GlobalContext, prefix: &[&str]) -> CargoResult<Targe
     let rustflags: OptValue<StringList> = gctx.get(prefix.iter().copied().chain(["rustflags"]))?;
     let rustdocflags: OptValue<StringList> =
         gctx.get(prefix.iter().copied().chain(["rustdocflags"]))?;
-    let linker: OptValue<ConfigRelativePath> =
+    let linker: OptValue<ConfigRootRelativeProgramPath> =
         gctx.get(prefix.iter().copied().chain(["linker"]))?;
     // Links do not support environment variables.
     let target_key = ConfigKey::from_parts(prefix);

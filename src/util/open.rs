@@ -6,7 +6,7 @@ use std::process::Command;
 
 use crate::CargoResult;
 use crate::GlobalContext;
-use crate::context::{ConfigRelativePathResolveExt, PathAndArgs};
+use crate::context::PathAndArgs;
 
 /// Opens a file path using the preferred application.
 ///
@@ -16,7 +16,7 @@ use crate::context::{ConfigRelativePathResolveExt, PathAndArgs};
 pub fn open(path: &Path, gctx: &GlobalContext) -> CargoResult<()> {
     let config_browser = {
         let cfg: Option<PathAndArgs> = gctx.get(["doc", "browser"])?;
-        cfg.map(|path_args| (path_args.path.resolve_program(gctx), path_args.args))
+        cfg.map(|path_args| (path_args.path.resolve(gctx.cwd()), path_args.args))
     };
 
     let mut shell = gctx.shell();

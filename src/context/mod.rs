@@ -15,6 +15,8 @@
 //!   config value was defined.
 //! - [`ConfigRootRelativePath`]: For a path that is relative to where it is
 //!   defined.
+//! - [`ConfigRootRelativeProgramPath`]: For a path that is relative to where it is
+//!   defined unless it is a bin name to look up in `PATH`
 //! - [`PathAndArgs`]: Similar to [`ConfigRootRelativePath`],
 //!   but also supports a list of arguments, useful for programs to execute.
 //! - [`StringList`]: Get a value that is either a list or a whitespace split
@@ -860,16 +862,6 @@ impl GlobalContext {
         self.get::<OptValue<String>>(key)
     }
 
-    fn string_to_path(&self, value: &str, definition: &Definition) -> PathBuf {
-        let is_path = value.contains('/') || (cfg!(windows) && value.contains('\\'));
-        if is_path {
-            definition.root(self.cwd()).join(value)
-        } else {
-            // A pathless name.
-            PathBuf::from(value)
-        }
-    }
-
     /// Update the instance based on settings typically passed in on
     /// the command-line.
     ///
@@ -1112,7 +1104,7 @@ impl GlobalContext {
     fn maybe_get_tool(
         &self,
         tool: &str,
-        from_config: &Option<ConfigRelativePath>,
+        from_config: &Option<ConfigRootRelativeProgramPath>,
     ) -> Option<PathBuf> {
         let var = tool.to_uppercase();
 
@@ -1127,7 +1119,7 @@ impl GlobalContext {
                 Some(path)
             }
 
-            None => from_config.as_ref().map(|p| p.resolve_program(self)),
+            None => from_config.as_ref().map(|p| p.resolve(self.cwd())),
         }
     }
 
@@ -1141,7 +1133,7 @@ impl GlobalContext {
     ///
     /// This is intended for tools that are rustup proxies. If you need to get
     /// a tool that is not a rustup proxy, use `maybe_get_tool` instead.
-    fn get_tool(&self, tool: Tool, from_config: &Option<ConfigRelativePath>) -> PathBuf {
+    fn get_tool(&self, tool: Tool, from_config: &Option<ConfigRootRelativeProgramPath>) -> PathBuf {
         let tool_str = tool.as_str();
         self.maybe_get_tool(tool_str, from_config)
             .or_else(|| {

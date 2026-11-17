@@ -15,14 +15,6 @@ pub trait ConfigRelativePathResolveExt {
         gctx: &GlobalContext,
         replacements: impl IntoIterator<Item = (impl AsRef<str>, impl AsRef<str>)>,
     ) -> Result<PathBuf, ResolveTemplateError>;
-
-    /// Resolves this configuration-relative path to either an absolute path or
-    /// something appropriate to execute from `PATH`.
-    ///
-    /// Values which don't look like a filesystem path (don't contain `/` or
-    /// `\`) will be returned as-is, and everything else will fall through to an
-    /// absolute path.
-    fn resolve_program(&self, gctx: &GlobalContext) -> PathBuf;
 }
 
 impl ConfigRelativePathResolveExt for ConfigRelativePath {
@@ -62,11 +54,6 @@ impl ConfigRelativePathResolveExt for ConfigRelativePath {
         }
 
         Ok(path.definition.root(gctx.cwd()).join(&value))
-    }
-
-    fn resolve_program(&self, gctx: &GlobalContext) -> PathBuf {
-        let value = self.as_value();
-        gctx.string_to_path(&value.val, &value.definition)
     }
 }
 

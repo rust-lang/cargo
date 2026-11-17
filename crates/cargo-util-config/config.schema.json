@@ -305,7 +305,7 @@
         "rustc-wrapper": {
           "anyOf": [
             {
-              "$ref": "#/$defs/ConfigRelativePath"
+              "$ref": "#/$defs/ConfigRootRelativeProgramPath"
             },
             {
               "type": "null"
@@ -315,7 +315,7 @@
         "rustc-workspace-wrapper": {
           "anyOf": [
             {
-              "$ref": "#/$defs/ConfigRelativePath"
+              "$ref": "#/$defs/ConfigRootRelativeProgramPath"
             },
             {
               "type": "null"
@@ -325,7 +325,7 @@
         "rustc": {
           "anyOf": [
             {
-              "$ref": "#/$defs/ConfigRelativePath"
+              "$ref": "#/$defs/ConfigRootRelativeProgramPath"
             },
             {
               "type": "null"
@@ -335,7 +335,7 @@
         "rustdoc": {
           "anyOf": [
             {
-              "$ref": "#/$defs/ConfigRelativePath"
+              "$ref": "#/$defs/ConfigRootRelativeProgramPath"
             },
             {
               "type": "null"
@@ -468,6 +468,10 @@
       "items": {
         "type": "string"
       }
+    },
+    "ConfigRootRelativeProgramPath": {
+      "description": "A path, potentially relative to the config, not current_dir",
+      "$ref": "#/$defs/Value"
     },
     "WarningHandling": {
       "description": "Whether warnings should warn, be allowed, or cause an error.",
@@ -674,7 +678,7 @@
       ]
     },
     "PathAndArgs": {
-      "description": "A config type that is a program to run.\n\nThis supports a list of strings like `['/path/to/program', 'somearg']`\nor a space separated string like `'/path/to/program somearg'`.\n\nThis expects the first value to be the path to the program to run.\nSubsequent values are strings of arguments to pass to the program.\n\nTypically you should use `ConfigRelativePathResolveExt::resolve_program` on the path\nto get the actual program.\n\n**Note**: Any usage of this type in config needs to be listed in\nthe `NON_MERGEABLE_LISTS` check to prevent list merging\nfrom multiple config files.",
+      "description": "A config type that is a program to run.\n\nThis supports a list of strings like `['/path/to/program', 'somearg']`\nor a space separated string like `'/path/to/program somearg'`.\n\nThis expects the first value to be the path to the program to run.\nSubsequent values are strings of arguments to pass to the program.\n\nTypically you should use [`ConfigRootRelativeProgramPath::resolve`] on the path\nto get the actual program.\n\n**Note**: Any usage of this type in config needs to be listed in\nthe `NON_MERGEABLE_LISTS` check to prevent list merging\nfrom multiple config files.",
       "type": [
         "array",
         "string"

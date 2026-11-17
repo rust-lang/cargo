@@ -504,10 +504,10 @@ pub struct CargoBuildConfig {
     pub jobs: Option<JobsConfig>,
     pub rustflags: Option<StringList>,
     pub rustdocflags: Option<StringList>,
-    pub rustc_wrapper: Option<ConfigRelativePath>,
-    pub rustc_workspace_wrapper: Option<ConfigRelativePath>,
-    pub rustc: Option<ConfigRelativePath>,
-    pub rustdoc: Option<ConfigRelativePath>,
+    pub rustc_wrapper: Option<ConfigRootRelativeProgramPath>,
+    pub rustc_workspace_wrapper: Option<ConfigRootRelativeProgramPath>,
+    pub rustc: Option<ConfigRootRelativeProgramPath>,
+    pub rustdoc: Option<ConfigRootRelativeProgramPath>,
     pub artifact_dir: Option<ConfigRootRelativePath>,
     pub warnings: Option<WarningHandling>,
     /// Unstable feature `-Zsbom`.
@@ -1040,6 +1040,27 @@ impl ConfigRootRelativePath {
     }
 }
 
+rel_path!(ConfigRootRelativeProgramPath);
+
+impl ConfigRootRelativeProgramPath {
+    /// Resolves this configuration-relative path to either an absolute path or
+    /// something appropriate to execute from `PATH`.
+    ///
+    /// Values which don't look like a filesystem path (don't contain `/` or
+    /// `\`) will be returned as-is, and everything else will fall through to an
+    /// absolute path.
+    pub fn resolve(&self, cwd: &Path) -> PathBuf {
+        let value = self.as_str();
+        let is_path = value.contains('/') || (cfg!(windows) && value.contains('\\'));
+        if is_path {
+            self.definition().root(cwd).join(value)
+        } else {
+            // A pathless name.
+            PathBuf::from(value)
+        }
+    }
+}
+
 /// A config type that is a program to run.
 ///
 /// This supports a list of strings like `['/path/to/program', 'somearg']`
@@ -1048,7 +1069,7 @@ impl ConfigRootRelativePath {
 /// This expects the first value to be the path to the program to run.
 /// Subsequent values are strings of arguments to pass to the program.
 ///
-/// Typically you should use `ConfigRelativePathResolveExt::resolve_program` on the path
+/// Typically you should use [`ConfigRootRelativeProgramPath::resolve`] on the path
 /// to get the actual program.
 ///
 /// **Note**: Any usage of this type in config needs to be listed in
@@ -1058,7 +1079,7 @@ impl ConfigRootRelativePath {
 #[cfg_attr(feature = "unstable-schema", schemars(with = "StringList"))]
 #[derive(Debug, Clone, PartialEq)]
 pub struct PathAndArgs {
-    pub path: ConfigRelativePath,
+    pub path: ConfigRootRelativeProgramPath,
     pub args: Vec<String>,
 }
 
@@ -1078,7 +1099,7 @@ impl<'de> serde::Deserialize<'de> for PathAndArgs {
             definition: vsl.definition,
         };
         Ok(PathAndArgs {
-            path: ConfigRelativePath(crp),
+            path: ConfigRootRelativeProgramPath(crp),
             args: strings,
         })
     }
@@ -1086,7 +1107,7 @@ impl<'de> serde::Deserialize<'de> for PathAndArgs {
 
 impl PathAndArgs {
     /// Construct a `PathAndArgs` from a string. The string will be split on ascii whitespace,
-    /// with the first item being treated as a `ConfigRelativePath` to the executable, and subsequent
+    /// with the first item being treated as a `ConfigRootRelativeProgramPath` to the executable, and subsequent
     /// items as arguments.
     pub fn from_whitespace_separated_string(p: &Value<String>) -> PathAndArgs {
         let mut iter = p.val.split_ascii_whitespace().map(str::to_string);
@@ -1097,7 +1118,7 @@ impl PathAndArgs {
             definition: p.definition.clone(),
         };
         PathAndArgs {
-            path: ConfigRelativePath(crp),
+            path: ConfigRootRelativeProgramPath(crp),
             args,
         }
     }
