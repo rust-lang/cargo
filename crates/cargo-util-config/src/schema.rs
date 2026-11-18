@@ -589,12 +589,14 @@ pub enum BuildStdWhen {
 /// Which standard library crates to build.
 /// Valid values are "core", "alloc", "std", or an array of crate names
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum BuildStdCrates {
     Core,
     Alloc,
     Std,
     // Custom list of crates - permanently unstable
+    #[serde(untagged)]
     List(Vec<String>),
 }
 

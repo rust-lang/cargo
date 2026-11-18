@@ -551,29 +551,20 @@
     },
     "BuildStdCrates": {
       "description": "Which standard library crates to build.\nValid values are \"core\", \"alloc\", \"std\", or an array of crate names",
-      "oneOf": [
+      "anyOf": [
         {
           "type": "string",
           "enum": [
-            "Core",
-            "Alloc",
-            "Std"
+            "core",
+            "alloc",
+            "std"
           ]
         },
         {
-          "type": "object",
-          "properties": {
-            "List": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          },
-          "required": [
-            "List"
-          ],
-          "additionalProperties": false
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       ]
     },
