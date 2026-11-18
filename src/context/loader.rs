@@ -57,7 +57,12 @@ impl<'a> ConfigLoader<'a> {
         let mut result = Vec::new();
         self.walk_tree(path, |path| {
             let mut layers = Vec::new();
-            self.load_unmerged_file(path, &mut HashSet::default(), &mut layers)?;
+            self.load_unmerged_file(
+                path,
+                &mut HashSet::default(),
+                DefinitionKind::Path,
+                &mut layers,
+            )?;
             // `walk_tree` visits highest precedence first,
             // but result is lowest-first,
             // so prepend to ensure the order
@@ -73,14 +78,15 @@ impl<'a> ConfigLoader<'a> {
         &self,
         path: &Path,
         seen: &mut HashSet<PathBuf>,
+        definition_kind: DefinitionKind,
         output: &mut Vec<ConfigStore>,
     ) -> CargoResult<()> {
-        let config = self._load_file(path, seen, false, DefinitionKind::Path)?;
+        let config = self._load_file(path, seen, false, definition_kind)?;
         for include in self.include_paths(&config)? {
             let Some(abs_path) = include.resolve_path(self.cwd) else {
                 continue;
             };
-            self.load_unmerged_file(&abs_path, seen, output)
+            self.load_unmerged_file(&abs_path, seen, definition_kind, output)
                 .with_context(|| {
                     format!(
                         "failed to load config include `{}` from `{}`",
