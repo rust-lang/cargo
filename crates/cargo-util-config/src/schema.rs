@@ -768,8 +768,8 @@ pub struct TermConfig {
 /// progress = { when = "always", width = 80 }
 /// ```
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-#[cfg_attr(feature = "unstable-schema", schemars(rename_all = "kebab-case"))]
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize)]
+#[serde(rename_all = "kebab-case")]
 pub struct ProgressConfig {
     pub when: ProgressWhen,
     pub width: Option<usize>,
@@ -778,7 +778,7 @@ pub struct ProgressConfig {
 }
 
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum ProgressWhen {
     #[default]
