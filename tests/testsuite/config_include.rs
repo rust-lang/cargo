@@ -431,10 +431,10 @@ fn cli_merge_failed() {
     assert_error(
         gctx.unwrap_err(),
         str![[r#"
-failed to merge key `foo` between [ROOT]/.cargo/config.toml and [ROOT]/.cargo/other.toml
+failed to merge key `foo` between [ROOT]/.cargo/other.toml and [ROOT]/.cargo/config.toml
 
 Caused by:
-  failed to merge config value from `[ROOT]/.cargo/other.toml` into `[ROOT]/.cargo/config.toml`: expected array, but found string
+  failed to merge config value from `[ROOT]/.cargo/config.toml` into `[ROOT]/.cargo/other.toml`: expected string, but found array
 "#]],
     );
 }

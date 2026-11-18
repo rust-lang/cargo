@@ -653,10 +653,10 @@ Caused by:
     assert_error(
         gctx.unwrap_err(),
         str![[r#"
-failed to merge key `a` between [ROOT]/.cargo/config.toml and --config cli option
+failed to merge key `a` between --config cli option and [ROOT]/.cargo/config.toml
 
 Caused by:
-  failed to merge config value from `--config cli option` into `[ROOT]/.cargo/config.toml`: expected boolean, but found array
+  failed to merge config value from `[ROOT]/.cargo/config.toml` into `--config cli option`: expected array, but found boolean
 "#]],
     );
 
@@ -2662,7 +2662,7 @@ fn mixed_type_array() {
                     definition: Definition::Cli(None),
                 },
             ],
-            definition: Definition::Environment("CARGO_A".into()),
+            definition: Definition::Cli(None),
         }
     );
 }
