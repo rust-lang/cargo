@@ -1012,14 +1012,14 @@ macro_rules! rel_path {
                 &self.0
             }
 
-            /// Returns where this path was defined.
-            pub fn definition(&self) -> &Definition {
-                &self.0.definition
-            }
-
             /// Returns the raw underlying configuration value for this key.
             pub fn as_str(&self) -> &str {
                 &self.0.val
+            }
+
+            /// Returns where this path was defined.
+            pub fn definition(&self) -> &Definition {
+                &self.0.definition
             }
         }
     };
