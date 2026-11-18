@@ -875,3 +875,41 @@ target.'cfg(target_os = "linux")'.runner = "runme"
         .with_stderr_data(str![[r#""#]])
         .run();
 }
+
+#[cargo_test]
+fn includes_same_file_twice_from_hierarchy() {
+    write_config_at(
+        paths::root().join("foo/.cargo/config.toml"),
+        "include = ['../../shared.toml']",
+    );
+    write_config_at(
+        paths::root().join(".cargo/config.toml"),
+        "include = ['../shared.toml']",
+    );
+    write_config_at(paths::root().join("shared.toml"), "key = 1");
+
+    cargo_process("config get key -Zunstable-options")
+        .cwd(paths::root().join("foo"))
+        .masquerade_as_nightly_cargo(&["cargo-config"])
+        .with_stdout_data(str![[r#"
+key = 1
+
+"#]])
+        .with_stderr_data(str![[r#""#]])
+        .run();
+
+    cargo_process("config get key --merged=no -Zunstable-options")
+        .cwd(paths::root().join("foo"))
+        .masquerade_as_nightly_cargo(&["cargo-config"])
+        .with_stdout_data(str![[r#"
+# [ROOT]/shared.toml
+key = 1
+
+# [ROOT]/shared.toml
+key = 1
+
+
+"#]])
+        .with_stderr_data(str![[r#""#]])
+        .run();
+}
