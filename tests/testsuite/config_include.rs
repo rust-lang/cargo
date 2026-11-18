@@ -440,6 +440,57 @@ Caused by:
 }
 
 #[cargo_test]
+fn cli_merge_failed_between_file_and_include() {
+    write_config_at(
+        "cli.toml",
+        "
+        include = ['other.toml']
+        foo = ['a']
+        ",
+    );
+    write_config_at("other.toml", "foo = 'b'");
+    let gctx = GlobalContextBuilder::new()
+        .config_arg("cli.toml")
+        .build_err();
+    assert_error(
+        gctx.unwrap_err(),
+        str![[r#"
+failed to load config from `[ROOT]/cli.toml`
+
+Caused by:
+  failed to merge key `foo` between [ROOT]/other.toml and [ROOT]/cli.toml
+
+Caused by:
+  failed to merge config value from `[ROOT]/cli.toml` into `[ROOT]/other.toml`: expected string, but found array
+"#]],
+    );
+}
+
+#[cargo_test]
+fn cli_merge_failed_between_includes() {
+    write_config_at(".cargo/one.toml", "foo = ['a']");
+    write_config_at(".cargo/two.toml", "foo = 'b'");
+    let gctx = GlobalContextBuilder::new()
+        .config_arg("include=['.cargo/one.toml', '.cargo/two.toml']")
+        .build_err();
+    assert_error(
+        gctx.unwrap_err(),
+        str![[r#"
+failed to load --config include
+
+Caused by:
+  failed to load config include `.cargo/two.toml` from `--config cli option`
+
+Caused by:
+  failed to merge key `foo` between [ROOT]/.cargo/one.toml and [ROOT]/.cargo/two.toml
+
+Caused by:
+  failed to merge config value from `[ROOT]/.cargo/two.toml` into `[ROOT]/.cargo/one.toml`: expected array, but found string
+"#]],
+    );
+}
+
+#[cargo_test]
 fn cli_include_take_priority_over_env() {
     write_config_at(".cargo/include.toml", "k='include'");
 
