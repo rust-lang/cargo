@@ -737,35 +737,27 @@
             {
               "type": "null"
             }
-          ]
+          ],
+          "default": null
         }
       }
     },
     "RustdocExternMode": {
       "description": "Mode used for `std`. This is for unstable feature [`-Zrustdoc-map`][1].\n\n[1]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#rustdoc-map",
-      "oneOf": [
+      "anyOf": [
         {
           "description": "Use a local `file://` URL.",
           "type": "string",
-          "const": "Local"
+          "const": "local"
         },
         {
           "description": "Use a remote URL to <https://doc.rust-lang.org/> (default).",
           "type": "string",
-          "const": "Remote"
+          "const": "remote"
         },
         {
           "description": "An arbitrary URL.",
-          "type": "object",
-          "properties": {
-            "Url": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "Url"
-          ],
-          "additionalProperties": false
+          "type": "string"
         }
       ]
     },

@@ -253,13 +253,15 @@ impl hash::Hash for RustdocExternMap {
 ///
 /// [1]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#rustdoc-map
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-#[derive(Debug, Hash)]
+#[derive(Debug, Hash, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum RustdocExternMode {
     /// Use a local `file://` URL.
     Local,
     /// Use a remote URL to <https://doc.rust-lang.org/> (default).
     Remote,
     /// An arbitrary URL.
+    #[serde(untagged)]
     Url(String),
 }
 
