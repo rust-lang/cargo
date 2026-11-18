@@ -51,7 +51,7 @@ impl<'a> ConfigLoader<'a> {
         }
     }
 
-    /// Like [`ConfigLoader::load_from`] but without merging config values.
+    /// Discovers config files from a path without merging config values.
     ///
     /// Returns one [`ConfigStore`] per config file, from lowest to highest precedence.
     pub(crate) fn load_unmerged_from(&self, path: &Path) -> CargoResult<Vec<ConfigStore>> {
@@ -92,12 +92,6 @@ impl<'a> ConfigLoader<'a> {
         }
         output.push(config);
         Ok(())
-    }
-
-    /// Start a config file discovery from a path and merges all config values found.
-    pub(crate) fn load_from(&self, path: &Path) -> CargoResult<ConfigStore> {
-        ConfigStore::from_layers(self.load_unmerged_from(path)?)
-            .context("could not load Cargo configuration")
     }
 
     /// Loads configuration from a path with options.
