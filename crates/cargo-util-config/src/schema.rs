@@ -637,7 +637,8 @@ pub struct BuildTargetConfig {
 }
 
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
 enum BuildTargetConfigInner {
     One(String),
     Many(Vec<String>),

@@ -416,33 +416,15 @@
       "$ref": "#/$defs/BuildTargetConfigInner"
     },
     "BuildTargetConfigInner": {
-      "oneOf": [
+      "anyOf": [
         {
-          "type": "object",
-          "properties": {
-            "One": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "One"
-          ],
-          "additionalProperties": false
+          "type": "string"
         },
         {
-          "type": "object",
-          "properties": {
-            "Many": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          },
-          "required": [
-            "Many"
-          ],
-          "additionalProperties": false
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       ]
     },
