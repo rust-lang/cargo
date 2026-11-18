@@ -40,6 +40,20 @@ impl ConfigStore {
         }
     }
 
+    /// Merges config `layers` given from lowest to highest precedence.
+    ///
+    /// A value with a higher-priority [`Definition`] wins regardless of its layer's position.
+    pub fn from_layers(layers: impl IntoIterator<Item = Self>) -> Result<Self> {
+        let layers: Vec<_> = layers.into_iter().collect();
+        let mut merged = Self::default();
+        // Merge from highest precedence, so ties keep the value already merged.
+        for mut layer in layers.into_iter().rev() {
+            layer.values.remove("include");
+            merged.merge(layer, MergePriority::Definition)?;
+        }
+        Ok(merged)
+    }
+
     /// Loads configuration from a path without processing includes.
     pub fn read_layer(path: &Path, definition_kind: DefinitionKind) -> Result<Self> {
         tracing::debug!(?path, ?definition_kind, "load config from file");

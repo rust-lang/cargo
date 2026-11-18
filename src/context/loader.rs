@@ -96,16 +96,8 @@ impl<'a> ConfigLoader<'a> {
 
     /// Start a config file discovery from a path and merges all config values found.
     pub(crate) fn load_from(&self, path: &Path) -> CargoResult<ConfigStore> {
-        let mut cfg = ConfigStore::default();
-
-        // Merge from highest precedence, so ties keep the value already merged.
-        for mut layer in self.load_unmerged_from(path)?.into_iter().rev() {
-            layer.values_mut().remove("include");
-            cfg.merge(layer, MergePriority::Definition)
-                .context("could not load Cargo configuration")?;
-        }
-
-        Ok(cfg)
+        ConfigStore::from_layers(self.load_unmerged_from(path)?)
+            .context("could not load Cargo configuration")
     }
 
     /// Loads configuration from a path with options.
