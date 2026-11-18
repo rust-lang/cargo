@@ -87,7 +87,7 @@ impl<'a> ConfigLoader<'a> {
                 .with_context(|| {
                     format!(
                         "failed to load config include `{}` from `{}`",
-                        include.path.as_str(),
+                        include.path,
                         include.path.definition()
                     )
                 })?;
@@ -180,7 +180,7 @@ impl<'a> ConfigLoader<'a> {
                 .with_context(|| {
                     format!(
                         "failed to load config include `{}` from `{}`",
-                        include.path.as_str(),
+                        include.path,
                         include.path.definition()
                     )
                 })?;
@@ -260,7 +260,7 @@ impl<'a> ConfigLoader<'a> {
                 bail!(
                     "expected a config include path ending with `.toml`, \
                      but found `{}` from `{}`",
-                    path.as_str(),
+                    path,
                     path.definition(),
                 )
             }
@@ -269,7 +269,7 @@ impl<'a> ConfigLoader<'a> {
                 bail!(
                     "expected a config include path without glob patterns, \
                      but found `{}` from `{}`",
-                    path.as_str(),
+                    path,
                     path.definition(),
                 )
             }
@@ -277,7 +277,7 @@ impl<'a> ConfigLoader<'a> {
                 bail!(
                     "expected a config include path without template braces, \
                      but found `{}` from `{}`",
-                    path.as_str(),
+                    path,
                     path.definition(),
                 )
             }
@@ -462,7 +462,7 @@ impl ConfigInclude {
         if self.optional && !abs_path.exists() {
             tracing::info!(
                 "skipping optional include `{}` in `{}`:  file not found at `{}`",
-                self.path.as_str(),
+                self.path,
                 self.path.definition(),
                 abs_path.display(),
             );

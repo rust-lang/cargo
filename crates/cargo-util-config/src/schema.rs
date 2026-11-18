@@ -1033,6 +1033,12 @@ macro_rules! rel_path {
                 &self.0.definition
             }
         }
+
+        impl fmt::Display for $name {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                fmt::Display::fmt(self.as_str(), f)
+            }
+        }
     };
 }
 
