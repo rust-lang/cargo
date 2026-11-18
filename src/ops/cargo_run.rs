@@ -110,7 +110,7 @@ pub fn run(
     if let MaybePackage::Package(pkg) = ws.root_maybe()
         && pkg.manifest().is_embedded()
     {
-        process.arg0(pkg.manifest_path());
+        process.arg0(unit.manifest_path());
     }
 
     // Sets the working directory of the child process to the current working

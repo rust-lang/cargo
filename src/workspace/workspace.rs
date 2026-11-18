@@ -285,7 +285,13 @@ impl<'gctx> Workspace<'gctx> {
         target_dir: Option<Filesystem>,
         require_optional_deps: bool,
     ) -> CargoResult<Workspace<'gctx>> {
-        let mut ws = Workspace::new_default(package.manifest_path().to_path_buf(), gctx);
+        let mut ws = Workspace::new_default(
+            package
+                .manifest_path()
+                .expect("package exists on the filesystem")
+                .to_path_buf(),
+            gctx,
+        );
         ws.is_ephemeral = true;
         ws.require_optional_deps = require_optional_deps;
         let id = package.package_id();
@@ -1178,7 +1184,7 @@ impl<'gctx> Workspace<'gctx> {
         if let Some(ref root_manifest) = self.root_manifest {
             for pkg in self
                 .members()
-                .filter(|p| p.manifest_path() != root_manifest)
+                .filter(|p| p.manifest_path().is_some_and(|path| path != root_manifest))
             {
                 let manifest = pkg.manifest();
                 let emit_warning = |what| -> CargoResult<()> {
@@ -1189,7 +1195,9 @@ impl<'gctx> Workspace<'gctx> {
                          workspace: {}",
                         what,
                         what,
-                        pkg.manifest_path().display(),
+                        pkg.manifest_path()
+                            .expect("the manifest path is some")
+                            .display(),
                         root_manifest.display(),
                     );
                     self.gctx.shell().warn(&msg)
@@ -1214,7 +1222,7 @@ impl<'gctx> Workspace<'gctx> {
                 if vm.resolve_behavior().is_none() {
                     if let Some(edition) = self
                         .members()
-                        .filter(|p| p.manifest_path() != root_manifest)
+                        .filter(|p| p.manifest_path().is_some_and(|path| path != root_manifest))
                         .map(|p| p.manifest().edition())
                         .filter(|&e| e >= Edition::Edition2021)
                         .max()

@@ -146,14 +146,15 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
             .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
 
         for (pkg, _) in &pkgs {
+            let manifest_path = pkg.manifest_path().expect("package is on the filesystem");
             verify_unpublished(pkg, &mut source, &source_ids, opts.dry_run, opts.gctx)?;
             verify_dependencies(pkg, &registry, source_ids.original).map_err(|err| {
                 ManifestError::new(
                     err.context(format!(
                         "failed to verify manifest at `{}`",
-                        pkg.manifest_path().display()
+                        manifest_path.display()
                     )),
-                    pkg.manifest_path().into(),
+                    manifest_path.into(),
                 )
             })?;
         }
@@ -594,19 +595,20 @@ pub(crate) fn prepare_transmit(
         ref rust_version,
     } = *manifest.metadata();
     let rust_version = rust_version.as_ref().map(ToString::to_string);
+    let root = local_pkg.root().expect("package is on the filesystem");
     let readme_content = local_pkg
         .manifest()
         .metadata()
         .readme
         .as_ref()
         .map(|readme| {
-            paths::read(&local_pkg.root().join(readme)).with_context(|| {
+            paths::read(&root.join(readme)).with_context(|| {
                 format!("failed to read `readme` file for package `{}`", local_pkg)
             })
         })
         .transpose()?;
     if let Some(ref file) = local_pkg.manifest().metadata().license_file {
-        if !local_pkg.root().join(file).exists() {
+        if !root.join(file).exists() {
             bail!("the license file `{}` does not exist", file)
         }
     }

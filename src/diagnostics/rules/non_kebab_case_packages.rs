@@ -127,8 +127,7 @@ fn lint_package_inner(
                 .patch(Patch::new(span.value, format!("\"{kebab_case}\""))),
         );
         report.push(help);
-    } else {
-        let path = pkg.manifest_path();
+    } else if let Some(path) = pkg.manifest_path() {
         let display_path = path.as_os_str().to_string_lossy();
         let end = display_path.len() - if display_path.ends_with(".rs") { 3 } else { 0 };
         let start = path

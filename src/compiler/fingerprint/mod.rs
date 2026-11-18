@@ -940,7 +940,7 @@ impl LocalFingerprint {
         cargo_exe: &Path,
         gctx: &GlobalContext,
     ) -> CargoResult<Option<StaleItem>> {
-        let pkg_root = pkg.root();
+        let pkg_root = pkg.root().expect("the package exists on the filesystem");
         match self {
             // We need to parse `dep_info`, learn about the crate's dependencies.
             //
@@ -1862,7 +1862,7 @@ fn build_script_local_fingerprints(
     // package. Remember that the fact that this is an `Option` is a bug, but a
     // longstanding bug, in Cargo. Recent refactorings just made it painfully
     // obvious.
-    let pkg_root = unit.pkg.root().to_path_buf();
+    let pkg_root = unit.root().to_path_buf();
     let build_dir = build_root(build_runner);
     let env_config = Arc::clone(build_runner.bcx.gctx.env_config()?);
     let calculate =

@@ -160,7 +160,7 @@ fn sysroot_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> RemapPair {
 
 /// Path prefix remap rules for dependencies.
 fn package_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> Vec<RemapPair> {
-    let pkg_root = unit.pkg.root();
+    let pkg_root = unit.root();
     let ws_root = build_runner.bcx.ws.root();
     let source_id = unit.pkg.package_id().source_id();
 
@@ -215,7 +215,7 @@ fn workspace_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> Vec<Remap
     // For more, see <https://github.com/rust-lang/cargo/pull/17366>
     let relative_remap = if let Some(prefix) = custom_prefix
         && src.is_relative()
-        && let Ok(rel) = unit.pkg.root().strip_prefix(&rustc_workdir)
+        && let Ok(rel) = unit.root().strip_prefix(&rustc_workdir)
         && !rel.is_empty()
     {
         let mut rel_to = prefix.to_owned();

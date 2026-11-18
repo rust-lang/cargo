@@ -31,7 +31,11 @@ pub fn remove(options: &RemoveOptions<'_>) -> CargoResult<()> {
         .map(String::from)
         .collect::<Vec<_>>();
 
-    let manifest_path = options.spec.manifest_path().to_path_buf();
+    let manifest_path = options
+        .spec
+        .manifest_path()
+        .expect("manifest exists on filesystem")
+        .to_path_buf();
     let mut manifest = LocalManifest::try_new(&manifest_path)?;
 
     for dep in &options.dependencies {

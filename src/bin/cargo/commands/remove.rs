@@ -171,7 +171,10 @@ fn gc_workspace(workspace: &Workspace<'_>) -> CargoResult<()> {
         .members()
         .map(|p| {
             Ok((
-                LocalManifest::try_new(p.manifest_path())?,
+                LocalManifest::try_new(
+                    p.manifest_path()
+                        .expect("workspace member exists on the filesystem"),
+                )?,
                 p.manifest().unstable_features(),
             ))
         })

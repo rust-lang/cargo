@@ -104,7 +104,7 @@ pub fn emit_parse_diagnostics(
     for maybe_pkg in workspace.loaded_maybe() {
         if let MaybePackage::Package(pkg) = maybe_pkg {
             if is_local_package(pkg) {
-                let path = pkg.manifest_path();
+                let path = pkg.manifest_path().expect("package is local");
                 emit_parse_pkg_diagnostics(workspace, pkg, &path, rules, &mut stats)?;
             }
         }

@@ -84,8 +84,12 @@ pub fn print_available_packages(ws: &Workspace<'_>) -> CargoResult<()> {
         writeln!(output, "Possible packages/workspace members:")?;
         let mut shell = ws.gctx().shell();
         for (name, manifest_path) in packages {
-            let link = shell.err_file_hyperlink(manifest_path);
-            writeln!(output, "{ITEM_INDENT}{link}{}{link:#}", name)?;
+            if let Some(p) = manifest_path {
+                let link = shell.err_file_hyperlink(p);
+                writeln!(output, "{ITEM_INDENT}{link}{name}{link:#}")?;
+            } else {
+                writeln!(output, "{ITEM_INDENT}{name}")?;
+            }
         }
     }
     bail!("{}", output)
@@ -142,7 +146,7 @@ pub fn path_args(ws: &Workspace<'_>, unit: &Unit) -> (PathBuf, PathBuf) {
             return (path.to_path_buf(), root);
         }
     }
-    (src, unit.pkg.root().to_path_buf())
+    (src, unit.root().to_path_buf())
 }
 
 pub fn add_path_args(ws: &Workspace<'_>, unit: &Unit, cmd: &mut ProcessBuilder) {

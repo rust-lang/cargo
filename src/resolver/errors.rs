@@ -390,7 +390,7 @@ pub(super) fn activation_error(
         let mut names_found: Vec<(String, PathBuf)> = vec![];
 
         for pkg in &packages {
-            let manifest_dir = pkg.manifest_path().parent().unwrap();
+            let manifest_dir = pkg.root().expect("dep is a path dependency");
             let p_name = pkg.name().as_str();
             if p_name == dep.package_name().as_str() {
                 exact_match = Some(manifest_dir.to_path_buf());

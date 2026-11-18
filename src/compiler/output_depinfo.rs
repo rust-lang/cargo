@@ -58,7 +58,7 @@ fn add_deps_for_unit(
         // Add dependencies from rustc dep-info output (stored in fingerprint directory)
         let dep_info_loc = fingerprint::dep_info_loc(build_runner, unit);
         if let Some(paths) = fingerprint::parse_dep_info(
-            unit.pkg.root(),
+            unit.root(),
             build_runner.files().host_build_root(),
             build_runner.bcx.ws.root(),
             &dep_info_loc,
@@ -86,7 +86,7 @@ fn add_deps_for_unit(
                 .get(metadata)
             {
                 for path in &output.rerun_if_changed {
-                    let package_root = unit.pkg.root();
+                    let package_root = unit.root();
 
                     let path = if path.as_os_str().is_empty() {
                         // Joining with an empty path causes Rust to add a trailing path separator.

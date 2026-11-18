@@ -452,8 +452,14 @@ impl<'gctx> Compilation<'gctx> {
         // crate properties which might require rebuild upon change
         // consider adding the corresponding properties to the hash
         // in BuildContext::target_metadata()
-        cmd.env("CARGO_MANIFEST_DIR", pkg.root())
-            .env("CARGO_MANIFEST_PATH", pkg.manifest_path())
+        let root = pkg
+            .root()
+            .expect("proceses require the package to be already on the filesystem");
+        let manifest_path = pkg
+            .manifest_path()
+            .expect("proceses require the package to be already on the filesystem");
+        cmd.env("CARGO_MANIFEST_DIR", root)
+            .env("CARGO_MANIFEST_PATH", manifest_path)
             .env("CARGO_PKG_VERSION_MAJOR", &pkg.version().major.to_string())
             .env("CARGO_PKG_VERSION_MINOR", &pkg.version().minor.to_string())
             .env("CARGO_PKG_VERSION_PATCH", &pkg.version().patch.to_string())
@@ -465,7 +471,7 @@ impl<'gctx> Compilation<'gctx> {
             cmd.env(key, value.as_ref());
         }
 
-        cmd.cwd(pkg.root());
+        cmd.cwd(root);
 
         apply_env_config(self.gctx, &mut cmd)?;
 

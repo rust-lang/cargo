@@ -233,7 +233,10 @@ impl<'gctx> Source for DirectorySource<'gctx> {
         };
 
         for (file, cksum) in cksum.files.iter() {
-            let file = pkg.root().join(file);
+            let file = pkg
+                .root()
+                .expect("package exists on the filesystem")
+                .join(file);
             let actual = Sha256::new()
                 .update_path(&file)
                 .with_context(|| format!("failed to calculate checksum of: {}", file.display()))?

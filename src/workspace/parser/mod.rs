@@ -3046,7 +3046,7 @@ pub fn prepare_for_publish(
     let original_toml = prepare_toml_for_publish(
         me.manifest().normalized_toml(),
         ws,
-        me.root(),
+        me.root().expect("package exists on the filesystem"),
         packaged_files,
     )?;
     let normalized_toml = original_toml.clone();
@@ -3064,13 +3064,18 @@ pub fn prepare_for_publish(
         features,
         workspace_config,
         source_id,
-        me.manifest_path(),
+        me.manifest_path()
+            .expect("package exists on the filesystem"),
         me.manifest().is_embedded(),
         gctx,
         &mut warnings,
         &mut errors,
     )?;
-    let new_pkg = Package::new(manifest, me.manifest_path());
+    let new_pkg = Package::new(
+        manifest,
+        me.manifest_path()
+            .expect("package exists on the filesystem"),
+    );
     Ok(new_pkg)
 }
 
