@@ -1012,14 +1012,31 @@ macro_rules! rel_path {
                 &self.0
             }
 
+            /// Returns the raw underlying configuration value for this key.
+            pub fn as_str(&self) -> &str {
+                &self.0.val
+            }
+
+            /// PRIVATE: Not to be made public to ensure people dependent on the base path have resolved first
+            fn as_path(&self) -> &Path {
+                Path::new(self.as_str())
+            }
+
+            /// Returns the [extension](Path::extension) of the configured path as written.
+            pub fn extension(&self) -> Option<&OsStr> {
+                // `as_path` is allowed since this is base-agnostic
+                self.as_path().extension()
+            }
+
             /// Returns where this path was defined.
             pub fn definition(&self) -> &Definition {
                 &self.0.definition
             }
+        }
 
-            /// Returns the raw underlying configuration value for this key.
-            pub fn as_str(&self) -> &str {
-                &self.0.val
+        impl fmt::Display for $name {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                fmt::Display::fmt(self.as_str(), f)
             }
         }
     };
@@ -1121,6 +1138,19 @@ pub enum ResolveTemplateError {
 pub enum BracketType {
     Opening,
     Closing,
+}
+
+rel_path!(ConfigParentRelativePath);
+
+impl ConfigParentRelativePath {
+    /// Resolves this configuration-parent-relative path to an absolute path.
+    ///
+    /// This will always return an absolute path where it's relative to the
+    /// location for configuration for this value.
+    pub fn resolve(&self, cwd: &Path) -> PathBuf {
+        let value = self.as_value();
+        value.definition.parent(cwd).join(&value.val)
+    }
 }
 
 /// A config type that is a program to run.
