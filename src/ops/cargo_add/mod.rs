@@ -167,14 +167,22 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
             deactivated.retain(|f| !unknown_features.contains(f));
             activated.retain(|f| !unknown_features.contains(f));
 
+            let version = dep
+                .display_available_version()
+                .map(|v| format!(" v{v}"))
+                .unwrap_or_default();
             let mut message = format!(
-                "unrecognized feature{} for crate {}: {}",
+                "unrecognized feature{} for crate {}{version}: {}",
                 if unknown_features.len() == 1 { "" } else { "s" },
                 dep.name,
                 unknown_features.iter().format(", "),
             );
             if activated.is_empty() && deactivated.is_empty() {
-                write!(message, "\n\nno features available for crate {}", dep.name)?;
+                write!(
+                    message,
+                    "\n\nno features available for crate {}{version}",
+                    dep.name
+                )?;
             } else {
                 let mut suggested = false;
                 for unknown_feature in &unknown_features {
@@ -1151,6 +1159,13 @@ impl DependencyUI {
         }
     }
 
+    /// Returns `available_version` without build metadata for user-facing messages.
+    fn display_available_version(&self) -> Option<semver::Version> {
+        let mut version = self.available_version.clone()?;
+        version.build = Default::default();
+        Some(version)
+    }
+
     fn apply_summary(&mut self, summary: &Summary) {
         self.available_version = Some(summary.version().clone());
         self.available_features = summary
@@ -1349,9 +1364,7 @@ fn print_dep_table_msg(shell: &mut Shell, dep: &DependencyUI) -> CargoResult<()>
 }
 
 fn format_features_version_suffix(dep: &DependencyUI) -> String {
-    if let Some(version) = &dep.available_version {
-        let mut version = version.clone();
-        version.build = Default::default();
+    if let Some(version) = dep.display_available_version() {
         let version = version.to_string();
         // Avoid displaying the version if it will visually look like the version req that we
         // showed earlier

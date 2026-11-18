@@ -23,7 +23,7 @@
 </tspan>
     <tspan x="10px" y="46px"><tspan class="fg-bright-green bold">      Adding</tspan><tspan> my-package v1 to dependencies</tspan>
 </tspan>
-    <tspan x="10px" y="64px"><tspan class="fg-bright-red bold">error</tspan><tspan>: unrecognized feature for crate my-package: raw_value</tspan>
+    <tspan x="10px" y="64px"><tspan class="fg-bright-red bold">error</tspan><tspan>: unrecognized feature for crate my-package v1.0.0: raw_value</tspan>
 </tspan>
     <tspan x="10px" y="82px">
 </tspan>
