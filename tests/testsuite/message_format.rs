@@ -284,3 +284,26 @@ mod tests {
 "#]])
         .run();
 }
+
+#[cargo_test(nightly, reason = "`-Zterminal-urls is unstable")]
+fn cargo_passes_terminal_urls() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+[package]
+name = "foo"
+version = "0.0.1"
+edition = "2015"
+"#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check -v")
+        .arg("--config")
+        .arg("term.hyperlinks=true")
+        .masquerade_as_nightly_cargo(&["terminal-urls"])
+        .with_stderr_does_not_contain("[..]-Zterminal-urls=yes[..]")
+        .run();
+}
