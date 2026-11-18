@@ -255,30 +255,30 @@ impl<'a> ConfigLoader<'a> {
         };
 
         for include in &includes {
-            let path = include.path.as_str();
-            if Path::new(path).extension() != Some(OsStr::new("toml")) {
+            let path = &include.path;
+            if Path::new(path.as_str()).extension() != Some(OsStr::new("toml")) {
                 bail!(
                     "expected a config include path ending with `.toml`, \
                      but found `{}` from `{}`",
-                    path,
-                    include.path.definition(),
+                    path.as_str(),
+                    path.definition(),
                 )
             }
 
-            if is_glob_pattern(path) {
+            if is_glob_pattern(path.as_str()) {
                 bail!(
                     "expected a config include path without glob patterns, \
                      but found `{}` from `{}`",
-                    path,
-                    include.path.definition(),
+                    path.as_str(),
+                    path.definition(),
                 )
             }
-            if path.contains(&['{', '}']) {
+            if path.as_str().contains(&['{', '}']) {
                 bail!(
                     "expected a config include path without template braces, \
                      but found `{}` from `{}`",
-                    path,
-                    include.path.definition(),
+                    path.as_str(),
+                    path.definition(),
                 )
             }
         }
