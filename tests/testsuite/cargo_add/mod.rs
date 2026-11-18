@@ -35,6 +35,7 @@ mod features_preserve;
 mod features_spaced_values;
 mod features_unknown;
 mod features_unknown_no_features;
+mod features_unknown_semver;
 mod git;
 mod git_branch;
 mod git_conflicts_namever;
