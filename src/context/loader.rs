@@ -57,11 +57,8 @@ impl<'a> ConfigLoader<'a> {
     pub(crate) fn load_unmerged_from(&self, path: &Path) -> CargoResult<Vec<ConfigStore>> {
         let mut result = Vec::new();
         self.walk_tree(path, |path| {
-            let mut seen = HashSet::default();
             let mut layers = Vec::new();
-            let mut config = self._load_file(path, &mut seen, false, DefinitionKind::Path)?;
-            self.load_unmerged_include(&mut config, &mut seen, &mut layers)?;
-            layers.push(config);
+            self.load_unmerged_file(path, &mut HashSet::default(), &mut layers)?;
             // `walk_tree` visits highest precedence first,
             // but result is lowest-first,
             // so prepend to ensure the order
@@ -72,23 +69,19 @@ impl<'a> ConfigLoader<'a> {
         Ok(result)
     }
 
-    /// Like [`ConfigLoader::load_includes`] but without merging config values.
-    ///
-    /// This is primarily crafted for `cargo config` command.
-    fn load_unmerged_include(
+    /// Loads a config file and its `include`s recursively without merging config values.
+    fn load_unmerged_file(
         &self,
-        config: &mut ConfigStore,
+        path: &Path,
         seen: &mut HashSet<PathBuf>,
         output: &mut Vec<ConfigStore>,
     ) -> CargoResult<()> {
-        let includes = self.include_paths(config, false)?;
-        for include in includes {
+        let mut config = self._load_file(path, seen, false, DefinitionKind::Path)?;
+        for include in self.include_paths(&mut config, false)? {
             let Some(abs_path) = include.resolve_path(self.cwd) else {
                 continue;
             };
-
-            let mut config = self
-                ._load_file(&abs_path, seen, false, DefinitionKind::Path)
+            self.load_unmerged_file(&abs_path, seen, output)
                 .with_context(|| {
                     format!(
                         "failed to load config include `{}` from `{}`",
@@ -96,9 +89,8 @@ impl<'a> ConfigLoader<'a> {
                         include.path.definition()
                     )
                 })?;
-            self.load_unmerged_include(&mut config, seen, output)?;
-            output.push(config);
         }
+        output.push(config);
         Ok(())
     }
 
