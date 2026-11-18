@@ -38,7 +38,7 @@ pub use cargo_util_schemas::manifest::TomlProfiles;
 
 /// Cargo's `.cargo/config.toml` file
 #[cfg(feature = "unstable-schema")]
-#[derive(Serialize, schemars::JsonSchema)]
+#[derive(Deserialize, Serialize, schemars::JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct Config {
     pub paths: Option<Vec<ConfigRootRelativePath>>,
@@ -67,7 +67,7 @@ pub struct Config {
 
 /// Cargo's `credentials.toml` file
 #[cfg(feature = "unstable-schema")]
-#[derive(Serialize, schemars::JsonSchema)]
+#[derive(Deserialize, Serialize, schemars::JsonSchema)]
 pub struct Credentials {
     pub registry: Option<RegistryCredential>,
     pub registries: Option<HashMap<String, RegistryCredential>>,
@@ -196,7 +196,7 @@ pub struct SourceConfigDef {
 }
 
 #[cfg(feature = "unstable-schema")]
-#[derive(Serialize, schemars::JsonSchema)]
+#[derive(Deserialize, Serialize, schemars::JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct DocConfig {
     pub browser: Option<PathAndArgs>,
