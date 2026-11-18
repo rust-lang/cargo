@@ -28,16 +28,16 @@ use ConfigValue as CV;
 pub struct ConfigLoader<'a> {
     shell: &'a Mutex<Shell>,
     cwd: &'a Path,
-    home: &'a Path,
+    cargo_home: &'a Path,
     search_stop_path: Option<&'a Path>,
 }
 
 impl<'a> ConfigLoader<'a> {
-    pub fn new(shell: &'a Mutex<Shell>, cwd: &'a Path, home: &'a Path) -> Self {
+    pub fn new(shell: &'a Mutex<Shell>, cwd: &'a Path, cargo_home: &'a Path) -> Self {
         Self {
             shell,
             cwd,
-            home,
+            cargo_home,
             search_stop_path: None,
         }
     }
@@ -247,7 +247,7 @@ impl<'a> ConfigLoader<'a> {
     where
         F: FnMut(&Path) -> Result<()>,
     {
-        let home = self.home;
+        let home = self.cargo_home;
         let mut seen_dir = HashSet::default();
 
         for current in paths::ancestors(pwd, self.search_stop_path) {
@@ -262,7 +262,7 @@ impl<'a> ConfigLoader<'a> {
 
         let canonical_home = home.canonicalize().unwrap_or(home.to_path_buf());
 
-        // Once we're done, also be sure to walk the home directory even if it's not
+        // Once we're done, also be sure to walk the $CARGO_HOME directory even if it's not
         // in our history to be sure we pick up that standard location for
         // information.
         if !seen_dir.contains(&canonical_home) && !seen_dir.contains(home) {
@@ -276,7 +276,7 @@ impl<'a> ConfigLoader<'a> {
 
     /// Loads credentials config from the credentials file, if present.
     pub fn load_credentials(&self) -> Result<ConfigStore> {
-        let Some(credentials) = self.get_file_path(self.home, "credentials", true)? else {
+        let Some(credentials) = self.get_file_path(self.cargo_home, "credentials", true)? else {
             return Ok(ConfigStore::default());
         };
 
