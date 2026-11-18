@@ -326,10 +326,10 @@ fn merge_failed_between_file_and_include() {
 could not load Cargo configuration
 
 Caused by:
-  failed to merge key `foo` between [ROOT]/.cargo/other.toml and [ROOT]/.cargo/config.toml
+  failed to merge key `foo` between [ROOT]/.cargo/config.toml and [ROOT]/.cargo/other.toml
 
 Caused by:
-  failed to merge config value from `[ROOT]/.cargo/config.toml` into `[ROOT]/.cargo/other.toml`: expected string, but found array
+  failed to merge config value from `[ROOT]/.cargo/other.toml` into `[ROOT]/.cargo/config.toml`: expected array, but found string
 "#]],
     );
 }
@@ -346,13 +346,10 @@ fn merge_failed_between_includes() {
 could not load Cargo configuration
 
 Caused by:
-  failed to load config include `two.toml` from `[ROOT]/.cargo/config.toml`
+  failed to merge key `foo` between [ROOT]/.cargo/two.toml and [ROOT]/.cargo/one.toml
 
 Caused by:
-  failed to merge key `foo` between [ROOT]/.cargo/one.toml and [ROOT]/.cargo/two.toml
-
-Caused by:
-  failed to merge config value from `[ROOT]/.cargo/two.toml` into `[ROOT]/.cargo/one.toml`: expected array, but found string
+  failed to merge config value from `[ROOT]/.cargo/one.toml` into `[ROOT]/.cargo/two.toml`: expected string, but found array
 "#]],
     );
 }
