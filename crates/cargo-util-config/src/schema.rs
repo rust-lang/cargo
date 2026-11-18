@@ -1206,6 +1206,14 @@ impl<'de> serde::Deserialize<'de> for PathAndArgs {
     }
 }
 
+impl Serialize for PathAndArgs {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.collect_seq(
+            std::iter::once(self.path.as_str()).chain(self.args.iter().map(String::as_str)),
+        )
+    }
+}
+
 impl PathAndArgs {
     /// Construct a `PathAndArgs` from a string. The string will be split on ascii whitespace,
     /// with the first item being treated as a `ConfigRootRelativeProgramPath` to the executable, and subsequent
