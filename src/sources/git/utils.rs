@@ -385,9 +385,11 @@ impl<'a> GitCheckout<'a> {
         let guard = CheckoutGuard::guard(&self.path);
         info!("reset {} to {}", self.repo.path().display(), self.revision);
 
-        // Ensure libgit2 won't mess with newlines when we vendor.
         if let Ok(mut git_config) = self.repo.config() {
+            // Ensure libgit2 won't mess with newlines when we vendor.
             git_config.set_bool("core.autocrlf", false)?;
+            // Allow libgit2 to check out paths longer than `MAX_PATH` on Windows.
+            git_config.set_bool("core.longpaths", true)?;
         }
 
         let object = self.repo.find_object(self.revision, None)?;
