@@ -124,12 +124,14 @@ pub struct CargoNewConfig {
 }
 
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum VersionControl {
     Git,
     Hg,
     Pijul,
     Fossil,
+    #[serde(rename = "none")]
     NoVcs,
 }
 

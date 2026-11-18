@@ -673,11 +673,11 @@
     "VersionControl": {
       "type": "string",
       "enum": [
-        "Git",
-        "Hg",
-        "Pijul",
-        "Fossil",
-        "NoVcs"
+        "git",
+        "hg",
+        "pijul",
+        "fossil",
+        "none"
       ]
     },
     "PathAndArgs": {
