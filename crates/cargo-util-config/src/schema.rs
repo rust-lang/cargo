@@ -374,7 +374,8 @@ impl CargoFutureIncompatConfig {
 /// ssl-version.max = "tlsv1.3"
 /// ```
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(untagged)]
 pub enum SslVersionConfig {
     Single(String),
     Range(SslVersionConfigRange),
@@ -413,7 +414,7 @@ impl<'de> Deserialize<'de> for SslVersionConfig {
 }
 
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub struct SslVersionConfigRange {
     pub min: Option<String>,

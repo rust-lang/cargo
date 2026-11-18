@@ -916,30 +916,12 @@
     },
     "SslVersionConfig": {
       "description": "Configuration for `ssl-version` in `http` section\nThere are two ways to configure:\n\n```text\n[http]\nssl-version = \"tlsv1.3\"\n```\n\n```text\n[http]\nssl-version.min = \"tlsv1.2\"\nssl-version.max = \"tlsv1.3\"\n```",
-      "oneOf": [
+      "anyOf": [
         {
-          "type": "object",
-          "properties": {
-            "Single": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "Single"
-          ],
-          "additionalProperties": false
+          "type": "string"
         },
         {
-          "type": "object",
-          "properties": {
-            "Range": {
-              "$ref": "#/$defs/SslVersionConfigRange"
-            }
-          },
-          "required": [
-            "Range"
-          ],
-          "additionalProperties": false
+          "$ref": "#/$defs/SslVersionConfigRange"
         }
       ]
     },
