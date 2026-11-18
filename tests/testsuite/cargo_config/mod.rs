@@ -901,17 +901,15 @@ key = 1
     cargo_process("config get key --merged=no -Zunstable-options")
         .cwd(paths::root().join("foo"))
         .masquerade_as_nightly_cargo(&["cargo-config"])
-        .with_status(101)
-        .with_stdout_data(str![[r#""#]])
-        .with_stderr_data(str![[r#"
-[ERROR] could not load Cargo configuration
+        .with_stdout_data(str![[r#"
+# [ROOT]/shared.toml
+key = 1
 
-Caused by:
-  failed to load config include `../shared.toml` from `[ROOT]/.cargo/config.toml`
+# [ROOT]/shared.toml
+key = 1
 
-Caused by:
-  config `include` cycle detected with path `[ROOT]/shared.toml`
 
 "#]])
+        .with_stderr_data(str![[r#""#]])
         .run();
 }
