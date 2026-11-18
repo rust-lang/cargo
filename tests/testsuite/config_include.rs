@@ -455,7 +455,7 @@ fn cli_merge_failed_between_file_and_include() {
     assert_error(
         gctx.unwrap_err(),
         str![[r#"
-failed to load config from `[ROOT]/cli.toml`
+failed to merge --config argument `cli.toml`
 
 Caused by:
   failed to merge key `foo` between [ROOT]/other.toml and [ROOT]/cli.toml
@@ -476,10 +476,7 @@ fn cli_merge_failed_between_includes() {
     assert_error(
         gctx.unwrap_err(),
         str![[r#"
-failed to load --config include
-
-Caused by:
-  failed to load config include `.cargo/two.toml` from `--config cli option`
+failed to merge --config argument `include=['.cargo/one.toml', '.cargo/two.toml']`
 
 Caused by:
   failed to merge key `foo` between [ROOT]/.cargo/one.toml and [ROOT]/.cargo/two.toml
