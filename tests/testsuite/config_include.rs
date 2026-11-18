@@ -260,6 +260,36 @@ Caused by:
     );
 }
 
+/// The same file got `include`d twice in one include tree.
+///
+/// We currently treat it as "cycle" and bail out.
+#[cargo_test]
+fn diamond_include() {
+    write_config_at(
+        ".cargo/config.toml",
+        "include = ['left.toml', 'right.toml']",
+    );
+    write_config_at(".cargo/left.toml", "include = ['shared.toml']");
+    write_config_at(".cargo/right.toml", "include = ['shared.toml']");
+    write_config_at(".cargo/shared.toml", "key = 1");
+    let gctx = GlobalContextBuilder::new().build();
+    assert_error(
+        gctx.get::<i32>(["key"]).unwrap_err(),
+        str![[r#"
+could not load Cargo configuration
+
+Caused by:
+  failed to load config include `right.toml` from `[ROOT]/.cargo/config.toml`
+
+Caused by:
+  failed to load config include `shared.toml` from `[ROOT]/.cargo/right.toml`
+
+Caused by:
+  config `include` cycle detected with path `[ROOT]/.cargo/shared.toml`
+"#]],
+    );
+}
+
 #[cargo_test]
 fn cli_include() {
     // Using --config with include.
