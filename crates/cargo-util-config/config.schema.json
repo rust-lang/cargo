@@ -413,6 +413,9 @@
     },
     "Value2": {
       "description": "A type which can be deserialized as a configuration value which records\nwhere it was deserialized from.",
+      "$ref": "#/$defs/BuildTargetConfigInner"
+    },
+    "BuildTargetConfigInner": {
       "oneOf": [
         {
           "type": "object",
