@@ -256,7 +256,7 @@ impl<'a> ConfigLoader<'a> {
 
         for include in &includes {
             let path = &include.path;
-            if Path::new(path.as_str()).extension() != Some(OsStr::new("toml")) {
+            if path.extension() != Some(OsStr::new("toml")) {
                 bail!(
                     "expected a config include path ending with `.toml`, \
                      but found `{}` from `{}`",

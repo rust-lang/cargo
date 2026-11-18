@@ -1017,6 +1017,17 @@ macro_rules! rel_path {
                 &self.0.val
             }
 
+            /// PRIVATE: Not to be made public to ensure people dependent on the base path have resolved first
+            fn as_path(&self) -> &Path {
+                Path::new(self.as_str())
+            }
+
+            /// Returns the [extension](Path::extension) of the configured path as written.
+            pub fn extension(&self) -> Option<&OsStr> {
+                // `as_path` is allowed since this is base-agnostic
+                self.as_path().extension()
+            }
+
             /// Returns where this path was defined.
             pub fn definition(&self) -> &Definition {
                 &self.0.definition
