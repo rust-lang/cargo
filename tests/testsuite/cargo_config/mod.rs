@@ -873,19 +873,19 @@ build.rustflags = [
 # CARGO=[..]
 # CARGO_HOME=[ROOT]/home/.cargo
 
-# [ROOT]/foo/.cargo/nested.toml
-build.rustflags = ["--flag-nested"]
+# [ROOT]/foo/.cargo/config.toml
+build.rustflags = ["--flag-directory"]
+include = ["other.toml", "other2.toml"]
+
+# [ROOT]/foo/.cargo/other2.toml
+build.rustflags = ["--flag-other2"]
 
 # [ROOT]/foo/.cargo/other.toml
 build.rustflags = ["--flag-other"]
 include = ["nested.toml"]
 
-# [ROOT]/foo/.cargo/other2.toml
-build.rustflags = ["--flag-other2"]
-
-# [ROOT]/foo/.cargo/config.toml
-build.rustflags = ["--flag-directory"]
-include = ["other.toml", "other2.toml"]
+# [ROOT]/foo/.cargo/nested.toml
+build.rustflags = ["--flag-nested"]
 
 # [ROOT]/home/.cargo/config.toml
 alias.foo = "abc --xyz"
