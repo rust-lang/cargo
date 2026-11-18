@@ -38,8 +38,8 @@ pub use cargo_util_schemas::manifest::TomlProfiles;
 
 /// Cargo's `.cargo/config.toml` file
 #[cfg(feature = "unstable-schema")]
-#[derive(schemars::JsonSchema)]
-#[schemars(rename_all = "kebab-case")]
+#[derive(Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "kebab-case")]
 pub struct Config {
     pub paths: Option<Vec<ConfigRootRelativePath>>,
     pub target_applies_to_host: Option<bool>,
@@ -67,7 +67,7 @@ pub struct Config {
 
 /// Cargo's `credentials.toml` file
 #[cfg(feature = "unstable-schema")]
-#[derive(schemars::JsonSchema)]
+#[derive(Serialize, schemars::JsonSchema)]
 pub struct Credentials {
     pub registry: Option<RegistryCredential>,
     pub registries: Option<HashMap<String, RegistryCredential>>,
@@ -76,7 +76,7 @@ pub struct Credentials {
 pub type PatchDependency = cargo_util_schemas::manifest::TomlDependency<ConfigRootRelativePath>;
 
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-#[derive(Debug, Default, Deserialize, PartialEq)]
+#[derive(Debug, Default, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub struct CargoCacheConfig {
     /// How often to automatically clean unused cache data.
@@ -92,7 +92,7 @@ pub struct CargoCacheConfig {
 ///
 /// If any of these options are `None`, the built-in default is used.
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-#[derive(Debug, Default, Deserialize, PartialEq)]
+#[derive(Debug, Default, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub struct GlobalCleanConfig {
     /// Anything older than this duration will be deleted in the source cache.
@@ -174,7 +174,7 @@ impl<'de> de::Deserialize<'de> for VersionControl {
 
 /// Definition of a source in a config file.
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct SourceConfigDef {
     /// Indicates this source should be replaced with another of the given name.
@@ -196,8 +196,8 @@ pub struct SourceConfigDef {
 }
 
 #[cfg(feature = "unstable-schema")]
-#[derive(schemars::JsonSchema)]
-#[schemars(rename_all = "kebab-case")]
+#[derive(Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "kebab-case")]
 pub struct DocConfig {
     pub browser: Option<PathAndArgs>,
     pub extern_map: Option<RustdocExternMap>,
@@ -208,7 +208,7 @@ pub struct DocConfig {
 ///
 /// [1]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#rustdoc-map
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-#[derive(serde::Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 #[serde(default)]
 pub struct RustdocExternMap {
     #[serde(deserialize_with = "default_crates_io_to_docs_rs")]
@@ -309,7 +309,7 @@ impl<'de> serde::de::Deserialize<'de> for RustdocExternMode {
 /// ssl-version = "tlsv1.3"
 /// ```
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-#[derive(Debug, Default, Deserialize, PartialEq)]
+#[derive(Debug, Default, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub struct CargoHttpConfig {
     pub proxy: Option<String>,
@@ -333,14 +333,14 @@ pub struct CargoHttpConfig {
 /// frequency = "always"
 /// ```
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-#[derive(Debug, Default, Deserialize, PartialEq)]
+#[derive(Debug, Default, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub struct CargoFutureIncompatConfig {
     frequency: Option<CargoFutureIncompatFrequencyConfig>,
 }
 
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-#[derive(Debug, Default, Deserialize, PartialEq)]
+#[derive(Debug, Default, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub enum CargoFutureIncompatFrequencyConfig {
     #[default]
@@ -432,7 +432,7 @@ pub struct SslVersionConfigRange {
 /// git-fetch-with-cli = true
 /// ```
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct CargoNetConfig {
     pub retry: Option<u32>,
@@ -442,7 +442,7 @@ pub struct CargoNetConfig {
 }
 
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct CargoSshConfig {
     pub known_hosts: Option<Vec<Value<String>>>,
@@ -493,7 +493,7 @@ impl<'de> Deserialize<'de> for JobsConfig {
 /// incremental = true
 /// ```
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct CargoBuildConfig {
     // deprecated, but preserved for compatibility
@@ -524,7 +524,7 @@ pub struct CargoBuildConfig {
 
 /// Metrics collection for build analysis.
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Serialize, Default)]
 #[serde(rename_all = "kebab-case")]
 pub struct CargoBuildAnalysis {
     pub enabled: bool,
@@ -532,7 +532,7 @@ pub struct CargoBuildAnalysis {
 
 /// Whether warnings should warn, be allowed, or cause an error.
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Deserialize, Default)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Deserialize, Serialize, Default)]
 #[serde(rename_all = "kebab-case")]
 pub enum WarningHandling {
     #[default]
@@ -570,7 +570,7 @@ impl std::fmt::Display for FingerprintMethod {
 
 /// Configuration for `build.build-std`.
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct BuildStdConfig {
     pub when: Option<BuildStdWhen>,
@@ -579,7 +579,7 @@ pub struct BuildStdConfig {
 
 /// When to build the standard library.
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub enum BuildStdWhen {
     Never,
@@ -630,7 +630,7 @@ impl<'de> Deserialize<'de> for BuildStdCrates {
 /// target = ["a", "b"]
 /// ```
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(transparent)]
 pub struct BuildTargetConfig {
     inner: Value<BuildTargetConfigInner>,
@@ -695,7 +695,7 @@ impl BuildTargetConfig {
 /// lockfile-path = "my/Cargo.lock"
 /// ```
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct CargoResolverConfig {
     pub incompatible_rust_versions: Option<IncompatibleRustVersions>,
@@ -705,7 +705,7 @@ pub struct CargoResolverConfig {
 }
 
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub enum IncompatibleRustVersions {
     Allow,
@@ -713,7 +713,7 @@ pub enum IncompatibleRustVersions {
 }
 
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub enum IncompatiblePublishAge {
     Allow,
@@ -721,7 +721,7 @@ pub enum IncompatiblePublishAge {
 }
 
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-#[derive(Copy, Clone, Debug, Deserialize)]
+#[derive(Copy, Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum FeatureUnification {
     Package,
@@ -741,7 +741,7 @@ pub enum FeatureUnification {
 /// progress.when = "auto"
 /// ```
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Serialize, Default)]
 #[serde(rename_all = "kebab-case")]
 pub struct TermConfig {
     pub verbose: Option<bool>,
@@ -896,7 +896,7 @@ impl<'de> Deserialize<'de> for EnvConfigValueInner {
 /// BAZ = { value = "override", force = true }
 /// ```
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(transparent)]
 pub struct EnvConfigValue {
     inner: EnvConfigValueInner,
@@ -938,7 +938,7 @@ pub type EnvConfig = HashMap<String, EnvConfigValue>;
 
 /// Credentials for a registry.
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-#[derive(Clone, Debug, Default, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct RegistryCredential {
     #[cfg_attr(feature = "unstable-schema", schemars(with = "Option<String>"))]
@@ -949,7 +949,7 @@ pub struct RegistryCredential {
 ///
 /// The values here should be kept in sync with `GlobalRegistryConfig`
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct RegistryConfig {
     pub index: Option<String>,
@@ -968,7 +968,7 @@ pub struct RegistryConfig {
 /// Note: nesting `RegistryConfig` inside this struct and using `serde(flatten)` *should* work
 /// but fails with "invalid type: sequence, expected a value" when attempting to deserialize.
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct GlobalRegistryConfig {
     pub index: Option<String>,
@@ -1245,7 +1245,7 @@ impl PathAndArgs {
 /// ```
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 #[cfg_attr(feature = "unstable-schema", schemars(extend("type" = ["array", "string"])))]
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct StringList(Vec<String>);
 
 impl StringList {
