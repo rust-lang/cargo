@@ -823,12 +823,15 @@ impl<'de> Deserialize<'de> for ProgressConfig {
 }
 
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
 enum EnvConfigValueInner {
     Simple(String),
     WithOptions {
         value: ConfigRootRelativePath,
+        #[serde(default)]
         force: bool,
+        #[serde(default)]
         relative: bool,
     },
 }
@@ -999,7 +1002,7 @@ macro_rules! rel_path {
     ($name:ident) => {
         /// A path, potentially relative to the config, not current_dir
         #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-        #[derive(Debug, Deserialize, PartialEq, Clone)]
+        #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
         #[serde(transparent)]
         pub struct $name(Value<String>);
 

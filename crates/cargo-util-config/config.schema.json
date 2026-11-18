@@ -739,46 +739,28 @@
       "$ref": "#/$defs/EnvConfigValueInner"
     },
     "EnvConfigValueInner": {
-      "oneOf": [
+      "anyOf": [
         {
-          "type": "object",
-          "properties": {
-            "Simple": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "Simple"
-          ],
-          "additionalProperties": false
+          "type": "string"
         },
         {
           "type": "object",
           "properties": {
-            "WithOptions": {
-              "type": "object",
-              "properties": {
-                "value": {
-                  "$ref": "#/$defs/ConfigRootRelativePath"
-                },
-                "force": {
-                  "type": "boolean"
-                },
-                "relative": {
-                  "type": "boolean"
-                }
-              },
-              "required": [
-                "value",
-                "force",
-                "relative"
-              ]
+            "value": {
+              "$ref": "#/$defs/ConfigRootRelativePath"
+            },
+            "force": {
+              "type": "boolean",
+              "default": false
+            },
+            "relative": {
+              "type": "boolean",
+              "default": false
             }
           },
           "required": [
-            "WithOptions"
-          ],
-          "additionalProperties": false
+            "value"
+          ]
         }
       ]
     },
