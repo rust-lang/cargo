@@ -3293,7 +3293,10 @@ fn checkout_long_path() {
         .build();
     let repo = git::init(&git_project.root());
     // libgit2 won't add the long path to the index on Windows without this.
-    t!(t!(repo.config()).set_bool("core.longpaths", true));
+    repo.config()
+        .unwrap()
+        .set_bool("core.longpaths", true)
+        .unwrap();
     git::add(&repo);
     git::commit(&repo);
 
@@ -3318,17 +3321,22 @@ fn checkout_long_path() {
 
     p.cargo("fetch").run();
 
-    let mut co_paths = t!(glob::glob(
+    let mut co_paths = glob::glob(
         paths::home()
             .join(".cargo/git/checkouts/dep1-*/*")
             .to_str()
-            .unwrap()
-    ));
+            .unwrap(),
+    )
+    .unwrap();
     let co_path = co_paths.next().unwrap().unwrap();
     assert!(co_path.join(&long_path).is_file());
-    let co_repo = t!(git2::Repository::open(&co_path));
-    let co_config = t!(t!(co_repo.config()).open_level(git2::ConfigLevel::Local));
-    assert!(t!(co_config.get_bool("core.longpaths")));
+    let co_repo = git2::Repository::open(&co_path).unwrap();
+    let co_config = co_repo
+        .config()
+        .unwrap()
+        .open_level(git2::ConfigLevel::Local)
+        .unwrap();
+    assert!(co_config.get_bool("core.longpaths").unwrap());
 }
 
 #[cargo_test]
@@ -3339,7 +3347,11 @@ fn checkout_long_path_in_submodule() {
     let git_project2 = project().at("dep2").file(&long_path, "").build();
     let repo2 = git::init(&git_project2.root());
     // libgit2 won't add the long path to the index on Windows without this.
-    t!(t!(repo2.config()).set_bool("core.longpaths", true));
+    repo2
+        .config()
+        .unwrap()
+        .set_bool("core.longpaths", true)
+        .unwrap();
     git::add(&repo2);
     git::commit(&repo2);
 
@@ -3350,14 +3362,20 @@ fn checkout_long_path_in_submodule() {
     });
     // Like `git::add_submodule`, but the submodule needs `core.longpaths` before its checkout.
     let url = git_project2.url().to_string();
-    let mut submodule = t!(repo.submodule(&url, Path::new("dep2"), false));
-    let subrepo = t!(submodule.open());
-    t!(t!(subrepo.config()).set_bool("core.longpaths", true));
-    t!(subrepo.remote_add_fetch("origin", "refs/heads/*:refs/heads/*"));
-    let mut origin = t!(subrepo.find_remote("origin"));
-    t!(origin.fetch(&Vec::<String>::new(), None, None));
-    t!(subrepo.checkout_head(None));
-    t!(submodule.add_finalize());
+    let mut submodule = repo.submodule(&url, Path::new("dep2"), false).unwrap();
+    let subrepo = submodule.open().unwrap();
+    subrepo
+        .config()
+        .unwrap()
+        .set_bool("core.longpaths", true)
+        .unwrap();
+    subrepo
+        .remote_add_fetch("origin", "refs/heads/*:refs/heads/*")
+        .unwrap();
+    let mut origin = subrepo.find_remote("origin").unwrap();
+    origin.fetch(&Vec::<String>::new(), None, None).unwrap();
+    subrepo.checkout_head(None).unwrap();
+    submodule.add_finalize().unwrap();
     git::commit(&repo);
 
     let p = project()
@@ -3381,17 +3399,22 @@ fn checkout_long_path_in_submodule() {
 
     p.cargo("fetch").run();
 
-    let mut co_paths = t!(glob::glob(
+    let mut co_paths = glob::glob(
         paths::home()
             .join(".cargo/git/checkouts/dep1-*/*")
             .to_str()
-            .unwrap()
-    ));
+            .unwrap(),
+    )
+    .unwrap();
     let co_path = co_paths.next().unwrap().unwrap().join("dep2");
     assert!(co_path.join(&long_path).is_file());
-    let co_repo = t!(git2::Repository::open(&co_path));
-    let co_config = t!(t!(co_repo.config()).open_level(git2::ConfigLevel::Local));
-    assert!(t!(co_config.get_bool("core.longpaths")));
+    let co_repo = git2::Repository::open(&co_path).unwrap();
+    let co_config = co_repo
+        .config()
+        .unwrap()
+        .open_level(git2::ConfigLevel::Local)
+        .unwrap();
+    assert!(co_config.get_bool("core.longpaths").unwrap());
 }
 
 #[cargo_test(requires = "git")]
