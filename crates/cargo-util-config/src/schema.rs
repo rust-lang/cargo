@@ -108,15 +108,13 @@ pub struct GlobalCleanConfig {
 }
 
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct CargoNewConfig {
     #[deprecated = "cargo-new no longer supports adding the authors field"]
-    #[expect(dead_code, reason = "deprecated")]
     name: Option<String>,
 
     #[deprecated = "cargo-new no longer supports adding the authors field"]
-    #[expect(dead_code, reason = "deprecated")]
     email: Option<String>,
 
     #[serde(rename = "vcs")]
