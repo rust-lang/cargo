@@ -1038,12 +1038,8 @@ impl GlobalContext {
     }
 
     pub(crate) fn config_loader(&self) -> ConfigLoader<'_> {
-        ConfigLoader::new(
-            &self.shell,
-            &self.cwd,
-            self.home_path.as_path_unlocked(),
-            self.search_stop_path.as_deref(),
-        )
+        ConfigLoader::new(&self.shell, &self.cwd, self.home_path.as_path_unlocked())
+            .search_stop_path(self.search_stop_path.as_deref())
     }
 
     /// Gets the index for a registry.

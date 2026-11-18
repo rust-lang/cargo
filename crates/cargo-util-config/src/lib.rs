@@ -17,10 +17,8 @@
 //! # std::path::PathBuf::from("/nonexistent/project");
 //! let cargo_home = // ...
 //! # std::path::PathBuf::from("/nonexistent/cargo-home");
-//! let search_stop_path = // ...
-//! # Some(cwd.as_path());
 //!
-//! let loader = cargo_util_config::ConfigLoader::new(&shell, &cwd, &cargo_home, search_stop_path);
+//! let loader = cargo_util_config::ConfigLoader::new(&shell, &cwd, &cargo_home);
 //! let layers = loader.load_unmerged_from(&cwd)?;
 //! let config = cargo_util_config::ConfigStore::from_layers(layers)?;
 //! let env = // ...

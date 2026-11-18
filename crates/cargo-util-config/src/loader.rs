@@ -33,18 +33,22 @@ pub struct ConfigLoader<'a> {
 }
 
 impl<'a> ConfigLoader<'a> {
-    pub fn new(
-        shell: &'a Mutex<Shell>,
-        cwd: &'a Path,
-        home: &'a Path,
-        search_stop_path: Option<&'a Path>,
-    ) -> Self {
+    pub fn new(shell: &'a Mutex<Shell>, cwd: &'a Path, home: &'a Path) -> Self {
         Self {
             shell,
             cwd,
             home,
-            search_stop_path,
+            search_stop_path: None,
         }
+    }
+
+    /// Sets a path where ancestor config file discovery will stop.
+    ///
+    /// The given path is included.
+    #[must_use]
+    pub fn search_stop_path(mut self, path: Option<&'a Path>) -> Self {
+        self.search_stop_path = path;
+        self
     }
 
     /// Discovers config files from a path without merging config values.
