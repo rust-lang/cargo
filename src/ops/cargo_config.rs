@@ -58,7 +58,7 @@ pub fn get(gctx: &GlobalContext, opts: &GetOptions<'_>) -> CargoResult<()> {
         );
     }
     let key = match opts.key {
-        Some(key) => ConfigKey::from_str(key),
+        Some(key) => key.parse()?,
         None => ConfigKey::new(),
     };
     if opts.merged {

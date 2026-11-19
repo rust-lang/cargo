@@ -37,18 +37,6 @@ impl ConfigKey {
     ///
     /// The `key` specified is expected to be a period-separated toml
     /// configuration key.
-    pub fn from_str(key: &str) -> ConfigKey {
-        let mut cfg = ConfigKey::new();
-        for part in key.split('.') {
-            cfg.push(part);
-        }
-        cfg
-    }
-
-    /// Creates a `ConfigKey` from the `key` specified.
-    ///
-    /// The `key` specified is expected to be a period-separated toml
-    /// configuration key.
     pub fn from_parts(parts: impl IntoIterator<Item = impl AsRef<str>>) -> ConfigKey {
         let mut cfg = ConfigKey::new();
         for part in parts {
@@ -114,6 +102,15 @@ impl ConfigKey {
             .split('.')
             .all(|pat| parts.next() == Some(pat) || pat == "*")
             && parts.next().is_none()
+    }
+}
+
+impl std::str::FromStr for ConfigKey {
+    type Err = std::convert::Infallible;
+
+    /// Creates a configuration key by splitting the input on periods.
+    fn from_str(key: &str) -> Result<Self, Self::Err> {
+        Ok(Self::from_parts(key.split('.')))
     }
 }
 
@@ -196,7 +193,7 @@ mod tests {
 
     #[test]
     fn array_item_key_path_display() {
-        let base = ConfigKey::from_str("array");
+        let base = "array".parse::<ConfigKey>().unwrap();
         let mut key_path = ArrayItemKeyPath::new(base);
         // These are pushed in reverse order.
         key_path.push_index(1);
