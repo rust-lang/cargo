@@ -46,6 +46,7 @@ mod lto;
 mod output_depinfo;
 mod output_sbom;
 pub mod rustdoc;
+pub(crate) mod shared_storage;
 pub mod standard_lib;
 pub mod timings;
 pub(crate) mod trim_paths;
@@ -54,6 +55,7 @@ pub mod unit_dependencies;
 pub mod unit_graph;
 pub mod unused_deps;
 
+use crate::compiler::shared_storage::SharedStorage;
 use cargo_util::collections::{HashMap, HashSet};
 use std::borrow::Cow;
 use std::cell::OnceCell;
@@ -261,6 +263,24 @@ fn compile<'gctx>(
                 // Need to link targets on both the dirty and fresh.
                 work.then(link_targets(build_runner, unit, true)?)
             });
+
+            if should_dedup_out_dir(build_runner, unit)
+                && let Some(shared_storage) = build_runner.files().shared_storage()
+            {
+                let out_dir = build_runner.files().out_dir_new_layout(unit);
+
+                let add_deduplicate_step = |job: &mut Job| {
+                    let shared_storage = shared_storage.clone();
+                    job.after(Work::new(move |_state| {
+                        deduplicate_out_dir(&out_dir, &shared_storage);
+                        Ok(())
+                    }));
+                };
+
+                if job.freshness().is_dirty() {
+                    add_deduplicate_step(&mut job);
+                }
+            }
 
             // If -Zfine-grain-locking is enabled, we wrap the job with an upgrade to exclusive
             // lock before starting, then downgrade to a shared lock after the job is finished.
@@ -674,6 +694,30 @@ fn downgrade_lock_to_shared(lock: LockKey) -> Work {
         state.downgrade_to_shared(&lock)?;
         Ok(())
     })
+}
+
+fn should_dedup_out_dir(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> bool {
+    build_runner.bcx.gctx.cli_unstable().build_dir_new_layout
+        && build_runner.bcx.gctx.cli_unstable().shared_object_storage
+        // We don't deduplicate local units as they are more likely to change frequently
+        // leaving behind objects that will likely never be used again.
+        && !unit.is_local()
+        // We also do not deduplicate build script run outputs as we don't wipe the OUT_DIR
+        // so its possible a build script could edit a file from a previous run.
+        // If the filesystem does not support reflinks, that would poison the object storage
+        // by write to it through a hardlink.
+        && !unit.mode.is_run_custom_build()
+}
+
+#[tracing::instrument(skip_all)]
+fn deduplicate_out_dir(out_dir: &Path, shared_storage: &SharedStorage) {
+    match shared_storage.insert_or_dedup_out_dir(out_dir) {
+        Ok(()) => {}
+        Err(err) => {
+            // couldn't deduplicate, but we can continue the build
+            debug!(?out_dir, ?err, "failed to insert file into object storage");
+        }
+    }
 }
 
 /// Link the compiled target (often of form `foo-{metadata_hash}`) to the

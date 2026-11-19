@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::prelude::*;
 use cargo_test_support::paths::ReadOnly;
@@ -81,12 +81,44 @@ fn should_deduplicate_basic_rustc_artifacts() {
         .file("src/lib.rs", "")
         .build();
 
+    let verify_files_deduplicated = || {
+        for extension in ["rlib", "rmeta"] {
+            let artifact = p
+                .glob(&format!(
+                    "target/debug/build/bar/*/out/libbar-*.{extension}"
+                ))
+                .next()
+                .unwrap()
+                .unwrap();
+            let contents = t!(fs::read(&artifact));
+            let hash = blake3::hash(&contents).to_hex();
+            let object = object(hash.as_str());
+            assert!(object.is_file(), "missing object: {}", object.display());
+            assert_eq!(t!(fs::read(&object)), contents);
+            assert_linked(&artifact, &object);
+        }
+    };
+
+    // Build and verify the files are deduplicated.
+    // Then clean and reverify the files are deduplicated from the previous run.
+
     p.cargo("build")
+        .env("__CARGO_TEST_SHARED_STORAGE_FORCE_HARDLINK", "1")
         .arg("-Zshared-object-storage")
         .masquerade_as_nightly_cargo(&["shared-object-storage"])
         .run();
 
-    assert!(!shared_storage().exists());
+    verify_files_deduplicated();
+
+    p.cargo("clean").run();
+
+    p.cargo("build")
+        .env("__CARGO_TEST_SHARED_STORAGE_FORCE_HARDLINK", "1")
+        .arg("-Zshared-object-storage")
+        .masquerade_as_nightly_cargo(&["shared-object-storage"])
+        .run();
+
+    verify_files_deduplicated();
 }
 
 #[cargo_test]
@@ -126,7 +158,7 @@ fn stores_dependency_artifact_by_content_hash() {
         .join("objects")
         .join(&hash[..2])
         .join(&hash[2..]);
-    assert!(!object.exists());
+    assert_eq!(t!(fs::read(object)), contents);
 }
 
 #[cargo_test]
@@ -227,7 +259,10 @@ fn skips_shared_storage_on_different_filesystems() {
         .masquerade_as_nightly_cargo(&["shared-object-storage"])
         .run();
 
-    assert!(!shared_storage().exists());
+    assert!(
+        shared_storage().read_dir().unwrap().next().is_none(),
+        "expected empty shared storage"
+    );
 }
 
 #[cargo_test]
@@ -287,10 +322,40 @@ fn should_not_deduplicate_build_script_outputs() {
             .unwrap()
             .unwrap();
         assert_eq!(std::fs::read_to_string(&output).unwrap(), expected);
-        assert!(!shared_storage().exists());
+        let hash = blake3::hash(expected.as_bytes()).to_hex();
+        assert!(!object(hash.as_str()).exists());
+
+        // Compiled artifacts are still eligible for object storage.
+        let artifact = p
+            .glob("target/debug/build/bar/*/out/libbar-*.rlib")
+            .next()
+            .unwrap()
+            .unwrap();
+        let contents = t!(fs::read(&artifact));
+        let hash = blake3::hash(&contents).to_hex();
+        assert_linked(&artifact, object(hash.as_str()));
     }
 }
 
 fn shared_storage() -> PathBuf {
     paths::home().join(".cargo/storage/v1")
+}
+
+fn object(hash: &str) -> PathBuf {
+    shared_storage()
+        .join("objects")
+        .join(&hash[..2])
+        .join(&hash[2..])
+}
+
+#[track_caller]
+fn assert_linked(a: impl AsRef<Path>, b: impl AsRef<Path>) {
+    let a = a.as_ref();
+    let b = b.as_ref();
+    assert!(
+        same_file::is_same_file(a, b).expect("failed to compare file identities"),
+        "{} and {} are not hardlinked",
+        a.display(),
+        b.display()
+    );
 }

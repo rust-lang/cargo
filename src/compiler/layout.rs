@@ -519,3 +519,24 @@ impl BuildDirLayout {
         Ok(&self.tmp)
     }
 }
+
+pub struct SharedStorageLayout {
+    /// Content addressed files partitioned by `hash[..2]/hash[2..]`.
+    pub objects: PathBuf,
+    /// Staging area for files being inserted into `objects`.
+    pub staging: PathBuf,
+}
+
+impl SharedStorageLayout {
+    pub fn new(root: &Path) -> Self {
+        Self {
+            objects: root.join("objects"),
+            staging: root.join(".staging"),
+        }
+    }
+
+    /// Returns the path of the object with the given hex encoded hash.
+    pub fn object(&self, hash: &str) -> PathBuf {
+        self.objects.join(&hash[..2]).join(&hash[2..])
+    }
+}
