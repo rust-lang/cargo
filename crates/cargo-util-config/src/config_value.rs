@@ -13,7 +13,7 @@ use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
 
-use super::key::{KeyOrIdx, escape_key_part};
+use super::key::KeyOrIdx;
 use super::{ConfigKey, Definition};
 
 use self::ConfigValue as CV;
@@ -69,17 +69,19 @@ impl fmt::Debug for ConfigValue {
 
 impl ConfigValue {
     pub fn from_toml(def: Definition, toml: toml::Value) -> Result<ConfigValue> {
+        use toml_writer::TomlWrite as _;
+
         let mut error_path = Vec::new();
         Self::from_toml_inner(def, toml, &mut error_path).with_context(|| {
             let mut it = error_path.iter().rev().peekable();
             let mut key_path = String::with_capacity(error_path.len() * 3);
             while let Some(k) = it.next() {
                 match k {
-                    KeyOrIdx::Key(s) => key_path.push_str(&escape_key_part(&s)),
+                    KeyOrIdx::Key(s) => key_path.key(s).unwrap(),
                     KeyOrIdx::Idx(i) => key_path.push_str(&format!("[{i}]")),
                 }
                 if matches!(it.peek(), Some(KeyOrIdx::Key(_))) {
-                    key_path.push('.');
+                    key_path.key_sep().unwrap();
                 }
             }
             format!("failed to parse config at `{key_path}`")

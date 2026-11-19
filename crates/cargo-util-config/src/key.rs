@@ -1,6 +1,8 @@
 use std::borrow::Cow;
 use std::fmt;
 
+use toml_writer::TomlWrite as _;
+
 /// Key for a configuration variable.
 ///
 /// This type represents a configuration variable that we're looking up in
@@ -31,18 +33,6 @@ impl ConfigKey {
             env: "CARGO".to_string(),
             parts: Vec::new(),
         }
-    }
-
-    /// Creates a `ConfigKey` from the `key` specified.
-    ///
-    /// The `key` specified is expected to be a period-separated toml
-    /// configuration key.
-    pub fn from_str(key: &str) -> ConfigKey {
-        let mut cfg = ConfigKey::new();
-        for part in key.split('.') {
-            cfg.push(part);
-        }
-        cfg
     }
 
     /// Creates a `ConfigKey` from the `key` specified.
@@ -117,10 +107,43 @@ impl ConfigKey {
     }
 }
 
+impl std::str::FromStr for ConfigKey {
+    type Err = anyhow::Error;
+
+    /// Parse a `ConfigKey` as a TOML key
+    fn from_str(key: &str) -> Result<Self, Self::Err> {
+        use toml_parser::parser::{EventKind, parse_key};
+
+        let source = toml_parser::Source::new(key);
+        let tokens = source.lex().into_vec();
+        let mut events = Vec::new();
+        let mut error = None;
+        parse_key(&tokens, &mut events, &mut error);
+
+        let mut result = Self::new();
+        for event in events {
+            if event.kind() == EventKind::SimpleKey {
+                let mut part = Cow::Borrowed("");
+                source.get(event).unwrap().decode_key(&mut part, &mut error);
+                result.push(&part);
+            }
+        }
+        if let Some(error) = error {
+            anyhow::bail!("invalid config key `{key}`: {}", error.description());
+        }
+        Ok(result)
+    }
+}
+
 impl fmt::Display for ConfigKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let parts: Vec<_> = self.parts().map(|part| escape_key_part(part)).collect();
-        parts.join(".").fmt(f)
+        for (i, part) in self.parts().enumerate() {
+            if i != 0 {
+                f.key_sep()?;
+            }
+            f.key(part)?;
+        }
+        Ok(())
     }
 }
 
@@ -162,8 +185,8 @@ impl fmt::Display for ArrayItemKeyPath {
         for k in self.path.iter().rev() {
             match k {
                 KeyOrIdx::Key(s) => {
-                    f.write_str(".")?;
-                    f.write_str(&escape_key_part(&s))?;
+                    f.key_sep()?;
+                    f.key(s)?;
                 }
                 KeyOrIdx::Idx(i) => {
                     write!(f, "[{i}]")?;
@@ -171,19 +194,6 @@ impl fmt::Display for ArrayItemKeyPath {
             }
         }
         Ok(())
-    }
-}
-
-pub(super) fn escape_key_part<'a>(part: &'a str) -> Cow<'a, str> {
-    let ok = part.chars().all(|c| {
-        matches!(c,
-        'a'..='z' | 'A'..='Z' | '0'..='9' | '-' | '_')
-    });
-    if ok {
-        Cow::Borrowed(part)
-    } else {
-        // This is a bit messy, but toml doesn't expose a function to do this.
-        Cow::Owned(toml::Value::from(part).to_string())
     }
 }
 
@@ -195,8 +205,56 @@ mod tests {
     use super::*;
 
     #[test]
+    fn parse_quoted_key_parts() {
+        let key = r#"target . 'a.b' . "c\u002Ed" . ''"#.parse::<ConfigKey>().unwrap();
+        assert_eq!(
+            key.parts().collect::<Vec<_>>(),
+            ["target", "a.b", "c.d", ""]
+        );
+    }
+
+    #[test]
+    fn reject_invalid_keys() {
+        use snapbox::IntoData as _;
+
+        for (key, expected) in [
+            (
+                "",
+                str!["invalid config key ``: unquoted keys cannot be empty"],
+            ),
+            (
+                ".a",
+                str!["invalid config key `.a`: unquoted keys cannot be empty"],
+            ),
+            (
+                "a.",
+                str!["invalid config key `a.`: unquoted keys cannot be empty"],
+            ),
+            (
+                "a..b",
+                str!["invalid config key `a..b`: unquoted keys cannot be empty"],
+            ),
+            ("a b", str!["invalid config key `a b`: unexpected content"]),
+            ("a=b", str!["invalid config key `a=b`: unexpected content"]),
+            (
+                "'unclosed",
+                str!["invalid config key `'unclosed`: invalid literal string"],
+            ),
+            (
+                r#""bad\q""#,
+                str![[r#"invalid config key `"bad\q"`: missing escaped value"#]],
+            ),
+        ] {
+            assert_data_eq!(
+                key.parse::<ConfigKey>().unwrap_err().to_string(),
+                expected.raw()
+            );
+        }
+    }
+
+    #[test]
     fn array_item_key_path_display() {
-        let base = ConfigKey::from_str("array");
+        let base = "array".parse::<ConfigKey>().unwrap();
         let mut key_path = ArrayItemKeyPath::new(base);
         // These are pushed in reverse order.
         key_path.push_index(1);
