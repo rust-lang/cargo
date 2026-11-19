@@ -310,6 +310,54 @@ Caused by:
 }
 
 #[cargo_test]
+fn merge_failed_between_file_and_include() {
+    write_config_at(
+        ".cargo/config.toml",
+        "
+        include = ['other.toml']
+        foo = ['a']
+        ",
+    );
+    write_config_at(".cargo/other.toml", "foo = 'b'");
+    let gctx = GlobalContextBuilder::new().build();
+    assert_error(
+        gctx.get::<i32>(["foo"]).unwrap_err(),
+        str![[r#"
+could not load Cargo configuration
+
+Caused by:
+  failed to merge key `foo` between [ROOT]/.cargo/other.toml and [ROOT]/.cargo/config.toml
+
+Caused by:
+  failed to merge config value from `[ROOT]/.cargo/config.toml` into `[ROOT]/.cargo/other.toml`: expected string, but found array
+"#]],
+    );
+}
+
+#[cargo_test]
+fn merge_failed_between_includes() {
+    write_config_at(".cargo/config.toml", "include = ['one.toml', 'two.toml']");
+    write_config_at(".cargo/one.toml", "foo = ['a']");
+    write_config_at(".cargo/two.toml", "foo = 'b'");
+    let gctx = GlobalContextBuilder::new().build();
+    assert_error(
+        gctx.get::<i32>(["foo"]).unwrap_err(),
+        str![[r#"
+could not load Cargo configuration
+
+Caused by:
+  failed to load config include `two.toml` from `[ROOT]/.cargo/config.toml`
+
+Caused by:
+  failed to merge key `foo` between [ROOT]/.cargo/one.toml and [ROOT]/.cargo/two.toml
+
+Caused by:
+  failed to merge config value from `[ROOT]/.cargo/two.toml` into `[ROOT]/.cargo/one.toml`: expected array, but found string
+"#]],
+    );
+}
+
+#[cargo_test]
 fn cli_include() {
     // Using --config with include.
     // CLI takes priority over files.

@@ -1346,9 +1346,6 @@ fn table_merge_failure() {
 could not load Cargo configuration
 
 Caused by:
-  failed to merge configuration at `[ROOT]/.cargo/config.toml`
-
-Caused by:
   failed to merge key `table` between [ROOT]/foo/.cargo/config.toml and [ROOT]/.cargo/config.toml
 
 Caused by:
