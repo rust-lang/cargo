@@ -484,13 +484,25 @@ a.b = "c"` includes non-whitespace decoration
 
     let gctx = GlobalContextBuilder::new()
         .config_arg("a.b = \"c\"\n# exactly")
-        .build();
-    assert_eq!(gctx.get::<String>(["a", "b"]).unwrap(), "c");
+        .build_err();
+    assert_error(
+        gctx.unwrap_err(),
+        str![[r#"
+--config argument `a.b = "c"
+# exactly` includes non-whitespace decoration
+"#]],
+    );
 
     let gctx = GlobalContextBuilder::new()
         .config_arg("a.b = [\"c\", # exactly\n]")
-        .build();
-    assert_eq!(gctx.get::<Vec<String>>(["a", "b"]).unwrap(), ["c"]);
+        .build_err();
+    assert_error(
+        gctx.unwrap_err(),
+        str![[r#"
+--config argument `a.b = ["c", # exactly
+]` includes non-whitespace decoration
+"#]],
+    );
 }
 
 #[cargo_test]

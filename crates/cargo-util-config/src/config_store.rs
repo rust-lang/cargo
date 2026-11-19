@@ -2,9 +2,6 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context as _, Result, bail};
-use serde::Deserialize;
-use serde::de::IntoDeserializer as _;
-use toml_edit::Item;
 
 use super::{ConfigKey, ConfigValue, Definition, DefinitionKind, MergePriority};
 use cargo_util::collections::{BuildHasher, HashMap};
@@ -68,9 +65,12 @@ impl ConfigStore {
 
     /// Parses a single inline `KEY=VALUE` argument into a configuration layer.
     pub fn parse_cli_key_value(arg: &str) -> Result<Self> {
-        let doc = toml_dotted_keys(arg)?;
-        let doc: toml::Value = toml::Value::deserialize(doc.into_deserializer())
-            .with_context(|| format!("failed to parse value from --config argument `{arg}`"))?;
+        let doc = arg.parse::<toml::Table>().with_context(|| {
+            format!(
+                "failed to parse value from --config argument `{arg}` as a dotted key expression"
+            )
+        })?;
+        validate_cli_key_value(arg)?;
 
         if doc
             .get("registry")
@@ -90,7 +90,7 @@ impl ConfigStore {
             );
         }
 
-        let table = CV::from_toml(Definition::Cli(None), doc)
+        let table = CV::from_toml(Definition::Cli(None), toml::Value::Table(doc))
             .with_context(|| format!("failed to convert --config argument `{arg}`"))?;
         Ok(Self::from_table_value(table).unwrap())
     }
@@ -172,84 +172,70 @@ impl ConfigStore {
     }
 }
 
-fn toml_dotted_keys(arg: &str) -> Result<toml_edit::DocumentMut> {
-    // We only want to allow "dotted key" (see https://toml.io/en/v1.0.0#keys)
-    // expressions followed by a value that's not an "inline table"
-    // (https://toml.io/en/v1.0.0#inline-table). Easiest way to check for that is to
-    // parse the value as a toml_edit::DocumentMut, and check that the (single)
-    // inner-most table is set via dotted keys.
-    let doc: toml_edit::DocumentMut = arg.parse().with_context(|| {
-        format!("failed to parse value from --config argument `{arg}` as a dotted key expression")
-    })?;
-    fn non_empty(d: Option<&toml_edit::RawString>) -> bool {
-        d.map_or(false, |p| !p.as_str().unwrap_or_default().trim().is_empty())
-    }
-    fn non_empty_decor(d: &toml_edit::Decor) -> bool {
-        non_empty(d.prefix()) || non_empty(d.suffix())
-    }
-    fn non_empty_key_decor(k: &toml_edit::Key) -> bool {
-        non_empty_decor(k.leaf_decor()) || non_empty_decor(k.dotted_decor())
-    }
-    let ok = {
-        let mut got_to_value = false;
-        let mut table = doc.as_table();
-        let mut is_root = true;
-        while table.is_dotted() || is_root {
-            is_root = false;
-            if table.len() != 1 {
-                break;
-            }
-            let (k, n) = table.iter().next().expect("len() == 1 above");
-            match n {
-                Item::Table(nt) => {
-                    if table.key(k).map_or(false, non_empty_key_decor)
-                        || non_empty_decor(nt.decor())
-                    {
-                        bail!(
-                            "--config argument `{arg}` \
-                                includes non-whitespace decoration"
-                        )
-                    }
-                    table = nt;
-                }
-                Item::Value(v) if v.is_inline_table() => {
-                    bail!(
-                        "--config argument `{arg}` \
-                        sets a value to an inline table, which is not accepted"
-                    );
-                }
-                Item::Value(v) => {
-                    if table
-                        .key(k)
-                        .map_or(false, |k| non_empty(k.leaf_decor().prefix()))
-                        || non_empty_decor(v.decor())
-                    {
-                        bail!(
-                            "--config argument `{arg}` \
-                                includes non-whitespace decoration"
-                        )
-                    }
-                    got_to_value = true;
-                    break;
-                }
-                Item::ArrayOfTables(_) => {
-                    bail!(
-                        "--config argument `{arg}` \
-                        sets a value to an array of tables, which is not accepted"
-                    );
-                }
+/// Ensure the correct format of `--config key = value`
+///
+/// We only want to allow "dotted key" (see <https://toml.io/en/v1.0.0#keys>)
+/// expressions followed by a value that's not an [inline table](https://toml.io/en/v1.0.0#inline-table).
+fn validate_cli_key_value(arg: &str) -> Result<()> {
+    use toml_parser::parser::EventKind;
 
-                Item::None => {
-                    bail!("--config argument `{arg}` doesn't provide a value")
-                }
-            }
-        }
-        got_to_value
-    };
-    if !ok {
-        bail!(
+    let invalid_expression = || {
+        anyhow::anyhow!(
             "--config argument `{arg}` was not a TOML dotted key expression (such as `build.jobs = 2`)"
-        );
+        )
+    };
+    let decoration =
+        || anyhow::anyhow!("--config argument `{arg}` includes non-whitespace decoration");
+
+    let tokens = toml_parser::Source::new(arg).lex().into_vec();
+    let mut events = Vec::new();
+    toml_parser::parser::parse_document(&tokens, &mut events, &mut ());
+    let mut events = events
+        .into_iter()
+        .map(|token| token.kind())
+        .filter(|kind| !matches!(*kind, EventKind::Whitespace | EventKind::Newline))
+        .peekable();
+
+    if events.next_if_eq(&EventKind::Comment).is_some() {
+        return Err(decoration());
     }
-    Ok(doc)
+
+    if !events
+        .next_if(|token| matches!(token, EventKind::SimpleKey))
+        .is_some()
+    {
+        return Err(invalid_expression());
+    }
+    while events
+        .next_if(|token| matches!(token, EventKind::KeySep | EventKind::SimpleKey))
+        .is_some()
+    {}
+
+    if !events.next_if_eq(&EventKind::KeyValSep).is_some() {
+        return Err(invalid_expression());
+    }
+
+    let mut array_depth = None::<usize>;
+    while let Some(token) = events.next() {
+        match token {
+            EventKind::StdTableOpen | EventKind::ArrayTableOpen => {
+                return Err(invalid_expression());
+            }
+            EventKind::SimpleKey if array_depth.unwrap_or(0) == 0 => {
+                // Started a new key-value pair
+                return Err(invalid_expression());
+            }
+            EventKind::InlineTableOpen if !array_depth.is_some() => {
+                bail!(
+                    "--config argument `{arg}` sets a value to an inline table, which is not accepted"
+                );
+            }
+            EventKind::ArrayOpen => *array_depth.get_or_insert_default() += 1,
+            EventKind::ArrayClose => *array_depth.get_or_insert_default() -= 1,
+            EventKind::Comment => return Err(decoration()),
+            _ => {}
+        }
+    }
+
+    Ok(())
 }
