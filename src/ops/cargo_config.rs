@@ -234,8 +234,8 @@ fn print_toml_unmerged(
     opts: &GetOptions<'_>,
     key: &ConfigKey,
 ) -> CargoResult<()> {
-    let print_table = |cv: &CV| {
-        drop_println!(gctx, "# {}", cv.definition());
+    let print_table = |def: &Definition, cv: &CV| {
+        drop_println!(gctx, "# {def}");
         print_toml(gctx, opts, &ConfigKey::new(), cv);
         drop_println!(gctx, "");
     };
@@ -274,7 +274,7 @@ fn print_toml_unmerged(
 
     let mut cli_args = gctx.cli_args_to_config()?.into_value();
     if trim_cv(&mut cli_args, key)? {
-        print_table(&cli_args);
+        print_table(&Definition::Cli(None), &cli_args);
     }
 
     // This slurps up some extra env vars that aren't technically part of the
@@ -315,7 +315,7 @@ fn print_toml_unmerged(
     for config in unmerged.into_iter().rev() {
         let mut cv = config.into_value();
         if trim_cv(&mut cv, key)? {
-            print_table(&cv);
+            print_table(cv.definition(), &cv);
         }
     }
     Ok(())
