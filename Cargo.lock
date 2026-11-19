@@ -577,6 +577,7 @@ dependencies = [
  "toml",
  "toml_edit",
  "toml_parser",
+ "toml_writer",
  "tracing",
 ]
 

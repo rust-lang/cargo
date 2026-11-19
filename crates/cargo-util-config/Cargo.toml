@@ -23,6 +23,7 @@ serde-untagged.workspace = true
 toml = { workspace = true, features = ["std", "serde", "parse", "display", "preserve_order"] }
 toml_edit.workspace = true
 toml_parser.workspace = true
+toml_writer.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]

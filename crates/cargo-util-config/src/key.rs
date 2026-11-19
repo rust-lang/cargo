@@ -1,6 +1,8 @@
 use std::borrow::Cow;
 use std::fmt;
 
+use toml_writer::TomlWrite as _;
+
 /// Key for a configuration variable.
 ///
 /// This type represents a configuration variable that we're looking up in
@@ -135,8 +137,13 @@ impl std::str::FromStr for ConfigKey {
 
 impl fmt::Display for ConfigKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let parts: Vec<_> = self.parts().map(|part| escape_key_part(part)).collect();
-        parts.join(".").fmt(f)
+        for (i, part) in self.parts().enumerate() {
+            if i != 0 {
+                f.key_sep()?;
+            }
+            f.key(part)?;
+        }
+        Ok(())
     }
 }
 
@@ -178,8 +185,8 @@ impl fmt::Display for ArrayItemKeyPath {
         for k in self.path.iter().rev() {
             match k {
                 KeyOrIdx::Key(s) => {
-                    f.write_str(".")?;
-                    f.write_str(&escape_key_part(&s))?;
+                    f.key_sep()?;
+                    f.key(s)?;
                 }
                 KeyOrIdx::Idx(i) => {
                     write!(f, "[{i}]")?;
@@ -187,19 +194,6 @@ impl fmt::Display for ArrayItemKeyPath {
             }
         }
         Ok(())
-    }
-}
-
-pub(super) fn escape_key_part<'a>(part: &'a str) -> Cow<'a, str> {
-    let ok = part.chars().all(|c| {
-        matches!(c,
-        'a'..='z' | 'A'..='Z' | '0'..='9' | '-' | '_')
-    });
-    if ok {
-        Cow::Borrowed(part)
-    } else {
-        // This is a bit messy, but toml doesn't expose a function to do this.
-        Cow::Owned(toml::Value::from(part).to_string())
     }
 }
 
