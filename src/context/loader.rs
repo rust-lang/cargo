@@ -17,9 +17,7 @@ use cargo_util_terminal::report::Level;
 
 use super::ConfigStore;
 use super::ConfigValue;
-use super::Definition;
 use super::DefinitionKind;
-use super::MergePriority;
 use super::Value;
 use crate::util::errors::CargoResult;
 use crate::util::restricted_names::is_glob_pattern;
@@ -209,9 +207,7 @@ impl<'a> ConfigLoader<'a> {
 
     /// Parses the CLI config args and returns them as a table.
     pub(crate) fn load_cli_args(&self, cli_args: &[String]) -> CargoResult<ConfigStore> {
-        let mut loaded_args =
-            ConfigStore::from_table_value(CV::Table(HashMap::default(), Definition::Cli(None)))
-                .unwrap();
+        let mut loaded_args = ConfigStore::default();
         let mut seen = HashSet::default();
         for arg in cli_args {
             let mut layers = Vec::new();
@@ -233,12 +229,8 @@ impl<'a> ConfigLoader<'a> {
                 .context("failed to load --config include".to_string())?;
                 layers.push(config);
             }
-            for mut layer in layers {
-                layer.values_mut().remove("include");
-                loaded_args
-                    .merge(layer, MergePriority::From)
-                    .with_context(|| format!("failed to merge --config argument `{arg}`"))?;
-            }
+            loaded_args = ConfigStore::from_layers(std::iter::once(loaded_args).chain(layers))
+                .with_context(|| format!("failed to merge --config argument `{arg}`"))?;
         }
         Ok(loaded_args)
     }

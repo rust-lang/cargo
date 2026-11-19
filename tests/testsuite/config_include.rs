@@ -458,10 +458,10 @@ fn cli_merge_failed_between_file_and_include() {
 failed to merge --config argument `cli.toml`
 
 Caused by:
-  failed to merge key `foo` between [ROOT]/other.toml and [ROOT]/cli.toml
+  failed to merge key `foo` between [ROOT]/cli.toml and [ROOT]/other.toml
 
 Caused by:
-  failed to merge config value from `[ROOT]/cli.toml` into `[ROOT]/other.toml`: expected string, but found array
+  failed to merge config value from `[ROOT]/other.toml` into `[ROOT]/cli.toml`: expected array, but found string
 "#]],
     );
 }
@@ -479,10 +479,10 @@ fn cli_merge_failed_between_includes() {
 failed to merge --config argument `include=['.cargo/one.toml', '.cargo/two.toml']`
 
 Caused by:
-  failed to merge key `foo` between [ROOT]/.cargo/one.toml and [ROOT]/.cargo/two.toml
+  failed to merge key `foo` between [ROOT]/.cargo/two.toml and [ROOT]/.cargo/one.toml
 
 Caused by:
-  failed to merge config value from `[ROOT]/.cargo/two.toml` into `[ROOT]/.cargo/one.toml`: expected array, but found string
+  failed to merge config value from `[ROOT]/.cargo/one.toml` into `[ROOT]/.cargo/two.toml`: expected string, but found array
 "#]],
     );
 }
