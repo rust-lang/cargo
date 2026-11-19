@@ -413,33 +413,18 @@
     },
     "Value2": {
       "description": "A type which can be deserialized as a configuration value which records\nwhere it was deserialized from.",
-      "oneOf": [
+      "$ref": "#/$defs/BuildTargetConfigInner"
+    },
+    "BuildTargetConfigInner": {
+      "anyOf": [
         {
-          "type": "object",
-          "properties": {
-            "One": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "One"
-          ],
-          "additionalProperties": false
+          "type": "string"
         },
         {
-          "type": "object",
-          "properties": {
-            "Many": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          },
-          "required": [
-            "Many"
-          ],
-          "additionalProperties": false
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       ]
     },
@@ -548,29 +533,20 @@
     },
     "BuildStdCrates": {
       "description": "Which standard library crates to build.\nValid values are \"core\", \"alloc\", \"std\", or an array of crate names",
-      "oneOf": [
+      "anyOf": [
         {
           "type": "string",
           "enum": [
-            "Core",
-            "Alloc",
-            "Std"
+            "core",
+            "alloc",
+            "std"
           ]
         },
         {
-          "type": "object",
-          "properties": {
-            "List": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          },
-          "required": [
-            "List"
-          ],
-          "additionalProperties": false
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       ]
     },
@@ -670,11 +646,11 @@
     "VersionControl": {
       "type": "string",
       "enum": [
-        "Git",
-        "Hg",
-        "Pijul",
-        "Fossil",
-        "NoVcs"
+        "git",
+        "hg",
+        "pijul",
+        "fossil",
+        "none"
       ]
     },
     "PathAndArgs": {
@@ -734,35 +710,27 @@
             {
               "type": "null"
             }
-          ]
+          ],
+          "default": null
         }
       }
     },
     "RustdocExternMode": {
       "description": "Mode used for `std`. This is for unstable feature [`-Zrustdoc-map`][1].\n\n[1]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#rustdoc-map",
-      "oneOf": [
+      "anyOf": [
         {
           "description": "Use a local `file://` URL.",
           "type": "string",
-          "const": "Local"
+          "const": "local"
         },
         {
           "description": "Use a remote URL to <https://doc.rust-lang.org/> (default).",
           "type": "string",
-          "const": "Remote"
+          "const": "remote"
         },
         {
           "description": "An arbitrary URL.",
-          "type": "object",
-          "properties": {
-            "Url": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "Url"
-          ],
-          "additionalProperties": false
+          "type": "string"
         }
       ]
     },
@@ -771,46 +739,28 @@
       "$ref": "#/$defs/EnvConfigValueInner"
     },
     "EnvConfigValueInner": {
-      "oneOf": [
+      "anyOf": [
         {
-          "type": "object",
-          "properties": {
-            "Simple": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "Simple"
-          ],
-          "additionalProperties": false
+          "type": "string"
         },
         {
           "type": "object",
           "properties": {
-            "WithOptions": {
-              "type": "object",
-              "properties": {
-                "value": {
-                  "$ref": "#/$defs/ConfigRootRelativePath"
-                },
-                "force": {
-                  "type": "boolean"
-                },
-                "relative": {
-                  "type": "boolean"
-                }
-              },
-              "required": [
-                "value",
-                "force",
-                "relative"
-              ]
+            "value": {
+              "$ref": "#/$defs/ConfigRootRelativePath"
+            },
+            "force": {
+              "type": "boolean",
+              "default": false
+            },
+            "relative": {
+              "type": "boolean",
+              "default": false
             }
           },
           "required": [
-            "WithOptions"
-          ],
-          "additionalProperties": false
+            "value"
+          ]
         }
       ]
     },
@@ -921,30 +871,12 @@
     },
     "SslVersionConfig": {
       "description": "Configuration for `ssl-version` in `http` section\nThere are two ways to configure:\n\n```text\n[http]\nssl-version = \"tlsv1.3\"\n```\n\n```text\n[http]\nssl-version.min = \"tlsv1.2\"\nssl-version.max = \"tlsv1.3\"\n```",
-      "oneOf": [
+      "anyOf": [
         {
-          "type": "object",
-          "properties": {
-            "Single": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "Single"
-          ],
-          "additionalProperties": false
+          "type": "string"
         },
         {
-          "type": "object",
-          "properties": {
-            "Range": {
-              "$ref": "#/$defs/SslVersionConfigRange"
-            }
-          },
-          "required": [
-            "Range"
-          ],
-          "additionalProperties": false
+          "$ref": "#/$defs/SslVersionConfigRange"
         }
       ]
     },
