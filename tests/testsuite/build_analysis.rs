@@ -227,14 +227,6 @@ fn log_msg_timing_info_section_timings() {
   {
     "elapsed": "{...}",
     "index": 0,
-    "reason": "unit-section-started",
-    "run_id": "[..]T[..]Z-[..]",
-    "section": "codegen",
-    "timestamp": "[..]T[..]Z"
-  },
-  {
-    "elapsed": "{...}",
-    "index": 0,
     "reason": "unit-rmeta-finished",
     "run_id": "[..]T[..]Z-[..]",
     "timestamp": "[..]T[..]Z"
@@ -242,7 +234,7 @@ fn log_msg_timing_info_section_timings() {
   {
     "elapsed": "{...}",
     "index": 0,
-    "reason": "unit-section-finished",
+    "reason": "unit-section-started",
     "run_id": "[..]T[..]Z-[..]",
     "section": "codegen",
     "timestamp": "[..]T[..]Z"
@@ -250,17 +242,9 @@ fn log_msg_timing_info_section_timings() {
   {
     "elapsed": "{...}",
     "index": 0,
-    "reason": "unit-section-started",
-    "run_id": "[..]T[..]Z-[..]",
-    "section": "link",
-    "timestamp": "[..]T[..]Z"
-  },
-  {
-    "elapsed": "{...}",
-    "index": 0,
     "reason": "unit-section-finished",
     "run_id": "[..]T[..]Z-[..]",
-    "section": "link",
+    "section": "codegen",
     "timestamp": "[..]T[..]Z"
   },
   {
@@ -283,14 +267,6 @@ fn log_msg_timing_info_section_timings() {
   {
     "elapsed": "{...}",
     "index": 1,
-    "reason": "unit-section-started",
-    "run_id": "[..]T[..]Z-[..]",
-    "section": "codegen",
-    "timestamp": "[..]T[..]Z"
-  },
-  {
-    "elapsed": "{...}",
-    "index": 1,
     "reason": "unit-rmeta-finished",
     "run_id": "[..]T[..]Z-[..]",
     "timestamp": "[..]T[..]Z"
@@ -298,7 +274,7 @@ fn log_msg_timing_info_section_timings() {
   {
     "elapsed": "{...}",
     "index": 1,
-    "reason": "unit-section-finished",
+    "reason": "unit-section-started",
     "run_id": "[..]T[..]Z-[..]",
     "section": "codegen",
     "timestamp": "[..]T[..]Z"
@@ -306,17 +282,9 @@ fn log_msg_timing_info_section_timings() {
   {
     "elapsed": "{...}",
     "index": 1,
-    "reason": "unit-section-started",
-    "run_id": "[..]T[..]Z-[..]",
-    "section": "link",
-    "timestamp": "[..]T[..]Z"
-  },
-  {
-    "elapsed": "{...}",
-    "index": 1,
     "reason": "unit-section-finished",
     "run_id": "[..]T[..]Z-[..]",
-    "section": "link",
+    "section": "codegen",
     "timestamp": "[..]T[..]Z"
   },
   {
