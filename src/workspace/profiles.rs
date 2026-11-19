@@ -1410,7 +1410,7 @@ fn warn_ignored_hint_mostly_unused(
     if gctx.cli_unstable().profile_hint_mostly_unused {
         return Ok(());
     }
-    let mut key = context::ConfigKey::from_str("profile");
+    let mut key = context::ConfigKey::from_parts(["profile"]);
     key.push(name);
     let mut tables = vec![(&profile.val, key.clone())];
     if let Some(build_override) = &profile.val.build_override {

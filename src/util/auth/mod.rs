@@ -221,7 +221,7 @@ impl fmt::Display for AuthorizationError {
                 self.sid.display_registry_name()
             )?;
             if self.supports_cargo_token_credential_provider {
-                let key = ConfigKey::from_str(&format!("registries.{name}.token"));
+                let key = ConfigKey::from_parts(["registries", name, "token"]);
                 write!(
                     f,
                     ", please run `cargo login --registry {name}`\n\
