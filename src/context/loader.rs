@@ -103,10 +103,7 @@ impl<'a> ConfigLoader<'a> {
 
         self.walk_tree(path, |path| {
             let config = self.load_file(path)?;
-            cfg.merge(config, MergePriority::Definition)
-                .with_context(|| {
-                    format!("failed to merge configuration at `{}`", path.display())
-                })?;
+            cfg.merge(config, MergePriority::Definition)?;
             Ok(())
         })
         .context("could not load Cargo configuration")?;
