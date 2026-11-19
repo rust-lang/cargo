@@ -103,7 +103,7 @@ use url::Url;
 pub use crate::config::{
     ConfigError, ConfigKey, ConfigStore, ConfigValue, Definition, DefinitionKind, OptValue, Value,
 };
-use crate::config::{ConfigReader, Env, MergePriority};
+use crate::config::{ConfigReader, Env};
 
 mod loader;
 use loader::ConfigLoader;
@@ -1668,7 +1668,7 @@ pub fn save_credentials(
         if registry.is_some() {
             if let Some(table) = toml.remove("registries") {
                 let v = CV::from_toml(path_def, table)?;
-                value.merge(v, MergePriority::Definition)?;
+                value.merge(v)?;
             }
         }
         toml.insert(key, value.into_toml());
