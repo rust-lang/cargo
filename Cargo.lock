@@ -576,6 +576,7 @@ dependencies = [
  "snapbox",
  "toml",
  "toml_edit",
+ "toml_parser",
  "tracing",
 ]
 

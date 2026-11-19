@@ -106,11 +106,30 @@ impl ConfigKey {
 }
 
 impl std::str::FromStr for ConfigKey {
-    type Err = std::convert::Infallible;
+    type Err = anyhow::Error;
 
-    /// Creates a configuration key by splitting the input on periods.
+    /// Parse a `ConfigKey` as a TOML key
     fn from_str(key: &str) -> Result<Self, Self::Err> {
-        Ok(Self::from_parts(key.split('.')))
+        use toml_parser::parser::{EventKind, parse_key};
+
+        let source = toml_parser::Source::new(key);
+        let tokens = source.lex().into_vec();
+        let mut events = Vec::new();
+        let mut error = None;
+        parse_key(&tokens, &mut events, &mut error);
+
+        let mut result = Self::new();
+        for event in events {
+            if event.kind() == EventKind::SimpleKey {
+                let mut part = Cow::Borrowed("");
+                source.get(event).unwrap().decode_key(&mut part, &mut error);
+                result.push(&part);
+            }
+        }
+        if let Some(error) = error {
+            anyhow::bail!("invalid config key `{key}`: {}", error.description());
+        }
+        Ok(result)
     }
 }
 
@@ -190,6 +209,54 @@ mod tests {
     use snapbox::str;
 
     use super::*;
+
+    #[test]
+    fn parse_quoted_key_parts() {
+        let key = r#"target . 'a.b' . "c\u002Ed" . ''"#.parse::<ConfigKey>().unwrap();
+        assert_eq!(
+            key.parts().collect::<Vec<_>>(),
+            ["target", "a.b", "c.d", ""]
+        );
+    }
+
+    #[test]
+    fn reject_invalid_keys() {
+        use snapbox::IntoData as _;
+
+        for (key, expected) in [
+            (
+                "",
+                str!["invalid config key ``: unquoted keys cannot be empty"],
+            ),
+            (
+                ".a",
+                str!["invalid config key `.a`: unquoted keys cannot be empty"],
+            ),
+            (
+                "a.",
+                str!["invalid config key `a.`: unquoted keys cannot be empty"],
+            ),
+            (
+                "a..b",
+                str!["invalid config key `a..b`: unquoted keys cannot be empty"],
+            ),
+            ("a b", str!["invalid config key `a b`: unexpected content"]),
+            ("a=b", str!["invalid config key `a=b`: unexpected content"]),
+            (
+                "'unclosed",
+                str!["invalid config key `'unclosed`: invalid literal string"],
+            ),
+            (
+                r#""bad\q""#,
+                str![[r#"invalid config key `"bad\q"`: missing escaped value"#]],
+            ),
+        ] {
+            assert_data_eq!(
+                key.parse::<ConfigKey>().unwrap_err().to_string(),
+                expected.raw()
+            );
+        }
+    }
 
     #[test]
     fn array_item_key_path_display() {
