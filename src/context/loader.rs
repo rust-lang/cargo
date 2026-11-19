@@ -53,14 +53,19 @@ impl<'a> ConfigLoader<'a> {
 
     /// Like [`ConfigLoader::load_from`] but without merging config values.
     ///
-    /// This is primarily crafted for `cargo config` command.
+    /// Returns one [`ConfigStore`] per config file, from lowest to highest precedence.
     pub(crate) fn load_unmerged_from(&self, path: &Path) -> CargoResult<Vec<ConfigStore>> {
         let mut result = Vec::new();
         self.walk_tree(path, |path| {
             let mut seen = HashSet::default();
+            let mut layers = Vec::new();
             let mut config = self._load_file(path, &mut seen, false, DefinitionKind::Path)?;
-            self.load_unmerged_include(&mut config, &mut seen, &mut result)?;
-            result.push(config);
+            self.load_unmerged_include(&mut config, &mut seen, &mut layers)?;
+            layers.push(config);
+            // `walk_tree` visits highest precedence first,
+            // but result is lowest-first,
+            // so prepend to ensure the order
+            result.splice(..0, layers);
             Ok(())
         })
         .context("could not load Cargo configuration")?;
