@@ -156,11 +156,12 @@ impl ConfigValue {
     ) -> Result<()> {
         let is_higher_priority = from.definition().is_higher_priority(self.definition());
         match (self, from) {
-            (&mut CV::List(ref mut old, _), CV::List(ref mut new, _)) => {
+            (&mut CV::List(ref mut old, ref mut old_def), CV::List(ref mut new, new_def)) => {
                 if is_nonmergeable_list(&parts) {
                     // Use whichever list is higher priority.
                     if force || is_higher_priority {
                         mem::swap(new, old);
+                        *old_def = new_def;
                     }
                 } else {
                     // Merge the lists together.

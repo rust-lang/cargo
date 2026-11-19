@@ -2206,7 +2206,7 @@ credential-provider = ['c', 'd']
     assert_eq!(provider.args, ["cli-arg"]);
     assert_e2e().eq(
         provider.path.definition().to_string(),
-        str!["[ROOT]/foo/.cargo/config.toml"],
+        str!["--config cli option"],
     );
 
     let env = "CARGO_REGISTRIES_EXAMPLE_CREDENTIAL_PROVIDER";
@@ -2244,7 +2244,7 @@ credential-provider = ['c', 'd']
     assert_eq!(provider.args, ["cli-arg"]);
     assert_e2e().eq(
         provider.path.definition().to_string(),
-        str!["environment variable `CARGO_REGISTRIES_EXAMPLE_CREDENTIAL_PROVIDER`"],
+        str!["--config cli option"],
     );
 }
 
