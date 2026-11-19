@@ -2185,6 +2185,10 @@ credential-provider = ['c', 'd']
         .unwrap();
     assert_eq!(provider.path.as_str(), "c");
     assert_eq!(provider.args, ["d"]);
+    assert_e2e().eq(
+        provider.path.definition().to_string(),
+        str!["[ROOT]/foo/.cargo/config.toml"],
+    );
 
     let cli_arg = "registries.example.credential-provider=['cli', 'cli-arg']";
     let gctx = GlobalContextBuilder::new()
@@ -2200,6 +2204,10 @@ credential-provider = ['c', 'd']
     // expect: no merge happens; config CLI takes precedence
     assert_eq!(provider.path.as_str(), "cli");
     assert_eq!(provider.args, ["cli-arg"]);
+    assert_e2e().eq(
+        provider.path.definition().to_string(),
+        str!["--config cli option"],
+    );
 
     let env = "CARGO_REGISTRIES_EXAMPLE_CREDENTIAL_PROVIDER";
     let gctx = GlobalContextBuilder::new()
@@ -2215,6 +2223,10 @@ credential-provider = ['c', 'd']
     // expect: no merge happens; env takes precedence over files
     assert_eq!(provider.path.as_str(), "env");
     assert_eq!(provider.args, ["env-arg"]);
+    assert_e2e().eq(
+        provider.path.definition().to_string(),
+        str!["environment variable `CARGO_REGISTRIES_EXAMPLE_CREDENTIAL_PROVIDER`"],
+    );
 
     let gctx = GlobalContextBuilder::new()
         .env(env, "env env-arg")
@@ -2230,6 +2242,10 @@ credential-provider = ['c', 'd']
     // expect: no merge happens; cli takes precedence over files and env
     assert_eq!(provider.path.as_str(), "cli");
     assert_eq!(provider.args, ["cli-arg"]);
+    assert_e2e().eq(
+        provider.path.definition().to_string(),
+        str!["--config cli option"],
+    );
 }
 
 #[cargo_test]
