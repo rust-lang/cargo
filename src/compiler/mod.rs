@@ -292,7 +292,15 @@ fn compile<'gctx>(
                     add_deduplicate_step(&mut job);
                 } else if cached_hash_file.exists() {
                     let hash = std::fs::read_to_string(&cached_hash_file)?;
-                    build_runner.object_storage_outputs.insert(hash);
+
+                    // If a previous build added objects to shared storage and then they were
+                    // removed via GC, we need to re-link them into shared storage, otherwise the
+                    // manifest would be created with "dangling pointers" to objects that dont exist
+                    if !shared_storage.unit_output_exists(&hash) {
+                        add_deduplicate_step(&mut job);
+                    } else {
+                        build_runner.object_storage_outputs.insert(hash);
+                    }
                 } else {
                     // If the unit was not deduplicated for some reason, go ahead try to deduplicate
                     // it now.

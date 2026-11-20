@@ -286,6 +286,7 @@ fn gc_preserves_artifacts_shared_with_live_manifest() {
         .enable_mac_dsym()
         .run();
 
+    let live_files = storage_files();
     let live_usage = partitioned_file("build-index");
 
     // Both manifests reference bar, but only this manifest references baz.
@@ -294,8 +295,6 @@ fn gc_preserves_artifacts_shared_with_live_manifest() {
         .masquerade_as_nightly_cargo(&["shared-object-storage"])
         .enable_mac_dsym()
         .run();
-
-    let all_files = storage_files();
 
     shared_storage().assert_dir_layout(
         str![[r#"
@@ -323,7 +322,7 @@ fn gc_preserves_artifacts_shared_with_live_manifest() {
         }
     }
 
-    p.cargo("clean gc")
+    p.cargo("clean gc --max-shared-storage-age=1day")
         .args(&["-Zgc", "-Zshared-object-storage"])
         .masquerade_as_nightly_cargo(&["gc", "shared-object-storage"])
         .run();
@@ -331,12 +330,6 @@ fn gc_preserves_artifacts_shared_with_live_manifest() {
     shared_storage().assert_dir_layout(
         str![[r#"
 [ROOT]/home/.cargo/storage/v1/build-index/[HASH]
-[ROOT]/home/.cargo/storage/v1/build-index/[HASH]
-[ROOT]/home/.cargo/storage/v1/objects/[HASH]
-[ROOT]/home/.cargo/storage/v1/objects/[HASH]
-[ROOT]/home/.cargo/storage/v1/objects/[HASH]
-[ROOT]/home/.cargo/storage/v1/objects/[HASH]
-[ROOT]/home/.cargo/storage/v1/objects/[HASH]
 [ROOT]/home/.cargo/storage/v1/objects/[HASH]
 [ROOT]/home/.cargo/storage/v1/objects/[HASH]
 [ROOT]/home/.cargo/storage/v1/objects/[HASH]
@@ -346,7 +339,7 @@ fn gc_preserves_artifacts_shared_with_live_manifest() {
 "#]],
         &[],
     );
-    assert_eq!(storage_files(), all_files);
+    assert_eq!(storage_files(), live_files);
 }
 
 #[cargo_test]
