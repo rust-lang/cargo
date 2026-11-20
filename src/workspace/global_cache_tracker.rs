@@ -114,6 +114,8 @@
 //!
 //! There are checks for read-only filesystems, which is generally ignored.
 
+use crate::compiler::layout::SharedStorageLayout;
+use crate::compiler::shared_storage::{BuildManifest, UnitOutputEntry};
 use crate::ops::CleanContext;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::interning::InternedString;
@@ -122,14 +124,16 @@ use crate::util::{Filesystem, Progress, ProgressStyle};
 use crate::workspace::gc::GcOpts;
 use crate::{CargoResult, GlobalContext};
 use anyhow::{Context as _, bail};
-use cargo_util::collections::HashMap;
+use cargo_util::collections::{HashMap, HashSet};
 use cargo_util::paths;
 use cargo_util_terminal::Verbosity;
 use rusqlite::{Connection, ErrorCode, params};
+use serde::de::DeserializeOwned;
 use std::collections::hash_map;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 use tracing::{debug, trace};
+use walkdir::{DirEntry, WalkDir};
 
 /// The filename of the database.
 const GLOBAL_CACHE_FILENAME: &str = ".global-cache";
@@ -224,6 +228,7 @@ struct BasePaths {
     crate_dir: PathBuf,
     /// Root path to the `src` directories.
     src: PathBuf,
+    shared_storage: Option<PathBuf>,
 }
 
 /// Migrations which initialize the database, and can be used to evolve it over time.
@@ -560,6 +565,7 @@ impl GlobalCacheTracker {
             git_co: gctx.git_checkouts_path().into_path_unlocked(),
             crate_dir: gctx.registry_cache_path().into_path_unlocked(),
             src: gctx.registry_source_path().into_path_unlocked(),
+            shared_storage: gctx.shared_storage_dir(),
         };
         let now = now();
         trace!(target: "gc", "cleaning {gc_opts:?}");
@@ -646,6 +652,11 @@ impl GlobalCacheTracker {
         }
         if let Some(max_size) = gc_opts.max_download_size {
             Self::get_registry_items_to_clean_size_both(&tx, max_size, &base, &mut delete_paths)?;
+        }
+        if let Some(max_age) = gc_opts.max_shared_storage_age
+            && let Some(shared_storage) = &base.shared_storage
+        {
+            Self::get_shared_storage_items_to_clean(max_age, shared_storage, &mut delete_paths)?;
         }
 
         clean_ctx.remove_paths(&delete_paths)?;
@@ -1355,6 +1366,76 @@ impl GlobalCacheTracker {
         }
         Ok(())
     }
+
+    /// Get the paths to delete from shared storage.
+    ///
+    /// This is a mark and sweep over `objects`. Build manifests used within `max_age` are the roots.
+    /// Objects reachable from a root are kept and all other objects are deleted.
+    fn get_shared_storage_items_to_clean(
+        max_age: Duration,
+        shared_storage: &Path,
+        delete_paths: &mut Vec<PathBuf>,
+    ) -> CargoResult<()> {
+        let storage = SharedStorageLayout::new(shared_storage);
+
+        let cutoff = Duration::from_secs(now())
+            .as_millis()
+            .saturating_sub(max_age.as_millis());
+        let live = Self::mark_shared_storage_objects(&storage, cutoff, delete_paths)?;
+
+        let mut buf = String::with_capacity(64);
+        walk_partitioned_dir(&storage.objects, |entry| {
+            if !partitioned_hash(&entry, &mut buf).is_some_and(|hash| live.contains(hash)) {
+                delete_paths.push(entry.into_path());
+            }
+            Ok(())
+        })
+    }
+
+    /// Returns the hashes of all objects reachable from build manifests used since `cutoff`.
+    ///
+    /// Build index entries last used before `cutoff` are added to `delete_paths`.
+    fn mark_shared_storage_objects(
+        storage: &SharedStorageLayout,
+        cutoff: u128,
+        delete_paths: &mut Vec<PathBuf>,
+    ) -> CargoResult<HashSet<String>> {
+        let mut live = HashSet::default();
+        let mut units = HashSet::default();
+        let mut buf = String::with_capacity(64);
+        walk_partitioned_dir(&storage.build_index, |entry| {
+            let timestamp = paths::read(entry.path())?
+                .parse::<u128>()
+                .with_context(|| {
+                    format!(
+                        "invalid build manifest usage timestamp in `{}`",
+                        entry.path().display()
+                    )
+                })?;
+            if timestamp < cutoff {
+                delete_paths.push(entry.into_path());
+                return Ok(());
+            }
+            let Some(hash) = partitioned_hash(&entry, &mut buf) else {
+                return Ok(());
+            };
+            if let Some(manifest) = read_shared_storage_object::<BuildManifest>(storage, hash)? {
+                live.insert(hash.to_owned());
+                units.extend(manifest.unit_outputs);
+            }
+            Ok(())
+        })?;
+
+        for unit_hash in units {
+            if let Some(unit) = read_shared_storage_object::<UnitOutputEntry>(storage, &unit_hash)?
+            {
+                live.extend(unit.objects.into_values());
+            }
+            live.insert(unit_hash);
+        }
+
+        Ok(live)
+    }
 }
 
 /// Helper to generate the upsert for the parent tables.
@@ -1837,4 +1918,55 @@ fn du(path: &Path, table_name: &str) -> CargoResult<u64> {
     } else {
         cargo_util::du(&path, &[])
     }
+}
+
+/// Visits files in a directory partitioned by `hash[..2]/hash[2..]`.
+/// This is primarily meant for directories in [`SharedStorageLayout`].
+fn walk_partitioned_dir(
+    path: impl AsRef<Path>,
+    mut visit: impl FnMut(DirEntry) -> CargoResult<()>,
+) -> CargoResult<()> {
+    let path = path.as_ref();
+    if !path.try_exists()? {
+        return Ok(());
+    }
+
+    for entry in WalkDir::new(path).min_depth(2).max_depth(2) {
+        let entry = entry?;
+        if entry.file_type().is_file() {
+            visit(entry)?;
+        }
+    }
+    Ok(())
+}
+
+/// Writes the hash of a file in a directory partitioned by `hash[..2]/hash[2..]` into `buf`.
+fn partitioned_hash<'a>(entry: &DirEntry, buf: &'a mut String) -> Option<&'a str> {
+    let prefix = entry.path().parent()?.file_name()?.to_str()?;
+    let suffix = entry.file_name().to_str()?;
+    buf.clear();
+    buf.push_str(prefix);
+    buf.push_str(suffix);
+    Some(buf)
+}
+
+/// Reads a JSON object from shared storage, returning `None` if it does not exist.
+fn read_shared_storage_object<T: DeserializeOwned>(
+    storage: &SharedStorageLayout,
+    hash: &str,
+) -> CargoResult<Option<T>> {
+    if hash.len() != 64 {
+        bail!("invalid shared storage object hash `{hash}`");
+    }
+    let path = storage.object(hash);
+    let contents = match std::fs::read(&path) {
+        Ok(contents) => contents,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(err) => {
+            return Err(err).with_context(|| format!("failed to read `{}`", path.display()));
+        }
+    };
+    let object = serde_json::from_slice(&contents)
+        .with_context(|| format!("failed to parse shared storage object `{}`", path.display()))?;
+    Ok(Some(object))
 }

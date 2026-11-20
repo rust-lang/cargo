@@ -102,6 +102,11 @@ impl SharedStorage {
         Ok(())
     }
 
+    pub fn unit_output_exists(&self, hash: &str) -> bool {
+        debug_assert_eq!(hash.len(), 64);
+        return self.layout.object(hash).exists();
+    }
+
     /// Inserts or deduplicates a file already in object storage.
     ///
     /// This function will prefer reflink if available on the current filesystem but fallback to
