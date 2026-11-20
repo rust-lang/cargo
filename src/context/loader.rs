@@ -1,6 +1,5 @@
 //! Config file discovery, `include` handling, and `--config` parsing
 
-use std::borrow::Cow;
 use std::ffi::OsStr;
 use std::path::Path;
 use std::path::PathBuf;
@@ -166,8 +165,8 @@ impl<'a> ConfigLoader<'a> {
     /// Converts the `include` config value to a list of absolute paths.
     fn include_paths(&self, config: &ConfigStore) -> CargoResult<Vec<ConfigInclude>> {
         let table = config.values();
-        let include = table.get("include").map(Cow::Borrowed);
-        let includes = match include.map(|c| c.into_owned()) {
+        let include = table.get("include");
+        let includes = match include.cloned() {
             Some(CV::List(list, _def)) => list
                 .into_iter()
                 .enumerate()
