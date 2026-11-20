@@ -3,9 +3,11 @@ use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
 use crate::prelude::*;
+use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::paths::ReadOnly;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{paths, prelude::*, project, str, t};
+use snapbox::Redactions;
 
 #[cargo_test]
 fn disabled_without_unstable_flag() {
@@ -151,6 +153,9 @@ fn should_save_build_manifest() {
 
     shared_storage().assert_dir_layout(
         str![[r#"
+[ROOT]/home/.cargo/storage/v1/build-index/[HASH]
+[ROOT]/home/.cargo/storage/v1/objects/[HASH]
+[ROOT]/home/.cargo/storage/v1/objects/[HASH]
 [ROOT]/home/.cargo/storage/v1/objects/[HASH]
 [ROOT]/home/.cargo/storage/v1/objects/[HASH]
 [ROOT]/home/.cargo/storage/v1/objects/[HASH]
@@ -158,6 +163,51 @@ fn should_save_build_manifest() {
 "#]],
         &[],
     );
+
+    // Find the build manifest through the index and verify it matches its hash
+    let manifest_hash = partitioned_hash(&partitioned_file("build-index"));
+    let contents = t!(fs::read_to_string(object(&manifest_hash)));
+    assert_e2e().redact_with(with_hash()).eq(
+        &contents,
+        str![[r#"
+{
+  "unit_outputs": [
+    "[HASH]"
+  ]
+}
+"#]]
+        .is_json(),
+    );
+    assert_eq!(
+        manifest_hash,
+        blake3::hash(contents.as_bytes()).to_hex().as_str()
+    );
+
+    // Find the unit output from the build manifest and verify it matches its hash
+    let manifest: serde_json::Value = serde_json::from_str(&contents).unwrap();
+    let unit_output = manifest["unit_outputs"][0].as_str().unwrap();
+    assert_eq!(manifest, serde_json::json!({"unit_outputs": [unit_output]}));
+    let unit_contents = t!(fs::read(object(unit_output)));
+    assert_e2e().redact_with(with_hash()).eq(
+        String::from_utf8_lossy(&unit_contents).to_string(),
+        str![[r#"
+{
+  "objects": {
+    "bar-[HASH].d": "[HASH]",
+    "libbar-[HASH].rlib": "[HASH]",
+    "libbar-[HASH].rmeta": "[HASH]"
+  }
+}
+"#]]
+        .is_json(),
+    );
+    assert_eq!(unit_output, blake3::hash(&unit_contents).to_hex().as_str());
+
+    // Verify every object referenced by the unit output exists
+    let unit: serde_json::Value = serde_json::from_slice(&unit_contents).unwrap();
+    for hash in unit["objects"].as_object().unwrap().values() {
+        assert!(object(hash.as_str().unwrap()).is_file());
+    }
 }
 
 #[cargo_test]
@@ -391,6 +441,29 @@ fn object(hash: &str) -> PathBuf {
         .join(&hash[2..])
 }
 
+/// Returns the first file in a shared storage dir partitioned by `hash[..2]/hash[2..]`.
+fn partitioned_file(dir: &str) -> PathBuf {
+    let pattern = shared_storage().join(dir).join("*").join("*");
+    glob::glob(&pattern.to_string_lossy())
+        .unwrap()
+        .next()
+        .unwrap()
+        .unwrap()
+}
+
+/// Rebuilds the hash from a path partitioned by `hash[..2]/hash[2..]`.
+fn partitioned_hash(path: &Path) -> String {
+    let prefix = path
+        .parent()
+        .unwrap()
+        .file_name()
+        .unwrap()
+        .to_str()
+        .unwrap();
+    let suffix = path.file_name().unwrap().to_str().unwrap();
+    format!("{prefix}{suffix}")
+}
+
 #[track_caller]
 fn assert_linked(a: impl AsRef<Path>, b: impl AsRef<Path>) {
     let a = a.as_ref();
@@ -401,4 +474,14 @@ fn assert_linked(a: impl AsRef<Path>, b: impl AsRef<Path>) {
         a.display(),
         b.display()
     );
+}
+
+fn with_hash() -> Redactions {
+    static RE: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+    let regex = RE.get_or_init(|| regex::Regex::new(r"(?<redacted>[0-9a-f]{64})").unwrap());
+
+    let mut redactions = assert_e2e().redactions().clone();
+    redactions.insert("[HASH]", regex).unwrap();
+
+    redactions
 }

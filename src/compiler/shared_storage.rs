@@ -1,10 +1,13 @@
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs::File;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::bail;
 use blake3::Hash;
-use cargo_util::paths::create_dir_all;
+use cargo_util::paths::{self, create_dir_all};
+use serde::{Deserialize, Serialize};
 use tracing::{instrument, trace};
 
 use crate::CargoResult;
@@ -38,16 +41,62 @@ impl SharedStorage {
         })
     }
 
-    pub fn insert_or_dedup_out_dir(&self, out_dir: &Path) -> CargoResult<()> {
+    pub fn insert_or_dedup_out_dir(&self, out_dir: &Path) -> CargoResult<String> {
+        let mut objects = BTreeMap::new();
         for entry in walkdir::WalkDir::new(out_dir) {
             let Ok(entry) = entry else {
                 continue;
             };
             if entry.file_type().is_file() {
-                let hash = self.insert_or_dedup_file(entry.path())?;
-                trace!(path = ?entry.path(), hash = hash.to_hex().to_string(), "inserted file into object storage");
+                let hash = self
+                    .insert_or_dedup_file(entry.path())?
+                    .to_hex()
+                    .to_string();
+                trace!(path = ?entry.path(), hash, "inserted file into object storage");
+                let path = entry.path().strip_prefix(out_dir)?.to_path_buf();
+                objects.insert(path, hash);
             }
         }
+
+        let buf = serde_json::to_vec(&UnitOutputEntry { objects })?;
+        let unit_output_hash = blake3::hash(&buf).to_hex().to_string();
+        let path = self.layout.object(&unit_output_hash);
+
+        if !path.exists() {
+            create_dir_all(&path.parent().unwrap())?;
+            paths::write_atomic(path, buf)?;
+        }
+
+        Ok(unit_output_hash)
+    }
+
+    pub fn save_build_outputs(&self, hashes: &BTreeSet<String>) -> CargoResult<()> {
+        let manifest = BuildManifest {
+            unit_outputs: hashes.clone(),
+        };
+
+        let output = serde_json::to_vec(&manifest)?;
+
+        let mut hasher = blake3::Hasher::new();
+        hasher.update(&output);
+        let hash = hasher.finalize().to_hex().to_string();
+
+        let path = self.layout.object(&hash);
+
+        if !path.exists() {
+            create_dir_all(path.parent().unwrap())?;
+            paths::write_atomic(path, output)?;
+        }
+
+        let usage = self.layout.build_index_entry(&hash);
+        create_dir_all(usage.parent().unwrap())?;
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis()
+            .to_string();
+
+        paths::write_atomic(usage, now.as_bytes())?;
 
         Ok(())
     }
@@ -198,4 +247,14 @@ fn is_same_filesystem(dir1: &Path, dir2: &Path) -> std::io::Result<bool> {
             Ok(volume_serial_number(dir1)? == volume_serial_number(dir2)?)
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UnitOutputEntry {
+    pub objects: BTreeMap<PathBuf, String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BuildManifest {
+    pub unit_outputs: BTreeSet<String>,
 }
