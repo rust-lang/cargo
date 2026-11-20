@@ -4,6 +4,15 @@
   "description": "Cargo's `.cargo/config.toml` file",
   "type": "object",
   "properties": {
+    "include": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "$ref": "#/$defs/IncludeConfig"
+      }
+    },
     "paths": {
       "type": [
         "array",
@@ -198,13 +207,44 @@
     }
   },
   "$defs": {
-    "ConfigRootRelativePath": {
+    "IncludeConfig": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ConfigParentRelativePath"
+        },
+        {
+          "$ref": "#/$defs/DetailedIncludeConfig"
+        }
+      ]
+    },
+    "ConfigParentRelativePath": {
       "description": "A path, potentially relative to the config, not current_dir",
       "$ref": "#/$defs/Value"
     },
     "Value": {
       "description": "A type which can be deserialized as a configuration value which records\nwhere it was deserialized from.",
       "type": "string"
+    },
+    "DetailedIncludeConfig": {
+      "description": "Represents a config-include value in the configuration.",
+      "type": "object",
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/ConfigParentRelativePath"
+        },
+        "optional": {
+          "description": "Whether this include is optional (missing files are silently ignored)",
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "path"
+      ]
+    },
+    "ConfigRootRelativePath": {
+      "description": "A path, potentially relative to the config, not current_dir",
+      "$ref": "#/$defs/Value"
     },
     "CargoBuildConfig": {
       "description": "The `[build]` table.\n\nExample configuration:\n\n```toml\n[build]\njobs = 4\ntarget = \"x86_64-unknown-linux-gnu\"\ntarget-dir = \"target\"\nrustflags = [\"-C\", \"link-arg=-fuse-ld=lld\"]\nincremental = true\n```",

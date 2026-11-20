@@ -11,14 +11,12 @@ use anyhow::bail;
 use cargo_util::collections::HashMap;
 use cargo_util::collections::HashSet;
 use cargo_util::paths;
-use cargo_util_config::schema::ConfigParentRelativePath;
+use cargo_util_config::schema::{DetailedIncludeConfig, IncludeConfig};
 use cargo_util_terminal::Shell;
 use cargo_util_terminal::report::Level;
-use serde::{Deserialize, Serialize, de};
 
 use super::ConfigValue;
 use super::DefinitionKind;
-use super::Value;
 use super::{ConfigKey, ConfigReader, ConfigStore};
 use crate::util::errors::CargoResult;
 use crate::util::restricted_names::is_glob_pattern;
@@ -297,117 +295,5 @@ impl<'a> ConfigLoader<'a> {
 
     fn shell(&self) -> MutexGuard<'_, Shell> {
         self.shell.lock().unwrap()
-    }
-}
-
-#[derive(Serialize)]
-#[serde(untagged)]
-pub enum IncludeConfig {
-    Simple(ConfigParentRelativePath),
-    Detailed(DetailedIncludeConfig),
-}
-
-impl<'de> Deserialize<'de> for IncludeConfig {
-    fn deserialize<D: de::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        // HACK: Workaround the serialization protocol for `ConfigParentRelativePath` / `Value` is
-        // a newtype, making it messier to use in `IncludeConfig::Simple`.
-        enum RawIncludeConfig {
-            Simple(String),
-            Detailed(DetailedIncludeConfig),
-        }
-
-        impl<'de> Deserialize<'de> for RawIncludeConfig {
-            fn deserialize<D: de::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-                struct IncludeVisitor;
-
-                impl<'de> de::Visitor<'de> for IncludeVisitor {
-                    type Value = RawIncludeConfig;
-
-                    fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                        f.write_str("a config include path or table")
-                    }
-
-                    fn visit_str<E: de::Error>(self, path: &str) -> Result<Self::Value, E> {
-                        self.visit_string(path.to_owned())
-                    }
-
-                    fn visit_string<E: de::Error>(self, path: String) -> Result<Self::Value, E> {
-                        Ok(RawIncludeConfig::Simple(path))
-                    }
-
-                    fn visit_map<M: de::MapAccess<'de>>(
-                        self,
-                        map: M,
-                    ) -> Result<Self::Value, M::Error> {
-                        DetailedIncludeConfig::deserialize(de::value::MapAccessDeserializer::new(
-                            map,
-                        ))
-                        .map(RawIncludeConfig::Detailed)
-                    }
-                }
-
-                deserializer.deserialize_any(IncludeVisitor)
-            }
-        }
-
-        let Value { val, definition } = Value::<RawIncludeConfig>::deserialize(deserializer)?;
-        Ok(match val {
-            RawIncludeConfig::Simple(val) => {
-                Self::Simple(ConfigParentRelativePath::new(Value { val, definition }))
-            }
-            RawIncludeConfig::Detailed(include) => Self::Detailed(include),
-        })
-    }
-}
-
-impl IncludeConfig {
-    pub fn into_detailed(self) -> DetailedIncludeConfig {
-        match self {
-            Self::Simple(path) => DetailedIncludeConfig {
-                path,
-                optional: false,
-            },
-            Self::Detailed(include) => include,
-        }
-    }
-}
-
-/// Represents a config-include value in the configuration.
-#[derive(Deserialize, Serialize)]
-pub struct DetailedIncludeConfig {
-    pub path: ConfigParentRelativePath,
-    /// Whether this include is optional (missing files are silently ignored)
-    #[serde(default)]
-    pub optional: bool,
-}
-
-impl DetailedIncludeConfig {
-    /// Resolves the absolute path for this include.
-    ///
-    /// For file based include,
-    /// it is relative to parent directory of the config file includes it.
-    /// For example, if `.cargo/config.toml has a `include = "foo.toml"`,
-    /// Cargo will load `.cargo/foo.toml`.
-    ///
-    /// For CLI based include (e.g., `--config 'include = "foo.toml"'`),
-    /// it is relative to the current working directory.
-    ///
-    /// Returns `None` if this is an optional include and the file doesn't exist.
-    /// Otherwise returns `Some(PathBuf)` with the absolute path.
-    pub fn resolve_path(&self, cwd: &Path) -> Option<PathBuf> {
-        let abs_path = self.path.resolve(cwd);
-        let abs_path = paths::normalize_path(&abs_path);
-
-        if self.optional && !abs_path.exists() {
-            tracing::info!(
-                "skipping optional include `{}` in `{}`:  file not found at `{}`",
-                self.path,
-                self.path.definition(),
-                abs_path.display(),
-            );
-            None
-        } else {
-            Some(abs_path)
-        }
     }
 }
