@@ -302,7 +302,7 @@ impl<'a> ConfigLoader<'a> {
 
 #[derive(Serialize)]
 #[serde(untagged)]
-enum IncludeConfig {
+pub enum IncludeConfig {
     Simple(ConfigParentRelativePath),
     Detailed(DetailedIncludeConfig),
 }
@@ -361,7 +361,7 @@ impl<'de> Deserialize<'de> for IncludeConfig {
 }
 
 impl IncludeConfig {
-    fn into_detailed(self) -> DetailedIncludeConfig {
+    pub fn into_detailed(self) -> DetailedIncludeConfig {
         match self {
             Self::Simple(path) => DetailedIncludeConfig {
                 path,
@@ -374,11 +374,11 @@ impl IncludeConfig {
 
 /// Represents a config-include value in the configuration.
 #[derive(Deserialize, Serialize)]
-struct DetailedIncludeConfig {
-    path: ConfigParentRelativePath,
+pub struct DetailedIncludeConfig {
+    pub path: ConfigParentRelativePath,
     /// Whether this include is optional (missing files are silently ignored)
     #[serde(default)]
-    optional: bool,
+    pub optional: bool,
 }
 
 impl DetailedIncludeConfig {
@@ -394,7 +394,7 @@ impl DetailedIncludeConfig {
     ///
     /// Returns `None` if this is an optional include and the file doesn't exist.
     /// Otherwise returns `Some(PathBuf)` with the absolute path.
-    fn resolve_path(&self, cwd: &Path) -> Option<PathBuf> {
+    pub fn resolve_path(&self, cwd: &Path) -> Option<PathBuf> {
         let abs_path = self.path.resolve(cwd);
         let abs_path = paths::normalize_path(&abs_path);
 
