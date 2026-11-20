@@ -675,9 +675,11 @@ impl GlobalContext {
     /// Reloads on-disk configuration values, starting at the given path and
     /// walking up its ancestors.
     pub fn reload_rooted_at<P: AsRef<Path>>(&mut self, path: P) -> CargoResult<()> {
-        let config = self.config_loader().load_from(path.as_ref())?;
+        let mut layers = self.config_loader().load_unmerged_from(path.as_ref())?;
+        layers.push(self.cli_args_to_config()?);
+        let config =
+            ConfigStore::from_layers(layers).context("could not load Cargo configuration")?;
         self.config.replace(config);
-        self.merge_cli_args()?;
         self.load_unstable_flags_from_config()?;
         Ok(())
     }
@@ -889,7 +891,11 @@ impl GlobalContext {
         }
         if !cli_config.is_empty() {
             self.cli_config = Some(cli_config.iter().map(|s| s.to_string()).collect());
-            self.merge_cli_args()?;
+            let cli_config = self.cli_args_to_config()?;
+            // Config files may already be loaded and merged, for example to expand aliases.
+            let files = std::mem::take(self.config_mut()?);
+            let config = ConfigStore::from_layers([files, cli_config])?;
+            self.config.replace(config);
         }
 
         self.load_unstable_flags_from_config()?;
@@ -1022,19 +1028,14 @@ impl GlobalContext {
 
     /// Loads configuration from the filesystem.
     pub fn load_config(&self) -> CargoResult<ConfigStore> {
-        self.config_loader().load_from(&self.cwd)
+        let layers = self.config_loader().load_unmerged_from(&self.cwd)?;
+        ConfigStore::from_layers(layers).context("could not load Cargo configuration")
     }
 
     /// Parses the CLI config args and returns them as a table.
     pub(crate) fn cli_args_to_config(&self) -> CargoResult<ConfigStore> {
         let cli_args = self.cli_config.as_deref().unwrap_or_default();
         self.config_loader().load_cli_args(cli_args)
-    }
-
-    /// Add config arguments passed on the command line.
-    fn merge_cli_args(&mut self) -> CargoResult<()> {
-        let cli_config = self.cli_args_to_config()?;
-        self.config_mut()?.merge(cli_config, MergePriority::From)
     }
 
     pub(crate) fn config_loader(&self) -> ConfigLoader<'_> {

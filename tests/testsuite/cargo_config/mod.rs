@@ -865,6 +865,25 @@ build.rustflags = [
         .with_stderr_data(str![[r#""#]])
         .run();
 
+    // This ensure `include` is removed and don't show up in the merged config view.
+    cargo_process("config get -Zunstable-options")
+        .cwd(&sub_folder.parent().unwrap())
+        .masquerade_as_nightly_cargo(&["cargo-config"])
+        .with_stdout_data(str![[r#"
+alias.foo = "abc --xyz"
+build.jobs = 99
+build.rustflags = ["--flag-global", "--flag-nested", "--flag-other", "--flag-other2", "--flag-directory"]
+extra-table.somekey = "somevalue"
+profile.dev.opt-level = 3
+profile.dev.package.foo.opt-level = 1
+target.'cfg(target_os = "linux")'.runner = "runme"
+# The following environment variables may affect the loaded values.
+# CARGO_HOME=[ROOT]/home/.cargo
+
+"#]])
+        .with_stderr_data(str![[r#""#]])
+        .run();
+
     cargo_process("config get --merged=no -Zunstable-options")
         .cwd(&sub_folder.parent().unwrap())
         .masquerade_as_nightly_cargo(&["cargo-config"])
