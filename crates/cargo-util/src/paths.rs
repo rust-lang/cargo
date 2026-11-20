@@ -777,13 +777,57 @@ pub fn create_dir_all_excluded_from_backups_atomic(p: impl AsRef<Path>) -> Resul
     // hence the check below to follow the existing behavior. If we get an error at
     // rename() and suddenly the directory (which didn't exist a moment earlier) exists
     // we can infer from it's another cargo process doing work.
-    if let Err(e) = fs::rename(tempdir.path(), path) {
+    if let Err(e) = rename_dir_noreplace(tempdir.path(), path) {
         if !path.exists() {
             return Err(anyhow::Error::from(e))
                 .with_context(|| format!("failed to create directory `{}`", path.display()));
         }
     }
     Ok(())
+}
+
+/// Renames the directory `from` to `to`, failing if `to` already exists where the platform
+/// supports that.
+///
+/// On Unix, a plain `rename` replaces `to` if it is an empty directory. Another process may have
+/// just created `to` and be about to create something inside it, for example as the parent of a
+/// nested target directory, and would then fail because its directory was deleted underneath it.
+fn rename_dir_noreplace(from: &Path, to: &Path) -> io::Result<()> {
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    {
+        use std::ffi::CString;
+        use std::os::unix::ffi::OsStrExt;
+
+        let c_from = CString::new(from.as_os_str().as_bytes())?;
+        let c_to = CString::new(to.as_os_str().as_bytes())?;
+        #[cfg(target_os = "macos")]
+        let ret = unsafe { libc::renamex_np(c_from.as_ptr(), c_to.as_ptr(), libc::RENAME_EXCL) };
+        // `libc` does not expose `renameat2` on musl, so call it directly.
+        #[cfg(target_os = "linux")]
+        let ret = unsafe {
+            libc::syscall(
+                libc::SYS_renameat2,
+                libc::AT_FDCWD,
+                c_from.as_ptr(),
+                libc::AT_FDCWD,
+                c_to.as_ptr(),
+                libc::RENAME_NOREPLACE,
+            )
+        };
+        if ret == 0 {
+            return Ok(());
+        }
+        let err = io::Error::last_os_error();
+        // An old kernel or a filesystem that cannot rename without replacing: fall back to a
+        // plain rename below.
+        if !matches!(
+            err.raw_os_error(),
+            Some(libc::ENOSYS | libc::EINVAL | libc::ENOTSUP)
+        ) {
+            return Err(err);
+        }
+    }
+    fs::rename(from, to)
 }
 
 /// Mark an existing directory as excluded from backups and indexing.
@@ -1058,6 +1102,41 @@ mod tests {
         assert_eq!(std::fs::read_to_string(&target_path).unwrap(), "updated");
         assert!(symlink_path.is_symlink());
         assert_eq!(std::fs::read_link(&symlink_path).unwrap(), relative_target);
+    }
+
+    #[test]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    fn rename_dir_noreplace_keeps_existing_empty_dir() {
+        let tmpdir = tempfile::tempdir().unwrap();
+        let from = tmpdir.path().join("from");
+        let to = tmpdir.path().join("to");
+        std::fs::create_dir(&from).unwrap();
+        write(from.join("marker"), "").unwrap();
+
+        // A plain `rename` would replace the empty directory.
+        std::fs::create_dir(&to).unwrap();
+        let err = super::rename_dir_noreplace(&from, &to).unwrap_err();
+        assert_eq!(err.kind(), std::io::ErrorKind::AlreadyExists);
+        assert!(from.join("marker").exists());
+        assert!(!to.join("marker").exists());
+
+        std::fs::remove_dir(&to).unwrap();
+        super::rename_dir_noreplace(&from, &to).unwrap();
+        assert!(!from.exists());
+        assert!(to.join("marker").exists());
+    }
+
+    #[test]
+    fn create_dir_all_excluded_from_backups_atomic_keeps_existing_dir() {
+        let tmpdir = tempfile::tempdir().unwrap();
+        let path = tmpdir.path().join("target");
+
+        super::create_dir_all_excluded_from_backups_atomic(&path).unwrap();
+        assert!(path.join("CACHEDIR.TAG").exists());
+
+        write(path.join("marker"), "").unwrap();
+        super::create_dir_all_excluded_from_backups_atomic(&path).unwrap();
+        assert!(path.join("marker").exists());
     }
 
     #[test]
