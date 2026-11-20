@@ -481,6 +481,16 @@ fn no_comments() {
 a.b = "c"` includes non-whitespace decoration
 "#]],
     );
+
+    let gctx = GlobalContextBuilder::new()
+        .config_arg("a.b = \"c\"\n# exactly")
+        .build();
+    assert_eq!(gctx.get::<String>(["a", "b"]).unwrap(), "c");
+
+    let gctx = GlobalContextBuilder::new()
+        .config_arg("a.b = [\"c\", # exactly\n]")
+        .build();
+    assert_eq!(gctx.get::<Vec<String>>(["a", "b"]).unwrap(), ["c"]);
 }
 
 #[cargo_test]
