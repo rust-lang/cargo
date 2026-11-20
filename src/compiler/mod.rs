@@ -267,17 +267,35 @@ fn compile<'gctx>(
             if should_dedup_out_dir(build_runner, unit)
                 && let Some(shared_storage) = build_runner.files().shared_storage()
             {
+                let cached_hash_file = build_runner
+                    .files()
+                    .fingerprint_dir(unit)
+                    .join("output-hash");
                 let out_dir = build_runner.files().out_dir_new_layout(unit);
 
                 let add_deduplicate_step = |job: &mut Job| {
+                    let cached_hash_file = cached_hash_file.clone();
                     let shared_storage = shared_storage.clone();
-                    job.after(Work::new(move |_state| {
-                        deduplicate_out_dir(&out_dir, &shared_storage);
+                    job.after(Work::new(move |state| {
+                        if let Some(hash) = deduplicate_out_dir(&out_dir, &shared_storage) {
+                            let mut f = File::create(&cached_hash_file)?;
+                            f.write_all(hash.as_bytes())?;
+                            state.add_object_storage_output(hash);
+                        }
                         Ok(())
                     }));
                 };
 
                 if job.freshness().is_dirty() {
+                    _ = std::fs::remove_file(&cached_hash_file);
+
+                    add_deduplicate_step(&mut job);
+                } else if cached_hash_file.exists() {
+                    let hash = std::fs::read_to_string(&cached_hash_file)?;
+                    build_runner.object_storage_outputs.insert(hash);
+                } else {
+                    // If the unit was not deduplicated for some reason, go ahead try to deduplicate
+                    // it now.
                     add_deduplicate_step(&mut job);
                 }
             }
@@ -710,12 +728,13 @@ fn should_dedup_out_dir(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> bool
 }
 
 #[tracing::instrument(skip_all)]
-fn deduplicate_out_dir(out_dir: &Path, shared_storage: &SharedStorage) {
+fn deduplicate_out_dir(out_dir: &Path, shared_storage: &SharedStorage) -> Option<String> {
     match shared_storage.insert_or_dedup_out_dir(out_dir) {
-        Ok(()) => {}
+        Ok(hash) => Some(hash),
         Err(err) => {
             // couldn't deduplicate, but we can continue the build
             debug!(?out_dir, ?err, "failed to insert file into object storage");
+            None
         }
     }
 }
