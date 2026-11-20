@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context as _, Result, bail};
 
-use super::{ConfigKey, ConfigValue, Definition, DefinitionKind, MergePriority};
+use super::{ConfigKey, ConfigValue, Definition, DefinitionKind};
 use cargo_util::collections::{BuildHasher, HashMap};
 
 use ConfigValue as CV;
@@ -46,7 +46,7 @@ impl ConfigStore {
         // Merge from highest precedence, so ties keep the value already merged.
         for mut layer in layers.into_iter().rev() {
             layer.values.remove("include");
-            merged.merge(layer, MergePriority::Definition)?;
+            merged.merge(layer)?;
         }
         Ok(merged)
     }
@@ -120,13 +120,11 @@ impl ConfigStore {
 
     /// Merge the given values into self.
     ///
-    /// Tables merge recursively. [`MergePriority`] controls value replacement and list ordering.
-    ///
-    /// Container and non-container types cannot be mixed.
-    pub fn merge(&mut self, from: Self, priority: MergePriority) -> Result<()> {
+    /// See [`ConfigValue::merge`] for how values are merged.
+    pub fn merge(&mut self, from: Self) -> Result<()> {
         let mut root_cv = std::mem::take(self).into_value();
         let from = from.into_value();
-        root_cv.merge(from, priority)?;
+        root_cv.merge(from)?;
         *self = Self::from_table_value(root_cv).unwrap();
 
         Ok(())

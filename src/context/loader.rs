@@ -17,9 +17,7 @@ use cargo_util_terminal::report::Level;
 
 use super::ConfigStore;
 use super::ConfigValue;
-use super::Definition;
 use super::DefinitionKind;
-use super::MergePriority;
 use super::Value;
 use crate::util::errors::CargoResult;
 use crate::util::restricted_names::is_glob_pattern;
@@ -57,7 +55,12 @@ impl<'a> ConfigLoader<'a> {
         let mut result = Vec::new();
         self.walk_tree(path, |path| {
             let mut layers = Vec::new();
-            self.load_unmerged_file(path, &mut HashSet::default(), &mut layers)?;
+            self.load_unmerged_file(
+                path,
+                &mut HashSet::default(),
+                DefinitionKind::Path,
+                &mut layers,
+            )?;
             // `walk_tree` visits highest precedence first,
             // but result is lowest-first,
             // so prepend to ensure the order
@@ -73,83 +76,35 @@ impl<'a> ConfigLoader<'a> {
         &self,
         path: &Path,
         seen: &mut HashSet<PathBuf>,
+        definition_kind: DefinitionKind,
         output: &mut Vec<ConfigStore>,
     ) -> CargoResult<()> {
-        let config = self._load_file(path, seen, false, DefinitionKind::Path)?;
-        for include in self.include_paths(&config)? {
-            let Some(abs_path) = include.resolve_path(self.cwd) else {
-                continue;
-            };
-            self.load_unmerged_file(&abs_path, seen, output)
-                .with_context(|| {
-                    format!(
-                        "failed to load config include `{}` from `{}`",
-                        include.path,
-                        include.path.definition()
-                    )
-                })?;
-        }
-        output.push(config);
-        Ok(())
-    }
-
-    /// Loads configuration from a path with options.
-    ///
-    /// This is the implementation of loading configuration from a path.
-    ///
-    /// * `includes` determines whether to load configs from [`ConfigInclude`].
-    /// * `seen` is used to check for cyclic includes.
-    /// * `definition_kind` tells why a config is being loaded.
-    fn _load_file(
-        &self,
-        path: &Path,
-        seen: &mut HashSet<PathBuf>,
-        includes: bool,
-        definition_kind: DefinitionKind,
-    ) -> CargoResult<ConfigStore> {
         if !seen.insert(path.to_path_buf()) {
             bail!(
                 "config `include` cycle detected with path `{}`",
                 path.display()
             );
         }
-        tracing::debug!(?path, ?definition_kind, includes, "load config from file");
-
+        tracing::debug!(?path, ?definition_kind, "load config from file");
         let config = ConfigStore::read_layer(path, definition_kind)?;
-
-        if includes {
-            self.load_includes(config, seen, definition_kind)
-        } else {
-            Ok(config)
-        }
+        self.load_unmerged_includes(&config, seen, definition_kind, output)?;
+        output.push(config);
+        Ok(())
     }
 
-    /// Load any `include` files listed in the given `config`.
-    ///
-    /// Returns `config` with the given include files merged into it.
-    ///
-    /// * `seen` is used to check for cyclic includes.
-    /// * `definition_kind` tells why a config is being loaded.
-    fn load_includes(
+    /// Loads the `include`s of `config` recursively without merging config values.
+    fn load_unmerged_includes(
         &self,
-        mut config: ConfigStore,
+        config: &ConfigStore,
         seen: &mut HashSet<PathBuf>,
         definition_kind: DefinitionKind,
-    ) -> CargoResult<ConfigStore> {
-        // Get the list of files to load.
-        let includes = self.include_paths(&config)?;
-        config.values_mut().remove("include");
-
-        // Accumulate all values here.
-        let root = CV::Table(HashMap::default(), config.definition().clone());
-        let mut root = ConfigStore::from_table_value(root).unwrap();
-        for include in includes {
+        output: &mut Vec<ConfigStore>,
+    ) -> CargoResult<()> {
+        for include in self.include_paths(config)? {
             let Some(abs_path) = include.resolve_path(self.cwd) else {
                 continue;
             };
-
-            self._load_file(&abs_path, seen, true, definition_kind)
-                .and_then(|include| root.merge(include, MergePriority::From))
+            self.load_unmerged_file(&abs_path, seen, definition_kind, output)
                 .with_context(|| {
                     format!(
                         "failed to load config include `{}` from `{}`",
@@ -158,8 +113,7 @@ impl<'a> ConfigLoader<'a> {
                     )
                 })?;
         }
-        root.merge(config, MergePriority::From)?;
-        Ok(root)
+        Ok(())
     }
 
     /// Converts the `include` config value to a list of absolute paths.
@@ -253,26 +207,29 @@ impl<'a> ConfigLoader<'a> {
 
     /// Parses the CLI config args and returns them as a table.
     pub(crate) fn load_cli_args(&self, cli_args: &[String]) -> CargoResult<ConfigStore> {
-        let mut loaded_args =
-            ConfigStore::from_table_value(CV::Table(HashMap::default(), Definition::Cli(None)))
-                .unwrap();
+        let mut loaded_args = ConfigStore::default();
         let mut seen = HashSet::default();
         for arg in cli_args {
+            let mut layers = Vec::new();
             let arg_as_path = self.cwd.join(arg);
-            let arg_config = if !arg.is_empty() && arg_as_path.exists() {
+            if !arg.is_empty() && arg_as_path.exists() {
                 // --config path_to_file
-                self._load_file(&arg_as_path, &mut seen, true, DefinitionKind::Cli)
+                self.load_unmerged_file(&arg_as_path, &mut seen, DefinitionKind::Cli, &mut layers)
                     .with_context(|| {
                         format!("failed to load config from `{}`", arg_as_path.display())
-                    })?
+                    })?;
             } else {
-                ConfigStore::parse_cli_key_value(arg)?
-            };
-            let arg_config = self
-                .load_includes(arg_config, &mut HashSet::default(), DefinitionKind::Cli)
+                let config = ConfigStore::parse_cli_key_value(arg)?;
+                self.load_unmerged_includes(
+                    &config,
+                    &mut HashSet::default(),
+                    DefinitionKind::Cli,
+                    &mut layers,
+                )
                 .context("failed to load --config include".to_string())?;
-            loaded_args
-                .merge(arg_config, MergePriority::From)
+                layers.push(config);
+            }
+            loaded_args = ConfigStore::from_layers(std::iter::once(loaded_args).chain(layers))
                 .with_context(|| format!("failed to merge --config argument `{arg}`"))?;
         }
         Ok(loaded_args)

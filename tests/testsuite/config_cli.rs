@@ -542,7 +542,7 @@ Caused by:
   failed to merge key `foo` between --config cli option and --config cli option
 
 Caused by:
-  failed to merge config value from `--config cli option` into `--config cli option`: expected string, but found array
+  failed to merge config value from `--config cli option` into `--config cli option`: expected array, but found string
 "#]],
     );
 }

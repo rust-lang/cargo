@@ -139,40 +139,31 @@ impl ConfigValue {
 
     /// Merge the given value into self.
     ///
-    /// Tables merge recursively. [`MergePriority`] controls value replacement and list ordering.
+    /// Rules:
     ///
-    /// Container and non-container types cannot be mixed.
-    pub fn merge(&mut self, from: ConfigValue, priority: MergePriority) -> Result<()> {
-        let force = match priority {
-            MergePriority::Definition => false,
-            MergePriority::From => true,
-        };
-        self.merge_helper(from, force, &mut ConfigKey::new())
+    /// * Tables merge recursively.
+    /// * Prefer the higher-priority definition, keeping the existing value on a tie.
+    /// * For mergeable lists, retain both sides, ordered by definition priority,
+    ///   and incoming entries come first among entries of equal priority.
+    /// * Container and non-container types cannot be mixed (yet).
+    pub fn merge(&mut self, from: ConfigValue) -> Result<()> {
+        self.merge_helper(from, &mut ConfigKey::new())
     }
 
-    fn merge_helper(
-        &mut self,
-        from: ConfigValue,
-        force: bool,
-        parts: &mut ConfigKey,
-    ) -> Result<()> {
+    fn merge_helper(&mut self, from: ConfigValue, parts: &mut ConfigKey) -> Result<()> {
         let is_higher_priority = from.definition().is_higher_priority(self.definition());
         match (self, from) {
             (&mut CV::List(ref mut old, ref mut old_def), CV::List(ref mut new, new_def)) => {
                 if is_nonmergeable_list(&parts) {
                     // Use whichever list is higher priority.
-                    if force || is_higher_priority {
+                    if is_higher_priority {
                         mem::swap(new, old);
                         *old_def = new_def;
                     }
                 } else {
                     // Merge the lists together.
-                    if force {
-                        old.append(new);
-                    } else {
-                        new.append(old);
-                        mem::swap(new, old);
-                    }
+                    new.append(old);
+                    mem::swap(new, old);
                 }
                 old.sort_by(|a, b| a.definition().cmp(b.definition()));
             }
@@ -183,7 +174,7 @@ impl ConfigValue {
                             let new_def = value.definition().clone();
                             let entry = entry.get_mut();
                             parts.push(&key);
-                            entry.merge_helper(value, force, parts).with_context(|| {
+                            entry.merge_helper(value, parts).with_context(|| {
                                 format!(
                                     "failed to merge key `{}` between \
                                      {} and {}",
@@ -213,7 +204,7 @@ impl ConfigValue {
                 ));
             }
             (old, mut new) => {
-                if force || is_higher_priority {
+                if is_higher_priority {
                     mem::swap(old, &mut new);
                 }
             }
@@ -306,25 +297,6 @@ impl ConfigValue {
             self.definition()
         )
     }
-}
-
-/// Policy for merging [`ConfigValue`]s
-///
-/// For scalar or non-mergeable lists, controls which wins when merging configuration values.
-///
-/// For mergeable lists, retain both sides, ordered by definition priority.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum MergePriority {
-    /// Defer to [`Definition`]
-    ///
-    /// Prefer the higher-priority definition, keeping the existing value on a tie.
-    /// For mergeable lists, incoming entries come first among entries of equal priority.
-    Definition,
-    /// Defer to the new layer.
-    ///
-    /// Prefer the incoming value regardless of its definition.
-    /// For mergeable lists, incoming entries come last among entries of equal priority.
-    From,
 }
 
 pub(crate) fn is_nonmergeable_list(key: &ConfigKey) -> bool {
