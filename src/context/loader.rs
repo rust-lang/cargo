@@ -82,7 +82,20 @@ impl<'a> ConfigLoader<'a> {
         output: &mut Vec<ConfigStore>,
     ) -> CargoResult<()> {
         let config = self._load_file(path, seen, false, definition_kind)?;
-        for include in self.include_paths(&config)? {
+        self.load_unmerged_includes(&config, seen, definition_kind, output)?;
+        output.push(config);
+        Ok(())
+    }
+
+    /// Loads the `include`s of `config` recursively without merging config values.
+    fn load_unmerged_includes(
+        &self,
+        config: &ConfigStore,
+        seen: &mut HashSet<PathBuf>,
+        definition_kind: DefinitionKind,
+        output: &mut Vec<ConfigStore>,
+    ) -> CargoResult<()> {
+        for include in self.include_paths(config)? {
             let Some(abs_path) = include.resolve_path(self.cwd) else {
                 continue;
             };
@@ -95,7 +108,6 @@ impl<'a> ConfigLoader<'a> {
                     )
                 })?;
         }
-        output.push(config);
         Ok(())
     }
 
