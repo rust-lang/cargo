@@ -81,7 +81,14 @@ impl<'a> ConfigLoader<'a> {
         definition_kind: DefinitionKind,
         output: &mut Vec<ConfigStore>,
     ) -> CargoResult<()> {
-        let config = self._load_file(path, seen, definition_kind)?;
+        if !seen.insert(path.to_path_buf()) {
+            bail!(
+                "config `include` cycle detected with path `{}`",
+                path.display()
+            );
+        }
+        tracing::debug!(?path, ?definition_kind, "load config from file");
+        let config = ConfigStore::read_layer(path, definition_kind)?;
         self.load_unmerged_includes(&config, seen, definition_kind, output)?;
         output.push(config);
         Ok(())
@@ -109,29 +116,6 @@ impl<'a> ConfigLoader<'a> {
                 })?;
         }
         Ok(())
-    }
-
-    /// Loads configuration from a path with options.
-    ///
-    /// This is the implementation of loading configuration from a path.
-    ///
-    /// * `seen` is used to check for cyclic includes.
-    /// * `definition_kind` tells why a config is being loaded.
-    fn _load_file(
-        &self,
-        path: &Path,
-        seen: &mut HashSet<PathBuf>,
-        definition_kind: DefinitionKind,
-    ) -> CargoResult<ConfigStore> {
-        if !seen.insert(path.to_path_buf()) {
-            bail!(
-                "config `include` cycle detected with path `{}`",
-                path.display()
-            );
-        }
-        tracing::debug!(?path, ?definition_kind, "load config from file");
-
-        ConfigStore::read_layer(path, definition_kind)
     }
 
     /// Converts the `include` config value to a list of absolute paths.
