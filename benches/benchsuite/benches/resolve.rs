@@ -107,13 +107,17 @@ fn feature_resolver(b: divan::Bencher<'_, '_>, WorkspacePath(ws_root): &Workspac
     } = &mut do_resolve(&gctx, ws_root);
     b.bench_local(|| {
         let feature_opts = FeatureOpts::new_behavior(ResolveBehavior::V2, *has_dev_units);
+        let members = ws
+            .members_with_features(specs, cli_features)
+            .unwrap()
+            .into_iter()
+            .map(|(member, features)| (member.package_id(), features))
+            .collect::<Vec<_>>();
         FeatureResolver::resolve(
-            ws,
             target_data,
             &ws_resolve.targeted_resolve,
             &ws_resolve.pkg_set,
-            cli_features,
-            specs,
+            &members,
             requested_kinds,
             feature_opts,
         )
