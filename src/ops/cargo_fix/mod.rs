@@ -150,8 +150,11 @@ pub fn fix(
 ) -> CargoResult<()> {
     check_version_control(gctx, opts)?;
 
-    let mut target_data =
-        RustcTargetData::new(original_ws, &opts.compile_opts.build_config.requested_kinds)?;
+    let mut target_data = RustcTargetData::new(
+        gctx,
+        Some(original_ws),
+        &opts.compile_opts.build_config.requested_kinds,
+    )?;
 
     let specs = opts.compile_opts.spec.to_package_id_specs(&original_ws)?;
     let members: Vec<&Package> = original_ws
