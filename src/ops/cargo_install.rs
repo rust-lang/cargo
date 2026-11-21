@@ -13,6 +13,7 @@ use crate::sources::source::Source;
 use crate::sources::{GitSource, PathSource, SourceConfigMap};
 use crate::util::errors::CargoResult;
 use crate::util::{Filesystem, GlobalContext, Rustc};
+use crate::workspace::global_cache_tracker::WorkspaceBuildKind;
 use crate::workspace::{Dependency, Edition, Package, PackageId, SourceId, Target, Workspace};
 use crate::{drop_println, ops};
 
@@ -392,7 +393,28 @@ impl<'gctx> InstallablePackage<'gctx> {
 
         let exec: Arc<dyn Executor> = Arc::new(DefaultExecutor);
         self.opts.build_config.dry_run = dry_run;
-        let compile = ops::compile_with_exec(&self.ws, &self.opts, &exec).with_context(|| {
+        let compile = match &td_opt {
+            // GC does not need the temporary target directory: a successful
+            // install removes it, and the OS cleans up what a failed install
+            // leaves. A build directory from `build.build-dir` stays, so it
+            // is still recorded.
+            Some(td) => {
+                if self.ws.build_dir().as_path_unlocked() != td.path() {
+                    self.gctx
+                        .deferred_global_last_use()?
+                        .mark_workspace_dir_used(
+                            &self.ws,
+                            WorkspaceBuildKind::Build,
+                            self.ws.build_dir(),
+                        );
+                }
+                ops::cargo_compile::compile_without_workspace_build_tracking(
+                    &self.ws, &self.opts, &exec,
+                )
+            }
+            None => ops::compile_with_exec(&self.ws, &self.opts, &exec),
+        }
+        .with_context(|| {
             if let Some(td) = td_opt.take() {
                 // preserve the temporary directory, so the user can inspect it
                 drop(td.keep());
