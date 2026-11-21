@@ -540,6 +540,9 @@ fn relative_install_location_without_trailing_slash() {
     // NOTE: the install location is relative to the CWD, not the config file
     assert_has_not_installed_exe(&root_t1, "foo");
     assert_has_installed_exe(&project_t1, "foo");
+
+    cargo_process("uninstall foo").cwd(p.root()).run();
+    assert_has_not_installed_exe(&project_t1, "foo");
 }
 
 #[cargo_test]
