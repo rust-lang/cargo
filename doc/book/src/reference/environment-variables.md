@@ -323,10 +323,13 @@ on the platform:
 * macOS: `DYLD_FALLBACK_LIBRARY_PATH`
 * Unix: `LD_LIBRARY_PATH`
 * AIX: `LIBPATH`
+* Haiku: `LIBRARY_PATH`
 
 The value is extended from the existing value when Cargo starts. macOS has
 special consideration where if `DYLD_FALLBACK_LIBRARY_PATH` is not already
-set, it will add the default `$HOME/lib:/usr/local/lib:/usr/lib`.
+set, it will add the default `$HOME/lib:/usr/local/lib:/usr/lib`. Likewise, on
+Haiku, if `LIBRARY_PATH` is not already set, it will add the default
+`%A/lib:/boot/system/non-packaged/lib:/boot/system/lib`.
 
 Cargo includes the following paths:
 
