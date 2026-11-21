@@ -1161,19 +1161,12 @@ fn multitarget() {
 foo v0.1.0 ([ROOT]/foo)
 ├── common v1.0.0
 ├── dog v2.0.0
+├── hostdep v1.0.0
 └── targetdep v1.0.0
 [build-dependencies]
 ├── bdep v1.0.0
 │   ├── common v1.0.0
 │   └── dog v1.0.0
-└── dog v1.0.0
-
-foo v0.1.0 ([ROOT]/foo)
-├── common v1.0.0
-├── dog v2.0.0
-└── hostdep v1.0.0
-[build-dependencies]
-├── bdep v1.0.0 (*)
 └── dog v1.0.0
 
 "#]])
@@ -1188,13 +1181,8 @@ foo v0.1.0 ([ROOT]/foo)
 dog v1.0.0
 └── bdep v1.0.0
     [build-dependencies]
-    ├── foo v0.1.0 ([ROOT]/foo)
     └── foo v0.1.0 ([ROOT]/foo)
 [build-dependencies]
-├── foo v0.1.0 ([ROOT]/foo)
-└── foo v0.1.0 ([ROOT]/foo)
-
-dog v2.0.0
 └── foo v0.1.0 ([ROOT]/foo)
 
 dog v2.0.0
