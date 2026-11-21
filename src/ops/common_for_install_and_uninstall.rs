@@ -8,12 +8,11 @@ use std::rc::Rc;
 use anyhow::{Context as _, bail, format_err};
 use cargo_util::paths;
 use cargo_util_schemas::core::PartialVersion;
-use cargo_util_terminal::report::Level;
 use ops::FilterRule;
 use serde::{Deserialize, Serialize};
 
 use crate::compiler::{DirtyReason, Freshness};
-use crate::context::{ConfigRootRelativeProgramPath, Definition};
+use crate::context::ConfigRootRelativePath;
 use crate::ops::{self, CompileFilter, CompileOptions};
 use crate::sources::IndexSummary;
 use crate::sources::PathSource;
@@ -546,36 +545,9 @@ impl InstallInfo {
 
 /// Determines the root directory where installation is done.
 pub fn resolve_root(flag: Option<&str>, gctx: &GlobalContext) -> CargoResult<Filesystem> {
-    let config_root = match gctx
-        .get::<Option<ConfigRootRelativeProgramPath>>(["install", "root"])?
-    {
-        Some(p) => {
-            let resolved = p.resolve(gctx.cwd());
-            if resolved.is_relative() {
-                let definition = p.definition();
-                if matches!(definition, Definition::Path(_)) {
-                    let suggested = format!("{}/", resolved.display());
-                    let notes = [
-                        Level::NOTE.message("a future version of Cargo will treat it as relative to the configuration directory"),
-                        Level::HELP.message(format!("add a trailing slash (`{}`) to adopt the correct behavior and silence this warning", suggested)),
-                        Level::NOTE.message("see more at https://doc.rust-lang.org/cargo/reference/config.html#config-relative-paths"),
-                    ];
-                    gctx.shell().print_report(
-                        &[Level::WARNING
-                            .secondary_title(format!(
-                                "the `install.root` value `{}` defined in {} without a trailing slash is deprecated",
-                                resolved.display(),
-                                definition
-                            ))
-                            .elements(notes)],
-                        false,
-                    )?;
-                }
-            }
-            Some(resolved)
-        }
-        None => None,
-    };
+    let config_root = gctx
+        .get::<Option<ConfigRootRelativePath>>(["install", "root"])?
+        .map(|p| p.resolve(gctx.cwd()));
 
     Ok(flag
         .map(PathBuf::from)
