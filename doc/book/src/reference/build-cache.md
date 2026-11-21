@@ -102,6 +102,9 @@ you use bash, it makes sense to add `export RUSTC_WRAPPER=sccache` to
 `.bashrc`. Alternatively, you can set [`build.rustc-wrapper`] in the [Cargo
 configuration][config]. Refer to sccache documentation for more details.
 
+Other compiler wrappers use the same `RUSTC_WRAPPER` / [`build.rustc-wrapper`]
+hook. [kache] writes that Cargo config with `kache init`.
+
 [`RUSTFLAGS`]: ../reference/config.md#buildrustflags
 [`build.dep-info-basedir`]: ../reference/config.md#builddep-info-basedir
 [`build.rustc-wrapper`]: ../reference/config.md#buildrustc-wrapper
@@ -117,6 +120,7 @@ configuration][config]. Refer to sccache documentation for more details.
 [environment variable]: ../reference/environment-variables.md
 [incremental output]: ../reference/profiles.md#incremental
 [sccache]: https://github.com/mozilla/sccache
+[kache]: https://github.com/kunobi-ninja/kache
 [profile]: ../reference/profiles.md
 [binary executables]: ../reference/cargo-targets.md#binaries
 [library targets]: ../reference/cargo-targets.md#library
