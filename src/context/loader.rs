@@ -11,14 +11,13 @@ use anyhow::bail;
 use cargo_util::collections::HashMap;
 use cargo_util::collections::HashSet;
 use cargo_util::paths;
-use cargo_util_config::schema::ConfigParentRelativePath;
+use cargo_util_config::schema::{DetailedIncludeConfig, IncludeConfig};
 use cargo_util_terminal::Shell;
 use cargo_util_terminal::report::Level;
 
-use super::ConfigStore;
 use super::ConfigValue;
 use super::DefinitionKind;
-use super::Value;
+use super::{ConfigKey, ConfigReader, ConfigStore};
 use crate::util::errors::CargoResult;
 use crate::util::restricted_names::is_glob_pattern;
 
@@ -117,61 +116,14 @@ impl<'a> ConfigLoader<'a> {
     }
 
     /// Converts the `include` config value to a list of absolute paths.
-    fn include_paths(&self, config: &ConfigStore) -> CargoResult<Vec<ConfigInclude>> {
-        let table = config.values();
-        let include = table.get("include");
-        let includes = match include.cloned() {
-            Some(CV::List(list, _def)) => list
-                .into_iter()
-                .enumerate()
-                .map(|(idx, cv)| match cv {
-                    CV::String(val, definition) => {
-                        let path = ConfigParentRelativePath::new(Value { val, definition });
-                        Ok(ConfigInclude::new(path))
-                    }
-                    CV::Table(mut table, def) => {
-                        // Extract `include.path`
-                        let path = match table.remove("path") {
-                            Some(CV::String(val, definition)) => {
-                                ConfigParentRelativePath::new(Value { val, definition })
-                            }
-                            Some(other) => bail!(
-                                "expected a string, but found {} at `include[{idx}].path` in `{def}`",
-                                other.desc()
-                            ),
-                            None => bail!("missing field `path` at `include[{idx}]` in `{def}`"),
-                        };
-
-                        // Extract optional `include.optional` field
-                        let optional = match table.remove("optional") {
-                            Some(CV::Boolean(b, _)) => b,
-                            Some(other) => bail!(
-                                "expected a boolean, but found {} at `include[{idx}].optional` in `{def}`",
-                                other.desc()
-                            ),
-                            None => false,
-                        };
-
-                        let mut include = ConfigInclude::new(path);
-                        include.optional = optional;
-                        Ok(include)
-                    }
-                    other => bail!(
-                        "expected a string or table, but found {} at `include[{idx}]` in {}",
-                        other.desc(),
-                        other.definition(),
-                    ),
-                })
-                .collect::<CargoResult<Vec<_>>>()?,
-            Some(other) => bail!(
-                "expected a list of strings or a list of tables, but found {} at `include` in `{}",
-                other.desc(),
-                other.definition()
-            ),
-            None => {
-                return Ok(Vec::new());
-            }
-        };
+    fn include_paths(&self, config: &ConfigStore) -> CargoResult<Vec<DetailedIncludeConfig>> {
+        let entries: Vec<IncludeConfig> = ConfigReader::new(self.shell)
+            .config(config)
+            .get(ConfigKey::from_parts(["include"]))?;
+        let includes: Vec<_> = entries
+            .into_iter()
+            .map(IncludeConfig::into_detailed)
+            .collect();
 
         for include in &includes {
             let path = &include.path;
@@ -343,54 +295,5 @@ impl<'a> ConfigLoader<'a> {
 
     fn shell(&self) -> MutexGuard<'_, Shell> {
         self.shell.lock().unwrap()
-    }
-}
-
-/// Represents a config-include value in the configuration.
-///
-/// This intentionally doesn't derive serde deserialization
-/// to avoid any misuse of `GlobalContext::get::<ConfigInclude>()`,
-/// which might lead to wrong config loading order.
-struct ConfigInclude {
-    path: ConfigParentRelativePath,
-    /// Whether this include is optional (missing files are silently ignored)
-    optional: bool,
-}
-
-impl ConfigInclude {
-    fn new(path: ConfigParentRelativePath) -> Self {
-        Self {
-            path,
-            optional: false,
-        }
-    }
-
-    /// Resolves the absolute path for this include.
-    ///
-    /// For file based include,
-    /// it is relative to parent directory of the config file includes it.
-    /// For example, if `.cargo/config.toml has a `include = "foo.toml"`,
-    /// Cargo will load `.cargo/foo.toml`.
-    ///
-    /// For CLI based include (e.g., `--config 'include = "foo.toml"'`),
-    /// it is relative to the current working directory.
-    ///
-    /// Returns `None` if this is an optional include and the file doesn't exist.
-    /// Otherwise returns `Some(PathBuf)` with the absolute path.
-    fn resolve_path(&self, cwd: &Path) -> Option<PathBuf> {
-        let abs_path = self.path.resolve(cwd);
-        let abs_path = paths::normalize_path(&abs_path);
-
-        if self.optional && !abs_path.exists() {
-            tracing::info!(
-                "skipping optional include `{}` in `{}`:  file not found at `{}`",
-                self.path,
-                self.path.definition(),
-                abs_path.display(),
-            );
-            None
-        } else {
-            Some(abs_path)
-        }
     }
 }

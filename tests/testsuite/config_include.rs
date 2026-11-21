@@ -386,7 +386,8 @@ fn bad_format() {
 could not load Cargo configuration
 
 Caused by:
-  expected a list of strings or a list of tables, but found integer at `include` in `[ROOT]/.cargo/config.toml
+  invalid configuration for key `include`
+expected a list, but found a integer for `include` in [ROOT]/.cargo/config.toml
 "#]],
     );
 }
@@ -629,7 +630,10 @@ fn table_missing_required_field() {
 could not load Cargo configuration
 
 Caused by:
-  missing field `path` at `include[0]` in `[ROOT]/.cargo/config.toml`
+  error in [ROOT]/.cargo/config.toml: failed to parse config at `include[0]`
+
+Caused by:
+  missing field `path`
 "#]],
     );
 }
