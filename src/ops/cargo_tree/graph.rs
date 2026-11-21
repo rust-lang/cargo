@@ -55,7 +55,6 @@ pub enum Node {
         package_id: PackageId,
         /// Features that are enabled on this package.
         features: Vec<InternedString>,
-        kind: CompileKind,
     },
     Feature {
         /// Index of the package node this feature is for.
@@ -324,30 +323,7 @@ impl<'a> Graph<'a> {
 
         let mut dupes: Vec<(&Node, NodeId)> = packages
             .into_iter()
-            .filter(|(_name, indexes)| {
-                indexes
-                    .into_iter()
-                    .map(|(node, _)| {
-                        match node {
-                            Node::Package {
-                                package_id,
-                                features,
-                                ..
-                            } => {
-                                // Do not treat duplicates on the host or target as duplicates.
-                                Node::Package {
-                                    package_id: package_id.clone(),
-                                    features: features.clone(),
-                                    kind: CompileKind::Host,
-                                }
-                            }
-                            _ => unreachable!(),
-                        }
-                    })
-                    .collect::<HashSet<_>>()
-                    .len()
-                    > 1
-            })
+            .filter(|(_name, indexes)| indexes.len() > 1)
             .flat_map(|(_name, indexes)| indexes)
             .collect();
 
@@ -370,13 +346,15 @@ pub fn build<'a>(
     opts: &TreeOptions,
 ) -> CargoResult<Graph<'a>> {
     let mut graph = Graph::new(package_map);
+    let mut visited = HashSet::default();
     let mut members_with_features = ws.members_with_features(specs, cli_features)?;
     members_with_features.sort_unstable_by_key(|(member, _)| member.package_id());
     for (member, cli_features) in members_with_features {
         let member_id = member.package_id();
         let features_for = FeaturesFor::from_for_host(member.proc_macro());
+        let mut member_index = None;
         for kind in requested_kinds {
-            let member_index = add_pkg(
+            member_index = Some(add_pkg(
                 &mut graph,
                 resolve,
                 resolved_features,
@@ -385,11 +363,17 @@ pub fn build<'a>(
                 target_data,
                 *kind,
                 opts,
+                &mut visited,
+            ));
+        }
+        if opts.graph_features {
+            let fmap = resolve.summary(member_id).features();
+            add_cli_features(
+                &mut graph,
+                member_index.expect("requested_kinds is never empty"),
+                &cli_features,
+                fmap,
             );
-            if opts.graph_features {
-                let fmap = resolve.summary(member_id).features();
-                add_cli_features(&mut graph, member_index, &cli_features, fmap);
-            }
         }
     }
     if opts.graph_features {
@@ -412,6 +396,7 @@ fn add_pkg(
     target_data: &RustcTargetData<'_>,
     requested_kind: CompileKind,
     opts: &TreeOptions,
+    visited: &mut HashSet<(NodeId, CompileKind)>,
 ) -> NodeId {
     let node_features = resolved_features.activated_features(package_id, features_for);
     let node_kind = match features_for {
@@ -422,12 +407,14 @@ fn add_pkg(
     let node = Node::Package {
         package_id,
         features: node_features,
-        kind: node_kind,
     };
-    if let Some(idx) = graph.index.get(&node) {
-        return *idx;
+    let from_index = match graph.index.get(&node) {
+        Some(idx) => *idx,
+        None => graph.add_node(node),
+    };
+    if !visited.insert((from_index, node_kind)) {
+        return from_index;
     }
-    let from_index = graph.add_node(node);
     // Compute the dep name map which is later used for foo/bar feature lookups.
     let mut dep_name_map: HashMap<InternedString, HashSet<(NodeId, bool)>> = HashMap::default();
     let mut deps: Vec<_> = resolve.deps(package_id).collect();
@@ -522,6 +509,7 @@ fn add_pkg(
                 target_data,
                 requested_kind,
                 opts,
+                visited,
             );
             let new_edge = Edge {
                 kind: EdgeKind::Dep(dep.kind()),
@@ -550,12 +538,10 @@ fn add_pkg(
         }
     }
     if opts.graph_features {
-        assert!(
-            graph
-                .dep_name_map
-                .insert(from_index, dep_name_map)
-                .is_none()
-        );
+        let map = graph.dep_name_map.entry(from_index).or_default();
+        for (dep_name, conns) in dep_name_map {
+            map.entry(dep_name).or_default().extend(conns);
+        }
     }
 
     from_index

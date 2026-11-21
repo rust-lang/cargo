@@ -1108,6 +1108,91 @@ fn duplicates_with_target() {
 }
 
 #[cargo_test]
+fn multitarget() {
+    let alt = "wasm32-unknown-unknown";
+    let host = rustc_host();
+
+    Package::new("targetdep", "1.0.0").publish();
+    Package::new("hostdep", "1.0.0").publish();
+    Package::new("common", "1.0.0").publish();
+    Package::new("dog", "1.0.0").publish();
+    Package::new("dog", "2.0.0").publish();
+    Package::new("bdep", "1.0.0")
+        .dep("common", "1.0")
+        .dep("dog", "1.0")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+
+                [dependencies]
+                common = "1.0"
+                dog = "2.0"
+
+                [target.'{alt}'.dependencies]
+                targetdep = "1.0"
+
+                [target.'{host}'.dependencies]
+                hostdep = "1.0"
+
+                [build-dependencies]
+                bdep = "1.0"
+                dog = "1.0"
+                "#
+            ),
+        )
+        .file("src/lib.rs", "")
+        .file("build.rs", "fn main() {}")
+        .build();
+
+    p.cargo("tree")
+        .arg("--target")
+        .arg(alt)
+        .arg("--target")
+        .arg(host)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
+├── common v1.0.0
+├── dog v2.0.0
+├── hostdep v1.0.0
+└── targetdep v1.0.0
+[build-dependencies]
+├── bdep v1.0.0
+│   ├── common v1.0.0
+│   └── dog v1.0.0
+└── dog v1.0.0
+
+"#]])
+        .run();
+
+    p.cargo("tree -d")
+        .arg("--target")
+        .arg(alt)
+        .arg("--target")
+        .arg(host)
+        .with_stdout_data(str![[r#"
+dog v1.0.0
+└── bdep v1.0.0
+    [build-dependencies]
+    └── foo v0.1.0 ([ROOT]/foo)
+[build-dependencies]
+└── foo v0.1.0 ([ROOT]/foo)
+
+dog v2.0.0
+└── foo v0.1.0 ([ROOT]/foo)
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn duplicates_with_proc_macro() {
     Package::new("dupe-dep", "1.0.0").publish();
     Package::new("dupe-dep", "2.0.0").publish();
