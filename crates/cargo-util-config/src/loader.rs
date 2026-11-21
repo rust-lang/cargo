@@ -182,7 +182,7 @@ impl<'a> ConfigLoader<'a> {
                     DefinitionKind::Cli,
                     &mut layers,
                 )
-                .context("failed to load --config include".to_string())?;
+                .context("failed to load --config include")?;
                 layers.push(config);
             }
             loaded_args = ConfigStore::from_layers(std::iter::once(loaded_args).chain(layers))
