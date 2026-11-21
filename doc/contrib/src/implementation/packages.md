@@ -20,7 +20,7 @@ Run `cargo new <name>`
   - If the right choice is inherited from the workspace, feel free to keep it that way
 - If running without [cargo new automatically adding to workspace](https://github.com/rust-lang/cargo/pull/12779), add it as a workspace member if not already captured by a glob
 
-If its an xtask,
+If it's an xtask,
 - Add it to `.cargo/config.toml`s `[alias]` table
 - Mark `package.publish = false`
 
