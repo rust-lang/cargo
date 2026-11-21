@@ -1,6 +1,7 @@
 //! [`BuildRunner`] is the mutable state used during the build process.
 
 use cargo_util::collections::{HashMap, HashSet};
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
@@ -94,6 +95,10 @@ pub struct BuildRunner<'a, 'gctx> {
 
     /// Manages locks for build units when fine grain locking is enabled.
     pub lock_manager: Arc<LockManager>,
+
+    /// The hashes of the unit outputs (not the individual objects) that were used
+    /// during the build.
+    pub object_storage_outputs: BTreeSet<String>,
 }
 
 impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
@@ -135,6 +140,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
             failed_scrape_units: Arc::new(Mutex::new(HashSet::default())),
             unused_dep_state: UnusedDepState::new(bcx),
             lock_manager: Arc::new(LockManager::new()),
+            object_storage_outputs: BTreeSet::new(),
         })
     }
 
@@ -455,7 +461,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
 
         self.record_units_requiring_metadata();
 
-        let files = CompilationFiles::new(self, host_layout, targets);
+        let files = CompilationFiles::new(self, host_layout, targets)?;
         self.files = Some(files);
         Ok(())
     }
