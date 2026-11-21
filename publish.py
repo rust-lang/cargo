@@ -31,6 +31,7 @@ TO_PUBLISH = [
     'crates/cargo-util-terminal',
     'crates/cargo-util-config',
     'crates/cargo-test-macro',
+    'crates/cargo-dev-registry',
     'crates/cargo-test-support',
     'crates/build-rs',
     '.',

@@ -35,11 +35,10 @@
 //! ```
 
 use crate::compare::InMemoryDir;
-use crate::registry::{self, FeatureMap, alt_api_path};
+use crate::registry::{self, alt_api_path};
 use flate2::read::GzDecoder;
 use snapbox::prelude::*;
 use std::collections::HashSet;
-use std::fs;
 use std::fs::File;
 use std::io::{self, SeekFrom, prelude::*};
 use std::path::Path;
@@ -217,99 +216,4 @@ fn validate_crate_contents_(
         );
     }
     actual_contents.assert_contains(&expected_contents);
-}
-
-pub(crate) fn create_index_line(
-    name: serde_json::Value,
-    vers: &str,
-    deps: Vec<serde_json::Value>,
-    cksum: &str,
-    features: crate::registry::FeatureMap,
-    yanked: bool,
-    links: Option<String>,
-    rust_version: Option<&str>,
-    pubtime: Option<&str>,
-    v: Option<u32>,
-) -> String {
-    // This emulates what crates.io does to retain backwards compatibility.
-    let (features, features2) = split_index_features(features.clone());
-    let mut json = serde_json::json!({
-        "name": name,
-        "vers": vers,
-        "deps": deps,
-        "cksum": cksum,
-        "features": features,
-        "yanked": yanked,
-        "links": links,
-    });
-    if let Some(f2) = &features2 {
-        json["features2"] = serde_json::json!(f2);
-        json["v"] = serde_json::json!(2);
-    }
-    if let Some(v) = v {
-        json["v"] = serde_json::json!(v);
-    }
-    if let Some(rust_version) = rust_version {
-        json["rust_version"] = serde_json::json!(rust_version);
-    }
-    if let Some(pubtime) = pubtime {
-        json["pubtime"] = serde_json::json!(pubtime);
-    }
-
-    json.to_string()
-}
-
-pub(crate) fn write_to_index(registry_path: &Path, name: &str, line: String, local: bool) {
-    let file = cargo_util::registry::make_dep_path(name, false);
-
-    // Write file/line in the index.
-    let dst = if local {
-        registry_path.join("index").join(&file)
-    } else {
-        registry_path.join(&file)
-    };
-    let prev = fs::read_to_string(&dst).unwrap_or_default();
-    t!(fs::create_dir_all(dst.parent().unwrap()));
-    t!(fs::write(&dst, prev + &line[..] + "\n"));
-
-    // Add the new file to the index.
-    if !local {
-        let repo = t!(git2::Repository::open(&registry_path));
-        let mut index = t!(repo.index());
-        t!(index.add_path(Path::new(&file)));
-        t!(index.write());
-        let id = t!(index.write_tree());
-
-        // Commit this change.
-        let tree = t!(repo.find_tree(id));
-        let sig = t!(repo.signature());
-        let parent = t!(repo.refname_to_id("refs/heads/master"));
-        let parent = t!(repo.find_commit(parent));
-        t!(repo.commit(
-            Some("HEAD"),
-            &sig,
-            &sig,
-            "Another commit",
-            &tree,
-            &[&parent]
-        ));
-    }
-}
-
-fn split_index_features(mut features: FeatureMap) -> (FeatureMap, Option<FeatureMap>) {
-    let mut features2 = FeatureMap::new();
-    for (feat, values) in features.iter_mut() {
-        if values
-            .iter()
-            .any(|value| value.starts_with("dep:") || value.contains("?/"))
-        {
-            let new_values = std::mem::take(values);
-            features2.insert(feat.clone(), new_values);
-        }
-    }
-    if features2.is_empty() {
-        (features, None)
-    } else {
-        (features, Some(features2))
-    }
 }
