@@ -569,6 +569,7 @@ dependencies = [
  "cargo-util-schemas",
  "cargo-util-terminal",
  "regex",
+ "same-file",
  "schemars",
  "serde",
  "serde-untagged",

@@ -7,25 +7,25 @@ use std::sync::Mutex;
 use std::sync::MutexGuard;
 
 use anyhow::Context as _;
+use anyhow::Result;
 use anyhow::bail;
 use cargo_util::collections::HashMap;
 use cargo_util::collections::HashSet;
 use cargo_util::paths;
-use cargo_util_config::schema::{DetailedIncludeConfig, IncludeConfig};
 use cargo_util_terminal::Shell;
 use cargo_util_terminal::report::Level;
 
 use super::ConfigValue;
 use super::DefinitionKind;
+use super::schema::{DetailedIncludeConfig, IncludeConfig};
 use super::{ConfigKey, ConfigReader, ConfigStore};
-use crate::util::errors::CargoResult;
-use crate::util::restricted_names::is_glob_pattern;
+use cargo_util::is_glob_pattern;
 
 use ConfigValue as CV;
 
 /// Discovers and loads config files from the filesystem.
 #[derive(Clone, Copy)]
-pub(crate) struct ConfigLoader<'a> {
+pub struct ConfigLoader<'a> {
     shell: &'a Mutex<Shell>,
     cwd: &'a Path,
     home: &'a Path,
@@ -33,7 +33,7 @@ pub(crate) struct ConfigLoader<'a> {
 }
 
 impl<'a> ConfigLoader<'a> {
-    pub(crate) fn new(
+    pub fn new(
         shell: &'a Mutex<Shell>,
         cwd: &'a Path,
         home: &'a Path,
@@ -50,7 +50,7 @@ impl<'a> ConfigLoader<'a> {
     /// Discovers config files from a path without merging config values.
     ///
     /// Returns one [`ConfigStore`] per config file, from lowest to highest precedence.
-    pub(crate) fn load_unmerged_from(&self, path: &Path) -> CargoResult<Vec<ConfigStore>> {
+    pub fn load_unmerged_from(&self, path: &Path) -> Result<Vec<ConfigStore>> {
         let mut result = Vec::new();
         self.walk_tree(path, |path| {
             let mut layers = Vec::new();
@@ -77,7 +77,7 @@ impl<'a> ConfigLoader<'a> {
         seen: &mut HashSet<PathBuf>,
         definition_kind: DefinitionKind,
         output: &mut Vec<ConfigStore>,
-    ) -> CargoResult<()> {
+    ) -> Result<()> {
         if !seen.insert(path.to_path_buf()) {
             bail!(
                 "config `include` cycle detected with path `{}`",
@@ -98,7 +98,7 @@ impl<'a> ConfigLoader<'a> {
         seen: &mut HashSet<PathBuf>,
         definition_kind: DefinitionKind,
         output: &mut Vec<ConfigStore>,
-    ) -> CargoResult<()> {
+    ) -> Result<()> {
         for include in self.include_paths(config)? {
             let Some(abs_path) = include.resolve_path(self.cwd) else {
                 continue;
@@ -116,7 +116,7 @@ impl<'a> ConfigLoader<'a> {
     }
 
     /// Converts the `include` config value to a list of absolute paths.
-    fn include_paths(&self, config: &ConfigStore) -> CargoResult<Vec<DetailedIncludeConfig>> {
+    fn include_paths(&self, config: &ConfigStore) -> Result<Vec<DetailedIncludeConfig>> {
         let entries: Vec<IncludeConfig> = ConfigReader::new(self.shell)
             .config(config)
             .get(ConfigKey::from_parts(["include"]))?;
@@ -158,7 +158,7 @@ impl<'a> ConfigLoader<'a> {
     }
 
     /// Parses the CLI config args and returns them as a table.
-    pub(crate) fn load_cli_args(&self, cli_args: &[String]) -> CargoResult<ConfigStore> {
+    pub fn load_cli_args(&self, cli_args: &[String]) -> Result<ConfigStore> {
         let mut loaded_args = ConfigStore::default();
         let mut seen = HashSet::default();
         for arg in cli_args {
@@ -192,12 +192,12 @@ impl<'a> ConfigLoader<'a> {
     /// Both 'config.toml' and 'credentials.toml' should be valid with or without extension.
     /// When both exist, we want to prefer the one without an extension for
     /// backwards compatibility, but warn the user appropriately.
-    pub(crate) fn get_file_path(
+    pub fn get_file_path(
         &self,
         dir: &Path,
         file_stem: &str,
         warn: bool,
-    ) -> CargoResult<Option<PathBuf>> {
+    ) -> Result<Option<PathBuf>> {
         let possible = dir.join(file_stem);
         let possible_with_extension = dir.join(format!("{}.toml", file_stem));
 
@@ -239,9 +239,9 @@ impl<'a> ConfigLoader<'a> {
         }
     }
 
-    fn walk_tree<F>(&self, pwd: &Path, mut walk: F) -> CargoResult<()>
+    fn walk_tree<F>(&self, pwd: &Path, mut walk: F) -> Result<()>
     where
-        F: FnMut(&Path) -> CargoResult<()>,
+        F: FnMut(&Path) -> Result<()>,
     {
         let home = self.home;
         let mut seen_dir = HashSet::default();
@@ -271,7 +271,7 @@ impl<'a> ConfigLoader<'a> {
     }
 
     /// Loads credentials config from the credentials file, if present.
-    pub(crate) fn load_credentials(&self) -> CargoResult<ConfigStore> {
+    pub fn load_credentials(&self) -> Result<ConfigStore> {
         let Some(credentials) = self.get_file_path(self.home, "credentials", true)? else {
             return Ok(ConfigStore::default());
         };

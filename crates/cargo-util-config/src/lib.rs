@@ -4,24 +4,37 @@
 //! > and not intended for external use (except as a transitive dependency). This
 //! > crate may make major changes to its APIs or be deprecated without warning.
 //!
+//! [`ConfigLoader`] discovers and loads config files as [`ConfigStore`] layers.
 //! [`ConfigReader::get`] is the primary way to load [`schema`]s.
 //!
 //! # Example
 //!
 //! ```rust
+//! # fn main() -> anyhow::Result<()> {
 //! let shell = // ...
 //! # std::sync::Mutex::new(cargo_util_terminal::Shell::new());
-//! let config = // ...
-//! # cargo_util_config::ConfigStore::new();
+//! let cwd = // ...
+//! # std::path::PathBuf::from("/nonexistent/project");
+//! let cargo_home = // ...
+//! # std::path::PathBuf::from("/nonexistent/cargo-home");
+//! let search_stop_path = // ...
+//! # Some(cwd.as_path());
+//!
+//! let loader = cargo_util_config::ConfigLoader::new(&shell, &cwd, &cargo_home, search_stop_path);
+//! let layers = loader.load_unmerged_from(&cwd)?;
+//! let config = cargo_util_config::ConfigStore::from_layers(layers)?;
 //! let env = // ...
 //! # cargo_util_config::Env::new();
+//!
 //! let reader = cargo_util_config::ConfigReader::new(&shell)
 //!   .config(&config)
 //!   .env(&env);
 //!
 //! use cargo_util_config::schema::CargoBuildConfig;
 //! let build_key = cargo_util_config::ConfigKey::from_parts(["build"]);
-//! let build = reader.get::<CargoBuildConfig>(build_key);
+//! let build = reader.get::<CargoBuildConfig>(build_key)?;
+//! # Ok(())
+//! # }
 //! ```
 
 mod config_store;
@@ -31,6 +44,7 @@ mod definition;
 mod env;
 mod error;
 mod key;
+mod loader;
 mod reader;
 pub mod schema;
 mod value;
@@ -41,6 +55,7 @@ pub use definition::{Definition, DefinitionKind};
 pub use env::Env;
 pub use error::ConfigError;
 pub use key::ConfigKey;
+pub use loader::ConfigLoader;
 pub use reader::{ConfigReader, expected};
 pub use value::{OptValue, Value};
 

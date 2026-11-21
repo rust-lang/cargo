@@ -10,12 +10,12 @@ use crate::compiler::{CompileKind, CompileMode, Unit};
 use crate::compiler::{RustcTargetData, UnitInterner};
 use crate::resolver::features::{self, FeaturesFor};
 use crate::resolver::{ForceAllTargets, HasDevUnits, Resolve};
-use crate::util::restricted_names::is_glob_pattern;
 use crate::util::{CargoResult, closest_msg};
 use crate::workspace::Workspace;
 use crate::workspace::dependency::DepKind;
 use crate::workspace::profiles::{Profiles, UnitFor};
 use crate::workspace::{FeatureValue, Package, PackageSet, Summary, Target};
+use cargo_util::is_glob_pattern;
 
 use super::Packages;
 use super::compile_filter::{CompileFilter, FilterRule, LibRule};

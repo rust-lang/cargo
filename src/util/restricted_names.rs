@@ -43,8 +43,3 @@ pub fn is_windows_reserved_path(path: &Path) -> bool {
             is_windows_reserved(stem)
         })
 }
-
-/// Returns `true` if the name contains any glob pattern wildcards.
-pub fn is_glob_pattern<T: AsRef<str>>(name: T) -> bool {
-    name.as_ref().contains(&['*', '?', '[', ']'][..])
-}

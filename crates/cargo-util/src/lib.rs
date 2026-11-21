@@ -25,3 +25,8 @@ mod sha256;
 pub fn is_ci() -> bool {
     std::env::var("CI").is_ok() || std::env::var("TF_BUILD").is_ok()
 }
+
+/// Returns `true` if the name contains any glob pattern wildcards.
+pub fn is_glob_pattern<T: AsRef<str>>(name: T) -> bool {
+    name.as_ref().contains(&['*', '?', '[', ']'][..])
+}

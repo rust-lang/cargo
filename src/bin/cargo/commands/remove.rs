@@ -267,7 +267,7 @@ fn gc_workspace(workspace: &Workspace<'_>) -> CargoResult<()> {
                         let key = key.get();
                         // Skip globs. Can't do anything with them.
                         // For example, profile.release.package."*".
-                        if crate::util::restricted_names::is_glob_pattern(key) {
+                        if cargo_util::is_glob_pattern(key) {
                             continue;
                         }
                         if !spec_has_match(

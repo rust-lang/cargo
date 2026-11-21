@@ -3,9 +3,9 @@
 use std::collections::BTreeSet;
 
 use crate::util::CargoResult;
-use crate::util::restricted_names::is_glob_pattern;
 use crate::workspace::{Package, PackageIdSpecQuery};
 use crate::workspace::{PackageIdSpec, Workspace};
+use cargo_util::is_glob_pattern;
 
 use anyhow::{Context as _, bail};
 
