@@ -33,6 +33,10 @@ pub struct ConfigLoader<'a> {
 }
 
 impl<'a> ConfigLoader<'a> {
+    /// Creates a config loader.
+    ///
+    /// * `current_dir` is what `--config` arguments and `include`s are relative to on the command line.
+    /// * `cargo_home` is `$CARGO_HOME`, where the lowest-precedence config file live.
     pub fn new(shell: &'a Mutex<Shell>, current_dir: &'a Path, cargo_home: &'a Path) -> Self {
         Self {
             shell,
@@ -119,7 +123,7 @@ impl<'a> ConfigLoader<'a> {
         Ok(())
     }
 
-    /// Converts the `include` config value to a list of absolute paths.
+    /// Reads the `include` entries of `config`.
     fn include_paths(&self, config: &ConfigStore) -> Result<Vec<DetailedIncludeConfig>> {
         let entries: Vec<IncludeConfig> = ConfigReader::new(self.shell)
             .config(config)
@@ -161,7 +165,10 @@ impl<'a> ConfigLoader<'a> {
         Ok(includes)
     }
 
-    /// Parses the CLI config args and returns them as a table.
+    /// Loads `--config` arguments and  merges them into one [`ConfigStore`].
+    ///
+    /// The `--config` value can be a path to a config file or a `key=value` pair.
+    /// Later arguments take precedence over earlier ones.
     pub fn load_cli_args(&self, cli_args: &[String]) -> Result<ConfigStore> {
         let mut loaded_args = ConfigStore::default();
         let mut seen = HashSet::default();
@@ -191,11 +198,11 @@ impl<'a> ConfigLoader<'a> {
         Ok(loaded_args)
     }
 
-    /// The purpose of this function is to aid in the transition to using
-    /// .toml extensions on Cargo's config files, which were historically not used.
-    /// Both 'config.toml' and 'credentials.toml' should be valid with or without extension.
-    /// When both exist, we want to prefer the one without an extension for
-    /// backwards compatibility, but warn the user appropriately.
+    /// Finds `<file_stem>` or `<file_stem>.toml` in `dir`.
+    ///
+    /// The file without extension is preferred if both exist.
+    ///
+    /// With `warn`, a warning is emitted if the legacy `<file_stem>` config file is used.
     pub fn get_file_path(
         &self,
         dir: &Path,
