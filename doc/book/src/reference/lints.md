@@ -42,6 +42,7 @@ These lints are all set to the 'allow' level by default.
 - [`non_kebab_case_packages`](#non_kebab_case_packages)
 - [`non_snake_case_features`](#non_snake_case_features)
 - [`non_snake_case_packages`](#non_snake_case_packages)
+- [`repository_not_inherited`](#repository_not_inherited)
 
 ## Warn-by-default
 
@@ -374,6 +375,48 @@ Should be written as:
 [package]
 name = "foo"
 repository = "https://github.com/rust-lang/cargo/"
+```
+
+
+## `repository_not_inherited`
+
+- Group: `pedantic`
+- Level: `allow`
+- Minimal [`package.rust-version`]: `1.79.0`
+
+
+### What it does
+
+Checks for a directly set `package.repository` in an explicit workspace.
+
+### Why is this bad?
+
+Package-specific repository links can point to a file browser rather than a cloneable repository.
+Inheriting a workspace repository can help keep these links consistent.
+
+### Drawbacks
+
+Workspace members can intentionally use different repositories.
+
+### Example
+
+```toml
+[workspace]
+
+[workspace.package]
+repository = "https://github.com/rust-lang/cargo"
+
+[package]
+name = "example"
+repository = "https://github.com/rust-lang/cargo/tree/master/crates/example"
+```
+
+Consider writing:
+
+```toml
+[package]
+name = "example"
+repository.workspace = true
 ```
 
 
