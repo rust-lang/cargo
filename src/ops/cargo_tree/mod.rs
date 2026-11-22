@@ -6,6 +6,7 @@ use crate::ops::resolve::SpecsAndResolvedFeatures;
 use crate::ops::{self, Packages};
 use crate::resolver::{ForceAllTargets, HasDevUnits, features::CliFeatures};
 use crate::util::CargoResult;
+use crate::util::interning::InternedString;
 use crate::util::style;
 use crate::workspace::dependency::DepKind;
 use crate::workspace::{Package, PackageId, PackageIdSpec, PackageIdSpecQuery, Workspace};
@@ -267,7 +268,7 @@ fn print(
     // already been printed (ignored with --no-dedupe).
     let mut visited_deps = HashSet::default();
 
-    for (i, root_index) in roots.into_iter().enumerate() {
+    for (i, root_indexes) in group_nodes(graph, roots).into_iter().enumerate() {
         if i != 0 {
             drop_println!(ws.gctx());
         }
@@ -282,7 +283,7 @@ fn print(
         print_node(
             ws,
             graph,
-            root_index,
+            &root_indexes,
             &format,
             symbols,
             pkgs_to_prune,
@@ -298,11 +299,70 @@ fn print(
     Ok(())
 }
 
+#[derive(Clone, Copy, Eq, PartialEq, Hash)]
+enum NodeKey<'a> {
+    Package {
+        package_id: PackageId,
+        features: &'a [InternedString],
+    },
+    Feature {
+        package_id: PackageId,
+        features: &'a [InternedString],
+        name: InternedString,
+    },
+}
+
+fn node_key<'a>(graph: &'a Graph<'_>, index: NodeId) -> NodeKey<'a> {
+    match graph.node(index) {
+        Node::Package {
+            package_id,
+            features,
+            ..
+        } => NodeKey::Package {
+            package_id: *package_id,
+            features,
+        },
+        Node::Feature { node_index, name } => match graph.node(*node_index) {
+            Node::Package {
+                package_id,
+                features,
+                ..
+            } => NodeKey::Feature {
+                package_id: *package_id,
+                features,
+                name: *name,
+            },
+            Node::Feature { .. } => panic!("unexpected feature node"),
+        },
+    }
+}
+
+/// Groups nodes that share the same package, feature set, and feature name across
+/// different [`CompileKind`]s so they can be merged when displayed.
+fn group_nodes(graph: &Graph<'_>, indexes: impl IntoIterator<Item = NodeId>) -> Vec<Vec<NodeId>> {
+    let mut groups: HashMap<NodeKey<'_>, Vec<NodeId>> = HashMap::default();
+    for index in indexes {
+        let group = groups.entry(node_key(graph, index)).or_default();
+        if !group.contains(&index) {
+            group.push(index);
+        }
+    }
+    let mut groups: Vec<Vec<NodeId>> = groups
+        .into_values()
+        .map(|mut group| {
+            group.sort_unstable_by(|a, b| graph.node(*a).cmp(graph.node(*b)));
+            group
+        })
+        .collect();
+    groups.sort_unstable_by(|a, b| graph.node(a[0]).cmp(graph.node(b[0])));
+    groups
+}
+
 /// Prints a package and all of its dependencies.
 fn print_node<'a>(
     ws: &Workspace<'_>,
     graph: &'a Graph<'_>,
-    node_index: NodeId,
+    node_indexes: &[NodeId],
     format: &Pattern,
     symbols: &Symbols,
     pkgs_to_prune: &[PackageIdSpec],
@@ -313,7 +373,13 @@ fn print_node<'a>(
     levels_continue: &mut Vec<(anstyle::Style, bool)>,
     print_stack: &mut Vec<NodeId>,
 ) -> CargoResult<()> {
-    let new = no_dedupe || visited_deps.insert(node_index);
+    let mut any_new = false;
+    if !no_dedupe {
+        for &node_index in node_indexes {
+            any_new |= visited_deps.insert(node_index);
+        }
+    }
+    let new = no_dedupe || any_new;
 
     match prefix {
         Prefix::Depth => drop_print!(ws.gctx(), "{}", levels_continue.len()),
@@ -340,22 +406,30 @@ fn print_node<'a>(
         Prefix::None => {}
     }
 
-    let in_cycle = print_stack.contains(&node_index);
+    let in_cycle = node_indexes.iter().any(|n| print_stack.contains(n));
     // If this node does not have any outgoing edges, don't include the (*)
     // since there isn't really anything "deduplicated", and it generally just
     // adds noise.
-    let has_deps = graph.has_outgoing_edges(node_index);
+    let has_deps = node_indexes
+        .iter()
+        .any(|&node_index| graph.has_outgoing_edges(node_index));
     let star = if (new && !in_cycle) || !has_deps {
         ""
     } else {
         color_print::cstr!(" <yellow,dim>(*)</>")
     };
-    drop_println!(ws.gctx(), "{}{}", format.display(graph, node_index), star);
+    drop_println!(
+        ws.gctx(),
+        "{}{}",
+        format.display(graph, node_indexes[0]),
+        star
+    );
 
     if !new || in_cycle {
         return Ok(());
     }
-    print_stack.push(node_index);
+    let prev_stack_len = print_stack.len();
+    print_stack.extend_from_slice(node_indexes);
 
     for kind in &[
         EdgeKind::Dep(DepKind::Normal),
@@ -366,7 +440,7 @@ fn print_node<'a>(
         print_dependencies(
             ws,
             graph,
-            node_index,
+            node_indexes,
             format,
             symbols,
             pkgs_to_prune,
@@ -379,7 +453,7 @@ fn print_node<'a>(
             kind,
         )?;
     }
-    print_stack.pop();
+    print_stack.truncate(prev_stack_len);
 
     Ok(())
 }
@@ -388,7 +462,7 @@ fn print_node<'a>(
 fn print_dependencies<'a>(
     ws: &Workspace<'_>,
     graph: &'a Graph<'_>,
-    node_index: NodeId,
+    node_indexes: &[NodeId],
     format: &Pattern,
     symbols: &Symbols,
     pkgs_to_prune: &[PackageIdSpec],
@@ -400,7 +474,13 @@ fn print_dependencies<'a>(
     print_stack: &mut Vec<NodeId>,
     kind: &EdgeKind,
 ) -> CargoResult<()> {
-    let deps = graph.edges_of_kind(node_index, kind);
+    let deps = group_nodes(
+        graph,
+        node_indexes
+            .iter()
+            .flat_map(|&node_index| graph.edges_of_kind(node_index, kind))
+            .map(|edge| edge.node()),
+    );
     if deps.is_empty() {
         return Ok(());
     }
@@ -441,7 +521,7 @@ fn print_dependencies<'a>(
         .iter()
         .filter(|dep| {
             // Filter out packages to prune.
-            match graph.node(dep.node()) {
+            match graph.node(dep[0]) {
                 Node::Package { package_id, .. } => {
                     if filter_non_workspace_member && !ws.is_member_id(*package_id) {
                         return false;
@@ -454,12 +534,12 @@ fn print_dependencies<'a>(
         .peekable();
 
     while let Some(dependency) = it.next() {
-        let style = edge_line_color(dependency.kind());
+        let style = edge_line_color(*kind);
         levels_continue.push((style, it.peek().is_some()));
         print_node(
             ws,
             graph,
-            dependency.node(),
+            dependency,
             format,
             symbols,
             pkgs_to_prune,
