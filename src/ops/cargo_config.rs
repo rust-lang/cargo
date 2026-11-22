@@ -311,7 +311,7 @@ fn print_toml_unmerged(
         drop_println!(gctx, "");
     }
 
-    let unmerged = gctx.config_loader().load_unmerged_from(gctx.cwd())?;
+    let unmerged = gctx.config_loader().load_layers(gctx.cwd())?;
     for config in unmerged.into_iter().rev() {
         let mut cv = config.into_value();
         if trim_cv(&mut cv, key)? {

@@ -674,7 +674,7 @@ impl GlobalContext {
     /// Reloads on-disk configuration values, starting at the given path and
     /// walking up its ancestors.
     pub fn reload_rooted_at<P: AsRef<Path>>(&mut self, path: P) -> CargoResult<()> {
-        let mut layers = self.config_loader().load_unmerged_from(path.as_ref())?;
+        let mut layers = self.config_loader().load_layers(path.as_ref())?;
         layers.push(self.cli_args_to_config()?);
         let config =
             ConfigStore::from_layers(layers).context("could not load Cargo configuration")?;
@@ -1027,14 +1027,14 @@ impl GlobalContext {
 
     /// Loads configuration from the filesystem.
     pub fn load_config(&self) -> CargoResult<ConfigStore> {
-        let layers = self.config_loader().load_unmerged_from(&self.cwd)?;
+        let layers = self.config_loader().load_layers(&self.cwd)?;
         ConfigStore::from_layers(layers).context("could not load Cargo configuration")
     }
 
     /// Parses the CLI config args and returns them as a table.
     pub(crate) fn cli_args_to_config(&self) -> CargoResult<ConfigStore> {
         let cli_args = self.cli_config.as_deref().unwrap_or_default();
-        self.config_loader().load_cli_args(cli_args)
+        self.config_loader().load_cli_args_layer(cli_args)
     }
 
     pub(crate) fn config_loader(&self) -> ConfigLoader<'_> {

@@ -58,7 +58,7 @@ impl<'a> ConfigLoader<'a> {
     /// Discovers config files from a path without merging config values.
     ///
     /// Returns one [`ConfigStore`] per config file, from lowest to highest precedence.
-    pub fn load_unmerged_from(&self, path: &Path) -> Result<Vec<ConfigStore>> {
+    pub fn load_layers(&self, path: &Path) -> Result<Vec<ConfigStore>> {
         let mut result = Vec::new();
         self.walk_tree(path, |path| {
             let mut layers = Vec::new();
@@ -169,7 +169,7 @@ impl<'a> ConfigLoader<'a> {
     ///
     /// The `--config` value can be a path to a config file or a `key=value` pair.
     /// Later arguments take precedence over earlier ones.
-    pub fn load_cli_args(&self, cli_args: &[String]) -> Result<ConfigStore> {
+    pub fn load_cli_args_layer(&self, cli_args: &[String]) -> Result<ConfigStore> {
         let mut loaded_args = ConfigStore::default();
         let mut seen = HashSet::default();
         for arg in cli_args {

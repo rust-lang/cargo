@@ -19,7 +19,7 @@
 //! # std::path::PathBuf::from("/nonexistent/cargo-home");
 //!
 //! let loader = cargo_util_config::ConfigLoader::new(&shell, &current_dir, &cargo_home);
-//! let layers = loader.load_unmerged_from(&current_dir)?;
+//! let layers = loader.load_layers(&current_dir)?;
 //! let config = cargo_util_config::ConfigStore::from_layers(layers)?;
 //! let env = // ...
 //! # cargo_util_config::Env::new();
