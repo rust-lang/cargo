@@ -62,7 +62,7 @@ impl<'a> ConfigLoader<'a> {
         let mut result = Vec::new();
         self.walk_tree(path, |path| {
             let mut layers = Vec::new();
-            self.load_unmerged_file(
+            self.load_file_layers(
                 path,
                 &mut HashSet::default(),
                 DefinitionKind::Path,
@@ -79,7 +79,7 @@ impl<'a> ConfigLoader<'a> {
     }
 
     /// Loads a config file and its `include`s recursively without merging config values.
-    fn load_unmerged_file(
+    fn load_file_layers(
         &self,
         path: &Path,
         seen: &mut HashSet<PathBuf>,
@@ -94,13 +94,13 @@ impl<'a> ConfigLoader<'a> {
         }
         tracing::debug!(?path, ?definition_kind, "load config from file");
         let config = ConfigStore::read_layer(path, definition_kind)?;
-        self.load_unmerged_includes(&config, seen, definition_kind, output)?;
+        self.load_include_layers(&config, seen, definition_kind, output)?;
         output.push(config);
         Ok(())
     }
 
     /// Loads the `include`s of `config` recursively without merging config values.
-    fn load_unmerged_includes(
+    fn load_include_layers(
         &self,
         config: &ConfigStore,
         seen: &mut HashSet<PathBuf>,
@@ -111,7 +111,7 @@ impl<'a> ConfigLoader<'a> {
             let Some(abs_path) = include.resolve_path(self.current_dir) else {
                 continue;
             };
-            self.load_unmerged_file(&abs_path, seen, definition_kind, output)
+            self.load_file_layers(&abs_path, seen, definition_kind, output)
                 .with_context(|| {
                     format!(
                         "failed to load config include `{}` from `{}`",
@@ -177,13 +177,13 @@ impl<'a> ConfigLoader<'a> {
             let arg_as_path = self.current_dir.join(arg);
             if !arg.is_empty() && arg_as_path.exists() {
                 // --config path_to_file
-                self.load_unmerged_file(&arg_as_path, &mut seen, DefinitionKind::Cli, &mut layers)
+                self.load_file_layers(&arg_as_path, &mut seen, DefinitionKind::Cli, &mut layers)
                     .with_context(|| {
                         format!("failed to load config from `{}`", arg_as_path.display())
                     })?;
             } else {
                 let config = ConfigStore::parse_cli_key_value(arg)?;
-                self.load_unmerged_includes(
+                self.load_include_layers(
                     &config,
                     &mut HashSet::default(),
                     DefinitionKind::Cli,
