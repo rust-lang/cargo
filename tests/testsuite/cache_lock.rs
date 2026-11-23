@@ -319,7 +319,7 @@ fn mutate_err_is_atomic() {
     // succeeds, but the second one fails, that the first lock is released.
     let gctx = GlobalContextBuilder::new().build();
     let locker = CacheLocker::new();
-    let cargo_home = gctx.home().as_path_unlocked();
+    let cargo_home = gctx.cargo_home().as_path_unlocked();
     let cache_path = cargo_home.join(".package-cache");
     // This is a hacky way to force an error acquiring the download lock. By
     // making it a directory, it is unable to open it.

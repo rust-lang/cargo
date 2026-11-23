@@ -347,7 +347,7 @@ fn search_directories(gctx: &GlobalContext) -> Vec<PathBuf> {
         vec![]
     };
 
-    let home_bin = gctx.home().clone().into_path_unlocked().join("bin");
+    let home_bin = gctx.cargo_home().clone().into_path_unlocked().join("bin");
 
     // If any of that PATH elements contains `home_bin`, do not
     // add it again. This is so that the users can control priority

@@ -1029,7 +1029,7 @@ fn rustfix_and_fix(
     let mut file_map = HashMap::default();
     let mut num_suggestion = 0;
     // It's safe since we won't read any content under home dir.
-    let home_path = gctx.home().as_path_unlocked();
+    let cargo_home = gctx.cargo_home().as_path_unlocked();
     for suggestion in suggestions {
         trace!("suggestion");
         // Make sure we've got a file associated with this suggestion and all
@@ -1050,7 +1050,7 @@ fn rustfix_and_fix(
 
         let file_path = Path::new(&file_name);
         // Do not write into registry cache. See rust-lang/cargo#9857.
-        if file_path.starts_with(home_path) {
+        if file_path.starts_with(cargo_home) {
             continue;
         }
         // Do not write into standard library source. See rust-lang/cargo#9857.

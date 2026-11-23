@@ -236,12 +236,7 @@ mod tests {
     };
 
     fn gctx() -> GlobalContext {
-        let cwd = std::env::current_dir().unwrap();
-        GlobalContext::new(
-            cargo_util_terminal::Shell::new(),
-            cwd.clone(),
-            home::cargo_home_with_cwd(&cwd).unwrap(),
-        )
+        GlobalContext::default().unwrap()
     }
 
     fn test_lint(name: &'static str, group: &'static LintGroup) -> Lint {
