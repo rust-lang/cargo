@@ -361,7 +361,7 @@ impl GlobalContext {
         let shell = Shell::new();
         let cwd =
             env::current_dir().context("couldn't get the current directory of the process")?;
-        let cargo_home = homedir(&cwd).ok_or_else(|| {
+        let cargo_home = cargo_home(&cwd).ok_or_else(|| {
             anyhow!(
                 "Cargo couldn't find your home directory. \
                  This probably means that $HOME was not set."
@@ -661,7 +661,7 @@ impl GlobalContext {
     pub fn reload_cwd(&mut self) -> CargoResult<()> {
         let cwd =
             env::current_dir().context("couldn't get the current directory of the process")?;
-        let cargo_home = homedir(&cwd).ok_or_else(|| {
+        let cargo_home = cargo_home(&cwd).ok_or_else(|| {
             anyhow!(
                 "Cargo couldn't find your home directory. \
                  This probably means that $HOME was not set."
@@ -1576,7 +1576,7 @@ fn registry_name(gctx: &GlobalContext, sid: &SourceId) -> CargoResult<Option<Str
     Ok(name)
 }
 
-pub fn homedir(cwd: &Path) -> Option<PathBuf> {
+pub fn cargo_home(cwd: &Path) -> Option<PathBuf> {
     ::home::cargo_home_with_cwd(cwd)
         .ok()
         // https://github.com/rust-lang/cargo/issues/15981

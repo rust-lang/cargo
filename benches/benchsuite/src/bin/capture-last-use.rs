@@ -52,7 +52,7 @@ fn main() {
     let mut deferred = DeferredGlobalLastUse::new();
     let mut tracker = GlobalCacheTracker::new(&gctx).unwrap();
 
-    let real_home = cargo::util::homedir(&std::env::current_dir().unwrap()).unwrap();
+    let real_home = cargo::util::cargo_home(&std::env::current_dir().unwrap()).unwrap();
 
     let cache_dir = real_home.join("registry/cache");
     for dir_ent in fs::read_dir(cache_dir).unwrap() {
