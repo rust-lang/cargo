@@ -27,16 +27,16 @@ use ConfigValue as CV;
 #[derive(Clone, Copy)]
 pub struct ConfigLoader<'a> {
     shell: &'a Mutex<Shell>,
-    cwd: &'a Path,
+    current_dir: &'a Path,
     cargo_home: &'a Path,
     search_stop_path: Option<&'a Path>,
 }
 
 impl<'a> ConfigLoader<'a> {
-    pub fn new(shell: &'a Mutex<Shell>, cwd: &'a Path, cargo_home: &'a Path) -> Self {
+    pub fn new(shell: &'a Mutex<Shell>, current_dir: &'a Path, cargo_home: &'a Path) -> Self {
         Self {
             shell,
-            cwd,
+            current_dir,
             cargo_home,
             search_stop_path: None,
         }
@@ -104,7 +104,7 @@ impl<'a> ConfigLoader<'a> {
         output: &mut Vec<ConfigStore>,
     ) -> Result<()> {
         for include in self.include_paths(config)? {
-            let Some(abs_path) = include.resolve_path(self.cwd) else {
+            let Some(abs_path) = include.resolve_path(self.current_dir) else {
                 continue;
             };
             self.load_unmerged_file(&abs_path, seen, definition_kind, output)
@@ -167,7 +167,7 @@ impl<'a> ConfigLoader<'a> {
         let mut seen = HashSet::default();
         for arg in cli_args {
             let mut layers = Vec::new();
-            let arg_as_path = self.cwd.join(arg);
+            let arg_as_path = self.current_dir.join(arg);
             if !arg.is_empty() && arg_as_path.exists() {
                 // --config path_to_file
                 self.load_unmerged_file(&arg_as_path, &mut seen, DefinitionKind::Cli, &mut layers)
