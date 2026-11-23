@@ -148,7 +148,7 @@ pub struct CredentialCacheValue {
 #[derive(Debug)]
 pub struct GlobalContext {
     /// The location of the user's Cargo home directory. OS-dependent.
-    home_path: Filesystem,
+    cargo_home: Filesystem,
     /// Information about how to write messages to the shell
     shell: Mutex<Shell>,
     /// A collection of configuration options
@@ -250,7 +250,7 @@ impl GlobalContext {
     ///
     /// This does only minimal initialization. In particular, it does not load
     /// any config files from disk. Those will be loaded lazily as-needed.
-    pub fn new(mut shell: Shell, cwd: PathBuf, homedir: PathBuf) -> GlobalContext {
+    pub fn new(mut shell: Shell, cwd: PathBuf, cargo_home: PathBuf) -> GlobalContext {
         static GLOBAL_JOBSERVER: LazyLock<CargoResult<Option<jobserver::Client>>> = LazyLock::new(
             || {
                 use jobserver::FromEnvErrorKind;
@@ -310,7 +310,7 @@ impl GlobalContext {
         };
 
         GlobalContext {
-            home_path: Filesystem::new(homedir),
+            cargo_home: Filesystem::new(cargo_home),
             shell: Mutex::new(shell),
             cwd,
             search_stop_path: None,
@@ -361,35 +361,38 @@ impl GlobalContext {
         let shell = Shell::new();
         let cwd =
             env::current_dir().context("couldn't get the current directory of the process")?;
-        let homedir = homedir(&cwd).ok_or_else(|| {
+        let cargo_home = homedir(&cwd).ok_or_else(|| {
             anyhow!(
                 "Cargo couldn't find your home directory. \
                  This probably means that $HOME was not set."
             )
         })?;
-        Ok(GlobalContext::new(shell, cwd, homedir))
+        Ok(GlobalContext::new(shell, cwd, cargo_home))
     }
 
     /// Gets the user's Cargo home directory (OS-dependent).
     pub fn home(&self) -> &Filesystem {
-        &self.home_path
+        &self.cargo_home
     }
 
     /// Returns a path to display to the user with the location of their home
     /// config file (to only be used for displaying a diagnostics suggestion,
     /// such as recommending where to add a config value).
     pub fn diagnostic_home_config(&self) -> String {
-        let home = self.home_path.as_path_unlocked();
-        let path = match self.config_loader().get_file_path(home, "config", false) {
+        let cargo_home = self.cargo_home.as_path_unlocked();
+        let path = match self
+            .config_loader()
+            .get_file_path(cargo_home, "config", false)
+        {
             Ok(Some(existing_path)) => existing_path,
-            _ => home.join("config.toml"),
+            _ => cargo_home.join("config.toml"),
         };
         path.to_string_lossy().to_string()
     }
 
     /// Gets the Cargo Git directory (`<cargo_home>/git`).
     pub fn git_path(&self) -> Filesystem {
-        self.home_path.join("git")
+        self.cargo_home.join("git")
     }
 
     /// Gets the directory of code sources Cargo checkouts from Git bare repos
@@ -406,7 +409,7 @@ impl GlobalContext {
 
     /// Gets the Cargo base directory for all registry information (`<cargo_home>/registry`).
     pub fn registry_base_path(&self) -> Filesystem {
-        self.home_path.join("registry")
+        self.cargo_home.join("registry")
     }
 
     /// Gets the Cargo registry index directory (`<cargo_home>/registry/index`).
@@ -658,7 +661,7 @@ impl GlobalContext {
     pub fn reload_cwd(&mut self) -> CargoResult<()> {
         let cwd =
             env::current_dir().context("couldn't get the current directory of the process")?;
-        let homedir = homedir(&cwd).ok_or_else(|| {
+        let cargo_home = homedir(&cwd).ok_or_else(|| {
             anyhow!(
                 "Cargo couldn't find your home directory. \
                  This probably means that $HOME was not set."
@@ -666,7 +669,7 @@ impl GlobalContext {
         })?;
 
         self.cwd = cwd;
-        self.home_path = Filesystem::new(homedir);
+        self.cargo_home = Filesystem::new(cargo_home);
         self.reload_rooted_at(self.cwd.clone())?;
         Ok(())
     }
@@ -1038,7 +1041,7 @@ impl GlobalContext {
     }
 
     pub(crate) fn config_loader(&self) -> ConfigLoader<'_> {
-        ConfigLoader::new(&self.shell, &self.cwd, self.home_path.as_path_unlocked())
+        ConfigLoader::new(&self.shell, &self.cwd, self.cargo_home.as_path_unlocked())
             .search_stop_path(self.search_stop_path.as_deref())
     }
 
@@ -1400,7 +1403,7 @@ impl GlobalContext {
             "package cache lock is not currently held, Cargo forgot to call \
              `acquire_package_cache_lock` before we got to this stack frame",
         );
-        assert!(ret.starts_with(self.home_path.as_path_unlocked()));
+        assert!(ret.starts_with(self.cargo_home.as_path_unlocked()));
         ret
     }
 
@@ -1599,10 +1602,10 @@ pub fn save_credentials(
     // If 'credentials' exists, write to that for backward compatibility reasons.
     // Otherwise write to 'credentials.toml'. There's no need to print the
     // warning here, because it would already be printed at load time.
-    let home_path = gctx.home_path.clone().into_path_unlocked();
+    let cargo_home = gctx.cargo_home.clone().into_path_unlocked();
     let filename = match gctx
         .config_loader()
-        .get_file_path(&home_path, "credentials", false)?
+        .get_file_path(&cargo_home, "credentials", false)?
     {
         Some(path) => match path.file_name() {
             Some(filename) => Path::new(filename).to_owned(),
@@ -1612,8 +1615,8 @@ pub fn save_credentials(
     };
 
     let mut file = {
-        gctx.home_path.create_dir()?;
-        gctx.home_path
+        gctx.cargo_home.create_dir()?;
+        gctx.cargo_home
             .open_rw_exclusive_create(filename, gctx, "credentials' config file")?
     };
 
