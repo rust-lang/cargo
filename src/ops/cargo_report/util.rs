@@ -19,7 +19,7 @@ pub fn list_log_files(
     gctx: &GlobalContext,
     ws: Option<&Workspace<'_>>,
 ) -> CargoResult<Box<dyn Iterator<Item = (PathBuf, RunId)>>> {
-    let log_dir = gctx.home().join("log");
+    let log_dir = gctx.cargo_home().join("log");
     let log_dir = log_dir.as_path_unlocked();
 
     if !log_dir.exists() {

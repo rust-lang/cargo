@@ -2252,7 +2252,7 @@ fn find_root_iter<'a>(
         // crates.io crates into the workspace by accident.
         .take_while(|path| {
             if let Some(last) = path.last {
-                gctx.home() != last
+                gctx.cargo_home() != last
             } else {
                 true
             }

@@ -366,7 +366,7 @@ impl GlobalCacheTracker {
 
     /// The path to the database.
     pub fn db_path(gctx: &GlobalContext) -> Filesystem {
-        gctx.home().join(GLOBAL_CACHE_FILENAME)
+        gctx.cargo_home().join(GLOBAL_CACHE_FILENAME)
     }
 
     /// Given an encoded registry name, returns its ID.

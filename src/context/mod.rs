@@ -371,7 +371,7 @@ impl GlobalContext {
     }
 
     /// Gets the user's Cargo home directory (OS-dependent).
-    pub fn home(&self) -> &Filesystem {
+    pub fn cargo_home(&self) -> &Filesystem {
         &self.cargo_home
     }
 
@@ -475,7 +475,7 @@ impl GlobalContext {
             wrapper,
             rustc_workspace_wrapper,
             &self
-                .home()
+                .cargo_home()
                 .join("bin")
                 .join("rustc")
                 .into_path_unlocked()
@@ -757,7 +757,7 @@ impl GlobalContext {
             ),
             (
                 "{cargo-cache-home}",
-                self.home()
+                self.cargo_home()
                     .as_path_unlocked()
                     .to_str()
                     .context("cargo home was not valid utf-8")?

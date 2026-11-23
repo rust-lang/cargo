@@ -29,7 +29,7 @@ impl FileLogger {
         let analysis = ws.gctx().build_config()?.analysis.as_ref();
         match (analysis, ws.gctx().cli_unstable().build_analysis) {
             (Some(analysis), true) if analysis.enabled => {
-                let log_dir = ws.gctx().home().join("log");
+                let log_dir = ws.gctx().cargo_home().join("log");
                 paths::create_dir_all(log_dir.as_path_unlocked())?;
 
                 let filename = format!("{run_id}.jsonl");

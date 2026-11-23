@@ -582,7 +582,7 @@ pub fn resolve_root(flag: Option<&str>, gctx: &GlobalContext) -> CargoResult<Fil
         .or_else(|| gctx.get_env_os("CARGO_INSTALL_ROOT").map(PathBuf::from))
         .or_else(|| config_root)
         .map(Filesystem::new)
-        .unwrap_or_else(|| gctx.home().clone()))
+        .unwrap_or_else(|| gctx.cargo_home().clone()))
 }
 
 /// Determines the `PathSource` from a `SourceId`.

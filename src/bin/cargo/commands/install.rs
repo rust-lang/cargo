@@ -113,7 +113,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         gctx.reload_rooted_at(path)?;
     } else {
         // TODO: Consider calling set_search_stop_path(home).
-        gctx.reload_rooted_at(gctx.home().clone().into_path_unlocked())?;
+        gctx.reload_rooted_at(gctx.cargo_home().clone().into_path_unlocked())?;
     }
 
     // In general, we try to avoid normalizing paths in Cargo,

@@ -1029,7 +1029,7 @@ fn rustfix_and_fix(
     let mut file_map = HashMap::default();
     let mut num_suggestion = 0;
     // It's safe since we won't read any content under home dir.
-    let cargo_home = gctx.home().as_path_unlocked();
+    let cargo_home = gctx.cargo_home().as_path_unlocked();
     for suggestion in suggestions {
         trace!("suggestion");
         // Make sure we've got a file associated with this suggestion and all
