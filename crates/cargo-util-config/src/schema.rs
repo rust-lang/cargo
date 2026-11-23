@@ -172,8 +172,8 @@ impl DetailedIncludeConfig {
     ///
     /// Returns `None` if this is an optional include and the file doesn't exist.
     /// Otherwise returns `Some(PathBuf)` with the absolute path.
-    pub fn resolve_path(&self, cwd: &Path) -> Option<PathBuf> {
-        let abs_path = self.path.resolve(cwd);
+    pub fn resolve_path(&self, current_dir: &Path) -> Option<PathBuf> {
+        let abs_path = self.path.resolve(current_dir);
         let abs_path = paths::normalize_path(&abs_path);
 
         if self.optional && !abs_path.exists() {
@@ -775,14 +775,14 @@ impl<'de> Deserialize<'de> for BuildTargetConfigInner {
 
 impl BuildTargetConfig {
     /// Gets values of `build.target` as a list of strings.
-    pub fn values(&self, cwd: &Path) -> Result<Vec<String>> {
+    pub fn values(&self, current_dir: &Path) -> Result<Vec<String>> {
         let map = |s: &String| {
             if s.ends_with(".json") {
                 // Path to a target specification file (in JSON).
                 // <https://doc.rust-lang.org/rustc/targets/custom.html>
                 self.inner
                     .definition
-                    .root(cwd)
+                    .root(current_dir)
                     .join(s)
                     .to_str()
                     .expect("must be utf-8 in toml")
@@ -1032,7 +1032,7 @@ impl EnvConfigValue {
     ///
     /// If `relative = true`,
     /// the value is interpreted as a [`ConfigRootRelativePath`]-like path.
-    pub fn resolve<'a>(&'a self, cwd: &Path) -> Cow<'a, OsStr> {
+    pub fn resolve<'a>(&'a self, current_dir: &Path) -> Cow<'a, OsStr> {
         match self.inner {
             EnvConfigValueInner::Simple(ref s) => Cow::Borrowed(OsStr::new(s.as_str())),
             EnvConfigValueInner::WithOptions {
@@ -1041,7 +1041,7 @@ impl EnvConfigValue {
                 ..
             } => {
                 if relative {
-                    let p = value.resolve(cwd);
+                    let p = value.resolve(current_dir);
                     Cow::Owned(p.into_os_string())
                 } else {
                     Cow::Borrowed(OsStr::new(value.as_str()))
@@ -1175,9 +1175,9 @@ impl ConfigRootRelativePath {
     ///
     /// This will always return an absolute path where it's relative to the
     /// location for configuration for this value.
-    pub fn resolve(&self, cwd: &Path) -> PathBuf {
+    pub fn resolve(&self, current_dir: &Path) -> PathBuf {
         let value = self.as_value();
-        value.definition.root(cwd).join(&value.val)
+        value.definition.root(current_dir).join(&value.val)
     }
 }
 
@@ -1190,11 +1190,11 @@ impl ConfigRootRelativeProgramPath {
     /// Values which don't look like a filesystem path (don't contain `/` or
     /// `\`) will be returned as-is, and everything else will fall through to an
     /// absolute path.
-    pub fn resolve(&self, cwd: &Path) -> PathBuf {
+    pub fn resolve(&self, current_dir: &Path) -> PathBuf {
         let value = self.as_str();
         let is_path = value.contains('/') || (cfg!(windows) && value.contains('\\'));
         if is_path {
-            self.definition().root(cwd).join(value)
+            self.definition().root(current_dir).join(value)
         } else {
             // A pathless name.
             PathBuf::from(value)
@@ -1211,7 +1211,7 @@ impl ConfigRootRelativePathTemplate {
     /// string replacement.
     pub fn resolve(
         &self,
-        cwd: &Path,
+        current_dir: &Path,
         replacements: impl IntoIterator<Item = (impl AsRef<str>, impl AsRef<str>)>,
     ) -> Result<PathBuf, ResolveTemplateError> {
         let path = self.as_value();
@@ -1244,7 +1244,7 @@ impl ConfigRootRelativePathTemplate {
             });
         }
 
-        Ok(path.definition.root(cwd).join(&value))
+        Ok(path.definition.root(current_dir).join(&value))
     }
 }
 
@@ -1273,9 +1273,9 @@ impl ConfigParentRelativePath {
     ///
     /// This will always return an absolute path where it's relative to the
     /// location for configuration for this value.
-    pub fn resolve(&self, cwd: &Path) -> PathBuf {
+    pub fn resolve(&self, current_dir: &Path) -> PathBuf {
         let value = self.as_value();
-        value.definition.parent(cwd).join(&value.val)
+        value.definition.parent(current_dir).join(&value.val)
     }
 }
 

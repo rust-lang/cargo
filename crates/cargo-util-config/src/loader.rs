@@ -11,6 +11,7 @@ use anyhow::Result;
 use anyhow::bail;
 use cargo_util::collections::HashMap;
 use cargo_util::collections::HashSet;
+use cargo_util::is_glob_pattern;
 use cargo_util::paths;
 use cargo_util_terminal::Shell;
 use cargo_util_terminal::report::Level;
@@ -19,7 +20,6 @@ use super::ConfigValue;
 use super::DefinitionKind;
 use super::schema::{DetailedIncludeConfig, IncludeConfig};
 use super::{ConfigKey, ConfigReader, ConfigStore};
-use cargo_util::is_glob_pattern;
 
 use ConfigValue as CV;
 
@@ -27,34 +27,42 @@ use ConfigValue as CV;
 #[derive(Clone, Copy)]
 pub struct ConfigLoader<'a> {
     shell: &'a Mutex<Shell>,
-    cwd: &'a Path,
-    home: &'a Path,
+    current_dir: &'a Path,
+    cargo_home: &'a Path,
     search_stop_path: Option<&'a Path>,
 }
 
 impl<'a> ConfigLoader<'a> {
-    pub fn new(
-        shell: &'a Mutex<Shell>,
-        cwd: &'a Path,
-        home: &'a Path,
-        search_stop_path: Option<&'a Path>,
-    ) -> Self {
+    /// Creates a config loader.
+    ///
+    /// * `current_dir` is what `--config` arguments and `include`s are relative to on the command line.
+    /// * `cargo_home` is `$CARGO_HOME`, where the lowest-precedence config file live.
+    pub fn new(shell: &'a Mutex<Shell>, current_dir: &'a Path, cargo_home: &'a Path) -> Self {
         Self {
             shell,
-            cwd,
-            home,
-            search_stop_path,
+            current_dir,
+            cargo_home,
+            search_stop_path: None,
         }
+    }
+
+    /// Sets a path where ancestor config file discovery will stop.
+    ///
+    /// The given path is included.
+    #[must_use]
+    pub fn search_stop_path(mut self, path: Option<&'a Path>) -> Self {
+        self.search_stop_path = path;
+        self
     }
 
     /// Discovers config files from a path without merging config values.
     ///
     /// Returns one [`ConfigStore`] per config file, from lowest to highest precedence.
-    pub fn load_unmerged_from(&self, path: &Path) -> Result<Vec<ConfigStore>> {
+    pub fn load_layers(&self, path: &Path) -> Result<Vec<ConfigStore>> {
         let mut result = Vec::new();
         self.walk_tree(path, |path| {
             let mut layers = Vec::new();
-            self.load_unmerged_file(
+            self.load_file_layers(
                 path,
                 &mut HashSet::default(),
                 DefinitionKind::Path,
@@ -71,7 +79,7 @@ impl<'a> ConfigLoader<'a> {
     }
 
     /// Loads a config file and its `include`s recursively without merging config values.
-    fn load_unmerged_file(
+    fn load_file_layers(
         &self,
         path: &Path,
         seen: &mut HashSet<PathBuf>,
@@ -86,13 +94,13 @@ impl<'a> ConfigLoader<'a> {
         }
         tracing::debug!(?path, ?definition_kind, "load config from file");
         let config = ConfigStore::read_layer(path, definition_kind)?;
-        self.load_unmerged_includes(&config, seen, definition_kind, output)?;
+        self.load_include_layers(&config, seen, definition_kind, output)?;
         output.push(config);
         Ok(())
     }
 
     /// Loads the `include`s of `config` recursively without merging config values.
-    fn load_unmerged_includes(
+    fn load_include_layers(
         &self,
         config: &ConfigStore,
         seen: &mut HashSet<PathBuf>,
@@ -100,10 +108,10 @@ impl<'a> ConfigLoader<'a> {
         output: &mut Vec<ConfigStore>,
     ) -> Result<()> {
         for include in self.include_paths(config)? {
-            let Some(abs_path) = include.resolve_path(self.cwd) else {
+            let Some(abs_path) = include.resolve_path(self.current_dir) else {
                 continue;
             };
-            self.load_unmerged_file(&abs_path, seen, definition_kind, output)
+            self.load_file_layers(&abs_path, seen, definition_kind, output)
                 .with_context(|| {
                     format!(
                         "failed to load config include `{}` from `{}`",
@@ -115,7 +123,7 @@ impl<'a> ConfigLoader<'a> {
         Ok(())
     }
 
-    /// Converts the `include` config value to a list of absolute paths.
+    /// Reads the `include` entries of `config`.
     fn include_paths(&self, config: &ConfigStore) -> Result<Vec<DetailedIncludeConfig>> {
         let entries: Vec<IncludeConfig> = ConfigReader::new(self.shell)
             .config(config)
@@ -157,28 +165,31 @@ impl<'a> ConfigLoader<'a> {
         Ok(includes)
     }
 
-    /// Parses the CLI config args and returns them as a table.
-    pub fn load_cli_args(&self, cli_args: &[String]) -> Result<ConfigStore> {
+    /// Loads `--config` arguments and  merges them into one [`ConfigStore`].
+    ///
+    /// The `--config` value can be a path to a config file or a `key=value` pair.
+    /// Later arguments take precedence over earlier ones.
+    pub fn load_cli_args_layer(&self, cli_args: &[String]) -> Result<ConfigStore> {
         let mut loaded_args = ConfigStore::default();
         let mut seen = HashSet::default();
         for arg in cli_args {
             let mut layers = Vec::new();
-            let arg_as_path = self.cwd.join(arg);
+            let arg_as_path = self.current_dir.join(arg);
             if !arg.is_empty() && arg_as_path.exists() {
                 // --config path_to_file
-                self.load_unmerged_file(&arg_as_path, &mut seen, DefinitionKind::Cli, &mut layers)
+                self.load_file_layers(&arg_as_path, &mut seen, DefinitionKind::Cli, &mut layers)
                     .with_context(|| {
                         format!("failed to load config from `{}`", arg_as_path.display())
                     })?;
             } else {
                 let config = ConfigStore::parse_cli_key_value(arg)?;
-                self.load_unmerged_includes(
+                self.load_include_layers(
                     &config,
                     &mut HashSet::default(),
                     DefinitionKind::Cli,
                     &mut layers,
                 )
-                .context("failed to load --config include".to_string())?;
+                .context("failed to load --config include")?;
                 layers.push(config);
             }
             loaded_args = ConfigStore::from_layers(std::iter::once(loaded_args).chain(layers))
@@ -187,11 +198,11 @@ impl<'a> ConfigLoader<'a> {
         Ok(loaded_args)
     }
 
-    /// The purpose of this function is to aid in the transition to using
-    /// .toml extensions on Cargo's config files, which were historically not used.
-    /// Both 'config.toml' and 'credentials.toml' should be valid with or without extension.
-    /// When both exist, we want to prefer the one without an extension for
-    /// backwards compatibility, but warn the user appropriately.
+    /// Finds `<file_stem>` or `<file_stem>.toml` in `dir`.
+    ///
+    /// The file without extension is preferred if both exist.
+    ///
+    /// With `warn`, a warning is emitted if the legacy `<file_stem>` config file is used.
     pub fn get_file_path(
         &self,
         dir: &Path,
@@ -243,7 +254,7 @@ impl<'a> ConfigLoader<'a> {
     where
         F: FnMut(&Path) -> Result<()>,
     {
-        let home = self.home;
+        let home = self.cargo_home;
         let mut seen_dir = HashSet::default();
 
         for current in paths::ancestors(pwd, self.search_stop_path) {
@@ -258,7 +269,7 @@ impl<'a> ConfigLoader<'a> {
 
         let canonical_home = home.canonicalize().unwrap_or(home.to_path_buf());
 
-        // Once we're done, also be sure to walk the home directory even if it's not
+        // Once we're done, also be sure to walk the $CARGO_HOME directory even if it's not
         // in our history to be sure we pick up that standard location for
         // information.
         if !seen_dir.contains(&canonical_home) && !seen_dir.contains(home) {
@@ -272,7 +283,7 @@ impl<'a> ConfigLoader<'a> {
 
     /// Loads credentials config from the credentials file, if present.
     pub fn load_credentials(&self) -> Result<ConfigStore> {
-        let Some(credentials) = self.get_file_path(self.home, "credentials", true)? else {
+        let Some(credentials) = self.get_file_path(self.cargo_home, "credentials", true)? else {
             return Ok(ConfigStore::default());
         };
 

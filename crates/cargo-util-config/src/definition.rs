@@ -56,10 +56,10 @@ impl Definition {
     ///
     /// If from a file, it is the directory above `.cargo/config.toml`.
     /// CLI and env use the provided current working directory.
-    pub fn root<'a>(&'a self, cwd: &'a Path) -> &'a Path {
+    pub fn root<'a>(&'a self, current_dir: &'a Path) -> &'a Path {
         match self {
             Definition::Path(p) | Definition::Cli(Some(p)) => p.parent().unwrap().parent().unwrap(),
-            Definition::Environment(_) | Definition::Cli(None) | Definition::BuiltIn => cwd,
+            Definition::Environment(_) | Definition::Cli(None) | Definition::BuiltIn => current_dir,
         }
     }
 
@@ -67,10 +67,10 @@ impl Definition {
     ///
     /// If from a file, it is the directory `.cargo/`.
     /// CLI and env use the provided current working directory.
-    pub fn parent<'a>(&'a self, cwd: &'a Path) -> &'a Path {
+    pub fn parent<'a>(&'a self, current_dir: &'a Path) -> &'a Path {
         match self {
             Definition::Path(p) | Definition::Cli(Some(p)) => p.parent().unwrap(),
-            Definition::Environment(_) | Definition::Cli(None) | Definition::BuiltIn => cwd,
+            Definition::Environment(_) | Definition::Cli(None) | Definition::BuiltIn => current_dir,
         }
     }
 
