@@ -346,8 +346,18 @@ impl<'a> GitCheckout<'a> {
         })?;
         let repo = repo.unwrap();
 
+        info!("reset {} to {}", repo.path().display(), revision);
+        if let Ok(mut git_config) = repo.config() {
+            // Ensure libgit2 won't mess with newlines when we vendor.
+            git_config.set_bool("core.autocrlf", false)?;
+            // Allow libgit2 to check out paths longer than `MAX_PATH` on Windows.
+            git_config.set_bool("core.longpaths", true)?;
+        }
+
+        reset(&repo, &repo.find_object(revision, None)?, gctx)?;
+
         let checkout = GitCheckout::new(database, revision, repo);
-        let guard = checkout.reset(gctx)?;
+        let guard = CheckoutGuard::guard(&checkout.path);
         Ok((checkout, guard))
     }
 
@@ -360,28 +370,6 @@ impl<'a> GitCheckout<'a> {
             }
             _ => false,
         }
-    }
-
-    /// Similar to [`reset()`]. This roughly performs `git reset --hard` to the
-    /// revision of this checkout, with additional interrupt protection by a
-    /// dummy file [`CHECKOUT_READY_LOCK`].
-    ///
-    /// See also [`CheckoutGuard`].
-    fn reset(&self, gctx: &GlobalContext) -> CargoResult<CheckoutGuard> {
-        info!("reset {} to {}", self.repo.path().display(), self.revision);
-
-        if let Ok(mut git_config) = self.repo.config() {
-            // Ensure libgit2 won't mess with newlines when we vendor.
-            git_config.set_bool("core.autocrlf", false)?;
-            // Allow libgit2 to check out paths longer than `MAX_PATH` on Windows.
-            git_config.set_bool("core.longpaths", true)?;
-        }
-
-        let object = self.repo.find_object(self.revision, None)?;
-        reset(&self.repo, &object, gctx)?;
-
-        let guard = CheckoutGuard::guard(&self.path);
-        Ok(guard)
     }
 
     /// Like `git submodule update --recursive` but for this git checkout.
