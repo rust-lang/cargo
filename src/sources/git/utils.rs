@@ -368,7 +368,6 @@ impl<'a> GitCheckout<'a> {
     ///
     /// See also [`CheckoutGuard`].
     fn reset(&self, gctx: &GlobalContext) -> CargoResult<CheckoutGuard> {
-        let guard = CheckoutGuard::guard(&self.path);
         info!("reset {} to {}", self.repo.path().display(), self.revision);
 
         if let Ok(mut git_config) = self.repo.config() {
@@ -381,6 +380,7 @@ impl<'a> GitCheckout<'a> {
         let object = self.repo.find_object(self.revision, None)?;
         reset(&self.repo, &object, gctx)?;
 
+        let guard = CheckoutGuard::guard(&self.path);
         Ok(guard)
     }
 
