@@ -20,12 +20,10 @@ use cargo_util::collections::{IndexMap, IndexSet};
 use cargo_util::paths;
 use cargo_util_schemas::manifest::ProfileName;
 use cargo_util_schemas::manifest::RegistryName;
-use cargo_util_terminal as shell;
 use cargo_util_terminal::report::Level;
 use clap::builder::PossibleValuesParser;
 use clap::builder::UnknownArgumentValueParser;
 use clap_complete::ArgValueCandidates;
-use home::cargo_home_with_cwd;
 use itertools::Itertools;
 use semver::Version;
 use std::collections::BTreeMap;
@@ -1475,9 +1473,8 @@ pub fn get_direct_dependencies_pkg_name_candidates() -> Vec<clap_complete::Compl
 }
 
 fn get_dependencies_from_metadata() -> CargoResult<(Vec<Dependency>, Vec<Dependency>)> {
-    let cwd = std::env::current_dir()?;
-    let gctx = GlobalContext::new(shell::Shell::new(), cwd.clone(), cargo_home_with_cwd(&cwd)?);
-    let ws = Workspace::new(&find_root_manifest_for_wd(&cwd)?, &gctx)?;
+    let gctx = GlobalContext::default()?;
+    let ws = Workspace::new(&find_root_manifest_for_wd(gctx.cwd())?, &gctx)?;
     let current_package = ws.current().ok();
 
     let current_package_dependencies = ws
@@ -1500,8 +1497,7 @@ fn get_dependencies_from_metadata() -> CargoResult<(Vec<Dependency>, Vec<Depende
 }
 
 pub fn new_gctx_for_completions() -> CargoResult<GlobalContext> {
-    let cwd = std::env::current_dir()?;
-    let mut gctx = GlobalContext::new(shell::Shell::new(), cwd.clone(), cargo_home_with_cwd(&cwd)?);
+    let mut gctx = GlobalContext::default()?;
 
     let verbose = 0;
     let quiet = true;
