@@ -27,7 +27,7 @@ use std::process::Command;
 use std::str;
 
 /// A file indicates that if present, `git reset` has been done and a repo
-/// checkout is ready to go. See [`GitCheckout::reset`] for why we need this.
+/// checkout is ready to go. See [`CheckoutGuard`] for why we need this.
 const CHECKOUT_READY_LOCK: &str = ".cargo-ok";
 
 /// A remote repository. It gets cloned into a local [`GitDatabase`].
@@ -355,7 +355,7 @@ impl<'a> GitCheckout<'a> {
     fn is_fresh(&self) -> bool {
         match self.repo.revparse_single("HEAD") {
             Ok(ref head) if head.id() == self.revision => {
-                // See comments in reset() for why we check this
+                // See `CheckoutGuard` for why we check this
                 self.path.join(CHECKOUT_READY_LOCK).exists()
             }
             _ => false,
@@ -366,17 +366,7 @@ impl<'a> GitCheckout<'a> {
     /// revision of this checkout, with additional interrupt protection by a
     /// dummy file [`CHECKOUT_READY_LOCK`].
     ///
-    /// If we're interrupted while performing a `git reset` (e.g., we die
-    /// because of a signal) Cargo needs to be sure to try to check out this
-    /// repo again on the next go-round.
-    ///
-    /// To enable this we have a dummy file in our checkout, [`.cargo-ok`],
-    /// which if present means that the repo has been successfully reset and is
-    /// ready to go. Hence if we start to do a reset, we make sure this file
-    /// *doesn't* exist. The caller of [`reset`] has an option to perform additional operations
-    /// (e.g. submodule update) before marking the check-out as ready.
-    ///
-    /// [`.cargo-ok`]: CHECKOUT_READY_LOCK
+    /// See also [`CheckoutGuard`].
     fn reset(&self, gctx: &GlobalContext) -> CargoResult<CheckoutGuard> {
         let guard = CheckoutGuard::guard(&self.path);
         info!("reset {} to {}", self.repo.path().display(), self.revision);
@@ -529,7 +519,19 @@ impl<'a> GitCheckout<'a> {
     }
 }
 
-/// See [`GitCheckout::reset`] for rationale on this type.
+/// Guards against interrupted checkouts.
+///
+/// If we're interrupted while checking out (e.g., we die
+/// because of a signal) Cargo needs to be sure to try to check out this
+/// repo again on the next go-round.
+///
+/// To enable this we have a dummy file in our checkout, [`.cargo-ok`],
+/// which if present means that the repo has been successfully checked out and is
+/// ready to go. Hence the guard makes sure this file *doesn't* exist,
+/// and the caller has an option to perform additional operations
+/// (e.g. submodule update) before marking the check-out as ready.
+///
+/// [`.cargo-ok`]: CHECKOUT_READY_LOCK
 #[must_use]
 struct CheckoutGuard {
     ok_file: PathBuf,
