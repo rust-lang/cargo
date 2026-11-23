@@ -361,12 +361,7 @@ impl GlobalContext {
         let shell = Shell::new();
         let cwd =
             env::current_dir().context("couldn't get the current directory of the process")?;
-        let cargo_home = cargo_home(&cwd).ok_or_else(|| {
-            anyhow!(
-                "Cargo couldn't find your home directory. \
-                 This probably means that $HOME was not set."
-            )
-        })?;
+        let cargo_home = cargo_home(&cwd)?;
         Ok(GlobalContext::new(shell, cwd, cargo_home))
     }
 
@@ -661,12 +656,7 @@ impl GlobalContext {
     pub fn reload_cwd(&mut self) -> CargoResult<()> {
         let cwd =
             env::current_dir().context("couldn't get the current directory of the process")?;
-        let cargo_home = cargo_home(&cwd).ok_or_else(|| {
-            anyhow!(
-                "Cargo couldn't find your home directory. \
-                 This probably means that $HOME was not set."
-            )
-        })?;
+        let cargo_home = cargo_home(&cwd)?;
 
         self.cwd = cwd;
         self.cargo_home = Filesystem::new(cargo_home);
@@ -1576,13 +1566,17 @@ fn registry_name(gctx: &GlobalContext, sid: &SourceId) -> CargoResult<Option<Str
     Ok(name)
 }
 
-pub fn cargo_home(cwd: &Path) -> Option<PathBuf> {
-    ::home::cargo_home_with_cwd(cwd)
-        .ok()
-        // https://github.com/rust-lang/cargo/issues/15981
-        // This is so everything shares one spelling and
-        // isn't incorrectly seen as distinct.
-        .map(|home| paths::normalize_path(&home))
+pub fn cargo_home(cwd: &Path) -> CargoResult<PathBuf> {
+    let cargo_home = ::home::cargo_home_with_cwd(cwd).map_err(|_| {
+        anyhow!(
+            "Cargo couldn't find your home directory. \
+             This probably means that $HOME was not set."
+        )
+    })?;
+    // https://github.com/rust-lang/cargo/issues/15981
+    // This is so everything shares one spelling and
+    // isn't incorrectly seen as distinct.
+    Ok(paths::normalize_path(&cargo_home))
 }
 
 pub fn save_credentials(
