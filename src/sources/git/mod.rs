@@ -11,6 +11,7 @@ pub use self::source::GitSource;
 pub use self::utils::{GitCheckout, GitDatabase, GitRemote, fetch, resolve_ref};
 mod cli;
 mod known_hosts;
+mod libgit2;
 mod oxide;
 mod source;
 mod utils;
