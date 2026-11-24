@@ -651,11 +651,16 @@ impl<'gctx> RegistrySource<'gctx> {
             .unpack_package(package, path)
             .with_context(|| format!("failed to unpack package `{}`", package))?;
         let src = PathSource::new(&path, self.source_id, self.gctx);
-        src.load()?;
-        let mut pkg = match src.download(package).await? {
-            MaybePackage::Ready(pkg) => pkg,
-            MaybePackage::Download { .. } => unreachable!(),
-        };
+        let mut pkg = src.root_package()?;
+        if pkg.package_id() != package {
+            anyhow::bail!(
+                "package `{}` does not match `{} v{}` in `{}`",
+                package,
+                pkg.name(),
+                pkg.version(),
+                pkg.manifest_path().display(),
+            );
+        }
 
         // After we've loaded the package configure its summary's `checksum`
         // field with the checksum we know for this `PackageId`.

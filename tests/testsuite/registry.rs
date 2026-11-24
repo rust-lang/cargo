@@ -5005,10 +5005,7 @@ fn mismatched_manifest_name_and_version() {
 [LOCKING] 1 package to highest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] registry-name v0.3.1 (registry `alternative`)
-[ERROR] failed to find registry-name v0.3.1 (registry `alternative`) in path source
-[NOTE] this is an unexpected cargo internal error
-[NOTE] we would appreciate a bug report: https://github.com/rust-lang/cargo/issues/
-[NOTE] cargo [..]
+[ERROR] package `registry-name v0.3.1 (registry `alternative`)` does not match `manifest-name v0.3.1` in `[ROOT]/home/.cargo/registry/src/-[HASH]/registry-name-0.3.1/Cargo.toml`
 
 "#]])
         .run();
@@ -5023,10 +5020,7 @@ Caused by:
   unable to get packages from source
 
 Caused by:
-  failed to find registry-name v0.3.1 (registry `alternative`) in path source
-[NOTE] this is an unexpected cargo internal error
-[NOTE] we would appreciate a bug report: https://github.com/rust-lang/cargo/issues/
-[NOTE] cargo [..]
+  package `registry-name v0.3.1 (registry `alternative`)` does not match `manifest-name v0.3.1` in `[ROOT]/home/.cargo/registry/src/-[HASH]/registry-name-0.3.1/Cargo.toml`
 
 "#]])
         .run();
@@ -5052,10 +5046,7 @@ Caused by:
 [ADDING] wrong-ver v0.1.0 (registry `alternative`)
 [DOWNLOADING] crates ...
 [DOWNLOADED] wrong-ver v0.1.0 (registry `alternative`)
-[ERROR] failed to find wrong-ver v0.1.0 (registry `alternative`) in path source
-[NOTE] this is an unexpected cargo internal error
-[NOTE] we would appreciate a bug report: https://github.com/rust-lang/cargo/issues/
-[NOTE] cargo [..]
+[ERROR] package `wrong-ver v0.1.0 (registry `alternative`)` does not match `wrong-ver v0.2.0` in `[ROOT]/home/.cargo/registry/src/-[HASH]/wrong-ver-0.1.0/Cargo.toml`
 
 "#]])
         .run();
