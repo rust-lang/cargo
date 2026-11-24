@@ -159,6 +159,16 @@ impl GitRemote {
 }
 
 impl GitDatabase {
+    /// Path to the root of the underlying Git repository on the local filesystem.
+    pub(crate) fn path(&self) -> &Path {
+        &self.path
+    }
+
+    /// Underlying Git repository instance for this database.
+    pub(crate) fn repo(&self) -> &git2::Repository {
+        &self.repo
+    }
+
     /// Checkouts to a revision at `dest`ination from this database.
     #[tracing::instrument(skip(self, gctx))]
     pub fn copy_to(
@@ -316,7 +326,7 @@ impl<'a> GitCheckout<'a> {
         //
         // Note that we still use the same fetch options because while we don't
         // need authentication information we may want progress bars and such.
-        let url = database.path.into_url()?;
+        let url = database.path().into_url()?;
         let mut repo = None;
         with_fetch_options(&git_config, url.as_str(), gctx, &mut |fopts| {
             let mut checkout = git2::build::CheckoutBuilder::new();
@@ -335,9 +345,9 @@ impl<'a> GitCheckout<'a> {
             // have their parents omitted as part of the shallow clone.
             //
             // TODO(git2): remove this when git2 supports shallow clone correctly
-            if database.repo.is_shallow() {
+            if database.repo().is_shallow() {
                 std::fs::copy(
-                    database.repo.path().join("shallow"),
+                    database.repo().path().join("shallow"),
                     r.path().join("shallow"),
                 )?;
             }
