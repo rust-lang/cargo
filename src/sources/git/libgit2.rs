@@ -295,7 +295,7 @@ where
 ///
 /// The callback is provided a fetch options, which can be used by the actual
 /// git fetch.
-pub(super) fn with_fetch_options(
+pub(crate) fn with_fetch_options(
     git_config: &git2::Config,
     url: &str,
     gctx: &GlobalContext,
@@ -387,7 +387,7 @@ pub(super) fn with_fetch_options(
 }
 
 #[tracing::instrument(skip(repo, gctx))]
-pub(super) fn fetch_with_libgit2(
+pub(crate) fn fetch_with_libgit2(
     repo: &mut git2::Repository,
     remote_url: &str,
     refspecs: Vec<String>,

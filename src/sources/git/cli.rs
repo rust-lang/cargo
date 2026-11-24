@@ -14,7 +14,7 @@ use cargo_util::Stdio;
 use cargo_util_terminal::Verbosity;
 use tracing::debug;
 
-pub(super) fn git_version() -> Option<GitVersion> {
+pub(crate) fn git_version() -> Option<GitVersion> {
     #[tracing::instrument(skip_all)]
     fn git_version() -> Option<GitVersion> {
         use std::process::Stdio;
@@ -45,7 +45,7 @@ pub(super) fn git_version() -> Option<GitVersion> {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[allow(unused)]
-pub(super) struct GitVersion {
+pub(crate) struct GitVersion {
     major: usize,
     minor: usize,
     patch: usize,
@@ -124,7 +124,7 @@ impl std::str::FromStr for GitVersion {
 ///
 /// [1]: https://doc.rust-lang.org/nightly/cargo/reference/config.html#netgit-fetch-with-cli
 #[tracing::instrument(skip(repo, gctx))]
-pub(super) fn fetch_with_cli(
+pub(crate) fn fetch_with_cli(
     repo: &git2::Repository,
     url: &str,
     refspecs: &[String],

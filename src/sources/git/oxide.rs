@@ -407,7 +407,7 @@ fn has_shallow_lock_file(err: &crate::sources::git::fetch::Error, repo_path: &Pa
 }
 
 #[tracing::instrument(skip(repo, gctx))]
-pub(super) fn fetch_with_gitoxide(
+pub(crate) fn fetch_with_gitoxide(
     repo: &mut git2::Repository,
     remote_url: &str,
     refspecs: Vec<String>,

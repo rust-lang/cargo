@@ -872,7 +872,7 @@ fn clean_repo_temp_files(repo: &git2::Repository) {
 
 /// Reinitializes a given Git repository. This is useful when a Git repository
 /// seems corrupted and we want to start over.
-pub(super) fn reinitialize(repo: &mut git2::Repository) -> CargoResult<()> {
+pub(crate) fn reinitialize(repo: &mut git2::Repository) -> CargoResult<()> {
     // Here we want to drop the current repository object pointed to by `repo`,
     // so we initialize temporary repository in a sub-folder, blow away the
     // existing git folder, and then recreate the git repo. Finally we blow away
