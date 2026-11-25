@@ -27,6 +27,7 @@ pub fn cli() -> Command {
                 .help_heading(heading::PACKAGE_SELECTION),
         )
         .arg_release("Clean only release artifacts")
+        .arg_debug("clean")
         .arg_profile("Clean only artifacts of the specified profile")
         .arg_target_tuple("Target tuple to clean output for")
         .arg_target_dir()

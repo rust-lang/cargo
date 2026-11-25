@@ -54,6 +54,7 @@ pub fn cli() -> Command {
         .arg_jobs()
         .arg_unsupported_keep_going()
         .arg_release("Build artifacts in release mode, with optimizations")
+        .arg_debug("test")
         .arg_profile("Build artifacts with the specified profile")
         .arg_target_tuple("Build for the target tuple")
         .arg_target_dir()

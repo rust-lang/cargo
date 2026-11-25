@@ -38,6 +38,7 @@ pub fn cli() -> Command {
         )
         .arg_parallel()
         .arg_release("Build artifacts in release mode, with optimizations")
+        .arg_debug("doc")
         .arg_profile("Build artifacts with the specified profile")
         .arg_target_tuple("Build for the target tuple")
         .arg_target_dir()
