@@ -1031,6 +1031,18 @@ fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResu
         }
     }
 
+    if unit.is_std {
+        // -Zforce-unstable-if-unmarked prevents the accidental use of
+        // unstable crates within the sysroot.
+        // See also: https://doc.rust-lang.org/rustdoc/unstable-features.html#-z-force-unstable-if-unmarked
+        //
+        // RUSTC_BOOTSTRAP allows unstable features on stable.
+        rustdoc
+            .arg("-Z")
+            .arg("force-unstable-if-unmarked")
+            .env("RUSTC_BOOTSTRAP", "1");
+    }
+
     if should_include_scrape_units(build_runner.bcx, unit) {
         rustdoc.arg("-Zunstable-options");
     }

@@ -2,7 +2,7 @@
 
 use crate::compiler::UnitInterner;
 use crate::compiler::unit_dependencies::IsArtifact;
-use crate::compiler::{CompileKind, CompileMode, RustcTargetData, Unit};
+use crate::compiler::{CompileKind, CompileMode, RustcTargetData, Unit, UserIntent};
 use crate::ops::{self, Packages};
 use crate::resolver::HasDevUnits;
 use crate::resolver::Resolve;
@@ -123,6 +123,7 @@ pub fn generate_std_roots(
     std_resolve: &Resolve,
     std_features: &ResolvedFeatures,
     kinds: &[CompileKind],
+    intent: UserIntent,
     package_set: &PackageSet<'_>,
     interner: &UnitInterner,
     profiles: &Profiles,
@@ -145,6 +146,7 @@ pub fn generate_std_roots(
             std_resolve,
             std_features,
             &kinds,
+            intent,
             package_set,
             interner,
             profiles,
@@ -163,6 +165,7 @@ fn generate_roots(
     std_resolve: &Resolve,
     std_features: &ResolvedFeatures,
     kinds: &[&CompileKind],
+    intent: UserIntent,
     package_set: &PackageSet<'_>,
     interner: &UnitInterner,
     profiles: &Profiles,
@@ -174,16 +177,27 @@ fn generate_roots(
         .collect::<CargoResult<Vec<PackageId>>>()?;
     let std_pkgs = package_set.get_many(std_ids)?;
 
+    let mode = match intent {
+        UserIntent::Doc { deps: true, .. } => CompileMode::Doc,
+        UserIntent::Bench
+        | UserIntent::Build
+        | UserIntent::Check { .. }
+        | UserIntent::Doctest
+        | UserIntent::Test
+        | UserIntent::Doc { deps: false, .. } => {
+            // I don't think we need to bother with Check here, the difference
+            // in time is minimal, and the difference in caching is
+            // significant.
+            CompileMode::Build
+        }
+    };
+
     for pkg in std_pkgs {
         let lib = pkg
             .targets()
             .iter()
             .find(|t| t.is_lib())
             .expect("std has a lib");
-        // I don't think we need to bother with Check here, the difference
-        // in time is minimal, and the difference in caching is
-        // significant.
-        let mode = CompileMode::Build;
         let features = std_features.activated_features(pkg.package_id(), FeaturesFor::NormalOrDev);
         for kind in kinds {
             let kind = **kind;

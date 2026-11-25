@@ -622,20 +622,28 @@ fn doc() {
 [DOWNLOADED] registry-dep-using-alloc v1.0.0 (registry `dummy-registry`)
 [DOWNLOADED] registry-dep-using-core v1.0.0 (registry `dummy-registry`)
 [DOWNLOADED] registry-dep-using-std v1.0.0 (registry `dummy-registry`)
-[COMPILING] dep_test v0.1.0 ([..]/dep_test)
 [COMPILING] compiler_builtins v0.1.0 ([..]/library/compiler_builtins)
-[COMPILING] proc_macro v0.1.0 ([..]/library/proc_macro)
-[COMPILING] panic_unwind v0.1.0 ([..]/library/panic_unwind)
-[COMPILING] rustc-std-workspace-core v1.9.0 ([..]/library/rustc-std-workspace-core)
-[COMPILING] registry-dep-using-core v1.0.0
-[COMPILING] rustc-std-workspace-alloc v1.9.0 ([..]/library/rustc-std-workspace-alloc)
-[COMPILING] registry-dep-using-alloc v1.0.0
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/[HOST_TARGET]/doc/foo/index.html
-[COMPILING] core v0.0.0 ([..]/library/core)
-[COMPILING] alloc v0.0.0 ([..]/library/alloc)
-[COMPILING] std v0.0.0 ([..]/library/std)
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
+[CHECKING] core v0.0.0 ([..]/library/core)
+[DOCUMENTING] core v0.0.0 ([..]/library/core)
+[CHECKING] dep_test v0.1.0 ([..]/dep_test)
+[DOCUMENTING] dep_test v0.1.0 ([..]/dep_test)
+[DOCUMENTING] proc_macro v0.1.0 ([..]/library/proc_macro)
+[DOCUMENTING] panic_unwind v0.1.0 ([..]/library/panic_unwind)
+[CHECKING] rustc-std-workspace-core v1.9.0 ([..]/library/rustc-std-workspace-core)
+[CHECKING] registry-dep-using-core v1.0.0
+[DOCUMENTING] compiler_builtins v0.1.0 ([..]/library/compiler_builtins)
+[CHECKING] alloc v0.0.0 ([..]/library/alloc)
+[CHECKING] rustc-std-workspace-alloc v1.9.0 ([..]/library/rustc-std-workspace-alloc)
+[CHECKING] registry-dep-using-alloc v1.0.0
+[DOCUMENTING] rustc-std-workspace-core v1.9.0 ([..]/library/rustc-std-workspace-core)
+[DOCUMENTING] registry-dep-using-core v1.0.0
+[DOCUMENTING] alloc v0.0.0 ([..]/library/alloc)
+[DOCUMENTING] rustc-std-workspace-alloc v1.9.0 ([..]/library/rustc-std-workspace-alloc)
+[DOCUMENTING] registry-dep-using-alloc v1.0.0
+[DOCUMENTING] std v0.0.0 ([..]/library/std)
 
 "#]]
             .unordered(),
