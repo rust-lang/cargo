@@ -949,6 +949,20 @@ warning: no files deleted due to --dry-run
             .raw(),
         )
         .run();
+
+    p.cargo("clean")
+        // Keep .rustc_info.json out of the file count and size.
+        .env("CARGO_CACHE_RUSTC_INFO", "0")
+        .with_stderr_data(
+            str![[r#"
+     Removed 2 files, 2.0KiB total
+
+"#]]
+            .raw(),
+        )
+        .run();
+    assert!(!original.exists());
+    assert!(!linked.exists());
 }
 
 #[cargo_test]
