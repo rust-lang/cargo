@@ -357,12 +357,7 @@ impl<'a> GitCheckout<'a> {
         let repo = repo.unwrap();
 
         info!("reset {} to {}", repo.path().display(), revision);
-        if let Ok(mut git_config) = repo.config() {
-            // Ensure libgit2 won't mess with newlines when we vendor.
-            git_config.set_bool("core.autocrlf", false)?;
-            // Allow libgit2 to check out paths longer than `MAX_PATH` on Windows.
-            git_config.set_bool("core.longpaths", true)?;
-        }
+        set_checkout_config(&repo)?;
 
         reset(&repo, &repo.find_object(revision, None)?, gctx)?;
 
@@ -546,6 +541,17 @@ impl CheckoutGuard {
         let _ = paths::create(self.ok_file)?;
         Ok(())
     }
+}
+
+/// Configures the repository of a fresh checkout before files are checked out.
+pub(crate) fn set_checkout_config(repo: &git2::Repository) -> CargoResult<()> {
+    if let Ok(mut git_config) = repo.config() {
+        // Ensure libgit2 won't mess with newlines when we vendor.
+        git_config.set_bool("core.autocrlf", false)?;
+        // Allow libgit2 to check out paths longer than `MAX_PATH` on Windows.
+        git_config.set_bool("core.longpaths", true)?;
+    }
+    Ok(())
 }
 
 /// Constructs an absolute URL for a child submodule URL with its parent base URL.
