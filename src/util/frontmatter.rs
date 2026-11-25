@@ -432,6 +432,45 @@ content: "fn main() {}\n"
     }
 
     #[test]
+    fn split_bom() {
+        assert_source(
+            "\u{feff}---
+[dependencies]
+time=\"0.1.25\"
+---
+fn main() {}
+",
+            str![[r#"
+shebang: None
+info: None
+frontmatter: None
+content: "\u{feff}---\n[dependencies]\ntime=\"0.1.25\"\n---\nfn main() {}\n"
+
+"#]],
+        );
+    }
+
+    #[test]
+    fn split_bom_shebang() {
+        assert_source(
+            "\u{feff}#!/usr/bin/env cargo
+---
+[dependencies]
+time=\"0.1.25\"
+---
+fn main() {}
+",
+            str![[r#"
+shebang: None
+info: None
+frontmatter: None
+content: "\u{feff}#!/usr/bin/env cargo\n---\n[dependencies]\ntime=\"0.1.25\"\n---\nfn main() {}\n"
+
+"#]],
+        );
+    }
+
+    #[test]
     fn split_dependencies() {
         assert_source(
             r#"---
