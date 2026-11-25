@@ -458,9 +458,14 @@ rustc fix shim comment 6
 fn fix_verification_failed() {
     // One suggested fix, with an error in the verification step.
     // This should cause `cargo fix` to back out the changes.
+    //
+    // Documents #15983: today cargo fix still exits 0 here even though
+    // verification failed, so a failed fix can look successful.
     expect_fix_runs_rustc_n_times(
         &[Step::OneFix, Step::Error],
-        |_execs| {},
+        |execs| {
+            execs.with_status(0);
+        },
         str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] errors present after applying fixes to crate `foo`
@@ -480,13 +485,16 @@ rustc fix shim comment 1
 
 #[cargo_test]
 fn fix_verification_failed_clippy() {
-    // This is the same as `fix_verification_failed_clippy`, except it checks
-    // the error message has the customization for the clippy URL and
-    // subcommand.
+    // Same as `fix_verification_failed`, except it checks the error message
+    // has the customization for the clippy URL and subcommand.
+    //
+    // Documents #15983: exits 0 today despite verification failure.
     expect_fix_runs_rustc_n_times(
         &[Step::OneFix, Step::Error],
         |execs| {
-            execs.env("RUSTC_WORKSPACE_WRAPPER", tools::wrapped_clippy_driver());
+            execs
+                .env("RUSTC_WORKSPACE_WRAPPER", tools::wrapped_clippy_driver())
+                .with_status(0);
         },
         str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
