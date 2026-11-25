@@ -52,7 +52,7 @@ impl ConfigStore {
     }
 
     /// Loads configuration from a path without processing includes.
-    pub fn read_layer(path: &Path, definition_kind: DefinitionKind) -> Result<Self> {
+    pub(crate) fn read_layer(path: &Path, definition_kind: DefinitionKind) -> Result<Self> {
         tracing::debug!(?path, ?definition_kind, "load config from file");
 
         let contents = fs::read_to_string(path)
