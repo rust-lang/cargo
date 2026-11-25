@@ -28,21 +28,23 @@ Common locations to override defaults are:
 Recommendation: Add to your `Cargo.toml` or `.cargo/config.toml`:
 
 ```toml
+[profile.dev]
+debug = "line-tables-only"
+
 [profile.dev.package."*"]
 debug = false
 ```
 
 This will:
 - Change the [`dev` profile](../reference/profiles.md#dev) (default for development commands) to:
-  - Avoid generating any [debug information](../reference/profiles.md#debug) for dependencies
-- Provide an opt-in for when debugging via [`--profile debug`](../reference/profiles.md#debug-profile)
-
-> **Note:**  The `dev` profile defaults to what is needed for useful panic backtraces
+  - Limit [debug information](../reference/profiles.md#debug) for workspace members to what is needed for useful panic backtraces
+  - Avoid generating any debug information for dependencies
 
 Trade-offs:
 - ✅ Faster code generation (`cargo build`)
 - ✅ Faster link times
 - ✅ Smaller disk usage of the `target` directory
+- ❌ Requires a full rebuild with [`--profile debug`](../reference/profiles.md#debug-profile) to have a high-quality debugger experience
 
 ### Use an alternative codegen backend
 
