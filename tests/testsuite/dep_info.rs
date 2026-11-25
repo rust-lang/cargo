@@ -259,8 +259,7 @@ fn no_rewrite_if_no_change_with_space_in_path() {
     p.cargo("build").run();
     let mtime = FileTime::from_last_modification_time(&dep_info.metadata().unwrap());
 
-    // The file is rewritten although nothing changed
-    assert_ne!(mtime, old);
+    assert_eq!(mtime, old);
 }
 
 #[cargo_test(nightly, reason = "-Z binary-dep-depinfo is unstable")]
