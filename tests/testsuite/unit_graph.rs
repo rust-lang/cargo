@@ -42,7 +42,8 @@ fn simple() {
             [dependencies]
             a = "1.0"
 
-            # Pinned as the default differs between stable and nightly toolchains
+            # Pinned debug level because the default differs between stable and nightly toolchains
+            # See https://github.com/rust-lang/cargo/issues/17788
             [profile.dev]
             debug = "line-tables-only"
             "#,

@@ -1170,7 +1170,7 @@ fn proc_macro_ws() {
             resolver = "2"
 
             [profile.dev.build-override]
-            debug = "line-tables-only"
+            debug = true
             "#,
         )
         .file(

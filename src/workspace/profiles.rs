@@ -28,6 +28,7 @@ use crate::resolver::features::FeaturesFor;
 use crate::util::interning::InternedString;
 use crate::util::{CargoResult, GlobalContext, closest_msg};
 use crate::workspace::dependency::Artifact;
+use crate::workspace::features;
 use crate::workspace::parser::validate_profile;
 use crate::workspace::{PackageId, PackageIdSpec, PackageIdSpecQuery, Target, Workspace};
 use anyhow::{Context as _, bail};
@@ -83,7 +84,8 @@ impl Profiles {
                 .or_else(|| is_ci().then_some(false)),
         };
         let mut profiles = merge_config_profiles(ws, requested_profile)?;
-        let rustc_host = ws.gctx().load_global_rustc(Some(ws))?.host;
+        let rustc = ws.gctx().load_global_rustc(Some(ws))?;
+        let rustc_host = rustc.host;
 
         let mut profile_makers = Profiles {
             incremental,
@@ -95,7 +97,11 @@ impl Profiles {
             hint_min_opt_level: gctx.cli_unstable().hint_min_opt_level,
         };
 
-        Self::add_root_profiles(&mut profile_makers, &profiles);
+        Self::add_root_profiles(
+            &mut profile_makers,
+            &profiles,
+            features::is_nightly_toolchain(&rustc.version),
+        );
 
         // Merge with predefined profiles.
         use std::collections::btree_map::Entry;
@@ -137,10 +143,17 @@ impl Profiles {
     fn add_root_profiles(
         profile_makers: &mut Profiles,
         profiles: &BTreeMap<InternedString, TomlProfile>,
+        is_nightly_toolchain: bool,
     ) {
+        let mut dev = Profile::default_dev();
+        if is_nightly_toolchain {
+            // Held back from stable until the transition concerns are addressed.
+            // See https://github.com/rust-lang/cargo/issues/17788
+            dev.debuginfo = DebugInfo::Resolved(TomlDebugInfo::LineTablesOnly);
+        }
         profile_makers.by_name.insert(
             "dev".into(),
-            ProfileMaker::new(Profile::default_dev(), profiles.get("dev").cloned()),
+            ProfileMaker::new(dev, profiles.get("dev").cloned()),
         );
 
         profile_makers.by_name.insert(
@@ -775,7 +788,7 @@ impl Profile {
         Profile {
             name: "dev".into(),
             root: ProfileRoot::Debug,
-            debuginfo: DebugInfo::Resolved(TomlDebugInfo::LineTablesOnly),
+            debuginfo: DebugInfo::Resolved(TomlDebugInfo::Full),
             debug_assertions: true,
             overflow_checks: true,
             incremental: true,
