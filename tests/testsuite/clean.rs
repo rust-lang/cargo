@@ -955,7 +955,7 @@ warning: no files deleted due to --dry-run
         .env("CARGO_CACHE_RUSTC_INFO", "0")
         .with_stderr_data(
             str![[r#"
-     Removed 2 files, 2.0KiB total
+     Removed 2 files, 1.0KiB total
 
 "#]]
             .raw(),
