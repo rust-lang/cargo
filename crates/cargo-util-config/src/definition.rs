@@ -3,7 +3,7 @@ use std::fmt;
 use std::mem;
 use std::path::{Path, PathBuf};
 
-/// The kind of source where a config value is defined.
+/// Why a config file is being loaded,
 #[derive(Clone, Copy, Debug)]
 pub(crate) enum DefinitionKind {
     /// Loaded due to config file discovery.
