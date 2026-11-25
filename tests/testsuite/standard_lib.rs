@@ -612,7 +612,80 @@ fn doc() {
         )
         .build();
 
-    p.cargo("doc -v").build_std(&setup).target_host().run();
+    p.cargo("doc")
+        .build_std_arg(&setup, "std")
+        .target_host()
+        .with_stderr_data(
+            str![[r#"
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] registry-dep-using-alloc v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] registry-dep-using-core v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] registry-dep-using-std v1.0.0 (registry `dummy-registry`)
+[COMPILING] dep_test v0.1.0 ([..]/dep_test)
+[COMPILING] compiler_builtins v0.1.0 ([..]/library/compiler_builtins)
+[COMPILING] proc_macro v0.1.0 ([..]/library/proc_macro)
+[COMPILING] panic_unwind v0.1.0 ([..]/library/panic_unwind)
+[COMPILING] rustc-std-workspace-core v1.9.0 ([..]/library/rustc-std-workspace-core)
+[COMPILING] registry-dep-using-core v1.0.0
+[COMPILING] rustc-std-workspace-alloc v1.9.0 ([..]/library/rustc-std-workspace-alloc)
+[COMPILING] registry-dep-using-alloc v1.0.0
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/[HOST_TARGET]/doc/foo/index.html
+[COMPILING] core v0.0.0 ([..]/library/core)
+[COMPILING] alloc v0.0.0 ([..]/library/alloc)
+[COMPILING] std v0.0.0 ([..]/library/std)
+[DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
+
+"#]]
+            .unordered(),
+        )
+        .run();
+}
+
+#[cargo_test(build_std_mock)]
+fn doc_no_deps() {
+    let setup = setup();
+
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"
+                /// Doc
+                pub fn f() -> Result<(), ()> {Ok(())}
+            "#,
+        )
+        .build();
+
+    p.cargo("doc --no-deps")
+        .build_std_arg(&setup, "std")
+        .target_host()
+        .with_stderr_data(
+            str![[r#"
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] registry-dep-using-alloc v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] registry-dep-using-core v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] registry-dep-using-std v1.0.0 (registry `dummy-registry`)
+[COMPILING] dep_test v0.1.0 ([..]/dep_test)
+[COMPILING] compiler_builtins v0.1.0 ([..]/library/compiler_builtins)
+[COMPILING] proc_macro v0.1.0 ([..]/library/proc_macro)
+[COMPILING] panic_unwind v0.1.0 ([..]/library/panic_unwind)
+[COMPILING] rustc-std-workspace-core v1.9.0 ([..]/library/rustc-std-workspace-core)
+[COMPILING] registry-dep-using-core v1.0.0
+[COMPILING] rustc-std-workspace-alloc v1.9.0 ([..]/library/rustc-std-workspace-alloc)
+[COMPILING] registry-dep-using-alloc v1.0.0
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/[HOST_TARGET]/doc/foo/index.html
+[COMPILING] core v0.0.0 ([..]/library/core)
+[COMPILING] alloc v0.0.0 ([..]/library/alloc)
+[COMPILING] std v0.0.0 ([..]/library/std)
+[DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
+
+"#]]
+            .unordered(),
+        )
+        .run();
 }
 
 #[cargo_test(build_std_mock)]
