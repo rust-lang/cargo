@@ -29,7 +29,7 @@ pub fn cli() -> Command {
         )
         .arg_features()
         .arg_release("Build artifacts in release mode, with optimizations")
-        .arg_redundant_default_mode("debug", "build", "release")
+        .arg_debug("build")
         .arg_profile("Build artifacts with the specified profile")
         .arg_parallel()
         .arg_target_tuple("Build for the target tuple")

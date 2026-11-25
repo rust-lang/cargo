@@ -97,7 +97,14 @@ pub fn cli() -> Command {
                 .conflicts_with("profile")
                 .help_heading(heading::COMPILATION_OPTIONS),
         )
-        .arg_redundant_default_mode("release", "install", "debug")
+        .arg(
+            flag("release", "")
+                .conflicts_with("profile")
+                .value_parser(clap::builder::UnknownArgumentValueParser::suggest(
+                    "`--release` is the default for `cargo install`; instead `--debug` is supported",
+                ))
+                .hide(true),
+        )
         .arg_profile("Install artifacts with the specified profile")
         .arg_target_tuple("Build for the target tuple")
         .arg_target_dir()

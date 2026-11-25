@@ -153,24 +153,6 @@ pub trait CommandExt: Sized {
         self._arg(flag("keep-going", "").value_parser(value_parser).hide(true))
     }
 
-    fn arg_redundant_default_mode(
-        self,
-        default_mode: &'static str,
-        command: &'static str,
-        supported_mode: &'static str,
-    ) -> Self {
-        let msg = format!(
-            "`--{default_mode}` is the default for `cargo {command}`; instead `--{supported_mode}` is supported"
-        );
-        let value_parser = UnknownArgumentValueParser::suggest(msg);
-        self._arg(
-            flag(default_mode, "")
-                .conflicts_with("profile")
-                .value_parser(value_parser)
-                .hide(true),
-        )
-    }
-
     fn arg_targets_all(
         self,
         lib: &'static str,
@@ -305,6 +287,18 @@ pub trait CommandExt: Sized {
                 .short('r')
                 .conflicts_with("profile")
                 .help_heading(heading::COMPILATION_OPTIONS),
+        )
+    }
+
+    fn arg_debug(self, command: &'static str) -> Self {
+        let msg =
+            format!("to enable the debug profile for `cargo {command}`, pass `--profile debug`");
+        let value_parser = UnknownArgumentValueParser::suggest(msg);
+        self._arg(
+            flag("debug", "")
+                .conflicts_with("profile")
+                .value_parser(value_parser)
+                .hide(true),
         )
     }
 

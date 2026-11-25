@@ -30,6 +30,7 @@ pub fn cli() -> Command {
         .arg_features()
         .arg_parallel()
         .arg_release("Check artifacts in release mode, with optimizations")
+        .arg_debug("check")
         .arg_profile("Check artifacts with the specified profile")
         .arg_target_tuple("Check for the target tuple")
         .arg_target_dir()

@@ -233,7 +233,7 @@ fn cargo_compile_with_redundant_default_mode() {
         .with_stderr_data(str![[r#"
 [ERROR] unexpected argument '--debug' found
 
-  tip: `--debug` is the default for `cargo build`; instead `--release` is supported
+  tip: to enable the debug profile for `cargo build`, pass `--profile debug`
 
 Usage: cargo[EXE] build [OPTIONS]
 

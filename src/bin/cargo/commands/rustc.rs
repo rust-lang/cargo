@@ -45,6 +45,7 @@ pub fn cli() -> Command {
         .arg_features()
         .arg_parallel()
         .arg_release("Build artifacts in release mode, with optimizations")
+        .arg_debug("rustc")
         .arg_profile("Build artifacts with the specified profile")
         .arg_target_tuple("Target tuple which compiles will be for")
         .arg_target_dir()
