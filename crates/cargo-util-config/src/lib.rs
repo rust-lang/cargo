@@ -49,7 +49,8 @@ mod value;
 
 pub use config_store::ConfigStore;
 pub use config_value::ConfigValue;
-pub use definition::{Definition, DefinitionKind};
+pub use definition::Definition;
+pub(crate) use definition::DefinitionKind;
 pub use env::Env;
 pub use error::ConfigError;
 pub use key::ConfigKey;

@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 /// The kind of source where a config value is defined.
 #[derive(Clone, Copy, Debug)]
-pub enum DefinitionKind {
+pub(crate) enum DefinitionKind {
     /// Loaded due to config file discovery.
     Path,
     /// Loaded due to a request from the global cli arg `--config`
