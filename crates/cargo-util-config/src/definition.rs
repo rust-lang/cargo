@@ -6,12 +6,8 @@ use std::path::{Path, PathBuf};
 /// The kind of source where a config value is defined.
 #[derive(Clone, Copy, Debug)]
 pub enum DefinitionKind {
-    /// A built-in value.
-    BuiltIn,
     /// Loaded due to config file discovery.
     Path,
-    /// A value defined in an environment variable.
-    Environment,
     /// Loaded due to a request from the global cli arg `--config`
     ///
     /// Configs loaded via `include` are also seen as from cli args,

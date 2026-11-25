@@ -63,10 +63,6 @@ impl ConfigStore {
         let def = match definition_kind {
             DefinitionKind::Cli => Definition::Cli(Some(path.into())),
             DefinitionKind::Path => Definition::Path(path.into()),
-            DefinitionKind::BuiltIn => Definition::BuiltIn,
-            DefinitionKind::Environment => {
-                unimplemented!("Environment defiinitions are not supported")
-            }
         };
         let value = CV::from_toml(def, toml::Value::Table(toml)).with_context(|| {
             format!(
