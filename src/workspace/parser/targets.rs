@@ -284,6 +284,16 @@ fn to_lib_target(
 
     let mut target = Target::lib_target(name_or_panic(lib), crate_types, path, edition);
     configure(lib, &mut target, TARGET_KIND_HUMAN_LIB, warnings)?;
+    // `harness = false` builds the lib as a test binary with a `main`. Proc-macro
+    // crates cannot be bins, which leads to a confusing rustc error about
+    // `#[proc_macro]` (see issue #15519). Fail early instead.
+    if target.proc_macro() && !target.harness() {
+        anyhow::bail!(
+            "library `{}` cannot set both `proc-macro = true` and `harness = false`\n\
+             proc-macro crates cannot be built as test binaries without the harness",
+            name_or_panic(lib)
+        );
+    }
     target.set_name_inferred(original_lib.map_or(true, |v| v.name.is_none()));
     Ok(Some(target))
 }

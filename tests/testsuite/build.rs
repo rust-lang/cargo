@@ -754,6 +754,53 @@ fn cargo_compile_with_bin_and_proc() {
 }
 
 #[cargo_test]
+fn cargo_compile_proc_macro_with_harness_false() {
+    // Issue #15519: proc-macro + harness=false used to surface a confusing
+    // rustc error about #[proc_macro] when building lib tests.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+
+                [lib]
+                proc-macro = true
+                harness = false
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                use proc_macro::TokenStream;
+
+                #[proc_macro]
+                pub fn foo(_input: TokenStream) -> TokenStream {
+                    "".parse().unwrap()
+                }
+
+                #[cfg(test)]
+                fn main() {}
+            "#,
+        )
+        .build();
+
+    p.cargo("build --all-targets")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  library `foo` cannot set both `proc-macro = true` and `harness = false`
+  proc-macro crates cannot be built as test binaries without the harness
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn cargo_compile_with_invalid_lib_target_name() {
     let p = project()
         .file(
