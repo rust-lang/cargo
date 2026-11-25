@@ -43,7 +43,7 @@ fn repeated_occurrence_without_a_value() {
  = [NOTE] this was previously accepted but will become a hard error in the future
  = [HELP] pass a value to `--package` or remove it
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -54,7 +54,7 @@ fn repeated_occurrence_without_a_value() {
  |
  = [NOTE] this was previously accepted but will become a hard error in the future
  = [HELP] pass a value to `--bin` or remove it
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -66,7 +66,7 @@ fn repeated_occurrence_without_a_value() {
  = [NOTE] this was previously accepted but will become a hard error in the future
  = [HELP] pass a value to `--example` or remove it
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -78,7 +78,7 @@ fn repeated_occurrence_without_a_value() {
  = [NOTE] this was previously accepted but will become a hard error in the future
  = [HELP] pass a value to `--test` or remove it
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -90,7 +90,7 @@ fn repeated_occurrence_without_a_value() {
  = [NOTE] this was previously accepted but will become a hard error in the future
  = [HELP] pass a value to `--bench` or remove it
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -102,7 +102,7 @@ fn repeated_occurrence_without_a_value() {
  = [NOTE] this was previously accepted but will become a hard error in the future
  = [HELP] pass a value to `--target` or remove it
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

@@ -43,7 +43,7 @@ fn depend_on_alt_registry() {
 [DOWNLOADED] bar v0.0.1 (registry `alternative`)
 [CHECKING] bar v0.0.1 (registry `alternative`)
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -55,7 +55,7 @@ fn depend_on_alt_registry() {
         .with_stderr_data(str![[r#"
 [CHECKING] bar v0.0.1 (registry `alternative`)
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -102,7 +102,7 @@ fn depend_on_alt_registry_depends_on_same_registry_no_index() {
 [CHECKING] baz v0.0.1 (registry `alternative`)
 [CHECKING] bar v0.0.1 (registry `alternative`)
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -151,7 +151,7 @@ fn depend_on_alt_registry_depends_on_same_registry() {
 [CHECKING] baz v0.0.1 (registry `alternative`)
 [CHECKING] bar v0.0.1 (registry `alternative`)
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -200,7 +200,7 @@ fn depend_on_alt_registry_depends_on_crates_io() {
 [DOWNLOADED] bar v0.0.1 (registry `alternative`)
 [CHECKING] baz v0.0.1
 [CHECKING] bar v0.0.1 (registry `alternative`)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 
 "#]]
@@ -242,7 +242,7 @@ fn registry_and_path_dep_works() {
 [LOCKING] 1 package to highest compatible version
 [CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -306,7 +306,7 @@ fn registry_and_git_dep_works() {
 [LOCKING] 1 package to highest compatible version
 [CHECKING] bar v0.0.1 ([ROOTURL]/bar#[..])
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -413,7 +413,7 @@ fn publish_with_registry_dependency() {
 [DOWNLOADED] bar v0.0.1 (registry `alternative`)
 [COMPILING] bar v0.0.1 (registry `alternative`)
 [COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `alternative`
 [NOTE] waiting for foo v0.0.1 to be available at registry `alternative`
@@ -504,7 +504,7 @@ fn alt_registry_and_crates_io_deps() {
 [DOWNLOADED] alt_reg_dep v0.1.0 (registry `alternative`)
 [CHECKING] crates_io_dep v0.0.1
 [CHECKING] alt_reg_dep v0.1.0 (registry `alternative`)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 
 "#]]
@@ -577,7 +577,7 @@ fn publish_to_alt_registry() {
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `alternative`
 [NOTE] waiting for foo v0.0.1 to be available at registry `alternative`
@@ -660,7 +660,7 @@ fn publish_with_crates_io_dep() {
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
 [COMPILING] bar v0.0.1
 [COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `alternative`
 [NOTE] waiting for foo v0.0.1 to be available at registry `alternative`
@@ -772,7 +772,7 @@ fn publish_with_git_and_registry_dep() {
 [DOWNLOADED] bar v0.0.1 (registry `alternative`)
 [COMPILING] bar v0.0.1 (registry `alternative`)
 [COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `alternative`
 [NOTE] waiting for foo v0.0.1 to be available at registry `alternative`
@@ -886,7 +886,7 @@ fn patch_alt_reg() {
 [LOCKING] 1 package to highest compatible version
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -979,7 +979,7 @@ fn no_api() {
 [DOWNLOADED] bar v0.0.1 (registry `alternative`)
 [CHECKING] bar v0.0.1 (registry `alternative`)
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1839,7 +1839,7 @@ fn registries_index_relative_url() {
 [DOWNLOADED] bar v0.0.1 (registry `relative`)
 [CHECKING] bar v0.0.1 (registry `relative`)
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

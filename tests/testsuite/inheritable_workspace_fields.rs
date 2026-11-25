@@ -60,7 +60,7 @@ fn permit_additional_workspace_fields() {
         // Should not warn about unused fields.
         .with_stderr_data(str![[r#"
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -170,7 +170,7 @@ fn inherit_own_workspace_fields() {
 [PACKAGED] 6 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v1.2.3 ([ROOT]/foo)
 [COMPILING] foo v1.2.3 ([ROOT]/foo/target/package/foo-1.2.3)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v1.2.3 ([ROOT]/foo)
 [UPLOADED] foo v1.2.3 to registry `crates-io`
 [NOTE] waiting for foo v1.2.3 to be available at registry `crates-io`
@@ -315,7 +315,7 @@ fn inherit_own_dependencies() {
 [DOWNLOADED] dep-build v0.8.2 (registry `dummy-registry`)
 [CHECKING] dep v0.1.2
 [CHECKING] bar v0.2.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -341,7 +341,7 @@ fn inherit_own_dependencies() {
 [VERIFYING] bar v0.2.0 ([ROOT]/foo)
 [COMPILING] dep v0.1.2
 [COMPILING] bar v0.2.0 ([ROOT]/foo/target/package/bar-0.2.0)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] bar v0.2.0 ([ROOT]/foo)
 [UPLOADED] bar v0.2.0 to registry `crates-io`
 [NOTE] waiting for bar v0.2.0 to be available at registry `crates-io`
@@ -493,7 +493,7 @@ fn inherit_own_detailed_dependencies() {
 [DOWNLOADED] dep v0.1.2 (registry `dummy-registry`)
 [CHECKING] dep v0.1.2
 [CHECKING] bar v0.2.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -515,7 +515,7 @@ fn inherit_own_detailed_dependencies() {
 [VERIFYING] bar v0.2.0 ([ROOT]/foo)
 [COMPILING] dep v0.1.2
 [COMPILING] bar v0.2.0 ([ROOT]/foo/target/package/bar-0.2.0)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] bar v0.2.0 ([ROOT]/foo)
 [UPLOADED] bar v0.2.0 to registry `crates-io`
 [NOTE] waiting for bar v0.2.0 to be available at registry `crates-io`
@@ -692,7 +692,7 @@ fn inherited_dependencies_union_features() {
 [CHECKING] dancy_dep v0.6.8
 [CHECKING] dep v0.1.0
 [CHECKING] bar v0.2.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -783,7 +783,7 @@ fn inherit_workspace_fields() {
 See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
 [WARNING] `bar` (manifest) generated 1 warning
 [COMPILING] bar v1.2.3 ([ROOT]/foo/target/package/bar-1.2.3)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] bar v1.2.3 ([ROOT]/foo/bar)
 [UPLOADED] bar v1.2.3 to registry `crates-io`
 [NOTE] waiting for bar v1.2.3 to be available at registry `crates-io`
@@ -934,7 +934,7 @@ fn inherit_dependencies() {
 [DOWNLOADED] dep-build v0.8.2 (registry `dummy-registry`)
 [CHECKING] dep v0.1.2
 [CHECKING] bar v0.2.0 ([ROOT]/foo/bar)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -961,7 +961,7 @@ fn inherit_dependencies() {
 [VERIFYING] bar v0.2.0 ([ROOT]/foo/bar)
 [COMPILING] dep v0.1.2
 [COMPILING] bar v0.2.0 ([ROOT]/foo/target/package/bar-0.2.0)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] bar v0.2.0 ([ROOT]/foo/bar)
 [UPLOADED] bar v0.2.0 to registry `crates-io`
 [NOTE] waiting for bar v0.2.0 to be available at registry `crates-io`
@@ -1115,7 +1115,7 @@ fn inherit_target_dependencies() {
 [DOWNLOADED] dep v0.1.2 (registry `dummy-registry`)
 [CHECKING] dep v0.1.2
 [CHECKING] bar v0.2.0 ([ROOT]/foo/bar)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1159,7 +1159,7 @@ fn inherit_dependency_override_optional() {
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to highest compatible version
 [CHECKING] bar v0.2.0 ([ROOT]/foo/bar)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1211,7 +1211,7 @@ fn inherit_dependency_features() {
 [CHECKING] fancy_dep v0.2.4
 [CHECKING] dep v0.1.0
 [CHECKING] bar v0.2.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -1282,7 +1282,7 @@ fn inherit_detailed_dependencies() {
 [LOCKING] 1 package to highest compatible version
 [CHECKING] detailed v0.5.0 ([ROOTURL]/detailed?branch=branchy#[..])
 [CHECKING] bar v0.2.0 ([ROOT]/foo/bar)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1325,7 +1325,7 @@ fn inherit_path_dependencies() {
         .with_stderr_data(str![[r#"
 [CHECKING] dep v0.9.0 ([ROOT]/foo/dep)
 [CHECKING] bar v0.2.0 ([ROOT]/foo/bar)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1591,7 +1591,7 @@ fn warn_inherit_def_feat_true_member_def_feat_false() {
 [CHECKING] fancy_dep v0.2.4
 [CHECKING] dep v0.1.0
 [CHECKING] bar v0.2.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]].unordered()).run();
 }
@@ -1638,7 +1638,7 @@ fn inherit_def_feat_true_member_def_feat_false_2024_edition() {
 [DOWNLOADED] dep v0.1.0 (registry `dummy-registry`)
 [CHECKING] dep v0.1.0
 [CHECKING] bar v0.2.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1689,7 +1689,7 @@ fn warn_inherit_simple_member_def_feat_false() {
 [CHECKING] fancy_dep v0.2.4
 [CHECKING] dep v0.1.0
 [CHECKING] bar v0.2.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]].unordered()).run();
 }
@@ -1736,7 +1736,7 @@ fn inherit_simple_member_def_feat_false_2024_edition() {
 [DOWNLOADED] dep v0.1.0 (registry `dummy-registry`)
 [CHECKING] dep v0.1.0
 [CHECKING] bar v0.2.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1787,7 +1787,7 @@ fn inherit_def_feat_false_member_def_feat_true() {
 [CHECKING] fancy_dep v0.2.4
 [CHECKING] dep v0.1.0
 [CHECKING] bar v0.2.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -1877,7 +1877,7 @@ fn warn_inherit_unused_manifest_key_dep() {
 [DOWNLOADED] dep v0.1.0 (registry `dummy-registry`)
 [CHECKING] dep v0.1.0
 [CHECKING] bar v0.2.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1915,7 +1915,7 @@ fn warn_unused_workspace_package_field() {
 [WARNING] Cargo.toml: unused manifest key: workspace.package.name
 [WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1986,7 +1986,7 @@ fn warn_inherit_unused_manifest_key_package() {
 [WARNING] Cargo.toml: unused manifest key: package.version.xyz
 [WARNING] `bar` (manifest) generated 14 warnings
 [CHECKING] bar v1.2.3 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

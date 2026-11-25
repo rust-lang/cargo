@@ -1006,7 +1006,7 @@ dependencies = [
 [ADDING] dep1 v0.5.0 ([ROOTURL]/dep1?{ref_kind}={encoded_ref}#[..])
 [CHECKING] dep1 v0.5.0 ([ROOTURL]/dep1?{ref_kind}={encoded_ref}#[..])
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 "
         ))
         .run();
@@ -1020,7 +1020,7 @@ dependencies = [
         .with_stderr_data(format!(
             "\
 [UPDATING] git repository `[ROOTURL]/dep1`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 "
         ))
         .run();
@@ -1103,7 +1103,7 @@ dependencies = [
 [ADDING] dep1 v0.5.0 ([ROOTURL]/dep1?{ref_kind}={encoded_ref}#[..])
 [CHECKING] dep1 v0.5.0 ([ROOTURL]/dep1?{ref_kind}={encoded_ref}#[..])
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 "
         ))
         .run();
@@ -1115,7 +1115,7 @@ dependencies = [
     p.cargo("check")
         .with_stderr_data(
             "\
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 ",
         )
         .run();

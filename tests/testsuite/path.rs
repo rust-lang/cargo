@@ -79,7 +79,7 @@ fn cargo_compile_with_nested_deps_shorthand() {
 [COMPILING] baz v0.5.0 ([ROOT]/foo/bar/baz)
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -105,7 +105,7 @@ test passed
     p.cargo("build -p baz")
         .with_stderr_data(str![[r#"
 [COMPILING] baz v0.5.0 ([ROOT]/foo/bar/baz)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -114,7 +114,7 @@ test passed
         .with_stderr_data(str![[r#"
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -210,7 +210,7 @@ fn cargo_compile_with_root_dev_deps_with_testing() {
 [LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/bar)
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] unittests src/main.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
 
 "#]])
@@ -279,7 +279,7 @@ fn cargo_compile_with_transitive_dev_deps() {
 [LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -321,7 +321,7 @@ fn no_rebuild_dependency() {
 [LOCKING] 1 package to highest compatible version
 [CHECKING] bar v0.5.0 ([ROOT]/foo/bar)
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -338,7 +338,7 @@ fn no_rebuild_dependency() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -391,13 +391,13 @@ fn deep_dependencies_trigger_rebuild() {
 [CHECKING] baz v0.5.0 ([ROOT]/foo/baz)
 [CHECKING] bar v0.5.0 ([ROOT]/foo/bar)
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
     p.cargo("check")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -414,7 +414,7 @@ fn deep_dependencies_trigger_rebuild() {
 [CHECKING] baz v0.5.0 ([ROOT]/foo/baz)
 [CHECKING] bar v0.5.0 ([ROOT]/foo/bar)
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -433,7 +433,7 @@ fn deep_dependencies_trigger_rebuild() {
         .with_stderr_data(str![[r#"
 [CHECKING] bar v0.5.0 ([ROOT]/foo/bar)
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -485,14 +485,14 @@ fn no_rebuild_two_deps() {
 [COMPILING] baz v0.5.0 ([ROOT]/foo/baz)
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
     assert!(p.bin("foo").is_file());
     p.cargo("build")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -531,7 +531,7 @@ fn nested_deps_recompile() {
 [LOCKING] 1 package to highest compatible version
 [CHECKING] bar v0.5.0 ([ROOT]/foo/src/bar)
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -543,7 +543,7 @@ fn nested_deps_recompile() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1367,7 +1367,7 @@ fn path_dep_build_cmd() {
 [LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1388,7 +1388,7 @@ fn path_dep_build_cmd() {
         .with_stderr_data(str![[r#"
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1436,7 +1436,7 @@ fn dev_deps_no_rebuild_lib() {
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to highest compatible version
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1445,7 +1445,7 @@ fn dev_deps_no_rebuild_lib() {
         .with_stderr_data(str![[r#"
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
 
 "#]])
@@ -1504,7 +1504,7 @@ fn custom_target_no_rebuild() {
         .with_stderr_data(str![[r#"
 [CHECKING] a v0.5.0 ([ROOT]/foo/a)
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1517,7 +1517,7 @@ fn custom_target_no_rebuild() {
         .env("CARGO_TARGET_DIR", "target_moved")
         .with_stderr_data(str![[r#"
 [CHECKING] b v0.5.0 ([ROOT]/foo/b)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1571,7 +1571,7 @@ fn override_and_depend() {
 [CHECKING] a2 v0.5.0 ([ROOT]/foo/a)
 [CHECKING] a1 v0.5.0 ([ROOT]/foo/a)
 [CHECKING] b v0.5.0 ([ROOT]/foo/b)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

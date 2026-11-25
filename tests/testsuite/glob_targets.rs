@@ -10,7 +10,7 @@ fn build_example() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name example1 [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -23,7 +23,7 @@ fn build_bin() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name bin1 [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -40,7 +40,7 @@ fn build_bench() {
 [RUNNING] `rustc --crate-name bench1 [..]`
 [RUNNING] `rustc --crate-name bin2 [..]`
 [RUNNING] `rustc --crate-name bin1 [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -59,7 +59,7 @@ fn build_test() {
 [RUNNING] `rustc --crate-name foo [..]`
 [RUNNING] `rustc --crate-name bin2 [..]`
 [RUNNING] `rustc --crate-name test1 [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -74,7 +74,7 @@ fn check_example() {
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name example1 [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -87,7 +87,7 @@ fn check_bin() {
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name bin1 [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -100,7 +100,7 @@ fn check_bench() {
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name bench1 [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -113,7 +113,7 @@ fn check_test() {
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name test1 [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -126,7 +126,7 @@ fn doc_bin() {
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustdoc --edition=2015 --crate-type bin --crate-name bin1 [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/bin1/index.html
 
 "#]])
@@ -141,7 +141,7 @@ fn fix_example() {
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `[..] rustc --crate-name example1 [..]`
 [FIXING] examples/example1.rs
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -155,7 +155,7 @@ fn fix_bin() {
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `[..] rustc --crate-name bin1 [..]`
 [FIXING] src/bin/bin1.rs
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -169,7 +169,7 @@ fn fix_bench() {
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `[..] rustc --crate-name bench1 [..]`
 [FIXING] benches/bench1.rs
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -183,7 +183,7 @@ fn fix_test() {
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `[..] rustc --crate-name test1 [..]`
 [FIXING] tests/test1.rs
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -216,7 +216,7 @@ fn test_example() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name example1 [..]`
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/example1-[HASH][EXE]`
 
 "#]])
@@ -230,7 +230,7 @@ fn test_bin() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name bin1 [..]`
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/bin1-[HASH][EXE]`
 
 "#]])
@@ -248,7 +248,7 @@ fn test_bench() {
 [RUNNING] `rustc --crate-name foo [..]`
 [RUNNING] `rustc --crate-name bench1 [..]`
 [RUNNING] `rustc --crate-name bin1 [..]`
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/bench1-[HASH][EXE]`
 
 "#]]
@@ -268,7 +268,7 @@ fn test_test() {
 [RUNNING] `rustc --crate-name bin1 [..]`
 [RUNNING] `rustc --crate-name foo [..]`
 [RUNNING] `rustc --crate-name bin2 [..]`
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/test1-[HASH][EXE]`
 
 "#]]
@@ -384,7 +384,7 @@ fn rustdoc_example() {
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustdoc --edition=2015 --crate-type bin --crate-name example1 [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/example1/index.html
 
 "#]])
@@ -398,7 +398,7 @@ fn rustdoc_bin() {
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustdoc --edition=2015 --crate-type bin --crate-name bin1 [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/bin1/index.html
 
 "#]])
@@ -412,7 +412,7 @@ fn rustdoc_bench() {
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustdoc --edition=2015 --crate-type bin --crate-name bench1 [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/bench1/index.html
 
 "#]])
@@ -426,7 +426,7 @@ fn rustdoc_test() {
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustdoc --edition=2015 --crate-type bin --crate-name test1 [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/test1/index.html
 
 "#]])
@@ -440,7 +440,7 @@ fn rustc_example() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name example1 [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -453,7 +453,7 @@ fn rustc_bin() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name bin1 [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -470,7 +470,7 @@ fn rustc_bench() {
 [RUNNING] `rustc --crate-name bench1 [..]`
 [RUNNING] `rustc --crate-name bin2 [..]`
 [RUNNING] `rustc --crate-name foo [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -489,7 +489,7 @@ fn rustc_test() {
 [RUNNING] `rustc --crate-name bin2 [..]`
 [RUNNING] `rustc --crate-name foo [..]`
 [RUNNING] `rustc --crate-name test1 [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),

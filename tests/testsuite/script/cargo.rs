@@ -43,7 +43,7 @@ args: []
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/echo.rs`
 [COMPILING] echo v0.0.0 ([ROOT]/foo/echo.rs)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/echo[EXE]`
 
 "#]])
@@ -69,7 +69,7 @@ args: []
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/echo.rs`
 [COMPILING] echo v0.0.0 ([ROOT]/foo/echo.rs)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/echo[EXE]`
 
 "#]])
@@ -95,7 +95,7 @@ args: []
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/echo.rs`
 [COMPILING] echo v0.0.0 ([ROOT]/foo/echo.rs)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/echo[EXE]`
 
 "#]])
@@ -120,7 +120,7 @@ args: []
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/echo`
 [COMPILING] echo v0.0.0 ([ROOT]/foo/echo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/echo[EXE]`
 
 "#]])
@@ -176,7 +176,7 @@ args: []
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/echo.rs`
 [COMPILING] echo v0.0.0 ([ROOT]/foo/echo.rs)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/echo[EXE]`
 
 "#]])
@@ -299,7 +299,7 @@ Hello world!
 "#]])
         .with_stderr_data(str![[r#"
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]`
 
 "#]])
@@ -330,7 +330,7 @@ Hello world!
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/script.rs`
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]`
 
 "#]])
@@ -359,7 +359,7 @@ msg = undefined
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/script.rs`
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]`
 
 "#]])
@@ -375,7 +375,7 @@ msg = undefined
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/script.rs`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]`
 
 "#]])
@@ -393,7 +393,7 @@ msg = hello
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/script.rs`
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]`
 
 "#]])
@@ -511,7 +511,7 @@ line: 4
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/script.rs`
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]`
 
 "#]])
@@ -537,7 +537,7 @@ args: ["-NotAnArg"]
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/script.rs`
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE] -NotAnArg`
 
 "#]])
@@ -563,7 +563,7 @@ args: ["-NotAnArg"]
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/script.rs`
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE] -NotAnArg`
 
 "#]])
@@ -589,7 +589,7 @@ args: ["--help"]
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/script.rs`
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE] --help`
 
 "#]])
@@ -616,7 +616,7 @@ args: []
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/s-h.w§c!.rs`
 ...
 [COMPILING] s-h-w-c- v0.0.0 ([ROOT]/foo/s-h.w§c!.rs)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/s-h-w-c-[EXE]`
 
 "#]])
@@ -642,7 +642,7 @@ args: []
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/42answer.rs`
 [COMPILING] answer v0.0.0 ([ROOT]/foo/42answer.rs)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/answer[EXE]`
 
 "#]])
@@ -666,7 +666,7 @@ args: []
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/42.rs`
 [COMPILING] package v0.0.0 ([ROOT]/foo/42.rs)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/package[EXE]`
 
 "#]])
@@ -691,7 +691,7 @@ args: []
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/con`
 [COMPILING] con v0.0.0 ([ROOT]/foo/con)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/con[EXE]`
 
 "#]])
@@ -715,7 +715,7 @@ args: []
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/test`
 [COMPILING] test v0.0.0 ([ROOT]/foo/test)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/test[EXE]`
 
 "#]])
@@ -739,7 +739,7 @@ args: []
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/self`
 [COMPILING] self v0.0.0 ([ROOT]/foo/self)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/self[EXE]`
 
 "#]])
@@ -956,7 +956,7 @@ Hello world!
 [DOWNLOADED] script v1.0.0 (registry `dummy-registry`)
 [COMPILING] script v1.0.0
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE] --help`
 
 "#]])
@@ -996,7 +996,7 @@ Hello world!
 [LOCKING] 1 package to highest Rust [..] compatible version
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE] --help`
 
 "#]])
@@ -1025,7 +1025,7 @@ Hello world!
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/script.rs`
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE] --help`
 
 "#]])
@@ -1054,7 +1054,7 @@ Hello world!
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/script.rs`
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE] --help`
 
 "#]])
@@ -1083,7 +1083,7 @@ Hello world!
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/script.rs`
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE] --help`
 
 "#]])
@@ -1612,7 +1612,7 @@ args: []
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/script.rs`
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]`
 
 "#]])
@@ -1652,7 +1652,7 @@ args: []
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/script.rs`
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]`
 
 "#]])
@@ -1710,7 +1710,7 @@ fn cmd_check_with_embedded() {
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/script.rs`
 [CHECKING] script v0.0.0 ([ROOT]/foo/script.rs)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1760,7 +1760,7 @@ fn cmd_build_with_embedded() {
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/script.rs`
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1788,7 +1788,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/script.rs`
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [RUNNING] unittests script.rs ([ROOT]/home/.cargo/build/[HASH]/debug/build/script/[HASH]/out/script-[HASH][EXE])
 
 "#]])
@@ -2029,7 +2029,7 @@ args: []
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/script.rs`
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]`
 
 "#]])
@@ -2288,7 +2288,7 @@ CARGO_MANIFEST_PATH: [ROOT]/foo/script.rs
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/script.rs`
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]`
 
 "#]])
@@ -2341,7 +2341,7 @@ args: []
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/script/echo.rs`
 [COMPILING] echo v0.0.0 ([ROOT]/foo/script/echo.rs)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/echo[EXE]`
 
 "#]])
@@ -2380,7 +2380,7 @@ args: []
 [WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
 [HELP] to pin the edition, run `cargo fix --manifest-path /proc/self/fd/[..]`
 [COMPILING] package v0.0.0 (/proc/self/fd/[..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/package`
 
 "#]])

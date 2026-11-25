@@ -38,7 +38,7 @@ fn timings_works() {
 [COMPILING] dep v0.1.0
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
       Timing report saved to [ROOT]/foo/target/cargo-timings/cargo-timing-[..].html
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -127,7 +127,7 @@ fn report_generated_without_any_units() {
     p.cargo("test --timings")
         .with_stderr_data(str![[r#"
       Timing report saved to [ROOT]/foo/target/cargo-timings/cargo-timing-[..].html
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

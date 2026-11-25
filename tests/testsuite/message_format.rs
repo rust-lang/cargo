@@ -197,7 +197,7 @@ mod tests {
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..] --json=diagnostic-rendered-ansi,artifacts,future-incompat,unused-externs-silent,diagnostic-unicode [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -241,7 +241,7 @@ mod tests {
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..] --json=diagnostic-rendered-ansi,artifacts,future-incompat,unused-externs-silent,diagnostic-no-graphics [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -279,7 +279,7 @@ mod tests {
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..] --json=diagnostic-rendered-ansi,artifacts,future-incompat,unused-externs-silent,diagnostic-no-graphics [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

@@ -266,7 +266,7 @@ fn stable_feature_warns() {
   See https://doc.rust-lang.org/[..]cargo/ for more information about using this feature.
 [WARNING] `a` (manifest) generated 1 warning
 [CHECKING] a v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -295,7 +295,7 @@ fn allow_features() {
         .masquerade_as_nightly_cargo(&["allow-features", "test-dummy-unstable"])
         .with_stderr_data(str![[r#"
 [CHECKING] a v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -374,7 +374,7 @@ error[E0725]: the feature `rustc_attrs` is not in the list of allowed features
         .masquerade_as_nightly_cargo(&["allow-features"])
         .with_stderr_data(str![[r#"
 [CHECKING] a v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -414,7 +414,7 @@ fn allow_features_in_cfg() {
         ])
         .with_stderr_data(str![[r#"
 [CHECKING] a v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -430,7 +430,7 @@ im-a-teapot = true
 
 "#]])
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -497,7 +497,7 @@ fn nightly_feature_requires_nightly() {
         .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
         .with_stderr_data(str![[r#"
 [CHECKING] a v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -558,7 +558,7 @@ fn nightly_feature_requires_nightly_in_dep() {
 [LOCKING] 1 package to highest compatible version
 [CHECKING] a v0.0.1 ([ROOT]/foo/a)
 [CHECKING] b v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -606,7 +606,7 @@ fn cant_publish() {
         .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
         .with_stderr_data(str![[r#"
 [CHECKING] a v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -671,7 +671,7 @@ im-a-teapot = true
 "#]])
         .with_stderr_data(str![[r#"
 [CHECKING] a v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -712,7 +712,7 @@ fn publish_allowed() {
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] a v0.0.1 ([ROOT]/foo)
 [COMPILING] a v0.0.1 ([ROOT]/foo/target/package/a-0.0.1)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] a v0.0.1 ([ROOT]/foo)
 [UPLOADED] a v0.0.1 to registry `crates-io`
 [NOTE] waiting for a v0.0.1 to be available at registry `crates-io`
@@ -763,7 +763,7 @@ fn z_stabilized() {
   Message caching is now always enabled.
 
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

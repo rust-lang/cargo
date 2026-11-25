@@ -39,13 +39,13 @@ fn simple_http() {
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
 [CHECKING] bar v0.0.1
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
         str![[r#"
 [CHECKING] bar v0.0.1
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
     );
@@ -61,13 +61,13 @@ fn simple_git() {
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
 [CHECKING] bar v0.0.1
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
         str![[r#"
 [CHECKING] bar v0.0.1
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
     );
@@ -118,7 +118,7 @@ fn deps_http() {
 [CHECKING] baz v0.0.1
 [CHECKING] bar v0.0.1
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]);
 }
@@ -134,7 +134,7 @@ fn deps_git() {
 [CHECKING] baz v0.0.1
 [CHECKING] bar v0.0.1
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]);
 }
@@ -569,7 +569,7 @@ required by package `foo v0.0.1 ([ROOT]/foo)`
 [DOWNLOADED] notyet v0.0.1 (registry `dummy-registry`)
 [CHECKING] notyet v0.0.1
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
     );
@@ -592,7 +592,7 @@ required by package `foo v0.0.1 ([ROOT]/foo)`
 [DOWNLOADED] notyet v0.0.1 (registry `dummy-registry`)
 [CHECKING] notyet v0.0.1
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
     );
@@ -657,7 +657,7 @@ Caused by:
 [DOWNLOADED] notyet v0.0.1 (registry `dummy-registry`)
 [COMPILING] notyet v0.0.1
 [COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
     );
@@ -686,7 +686,7 @@ Caused by:
 [DOWNLOADED] notyet v0.0.1 (registry `dummy-registry`)
 [COMPILING] notyet v0.0.1
 [COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
     );
@@ -747,11 +747,11 @@ fn lockfile_locks_http() {
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
 [CHECKING] bar v0.0.1
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
         str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
     );
@@ -767,11 +767,11 @@ fn lockfile_locks_git() {
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
 [CHECKING] bar v0.0.1
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
         str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
     );
@@ -825,11 +825,11 @@ fn lockfile_locks_transitively_http() {
 [CHECKING] baz v0.0.1
 [CHECKING] bar v0.0.1
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
         str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
     );
@@ -847,11 +847,11 @@ fn lockfile_locks_transitively_git() {
 [CHECKING] baz v0.0.1
 [CHECKING] bar v0.0.1
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
         str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
     );
@@ -909,7 +909,7 @@ fn yanks_are_not_used_http() {
 [CHECKING] baz v0.0.1
 [CHECKING] bar v0.0.1
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]);
 }
@@ -925,7 +925,7 @@ fn yanks_are_not_used_git() {
 [CHECKING] baz v0.0.1
 [CHECKING] bar v0.0.1
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]);
 }
@@ -1022,7 +1022,7 @@ fn yanks_in_lockfiles_are_ok_http() {
     let _server = setup_http();
     yanks_in_lockfiles_are_ok(
         str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
         str![[r#"
@@ -1040,7 +1040,7 @@ required by package `foo v0.0.1 ([ROOT]/foo)`
 fn yanks_in_lockfiles_are_ok_git() {
     yanks_in_lockfiles_are_ok(
         str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
         str![[r#"
@@ -1096,7 +1096,7 @@ fn yanks_in_lockfiles_are_ok_for_other_update_http() {
     let _server = setup_http();
     yanks_in_lockfiles_are_ok_for_other_update(
         str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
         str![[r#"
@@ -1120,7 +1120,7 @@ required by package `foo v0.0.1 ([ROOT]/foo)`
 fn yanks_in_lockfiles_are_ok_for_other_update_git() {
     yanks_in_lockfiles_are_ok_for_other_update(
         str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
         str![[r#"
@@ -1201,7 +1201,7 @@ fn yanks_in_lockfiles_are_ok_with_new_dep_http() {
 [DOWNLOADED] baz v0.0.1 (registry `dummy-registry`)
 [CHECKING] baz v0.0.1
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]);
 }
@@ -1216,7 +1216,7 @@ fn yanks_in_lockfiles_are_ok_with_new_dep_git() {
 [DOWNLOADED] baz v0.0.1 (registry `dummy-registry`)
 [CHECKING] baz v0.0.1
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]);
 }
@@ -1279,7 +1279,7 @@ fn update_with_lockfile_if_packages_missing_http() {
 [UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]);
 }
@@ -1290,7 +1290,7 @@ fn update_with_lockfile_if_packages_missing_git() {
 [UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]);
 }
@@ -1338,7 +1338,7 @@ fn update_lockfile_http() {
 [DOWNLOADED] bar v0.0.2 (registry `dummy-registry`)
 [CHECKING] bar v0.0.2
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
         str![[r#"
@@ -1352,7 +1352,7 @@ fn update_lockfile_http() {
 [DOWNLOADED] bar v0.0.3 (registry `dummy-registry`)
 [CHECKING] bar v0.0.3
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
         str![[r#"
@@ -1385,7 +1385,7 @@ fn update_lockfile_git() {
 [DOWNLOADED] bar v0.0.2 (registry `dummy-registry`)
 [CHECKING] bar v0.0.2
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
         str![[r#"
@@ -1399,7 +1399,7 @@ fn update_lockfile_git() {
 [DOWNLOADED] bar v0.0.3 (registry `dummy-registry`)
 [CHECKING] bar v0.0.3
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
         str![[r#"
@@ -1496,7 +1496,7 @@ fn dev_dependency_not_used_http() {
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
 [CHECKING] bar v0.0.1
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]);
 }
@@ -1510,7 +1510,7 @@ fn dev_dependency_not_used_git() {
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
 [CHECKING] bar v0.0.1
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]);
 }
@@ -1605,7 +1605,7 @@ fn updating_a_dep_http() {
 [CHECKING] bar v0.0.1
 [CHECKING] a v0.0.1 ([ROOT]/foo/a)
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
         str![[r#"
@@ -1617,7 +1617,7 @@ fn updating_a_dep_http() {
 [CHECKING] bar v0.1.0
 [CHECKING] a v0.0.1 ([ROOT]/foo/a)
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
     );
@@ -1634,7 +1634,7 @@ fn updating_a_dep_git() {
 [CHECKING] bar v0.0.1
 [CHECKING] a v0.0.1 ([ROOT]/foo/a)
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
         str![[r#"
@@ -1646,7 +1646,7 @@ fn updating_a_dep_git() {
 [CHECKING] bar v0.1.0
 [CHECKING] a v0.0.1 ([ROOT]/foo/a)
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
     );
@@ -1743,11 +1743,11 @@ fn git_and_registry_dep_http() {
 [CHECKING] a v0.0.1
 [CHECKING] b v0.0.1 ([ROOTURL]/b#[..])
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
         str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
     );
@@ -1765,11 +1765,11 @@ fn git_and_registry_dep_git() {
 [CHECKING] a v0.0.1
 [CHECKING] b v0.0.1 ([ROOTURL]/b#[..])
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
         str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
     );
@@ -1840,7 +1840,7 @@ fn update_publish_then_update_http() {
 [DOWNLOADED] a v0.1.1 (registry `dummy-registry`)
 [COMPILING] a v0.1.1
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]);
 }
@@ -1853,7 +1853,7 @@ fn update_publish_then_update_git() {
 [DOWNLOADED] a v0.1.1 (registry `dummy-registry`)
 [COMPILING] a v0.1.1
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]);
 }
@@ -1988,7 +1988,7 @@ fn update_transitive_dependency_http() {
 [CHECKING] b v0.1.1
 [CHECKING] a v0.1.0
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
     );
@@ -2009,7 +2009,7 @@ fn update_transitive_dependency_git() {
 [CHECKING] b v0.1.1
 [CHECKING] a v0.1.0
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
     );
@@ -2139,7 +2139,7 @@ fn update_multiple_packages_http() {
 [CHECKING] c v0.1.1
 [CHECKING] b v0.1.1
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
     );
@@ -2171,7 +2171,7 @@ fn update_multiple_packages_git() {
 [CHECKING] a v0.1.1
 [CHECKING] c v0.1.1
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
     );
@@ -2432,7 +2432,7 @@ fn only_download_relevant_http() {
 [DOWNLOADED] baz v0.1.0 (registry `dummy-registry`)
 [CHECKING] baz v0.1.0
 [CHECKING] bar v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]);
 }
@@ -2446,7 +2446,7 @@ fn only_download_relevant_git() {
 [DOWNLOADED] baz v0.1.0 (registry `dummy-registry`)
 [CHECKING] baz v0.1.0
 [CHECKING] bar v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]);
 }
@@ -2635,7 +2635,7 @@ fn add_dep_dont_update_registry_http() {
     let _server = setup_http();
     add_dep_dont_update_registry(str![[r#"
 [CHECKING] bar v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]);
 }
@@ -2644,7 +2644,7 @@ fn add_dep_dont_update_registry_http() {
 fn add_dep_dont_update_registry_git() {
     add_dep_dont_update_registry(str![[r#"
 [CHECKING] bar v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]);
 }
@@ -2717,7 +2717,7 @@ fn bump_version_dont_update_registry_http() {
     let _server = setup_http();
     bump_version_dont_update_registry(str![[r#"
 [CHECKING] bar v0.6.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]);
 }
@@ -2726,7 +2726,7 @@ fn bump_version_dont_update_registry_http() {
 fn bump_version_dont_update_registry_git() {
     bump_version_dont_update_registry(str![[r#"
 [CHECKING] bar v0.6.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]);
 }
@@ -3284,7 +3284,7 @@ fn inaccessible_registry_cache_still_works() {
 [COMPILING] fo[..] v0.1.0
 [COMPILING] fo[..] v0.1.0
 [COMPILING] a v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -3685,7 +3685,7 @@ Caused by:
         .with_stderr_data(str![[r#"
 [CHECKING] bar v0.0.1
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -3760,7 +3760,7 @@ internal server error
 [CHECKING] dep1 v0.0.1
 [CHECKING] bar v0.0.1
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]].unordered()).run();
 }
@@ -3816,7 +3816,7 @@ internal server error
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
 [CHECKING] bar v0.0.1
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]).run();
 }
@@ -4112,7 +4112,7 @@ too many requests, try again in 1 seconds
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
 [CHECKING] bar v0.0.1
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]).run();
 }
@@ -4705,7 +4705,7 @@ fn differ_only_by_metadata() {
 [DOWNLOADED] baz v0.0.1+b (registry `dummy-registry`)
 [CHECKING] baz v0.0.1+b
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -4717,7 +4717,7 @@ fn differ_only_by_metadata() {
         .with_stderr_data(str![[r#"
 [CHECKING] baz v0.0.1+b
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -4763,7 +4763,7 @@ fn differ_only_by_metadata_with_lockfile() {
 [DOWNLOADED] baz v0.0.1+b (registry `dummy-registry`)
 [CHECKING] baz v0.0.1+b
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

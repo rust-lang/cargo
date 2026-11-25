@@ -202,7 +202,7 @@ test-runner:
         .arg("run-runner")
         .arg("-j2")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `runner target/debug/cargo-jobserver-check[EXE]`
 this is a runner
 
@@ -219,7 +219,7 @@ this is a runner
         .arg("test-runner")
         .arg("-j2")
         .with_stderr_data(str![[r#"
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] unittests src/lib.rs (target/debug/build/cargo-jobserver-check/[HASH]/out/cargo_jobserver_check-[HASH][EXE])
 this is a runner
 
@@ -230,7 +230,7 @@ this is a runner
     p.cargo("run -j2")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/cargo-jobserver-check[EXE]`
 ...
 [..]no jobserver from env[..]
@@ -244,7 +244,7 @@ this is a runner
         .arg(config_value)
         .with_status(101)
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `runner target/debug/cargo-jobserver-check[EXE]`
 this is a runner
 ...
@@ -263,7 +263,7 @@ this is a runner
         .arg(config_value)
         .with_status(101)
         .with_stderr_data(str![[r#"
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] unittests src/lib.rs (target/debug/build/cargo-jobserver-check/[HASH]/out/cargo_jobserver_check-[HASH][EXE])
 this is a runner
 ...
@@ -405,7 +405,7 @@ all:
         .with_stderr_data(str![[r#"
 [WARNING] a `-j` argument was passed to Cargo but Cargo is also configured with an external jobserver in its environment, ignoring the `-j` parameter
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -424,7 +424,7 @@ fn jobserver_invalid_fd_warning() {
         .with_stderr_data(str![[r#"
 [WARNING] failed to connect to jobserver from environment variable `MAKEFLAGS="--jobserver-auth=200001,200002"`: [..]
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
     .run();

@@ -233,7 +233,7 @@ fn typical_rustup() {
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 real rustc running
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -250,7 +250,7 @@ real rustc running
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 real rustc running
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -280,7 +280,7 @@ fn absolute_toolchain_path_bypasses_proxy() {
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 custom toolchain rustc running
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -316,7 +316,7 @@ fn relative_toolchain_path_uses_proxy() {
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 `[..]rustc[EXE]` proxy running
 real rustc running
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -342,7 +342,7 @@ fn missing_absolute_toolchain_uses_proxy() {
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 `[..]rustc[EXE]` proxy running
 real rustc running
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -412,7 +412,7 @@ fn custom_calls_other_cargo() {
 custom command running
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 custom toolchain rustc running
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

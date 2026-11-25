@@ -223,7 +223,7 @@ fn issue_3418() {
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..] src/lib.rs [..]--emit=[..]metadata [..]`
 [RUNNING] `rustc --crate-name foo [..] src/main.rs [..]--emit=[..]metadata [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -254,7 +254,7 @@ fn dylib_check_preserves_build_cache() {
     p.cargo("build")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -263,7 +263,7 @@ fn dylib_check_preserves_build_cache() {
 
     p.cargo("build")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -426,7 +426,7 @@ fn check_all_exclude() {
         .with_stderr_does_not_contain("[CHECKING] baz v0.1.0 [..]")
         .with_stderr_data(str![[r#"
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -452,7 +452,7 @@ fn check_all_exclude_glob() {
         .with_stderr_does_not_contain("[CHECKING] baz v0.1.0 [..]")
         .with_stderr_data(str![[r#"
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -481,7 +481,7 @@ fn check_virtual_all_implied() {
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
 [RUNNING] `rustc --crate-name baz [..] baz/src/lib.rs [..]`
 [RUNNING] `rustc --crate-name bar [..] bar/src/lib.rs [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -509,7 +509,7 @@ fn check_virtual_manifest_one_project() {
         .with_stderr_does_not_contain("[CHECKING] baz v0.1.0 [..]")
         .with_stderr_data(str![[r#"
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -556,7 +556,7 @@ fn check_virtual_manifest_glob() {
         .with_stderr_does_not_contain("[CHECKING] bar v0.1.0 [..]")
         .with_stderr_data(str![[r#"
 [CHECKING] baz v0.1.0 ([ROOT]/foo/baz)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -570,7 +570,7 @@ fn exclude_warns_on_non_existing_package() {
         .with_stderr_data(str![[r#"
 [WARNING] excluded package(s) `bar` not found in workspace `[ROOT]/foo`
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1128,7 +1128,7 @@ fn warn_manifest_with_project() {
 [WARNING] Cargo.toml: `[project]` is deprecated in favor of `[package]`
 [WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1186,7 +1186,7 @@ fn warn_manifest_package_and_project() {
 [WARNING] Cargo.toml: `[project]` is deprecated in favor of `[package]`
 [WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1246,7 +1246,7 @@ fn git_manifest_package_and_project() {
 [LOCKING] 1 package to highest compatible version
 [CHECKING] bar v0.0.1 ([ROOTURL]/bar#[..])
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1298,7 +1298,7 @@ fn git_manifest_with_project() {
 [LOCKING] 1 package to highest compatible version
 [CHECKING] bar v0.0.1 ([ROOTURL]/bar#[..])
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1669,7 +1669,7 @@ fn check_unused_manifest_keys() {
 [CHECKING] foo v0.1.0
 [CHECKING] dep v0.1.0
 [CHECKING] bar v0.2.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -1694,7 +1694,7 @@ fn versionless_package() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1738,7 +1738,7 @@ fn pkgid_querystring_works() {
         .arg(gitdep_pkgid)
         .with_stderr_data(str![[r#"
 [COMPILING] gitdep v1.0.0 ([ROOTURL]/gitdep?branch=master#[..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1922,7 +1922,7 @@ fn dead_code_pub_in_binary_library_tests() {
     p.cargo("check --all-targets")
         .with_stderr_data(str![[r#"
 [CHECKING] lint_test v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1958,7 +1958,7 @@ fn main() {}
     p.cargo("check --all-targets")
         .with_stderr_data(str![[r#"
 [CHECKING] lint_test_no_harness v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1991,7 +1991,7 @@ fn dead_code_pub_in_binary_rustflags() {
         .env("RUSTFLAGS", "-Wdead_code_pub_in_binary")
         .with_stderr_data(str![[r#"
 [CHECKING] lint_rustflags v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -2038,7 +2038,7 @@ fn main() {}
 ...
 
 [WARNING] `lint_custom_harness` (test "custom") generated 1 warning
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

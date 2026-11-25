@@ -1287,7 +1287,7 @@ fn artifact_deps() {
 [LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target-dir/debug/foo[EXE]`
 
 "#]])

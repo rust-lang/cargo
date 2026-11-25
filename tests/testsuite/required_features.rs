@@ -294,7 +294,7 @@ fn test_default_features() {
     p.cargo("test")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] tests/foo.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
 
 "#]])
@@ -311,7 +311,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 
     p.cargo("test --no-default-features")
         .with_stderr_data(str![[r#"
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .with_stdout_data("")
@@ -319,7 +319,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 
     p.cargo("test --test=foo")
         .with_stderr_data(str![[r#"
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] tests/foo.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
 
 "#]])
@@ -370,7 +370,7 @@ fn test_arg_features() {
     p.cargo("test --features a")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] tests/foo.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
 
 "#]])
@@ -420,7 +420,7 @@ fn test_multiple_required_features() {
     p.cargo("test")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] tests/foo_2.rs (target/debug/build/foo/[HASH]/out/foo_2-[HASH][EXE])
 
 "#]])
@@ -438,7 +438,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
     p.cargo("test --features c")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] tests/foo_1.rs (target/debug/build/foo/[HASH]/out/foo_1-[HASH][EXE])
 [RUNNING] tests/foo_2.rs (target/debug/build/foo/[HASH]/out/foo_2-[HASH][EXE])
 
@@ -462,7 +462,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 
     p.cargo("test --no-default-features")
         .with_stderr_data(str![[r#"
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .with_stdout_data("")
@@ -1038,7 +1038,7 @@ fn dep_feature_in_toml() {
     p.cargo("test --test=foo")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] tests/foo.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
 
 "#]])
@@ -1157,7 +1157,7 @@ fn dep_feature_in_cmd_line() {
     p.cargo("build")
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to highest compatible version
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1193,7 +1193,7 @@ Consider enabling them by passing, e.g., `--features="bar/a"`
     // This is a no-op, since no tests are enabled
     p.cargo("test")
         .with_stderr_data(str![[r#"
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .with_stdout_data("")
@@ -1205,7 +1205,7 @@ Consider enabling them by passing, e.g., `--features="bar/a"`
         .with_stderr_data(str![[r#"
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] tests/foo.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
 
 "#]])
@@ -1302,7 +1302,7 @@ fn test_skips_compiling_bin_with_missing_required_features() {
     p.cargo("test")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] tests/foo.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
 
 "#]])

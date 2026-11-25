@@ -1029,7 +1029,7 @@ fn required_features_inactive_dep() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to highest compatible version
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1037,7 +1037,7 @@ fn required_features_inactive_dep() {
     p.cargo("check --features=feat1")
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1226,7 +1226,7 @@ fn proc_macro_ws() {
         .with_stderr_data(str![[r#"
 [FRESH] foo v0.1.0 ([ROOT]/foo/foo)
 [FRESH] pm v0.1.0 ([ROOT]/foo/pm)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1292,7 +1292,7 @@ fn has_dev_dep_for_test() {
 [LOCKING] 1 package to highest compatible version
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1302,7 +1302,7 @@ fn has_dev_dep_for_test() {
 [RUNNING] `rustc --crate-name dep [..]`
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]`
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1313,7 +1313,7 @@ fn has_dev_dep_for_test() {
         .with_stderr_data(str![[r#"
 [FRESH] dep v0.1.0 ([ROOT]/foo/dep)
 [FRESH] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1529,7 +1529,7 @@ fn resolver_ws_member() {
 package:   [ROOT]/foo/a/Cargo.toml
 workspace: [ROOT]/foo/Cargo.toml
 [CHECKING] a v0.1.0 ([ROOT]/foo/a)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1564,7 +1564,7 @@ fn edition_2021_workspace_member() {
  = [NOTE] to use the edition 2021 resolver, specify `workspace.resolver = "2"` in the workspace root's manifest
  = [NOTE] for more details see https://doc.rust-lang.org/cargo/reference/resolver.html#resolver-versions
 [CHECKING] a v0.1.0 ([ROOT]/foo/a)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]).run();
 }
@@ -1598,7 +1598,7 @@ fn resolver_ws_root_and_member() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [CHECKING] a v0.1.0 ([ROOT]/foo/a)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1715,7 +1715,7 @@ fn resolver_enables_new_features() {
 [DOWNLOADED] common v1.0.0 (registry `dummy-registry`)
 [COMPILING] common v1.0.0
 [COMPILING] a v0.1.0 ([ROOT]/foo/a)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/a[EXE]`
 
 "#]])
@@ -1972,7 +1972,7 @@ fn shared_dep_same_but_dependencies() {
 [COMPILING] bin1 v0.1.0 ([ROOT]/foo/bin1)
 [COMPILING] bin2 v0.1.0 ([ROOT]/foo/bin2)
 [WARNING] bin2@0.1.0: feat: enabled
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -1994,7 +1994,7 @@ cargo::warning=feat: not enabled
 [FRESH] bin1 v0.1.0 ([ROOT]/foo/bin1)
 [WARNING] bin2@0.1.0: feat: enabled
 [FRESH] bin2 v0.1.0 ([ROOT]/foo/bin2)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -2131,7 +2131,7 @@ fn doc_optional() {
 [DOCUMENTING] bar v1.0.0
 [CHECKING] bar v1.0.0
 [DOCUMENTING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]]
@@ -2256,7 +2256,7 @@ fn minimal_download() {
 [CHECKING] normal_pm v1.0.0
 [CHECKING] normal v1.0.0
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -2281,7 +2281,7 @@ fn minimal_download() {
 [CHECKING] normal_pm v1.0.0
 [CHECKING] normal v1.0.0
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -2307,7 +2307,7 @@ fn minimal_download() {
 [COMPILING] dev_dep v1.0.0
 [COMPILING] dev_dep_pm v1.0.0
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [EXECUTABLE] unittests src/lib.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
 
 "#]]
@@ -2511,7 +2511,7 @@ fn pm_with_int_shared() {
 [RUNNING] `rustc --crate-name foo [..]--crate-type lib [..]`
 [RUNNING] `rustc --crate-name foo [..]--test[..]`
 [RUNNING] `rustc --crate-name pm_test [..]--test[..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -2525,7 +2525,7 @@ fn pm_with_int_shared() {
 [FRESH] pm v0.1.0 ([ROOT]/foo/pm)
 [FRESH] foo v0.1.0 ([ROOT]/foo/foo)
 [FRESH] shared v0.1.0 ([ROOT]/foo/shared)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -2708,7 +2708,7 @@ fn all_features_merges_with_features() {
 [DOWNLOADED] dep v0.1.0 (registry `dummy-registry`)
 [COMPILING] dep v0.1.0
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/examples/ex[EXE]`
 
 "#]])
@@ -2722,7 +2722,7 @@ it works
 
     p.cargo("run --example ex --all-features --features dep/feat1")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/examples/ex[EXE]`
 
 "#]])
@@ -2807,7 +2807,7 @@ fn dep_with_optional_host_deps_activated() {
 [COMPILING] serde_derive v0.1.0 ([ROOT]/foo/serde_derive)
 [COMPILING] serde v0.1.0 ([ROOT]/foo/serde)
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -2856,7 +2856,7 @@ fn dont_unify_proc_macro_example_from_dependency() {
 [LOCKING] 1 package to highest compatible version
 [CHECKING] pm_helper v0.0.0 ([ROOT]/foo/pm_helper)
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

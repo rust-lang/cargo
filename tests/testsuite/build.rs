@@ -118,7 +118,7 @@ fn cargo_compile_incremental() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [RUNNING] `rustc [..] -C incremental=[ROOT]/foo/target/debug/incremental[..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -128,7 +128,7 @@ fn cargo_compile_incremental() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [RUNNING] `rustc [..] -C incremental=[ROOT]/foo/target/debug/incremental[..]`
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/foo-[HASH][EXE]`
 
 "#]])
@@ -513,7 +513,7 @@ fn cargo_compile_duplicate_build_targets() {
   * `bin` target `foo`
 [WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -923,7 +923,7 @@ fn cargo_compile_with_warnings_in_the_root_package() {
 [WARNING] [..]dead[..]
 ...
 [WARNING] `foo` (bin "foo") generated 1 warning
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -972,7 +972,7 @@ fn cargo_compile_with_warnings_in_a_dep_package() {
 ...
 [WARNING] `bar` (lib) generated 1 warning
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1879,7 +1879,7 @@ fn vv_prints_rustc_env_vars() {
         b.with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `[..] CARGO_PKG_AUTHORS="escape='/"@example.com"&& [..] set CARGO_PKG_NAME=foo&& [..] rustc [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]);
     }
@@ -1889,7 +1889,7 @@ fn vv_prints_rustc_env_vars() {
         b.with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `[..] CARGO_PKG_AUTHORS='escape='/''"@example.com' [..] CARGO_PKG_NAME=foo [..] rustc --crate-name foo [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]);
     }
@@ -1978,13 +1978,13 @@ fn issue_14194_deduplicate_library_path_env_var() {
     setenv_for_removing_empty_component(p.cargo("run -- 3"))
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/foo[EXE] 3`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/foo[EXE] 2`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/foo[EXE] 1`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/foo[EXE] 0`
 
 "#]])
@@ -2031,7 +2031,7 @@ fn many_crate_types_old_style_lib_location() {
 please rename the file to `src/lib.rs` or set lib.path in Cargo.toml
 [WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -2161,7 +2161,7 @@ fn ignore_broken_symlinks() {
         .with_stderr_data(str![[r#"
 [WARNING] File system loop found: [ROOT]/foo/a/b/c/d/foo points to an ancestor [ROOT]/foo/a/b
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -2452,7 +2452,7 @@ fn lib_with_standard_name() {
     p.cargo("build")
         .with_stderr_data(str![[r#"
 [COMPILING] syntax v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -2572,7 +2572,7 @@ fn freshness_ignores_excluded() {
     foo.cargo("build")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -2581,7 +2581,7 @@ fn freshness_ignores_excluded() {
     println!("first pass");
     foo.cargo("build")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -2591,7 +2591,7 @@ fn freshness_ignores_excluded() {
     foo.change_file("src/bar.rs", "");
     foo.cargo("build")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -2636,7 +2636,7 @@ fn rebuild_preserves_out_dir() {
         .env("FIRST", "1")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -2645,7 +2645,7 @@ fn rebuild_preserves_out_dir() {
     foo.cargo("build")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -2697,7 +2697,7 @@ fn recompile_space_in_name() {
     foo.root().move_into_the_past();
     foo.cargo("build")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -3548,7 +3548,7 @@ fn panic_abort_compiles_with_panic_abort() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..] -C panic=abort [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -3770,7 +3770,7 @@ fn no_warn_about_package_metadata() {
     p.cargo("build")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -3809,7 +3809,7 @@ fn no_warn_about_workspace_metadata() {
     p.cargo("build")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -3884,7 +3884,7 @@ fn build_all_workspace() {
         .with_stderr_data(str![[r#"
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -3917,7 +3917,7 @@ fn build_all_exclude() {
             str![[r#"
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -3988,7 +3988,7 @@ fn build_all_exclude_not_found() {
 [WARNING] excluded package(s) `baz` not found in workspace `[ROOT]/foo`
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -4023,7 +4023,7 @@ fn build_all_exclude_glob() {
             str![[r#"
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -4057,7 +4057,7 @@ fn build_all_exclude_glob_not_found() {
 [WARNING] excluded package pattern(s) `*z` not found in workspace `[ROOT]/foo`
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -4115,7 +4115,7 @@ fn build_all_workspace_implicit_examples() {
         .with_stderr_data(str![[r#"
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -4151,7 +4151,7 @@ fn build_all_virtual_manifest() {
             str![[r#"
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [COMPILING] baz v0.1.0 ([ROOT]/foo/baz)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -4181,7 +4181,7 @@ fn build_virtual_manifest_all_implied() {
             str![[r#"
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [COMPILING] baz v0.1.0 ([ROOT]/foo/baz)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -4208,7 +4208,7 @@ fn build_virtual_manifest_one_project() {
     p.cargo("build -p bar")
         .with_stderr_data(str![[r#"
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -4233,7 +4233,7 @@ fn build_virtual_manifest_glob() {
     p.cargo("build -p '*z'")
         .with_stderr_data(str![[r#"
 [COMPILING] baz v0.1.0 ([ROOT]/foo/baz)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -4318,7 +4318,7 @@ fn build_all_virtual_manifest_implicit_examples() {
             str![[r#"
 [COMPILING] baz v0.1.0 ([ROOT]/foo/baz)
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -4372,7 +4372,7 @@ fn build_all_member_dependency_same_name() {
 [DOWNLOADED] a v0.1.0 (registry `dummy-registry`)
 [COMPILING] a v0.1.0
 [COMPILING] a v0.1.0 ([ROOT]/foo/a)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -4512,7 +4512,7 @@ fn rustc_wrapper() {
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `[..]/rustc-echo-wrapper[EXE] rustc --crate-name foo [..]`
 WRAPPER CALLED: rustc --crate-name foo [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -4523,7 +4523,7 @@ WRAPPER CALLED: rustc --crate-name foo [..]
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `[..]/rustc-echo-wrapper[EXE] rustc --crate-name foo [..]`
 WRAPPER CALLED: rustc --crate-name foo [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -4546,7 +4546,7 @@ fn rustc_wrapper_precedence() {
 [RUNNING] `[..]/rustc-echo-wrapper[EXE] [..]/rustc-ws-wrapper rustc --crate-name foo [..]`
 WRAPPER CALLED: [..]/rustc-ws-wrapper rustc --crate-name foo [..]
 WRAPPER CALLED: rustc --crate-name foo [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -4670,7 +4670,7 @@ WRAPPER CALLED: rustc --crate-name bar [..]
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `[ROOT]/foo/./rustc-echo-wrapper[EXE] rustc --crate-name foo [..]`
 WRAPPER CALLED: rustc --crate-name foo [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -4683,7 +4683,7 @@ WRAPPER CALLED: rustc --crate-name foo [..]
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `[ROOT]/foo/./rustc-echo-wrapper[EXE] rustc --crate-name foo [..]`
 WRAPPER CALLED: rustc --crate-name foo [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -4705,7 +4705,7 @@ WRAPPER CALLED: rustc --crate-name bar [..]
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `[ROOT]/foo/./rustc-echo-wrapper[EXE] rustc --crate-name foo [..]`
 WRAPPER CALLED: rustc --crate-name foo [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -4856,7 +4856,7 @@ fn no_dep_info_collision_when_cdylib_and_bin_coexist() {
 [COMPILING] foo v1.0.0 ([ROOT]/foo)
 [RUNNING] `rustc [..] --crate-type bin [..] -C metadata=[..]`
 [RUNNING] `rustc [..] --crate-type cdylib [..] -C metadata=[..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -4924,7 +4924,7 @@ fn deterministic_cfg_flags() {
 [RUNNING] `rustc [..]`
 [RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/build_script_build`
 [RUNNING] `rustc --crate-name foo [..] --cfg[..]default[..]--cfg[..]f_a[..]--cfg[..]f_b[..] --cfg[..]f_c[..]--cfg[..]f_d[..] --cfg cfg_a --cfg cfg_b --cfg cfg_c --cfg cfg_d --cfg cfg_e`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -5107,7 +5107,7 @@ fn target_edition() {
 [WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..]--edition=2018 [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -5331,7 +5331,7 @@ fn build_filter_infer_profile() {
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]`
 [RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]--crate-type bin --emit=[..]link[..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]].unordered())
         .run();
@@ -5343,7 +5343,7 @@ fn build_filter_infer_profile() {
 [RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..] -C debuginfo=2 [..]`
 [RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]--crate-type bin --emit=[..]link[..] -C debuginfo=2 [..]`
 [RUNNING] `rustc --crate-name t1 --edition=2015 tests/t1.rs [..]--emit=[..]link[..] -C debuginfo=2 [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]].unordered())
         .run();
@@ -5356,7 +5356,7 @@ fn build_filter_infer_profile() {
 [RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link [..]-C debuginfo=2 [..]`
 [RUNNING] `rustc --crate-name b1 --edition=2015 benches/b1.rs [..]--emit=[..]link[..] -C embed-bitcode=no -C debuginfo=2 [..]--test [..]`
 [RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]--crate-type bin --emit=[..]link [..]-C debuginfo=2 [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]].unordered())
         .run();
@@ -5394,7 +5394,7 @@ fn targets_selected_all() {
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]--emit=[..]link [..]-C debuginfo=2 -[..]-test[..]`
 [RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]--crate-type bin --emit=[..]link[..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]].unordered())
         .run();
@@ -5410,7 +5410,7 @@ fn all_targets_no_lib() {
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]--emit=[..]link[..] -C debuginfo=2 [..]--test [..]`
 [RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]--crate-type bin --emit=[..]link[..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]].unordered())
         .run();
@@ -5457,7 +5457,7 @@ fn no_linkable_target() {
  = [HELP] consider adding 'dylib' or 'rlib' to key 'crate-type' in `the_lib`'s Cargo.toml
 [COMPILING] the_lib v0.1.0 ([ROOT]/foo/the_lib)
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -5634,7 +5634,7 @@ fn target_filters_workspace() {
 [COMPILING] b v0.5.0 ([ROOT]/ws/b)
 [RUNNING] `rustc [..]a/src/lib.rs[..]`
 [RUNNING] `rustc [..]b/src/lib.rs[..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -5645,7 +5645,7 @@ fn target_filters_workspace() {
         .with_stderr_data(str![[r#"
 [COMPILING] a v0.5.0 ([ROOT]/ws/a)
 [RUNNING] `rustc [..]a/examples/ex1.rs[..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -5791,7 +5791,7 @@ fn pipelining_works() {
 [LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -5925,7 +5925,7 @@ b
 c
 d
 {a
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -5942,7 +5942,7 @@ fn build_lib_only() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -6315,7 +6315,7 @@ Caused by:
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustdoc [..]--diagnostic-width=20[..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]])
@@ -6580,7 +6580,7 @@ fn embed_metadata_no_invalidate() {
 [LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -6590,7 +6590,7 @@ fn embed_metadata_no_invalidate() {
         .with_stderr_data(str![[r#"
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -6616,7 +6616,7 @@ fn should_not_include_current_build_unit_path_in_rustc_args() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..] --out-dir [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out --force-warn=unused_crate_dependencies`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -6646,7 +6646,7 @@ fn should_not_include_build_script_out_dir_path_in_rustc_args() {
 [RUNNING] `rustc --crate-name build_script_build [..]`
 [RUNNING] `[ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/build_script_build`
 [RUNNING] `rustc --crate-name foo [..] --out-dir [ROOT]/foo/build-dir/debug/build/foo/[HASH]/out --force-warn=unused_crate_dependencies`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -6877,7 +6877,7 @@ fn should_not_include_proc_macro_deps_paths_in_rustc_args() {
 [RUNNING] `rustc --crate-name my_proc_macro [..]`
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..] --out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out --extern my_proc_macro=[ROOT]/foo/target/debug/build/my-proc-macro/[HASH]/out/[..] --force-warn=unused_crate_dependencies`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]].unordered())
         .run();
@@ -6957,7 +6957,7 @@ fn should_not_include_direct_deps_paths_in_rustc_args() {
 [RUNNING] `rustc --crate-name my_direct_dep [..]`
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..] --out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out -L dependency=[ROOT]/foo/target/debug/build/my-indirect-dep/[HASH]/out --extern my_direct_dep=[ROOT]/foo/target/debug/build/my-direct-dep/[HASH]/out/[..] --force-warn=unused_crate_dependencies`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]].unordered())
         .run();
@@ -7049,7 +7049,7 @@ fn should_include_deps_paths_of_lib_crate_type_with_proc_macro_true() {
 [RUNNING] `rustc --crate-name my_direct_dep [..] --crate-type lib [..] --extern proc_macro [..]`
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..] --out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out -L dependency=[ROOT]/foo/target/debug/build/my-indirect-dep/[HASH]/out --extern my_direct_dep=[ROOT]/foo/target/debug/build/my-direct-dep/[HASH]/out/[..] --force-warn=unused_crate_dependencies`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]].unordered())
         .run();

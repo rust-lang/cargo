@@ -28,7 +28,7 @@ fn pathless_tools() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [RUNNING] `rustc [..]-C linker=nonexistent-linker[..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -53,7 +53,7 @@ fn custom_linker_cfg() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [RUNNING] `rustc [..]-C linker=nonexistent-linker[..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -85,7 +85,7 @@ fn custom_linker_cfg_precedence() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [RUNNING] `rustc [..]-C linker=nonexistent-linker[..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -149,7 +149,7 @@ fn absolute_tools() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [RUNNING] `rustc [..]-C linker=[..]/bogus/nonexistent-linker[..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -190,7 +190,7 @@ fn relative_tools() {
         .with_stderr_data(str![[r#"
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [RUNNING] `rustc [..]-C linker=[ROOT]/foo/./tools/nonexistent-linker[..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -220,7 +220,7 @@ fn custom_runner() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `nonexistent-runner -r target/debug/foo[EXE] --param`
 ...
 "#]])
@@ -231,7 +231,7 @@ fn custom_runner() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..]`
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `nonexistent-runner -r [ROOT]/foo/target/debug/build/foo/[HASH]/out/test-[HASH][EXE] --param`
 ...
 "#]])
@@ -268,7 +268,7 @@ fn custom_runner_cfg() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `nonexistent-runner -r target/debug/foo[EXE] --param`
 ...
 "#]])
@@ -301,7 +301,7 @@ fn custom_runner_cfg_precedence() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `nonexistent-runner -r target/debug/foo[EXE] --param`
 ...
 "#]])
@@ -346,7 +346,7 @@ fn custom_runner_env() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `nonexistent-runner --foo target/debug/foo[EXE]`
 [ERROR] could not execute process `nonexistent-runner --foo target/debug/foo[EXE]` (never executed)
 
@@ -400,7 +400,7 @@ fn custom_runner_env_true() {
         .env(&key, "true")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `true target/debug/foo[EXE]`
 
 "#]])
@@ -434,7 +434,7 @@ fn custom_runner_target_applies_to_host() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `nonexistent-runner -r target/debug/foo[EXE]`
 [ERROR] could not execute process `nonexistent-runner -r target/debug/foo[EXE]` (never executed)
 
@@ -1109,7 +1109,7 @@ fn target_in_environment_contains_lower_case() {
 [WARNING] environment variables are expected to use uppercase letters and underscores, the variable `{env_key}` will be ignored and have no effect
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 "
         ))
         .run();
@@ -1146,7 +1146,7 @@ fn cfg_ignored_fields() {
 [WARNING] unused key `foo` in [target] config table `cfg(not(target_os = "none"))`
 [WARNING] unused key `invalid` in [target] config table `cfg(not(target_os = "none"))`
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

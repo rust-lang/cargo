@@ -52,7 +52,7 @@ fn simple() {
         .with_stderr_data(str![[r#"
 ...
 [RUNNING] `rustdoc [..]--crate-name foo [..]--extern-html-root-url [..]bar=https://docs.rs/bar/1.0.0/[..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]])
@@ -149,7 +149,7 @@ fn renamed_dep() {
         .with_stderr_data(str![[r#"
 ...
 [RUNNING] `rustdoc [..]--crate-name foo [..]--extern-html-root-url [..]bar=https://docs.rs/bar/1.0.0/[..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]])
@@ -203,7 +203,7 @@ fn lib_name() {
         .with_stderr_data(str![[r#"
 ...
 [RUNNING] `rustdoc [..]--crate-name foo [..]--extern-html-root-url [..]rumpelstiltskin=https://docs.rs/bar/1.0.0/[..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]])
@@ -275,7 +275,7 @@ fn alt_registry() {
         .with_stderr_data(str![[r#"
 ...
 [RUNNING] `rustdoc [..]--crate-name foo [..]--extern-html-root-url [..]bar=https://example.com/bar/1.0.0/[..] --extern-html-root-url [..]baz=https://example.com/baz/1.0.0/[..] --extern-html-root-url [..]grimm=https://docs.rs/grimm/1.0.0/[..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]])
@@ -329,7 +329,7 @@ fn multiple_versions() {
         .with_stderr_data(str![[r#"
 ...
 [RUNNING] `rustdoc [..]--crate-name foo [..]--extern-html-root-url [..]bar=https://docs.rs/bar/1.0.0/[..] --extern-html-root-url [..]bar=https://docs.rs/bar/2.0.0/[..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]])
@@ -352,7 +352,7 @@ fn rebuilds_when_changing() {
         .with_stderr_data(str![[r#"
 ...
 [RUNNING] `rustdoc [..]--extern-html-root-url[..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]])
@@ -372,7 +372,7 @@ fn rebuilds_when_changing() {
         .with_stderr_data(str![[r#"
 ...
 [RUNNING] `rustdoc [..]--extern-html-root-url [..]bar=https://example.com/bar/1.0.0/[..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]])
@@ -446,7 +446,7 @@ fn alt_sparse_registry() {
         .with_stderr_data(str![[r#"
 ...
 [RUNNING] `rustdoc [..]--crate-name foo [..]--extern-html-root-url [..]bar=https://example.com/bar/1.0.0/[..] --extern-html-root-url [..]baz=https://example.com/baz/1.0.0/[..] --extern-html-root-url [..]grimm=https://docs.rs/grimm/1.0.0/[..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]])

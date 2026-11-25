@@ -400,7 +400,7 @@ fn build_script_doc() {
 [RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/build_script_build`
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
 {running_rustdoc}
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 ",
             running_rustdoc = x!("rustdoc" => "cfg" of "foo")

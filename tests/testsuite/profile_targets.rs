@@ -101,7 +101,7 @@ fn profile_selection_build() {
 [foo 0.0.1] foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
 [RUNNING] `[..] rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..] -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]
 [RUNNING] `[..] rustc --crate-name foo --edition=2015 src/main.rs [..]--crate-type bin --emit=[..]link[..] -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]].unordered())
         .with_stderr_does_not_contain("[..] -C debuginfo=0[..]")
@@ -112,7 +112,7 @@ fn profile_selection_build() {
 [FRESH] bdep v0.0.1 ([ROOT]/foo/bdep)
 [FRESH] bar v0.0.1 ([ROOT]/foo/bar)
 [FRESH] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -211,7 +211,7 @@ fn profile_selection_build_all_targets() {
 [RUNNING] `[..] rustc --crate-name bench1 --edition=2015 benches/bench1.rs [..]--emit=[..]link[..]-C codegen-units=1 -C debuginfo=2 [..]--test [..]`
 [RUNNING] `[..] rustc --crate-name foo --edition=2015 src/main.rs [..]--crate-type bin --emit=[..]link[..] -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]`
 [RUNNING] `[..] rustc --crate-name ex1 --edition=2015 examples/ex1.rs [..]--crate-type bin --emit=[..]link[..] -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]].unordered())
         .with_stderr_does_not_contain("[..] -C debuginfo=0[..]")
@@ -222,7 +222,7 @@ fn profile_selection_build_all_targets() {
 [FRESH] bar v0.0.1 ([ROOT]/foo/bar)
 [FRESH] bdep v0.0.1 ([ROOT]/foo/bdep)
 [FRESH] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -346,7 +346,7 @@ fn profile_selection_test() {
 [RUNNING] `[..] rustc --crate-name ex1 --edition=2015 examples/ex1.rs [..]--crate-type bin --emit=[..]link[..]-C codegen-units=3 -C debuginfo=2 [..]`
 [RUNNING] `[..] rustc --crate-name foo --edition=2015 src/main.rs [..]--emit=[..]link[..]-C codegen-units=3 -C debuginfo=2 [..]--test [..]`
 [RUNNING] `[..] rustc --crate-name foo --edition=2015 src/main.rs [..]--crate-type bin --emit=[..]link[..] -C panic=abort[..]-C codegen-units=3 -C debuginfo=2 [..]`
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[..][ROOT]/foo/target/debug/build/foo/[HASH]/out/foo-[HASH][EXE]`
 [RUNNING] `[..][ROOT]/foo/target/debug/build/foo/[HASH]/out/foo-[HASH][EXE]`
 [RUNNING] `[..][ROOT]/foo/target/debug/build/foo/[HASH]/out/test1-[HASH][EXE]`
@@ -361,7 +361,7 @@ fn profile_selection_test() {
 [FRESH] bdep v0.0.1 ([ROOT]/foo/bdep)
 [FRESH] bar v0.0.1 ([ROOT]/foo/bar)
 [FRESH] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[..][ROOT]/foo/target/debug/build/foo/[HASH]/out/foo-[HASH][EXE]`
 [RUNNING] `[..][ROOT]/foo/target/debug/build/foo/[HASH]/out/foo-[HASH][EXE]`
 [RUNNING] `[..][ROOT]/foo/target/debug/build/foo/[HASH]/out/test1-[HASH][EXE]`
@@ -563,7 +563,7 @@ fn profile_selection_check_all_targets() {
 [RUNNING] `[..] rustc --crate-name bench1 --edition=2015 benches/bench1.rs [..]--emit=[..]metadata[..]-C codegen-units=1 -C debuginfo=2 [..]--test [..]`
 [RUNNING] `[..] rustc --crate-name ex1 --edition=2015 examples/ex1.rs [..]--crate-type bin --emit=[..]metadata -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]`
 [RUNNING] `[..] rustc --crate-name foo --edition=2015 src/main.rs [..]--crate-type bin --emit=[..]metadata -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]].unordered())
         .run();
@@ -577,7 +577,7 @@ fn profile_selection_check_all_targets() {
 [FRESH] bdep v0.0.1 ([ROOT]/foo/bdep)
 [FRESH] bar v0.0.1 ([ROOT]/foo/bar)
 [FRESH] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -676,7 +676,7 @@ fn profile_selection_check_all_targets_test() {
 [RUNNING] `[..] rustc --crate-name foo --edition=2015 src/main.rs [..]--emit=[..]metadata[..]-C codegen-units=3 -C debuginfo=2 [..]--test [..]`
 [RUNNING] `[..] rustc --crate-name bench1 --edition=2015 benches/bench1.rs [..]--emit=[..]metadata[..]-C codegen-units=3 -C debuginfo=2 [..]--test [..]`
 [RUNNING] `[..] rustc --crate-name ex1 --edition=2015 examples/ex1.rs [..]--emit=[..]metadata[..]-C codegen-units=3 -C debuginfo=2 [..]--test [..]`
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]].unordered())
         .run();
@@ -687,7 +687,7 @@ fn profile_selection_check_all_targets_test() {
 [FRESH] bdep v0.0.1 ([ROOT]/foo/bdep)
 [FRESH] bar v0.0.1 ([ROOT]/foo/bar)
 [FRESH] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -725,7 +725,7 @@ fn profile_selection_doc() {
 [foo 0.0.1] foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `[..] rustdoc [..]--crate-name foo src/lib.rs [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]].unordered())

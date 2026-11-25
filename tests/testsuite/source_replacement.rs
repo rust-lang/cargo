@@ -223,7 +223,7 @@ fn publish_with_replacement() {
 [DOWNLOADED] bar v1.0.0 (registry `alternative`)
 [COMPILING] bar v1.0.0
 [COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `crates-io`
 [NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`
@@ -297,7 +297,7 @@ fn source_replacement_with_registry_url() {
 [DOWNLOADED] bar v0.0.1 (registry `using-registry-url`)
 [CHECKING] bar v0.0.1
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

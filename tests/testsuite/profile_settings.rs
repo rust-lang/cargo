@@ -57,7 +57,7 @@ fn opt_level_override_0() {
     p.cargo("build -v").with_stderr_data(str![[r#"
 [COMPILING] test v0.0.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name test --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=2 [..] -C metadata=[..] --out-dir [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]).run();
 }
@@ -83,7 +83,7 @@ fn debug_override_1() {
     p.cargo("build -v").with_stderr_data(str![[r#"
 [COMPILING] test v0.0.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name test --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=1 [..]-C metadata=[..] --out-dir [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]]).run();
 }
@@ -120,7 +120,7 @@ fn check_opt_level_override(profile_level: &str, rustc_level: &str) {
         -C debug-assertions=on[..] \
         -C metadata=[..] \
         --out-dir [..]`
-[FINISHED] `dev` profile [..]+ debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [..] target(s) in [ELAPSED]s
 ",
             level = rustc_level
         ))
@@ -212,7 +212,7 @@ fn top_level_overrides_deps() {
         --extern foo=[ROOT]/foo/target/release/build/foo/[HASH]/out/\
                      {prefix}foo[..]{suffix} \
         --extern foo=[ROOT]/foo/target/release/build/foo/[HASH]/out/libfoo.rlib[..]`
-[FINISHED] `release` profile [optimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `release` profile [optimized + full debuginfo] target(s) in [ELAPSED]s
 ",
             prefix = env::consts::DLL_PREFIX,
             suffix = env::consts::DLL_SUFFIX
@@ -368,7 +368,7 @@ fn profile_panic_test_bench() {
 [WARNING] Cargo.toml: `panic` setting is ignored for `test` profile
 [WARNING] `foo` (manifest) generated 2 warnings
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -432,7 +432,7 @@ fn panic_unwind_does_not_build_twice() {
 [RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]--crate-type bin [..]`
 [RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..] --test [..]`
 [RUNNING] `rustc --crate-name t1 --edition=2015 tests/t1.rs [..]`
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [EXECUTABLE] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/foo-[HASH][EXE]`
 [EXECUTABLE] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/foo-[HASH][EXE]`
 [EXECUTABLE] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/t1-[HASH][EXE]`
@@ -712,7 +712,7 @@ fn strip_debuginfo_for_build_script_and_proc_macro() {
 [RUNNING] `rustc --crate-name pm [..] --out-dir [ROOT]/foo/target/debug/build/pm/[HASH]/out -C strip=debuginfo --extern proc_macro --force-warn=unused_crate_dependencies`
 [RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/build_script_build`
 [RUNNING] `rustc --crate-name foo [..] -C debuginfo=2 [..] --out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out --extern pm=[..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -1023,7 +1023,7 @@ fn rustflags_works() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..] -C link-dead-code=yes [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1052,7 +1052,7 @@ fn rustflags_works_with_env() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..] -C link-dead-code=yes [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1218,7 +1218,7 @@ From [ROOTURL]/registry
 [RUNNING] `rustc --crate-name bar [..]`
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .with_stderr_does_not_contain("-Zhint-mostly-unused")
@@ -1241,7 +1241,7 @@ fn profile_hint_mostly_unused_warns_with_mixed_profiles() {
 [LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]];
     let build_only = str![[r#"
@@ -1258,7 +1258,7 @@ fn profile_hint_mostly_unused_warns_with_mixed_profiles() {
 [LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]];
     let both = str![[r#"
@@ -1284,7 +1284,7 @@ fn profile_hint_mostly_unused_warns_with_mixed_profiles() {
 [LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]];
     for (normal_hint, build_hint, expected) in [
@@ -1379,7 +1379,7 @@ From [ROOTURL]/registry
 [RUNNING] `rustc --crate-name bar [..]`
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .with_stderr_does_not_contain("-Zhint-mostly-unused")
@@ -1418,7 +1418,7 @@ fn profile_hint_mostly_unused_from_config_only_profile_warn_without_gate() {
 [WARNING] ignoring `hint-mostly-unused` in `profile.custom` (defined in [ROOT]/foo/.cargo/config.toml), pass `-Zprofile-hint-mostly-unused` to enable it
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]`
-[FINISHED] `custom` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `custom` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .with_stderr_does_not_contain("-Zhint-mostly-unused")
@@ -1453,7 +1453,7 @@ fn profile_hint_mostly_unused_from_env_and_config_warn_without_gate() {
 [WARNING] ignoring `hint-mostly-unused` in `profile.dev` (defined in environment variable `CARGO_PROFILE_DEV_HINT_MOSTLY_UNUSED`), pass `-Zprofile-hint-mostly-unused` to enable it
 [WARNING] ignoring `hint-mostly-unused` in `profile.dev.build-override` (defined in [ROOT]/foo/.cargo/config.toml), pass `-Zprofile-hint-mostly-unused` to enable it
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1497,7 +1497,7 @@ fn profile_hint_mostly_unused_in_unselected_profile_warn_without_gate() {
 [WARNING] workspace (manifest) generated 1 warning
 [WARNING] ignoring `hint-mostly-unused` in `profile.bench` (defined in [ROOT]/foo/.cargo/config.toml), pass `-Zprofile-hint-mostly-unused` to enable it
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1542,7 +1542,7 @@ From [ROOTURL]/registry
 [RUNNING] `rustc --crate-name bar [..] -Zhint-mostly-unused [..]`
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .with_stderr_does_not_contain(

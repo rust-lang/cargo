@@ -427,7 +427,7 @@ From [ROOTURL]/registry
 [RUNNING] `[..] rustc --crate-name compiler_builtins [..]--target aarch64-unknown-none[..]`
 [RUNNING] `[..] rustc --crate-name core [..]--target aarch64-unknown-none[..]`
 [RUNNING] `[..] rustc --crate-name foo [..]--target aarch64-unknown-none[..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -482,7 +482,7 @@ From [ROOTURL]/registry
 [RUNNING] `[..]rustc --crate-name registry_dep_using_alloc [..]--target [HOST_TARGET][..]`
 [RUNNING] `[..]rustc --crate-name std [..]--target [HOST_TARGET][..]`
 [RUNNING] `[..]rustc --crate-name foo [..]--target [HOST_TARGET][..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -825,7 +825,7 @@ fn no_roots() {
         .target_host()
         .with_stderr_data(str![[r#"
 ...
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -855,7 +855,7 @@ fn proc_macro_only() {
         .target_host()
         .with_stderr_data(str![[r#"
 ...
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

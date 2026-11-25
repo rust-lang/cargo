@@ -485,7 +485,7 @@ fn pin_prerelease_and_check() {
 [DOWNLOADED] my-dependency v0.1.2-pre.0 (registry `dummy-registry`)
 [CHECKING] my-dependency v0.1.2-pre.0
 [CHECKING] package v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -494,7 +494,7 @@ fn pin_prerelease_and_check() {
         .arg("-Zprerelease")
         .masquerade_as_nightly_cargo(&["prerelease"])
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -575,7 +575,7 @@ fn pin_prerelease_and_check_without_zflag() {
 [DOWNLOADED] my-dependency v0.1.1 (registry `dummy-registry`)
 [CHECKING] my-dependency v0.1.1
 [CHECKING] package v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -685,7 +685,7 @@ dependencies = [
 [CHECKING] my-dependency v0.1.2-pre.0
 [CHECKING] bar v1.0.0
 [CHECKING] package v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -813,7 +813,7 @@ dependencies = [
 [CHECKING] my-dependency v0.1.2-pre.0
 [CHECKING] bar v1.0.0 ([ROOT]/foo/bar)
 [CHECKING] package v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -944,7 +944,7 @@ dependencies = [
 [CHECKING] my-dependency v0.1.2-pre.0
 [CHECKING] bar v1.0.0
 [CHECKING] package v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -1221,7 +1221,7 @@ fn prerelease_patch() {
 [LOCKING] 1 package to highest compatible version
 [CHECKING] my-dependency v0.1.2-pre.0 ([ROOT]/foo/my-dependency)
 [CHECKING] package v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1252,7 +1252,7 @@ dependencies = [
         .arg("-Zprerelease")
         .masquerade_as_nightly_cargo(&["prerelease"])
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1298,7 +1298,7 @@ fn prerelease_patch_without_zflag() {
 [DOWNLOADED] my-dependency v0.1.1 (registry `dummy-registry`)
 [CHECKING] my-dependency v0.1.1
 [CHECKING] package v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1374,7 +1374,7 @@ fn prerelease_patch_out_of_range() {
 [DOWNLOADED] my-dependency v0.1.1 (registry `dummy-registry`)
 [CHECKING] my-dependency v0.1.1
 [CHECKING] package v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1512,7 +1512,7 @@ fn prerelease_patch_transitive() {
 [CHECKING] my-dependency v0.1.2-pre.0 ([ROOT]/foo/my-dependency)
 [CHECKING] bar v0.1.0
 [CHECKING] package v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1552,7 +1552,7 @@ dependencies = [
         .arg("-Zprerelease")
         .masquerade_as_nightly_cargo(&["prerelease"])
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1601,7 +1601,7 @@ fn prerelease_patch_below_release() {
 [DOWNLOADED] my-dependency v1.0.0 (registry `dummy-registry`)
 [CHECKING] my-dependency v1.0.0
 [CHECKING] package v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

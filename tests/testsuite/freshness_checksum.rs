@@ -42,14 +42,14 @@ fn warn_on_missing_feature() {
         .with_stderr_data(str![[r#"
 [WARNING] ignoring `build.fingerprint = "content"` without `-Zchecksum-freshness`
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
     p.cargo("check")
         .env("CARGO_BUILD_FINGERPRINT", "mtime")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -68,7 +68,7 @@ fn checksum_actually_uses_checksum() {
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -79,7 +79,7 @@ fn checksum_actually_uses_checksum() {
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -98,7 +98,7 @@ fn same_size_different_content() {
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -112,7 +112,7 @@ fn same_size_different_content() {
 [DIRTY] foo v0.0.1 ([ROOT]/foo): the file `src/main.rs` has changed (checksum didn't match, blake3=26aa07e1adab787246f9d333be65d2eb78dd5fd0fee834ba7a769098b4b651bc != blake3=fc1a42e376d9c148227c13de41b77143f6b5b8132d2b204b63cdbc9326848894)
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -122,7 +122,7 @@ fn same_size_different_content() {
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -201,7 +201,7 @@ fn binary_depinfo_correctly_encoded() {
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["binary-dep-depinfo", "checksum-freshness"])
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -220,7 +220,7 @@ fn modifying_and_moving() {
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -230,7 +230,7 @@ fn modifying_and_moving() {
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -246,7 +246,7 @@ fn modifying_and_moving() {
 [DIRTY] foo v0.0.1 ([ROOT]/foo): file size changed (0 != 28) for `src/a.rs`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -283,7 +283,7 @@ fn modify_only_some_files() {
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -355,7 +355,7 @@ fn rebuild_sub_package_then_while_package() {
 [COMPILING] b v0.0.1 ([ROOT]/foo/b)
 [COMPILING] a v0.0.1 ([ROOT]/foo/a)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -370,7 +370,7 @@ fn rebuild_sub_package_then_while_package() {
 [DIRTY] b v0.0.1 ([ROOT]/foo/b): file size changed (0 != 13) for `b/src/lib.rs`
 [COMPILING] b v0.0.1 ([ROOT]/foo/b)
 [RUNNING] `rustc --crate-name b [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -392,7 +392,7 @@ fn rebuild_sub_package_then_while_package() {
 [DIRTY] foo v0.0.1 ([ROOT]/foo): the dependency `b` was rebuilt ([TIME_DIFF_AFTER_LAST_BUILD])
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..] src/lib.rs [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -431,7 +431,7 @@ fn rebuild_tests_if_lib_changes() {
 [DIRTY] foo v0.0.1 ([ROOT]/foo): the dependency `foo` was rebuilt ([TIME_DIFF_AFTER_LAST_BUILD])
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo_test [..]`
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/foo_test-[HASH][EXE]`
 
 "#]])
@@ -476,7 +476,7 @@ fn no_rebuild_if_build_artifacts_move_backwards_in_time() {
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .with_stdout_data(str![])
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -521,7 +521,7 @@ fn no_rebuild_if_build_artifacts_move_forward_in_time() {
         .env("CARGO_LOG", "")
         .with_stdout_data(str![])
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -576,7 +576,7 @@ fn no_rebuild_when_rename_dir() {
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .cwd(&new)
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -615,7 +615,7 @@ fn update_dependency_mtime_does_not_rebuild() {
 [LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -627,7 +627,7 @@ fn update_dependency_mtime_does_not_rebuild() {
         .masquerade_as_nightly_cargo(&["mtime-on-use", "checksum-freshness"])
         .env("RUSTFLAGS", "-C linker=cc")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -639,7 +639,7 @@ fn update_dependency_mtime_does_not_rebuild() {
         .masquerade_as_nightly_cargo(&["mtime-on-use", "checksum-freshness"])
         .env("RUSTFLAGS", "-C linker=cc")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -718,7 +718,7 @@ fn fingerprint_cleaner_does_not_rebuild() {
         .masquerade_as_nightly_cargo(&["mtime-on-use", "checksum-freshness"])
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -736,7 +736,7 @@ fn fingerprint_cleaner_does_not_rebuild() {
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["mtime-on-use", "checksum-freshness"])
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -748,7 +748,7 @@ fn fingerprint_cleaner_does_not_rebuild() {
         .arg("-Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["mtime-on-use", "checksum-freshness"])
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -760,7 +760,7 @@ fn fingerprint_cleaner_does_not_rebuild() {
         .masquerade_as_nightly_cargo(&["mtime-on-use", "checksum-freshness"])
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -819,7 +819,7 @@ fn bust_patched_dep() {
 [DIRTY] foo v0.0.1 ([ROOT]/foo): the dependency `registry2` was rebuilt
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -832,7 +832,7 @@ fn bust_patched_dep() {
 [FRESH] registry1 v0.1.0 ([ROOT]/foo/reg1new)
 [FRESH] registry2 v0.1.0
 [FRESH] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -931,7 +931,7 @@ fn rebuild_on_mid_build_file_modification() {
         .with_stderr_data(str![[r#"
 [COMPILING] proc_macro_dep v0.1.0 ([ROOT]/foo/proc_macro_dep)
 [COMPILING] root v0.1.0 ([ROOT]/foo/root)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -945,7 +945,7 @@ fn rebuild_on_mid_build_file_modification() {
 [DIRTY] root v0.1.0 ([ROOT]/foo/root): file size changed (150 != 162) for `root/src/lib.rs`
 [COMPILING] root v0.1.0 ([ROOT]/foo/root)
 [RUNNING] `rustc --crate-name root [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1258,7 +1258,7 @@ fn simulated_docker_deps_stay_cached() {
 [FRESH] regdep_old_style [..]
 [RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/build_script_build`
 [RUNNING] `rustc --crate-name foo [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]]
                 .unordered(),
@@ -1331,7 +1331,7 @@ fn rename_with_path_deps() {
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .cwd(&new)
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1410,7 +1410,7 @@ fn move_target_directory_with_path_deps() {
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .env("CARGO_TARGET_DIR", &new_target)
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1461,7 +1461,7 @@ fn verify_source_before_recompile() {
 [RUNNING] `rustc --crate-name bar [..] [ROOT]/foo/vendor/bar/src/lib.rs [..]
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..] src/lib.rs [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1478,7 +1478,7 @@ fn verify_source_before_recompile() {
         .with_stderr_data(str![[r#"
 [FRESH] bar v0.1.0
 [FRESH] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1521,7 +1521,7 @@ fn skip_checksum_check_in_selected_cargo_home_subdirs() {
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.5.0 ([ROOT]/cargo_home/registry/foo)
 [RUNNING] `rustc --crate-name foo [..] src/lib.rs [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1533,7 +1533,7 @@ fn skip_checksum_check_in_selected_cargo_home_subdirs() {
         .env("CARGO_HOME", &cargo_home)
         .with_stderr_data(str![[r#"
 [FRESH] foo v0.5.0 ([ROOT]/cargo_home/registry/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1556,7 +1556,7 @@ fn use_checksum_cache_in_cargo_home() {
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.5.0 ([ROOT]/cargo_home/foo)
 [RUNNING] `rustc --crate-name foo [..] src/lib.rs [..] src/lib.rs [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1597,7 +1597,7 @@ fn incremental_build_script_execution_got_new_mtime_and_cargo_check() {
         .env("CARGO_INCREMENTAL", "1")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1615,7 +1615,7 @@ fn incremental_build_script_execution_got_new_mtime_and_cargo_check() {
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/build_script_build`
 [RUNNING] `rustc --crate-name foo [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1628,7 +1628,7 @@ fn incremental_build_script_execution_got_new_mtime_and_cargo_check() {
         .env("CARGO_INCREMENTAL", "1")
         .with_stderr_data(str![[r#"
 [FRESH] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1640,7 +1640,7 @@ fn incremental_build_script_execution_got_new_mtime_and_cargo_check() {
         .env("CARGO_INCREMENTAL", "1")
         .with_stderr_data(str![[r#"
 [FRESH] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1701,7 +1701,7 @@ fn symlink_to_package() {
 [LOCKING] 1 package to highest compatible version
 [CHECKING] bar v1.0.0 ([ROOT]/foo/bar)
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1716,7 +1716,7 @@ fn symlink_to_package() {
         .with_stderr_data(str![[r#"
 [CHECKING] bar v1.0.0 ([ROOT]/foo/bar)
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

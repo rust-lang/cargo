@@ -45,7 +45,7 @@ Caused by:
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..] -C link-dead-code=yes [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -65,7 +65,7 @@ Caused by:
         .masquerade_as_nightly_cargo(&["profile-rustflags"])
         .with_stderr_data(str![[r#"
 [FRESH] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -102,7 +102,7 @@ fn profile_config_validate_warnings() {
 [WARNING] unused config key `profile.dev.build-override.bad-key-bo` in `[ROOT]/foo/.cargo/config.toml`
 [WARNING] unused config key `profile.dev.package.bar.bad-key-bar` in `[ROOT]/foo/.cargo/config.toml`
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]].unordered()).run();
 }
@@ -263,7 +263,7 @@ fn profile_config_all_options() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..] -C opt-level=1 -C panic=abort -C lto[..]-C codegen-units=2 -C debuginfo=2 [..]-C debug-assertions=on -C overflow-checks=off [..]-C rpath --out-dir [ROOT]/foo/target/release/build/foo/[HASH]/out -C incremental=[ROOT]/foo/target/release/incremental[..]`
-[FINISHED] `release` profile [optimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `release` profile [optimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -313,7 +313,7 @@ fn profile_config_override_precedence() {
 [RUNNING] `rustc --crate-name bar [..] -C opt-level=2[..]-C codegen-units=2 [..]`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]-C codegen-units=2 [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -363,7 +363,7 @@ fn profile_config_mixed_types() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [RUNNING] `rustc [..]-C opt-level=3 [..]`
-[FINISHED] `dev` profile [optimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [optimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -489,7 +489,7 @@ fn named_env_profile() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustc [..]-C codegen-units=1 [..]`
-[FINISHED] `other` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `other` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -537,7 +537,7 @@ fn check_ignores_install_profile() {
         .env("CARGO_INSTALL_PROFILE", "release")
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -586,7 +586,7 @@ fn test_ignores_install_profile() {
         .env("CARGO_INSTALL_PROFILE", "release")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [EXECUTABLE] unittests src/main.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
 
 "#]])
@@ -613,7 +613,7 @@ fn install_uses_install_profile() {
 [WARNING] using `cargo install` to install the binaries from the package in current working directory is deprecated, use `cargo install --path .` instead. [NOTE] use `cargo build` if you want to simply build the package.
 [INSTALLING] foo v0.1.0 ([ROOT]/foo)
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `debug` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `debug` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
 [INSTALLED] package `foo v0.1.0 ([ROOT]/foo)` (executable `foo[EXE]`)
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries

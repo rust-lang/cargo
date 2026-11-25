@@ -35,7 +35,7 @@ fn warn_without_passing_unstable_flag() {
         .with_stderr_data(cargo_test_support::str![[r#"
 [WARNING] ignoring 'sbom' config, pass `-Zsbom` to enable it
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/foo[EXE]`
 None
 
@@ -111,7 +111,7 @@ fn enabling_sbom_invalidates_fingerprint() {
         .masquerade_as_nightly_cargo(&["sbom"])
         .with_stderr_data(cargo_test_support::str![[r#"
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -123,7 +123,7 @@ fn enabling_sbom_invalidates_fingerprint() {
         .arg("-Zsbom")
         .masquerade_as_nightly_cargo(&["sbom"])
         .with_stderr_data(cargo_test_support::str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -842,7 +842,7 @@ fn workspace_wrapper() {
         .with_stderr_data(cargo_test_support::str![[r#"
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 found sbom
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

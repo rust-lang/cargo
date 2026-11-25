@@ -339,7 +339,7 @@ fn features_are_unified_among_lib_and_bin_dep_of_same_target() {
 [COMPILING] d2 v0.0.1 ([ROOT]/foo/d2)
 [COMPILING] d1 v0.0.1 ([ROOT]/foo/d1)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -613,7 +613,7 @@ fn build_script_with_bin_artifacts() {
             str![[r#"
 [LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
 
 "#]]
@@ -809,7 +809,7 @@ fn build_script_with_selected_dashed_bin_artifact_and_lib_true() {
 [LOCKING] 1 package to highest compatible version
 [COMPILING] bar-baz v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -902,7 +902,7 @@ fn lib_with_selected_dashed_bin_artifact_and_lib_true() {
 [LOCKING] 1 package to highest compatible version
 [COMPILING] bar-baz v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -954,7 +954,7 @@ fn allow_artifact_and_no_artifact_dep_to_same_package_within_different_dep_categ
 [LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 [RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
 [DOCTEST] foo
 
@@ -1085,7 +1085,7 @@ fn allow_artifact_and_non_artifact_dependency_to_same_crate() {
 [LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1310,7 +1310,7 @@ fn cross_doctests_works_with_artifacts() {
 [LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 [RUNNING] unittests src/lib.rs (target/[HOST_TARGET]/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
 [DOCTEST] foo
 
@@ -1335,7 +1335,7 @@ fn cross_doctests_works_with_artifacts() {
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]
 [RUNNING] `rustc --crate-name foo [..]
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/foo/target/[ALT_TARGET]/debug/build/foo/[HASH]/out/foo-[HASH][EXE]`
 [DOCTEST] foo
 [RUNNING] `rustdoc [..]--test src/lib.rs --test-run-directory [ROOT]/foo --target [ALT_TARGET] [..]
@@ -1445,7 +1445,7 @@ fn profile_override_basic() {
 [RUNNING] `rustc --crate-name bar --edition=2015 bar/src/lib.rs [..] -C opt-level=3 [..]`
 [RUNNING] `rustc --crate-name foo [..] -C opt-level=3 [..]`
 [RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/build_script_build`
-[FINISHED] `dev` profile [optimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [optimized + [..] debuginfo] target(s) in [ELAPSED]s
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 
 "#]]
@@ -1554,7 +1554,7 @@ fn artifact_dep_target_specified() {
 [LOCKING] 1 package to highest compatible version
 [COMPILING] bindep v0.0.0 ([ROOT]/foo/bindep)
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .with_status(0)
@@ -1634,7 +1634,7 @@ fn dep_of_artifact_dep_same_target_specified() {
 [COMPILING] baz v0.1.0 ([ROOT]/foo/baz)
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .with_status(0)
@@ -1886,7 +1886,7 @@ fn allow_dep_renames_with_multiple_versions() {
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 [COMPILING] bar v1.0.0
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
 
 "#]]
@@ -1946,7 +1946,7 @@ fn allow_artifact_and_non_artifact_dependency_to_same_crate_if_these_are_not_the
 [LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1983,7 +1983,7 @@ fn prevent_no_lib_warning_with_artifact_dependencies() {
 [LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -2025,7 +2025,7 @@ fn show_no_lib_warning_with_artifact_dependencies_that_have_no_lib_but_lib_true(
 [WARNING] foo v0.0.0 ([ROOT]/foo) ignoring invalid dependency `bar` which is missing a lib target
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -2247,7 +2247,7 @@ fn env_vars_and_build_products_for_various_build_targets() {
 [LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 [RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
 [RUNNING] tests/main.rs (target/debug/build/foo/[HASH]/out/main-[HASH][EXE])
 [DOCTEST] foo
@@ -2447,7 +2447,7 @@ fn doc_lib_true() {
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [DOCUMENTING] bar v0.0.1 ([ROOT]/foo/bar)
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]])
@@ -2469,7 +2469,7 @@ fn doc_lib_true() {
         .arg("-Zbindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]])
@@ -2534,7 +2534,7 @@ fn rustdoc_works_on_libs_with_artifacts_and_lib_false() {
 [LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]])
@@ -2743,7 +2743,7 @@ fn calc_bin_artifact_fingerprint() {
 [LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -2760,7 +2760,7 @@ fn calc_bin_artifact_fingerprint() {
 [DIRTY] foo v0.1.0 ([ROOT]/foo): the dependency `bar` was rebuilt
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -2772,7 +2772,7 @@ fn calc_bin_artifact_fingerprint() {
         .with_stderr_data(str![[r#"
 [FRESH] bar v0.5.0 ([ROOT]/foo/bar)
 [FRESH] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -2827,7 +2827,7 @@ fn with_target_and_optional() {
 [RUNNING] `rustc --crate-name d1 [..]--crate-type bin[..]
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]--cfg[..]d1[..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -3024,7 +3024,7 @@ fn decouple_same_target_transitive_dep_from_artifact_dep() {
 [COMPILING] a v0.1.0 ([ROOT]/foo/a)
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -3139,7 +3139,7 @@ fn decouple_same_target_transitive_dep_from_artifact_dep_lib() {
 [COMPILING] a v0.1.0 ([ROOT]/foo/a)
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -3286,7 +3286,7 @@ fn decouple_same_target_transitive_dep_from_artifact_dep_and_proc_macro() {
 [COMPILING] b v0.1.0 ([ROOT]/foo/b)
 [COMPILING] c v0.1.0 ([ROOT]/foo/c)
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [..]
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 
 "#]]
@@ -3352,7 +3352,7 @@ fn same_target_artifact_dep_sharing() {
 [COMPILING] a v0.1.0 ([ROOT]/foo/a)
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -3746,7 +3746,7 @@ fn artifact_dep_target_does_not_propagate_to_deps_of_build_script() {
 [COMPILING] builder v0.0.1 ([ROOT]/foo/builder)
 [COMPILING] artifact v0.0.1 ([ROOT]/foo/artifact)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 [RUNNING] unittests src/main.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
 
 "#]])
@@ -3839,7 +3839,7 @@ fn artifact_dep_target_does_not_propagate_to_proc_macro() {
 [COMPILING] macro v0.0.1 ([ROOT]/foo/macro)
 [COMPILING] artifact v0.0.1 ([ROOT]/foo/artifact)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 [RUNNING] unittests src/main.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
 
 "#]])

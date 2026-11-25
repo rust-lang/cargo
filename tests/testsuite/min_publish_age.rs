@@ -424,7 +424,7 @@ dependencies = [
 [DOWNLOADED] bar v1.1.0 (registry `dummy-registry`)
 [CHECKING] bar v1.1.0
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

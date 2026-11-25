@@ -81,7 +81,7 @@ fn incompat_in_local_crate() {
 ...
 
 [WARNING] `foo` (lib) generated 1 warning[..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [WARNING] the following packages contain code that will be rejected by a future version of Rust: foo v0.0.0 ([ROOT]/foo)
 [NOTE] to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
 
@@ -95,7 +95,7 @@ fn incompat_in_local_crate() {
 ...
 
 [WARNING] `foo` (lib) generated 1 warning[..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [WARNING] the following packages contain code that will be rejected by a future version of Rust: foo v0.0.0 ([ROOT]/foo)
 [NOTE] this report can be shown with `cargo report future-incompatibilities --id 1`
 
@@ -140,7 +140,7 @@ fn incompat_in_dependency() {
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 [CHECKING] bar v1.0.0
 [CHECKING] foo v1.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [WARNING] the following packages contain code that will be rejected by a future version of Rust: bar v1.0.0
 [NOTE] to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
 
@@ -150,7 +150,7 @@ fn incompat_in_dependency() {
     p.cargo("check --future-incompat-report")
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [WARNING] the following packages contain code that will be rejected by a future version of Rust: bar v1.0.0
 [HELP] ensure the maintainers know of this problem (e.g. creating a bug report if needed)
       or even helping with a fix (e.g. by creating a pull request)
@@ -230,7 +230,7 @@ fn test_zero_future_incompat() {
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -238,7 +238,7 @@ fn test_zero_future_incompat() {
     p.cargo("check --future-incompat-report")
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [NOTE] 0 dependencies had future-incompatible warnings
 
 "#]])
@@ -596,7 +596,7 @@ fn suggestions_for_updates() {
 [CHECKING] big_update v1.0.0
 [CHECKING] without_updates v1.0.0
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [WARNING] the following packages contain code that will be rejected by a future version of Rust: big_update v1.0.0, with_updates v1.0.0, without_updates v1.0.0
 [HELP] update to a newer version to see if the issue has been fixed
         - big_update v1.0.0 has the following newer versions available: 2.0.0
@@ -692,7 +692,7 @@ fn correct_report_id_when_cached() {
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 [CHECKING] bar v1.0.0
 [CHECKING] foo v1.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [WARNING] the following packages contain code that will be rejected by a future version of Rust: bar v1.0.0
 [HELP] ensure the maintainers know of this problem (e.g. creating a bug report if needed)
       or even helping with a fix (e.g. by creating a pull request)
@@ -710,7 +710,7 @@ fn correct_report_id_when_cached() {
     p.cargo("check --future-incompat-report")
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [WARNING] the following packages contain code that will be rejected by a future version of Rust: bar v1.0.0
 [HELP] ensure the maintainers know of this problem (e.g. creating a bug report if needed)
       or even helping with a fix (e.g. by creating a pull request)

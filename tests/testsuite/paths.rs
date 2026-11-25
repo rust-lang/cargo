@@ -89,7 +89,7 @@ https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html
 [CHECKING] bar v0.2.0
 [CHECKING] a v0.0.1 ([ROOT]/foo/a2)
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -199,7 +199,7 @@ fn paths_ok_with_optional() {
 [LOCKING] 1 package to highest compatible version
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar2)
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -269,7 +269,7 @@ https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html
 
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar2)
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -323,7 +323,7 @@ fn env_paths_overrides_not_supported() {
 [CHECKING] cli v0.2.0 ([ROOT]/foo/cli)
 [CHECKING] env v0.1.0
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),

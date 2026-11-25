@@ -876,10 +876,10 @@ impl<'gctx> DrainState<'gctx> {
             "optimized"
         });
         opt_type += match profile.debuginfo.into_inner() {
-            TomlDebugInfo::Full
-            | TomlDebugInfo::Limited
+            TomlDebugInfo::Full => " + full debuginfo",
+            TomlDebugInfo::Limited
             | TomlDebugInfo::LineTablesOnly
-            | TomlDebugInfo::LineDirectivesOnly => " + debuginfo",
+            | TomlDebugInfo::LineDirectivesOnly => " + partial debuginfo",
             TomlDebugInfo::None => "",
         };
 

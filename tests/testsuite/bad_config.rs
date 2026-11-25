@@ -865,7 +865,7 @@ quiet = false
 [HELP] term is a valid .cargo/config.toml key
 [WARNING] `foo` (manifest) generated 21 warnings
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -890,7 +890,7 @@ fn unused_keys_in_virtual_manifest() {
 [WARNING] Cargo.toml: unused manifest key: workspace.unused
 [WARNING] workspace (manifest) generated 1 warning
 [CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -963,7 +963,7 @@ fn registry_without_version() {
 [LOCKING] 1 package to highest compatible version
 [CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1002,7 +1002,7 @@ fn dev_dependencies2() {
 [WARNING] `foo` (manifest) generated 1 warning
 [LOCKING] 1 package to highest compatible version
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]).run();
 }
@@ -1081,7 +1081,7 @@ fn dev_dependencies2_conflict() {
 [WARNING] `foo` (manifest) generated 1 warning
 [LOCKING] 1 package to highest compatible version
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]).run();
 }
@@ -1125,7 +1125,7 @@ fn build_dependencies2() {
 [WARNING] `foo` (manifest) generated 1 warning
 [LOCKING] 1 package to highest compatible version
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]).run();
 }
@@ -1210,7 +1210,7 @@ fn build_dependencies2_conflict() {
 [WARNING] `foo` (manifest) generated 1 warning
 [LOCKING] 1 package to highest compatible version
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]).run();
 }
@@ -1240,7 +1240,7 @@ fn lib_crate_type2() {
 (in the `foo` library target)
 [WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1302,7 +1302,7 @@ fn lib_crate_type2_conflict() {
 [WARNING] Cargo.toml: `crate_type` is redundant with `crate-type`, preferring `crate-type` in the `foo` library target
 [WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]).run();
 }
@@ -1333,7 +1333,7 @@ fn bin_crate_type2() {
 (in the `foo` binary target)
 [WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1397,7 +1397,7 @@ fn bin_crate_type2_conflict() {
 [WARNING] Cargo.toml: `crate_type` is redundant with `crate-type`, preferring `crate-type` in the `foo` binary target
 [WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]).run();
 }
@@ -1446,7 +1446,7 @@ fn examples_crate_type2() {
 (in the `goodbye` example target)
 [WARNING] `foo` (manifest) generated 2 warnings
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1544,7 +1544,7 @@ fn examples_crate_type2_conflict() {
 [WARNING] Cargo.toml: `crate_type` is redundant with `crate-type`, preferring `crate-type` in the `goodbye` example target
 [WARNING] `foo` (manifest) generated 2 warnings
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]).run();
 }
@@ -1587,7 +1587,7 @@ fn cargo_platform_build_dependencies2() {
 [LOCKING] 1 package to highest compatible version
 [COMPILING] build v0.5.0 ([ROOT]/foo/build)
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
         )
@@ -1676,7 +1676,7 @@ fn cargo_platform_build_dependencies2_conflict() {
 [LOCKING] 1 package to highest compatible version
 [COMPILING] build v0.5.0 ([ROOT]/foo/build)
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
 
@@ -1719,7 +1719,7 @@ fn cargo_platform_dev_dependencies2() {
 [WARNING] `foo` (manifest) generated 1 warning
 [LOCKING] 1 package to highest compatible version
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1804,7 +1804,7 @@ fn cargo_platform_dev_dependencies2_conflict() {
 [WARNING] `foo` (manifest) generated 1 warning
 [LOCKING] 1 package to highest compatible version
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1857,7 +1857,7 @@ fn default_features2() {
 [LOCKING] 1 package to highest compatible version
 [CHECKING] a v0.1.0 ([ROOT]/foo/a)
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]).run();
 }
@@ -1955,7 +1955,7 @@ fn default_features2_conflict() {
 [LOCKING] 1 package to highest compatible version
 [CHECKING] a v0.1.0 ([ROOT]/foo/a)
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]).run();
 }
@@ -2045,7 +2045,7 @@ fn workspace_default_features2() {
 [CHECKING] dep_workspace_only v0.1.0 ([ROOT]/foo/dep_workspace_only)
 [CHECKING] package_only v0.1.0 ([ROOT]/foo/package_only)
 [CHECKING] workspace_only v0.1.0 ([ROOT]/foo/workspace_only)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [WARNING] workspace_only/Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
 (in the `dep_workspace_only` dependency)
 [WARNING] `workspace_only` (manifest) generated 1 warning
@@ -2162,7 +2162,7 @@ fn lib_proc_macro2() {
 (in the `foo` library target)
 [WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -2220,7 +2220,7 @@ fn lib_proc_macro2_conflict() {
 [WARNING] Cargo.toml: `proc_macro` is redundant with `proc-macro`, preferring `proc-macro` in the `foo` library target
 [WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]).run();
 }
@@ -2252,7 +2252,7 @@ fn bin_proc_macro2() {
 (in the `foo` binary target)
 [WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -2318,7 +2318,7 @@ fn bin_proc_macro2_conflict() {
 [WARNING] Cargo.toml: `proc_macro` is redundant with `proc-macro`, preferring `proc-macro` in the `foo` binary target
 [WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]).run();
 }
@@ -3050,7 +3050,7 @@ fn warn_semver_metadata() {
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 [CHECKING] bar v1.0.0
 [CHECKING] foo v1.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]).run();
 }
@@ -3732,7 +3732,7 @@ please set bin.path in Cargo.toml
 [CHECKING] foo v1.0.0 ([ROOT]/foo)
 [RUNNING] `rustc [..]`
 [RUNNING] `rustc [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -3778,7 +3778,7 @@ please set bin.path in Cargo.toml
 [CHECKING] foo v1.0.0 ([ROOT]/foo)
 [RUNNING] `rustc [..]`
 [RUNNING] `rustc [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -3807,7 +3807,7 @@ please set bin.path in Cargo.toml
 [WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v1.0.0 ([ROOT]/foo)
 [RUNNING] `rustc [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

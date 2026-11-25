@@ -96,7 +96,7 @@ fn config() {
 [WARNING] unused variable: `x`
 ...
 [WARNING] `foo` (bin "foo") generated 1 warning[..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -163,7 +163,7 @@ fn keep_going() {
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 ...
 [ERROR] `foo` (bin "foo") generated 1 warning (run `cargo fix --bin "foo" -p foo` to apply 1 suggestion)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [ERROR] warnings are denied by `build.warnings` configuration
 
 "#]])
@@ -181,7 +181,7 @@ fn rustc_caching_allow_first() {
         .arg("build.warnings='allow'")
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -221,7 +221,7 @@ fn rustc_caching_deny_first() {
         .arg("--config")
         .arg("build.warnings='allow'")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -285,7 +285,7 @@ fn lint_parse_pass() {
 [HELP] consider removing `package.homepage`
 [WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -299,7 +299,7 @@ fn lint_parse_pass() {
         .arg("--config")
         .arg("build.warnings='allow'")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -340,7 +340,7 @@ fn lint_parse_pass() {
   = [NOTE] `cargo::redundant_homepage` is set to `warn` in `[lints]`
 [HELP] consider removing `package.homepage`
 [WARNING] `foo` (manifest) generated 1 warning
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [ERROR] warnings are denied by `build.warnings` configuration
 
 "#]])
@@ -395,7 +395,7 @@ fn lint_build_result_pass() {
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused`
 [WARNING] `foo` (manifest) generated 1 warning
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -404,7 +404,7 @@ fn lint_build_result_pass() {
         .arg("--config")
         .arg("build.warnings='allow'")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -423,7 +423,7 @@ fn lint_build_result_pass() {
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused`
 [WARNING] `foo` (manifest) generated 1 warning
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [ERROR] warnings are denied by `build.warnings` configuration
 
 "#]])
@@ -466,7 +466,7 @@ fn hard_warning_deny() {
 [WARNING] [..]
 
 [WARNING] `foo` (bin "foo") generated 2 warnings
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -486,7 +486,7 @@ fn hard_warning_deny() {
 [WARNING] [..]
 
 [WARNING] `foo` (bin "foo") generated 2 warnings
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -507,7 +507,7 @@ fn hard_warning_deny() {
 [WARNING] [..]
 
 [WARNING] `foo` (bin "foo") generated 2 warnings
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -549,7 +549,7 @@ fn hard_warning_allow() {
 [WARNING] [..]
 
 [WARNING] `foo` (bin "foo") generated 2 warnings
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .with_status(0)
@@ -565,7 +565,7 @@ fn hard_warning_allow() {
 [WARNING] `foo` (manifest) generated 1 warning
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] foo@0.0.1: from a build script
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .with_status(0)
@@ -587,7 +587,7 @@ fn hard_warning_allow() {
 [WARNING] [..]
 
 [WARNING] `foo` (bin "foo") generated 2 warnings
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -637,7 +637,7 @@ From [ROOTURL]/registry
 [WARNING] `has_warning` (lib) generated 1 warning
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -653,7 +653,7 @@ From [ROOTURL]/registry
 [WARNING] `has_warning` (lib) generated 1 warning
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -668,7 +668,7 @@ From [ROOTURL]/registry
 ...
 [WARNING] `has_warning` (lib) generated 1 warning
 [FRESH] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -718,7 +718,7 @@ From [ROOTURL]/registry
 [WARNING] `has_warning` (lib) generated 1 warning
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -731,7 +731,7 @@ From [ROOTURL]/registry
 [RUNNING] [..]
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -743,7 +743,7 @@ From [ROOTURL]/registry
         .with_stderr_data(str![[r#"
 [FRESH] has_warning v1.0.0
 [FRESH] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

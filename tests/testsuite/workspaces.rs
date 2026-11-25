@@ -118,7 +118,7 @@ fn non_virtual_default_members_build_other_member() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [CHECKING] baz v0.1.0 ([ROOT]/foo/baz)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -126,7 +126,7 @@ fn non_virtual_default_members_build_other_member() {
     p.cargo("check --manifest-path bar/Cargo.toml")
         .with_stderr_data(str![[r#"
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -157,7 +157,7 @@ fn non_virtual_default_members_build_root_project() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -711,7 +711,7 @@ fn share_dependencies() {
 [DOWNLOADED] dep1 v0.1.3 (registry `dummy-registry`)
 [CHECKING] dep1 v0.1.3
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -825,7 +825,7 @@ fn lock_works_for_everyone() {
 [DOWNLOADED] dep2 v0.1.0 (registry `dummy-registry`)
 [CHECKING] dep2 v0.1.0
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -837,7 +837,7 @@ fn lock_works_for_everyone() {
 [DOWNLOADED] dep1 v0.1.0 (registry `dummy-registry`)
 [CHECKING] dep1 v0.1.0
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -989,7 +989,7 @@ fn virtual_default_members_build_other_member() {
     p.cargo("check --manifest-path bar/Cargo.toml")
         .with_stderr_data(str![[r#"
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -2016,7 +2016,7 @@ fn dep_used_with_separate_features() {
 [COMPILING] feat_lib v0.1.0 ([ROOT]/foo/feat_lib)
 [COMPILING] caller1 v0.1.0 ([ROOT]/foo/caller1)
 [COMPILING] caller2 v0.1.0 ([ROOT]/foo/caller2)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -2032,7 +2032,7 @@ fn dep_used_with_separate_features() {
         .with_stderr_data(str![[r#"
 [COMPILING] feat_lib v0.1.0 ([ROOT]/foo/feat_lib)
 [COMPILING] caller1 v0.1.0 ([ROOT]/foo/caller1)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -2042,21 +2042,21 @@ fn dep_used_with_separate_features() {
     p.cargo("build")
         .cwd("caller2")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
     p.cargo("build")
         .cwd("caller1")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
     p.cargo("build")
         .cwd("caller2")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -2393,7 +2393,7 @@ fn ws_warn_unused() {
 package:   [ROOT]/foo/a/Cargo.toml
 workspace: [ROOT]/foo/Cargo.toml
 [CHECKING] a v0.1.0 ([ROOT]/foo/a)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 ",
                 name, name
             ))
@@ -2430,7 +2430,7 @@ fn ws_warn_path() {
   See https://doc.rust-lang.org/[..]cargo/reference/manifest.html#the-edition-field for more information about using this feature.
 [WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.1.0 ([ROOT]/foo/a)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]).run();
 }
@@ -2770,7 +2770,7 @@ fn fix_only_check_manifest_path_member() {
     p.cargo("fix --manifest-path foo/Cargo.toml --allow-no-vcs")
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.1.0 ([ROOT]/foo/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

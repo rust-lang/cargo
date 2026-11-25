@@ -156,7 +156,7 @@ fn cargo_compile_with_downloaded_dependency_with_offline() {
 [LOCKING] 1 package to highest compatible version
 [CHECKING] present_dep v1.2.3
 [CHECKING] bar v0.1.0 ([ROOT]/bar)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -274,7 +274,7 @@ fn main(){
 [LOCKING] 1 package to highest compatible version
 [COMPILING] present_dep v1.2.3
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/foo[EXE]`
 
 "#]])
@@ -530,7 +530,7 @@ fn compile_offline_with_cached_git_dep(shallow: bool) {
 [LOCKING] 1 package to highest compatible version
 [COMPILING] dep1 v0.5.0 ([ROOTURL]/dep1#[..])
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 ",
     ));
     maybe_use_shallow(cargo).run();
@@ -711,7 +711,7 @@ fn main(){
 [LOCKING] 1 package to highest compatible version
 [COMPILING] present_dep v1.2.9
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -734,7 +734,7 @@ fn main(){
         .with_stderr_data(str![[r#"
 [COMPILING] present_dep v1.2.3
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

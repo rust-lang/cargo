@@ -161,7 +161,7 @@ fn duplicate_version_yanked() {
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.0 ([ROOT]/foo)
 [COMPILING] foo v0.0.0 ([ROOT]/foo/target/package/foo-0.0.0)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.0 ([ROOT]/foo)
 [WARNING] aborting upload due to dry run
 
@@ -214,7 +214,7 @@ fn duplicate_version() {
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] aborting upload due to dry run
 
@@ -572,7 +572,7 @@ fn publish_clean() {
 [PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `crates-io`
 [NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`
@@ -624,7 +624,7 @@ fn publish_in_sub_repo() {
 [PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.1 ([ROOT]/foo/bar/target/package/foo-0.0.1)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.1 ([ROOT]/foo/bar)
 [UPLOADED] foo v0.0.1 to registry `crates-io`
 [NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`
@@ -676,7 +676,7 @@ fn publish_when_ignored() {
 [PACKAGED] 6 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `crates-io`
 [NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`
@@ -727,7 +727,7 @@ fn ignore_when_crate_ignored() {
 [PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.1 ([ROOT]/foo/bar/target/package/foo-0.0.1)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.1 ([ROOT]/foo/bar)
 [UPLOADED] foo v0.0.1 to registry `crates-io`
 [NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`
@@ -805,7 +805,7 @@ fn dry_run() {
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] aborting upload due to dry run
 
@@ -919,7 +919,7 @@ fn publish_allowed_registry() {
 [PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `alternative`
 [NOTE] waiting for foo v0.0.1 to be available at registry `alternative`
@@ -983,7 +983,7 @@ fn publish_implicitly_to_only_allowed_registry() {
 [PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `alternative`
 [NOTE] waiting for foo v0.0.1 to be available at registry `alternative`
@@ -1053,7 +1053,7 @@ fn publish_when_both_publish_and_index_specified() {
 [PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry [..]
 [NOTE] waiting for foo v0.0.1 to be available at registry [..]
@@ -1210,7 +1210,7 @@ The registry `alternative` is not listed in the `package.publish` value in Cargo
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `crates-io`
 [NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`
@@ -1262,7 +1262,7 @@ fn publish_with_select_features() {
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `crates-io`
 [NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`
@@ -1314,7 +1314,7 @@ fn publish_with_all_features() {
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `crates-io`
 [NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`
@@ -1428,7 +1428,7 @@ error[E0425]: cannot find function `newfunc` in crate `bar`
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `crates-io`
 [NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`
@@ -1523,7 +1523,7 @@ or use environment variable CARGO_REGISTRY_TOKEN
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] aborting upload due to dry run
 
@@ -3032,7 +3032,7 @@ fn http_api_not_noop() {
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `crates-io`
 [NOTE] waiting for foo v0.0.1 to be available at registry `crates-io`
@@ -3965,19 +3965,19 @@ fn workspace_with_local_deps() {
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] level3 v0.0.1 ([ROOT]/foo/level3)
 [COMPILING] level3 v0.0.1 ([ROOT]/foo/target/package/level3-0.0.1)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [VERIFYING] level2 v0.0.1 ([ROOT]/foo/level2)
 [UPDATING] crates.io index
 [UNPACKING] level3 v0.0.1 (registry `[ROOT]/foo/target/package/tmp-registry`)
 [COMPILING] level3 v0.0.1
 [COMPILING] level2 v0.0.1 ([ROOT]/foo/target/package/level2-0.0.1)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [VERIFYING] level1 v0.0.1 ([ROOT]/foo/level1)
 [UPDATING] crates.io index
 [UNPACKING] level2 v0.0.1 (registry `[ROOT]/foo/target/package/tmp-registry`)
 [COMPILING] level2 v0.0.1
 [COMPILING] level1 v0.0.1 ([ROOT]/foo/target/package/level1-0.0.1)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] level3 v0.0.1 ([ROOT]/foo/level3)
 [UPLOADED] level3 v0.0.1 to registry `crates-io`
 [NOTE] waiting for level3 v0.0.1 to be available at registry `crates-io`.
@@ -4079,10 +4079,10 @@ fn workspace_parallel() {
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] a v0.0.1 ([ROOT]/foo/a)
 [COMPILING] a v0.0.1 ([ROOT]/foo/target/package/a-0.0.1)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [VERIFYING] b v0.0.1 ([ROOT]/foo/b)
 [COMPILING] b v0.0.1 ([ROOT]/foo/target/package/b-0.0.1)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [VERIFYING] c v0.0.1 ([ROOT]/foo/c)
 [UPDATING] crates.io index
 [UNPACKING] a v0.0.1 (registry `[ROOT]/foo/target/package/tmp-registry`)
@@ -4090,7 +4090,7 @@ fn workspace_parallel() {
 [COMPILING] a v0.0.1
 [COMPILING] b v0.0.1
 [COMPILING] c v0.0.1 ([ROOT]/foo/target/package/c-0.0.1)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [UPLOADED] b v0.0.1 to registry `crates-io`
 [UPLOADED] a v0.0.1 to registry `crates-io`
 [NOTE] waiting for a v0.0.1 or b v0.0.1 to be available at registry `crates-io`.
@@ -4180,7 +4180,7 @@ Caused by:
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] a v0.0.1 ([ROOT]/foo/a)
 [COMPILING] a v0.0.1 ([ROOT]/foo/target/package/a-0.0.1)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] a v0.0.1 ([ROOT]/foo/a)
 [UPLOADED] a v0.0.1 to registry `crates-io`
 [NOTE] waiting for a v0.0.1 to be available at registry `crates-io`
@@ -4256,7 +4256,7 @@ fn one_unpublishable_package() {
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] dep v0.1.0 ([ROOT]/foo/dep)
 [COMPILING] dep v0.1.0 ([ROOT]/foo/target/package/dep-0.1.0)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] dep v0.1.0 ([ROOT]/foo/dep)
 [UPLOADED] dep v0.1.0 to registry `crates-io`
 [NOTE] waiting for dep v0.1.0 to be available at registry `crates-io`
@@ -4335,7 +4335,7 @@ fn virtual_ws_with_multiple_unpublishable_package() {
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] publishable v0.1.0 ([ROOT]/foo/publishable)
 [COMPILING] publishable v0.1.0 ([ROOT]/foo/target/package/publishable-0.1.0)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] publishable v0.1.0 ([ROOT]/foo/publishable)
 [UPLOADED] publishable v0.1.0 to registry `crates-io`
 [NOTE] waiting for publishable v0.1.0 to be available at registry `crates-io`
@@ -4406,7 +4406,7 @@ fn workspace_flag_with_unpublishable_packages() {
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] publishable v0.0.0 ([ROOT]/foo/publishable)
 [COMPILING] publishable v0.0.0 ([ROOT]/foo/target/package/publishable-0.0.0)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] publishable v0.0.0 ([ROOT]/foo/publishable)
 [UPLOADED] publishable v0.0.0 to registry `crates-io`
 [NOTE] waiting for publishable v0.0.0 to be available at registry `crates-io`
@@ -4634,13 +4634,13 @@ fn checksum_changed() {
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] dep v1.0.0 ([ROOT]/foo/dep)
 [COMPILING] dep v1.0.0 ([ROOT]/foo/target/package/dep-1.0.0)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
 [UNPACKING] dep v1.0.0 (registry `[ROOT]/foo/target/package/tmp-registry`)
 [COMPILING] dep v1.0.0
 [COMPILING] transitive v1.0.0
 [COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] dep v1.0.0 ([ROOT]/foo/dep)
 [WARNING] aborting upload due to dry run
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)

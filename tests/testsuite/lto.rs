@@ -773,7 +773,7 @@ From [ROOTURL]/registry
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]--crate-type lib --emit=dep-info,metadata,link[..] -C linker-plugin-lto [..]`
 [RUNNING] `rustc --crate-name foo [..]--emit=dep-info,link -C lto=thin [..]--test [..]`
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/foo-[HASH][EXE]`
 [DOCTEST] foo
 [RUNNING] `rustdoc [..]
