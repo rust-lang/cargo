@@ -308,6 +308,21 @@ pub trait CommandExt: Sized {
         )
     }
 
+    fn arg_debug(self, command: &'static str) -> Self {
+        let default_mode = "debug";
+        let supported_mode = "release";
+        let msg = format!(
+            "`--{default_mode}` is the default for `cargo {command}`; instead `--{supported_mode}` is supported"
+        );
+        let value_parser = UnknownArgumentValueParser::suggest(msg);
+        self._arg(
+            flag(default_mode, "")
+                .conflicts_with("profile")
+                .value_parser(value_parser)
+                .hide(true),
+        )
+    }
+
     fn arg_profile(self, profile: &'static str) -> Self {
         self._arg(
             opt("profile", profile)
