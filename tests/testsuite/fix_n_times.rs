@@ -457,14 +457,12 @@ rustc fix shim comment 6
 #[cargo_test]
 fn fix_verification_failed() {
     // One suggested fix, with an error in the verification step.
-    // This should cause `cargo fix` to back out the changes.
-    //
-    // Documents #15983: today cargo fix still exits 0 here even though
-    // verification failed, so a failed fix can look successful.
+    // This should cause `cargo fix` to back out the changes and exit nonzero
+    // so the failure is not mistaken for a successful `cargo fix` (#15983).
     expect_fix_runs_rustc_n_times(
         &[Step::OneFix, Step::Error],
         |execs| {
-            execs.with_status(0);
+            execs.with_status(101);
         },
         str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
@@ -475,8 +473,12 @@ fn fix_verification_failed() {
 [HELP] to possibly apply more fixes, pass in the `--broken-code` flag
 [NOTE] original diagnostics will follow:
 rustc fix shim comment 1
+[ERROR] `cargo fix` failed: suggestions were applied but the crate no longer compiles; see the messages above
 [WARNING] `foo` (lib) generated 1 warning (run `cargo fix --lib -p foo` to apply 1 suggestion)
-[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
+[ERROR] could not compile `foo` (lib); 1 warning emitted
+
+Caused by:
+  process didn't exit successfully: `[..]` ([EXIT_STATUS]: 1)
 
 "#]],
         "// fix-count 0",
@@ -485,16 +487,15 @@ rustc fix shim comment 1
 
 #[cargo_test]
 fn fix_verification_failed_clippy() {
-    // Same as `fix_verification_failed`, except it checks the error message
-    // has the customization for the clippy URL and subcommand.
-    //
-    // Documents #15983: exits 0 today despite verification failure.
+    // This is the same as `fix_verification_failed`, except it checks
+    // the error message has the customization for the clippy URL and
+    // subcommand.
     expect_fix_runs_rustc_n_times(
         &[Step::OneFix, Step::Error],
         |execs| {
             execs
                 .env("RUSTC_WORKSPACE_WRAPPER", tools::wrapped_clippy_driver())
-                .with_status(0);
+                .with_status(101);
         },
         str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
@@ -505,8 +506,12 @@ fn fix_verification_failed_clippy() {
 [HELP] to possibly apply more fixes, pass in the `--broken-code` flag
 [NOTE] original diagnostics will follow:
 rustc fix shim comment 1
+[ERROR] `cargo fix` failed: suggestions were applied but the crate no longer compiles; see the messages above
 [WARNING] `foo` (lib) generated 1 warning (run `cargo clippy --fix --lib -p foo` to apply 1 suggestion)
-[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
+[ERROR] could not compile `foo` (lib); 1 warning emitted
+
+Caused by:
+  process didn't exit successfully: `[..]` ([EXIT_STATUS]: 1)
 
 "#]],
         "// fix-count 0",
@@ -584,6 +589,7 @@ fn broken_code_one_suggestion() {
 [NOTE] original diagnostics will follow:
 rustc fix shim comment 1
 rustc fix shim error count=2
+[ERROR] `cargo fix` failed: suggestions were applied but the crate no longer compiles; see the messages above
 [WARNING] `foo` (lib) generated 1 warning
 [ERROR] could not compile `foo` (lib) due to 1 previous error; 1 warning emitted
 

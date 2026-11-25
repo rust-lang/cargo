@@ -800,10 +800,14 @@ pub fn fix_exec_rustc(gctx: &GlobalContext, lock_addr: &str) -> CargoResult<()> 
         // fixes failed. This can help with diagnosing which suggestions
         // caused the failure.
         emit_output(&fixes.first_output)?;
-        // Exit with whatever exit code we initially started with. `cargo fix`
-        // treats this as a warning, and shouldn't return a failure code
-        // unless the code didn't compile in the first place.
-        exit_with(fixes.first_output.status);
+        // Repeat a short error after the (often long) original diagnostics so
+        // the failure is still visible, and exit with the post-fix rustc
+        // status so `cargo fix` does not look successful (#15983).
+        gctx.shell().error(
+            "`cargo fix` failed: suggestions were applied but the crate \
+             no longer compiles; see the messages above",
+        )?;
+        exit_with(fixes.last_output.status);
     }
 }
 

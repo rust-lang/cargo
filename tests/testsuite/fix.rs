@@ -1433,6 +1433,7 @@ fn fix_to_broken_code() {
     p.cargo("fix --allow-no-vcs --broken-code")
         .cwd("bar")
         .env("RUSTC", p.root().join("foo/target/debug/foo"))
+        .with_status(101)
         .with_stderr_data(str![[r#"
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [ERROR] errors present after applying fixes to crate `bar`
@@ -1784,6 +1785,7 @@ fn abnormal_exit() {
             paths::root().join("proc-macro-run-once").to_str().unwrap(),
         )
         // "signal: 6, SIGABRT: process abort signal" on some platforms
+        .with_status(101)
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to highest compatible version
 [COMPILING] pm v0.1.0 ([ROOT]/foo/pm)
