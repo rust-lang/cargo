@@ -1320,7 +1320,7 @@ fn test_a_bench() {
     p.cargo("test")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] [..] (target/debug/build/foo/[HASH]/out/b-[HASH][EXE])
 
 "#]])

@@ -149,7 +149,7 @@ fn basic() {
         // There have been multiple bugs where every build triggers and update.
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -157,7 +157,7 @@ fn basic() {
         .build_std_isolated()
         .target_host()
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/[HOST_TARGET]/debug/foo`
 
 "#]])
@@ -168,7 +168,7 @@ fn basic() {
         .with_stderr_data(str![[r#"
 [COMPILING] [..]
 ...
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [RUNNING] unittests src/lib.rs (target/[HOST_TARGET]/debug/build/foo/[HASH]/out/foo-[HASH])
 [RUNNING] unittests src/main.rs (target/[HOST_TARGET]/debug/build/foo/[HASH]/out/foo-[HASH])
 [RUNNING] tests/smoke.rs (target/[HOST_TARGET]/debug/build/foo/[HASH]/out/smoke-[HASH])
@@ -395,7 +395,7 @@ fn remap_path_scope() {
         .with_status(101)
         .with_stderr_data(
             str![[r#"
-[FINISHED] `release` profile [optimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `release` profile [optimized + [..] debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/[HOST_TARGET]/release/foo`
 ...
 [..]thread [..] panicked at [..]src/main.rs:3:[..]:
@@ -434,7 +434,7 @@ fn test_proc_macro() {
         .with_stderr_data(str![[r#"
 ...
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/out/foo-[HASH])
 
 "#]])

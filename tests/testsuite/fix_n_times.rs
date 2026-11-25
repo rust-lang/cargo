@@ -384,7 +384,7 @@ fn fix_no_suggestions() {
         |_execs| {},
         str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
         "// fix-count 0",
@@ -400,7 +400,7 @@ fn fix_one_suggestion() {
         str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FIXED] src/lib.rs (1 fix)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
         "// fix-count 1",
@@ -416,7 +416,7 @@ fn fix_one_overlapping() {
         str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FIXED] src/lib.rs (1 fix)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
         "// fix-count 2",
@@ -447,7 +447,7 @@ fn fix_overlapping_max() {
 rustc fix shim comment 5
 rustc fix shim comment 6
 [WARNING] `foo` (lib) generated 2 warnings (run `cargo fix --lib -p foo` to apply 2 suggestions)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
         "// fix-count 5",
@@ -471,7 +471,7 @@ fn fix_verification_failed() {
 [NOTE] original diagnostics will follow:
 rustc fix shim comment 1
 [WARNING] `foo` (lib) generated 1 warning (run `cargo fix --lib -p foo` to apply 1 suggestion)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
         "// fix-count 0",
@@ -498,7 +498,7 @@ fn fix_verification_failed_clippy() {
 [NOTE] original diagnostics will follow:
 rustc fix shim comment 1
 [WARNING] `foo` (lib) generated 1 warning (run `cargo clippy --fix --lib -p foo` to apply 1 suggestion)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
         "// fix-count 0",
@@ -515,7 +515,7 @@ fn warnings() {
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 rustc fix shim warning count=1
 [WARNING] `foo` (lib) generated 1 warning
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
         "// fix-count 0",
@@ -605,7 +605,7 @@ fn fix_exclusive_suggestions() {
 [FIXED] src/lib.rs (0 fixes)
 [..]
 [WARNING] `foo` (lib) generated 1 warning (run `cargo fix --lib -p foo` to apply 1 suggestion)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]],
         "// fix-count 0",

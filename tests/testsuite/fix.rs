@@ -107,7 +107,7 @@ fn fix_path_deps() {
 [FIXED] bar/src/lib.rs (1 fix)
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FIXED] src/lib.rs (1 fix)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -183,7 +183,7 @@ fn prepare_for_2018() {
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [MIGRATING] src/lib.rs from 2015 edition to 2018
 [FIXED] src/lib.rs (2 fixes)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .with_stdout_data("")
@@ -239,7 +239,7 @@ fn fix_tests_with_edition() {
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [MIGRATING] src/lib.rs from 2018 edition to 2021
 [FIXED] src/lib.rs (1 fix)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .with_stdout_data("")
@@ -285,7 +285,7 @@ fn fix_tests_with_edition_idioms() {
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FIXED] src/lib.rs (1 fix)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .with_stdout_data("")
@@ -319,7 +319,7 @@ fn local_paths() {
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [MIGRATING] src/lib.rs from 2015 edition to 2018
 [FIXED] src/lib.rs (1 fix)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .with_stdout_data("")
@@ -370,7 +370,7 @@ fn upgrade_extern_crate() {
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FIXED] src/lib.rs (1 fix)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .with_stdout_data("")
@@ -405,7 +405,7 @@ fn specify_rustflags() {
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [MIGRATING] src/lib.rs from 2015 edition to 2018
 [FIXED] src/lib.rs (1 fix)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .with_stdout_data("")
@@ -419,7 +419,7 @@ fn no_changes_necessary() {
     p.cargo("fix --allow-no-vcs")
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .with_stdout_data("")
@@ -445,7 +445,7 @@ fn fixes_extra_mut() {
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FIXED] src/lib.rs (1 fix)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .with_stdout_data("")
@@ -472,7 +472,7 @@ fn fixes_two_missing_ampersands() {
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FIXED] src/lib.rs (2 fixes)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .with_stdout_data("")
@@ -498,7 +498,7 @@ fn tricky() {
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FIXED] src/lib.rs (2 fixes)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .with_stdout_data("")
@@ -599,7 +599,7 @@ fn fix_two_files() {
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FIXED] src/bar.rs (1 fix)
 [FIXED] src/lib.rs (1 fix)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -649,7 +649,7 @@ fn fixes_missing_ampersand() {
 [FIXED] src/main.rs (1 fix)
 [FIXED] examples/foo.rs (1 fix)
 [FIXED] tests/a.rs (1 fix)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 ...
 "#]]
             .unordered(),
@@ -866,7 +866,7 @@ process requires following these steps:
 More details may be found at
 https://doc.rust-lang.org/edition-guide/editions/transitioning-an-existing-project-to-a-new-edition.html
 
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 ", next=next, latest_stable=latest_stable, prev=prev))
         .run();
 
@@ -882,7 +882,7 @@ https://doc.rust-lang.org/edition-guide/editions/transitioning-an-existing-proje
 [MIGRATING] Cargo.toml from {latest_stable} edition to {next}
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [MIGRATING] src/lib.rs from {latest_stable} edition to {next}
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 ",
             latest_stable = latest_stable,
             next = next,
@@ -917,7 +917,7 @@ fn prepare_for_latest_stable() {
 [MIGRATING] Cargo.toml from {previous} edition to {latest_stable}
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [MIGRATING] src/lib.rs from {previous} edition to {latest_stable}
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 ",
         ))
         .run();
@@ -1025,7 +1025,7 @@ fn fix_overlapping() {
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [MIGRATING] src/lib.rs from 2015 edition to 2018
 [FIXED] src/lib.rs (2 fixes)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1062,7 +1062,7 @@ fn fix_idioms() {
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FIXED] src/lib.rs (1 fix)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1240,7 +1240,7 @@ fn doesnt_rebuild_dependencies() {
         .with_stderr_data(str![[r#"
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1250,7 +1250,7 @@ fn doesnt_rebuild_dependencies() {
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1355,7 +1355,7 @@ fn only_warn_for_relevant_crates() {
 [CHECKING] a v0.1.0 ([ROOT]/foo/a)
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [MIGRATING] src/lib.rs from 2015 edition to 2018
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1598,7 +1598,7 @@ The following differences only apply when building with dev-dependencies:
 [CHECKING] bar v1.0.0
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [MIGRATING] src/lib.rs from 2018 edition to 2021
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]].unordered())
         .run();
@@ -1658,7 +1658,7 @@ fn fix_edition_2021() {
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [MIGRATING] src/lib.rs from 2018 edition to 2021
 [FIXED] src/lib.rs (1 fix)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1701,7 +1701,7 @@ fn fix_shared_cross_workspace() {
 [CHECKING] foo v0.1.0 ([ROOT]/foo/foo)
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
 [FIXED] [..]foo/src/shared.rs (2 fixes)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -2085,7 +2085,7 @@ fn fix_in_dependency() {
   = [NOTE] `#[warn(unused_variables)]` on by default
 
 [WARNING] `foo` (lib) generated 1 warning (run `cargo fix --lib -p foo` to apply 1 suggestion)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -2447,7 +2447,7 @@ fn main() {
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FIXED] src/main.rs (1 fix)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -2495,7 +2495,7 @@ edition = "2021"
 [FIXED] Cargo.toml (1 fix)
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
 [MIGRATING] src/lib.rs from 2021 edition to 2024
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -2544,7 +2544,7 @@ edition = "2021"
 [FIXED] Cargo.toml (1 fix)
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
 [MIGRATING] src/lib.rs from 2021 edition to 2024
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -2599,7 +2599,7 @@ fn main() {
 [FIXED] foo.rs (1 fix)
 [CHECKING] foo v0.0.0 ([ROOT]/foo/foo.rs)
 [MIGRATING] foo.rs from 2021 edition to 2024
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -2712,7 +2712,7 @@ default = "allow"
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
 [MIGRATING] src/lib.rs from 2021 edition to 2024
 [MIGRATING] examples/ex.rs from 2021 edition to 2024
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -2829,7 +2829,7 @@ default = "allow"
 [MIGRATING] foo/Cargo.toml from 2021 edition to 2024
 [CHECKING] foo v0.0.0 ([ROOT]/foo/foo)
 [MIGRATING] foo/src/lib.rs from 2021 edition to 2024
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -2988,7 +2988,7 @@ dep_df_false = { version = "0.1.0", default-features = false }
 [MIGRATING] pkg_df_false/src/lib.rs from 2021 edition to 2024
 [MIGRATING] pkg_df_true/src/lib.rs from 2021 edition to 2024
 [MIGRATING] pkg_default/src/lib.rs from 2021 edition to 2024
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -3085,7 +3085,7 @@ fn fix_edition_skips_old_editions() {
         .masquerade_as_nightly_cargo(&["fix-edition"])
         .with_stderr_data(str![[r#"
 [CHECKING] e2024 v0.0.0 ([ROOT]/foo/e2024)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -3112,10 +3112,10 @@ fn fix_edition_future() {
 [MIGRATING] Cargo.toml from 2024 edition to future
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
 [MIGRATING] src/lib.rs from 2024 edition to future
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
      Updated edition to future
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -3147,7 +3147,7 @@ fn script_without_frontmatter() {
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/echo.rs`
 [FIXED] echo.rs (1 fix)
 [CHECKING] echo v0.0.0 ([ROOT]/foo/echo.rs)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -3187,7 +3187,7 @@ fn main() {}",
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/echo.rs`
 [FIXED] echo.rs (1 fix)
 [CHECKING] echo v0.0.0 ([ROOT]/foo/echo.rs)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -3229,7 +3229,7 @@ fn main() {}"#,
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/echo.rs`
 [FIXED] echo.rs (1 fix)
 [CHECKING] foo v0.0.0 ([ROOT]/foo/echo.rs)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -3270,7 +3270,7 @@ fn main() {}"#,
 [HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/echo.rs`
 [FIXED] echo.rs (1 fix)
 [CHECKING] foo v0.0.0 ([ROOT]/foo/echo.rs)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -3307,7 +3307,7 @@ fn main() {}"#,
         .with_stdout_data(str![""])
         .with_stderr_data(str![[r#"
 [CHECKING] echo v0.0.0 ([ROOT]/foo/echo.rs)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

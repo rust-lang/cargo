@@ -138,7 +138,7 @@ fn clears_cache_after_fix() {
 [WARNING] function `asdf` is never used
 ...
 [WARNING] `foo` (lib) generated 1 warning
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -159,7 +159,7 @@ fn clears_cache_after_fix() {
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -168,7 +168,7 @@ fn clears_cache_after_fix() {
     p.cargo("check")
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -253,14 +253,14 @@ From [ROOTURL]/registry
 ...
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
 
     p.cargo("check")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -272,7 +272,7 @@ From [ROOTURL]/registry
 ...
 [WARNING] `bar` (lib) generated 1 warning
 [FRESH] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -306,7 +306,7 @@ fn replay_non_json() {
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 line 1
 line 2
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -316,7 +316,7 @@ line 2
         .with_stderr_data(str![[r#"
 line 1
 line 2
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -365,7 +365,7 @@ fn caching_large_output() {
             "\
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 {}[WARNING] `foo` (lib) generated 250 warnings
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 ",
             expected
         ))
@@ -376,7 +376,7 @@ fn caching_large_output() {
         .with_stderr_data(&format!(
             "\
 {}[WARNING] `foo` (lib) generated 250 warnings
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 ",
             expected
         ))
@@ -402,7 +402,7 @@ WRAPPER CALLED: rustc --crate-name foo --edition=2015 src/lib.rs [..]
 [WARNING] function `unused_func` is never used
 ...
 [WARNING] `foo` (lib) generated 1 warning
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -415,7 +415,7 @@ WRAPPER CALLED: rustc --crate-name foo --edition=2015 src/lib.rs [..]
 [WARNING] function `unused_func` is never used
 ...
 [WARNING] `foo` (lib) generated 1 warning
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .with_stdout_data("")
@@ -429,7 +429,7 @@ WRAPPER CALLED: rustc --crate-name foo --edition=2015 src/lib.rs [..]
 WRAPPER CALLED: rustc [..]
 ...
 [WARNING] `foo` (lib) generated 1 warning
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .with_stdout_data("")
@@ -442,7 +442,7 @@ WRAPPER CALLED: rustc [..]
 [WARNING] function `unused_func` is never used
 ...
 [WARNING] `foo` (lib) generated 1 warning
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .with_stdout_data("")
@@ -466,7 +466,7 @@ fn wacky_hashless_fingerprint() {
 [WARNING] unused variable: `unused`
 ...
 [WARNING] `foo` (bin "a") generated 1 warning[..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

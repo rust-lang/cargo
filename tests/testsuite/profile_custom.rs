@@ -336,7 +336,7 @@ fn overrides_with_custom() {
 [RUNNING] `rustc --crate-name xxx [..] -C codegen-units=5 [..]`
 [RUNNING] `rustc --crate-name yyy [..] -C codegen-units=3 [..]`
 [RUNNING] `rustc --crate-name foo [..] -C codegen-units=7 [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -353,7 +353,7 @@ fn overrides_with_custom() {
 [RUNNING] `rustc --crate-name xxx [..] -C codegen-units=5 [..]`
 [RUNNING] `rustc --crate-name yyy [..] -C codegen-units=6 [..]`
 [RUNNING] `rustc --crate-name foo [..] -C codegen-units=2 [..]`
-[FINISHED] `other` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `other` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -466,7 +466,7 @@ fn clean_custom_dirname() {
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -666,7 +666,7 @@ fn legacy_rustc() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]-C codegen-units=3[..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -765,7 +765,7 @@ fn request_test_profile() {
     p.cargo("check --profile test")
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -795,7 +795,7 @@ fn debug_inherits_dev() {
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]`
-[FINISHED] `debug` profile [optimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `debug` profile [optimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .with_stderr_does_not_contain("[..] -C debuginfo=0[..]")
@@ -825,7 +825,7 @@ fn change_debug_inheritance() {
     p.cargo("check --profile=debug")
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `debug` profile [optimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `debug` profile [optimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -839,7 +839,7 @@ fn dev_default_debuginfo_nightly() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=line-tables-only [..]-C metadata=[..] --out-dir [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

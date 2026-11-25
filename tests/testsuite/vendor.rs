@@ -1459,7 +1459,7 @@ fn git_complex() {
 [RUNNING] `rustc [..] [ROOT]/foo/vendor/a/src/lib.rs [..]`
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustc [..] src/lib.rs [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -1770,7 +1770,7 @@ fn config_instructions_works() {
 [RUNNING] `rustc [..] [ROOT]/foo/vendor/dep/src/lib.rs [..]`
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustc [..] src/lib.rs [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [CHECKING] gitdep v0.5.0 ([ROOTURL]/gitdep#[..])
 
 "#]]
@@ -1962,7 +1962,7 @@ fn vendor_crate_with_ws_inherit() {
 [RUNNING] `rustc [..] [ROOT]/foo/vendor/bar/src/lib.rs [..]`
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustc [..] src/lib.rs [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

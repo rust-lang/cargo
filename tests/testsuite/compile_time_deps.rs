@@ -58,7 +58,7 @@ fn non_comp_time_dep() {
         .masquerade_as_nightly_cargo(&["compile-time-deps"])
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to highest compatible version
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -155,7 +155,7 @@ fn proc_macro_dep() {
         .with_stderr_data(str![[r#"
 [COMPILING] baz v0.0.1 ([ROOT]/foo/baz)
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -166,7 +166,7 @@ fn proc_macro_dep() {
         .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["compile-time-deps"])
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -179,7 +179,7 @@ fn proc_macro_dep() {
         .with_stderr_data(str![[r#"
 [COMPILING] baz v0.0.1 ([ROOT]/foo/baz)
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -250,7 +250,7 @@ fn build_dep() {
 [COMPILING] baz v0.0.1 ([ROOT]/foo/bar/baz)
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -324,7 +324,7 @@ fn indirect_comp_time_dep() {
 [LOCKING] 2 packages to highest compatible versions
 [COMPILING] baz v0.0.1 ([ROOT]/foo/bar/baz)
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -387,7 +387,7 @@ fn tests_target() {
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .arg("-Zunstable-options")
@@ -400,7 +400,7 @@ fn tests_target() {
         .arg("-Zunstable-options")
         .masquerade_as_nightly_cargo(&["compile-time-deps"])
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

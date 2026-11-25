@@ -51,7 +51,7 @@ fn unused_dep_normal() {
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused`
 [WARNING] `foo` (manifest) generated 1 warning
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -109,7 +109,7 @@ fn unused_dep_build() {
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused`
 [WARNING] `foo` (manifest) generated 1 warning
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -160,7 +160,7 @@ fn unused_dep_build_no_build_rs() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] unused v0.1.0 (registry `dummy-registry`)
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -228,7 +228,7 @@ fn unused_dep_lib_bins() {
 [CHECKING] unused v0.1.0
 [CHECKING] lib_used v0.1.0
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [WARNING] unused dependency `unused`
  --> Cargo.toml:9:13
   |
@@ -246,21 +246,21 @@ fn unused_dep_lib_bins() {
 
     p.cargo("check --lib")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
 
     p.cargo("check --bins")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
 
     p.cargo("check --bin foo")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -277,7 +277,7 @@ fn unused_dep_lib_bins() {
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused`
 [WARNING] `foo` (manifest) generated 1 warning
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -298,7 +298,7 @@ fn unused_dep_lib_bins() {
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused`
 [WARNING] `foo` (manifest) generated 1 warning
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [EXECUTABLE] unittests src/lib.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
 [EXECUTABLE] unittests src/bin/bar.rs (target/debug/build/foo/[HASH]/out/bar-[HASH][EXE])
 [EXECUTABLE] unittests src/bin/foo.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
@@ -383,7 +383,7 @@ fn unused_dep_static_lib_only() {
    = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused`
 [WARNING] `foo` (manifest) generated 1 warning
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -392,21 +392,21 @@ fn unused_dep_static_lib_only() {
 
     p.cargo("check --lib")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
 
     p.cargo("check --bins")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
 
     p.cargo("check --bin foo")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -423,7 +423,7 @@ fn unused_dep_static_lib_only() {
    = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused`
 [WARNING] `foo` (manifest) generated 1 warning
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -435,7 +435,7 @@ fn unused_dep_static_lib_only() {
 [COMPILING] bins_used v0.1.0
 [COMPILING] unused v0.1.0
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [EXECUTABLE] unittests src/lib.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
 [EXECUTABLE] unittests src/bin/bar.rs (target/debug/build/foo/[HASH]/out/bar-[HASH][EXE])
 [EXECUTABLE] unittests src/bin/foo.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
@@ -504,7 +504,7 @@ fn unused_dep_build_with_used_dep_normal() {
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused_build`
 [WARNING] `foo` (manifest) generated 1 warning
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -565,7 +565,7 @@ fn unused_dep_normal_but_implicit_used_dep_dev() {
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `used_dev`
 [WARNING] `foo` (manifest) generated 1 warning
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -583,7 +583,7 @@ fn unused_dep_normal_but_implicit_used_dep_dev() {
 [HELP] consider removing the dependency on `used_dev`
 [HELP] to still use for development builds, move to `dev-dependencies`
 [WARNING] `foo` (manifest) generated 1 warning
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -647,7 +647,7 @@ fn unused_dep_normal_but_explicit_used_dep_dev() {
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `used_once`
 [WARNING] `foo` (manifest) generated 1 warning
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -705,7 +705,7 @@ fn unused_dep_dev_but_explicit_used_dep_normal() {
 [DOWNLOADED] used_once v0.1.0 (registry `dummy-registry`)
 [CHECKING] used_once v0.1.0
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -751,7 +751,7 @@ fn optional_dependency() {
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to highest compatible versions
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -765,7 +765,7 @@ fn optional_dependency() {
 [CHECKING] unused v0.1.0
 [CHECKING] used v0.1.0
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [WARNING] unused dependency `unused`
  --> Cargo.toml:9:13
   |
@@ -826,7 +826,7 @@ fn unused_dep_renamed() {
 [CHECKING] baz v0.2.0
 [CHECKING] bar v0.1.0
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [WARNING] unused dependency `baz`
  --> Cargo.toml:9:13
   |
@@ -890,7 +890,7 @@ fn warning_replay() {
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused`
 [WARNING] `foo` (manifest) generated 1 warning
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -906,7 +906,7 @@ fn warning_replay() {
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused`
 [WARNING] `foo` (manifest) generated 1 warning
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -959,7 +959,7 @@ fn unused_dep_target() {
 [CHECKING] unused v0.1.0
 [CHECKING] used v0.1.0
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [WARNING] unused dependency `unused`
  --> Cargo.toml:9:13
   |
@@ -1050,7 +1050,7 @@ fn unused_dev_deps() {
 [UPDATING] `dummy-registry` index
 [LOCKING] 6 packages to highest compatible versions
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1073,7 +1073,7 @@ fn unused_dev_deps() {
 [CHECKING] unit_used v0.1.0
 [CHECKING] test_used v0.1.0
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -1091,7 +1091,7 @@ fn unused_dev_deps() {
 [COMPILING] bench_used v0.1.0
 [COMPILING] doctest_used v0.1.0
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [EXECUTABLE] unittests src/lib.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
 [EXECUTABLE] tests/hello.rs (target/debug/build/foo/[HASH]/out/hello-[HASH][EXE])
 
@@ -1104,7 +1104,7 @@ fn unused_dev_deps() {
     p.cargo("test --no-run --all-targets")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [EXECUTABLE] unittests src/lib.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
 [EXECUTABLE] tests/hello.rs (target/debug/build/foo/[HASH]/out/hello-[HASH][EXE])
 [EXECUTABLE] benches/hello.rs (target/debug/build/foo/[HASH]/out/hello-[HASH][EXE])
@@ -1117,7 +1117,7 @@ fn unused_dev_deps() {
     // the benches
     p.cargo("test")
         .with_stderr_data(str![[r#"
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] unittests src/lib.rs (target/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
 [RUNNING] tests/hello.rs (target/debug/build/foo/[HASH]/out/hello-[HASH][EXE])
 [DOCTEST] foo
@@ -1274,7 +1274,7 @@ fn package_selection() {
 [HELP] consider removing the dependency on `unused_foo`
 [WARNING] `bar` (manifest) generated 1 warning
 [WARNING] `foo` (manifest) generated 3 warnings
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -1307,7 +1307,7 @@ fn package_selection() {
   |
 [HELP] consider removing the dependency on `unused_foo`
 [WARNING] `foo` (manifest) generated 3 warnings
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -1326,7 +1326,7 @@ fn package_selection() {
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused_bar`
 [WARNING] `bar` (manifest) generated 1 warning
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -1387,7 +1387,7 @@ fn pinned_transitive_dep() {
 [CHECKING] transitive v0.1.1
 [CHECKING] intermediate v0.1.0
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -1461,7 +1461,7 @@ pub fn fun() -> &'static str {
 [CHECKING] transitive v0.1.1
 [CHECKING] intermediate v0.1.0
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -1517,7 +1517,7 @@ fn allow_rustflags() {
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused`
 [WARNING] `foo` (manifest) generated 1 warning
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1571,7 +1571,7 @@ fn allow_attribute() {
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused`
 [WARNING] `foo` (manifest) generated 1 warning
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1677,7 +1677,7 @@ fn deny_rustflags() {
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused`
 [WARNING] `foo` (manifest) generated 1 warning
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1731,7 +1731,7 @@ fn deny_attribute() {
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused`
 [WARNING] `foo` (manifest) generated 1 warning
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1785,7 +1785,7 @@ fn forbid_rustflags() {
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused`
 [WARNING] `foo` (manifest) generated 1 warning
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1839,7 +1839,7 @@ fn forbid_attribute() {
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused`
 [WARNING] `foo` (manifest) generated 1 warning
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1891,7 +1891,7 @@ unused_dependencies = "warn"
   = [NOTE] `cargo::unused_dependencies` is set to `warn` in `[lints]`
 [HELP] consider removing the dependency on `unused`
 [WARNING] `foo` (manifest) generated 1 warning
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

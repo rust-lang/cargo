@@ -559,7 +559,7 @@ fn cross_tests() {
         .arg(&target)
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] unittests src/lib.rs (target/[ALT_TARGET]/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
 [RUNNING] unittests src/bin/bar.rs (target/[ALT_TARGET]/debug/build/foo/[HASH]/out/bar-[HASH][EXE])
 [DOCTEST] foo
@@ -670,7 +670,7 @@ fn cross_with_a_build_script() {
 [RUNNING] `rustc [..] build.rs [..] --out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out[..]
 [RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/build_script_build`
 [RUNNING] `rustc [..] src/main.rs [..] --target [ALT_TARGET] [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -781,7 +781,7 @@ fn build_script_needed_for_host_and_target() {
 [RUNNING] `rustc [..] build.rs [..] --out-dir [ROOT]/foo/target/debug/build/foo/[HASH]/out [..]-L [ROOT]/foo/link-[HOST_TARGET]`
 [RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/build_script_build`
 [RUNNING] `rustc [..] src/main.rs [..] --out-dir [ROOT]/foo/target/[ALT_TARGET]/debug/build/foo/[HASH]/out --target [ALT_TARGET] [..]-L [ROOT]/foo/link-[ALT_TARGET]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]].unordered())
         .run();
@@ -953,7 +953,7 @@ fn build_script_with_platform_specific_dependencies() {
 [RUNNING] `rustc [..] build.rs [..]`
 [RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/build_script_build`
 [RUNNING] `rustc [..] src/lib.rs [..] --target [ALT_TARGET] [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1198,7 +1198,7 @@ fn cross_test_dylib() {
 [LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] unittests src/lib.rs (target/[ALT_TARGET]/debug/build/foo/[HASH]/out/foo-[HASH][EXE])
 [RUNNING] tests/test.rs (target/[ALT_TARGET]/debug/build/foo/[HASH]/out/test-[HASH][EXE])
 
@@ -1258,7 +1258,7 @@ fn doctest_xcompile_linker() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..] --out-dir [ROOT]/foo/target/[ALT_TARGET]/debug/build/foo/[HASH]/out --target [ALT_TARGET] [..]
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [DOCTEST] foo
 [RUNNING] `rustdoc [..] src/lib.rs [..]
 [ERROR] doctest failed, to rerun pass `--doc`
@@ -1296,7 +1296,7 @@ fn always_emit_warnings_as_warnings_when_learning_target_info() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]-Awarnings[..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

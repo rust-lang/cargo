@@ -69,7 +69,7 @@ fn empty_multiple_build_script_project() {
         .with_status(0)
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -220,7 +220,7 @@ fn verify_package_multiple_build_scripts() {
 [PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.1.0 ([ROOT]/foo)
 [COMPILING] foo v0.1.0 ([ROOT]/foo/target/package/foo-0.1.0)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -742,7 +742,7 @@ fn bar() {
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/build_script_build1`
 [RUNNING] `rustc --crate-name foo --edition=2024 src/main.rs [..] --crate-type bin [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -758,7 +758,7 @@ fn bar() {
 [RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/build_script_build[..]`
 [RUNNING] `[ROOT]/foo/target/debug/build/foo/[HASH]/out/build_script_build[..]`
 [RUNNING] `rustc --crate-name foo --edition=2024 src/main.rs [..] --crate-type bin [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

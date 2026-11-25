@@ -41,7 +41,7 @@ fn profile_override_basic() {
 [RUNNING] `rustc --crate-name bar [..] -C opt-level=3 [..]`
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..] -C opt-level=1 [..]`
-[FINISHED] `dev` profile [optimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [optimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -88,7 +88,7 @@ fn profile_override_warnings() {
 [WARNING] profile package spec `no-suggestion` in profile `dev` did not match any packages
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]).run();
 }
@@ -246,7 +246,7 @@ fn profile_override_hierarchy() {
 [RUNNING] `rustc --crate-name m2 --edition=2015 m2/src/lib.rs [..] --crate-type lib --emit=[..]link[..]-C codegen-units=2 [..]`
 [COMPILING] m1 v0.0.1 ([ROOT]/foo/m1)
 [RUNNING] `rustc --crate-name m1 --edition=2015 m1/src/lib.rs [..] --crate-type lib --emit=[..]link[..]-C codegen-units=1 [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]].unordered())
         .run();
@@ -520,7 +520,7 @@ fn no_warning_ws() {
     p.cargo("check -p b")
         .with_stderr_data(str![[r#"
 [CHECKING] b v0.1.0 ([ROOT]/foo/b)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

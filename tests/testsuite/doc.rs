@@ -41,7 +41,7 @@ fn simple() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]])
@@ -80,7 +80,7 @@ fn doc_twice() {
     p.cargo("doc")
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]])
@@ -88,7 +88,7 @@ fn doc_twice() {
 
     p.cargo("doc")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]])
@@ -123,7 +123,7 @@ fn doc_deps() {
 [DOCUMENTING] bar v0.0.1 ([ROOT]/foo/bar)
 [CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]]
@@ -146,7 +146,7 @@ fn doc_deps() {
     // Make sure it doesn't recompile.
     p.cargo("doc")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]])
@@ -183,7 +183,7 @@ fn doc_no_deps() {
 [LOCKING] 1 package to highest compatible version
 [CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]])
@@ -321,7 +321,7 @@ fn doc_multiple_targets_same_name() {
  = [NOTE] this is a known bug where multiple crates with the same name use the same path; see <https://github.com/rust-lang/cargo/issues/6313>
 [DOCUMENTING] bar v0.1.0 ([ROOT]/foo/bar)
 [DOCUMENTING] foo v0.1.0 ([ROOT]/foo/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo_lib/index.html and 1 other file
 
 "#]].unordered())
@@ -437,7 +437,7 @@ fn doc_lib_bin_same_name_documents_lib() {
     p.cargo("doc")
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]])
@@ -472,7 +472,7 @@ fn doc_lib_bin_same_name_documents_lib_when_requested() {
     p.cargo("doc --lib")
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]])
@@ -494,7 +494,7 @@ fn doc_lib_bin_same_name_with_dash() {
     p.cargo("doc")
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo-bar v1.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo_bar/index.html
 
 "#]])
@@ -535,7 +535,7 @@ fn doc_lib_bin_same_name_documents_named_bin_when_requested() {
  = [NOTE] this is a known bug where multiple crates with the same name use the same path; see <https://github.com/rust-lang/cargo/issues/6313>
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]].unordered())
@@ -577,7 +577,7 @@ fn doc_lib_bin_same_name_documents_bins_when_requested() {
  = [NOTE] this is a known bug where multiple crates with the same name use the same path; see <https://github.com/rust-lang/cargo/issues/6313>
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]].unordered())
@@ -623,7 +623,7 @@ fn doc_lib_bin_example_same_name_documents_named_example_when_requested() {
             str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/ex1/index.html
 
 "#]]
@@ -680,7 +680,7 @@ fn doc_lib_bin_example_same_name_documents_examples_when_requested() {
             str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/ex1/index.html and 1 other file
 
 "#]]
@@ -743,7 +743,7 @@ fn doc_dash_p() {
 [DOCUMENTING] b v0.0.1 ([ROOT]/foo/b)
 [CHECKING] b v0.0.1 ([ROOT]/foo/b)
 [DOCUMENTING] a v0.0.1 ([ROOT]/foo/a)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/a/index.html
 
 "#]]
@@ -771,7 +771,7 @@ fn doc_all_exclude() {
     p.cargo("doc --workspace --exclude baz")
         .with_stderr_data(str![[r#"
 [DOCUMENTING] bar v0.1.0 ([ROOT]/foo/bar)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/bar/index.html
 
 "#]])
@@ -797,7 +797,7 @@ fn doc_all_exclude_glob() {
     p.cargo("doc --workspace --exclude '*z'")
         .with_stderr_data(str![[r#"
 [DOCUMENTING] bar v0.1.0 ([ROOT]/foo/bar)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/bar/index.html
 
 "#]])
@@ -1084,7 +1084,7 @@ fn features() {
 [CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
 [DOCUMENTING] bar v0.0.1 ([ROOT]/foo/bar)
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]]
@@ -1101,7 +1101,7 @@ fn features() {
 [CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
 [DOCUMENTING] bar v0.0.1 ([ROOT]/foo/bar)
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]]
@@ -1116,7 +1116,7 @@ fn features() {
             str![[r#"
 [DOCUMENTING] bar v0.0.1 ([ROOT]/foo/bar)
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]]
@@ -1187,7 +1187,7 @@ fn rerun_bin_doc_when_lib_rebuilt_after_lib_doc() {
 [DIRTY] foo v0.0.1 ([ROOT]/foo): the dependency `foo` was rebuilt ([TIME_DIFF_AFTER_LAST_BUILD])
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustdoc [..]--crate-name cli [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/cli/index.html
 
 "#]]
@@ -1200,7 +1200,7 @@ fn rerun_bin_doc_when_lib_rebuilt_after_lib_doc() {
             str![[r#"
 [FRESH] bar v0.0.1 ([ROOT]/foo/bar)
 [FRESH] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/cli/index.html
 
 "#]]
@@ -1284,7 +1284,7 @@ fn doc_all_workspace() {
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
 [DOCUMENTING] bar v0.1.0 ([ROOT]/foo/bar)
 [DOCUMENTING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/bar/index.html and 1 other file
 
 "#]]
@@ -1325,7 +1325,7 @@ fn doc_all_workspace_verbose() {
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
 [RUNNING] `rustc [..]
 [RUNNING] `rustdoc [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/bar/index.html
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
@@ -1357,7 +1357,7 @@ fn doc_all_virtual_manifest() {
             str![[r#"
 [DOCUMENTING] baz v0.1.0 ([ROOT]/foo/baz)
 [DOCUMENTING] bar v0.1.0 ([ROOT]/foo/bar)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/bar/index.html and 1 other file
 
 "#]]
@@ -1387,7 +1387,7 @@ fn doc_virtual_manifest_all_implied() {
         .with_stderr_data(
             str![[r#"
 [GENERATED] [ROOT]/foo/target/doc/bar/index.html and 1 other file
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [DOCUMENTING] bar v0.1.0 ([ROOT]/foo/bar)
 [DOCUMENTING] baz v0.1.0 ([ROOT]/foo/baz)
 
@@ -1416,7 +1416,7 @@ fn doc_virtual_manifest_one_project() {
     p.cargo("doc -p bar")
         .with_stderr_data(str![[r#"
 [DOCUMENTING] bar v0.1.0 ([ROOT]/foo/bar)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/bar/index.html
 
 "#]])
@@ -1442,7 +1442,7 @@ fn doc_virtual_manifest_glob() {
     p.cargo("doc -p '*z'")
         .with_stderr_data(str![[r#"
 [DOCUMENTING] baz v0.1.0 ([ROOT]/foo/baz)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/baz/index.html
 
 "#]])
@@ -1489,7 +1489,7 @@ fn doc_all_member_dependency_same_name() {
 [DOCUMENTING] bar v0.1.0
 [CHECKING] bar v0.1.0
 [DOCUMENTING] bar v0.1.0 ([ROOT]/foo/bar)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/bar/index.html
 
 "#]].unordered())
@@ -1519,7 +1519,7 @@ fn doc_workspace_open_help_message() {
             str![[r#"
 [DOCUMENTING] foo v0.1.0 ([ROOT]/foo/foo)
 [DOCUMENTING] bar v0.1.0 ([ROOT]/foo/bar)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [OPENING] [ROOT]/foo/target/doc/bar/index.html
 
 "#]]
@@ -1551,7 +1551,7 @@ fn doc_extern_map_local() {
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustdoc --edition=2015 --crate-type lib --crate-name foo src/lib.rs [..]--crate-version 0.1.0`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [OPENING] [ROOT]/foo/target/doc/foo/index.html
 
 "#]])
@@ -1581,7 +1581,7 @@ fn open_no_doc_crate() {
         .env("BROWSER", "do_not_run_me")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [ERROR] cannot open specified crate's documentation: no documentation generated
 
 "#]])
@@ -1616,7 +1616,7 @@ fn doc_workspace_open_different_library_and_package_names() {
         .env("BROWSER", tools::echo())
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.1.0 ([ROOT]/foo/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [OPENING] [ROOT]/foo/target/doc/foolib/index.html
 
 "#]])
@@ -1676,7 +1676,7 @@ fn doc_workspace_open_binary() {
         .env("BROWSER", tools::echo())
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.1.0 ([ROOT]/foo/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [OPENING] [ROOT]/foo/target/doc/foobin/index.html
 
 "#]])
@@ -1717,7 +1717,7 @@ fn doc_workspace_open_binary_and_library() {
             str![[r#"
 [DOCUMENTING] foo v0.1.0 ([ROOT]/foo/foo)
 [CHECKING] foo v0.1.0 ([ROOT]/foo/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [OPENING] [ROOT]/foo/target/doc/foolib/index.html
 
 "#]]
@@ -1869,7 +1869,7 @@ fn doc_private_ws() {
 [RUNNING] `rustdoc [..] b/src/lib.rs [..]--document-private-items[..]
 [WARNING] `b` (lib) generated 1 warning
 [RUNNING] `rustdoc [..] b/src/bin/b-cli.rs [..]--document-private-items[..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/a/index.html
 [GENERATED] [ROOT]/foo/target/doc/b/index.html
 [GENERATED] [ROOT]/foo/target/doc/b_cli/index.html
@@ -1922,7 +1922,7 @@ fn doc_cap_lints() {
 [DOCUMENTING] a v0.5.0 ([..])
 [CHECKING] a v0.5.0 ([..])
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]]
@@ -2223,7 +2223,7 @@ fn bin_private_items() {
     p.cargo("doc")
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]])
@@ -2288,7 +2288,7 @@ fn bin_private_items_deps() {
 [DOCUMENTING] bar v0.0.1 ([ROOT]/foo/bar)
 [CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]]
@@ -2325,7 +2325,7 @@ fn crate_versions() {
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v1.2.4 ([ROOT]/foo)
 [RUNNING] `rustdoc --edition=2015 --crate-type lib --crate-name foo src/lib.rs [..]--crate-version 1.2.4`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]])
@@ -2747,7 +2747,7 @@ fn doc_fingerprint_unusual_behavior() {
     p.cargo("doc")
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]])
@@ -2769,7 +2769,7 @@ fn doc_fingerprint_unusual_behavior() {
         .masquerade_as_nightly_cargo(&["skip-rustdoc-fingerprint"])
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]])
@@ -2811,7 +2811,7 @@ fn lib_before_bin() {
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustdoc --edition=2015 --crate-type lib --crate-name foo src/lib.rs [..]
 [RUNNING] `rustdoc --edition=2015 --crate-type bin --crate-name somebin src/bin/somebin.rs [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 [GENERATED] [ROOT]/foo/target/doc/somebin/index.html
 
@@ -2865,7 +2865,7 @@ fn doc_lib_false() {
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [DOCUMENTING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/some_bin/index.html
 
 "#]])
@@ -2914,7 +2914,7 @@ fn doc_lib_false_dep() {
 [LOCKING] 1 package to highest compatible version
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
 [DOCUMENTING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]])
@@ -2944,7 +2944,7 @@ fn link_to_private_item() {
     p.cargo("doc")
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]])
@@ -3022,7 +3022,7 @@ fn rebuild_tracks_target_src_outside_package_root() {
         .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.0.0 ([ROOT]/parent/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/parent/foo/target/doc/foo/index.html
 
 "#]])
@@ -3040,7 +3040,7 @@ fn rebuild_tracks_target_src_outside_package_root() {
 [DIRTY] foo v0.0.0 ([ROOT]/parent/foo): the file `../lib.rs` has changed ([TIME_DIFF_AFTER_LAST_BUILD])
 [DOCUMENTING] foo v0.0.0 ([ROOT]/parent/foo)
 [RUNNING] `rustdoc [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/parent/foo/target/doc/foo/index.html
 
 "#]])
@@ -3063,7 +3063,7 @@ fn rebuild_tracks_include_str() {
         .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.5.0 ([ROOT]/parent/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/parent/foo/target/doc/foo/index.html
 
 "#]])
@@ -3081,7 +3081,7 @@ fn rebuild_tracks_include_str() {
 [DIRTY] foo v0.5.0 ([ROOT]/parent/foo): the file `src/../../README` has changed ([TIME_DIFF_AFTER_LAST_BUILD])
 [DOCUMENTING] foo v0.5.0 ([ROOT]/parent/foo)
 [RUNNING] `rustdoc [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/parent/foo/target/doc/foo/index.html
 
 "#]])
@@ -3104,7 +3104,7 @@ fn rebuild_tracks_path_attr() {
         .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.5.0 ([ROOT]/parent/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/parent/foo/target/doc/foo/index.html
 
 "#]])
@@ -3122,7 +3122,7 @@ fn rebuild_tracks_path_attr() {
 [DIRTY] foo v0.5.0 ([ROOT]/parent/foo): the file `src/../../bar.rs` has changed ([TIME_DIFF_AFTER_LAST_BUILD])
 [DOCUMENTING] foo v0.5.0 ([ROOT]/parent/foo)
 [RUNNING] `rustdoc [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/parent/foo/target/doc/foo/index.html
 
 "#]])
@@ -3146,7 +3146,7 @@ fn rebuild_tracks_env() {
         .masquerade_as_nightly_cargo(&["rustdoc-depinfo"])
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]])
@@ -3163,7 +3163,7 @@ fn rebuild_tracks_env() {
 [DIRTY] foo v0.5.0 ([ROOT]/foo): the environment variable __RUSTDOC_INJECTED changed
 [DOCUMENTING] foo v0.5.0 ([ROOT]/foo)
 [RUNNING] `rustdoc [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]])
@@ -3208,7 +3208,7 @@ fn rebuild_tracks_env_in_dep() {
 [CHECKING] bar v0.1.0
 [DOCUMENTING] bar v0.1.0
 [DOCUMENTING] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]]
@@ -3234,7 +3234,7 @@ fn rebuild_tracks_env_in_dep() {
 [DIRTY] foo v0.0.0 ([ROOT]/foo): the dependency `bar` was rebuilt
 [DOCUMENTING] foo v0.0.0 ([ROOT]/foo)
 [RUNNING] `rustdoc [..]--crate-name foo [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]]
@@ -3264,7 +3264,7 @@ fn rebuild_tracks_checksum() {
         .masquerade_as_nightly_cargo(&["rustdoc-depinfo", "checksum-freshness"])
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.5.0 ([ROOT]/parent/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/parent/foo/target/doc/foo/index.html
 
 "#]])
@@ -3286,7 +3286,7 @@ fn rebuild_tracks_checksum() {
 [DIRTY] foo v0.5.0 ([ROOT]/parent/foo): file size changed (16 != 15) for `src/../../README`
 [DOCUMENTING] foo v0.5.0 ([ROOT]/parent/foo)
 [RUNNING] `rustdoc [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/parent/foo/target/doc/foo/index.html
 
 "#]])
@@ -3345,7 +3345,7 @@ fn mergeable_info_with_deps() {
 [RUNNING] `rustc --crate-name dep [..]`
 [DOCUMENTING] foo v0.0.0 ([ROOT]/foo)
 [RUNNING] `rustdoc [..]--crate-name foo [..]--write-doc-meta-dir=[ROOT]/foo/target/debug/build/foo/[HASH]/out[..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [MERGING] 2 docs for host
 [RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --edition=2015 --read-doc-meta-dir=[ROOT]/foo/target/debug/build/dep/[HASH]/out --read-doc-meta-dir=[ROOT]/foo/target/debug/build/foo/[HASH]/out`
 [FINISHED] documentation merge in [ELAPSED]s
@@ -3392,7 +3392,7 @@ fn mergeable_info_with_rustdocflags() {
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.5.0 ([ROOT]/foo)
 [RUNNING] `rustdoc [..]--crate-name foo [..]-o [ROOT]/foo/target/doc [..]-Zunstable-options --write-doc-meta-dir=[ROOT]/foo/target/debug/build/foo/[HASH]/out [..]--markdown-playground-url=example.com --crate-version 0.5.0`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [MERGING] 1 doc for host
 [RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --edition=2015 --markdown-playground-url=example.com --read-doc-meta-dir=[ROOT]/foo/target/debug/build/foo/[HASH]/out`
 [FINISHED] documentation merge in [ELAPSED]s
@@ -3431,7 +3431,7 @@ fn mergeable_info_no_deps() {
 [RUNNING] `rustc --crate-name dep --edition=2015 [..]`
 [DOCUMENTING] foo v0.0.0 ([ROOT]/foo)
 [RUNNING] `rustdoc [..]--crate-name foo [..]--write-doc-meta-dir=[ROOT]/foo/target/debug/build/foo/[HASH]/out [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [MERGING] 1 doc for host
 [RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --edition=2015 --read-doc-meta-dir=[ROOT]/foo/target/debug/build/foo/[HASH]/out`
 [FINISHED] documentation merge in [ELAPSED]s
@@ -3502,7 +3502,7 @@ fn mergeable_info_workspace() {
 [RUNNING] `rustc --crate-name dep [..]`
 [DOCUMENTING] foo v0.0.0 ([ROOT]/foo/foo)
 [RUNNING] `rustdoc [..]--crate-name foo [..]--write-doc-meta-dir=[ROOT]/foo/target/debug/build/foo/[HASH]/out [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [MERGING] 3 docs for host
 [RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --edition=2015 --read-doc-meta-dir=[ROOT]/foo/target/debug/build/bar/[HASH]/out --read-doc-meta-dir=[ROOT]/foo/target/debug/build/dep/[HASH]/out --read-doc-meta-dir=[ROOT]/foo/target/debug/build/foo/[HASH]/out`
 [FINISHED] documentation merge in [ELAPSED]s
@@ -3567,7 +3567,7 @@ fn mergeable_info_multi_targets() {
 [DOCUMENTING] foo v0.0.0 ([ROOT]/foo)
 [RUNNING] `rustdoc [..]--crate-name foo src/lib.rs --target [HOST_TARGET] [..]--write-doc-meta-dir=[ROOT]/foo/target/[HOST_TARGET]/debug/build/foo/[HASH]/out [..]`
 [RUNNING] `rustdoc [..]--crate-name foo src/lib.rs --target [ALT_TARGET] [..]--write-doc-meta-dir=[ROOT]/foo/target/[ALT_TARGET]/debug/build/foo/[HASH]/out [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [MERGING] 1 doc for [ALT_TARGET]
 [RUNNING] `rustdoc -o [ROOT]/foo/target/[ALT_TARGET]/doc -Zunstable-options --edition=2015 --read-doc-meta-dir=[ROOT]/foo/target/[ALT_TARGET]/debug/build/foo/[HASH]/out`
 [MERGING] 1 doc for [HOST_TARGET]
@@ -3639,7 +3639,7 @@ fn mergeable_info_rebuild_detection() {
             str![[r#"
 [DOCUMENTING] foo v0.0.0 ([ROOT]/foo)
 [RUNNING] `rustdoc [..]--crate-name foo [..]--write-doc-meta-dir=[ROOT]/foo/target/debug/build/foo/[HASH]/out [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [MERGING] 1 doc for host
 [RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --edition=2015 --read-doc-meta-dir=[ROOT]/foo/target/debug/build/foo/[HASH]/out`
 [FINISHED] documentation merge in [ELAPSED]s
@@ -3671,7 +3671,7 @@ fn mergeable_info_rebuild_detection() {
         .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
         .with_stderr_data(str![[r#"
 [FRESH] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [FRESH] doc-merge for host
 [FINISHED] documentation merge in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
@@ -3705,7 +3705,7 @@ fn mergeable_info_rebuild_detection() {
 [DIRTY] foo v0.0.0 ([ROOT]/foo): the precalculated components changed
 [DOCUMENTING] foo v0.0.0 ([ROOT]/foo)
 [RUNNING] `rustdoc [..]--crate-name foo [..]--write-doc-meta-dir=[ROOT]/foo/target/debug/build/foo/[HASH]/out [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [MERGING] 1 doc for host
 [RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --edition=2015 --read-doc-meta-dir=[ROOT]/foo/target/debug/build/foo/[HASH]/out`
 [FINISHED] documentation merge in [ELAPSED]s
@@ -3721,7 +3721,7 @@ fn mergeable_info_rebuild_detection() {
         .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
         .with_stderr_data(str![[r#"
 [FRESH] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [FRESH] doc-merge for host
 [FINISHED] documentation merge in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
@@ -3735,7 +3735,7 @@ fn mergeable_info_rebuild_detection() {
         .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info"])
         .with_stderr_data(str![[r#"
 [FRESH] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [FRESH] doc-merge for host
 [FINISHED] documentation merge in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
@@ -3783,7 +3783,7 @@ fn mergeable_info_rebuild_with_depinfo() {
             str![[r#"
 [DOCUMENTING] foo v0.0.0 ([ROOT]/foo)
 [RUNNING] `rustdoc [..]--crate-name foo [..]--emit=html-non-static-files,dep-info=[..] --write-doc-meta-dir=[ROOT]/foo/target/debug/build/foo/[HASH]/out [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [MERGING] 1 doc for host
 [RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --edition=2015 --read-doc-meta-dir=[ROOT]/foo/target/debug/build/foo/[HASH]/out`
 [FINISHED] documentation merge in [ELAPSED]s
@@ -3816,7 +3816,7 @@ fn mergeable_info_rebuild_with_depinfo() {
         .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info", "-Zrustdoc-depinfo"])
         .with_stderr_data(str![[r#"
 [FRESH] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [FRESH] doc-merge for host
 [FINISHED] documentation merge in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
@@ -3851,7 +3851,7 @@ fn mergeable_info_rebuild_with_depinfo() {
 [DIRTY] foo v0.0.0 ([ROOT]/foo): the file `src/lib.rs` has changed ([TIME_DIFF_AFTER_LAST_BUILD])
 [DOCUMENTING] foo v0.0.0 ([ROOT]/foo)
 [RUNNING] `rustdoc [..]--crate-name foo [..]--emit=html-non-static-files,dep-info=[..] --write-doc-meta-dir=[ROOT]/foo/target/debug/build/foo/[HASH]/out [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [MERGING] 1 doc for host
 [RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --edition=2015 --read-doc-meta-dir=[ROOT]/foo/target/debug/build/foo/[HASH]/out`
 [FINISHED] documentation merge in [ELAPSED]s
@@ -3868,7 +3868,7 @@ fn mergeable_info_rebuild_with_depinfo() {
         .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info", "-Zrustdoc-depinfo"])
         .with_stderr_data(str![[r#"
 [FRESH] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [FRESH] doc-merge for host
 [FINISHED] documentation merge in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
@@ -3883,7 +3883,7 @@ fn mergeable_info_rebuild_with_depinfo() {
         .masquerade_as_nightly_cargo(&["rustdoc-mergeable-info", "-Zrustdoc-depinfo"])
         .with_stderr_data(str![[r#"
 [FRESH] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [FRESH] doc-merge for host
 [FINISHED] documentation merge in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
@@ -3944,7 +3944,7 @@ fn mergeable_info_additive() {
 [RUNNING] `rustc --crate-name dep [..]`
 [DOCUMENTING] foo v0.0.0 ([ROOT]/foo/foo)
 [RUNNING] `rustdoc [..]--crate-name foo [..]--write-doc-meta-dir=[ROOT]/foo/target/debug/build/foo/[HASH]/out [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [MERGING] 1 doc for host
 [RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --edition=2015 --read-doc-meta-dir=[ROOT]/foo/target/debug/build/foo/[HASH]/out`
 [FINISHED] documentation merge in [ELAPSED]s
@@ -3981,7 +3981,7 @@ fn mergeable_info_additive() {
             str![[r#"
 [DOCUMENTING] dep v0.0.0 ([ROOT]/foo/dep)
 [RUNNING] `rustdoc [..]--crate-name dep [..]--write-doc-meta-dir=[ROOT]/foo/target/debug/build/dep/[HASH]/out [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [MERGING] 2 docs for host
 [RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --edition=2015 --read-doc-meta-dir=[ROOT]/foo/target/debug/build/dep/[HASH]/out --read-doc-meta-dir=[ROOT]/foo/target/debug/build/foo/[HASH]/out`
 [FINISHED] documentation merge in [ELAPSED]s
@@ -4019,7 +4019,7 @@ fn mergeable_info_additive() {
             str![[r#"
 [DOCUMENTING] bar v0.0.0 ([ROOT]/foo/bar)
 [RUNNING] `rustdoc [..]--crate-name bar [..]--write-doc-meta-dir=[ROOT]/foo/target/debug/build/bar/[HASH]/out [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [MERGING] 3 docs for host
 [RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --edition=2015 --read-doc-meta-dir=[ROOT]/foo/target/debug/build/bar/[HASH]/out --read-doc-meta-dir=[ROOT]/foo/target/debug/build/dep/[HASH]/out --read-doc-meta-dir=[ROOT]/foo/target/debug/build/foo/[HASH]/out`
 [FINISHED] documentation merge in [ELAPSED]s
@@ -4099,7 +4099,7 @@ From [ROOTURL]/registry
 [DOWNLOADED] dep v0.2.0 (registry `dummy-registry`)
 [DOCUMENTING] dep v0.1.0
 [RUNNING] `rustdoc [..]--crate-name dep [..]--write-doc-meta-dir=[ROOT]/foo/target/debug/build/dep/[HASH]/out [..]--crate-version 0.1.0`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [MERGING] 1 doc for host
 [RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --edition=2015 --read-doc-meta-dir=[ROOT]/foo/target/debug/build/dep/[HASH]/out`
 [FINISHED] documentation merge in [ELAPSED]s
@@ -4139,7 +4139,7 @@ From [ROOTURL]/registry
             str![[r#"
 [DOCUMENTING] dep v0.2.0
 [RUNNING] `rustdoc [..]--crate-name dep [..]--write-doc-meta-dir=[ROOT]/foo/target/debug/build/dep/[HASH]/out [..]--crate-version 0.2.0`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [MERGING] 1 doc for host
 [RUNNING] `rustdoc -o [ROOT]/foo/target/doc -Zunstable-options --edition=2015 --read-doc-meta-dir=[ROOT]/foo/target/debug/build/dep/[HASH]/out`
 [FINISHED] documentation merge in [ELAPSED]s
@@ -4260,7 +4260,7 @@ fn doc_output_format_json_no_deps() {
 [RUNNING] `rustc [..]--crate-name bar [..]`
 [DOCUMENTING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustdoc [..]--crate-name foo [..]--output-format=json[..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo.json
 
 "#]])
@@ -4314,7 +4314,7 @@ fn doc_output_format_json_with_deps() {
 [RUNNING] `rustdoc [..]--crate-name bar [..]--output-format=json[..]`
 [DOCUMENTING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustdoc [..]--crate-name foo [..]--output-format=json[..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo.json
 
 "#]]
@@ -4381,7 +4381,7 @@ fn doc_output_format_json_with_deps_and_mergeable_info() {
 [RUNNING] `rustdoc [..]--crate-name bar [..]--output-format=json[..]`
 [DOCUMENTING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustdoc [..]--crate-name foo [..]--output-format=json[..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo.json
 
 "#]]
@@ -4416,7 +4416,7 @@ fn doc_fixable_warning_no_fix_suggestion() {
 [WARNING] this URL is not a hyperlink
 ...
 [WARNING] `foo` (lib doc) generated 1 warning
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]])

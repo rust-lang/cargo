@@ -1297,7 +1297,7 @@ fn artifact_deps() {
 [LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target-dir/debug/foo[EXE]`
 
 "#]])
@@ -1432,7 +1432,7 @@ fn dylib_deps_output_overwrite() {
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [COMPILING] baz v0.1.0 ([ROOT]/foo/baz)
 [COMPILING] main v0.0.0 ([ROOT]/foo)
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [RUNNING] unittests src/main.rs (build-dir/debug/build/main/[HASH]/out/[..])
 [RUNNING] tests/use_both_dylibs.rs (build-dir/debug/build/main/[HASH]/out/[..])
 
@@ -1490,7 +1490,7 @@ fn should_work_with_cargo_default_lib_metadata() {
         .enable_mac_dsym()
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

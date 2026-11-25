@@ -396,7 +396,7 @@ fn relative_depinfo_paths_ws() {
         .arg("-Zbinary-dep-depinfo")
         .masquerade_as_nightly_cargo(&["binary-dep-depinfo"])
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -539,7 +539,7 @@ fn relative_depinfo_paths_no_ws() {
         .arg("-Zbinary-dep-depinfo")
         .masquerade_as_nightly_cargo(&["binary-dep-depinfo"])
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

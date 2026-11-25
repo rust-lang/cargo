@@ -1298,7 +1298,7 @@ fn package_cache_lock_during_build() {
    [..]s DEBUG gc: unable to acquire mutate lock, auto gc disabled
 [CHECKING] bar v1.0.0
 [CHECKING] foo2 v0.1.0 ([ROOT]/foo2)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1353,7 +1353,7 @@ fn read_only_locking_auto_gc() {
         .with_stderr_data(str![[r#"
 [CHECKING] bar v1.0.0
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1369,7 +1369,7 @@ fn read_only_locking_auto_gc() {
         .arg("-Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1478,7 +1478,7 @@ fn offline_doesnt_auto_gc() {
     p.cargo("check --offline")
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1487,7 +1487,7 @@ fn offline_doesnt_auto_gc() {
     // Run online, make sure auto-gc runs.
     p.cargo("check")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

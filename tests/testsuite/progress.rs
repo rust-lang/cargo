@@ -106,7 +106,7 @@ fn always_shows_progress() {
         .with_stderr_data(
             str![[r#"
 [BUILDING] [..] [..]/4: [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 ...
 "#]]
             .unordered(),

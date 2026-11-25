@@ -213,7 +213,7 @@ fn collision_doc_multiple_versions() {
 [CHECKING] bar v2.0.0
 [CHECKING] bar v1.0.0
 [DOCUMENTING] bar v2.0.0
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [DOCUMENTING] foo v0.1.0 ([ROOT]/foo)
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
@@ -400,7 +400,7 @@ From [ROOTURL]/registry
 [RUNNING] `rustc --crate-name pm [..]
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]
-[FINISHED] `dev` profile [optimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [optimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -415,7 +415,7 @@ From [ROOTURL]/registry
 [DOCUMENTING] common v1.0.0
 [DOCUMENTING] pm v0.1.0 ([ROOT]/foo/pm)
 [DOCUMENTING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [optimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [optimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]]
@@ -463,7 +463,7 @@ fn collision_doc_sources() {
 [DOCUMENTING] bar v1.0.0
 [CHECKING] bar v1.0.0
 [DOCUMENTING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]]
@@ -517,7 +517,7 @@ fn collision_doc_target() {
 [CHECKING] bar v2.0.0
 [CHECKING] bar v1.0.0
 [DOCUMENTING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/[ALT_TARGET]/doc/foo/index.html
 
 "#]]
@@ -588,7 +588,7 @@ fn collision_with_root() {
 [CHECKING] abc v1.0.0 ([ROOT]/foo/abc)
 [DOCUMENTING] foo-macro v1.0.0 ([ROOT]/foo/foo-macro)
 [DOCUMENTING] abc v1.0.0 ([ROOT]/foo/abc)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/abc/index.html and 1 other file
 
 "#]].unordered())

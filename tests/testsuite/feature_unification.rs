@@ -88,7 +88,7 @@ fn workspace_feature_unification() {
         .masquerade_as_nightly_cargo(&["feature-unification"])
         .with_stderr_data(str![[r#"
 [CHECKING] common v0.1.0 ([ROOT]/foo/common)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -97,7 +97,7 @@ fn workspace_feature_unification() {
         .masquerade_as_nightly_cargo(&["feature-unification"])
         .with_stderr_data(str![[r#"
 [CHECKING] a v0.1.0 ([ROOT]/foo/a)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -106,7 +106,7 @@ fn workspace_feature_unification() {
         .masquerade_as_nightly_cargo(&["feature-unification"])
         .with_stderr_data(str![[r#"
 [CHECKING] b v0.1.0 ([ROOT]/foo/b)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -114,7 +114,7 @@ fn workspace_feature_unification() {
         .arg("-Zfeature-unification")
         .masquerade_as_nightly_cargo(&["feature-unification"])
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -201,7 +201,7 @@ fn workspace_feature_unification_default_members() {
         .masquerade_as_nightly_cargo(&["feature-unification"])
         .with_stderr_data(str![[r#"
 [CHECKING] common v0.1.0 ([ROOT]/foo/common)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -288,7 +288,7 @@ fn workspace_feature_unification_exclude_package() {
         .masquerade_as_nightly_cargo(&["feature-unification"])
         .with_stderr_data(str![[r#"
 [CHECKING] common v0.1.0 ([ROOT]/foo/common)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -398,7 +398,7 @@ fn workspace_feature_unification_v1_resolver() {
         .masquerade_as_nightly_cargo(&["feature-unification"])
         .with_stderr_data(str![[r#"
 [CHECKING] common v0.1.0 ([ROOT]/foo/common)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -508,7 +508,7 @@ fn workspace_feature_unification_v2_resolver() {
         .masquerade_as_nightly_cargo(&["feature-unification"])
         .with_stderr_data(str![[r#"
 [CHECKING] common v0.1.0 ([ROOT]/foo/common)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -600,7 +600,7 @@ fn workspace_feature_unification_all_features() {
         .masquerade_as_nightly_cargo(&["feature-unification"])
         .with_stderr_data(str![[r#"
 [CHECKING] common v0.1.0 ([ROOT]/foo/common)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -692,7 +692,7 @@ fn workspace_feature_unification_no_default_features() {
         .masquerade_as_nightly_cargo(&["feature-unification"])
         .with_stderr_data(str![[r#"
 [CHECKING] common v0.1.0 ([ROOT]/foo/common)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -802,7 +802,7 @@ fn package_feature_unification() {
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to highest compatible version
 [CHECKING] common v0.1.0 ([ROOT]/foo/common)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -816,7 +816,7 @@ fn package_feature_unification() {
 [CHECKING] outside v0.1.0
 [CHECKING] common v0.1.0 ([ROOT]/foo/common)
 [CHECKING] a v0.1.0 ([ROOT]/foo/a)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -830,7 +830,7 @@ fn package_feature_unification() {
 [CHECKING] outside v0.1.0
 [CHECKING] common v0.1.0 ([ROOT]/foo/common)
 [CHECKING] b v0.1.0 ([ROOT]/foo/b)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -841,7 +841,7 @@ fn package_feature_unification() {
         .masquerade_as_nightly_cargo(&["feature-unification"])
         .with_stderr_data(
             str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -851,7 +851,7 @@ fn package_feature_unification() {
         .arg("-Zfeature-unification")
         .masquerade_as_nightly_cargo(&["feature-unification"])
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -941,7 +941,7 @@ fn package_feature_unification_default_features() {
         .masquerade_as_nightly_cargo(&["feature-unification"])
         .with_stderr_data(str![[r#"
 [CHECKING] common v0.1.0 ([ROOT]/foo/common)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -950,7 +950,7 @@ fn package_feature_unification_default_features() {
         .masquerade_as_nightly_cargo(&["feature-unification"])
         .with_stderr_data(str![[r#"
 [CHECKING] a v0.1.0 ([ROOT]/foo/a)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -960,7 +960,7 @@ fn package_feature_unification_default_features() {
         .with_stderr_data(str![[r#"
 [CHECKING] common v0.1.0 ([ROOT]/foo/common)
 [CHECKING] b v0.1.0 ([ROOT]/foo/b)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -969,7 +969,7 @@ fn package_feature_unification_default_features() {
         .masquerade_as_nightly_cargo(&["feature-unification"])
         .with_stderr_data(
             str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -1085,7 +1085,7 @@ fn package_feature_unification_cli_features() {
         .masquerade_as_nightly_cargo(&["feature-unification"])
         .with_stderr_data(
             str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 [CHECKING] common v0.1.0 ([ROOT]/foo/common)
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to highest compatible version
@@ -1104,7 +1104,7 @@ fn package_feature_unification_cli_features() {
         .masquerade_as_nightly_cargo(&["feature-unification"])
         .with_stderr_data(
             str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -1116,7 +1116,7 @@ fn package_feature_unification_cli_features() {
         .masquerade_as_nightly_cargo(&["feature-unification"])
         .with_stderr_data(
             str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -1250,7 +1250,7 @@ fn package_feature_unification_weak_dependencies() {
 [CHECKING] common v0.1.0 ([ROOT]/foo/common)
 [CHECKING] a v0.1.0 ([ROOT]/foo/a)
 [CHECKING] b v0.1.0 ([ROOT]/foo/b)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -1261,7 +1261,7 @@ fn package_feature_unification_weak_dependencies() {
         .masquerade_as_nightly_cargo(&["feature-unification"])
         .with_stderr_data(str![[r#"
 [CHECKING] common v0.1.0 ([ROOT]/foo/common)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1537,7 +1537,7 @@ fn unstable_config_on_stable() {
         .with_stderr_data(str![[r#"
 [WARNING] ignoring `resolver.feature-unification` without `-Zfeature-unification`
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1569,7 +1569,7 @@ edition = "2021"
 [FIXED] Cargo.toml (1 fix)
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
 [MIGRATING] src/lib.rs from 2021 edition to 2024
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1774,7 +1774,7 @@ fn feature_unification_of_cli_features_within_workspace() {
         .with_stderr_data(str![[r#"
 [CHECKING] grandchild v0.1.0 ([ROOT]/foo/grandchild)
 [CHECKING] child v0.1.0 ([ROOT]/foo/child)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1784,7 +1784,7 @@ fn feature_unification_of_cli_features_within_workspace() {
         .masquerade_as_nightly_cargo(&["feature-unification"])
         .env("CARGO_RESOLVER_FEATURE_UNIFICATION", "workspace")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1794,7 +1794,7 @@ fn feature_unification_of_cli_features_within_workspace() {
         .masquerade_as_nightly_cargo(&["feature-unification"])
         .env("CARGO_RESOLVER_FEATURE_UNIFICATION", "selected")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1805,7 +1805,7 @@ fn feature_unification_of_cli_features_within_workspace() {
         .env("CARGO_RESOLVER_FEATURE_UNIFICATION", "package")
         .with_stderr_data(str![[r#"
 [CHECKING] parent v0.1.0 ([ROOT]/foo/parent)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1815,7 +1815,7 @@ fn feature_unification_of_cli_features_within_workspace() {
         .masquerade_as_nightly_cargo(&["feature-unification"])
         .env("CARGO_RESOLVER_FEATURE_UNIFICATION", "workspace")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1825,7 +1825,7 @@ fn feature_unification_of_cli_features_within_workspace() {
         .masquerade_as_nightly_cargo(&["feature-unification"])
         .env("CARGO_RESOLVER_FEATURE_UNIFICATION", "selected")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1835,7 +1835,7 @@ fn feature_unification_of_cli_features_within_workspace() {
         .masquerade_as_nightly_cargo(&["feature-unification"])
         .env("CARGO_RESOLVER_FEATURE_UNIFICATION", "package")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1845,7 +1845,7 @@ fn feature_unification_of_cli_features_within_workspace() {
         .masquerade_as_nightly_cargo(&["feature-unification"])
         .env("CARGO_RESOLVER_FEATURE_UNIFICATION", "workspace")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -1855,7 +1855,7 @@ fn feature_unification_of_cli_features_within_workspace() {
         .masquerade_as_nightly_cargo(&["feature-unification"])
         .env("CARGO_RESOLVER_FEATURE_UNIFICATION", "selected")
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

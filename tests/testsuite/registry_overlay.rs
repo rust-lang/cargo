@@ -88,7 +88,7 @@ fn registry_version_wins() {
 [DOWNLOADED] baz v0.1.1 (registry `sparse+http://127.0.0.1:[..]/index/`)
 [CHECKING] baz v0.1.1
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -132,7 +132,7 @@ fn overlay_version_wins() {
 [UNPACKING] baz v0.1.1 (registry `[ROOT]/alternative-registry`)
 [CHECKING] baz v0.1.1
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -176,7 +176,7 @@ fn version_precedence() {
 [UNPACKING] baz v0.1.1 (registry `[ROOT]/alternative-registry`)
 [CHECKING] baz v0.1.1
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -268,7 +268,7 @@ fn registry_dep_depends_on_new_local_package() {
 [CHECKING] workspace-package v0.0.1
 [CHECKING] registry-package v0.1.0
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),

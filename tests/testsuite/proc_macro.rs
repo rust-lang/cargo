@@ -377,7 +377,7 @@ fn proc_macro_crate_type_warning() {
 [WARNING] Cargo.toml: library `foo` should only specify `proc-macro = true` instead of setting `crate-type`
 [WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -405,7 +405,7 @@ fn lib_plugin_unused_key_warning() {
 [WARNING] Cargo.toml: unused manifest key: lib.plugin
 [WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -433,7 +433,7 @@ fn proc_macro_crate_type_warning_plugin() {
 [WARNING] Cargo.toml: library `foo` should only specify `proc-macro = true` instead of setting `crate-type`
 [WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -497,7 +497,7 @@ fn proc_macro_conflicting_crate_types_warning() {
 [HELP] remove `proc-macro` if this library is not intended to be a proc macro
 [WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
             .run();
@@ -549,7 +549,7 @@ fn proc_macro_false_with_proc_macro_crate_type_warns() {
 [HELP] set `proc-macro = true` and remove `crate-type` if this library is intended to be a proc macro
 [WARNING] `foo` (manifest) generated 2 warnings
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -581,7 +581,7 @@ fn proc_macro_with_example_crate_type() {
     foo.cargo("check --examples")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -692,7 +692,7 @@ fn proc_macro_built_once() {
 [RUNNING] `rustc --crate-name build_script_build [..]`
 [RUNNING] `[ROOT]/foo/target/debug/build/a/[HASH]/out/build_script_build`
 [RUNNING] `rustc --crate-name a [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),

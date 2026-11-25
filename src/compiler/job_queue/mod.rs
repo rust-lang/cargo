@@ -152,6 +152,7 @@ use crate::util::machine_message::{self, Message as _};
 use crate::util::{self, internal};
 use crate::util::{DependencyQueue, GlobalContext, Progress, ProgressStyle, Queue};
 use crate::workspace::{PackageId, TargetKind};
+use cargo_util_schemas::manifest::TomlDebugInfo;
 use cargo_util_terminal::Shell;
 
 /// This structure is backed by the `DependencyQueue` type and manages the
@@ -874,9 +875,13 @@ impl<'gctx> DrainState<'gctx> {
         } else {
             "optimized"
         });
-        if profile.debuginfo.is_turned_on() {
-            opt_type += " + debuginfo";
-        }
+        opt_type += match profile.debuginfo.into_inner() {
+            TomlDebugInfo::Full => " + full debuginfo",
+            TomlDebugInfo::Limited
+            | TomlDebugInfo::LineTablesOnly
+            | TomlDebugInfo::LineDirectivesOnly => " + partial debuginfo",
+            TomlDebugInfo::None => "",
+        };
 
         let time_elapsed = util::elapsed(build_runner.bcx.gctx.invocation_instant().elapsed());
         if let Err(e) = self

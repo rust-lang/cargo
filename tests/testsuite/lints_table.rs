@@ -53,7 +53,7 @@ fn dependency_warning_ignored() {
 [LOCKING] 1 package to highest compatible version
 [CHECKING] bar v0.0.1 ([ROOT]/bar)
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -117,7 +117,7 @@ fn fail_on_invalid_tool() {
 supported tools: cargo, clippy, rust, rustdoc
 [WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]]).run();
 }
@@ -179,7 +179,7 @@ fn warn_on_unused_key() {
 [WARNING] Cargo.toml: unused manifest key: `lints.rust.rust_2018_idioms.unused`
 [WARNING] `foo` (manifest) generated 2 warnings
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -731,7 +731,7 @@ pub const Ĕ: i32 = 2;
     foo.cargo("check")
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -739,7 +739,7 @@ pub const Ĕ: i32 = 2;
     foo.cargo("test --doc")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `test` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [DOCTEST] foo
 
 "#]])
@@ -771,7 +771,7 @@ im-a-teapot = true
         .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -811,7 +811,7 @@ im_a_teapot = "warn"
   = [NOTE] `cargo::im_a_teapot` is set to `warn` in `[lints]`
 [WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -840,7 +840,7 @@ fn hyphen_in_lint_name() {
 [WARNING] Cargo.toml: `lints.rust.unexpected-cfgs` is deprecated in favor of `lints.rust.unexpected_cfgs` and will not work in a future edition
 [WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -871,7 +871,7 @@ fn duplicate_lint_name_hyphen_and_underscore() {
 [WARNING] Cargo.toml: duplicate lint `unexpected-cfgs` in `[lints.rust]`, conflicts with `unexpected_cfgs` and will not work in a future edition
 [WARNING] `foo` (manifest) generated 2 warnings
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

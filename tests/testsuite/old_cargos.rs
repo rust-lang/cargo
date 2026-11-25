@@ -662,7 +662,7 @@ fn index_cache_rebuild() {
 [DOWNLOADED] bar v1.0.1 (registry `dummy-registry`)
 [CHECKING] bar v1.0.1
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -724,7 +724,7 @@ fn avoids_split_debuginfo_collision() {
         .with_stderr_data(str![[r#"
 [WARNING] no edition set: defaulting to the 2015 edition while the latest is [..]
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

@@ -144,7 +144,7 @@ fn simple_doc_open() {
         .arg(&t2)
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v1.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 [ERROR] only one `--target` argument is supported
 
 "#]])

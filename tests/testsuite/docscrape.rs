@@ -29,7 +29,7 @@ fn basic() {
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [SCRAPING] foo v0.0.1 ([ROOT]/foo)
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]])
@@ -40,7 +40,7 @@ fn basic() {
         .arg("-Zrustdoc-scrape-examples")
         .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]])
@@ -127,7 +127,7 @@ impl Foo {
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [SCRAPING] foo v0.0.1 ([ROOT]/foo)
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]]
@@ -428,7 +428,7 @@ fn cache() {
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [SCRAPING] foo v0.0.1 ([ROOT]/foo)
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]])
@@ -439,7 +439,7 @@ fn cache() {
         .arg("-Zrustdoc-scrape-examples")
         .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .with_stderr_data(str![[r#"
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]])
@@ -484,7 +484,7 @@ fn no_fail_bad_lib() {
     If an example should not be scanned, then consider adding `doc-scrape-examples = false` to its `[[example]]` definition in Cargo.toml
 [WARNING] `foo` (example "ex2") generated 1 warning
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]].unordered())
@@ -563,7 +563,7 @@ fn no_fail_bad_example() {
     If an example should not be scanned, then consider adding `doc-scrape-examples = false` to its `[[example]]` definition in Cargo.toml
 [WARNING] `foo` (example "ex1") generated 1 warning
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]])
@@ -590,7 +590,7 @@ fn no_fail_bad_example() {
   |      ^^^ expected one of `!` or `::`
 
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]]
@@ -649,7 +649,7 @@ fn no_scrape_with_dev_deps() {
     If you want Rustdoc to scrape these examples, then add `doc-scrape-examples = true`
     to the [[example]] target configuration of at least one example.
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]])
@@ -667,7 +667,7 @@ fn no_scrape_with_dev_deps() {
 [DOCUMENTING] a v0.0.1 ([ROOT]/foo/a)
 [SCRAPING] foo v0.0.1 ([ROOT]/foo)
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/ex/index.html
 
 "#]]
@@ -723,7 +723,7 @@ fn use_dev_deps_if_explicitly_enabled() {
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [SCRAPING] foo v0.0.1 ([ROOT]/foo)
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [..]
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
 "#]]

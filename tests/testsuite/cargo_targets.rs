@@ -26,7 +26,7 @@ fn warn_unmatched_target_filters() {
     p.cargo("check --tests --bins --examples --benches")
         .with_stderr_data(str![[r#"
 [WARNING] target filters `bins`, `tests`, `examples`, `benches` specified, but no targets matched; this is a no-op
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -57,7 +57,7 @@ fn reserved_windows_target_name() {
 [WARNING] Cargo.toml: binary target `con` is a reserved Windows filename, this target will not work on Windows platforms
 [WARNING] `foo` (manifest) generated 1 warning
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
             .run();
@@ -65,7 +65,7 @@ fn reserved_windows_target_name() {
         p.cargo("check")
             .with_stderr_data(str![[r#"
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
             .run();

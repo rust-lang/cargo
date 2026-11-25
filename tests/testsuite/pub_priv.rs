@@ -84,7 +84,7 @@ fn exported_pub_dep() {
 [DOWNLOADED] pub_dep v0.1.0 (registry `dummy-registry`)
 [CHECKING] pub_dep v0.1.0
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -152,7 +152,7 @@ fn requires_feature() {
 [DOWNLOADED] pub_dep v0.1.0 (registry `dummy-registry`)
 [CHECKING] pub_dep v0.1.0
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + [..] debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -235,7 +235,7 @@ fn pub_dev_dependency_without_feature() {
 [WARNING] `foo` (manifest) generated 1 warning
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to highest compatible version
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + full debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -338,7 +338,7 @@ fn allow_priv_in_tests() {
 [DOWNLOADED] priv_dep v0.1.0 (registry `dummy-registry`)
 [CHECKING] priv_dep v0.1.0
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -383,7 +383,7 @@ fn allow_priv_in_benches() {
 [DOWNLOADED] priv_dep v0.1.0 (registry `dummy-registry`)
 [CHECKING] priv_dep v0.1.0
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -429,7 +429,7 @@ fn allow_priv_in_bins() {
 [DOWNLOADED] priv_dep v0.1.0 (registry `dummy-registry`)
 [CHECKING] priv_dep v0.1.0
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -475,7 +475,7 @@ fn allow_priv_in_examples() {
 [DOWNLOADED] priv_dep v0.1.0 (registry `dummy-registry`)
 [CHECKING] priv_dep v0.1.0
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -522,7 +522,7 @@ fn allow_priv_in_custom_build() {
 [DOWNLOADED] priv_dep v0.1.0 (registry `dummy-registry`)
 [COMPILING] priv_dep v0.1.0
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -579,7 +579,7 @@ fn publish_package_with_public_dependency() {
 [CHECKING] pub_bar v0.1.0
 [CHECKING] bar v0.1.0
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
@@ -738,7 +738,7 @@ src/lib.rs:3:13: [WARNING] type `FromDep` from private dependency 'dep' in publi
         .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -759,7 +759,7 @@ src/lib.rs:3:13: [WARNING] type `FromDep` from private dependency 'dep' in publi
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 src/lib.rs:3:13: [WARNING] type `FromDep` from private dependency 'dep' in public interface
 [WARNING] `foo` (lib) generated 1 warning
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
