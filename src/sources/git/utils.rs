@@ -462,7 +462,7 @@ impl<'a> GitCheckout<'a> {
                 let url = fetch_url.unwrap_or_else(|| source_url.to_string());
                 format!("failed to fetch submodule `{name}` from {url}")
             })?;
-            db.copy_to(actual_rev, repo.path(), gctx, quiet)?;
+            db.copy_to(actual_rev, repo.workdir().unwrap(), gctx, quiet)?;
             Ok(())
         }
     }
