@@ -41,6 +41,10 @@ fn simple() {
 
             [dependencies]
             a = "1.0"
+
+            # Pinned as the default differs between stable and nightly toolchains
+            [profile.dev]
+            debug = "line-tables-only"
             "#,
         )
         .file("src/lib.rs", "")

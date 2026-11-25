@@ -21,6 +21,15 @@ fn checksum_build_compatible_with_mtime_build() {
     let p = project()
         .file("src/main.rs", "mod a; fn main() {}")
         .file("src/a.rs", "")
+        // Pinned debug level because the default differs between stable and nightly toolchains
+        // See https://github.com/rust-lang/cargo/issues/17788
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [profile.dev]
+            debug = "line-tables-only"
+            "#,
+        )
         .build();
 
     p.cargo("check")

@@ -830,3 +830,17 @@ fn change_debug_inheritance() {
 "#]])
         .run();
 }
+
+#[cargo_test(nightly, reason = "line-tables-only is the default on nightly")]
+fn dev_default_debuginfo_nightly() {
+    let p = project().file("src/lib.rs", "").build();
+    p.cargo("build -v")
+        .masquerade_as_nightly_cargo(&["line-tables-only is the default on nightly"])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=line-tables-only [..]-C metadata=[..] --out-dir [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
