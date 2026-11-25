@@ -1,4 +1,4 @@
----
+﻿---
 [package]
 edition = "2024"
 
@@ -6,4 +6,4 @@ edition = "2024"
 my-package = "99999.0.0"
 ---
 
-﻿fn main() {}
+fn main() {}

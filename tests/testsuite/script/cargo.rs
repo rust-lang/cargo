@@ -327,8 +327,6 @@ Hello world!
 
 "#]])
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to the latest edition (currently `[..]`)
-[HELP] to pin the edition, run `cargo fix --manifest-path [ROOT]/foo/script.rs`
 [COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
 [FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]`
