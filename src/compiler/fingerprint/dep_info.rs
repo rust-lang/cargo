@@ -413,7 +413,9 @@ pub fn parse_rustc_dep_info(rustc_dep_info: &Path) -> CargoResult<RustcDepInfo> 
                 continue;
             }
             found_deps = true;
-            let mut deps = line[pos + 2..].split_whitespace();
+            // rustc separates paths with ASCII spaces and only escapes those,
+            // so other whitespace is part of a path.
+            let mut deps = line[pos + 2..].split(' ').filter(|s| !s.is_empty());
 
             while let Some(s) = deps.next() {
                 let mut file = s.to_string();

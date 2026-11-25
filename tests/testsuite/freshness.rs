@@ -2074,9 +2074,7 @@ fn non_ascii_whitespace_in_dep_info_path() {
         .run();
     p.cargo("check -v")
         .with_stderr_data(str![[r#"
-[DIRTY] foo v0.0.1 ([ROOT]/foo): the file `file.txt` is missing
-[CHECKING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo [..]`
+[FRESH] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
