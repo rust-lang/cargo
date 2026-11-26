@@ -151,6 +151,8 @@ mod rustc_incompatible;
 mod rustc_latest;
 mod rustc_older;
 mod script_bare;
+mod script_bom_bare;
+mod script_bom_frontmatter;
 mod script_escape;
 mod script_frontmatter;
 mod script_frontmatter_empty;

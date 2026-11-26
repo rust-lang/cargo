@@ -307,6 +307,35 @@ Hello world!
 }
 
 #[cargo_test(nightly, reason = "-Zscript is unstable")]
+fn clean_output_with_edition_and_bom() {
+    let script = "\u{feff}---
+[package]
+edition = \"2018\"
+---
+
+fn main() {
+    println!(\"Hello world!\");
+}";
+    let p = cargo_test_support::project()
+        .file("script.rs", script)
+        .build();
+
+    p.cargo("-Zscript -v script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout_data(str![[r#"
+Hello world!
+
+"#]])
+        .with_stderr_data(str![[r#"
+[COMPILING] script v0.0.0 ([ROOT]/foo/script.rs)
+[FINISHED] `dev` profile [unoptimized + partial debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/home/.cargo/build/[HASH]/target/debug/script[EXE]`
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "-Zscript is unstable")]
 fn warning_without_edition() {
     let script = r#"#!/usr/bin/env cargo
 ---

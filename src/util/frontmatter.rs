@@ -38,6 +38,13 @@ impl<'s> ScriptSource<'s> {
 
         let mut input = winnow::stream::LocatingSlice::new(raw);
 
+        // rustc strips a byte order mark before looking for a shebang or frontmatter
+        const BOM: &str = "\u{feff}";
+        if input.as_ref().starts_with(BOM) {
+            let _ = input.next_slice(BOM.len());
+            source.content = input.current_token_start()..content_end;
+        }
+
         if let Some(shebang_end) = strip_shebang(input.as_ref()) {
             let shebang_start = input.current_token_start();
             let _ = input.next_slice(shebang_end);
@@ -428,6 +435,45 @@ frontmatter: None
 content: "fn main() {}\n"
 
 "#]],
+        );
+    }
+
+    #[test]
+    fn split_bom() {
+        assert_source(
+            "\u{feff}---
+[dependencies]
+time=\"0.1.25\"
+---
+fn main() {}
+",
+            str![[r#"
+shebang: None
+info: None
+frontmatter: "[dependencies]\ntime=\"0.1.25\"\n"
+content: "fn main() {}\n"
+
+"#]],
+        );
+    }
+
+    #[test]
+    fn split_bom_shebang() {
+        assert_source(
+            "\u{feff}#!/usr/bin/env cargo
+---
+[dependencies]
+time=\"0.1.25\"
+---
+fn main() {}
+",
+            str![[r##"
+shebang: "#!/usr/bin/env cargo\n"
+info: None
+frontmatter: "[dependencies]\ntime=\"0.1.25\"\n"
+content: "fn main() {}\n"
+
+"##]],
         );
     }
 

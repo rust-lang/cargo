@@ -279,7 +279,8 @@ impl LocalManifest {
                 embedded = Some(Embedded::after(shebang));
                 data = String::new();
             } else {
-                embedded = Some(Embedded::start());
+                // Insert after a byte order mark, if any
+                embedded = Some(Embedded::start(source.content_span().start));
                 data = String::new();
             }
         }
@@ -303,7 +304,11 @@ impl LocalManifest {
                 let fence = "---\n";
                 let prefix = &self.raw[0..*start];
                 let suffix = &self.raw[*start..];
-                let empty_line = if prefix.is_empty() { "\n" } else { "" };
+                let empty_line = if prefix.trim_start_matches('\u{feff}').is_empty() {
+                    "\n"
+                } else {
+                    ""
+                };
                 format!("{prefix}{fence}{manifest}{fence}{empty_line}{suffix}")
             }
             Some(Embedded::Explicit(span)) => {
@@ -610,8 +615,8 @@ pub enum Embedded {
 }
 
 impl Embedded {
-    fn start() -> Self {
-        Self::Implicit(0)
+    fn start(start: usize) -> Self {
+        Self::Implicit(start)
     }
 
     fn after(after: std::ops::Range<usize>) -> Self {
