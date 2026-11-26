@@ -104,7 +104,7 @@ use crate::config::ConfigLoader;
 use crate::config::ConfigReader;
 use crate::config::Env;
 pub use crate::config::{
-    ConfigError, ConfigKey, ConfigStore, ConfigValue, Definition, DefinitionKind, OptValue, Value,
+    ConfigError, ConfigKey, ConfigStore, ConfigValue, Definition, OptValue, Scope, Value,
 };
 
 mod target;

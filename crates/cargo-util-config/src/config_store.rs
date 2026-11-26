@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context as _, Result, bail};
 
-use super::{ConfigKey, ConfigValue, Definition, DefinitionKind};
+use super::{ConfigKey, ConfigValue, Definition, Scope};
 use cargo_util::collections::{BuildHasher, HashMap};
 
 use ConfigValue as CV;
@@ -52,19 +52,19 @@ impl ConfigStore {
     }
 
     /// Loads configuration from a path without processing includes.
-    pub fn read_layer(path: &Path, definition_kind: DefinitionKind) -> Result<Self> {
-        tracing::debug!(?path, ?definition_kind, "load config from file");
+    pub fn read_layer(path: &Path, scope: Scope) -> Result<Self> {
+        tracing::debug!(?path, ?scope, "load config from file");
 
         let contents = fs::read_to_string(path)
             .with_context(|| format!("failed to read configuration file `{}`", path.display()))?;
         let toml = contents.parse::<toml::Table>().with_context(|| {
             format!("could not parse TOML configuration in `{}`", path.display())
         })?;
-        let def = match definition_kind {
-            DefinitionKind::Cli => Definition::Cli(Some(path.into())),
-            DefinitionKind::Path => Definition::Path(path.into()),
-            DefinitionKind::BuiltIn => Definition::BuiltIn,
-            DefinitionKind::Environment => {
+        let def = match scope {
+            Scope::Cli => Definition::Cli(Some(path.into())),
+            Scope::Path => Definition::Path(path.into()),
+            Scope::BuiltIn => Definition::BuiltIn,
+            Scope::Environment => {
                 unimplemented!("Environment defiinitions are not supported")
             }
         };

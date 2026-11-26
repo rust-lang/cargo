@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 /// The kind of source where a config value is defined.
 #[derive(Clone, Copy, Debug)]
-pub enum DefinitionKind {
+pub enum Scope {
     /// A built-in value.
     BuiltIn,
     /// Loaded due to config file discovery.
