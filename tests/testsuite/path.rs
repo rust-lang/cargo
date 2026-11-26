@@ -403,12 +403,9 @@ fn deep_dependencies_trigger_rebuild() {
         .run();
 
     // Make sure an update to baz triggers a rebuild of bar
-    //
-    // We base recompilation off mtime, so sleep for at least a second to ensure
-    // that this write will change the mtime.
-    sleep_ms(1000);
+    p.root().move_into_the_past();
+    p.build_dir().move_into_the_past();
     p.change_file("baz/src/baz.rs", r#"pub fn baz() { println!("hello!"); }"#);
-    sleep_ms(1000);
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [CHECKING] baz v0.5.0 ([ROOT]/foo/baz)
@@ -420,7 +417,6 @@ fn deep_dependencies_trigger_rebuild() {
         .run();
 
     // Make sure an update to bar doesn't trigger baz
-    sleep_ms(1000);
     p.change_file(
         "bar/src/bar.rs",
         r#"
@@ -428,7 +424,7 @@ fn deep_dependencies_trigger_rebuild() {
             pub fn bar() { println!("hello!"); baz::baz(); }
         "#,
     );
-    sleep_ms(1000);
+    p.root().join("bar/src/bar.rs").move_into_the_future();
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [CHECKING] bar v0.5.0 ([ROOT]/foo/bar)
