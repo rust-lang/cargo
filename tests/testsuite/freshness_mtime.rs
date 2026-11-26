@@ -84,14 +84,14 @@ fn modify_only_some_files() {
 "#]])
         .run();
     p.cargo("test").run();
-    sleep_ms(1000);
 
     assert!(p.bin("foo").is_file());
 
     let lib = p.root().join("src/lib.rs");
     p.change_file("src/lib.rs", "invalid rust code");
-    p.change_file("src/b.rs", "#[allow(unused)]fn foo() {}");
     lib.move_into_the_past();
+    p.change_file("src/b.rs", "#[allow(unused)]fn foo() {}");
+    p.root().join("src/b.rs").move_into_the_future();
 
     // Make sure the binary is rebuilt, not the lib
     p.cargo("build -v")
