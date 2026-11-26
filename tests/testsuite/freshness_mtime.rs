@@ -13,9 +13,7 @@ use std::time::{Duration, SystemTime};
 use crate::prelude::*;
 use cargo_test_support::paths;
 use cargo_test_support::registry::Package;
-use cargo_test_support::{
-    basic_lib_manifest, basic_manifest, is_coarse_mtime, project, sleep_ms, str,
-};
+use cargo_test_support::{basic_lib_manifest, basic_manifest, project, sleep_ms, str};
 use filetime::FileTime;
 
 #[cargo_test]
@@ -793,6 +791,9 @@ fn dirty_both_lib_and_test() {
         .file("slib.rs", &slib(2))
         .build();
 
+    p.cargo("generate-lockfile").run();
+    p.root().move_into_the_past();
+
     p.cargo("build").run();
 
     // 2 != 1
@@ -801,10 +802,7 @@ fn dirty_both_lib_and_test() {
         .with_stdout_data("...\n[..]doit assert failure[..]\n...")
         .run();
 
-    if is_coarse_mtime() {
-        // #5918
-        sleep_ms(1000);
-    }
+    p.build_dir().move_into_the_past();
     // Fix the mistake.
     p.change_file("slib.rs", &slib(1));
 
