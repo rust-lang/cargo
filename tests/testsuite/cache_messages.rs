@@ -3,7 +3,7 @@
 use crate::prelude::*;
 use crate::utils::tools;
 use cargo_test_support::str;
-use cargo_test_support::{basic_manifest, is_coarse_mtime, project, registry::Package, sleep_ms};
+use cargo_test_support::{basic_manifest, project, registry::Package};
 
 use super::messages::raw_rustc_output;
 
@@ -150,9 +150,8 @@ fn clears_cache_after_fix() {
     assert!(std::fs::read_to_string(cpath).unwrap().contains("asdf"));
 
     // Fix it.
-    if is_coarse_mtime() {
-        sleep_ms(1000);
-    }
+    p.root().move_into_the_past();
+    p.build_dir().move_into_the_past();
     p.change_file("src/lib.rs", "");
 
     p.cargo("check")
