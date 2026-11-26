@@ -33,24 +33,6 @@ pub enum Definition {
     Cli(Option<PathBuf>),
 }
 
-impl PartialOrd for Definition {
-    fn partial_cmp(&self, other: &Definition) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for Definition {
-    fn cmp(&self, other: &Definition) -> Ordering {
-        if mem::discriminant(self) == mem::discriminant(other) {
-            Ordering::Equal
-        } else if self.is_higher_priority(other) {
-            Ordering::Greater
-        } else {
-            Ordering::Less
-        }
-    }
-}
-
 impl Definition {
     /// Root directory where this is defined.
     ///
@@ -87,6 +69,24 @@ impl Definition {
                 | (Definition::Environment(_), Definition::BuiltIn)
                 | (Definition::Path(_), Definition::BuiltIn)
         )
+    }
+}
+
+impl PartialOrd for Definition {
+    fn partial_cmp(&self, other: &Definition) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Definition {
+    fn cmp(&self, other: &Definition) -> Ordering {
+        if mem::discriminant(self) == mem::discriminant(other) {
+            Ordering::Equal
+        } else if self.is_higher_priority(other) {
+            Ordering::Greater
+        } else {
+            Ordering::Less
+        }
     }
 }
 
