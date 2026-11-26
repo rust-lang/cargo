@@ -148,6 +148,12 @@ https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli"
     cmd.arg("-c").arg("core.fsmonitor=false");
     // Avoid warnings with `--no-show-forced-updates`
     cmd.arg("-c").arg("advice.fetchShowForcedUpdates=false");
+
+    // The implicit gc from `git fetch` is redundant
+    // as we run `maybe_gc_repo` unconditionally for all git backend before fetch.
+    cmd.arg("-c").arg("maintenance.auto=false");
+    cmd.arg("-c").arg("gc.auto=0");
+
     // Have 429's retried in git, where supported
     let max_retries = gctx
         .net_config()?
