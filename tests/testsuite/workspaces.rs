@@ -8,7 +8,6 @@ use cargo_test_support::registry::Package;
 use cargo_test_support::str;
 use cargo_test_support::{
     ProjectBuilder, basic_lib_manifest, basic_manifest, git, paths, project, project_in_home,
-    sleep_ms,
 };
 
 #[cargo_test]
@@ -1239,8 +1238,9 @@ fn rebuild_please() {
 
     p.cargo("run").cwd("bin").run();
 
-    sleep_ms(1000);
-
+    // Keep the original binary older than the independently rebuilt library.
+    p.root().move_into_the_past();
+    p.build_dir().move_into_the_past();
     p.change_file("lib/src/lib.rs", "pub fn foo() -> u32 { 1 }");
 
     p.cargo("build").cwd("lib").run();
