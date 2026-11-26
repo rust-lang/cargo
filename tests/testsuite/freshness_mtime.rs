@@ -8,7 +8,7 @@ use std::io::prelude::*;
 use std::net::TcpListener;
 use std::path::{Path, PathBuf};
 use std::thread;
-use std::time::SystemTime;
+use std::time::{Duration, SystemTime};
 
 use crate::prelude::*;
 use cargo_test_support::paths;
@@ -516,13 +516,10 @@ fn fingerprint_cleaner_does_not_rebuild() {
 
 "#]])
         .run();
-    if is_coarse_mtime() {
-        sleep_ms(1000);
-    }
-    let timestamp = filetime::FileTime::from_system_time(SystemTime::now());
-    if is_coarse_mtime() {
-        sleep_ms(1000);
-    }
+    // Put the cutoff between the old fingerprints and the next mtime-on-use update.
+    p.root().move_into_the_past();
+    p.build_dir().move_into_the_past();
+    let timestamp = FileTime::from_system_time(SystemTime::now() - Duration::from_secs(60));
     // This does not make new files, but it does update the mtime.
     p.cargo("build --features a")
         .arg("-Zmtime-on-use")
