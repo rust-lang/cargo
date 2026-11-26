@@ -803,7 +803,7 @@ fn maybe_gc_repo(repo: &mut git2::Repository, gctx: &GlobalContext) -> CargoResu
     // to run by setting a low threshold without depending on git's defaults.
     let mut cmd = Command::new("git");
     if let Ok(limit) = gctx.get_env("__CARGO_PACKFILE_LIMIT") {
-        cmd.arg(format!("-c gc.autoPackLimit={}", limit));
+        cmd.arg("-c").arg(format!("gc.autoPackLimit={limit}"));
     }
     cmd.arg("gc")
         .arg("--auto")
