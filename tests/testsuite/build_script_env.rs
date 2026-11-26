@@ -3,7 +3,6 @@
 use crate::prelude::*;
 use cargo_test_support::basic_manifest;
 use cargo_test_support::project;
-use cargo_test_support::sleep_ms;
 use cargo_test_support::str;
 
 #[cargo_test]
@@ -98,8 +97,8 @@ fn rerun_if_env_or_file_changes() {
 
 "#]])
         .run();
-    sleep_ms(1000);
     p.change_file("foo", "// modified");
+    p.root().join("foo").move_into_the_future();
     p.cargo("check")
         .env("FOO", "bar")
         .with_stderr_data(str![[r#"
