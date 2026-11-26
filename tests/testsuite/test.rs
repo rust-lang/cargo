@@ -7,7 +7,7 @@ use crate::utils::cargo_exe;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, project, str};
 use cargo_test_support::{cross_compile, paths};
-use cargo_test_support::{rustc_host, rustc_host_env, sleep_ms};
+use cargo_test_support::{rustc_host, rustc_host_env};
 use cargo_util::paths::dylib_path_envvar;
 
 use crate::utils::cross_compile::can_run_on_host as cross_compile_can_run_on_host;
@@ -3006,8 +3006,8 @@ fn bin_does_not_rebuild_tests() {
 
     p.cargo("test -v").run();
 
-    sleep_ms(1000);
-    fs::write(p.root().join("src/main.rs"), "fn main() { 3; }").unwrap();
+    p.change_file("src/main.rs", "fn main() { 3; }");
+    p.root().join("src/main.rs").move_into_the_future();
 
     p.cargo("test -v --no-run")
         .with_stderr_data(str![[r#"
