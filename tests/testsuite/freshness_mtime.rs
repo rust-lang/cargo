@@ -153,9 +153,8 @@ fn rebuild_sub_package_then_while_package() {
 "#]])
         .run();
 
-    if is_coarse_mtime() {
-        sleep_ms(1000);
-    }
+    p.root().move_into_the_past();
+    p.build_dir().move_into_the_past();
     p.change_file("b/src/lib.rs", "pub fn b() {}");
 
     p.cargo("build -pb -v")
