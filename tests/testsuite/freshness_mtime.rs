@@ -583,14 +583,10 @@ fn bust_patched_dep() {
         .build();
 
     p.cargo("build").run();
-    if is_coarse_mtime() {
-        sleep_ms(1000);
-    }
+    p.root().move_into_the_past();
+    p.build_dir().move_into_the_past();
 
     p.change_file("reg1new/src/lib.rs", "// modified");
-    if is_coarse_mtime() {
-        sleep_ms(1000);
-    }
 
     p.cargo("build -v").with_stderr_data(str![[r#"
 [DIRTY] registry1 v0.1.0 ([ROOT]/foo/reg1new): the file `reg1new/src/lib.rs` has changed ([TIME_DIFF_AFTER_LAST_BUILD])
