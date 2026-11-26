@@ -1,6 +1,5 @@
 use std::cmp::Ordering;
 use std::fmt;
-use std::mem;
 use std::path::{Path, PathBuf};
 
 /// Location where a config value is defined.
@@ -18,6 +17,16 @@ pub enum Definition {
 }
 
 impl Definition {
+    /// Returns the scope in which the config value is defined.
+    pub fn scope(&self) -> Scope {
+        match self {
+            Definition::BuiltIn => Scope::BuiltIn,
+            Definition::Path(_) => Scope::Path,
+            Definition::Environment(_) => Scope::Environment,
+            Definition::Cli(_) => Scope::Cli,
+        }
+    }
+
     /// Root directory where this is defined.
     ///
     /// If from a file, it is the directory above `.cargo/config.toml`.
@@ -44,15 +53,7 @@ impl Definition {
     ///
     /// CLI is preferred over environment, which is preferred over files.
     pub fn is_higher_priority(&self, other: &Definition) -> bool {
-        matches!(
-            (self, other),
-            (Definition::Cli(_), Definition::Environment(_))
-                | (Definition::Cli(_), Definition::Path(_))
-                | (Definition::Cli(_), Definition::BuiltIn)
-                | (Definition::Environment(_), Definition::Path(_))
-                | (Definition::Environment(_), Definition::BuiltIn)
-                | (Definition::Path(_), Definition::BuiltIn)
-        )
+        self.scope().is_higher_priority(other.scope())
     }
 }
 
@@ -64,13 +65,7 @@ impl PartialOrd for Definition {
 
 impl Ord for Definition {
     fn cmp(&self, other: &Definition) -> Ordering {
-        if mem::discriminant(self) == mem::discriminant(other) {
-            Ordering::Equal
-        } else if self.is_higher_priority(other) {
-            Ordering::Greater
-        } else {
-            Ordering::Less
-        }
+        self.scope().cmp(&other.scope())
     }
 }
 
@@ -80,7 +75,7 @@ impl PartialEq for Definition {
         // but they need to be defined in the same location. For example if
         // they're defined in the environment that's different than being
         // defined in a file due to path interpretations.
-        mem::discriminant(self) == mem::discriminant(other)
+        self.scope() == other.scope()
     }
 }
 
@@ -96,7 +91,9 @@ impl fmt::Display for Definition {
 }
 
 /// The kind of source where a config value is defined.
-#[derive(Clone, Copy, Debug)]
+///
+/// In priority order.
+#[derive(Clone, Copy, Debug, PartialOrd, Ord, PartialEq, Eq)]
 pub enum Scope {
     /// A built-in value.
     BuiltIn,
@@ -109,4 +106,13 @@ pub enum Scope {
     /// Configs loaded via `include` are also seen as from cli args,
     /// if the initial config is being loaded from cli.
     Cli,
+}
+
+impl Scope {
+    /// Returns true if self is a higher priority to other.
+    ///
+    /// CLI is preferred over environment, which is preferred over files.
+    pub fn is_higher_priority(&self, other: Self) -> bool {
+        *self > other
+    }
 }
