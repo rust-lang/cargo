@@ -841,9 +841,8 @@ fn script_fails_stay_dirty() {
         .build();
 
     p.cargo("build").run();
-    if is_coarse_mtime() {
-        sleep_ms(1000);
-    }
+    p.root().move_into_the_past();
+    p.build_dir().move_into_the_past();
     p.change_file("helper.rs", r#"pub fn doit() {panic!("Crash!");}"#);
     p.cargo("build")
         .with_stderr_data("...\n[..]Crash![..]\n...")
