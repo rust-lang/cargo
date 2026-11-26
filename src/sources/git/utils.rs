@@ -802,8 +802,11 @@ fn maybe_gc_repo(repo: &mut git2::Repository, gctx: &GlobalContext) -> CargoResu
     // gc.autoPackLimit, which has the same meaning. This lets tests force gc
     // to run by setting a low threshold without depending on git's defaults.
     let mut cmd = Command::new("git");
+    // Run gc in the foreground, so gc doesn't outlive Cargo cache lock.
+    // Otherwise it may modify the database while it is in use.
+    cmd.arg("-c").arg("gc.autoDetach=false");
     if let Ok(limit) = gctx.get_env("__CARGO_PACKFILE_LIMIT") {
-        cmd.arg(format!("-c gc.autoPackLimit={}", limit));
+        cmd.arg("-c").arg(format!("gc.autoPackLimit={limit}"));
     }
     cmd.arg("gc")
         .arg("--auto")
