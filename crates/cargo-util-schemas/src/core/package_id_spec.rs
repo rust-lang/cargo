@@ -458,6 +458,13 @@ mod tests {
     }
 
     #[test]
+    fn prerelease_sorts_before_release() {
+        let pre = PackageIdSpec::parse("foo@1.0.0-alpha").unwrap();
+        let stable = PackageIdSpec::parse("foo@1.0.0").unwrap();
+        assert!(pre < stable);
+    }
+
+    #[test]
     fn good_parsing() {
         ok(
             "https://crates.io/foo",
