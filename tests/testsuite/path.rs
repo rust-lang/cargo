@@ -326,7 +326,6 @@ fn no_rebuild_dependency() {
 "#]])
         .run();
 
-    sleep_ms(1000);
     p.change_file(
         "src/main.rs",
         r#"
@@ -334,6 +333,7 @@ fn no_rebuild_dependency() {
             fn main() { bar::bar(); }
         "#,
     );
+    p.root().join("src/main.rs").move_into_the_future();
     // Don't compile bar, but do recompile foo.
     p.cargo("check")
         .with_stderr_data(str![[r#"
