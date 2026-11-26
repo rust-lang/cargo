@@ -104,11 +104,12 @@ impl ConfigReader<'_> {
             return Ok(cv);
         }
         let env = self.env.get_str(key.as_env_key());
-        let env_def = Definition::Environment(key.as_env_key().to_string());
         let use_env = match (&cv, env) {
             // Lists are always merged.
             (Some(CV::List(..)), Some(_)) => true,
-            (Some(cv), Some(_)) => env_def.is_higher_priority(cv.definition()),
+            (Some(cv), Some(_)) => {
+                crate::Scope::Environment.is_higher_priority(cv.definition().scope())
+            }
             (None, Some(_)) => true,
             _ => false,
         };
@@ -121,6 +122,7 @@ impl ConfigReader<'_> {
         // map type, this should implement a starts_with check (similar to how
         // ConfigMapAccess does).
         let env = env.unwrap();
+        let env_def = Definition::Environment(key.as_env_key().to_string());
         if env == "true" {
             Ok(Some(CV::Boolean(true, env_def)))
         } else if env == "false" {
