@@ -1307,10 +1307,8 @@ fn incremental_build_script_execution_got_new_mtime_and_cargo_check() {
 "#]])
         .run();
 
-    if is_coarse_mtime() {
-        sleep_ms(1000);
-    }
-
+    p.root().move_into_the_past();
+    p.build_dir().move_into_the_past();
     p.change_file("touch-me", "oops");
 
     // The first one is expected to rerun build script
