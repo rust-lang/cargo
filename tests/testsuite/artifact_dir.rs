@@ -5,7 +5,6 @@ use std::fs;
 use std::path::Path;
 
 use crate::prelude::*;
-use cargo_test_support::sleep_ms;
 use cargo_test_support::str;
 use cargo_test_support::{basic_manifest, project};
 
@@ -228,8 +227,8 @@ foo
 "#]])
     .run();
 
-    sleep_ms(1000);
     p.change_file("src/main.rs", r#"fn main() { println!("bar") }"#);
+    p.root().join("src/main.rs").move_into_the_future();
 
     p.cargo("build --artifact-dir out")
         .arg("-Zunstable-options")
