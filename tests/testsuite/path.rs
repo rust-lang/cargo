@@ -6,8 +6,7 @@ use crate::prelude::*;
 use cargo_test_support::paths;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
-use cargo_test_support::{basic_lib_manifest, basic_manifest, main_file, project};
-use cargo_test_support::{sleep_ms, t};
+use cargo_test_support::{basic_lib_manifest, basic_manifest, main_file, project, t};
 
 #[cargo_test]
 // I have no idea why this is failing spuriously on Windows;
@@ -531,9 +530,9 @@ fn nested_deps_recompile() {
 
 "#]])
         .run();
-    sleep_ms(1000);
 
     p.change_file("src/main.rs", r#"fn main() {}"#);
+    p.root().join("src/main.rs").move_into_the_future();
 
     // This shouldn't recompile `bar`
     p.cargo("check")
