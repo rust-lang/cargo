@@ -509,15 +509,15 @@ impl<'reader, 'err> ValueSource<'reader, 'err> {
         // Figure out where this key is defined.
         let definition = {
             let env = de.key.as_env_key();
-            let env_def = Definition::Environment(env.to_string());
+            let env_def = || Definition::Environment(env.to_string());
             match (
                 de.reader.env.contains_key(env),
                 de.reader.store.get_cv(&de.key)?,
             ) {
                 (true, Some(cv)) => {
                     // Both, pick highest priority.
-                    if env_def.is_higher_priority(cv.definition()) {
-                        env_def
+                    if crate::Scope::Environment.is_higher_priority(cv.definition().scope()) {
+                        env_def()
                     } else {
                         cv.definition().clone()
                     }
@@ -526,7 +526,7 @@ impl<'reader, 'err> ValueSource<'reader, 'err> {
                 // Assume it is an environment, even if the key is not set.
                 // This can happen for intermediate tables, like
                 // CARGO_FOO_BAR_* where `CARGO_FOO_BAR` is not set.
-                (_, None) => env_def,
+                (_, None) => env_def(),
             }
         };
 
