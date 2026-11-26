@@ -1171,9 +1171,11 @@ fn rerun_bin_doc_when_lib_rebuilt_after_lib_doc() {
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
+    // Keep the package inputs unchanged across the two documentation builds.
+    p.root().move_into_the_past();
     p.cargo("doc --no-deps").run();
 
-    cargo_test_support::sleep_ms(1000);
+    p.target_debug_dir().move_into_the_past();
     p.change_file("bar/src/lib.rs", "pub fn bar() {} pub fn baz() {}");
 
     // Rebuild the lib that the bin docs depend on, then only document the lib.
