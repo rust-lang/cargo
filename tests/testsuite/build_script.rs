@@ -4533,10 +4533,15 @@ fn rebuild_only_on_explicit_paths() {
 "#]])
         .run();
 
-    sleep_ms(1000);
+    let age_build = || {
+        p.root().move_into_the_past();
+        p.build_dir().move_into_the_past();
+    };
+    age_build();
     p.change_file("foo", "");
     p.change_file("bar", "");
-    sleep_ms(1000); // make sure the to-be-created outfile has a timestamp distinct from the infiles
+    // Keep the new inputs between the previous build and the one about to run.
+    age_build();
 
     // now the exist, so run once, catch the mtime, then shouldn't run again
     println!("run with");
@@ -4560,7 +4565,7 @@ fn rebuild_only_on_explicit_paths() {
 "#]])
         .run();
 
-    sleep_ms(1000);
+    age_build();
 
     // random other files do not affect freshness
     println!("run baz");
