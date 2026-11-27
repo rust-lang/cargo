@@ -3,22 +3,6 @@ use std::fmt;
 use std::mem;
 use std::path::{Path, PathBuf};
 
-/// The kind of source where a config value is defined.
-#[derive(Clone, Copy, Debug)]
-pub enum Scope {
-    /// A built-in value.
-    BuiltIn,
-    /// Loaded due to config file discovery.
-    Path,
-    /// A value defined in an environment variable.
-    Environment,
-    /// Loaded due to a request from the global cli arg `--config`
-    ///
-    /// Configs loaded via `include` are also seen as from cli args,
-    /// if the initial config is being loaded from cli.
-    Cli,
-}
-
 /// Location where a config value is defined.
 #[derive(Clone, Debug, Eq, Default)]
 pub enum Definition {
@@ -109,4 +93,20 @@ impl fmt::Display for Definition {
             Definition::BuiltIn => write!(f, "default"),
         }
     }
+}
+
+/// The kind of source where a config value is defined.
+#[derive(Clone, Copy, Debug)]
+pub enum Scope {
+    /// A built-in value.
+    BuiltIn,
+    /// Loaded due to config file discovery.
+    Path,
+    /// A value defined in an environment variable.
+    Environment,
+    /// Loaded due to a request from the global cli arg `--config`
+    ///
+    /// Configs loaded via `include` are also seen as from cli args,
+    /// if the initial config is being loaded from cli.
+    Cli,
 }
