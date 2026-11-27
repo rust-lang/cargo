@@ -146,10 +146,39 @@ pub fn compile_with_exec<'a>(
     options: &CompileOptions,
     exec: &Arc<dyn Executor>,
 ) -> CargoResult<Compilation<'a>> {
+    compile_with_exec_inner(ws, options, exec, true)
+}
+
+/// Like [`compile_with_exec`], but skips last-use tracking for the workspace's
+/// target and build directories.
+///
+/// For a build in a temporary workspace or a temporary directory, which GC
+/// must not record. The caller records the directories that stay, if any.
+pub(crate) fn compile_without_workspace_build_tracking<'a>(
+    ws: &Workspace<'a>,
+    options: &CompileOptions,
+    exec: &Arc<dyn Executor>,
+) -> CargoResult<Compilation<'a>> {
+    compile_with_exec_inner(ws, options, exec, false)
+}
+
+fn compile_with_exec_inner<'a>(
+    ws: &Workspace<'a>,
+    options: &CompileOptions,
+    exec: &Arc<dyn Executor>,
+    track_workspace_build: bool,
+) -> CargoResult<Compilation<'a>> {
     let parse_pass_output = crate::diagnostics::passes::emit_parse_diagnostics(
         ws,
         crate::diagnostics::rules::PARSE_PASS_RULES,
     )?;
+    // Record before compilation setup, whose dependency resolution saves
+    // the deferred last-use data.
+    if track_workspace_build {
+        ws.gctx()
+            .deferred_global_last_use()?
+            .mark_workspace_build_used(ws);
+    }
     let compilation = compile_ws(ws, options, exec)?;
     if ws.gctx().warning_handling()? == WarningHandling::Deny
         && (compilation.lint_warning_count + parse_pass_output.lint_warning_count) > 0
