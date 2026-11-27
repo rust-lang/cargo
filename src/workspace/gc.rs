@@ -110,6 +110,8 @@ pub struct GcOpts {
     pub max_git_size: Option<u64>,
     /// The `--max-download-size` CLI option.
     pub max_download_size: Option<u64>,
+
+    pub max_shared_storage_age: Option<Duration>,
 }
 
 impl GcOpts {
@@ -132,6 +134,11 @@ impl GcOpts {
             || self.max_crate_size.is_some()
             || self.max_git_size.is_some()
             || self.max_download_size.is_some()
+    }
+
+    /// Returns whether any shared storage cleaning options are set.
+    pub fn is_shared_storage_opt_set(&self) -> bool {
+        self.max_shared_storage_age.is_some()
     }
 
     /// Updates the `GcOpts` to incorporate the specified max download age.

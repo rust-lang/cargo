@@ -76,6 +76,7 @@ use std::sync::{Arc, LazyLock, Mutex, MutexGuard, OnceLock};
 use std::time::Instant;
 
 use self::ConfigValue as CV;
+use crate::compiler::shared_storage;
 use crate::ops::RegistryCredentialConfig;
 use crate::sources::CRATES_IO_INDEX;
 use crate::sources::CRATES_IO_REGISTRY;
@@ -810,6 +811,19 @@ impl GlobalContext {
             .config(self.config()?)
             .env(&self.env)
             .unstable_advanced_env(self.cli_unstable().advanced_env))
+    }
+
+    pub fn shared_storage_dir(&self) -> Option<PathBuf> {
+        if !self.cli_unstable().shared_object_storage || !self.cli_unstable().build_dir_new_layout {
+            return None;
+        }
+
+        return Some(
+            self.cargo_home
+                .as_path_unlocked()
+                .join("storage")
+                .join(shared_storage::VERSION),
+        );
     }
 
     pub(crate) fn get_cv_with_env(&self, key: &ConfigKey) -> CargoResult<Option<CV>> {

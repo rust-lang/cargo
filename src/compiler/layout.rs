@@ -519,3 +519,33 @@ impl BuildDirLayout {
         Ok(&self.tmp)
     }
 }
+
+pub struct SharedStorageLayout {
+    /// Content addressed files partitioned by `hash[..2]/hash[2..]`.
+    pub objects: PathBuf,
+    /// Last used timestamps of build manifests, named by the manifest's object hash.
+    /// These are the roots for garbage collecting `objects`.
+    pub build_index: PathBuf,
+    /// Staging area for files being inserted into `objects`.
+    pub staging: PathBuf,
+}
+
+impl SharedStorageLayout {
+    pub fn new(root: &Path) -> Self {
+        Self {
+            objects: root.join("objects"),
+            build_index: root.join("build-index"),
+            staging: root.join(".staging"),
+        }
+    }
+
+    /// Returns the path of the object with the given hex encoded hash.
+    pub fn object(&self, hash: &str) -> PathBuf {
+        self.objects.join(&hash[..2]).join(&hash[2..])
+    }
+
+    /// Returns the path of the last-used timestamp for the build manifest with the given hash.
+    pub fn build_index_entry(&self, hash: &str) -> PathBuf {
+        self.build_index.join(&hash[..2]).join(&hash[2..])
+    }
+}
