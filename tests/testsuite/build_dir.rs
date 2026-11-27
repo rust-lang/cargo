@@ -127,25 +127,25 @@ fn libs() {
         };
 
     // (crate-type, list of final artifacts)
-    let lib_types = [
-        ("lib", ["libfoo.rlib", "libfoo.d"]),
+    let lib_types: [(_, &[&str]); 4] = [
+        ("lib", &[]),
         (
             "dylib",
-            [
+            &[
                 &format!("{DLL_PREFIX}foo{DLL_SUFFIX}"),
                 &format!("{DLL_PREFIX}foo.d"),
             ],
         ),
         (
             "cdylib",
-            [
+            &[
                 &format!("{DLL_PREFIX}foo{DLL_SUFFIX}"),
                 &format!("{DLL_PREFIX}foo.d"),
             ],
         ),
         (
             "staticlib",
-            [
+            &[
                 &format!("{staticlib_prefix}foo{staticlib_suffix}"),
                 &format!("{staticlib_prefix}foo.d"),
             ],
@@ -187,7 +187,7 @@ fn libs() {
     }
 }
 
-#[cargo_test(nightly, reason = "rlib only not uplifted on nightly")]
+#[cargo_test]
 fn rlibs_artifact_location() {
     let p = project()
         .file("src/lib.rs", "")
@@ -202,8 +202,6 @@ fn rlibs_artifact_location() {
         .build();
 
     p.cargo("build --message-format=json")
-        .masquerade_as_nightly_cargo(&["rlib uplifting"])
-        .env_remove("__CARGO_TEMPORARY_STOP_RLIB_UPLIFT_OPT_OUT")
         .with_stdout_data(
             str![[r#"
 [
@@ -232,6 +230,56 @@ fn rlibs_artifact_location() {
 [ROOT]/foo/target-dir/CACHEDIR.TAG
 [ROOT]/foo/target-dir/debug/.cargo-artifact-lock
 [ROOT]/foo/target-dir/debug/.cargo-lock
+
+"#]]);
+}
+
+#[cargo_test]
+fn rlibs_artifact_location_opt_out() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [build]
+            target-dir = "target-dir"
+            build-dir = "build-dir"
+            "#,
+        )
+        .build();
+
+    p.cargo("build --message-format=json")
+        .env("__CARGO_TEMPORARY_STOP_RLIB_UPLIFT_OPT_OUT", "1")
+        .with_stdout_data(
+            str![[r#"
+[
+  {
+    "filenames": [
+      "[ROOT]/foo/target-dir/debug/libfoo.rlib",
+      "[ROOT]/foo/build-dir/debug/build/foo/[HASH]/out/libfoo-[HASH].rmeta"
+    ],
+    "reason": "compiler-artifact",
+    "...": "{...}"
+  },
+  {
+    "reason": "build-finished",
+    "success": true
+  }
+]
+"#]]
+            .is_json()
+            .against_jsonlines(),
+        )
+        .run();
+
+    p.root()
+        .join("target-dir")
+        .assert_build_dir_layout(str![[r#"
+[ROOT]/foo/target-dir/CACHEDIR.TAG
+[ROOT]/foo/target-dir/debug/.cargo-artifact-lock
+[ROOT]/foo/target-dir/debug/.cargo-lock
+[ROOT]/foo/target-dir/debug/libfoo.d
+[ROOT]/foo/target-dir/debug/libfoo.rlib
 
 "#]]);
 }

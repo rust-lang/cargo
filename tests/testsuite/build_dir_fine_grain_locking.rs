@@ -136,25 +136,25 @@ fn libs() {
         };
 
     // (crate-type, list of final artifacts)
-    let lib_types = [
-        ("lib", ["libfoo.rlib", "libfoo.d"]),
+    let lib_types: [(_, &[&str]); 4] = [
+        ("lib", &[]),
         (
             "dylib",
-            [
+            &[
                 &format!("{DLL_PREFIX}foo{DLL_SUFFIX}"),
                 &format!("{DLL_PREFIX}foo.d"),
             ],
         ),
         (
             "cdylib",
-            [
+            &[
                 &format!("{DLL_PREFIX}foo{DLL_SUFFIX}"),
                 &format!("{DLL_PREFIX}foo.d"),
             ],
         ),
         (
             "staticlib",
-            [
+            &[
                 &format!("{staticlib_prefix}foo{staticlib_suffix}"),
                 &format!("{staticlib_prefix}foo.d"),
             ],
