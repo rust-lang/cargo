@@ -2052,3 +2052,31 @@ fn changing_linker() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn non_ascii_whitespace_in_dep_info_path() {
+    // rustc only escapes ASCII spaces in dep-info,
+    // other whitespace is part of the path.
+    let p = project()
+        .file(
+            "src/lib.rs",
+            "pub const DATA: &str = include_str!(\"data\u{3000}file.txt\");",
+        )
+        .file("src/data\u{3000}file.txt", "")
+        .build();
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+    p.cargo("check -v")
+        .with_stderr_data(str![[r#"
+[FRESH] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
