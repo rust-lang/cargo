@@ -522,24 +522,21 @@ fn relative_install_location_without_trailing_slash() {
     let mut cmd = cargo_process("install --path .");
     cmd.cwd(p.root());
     cmd.with_stderr_data(str![[r#"
-[WARNING] the `install.root` value `t1` defined in [ROOT]/.cargo/config.toml without a trailing slash is deprecated
- |
- = [NOTE] a future version of Cargo will treat it as relative to the configuration directory
- = [HELP] add a trailing slash (`t1/`) to adopt the correct behavior and silence this warning
- = [NOTE] see more at https://doc.rust-lang.org/cargo/reference/config.html#config-relative-paths
 [INSTALLING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/foo/t1/bin/foo[EXE]
+[INSTALLING] [ROOT]/t1/bin/foo[EXE]
 [INSTALLED] package `foo v0.0.1 ([ROOT]/foo)` (executable `foo[EXE]`)
-[WARNING] be sure to add `[ROOT]/foo/t1/bin` to your PATH to be able to run the installed binaries
+[WARNING] be sure to add `[ROOT]/t1/bin` to your PATH to be able to run the installed binaries
 
 "#]])
         .run();
 
-    // NOTE: the install location is relative to the CWD, not the config file
+    assert_has_installed_exe(&root_t1, "foo");
+    assert_has_not_installed_exe(&project_t1, "foo");
+
+    cargo_process("uninstall foo").cwd(p.root()).run();
     assert_has_not_installed_exe(&root_t1, "foo");
-    assert_has_installed_exe(&project_t1, "foo");
 }
 
 #[cargo_test]
@@ -634,21 +631,17 @@ fn relative_install_location_with_path_set() {
     cmd.cwd(p.root());
     cmd.env("PATH", new_path);
     cmd.with_stderr_data(str![[r#"
-[WARNING] the `install.root` value `t1` defined in [ROOT]/.cargo/config.toml without a trailing slash is deprecated
- |
- = [NOTE] a future version of Cargo will treat it as relative to the configuration directory
- = [HELP] add a trailing slash (`t1/`) to adopt the correct behavior and silence this warning
- = [NOTE] see more at https://doc.rust-lang.org/cargo/reference/config.html#config-relative-paths
 [INSTALLING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/foo/t1/bin/foo[EXE]
+[INSTALLING] [ROOT]/t1/bin/foo[EXE]
 [INSTALLED] package `foo v0.0.1 ([ROOT]/foo)` (executable `foo[EXE]`)
+[WARNING] be sure to add `[ROOT]/t1/bin` to your PATH to be able to run the installed binaries
 
 "#]])
         .run();
 
-    assert_has_installed_exe(&project_t1, "foo");
+    assert_has_not_installed_exe(&project_t1, "foo");
 }
 
 #[cargo_test]
