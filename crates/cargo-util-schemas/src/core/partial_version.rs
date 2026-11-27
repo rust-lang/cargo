@@ -1,15 +1,68 @@
+use std::cmp::Ordering;
 use std::fmt::{self, Display};
+use std::hash::{Hash, Hasher};
 
-use semver::{Comparator, Version, VersionReq};
+use semver::{Comparator, Prerelease, Version, VersionReq};
 use serde_untagged::UntaggedEnumVisitor;
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct PartialVersion {
     pub major: u64,
     pub minor: Option<u64>,
     pub patch: Option<u64>,
     pub pre: Option<semver::Prerelease>,
     pub build: Option<semver::BuildMetadata>,
+}
+
+impl PartialEq for PartialVersion {
+    fn eq(&self, other: &Self) -> bool {
+        // An explicitly empty prerelease is semantically the same as no
+        // prerelease. Normalize it so equality agrees with ordering.
+        self.major == other.major
+            && self.minor == other.minor
+            && self.patch == other.patch
+            && self.pre.as_ref().unwrap_or(&Prerelease::EMPTY)
+                == other.pre.as_ref().unwrap_or(&Prerelease::EMPTY)
+            && self.build == other.build
+    }
+}
+
+impl Eq for PartialVersion {}
+
+impl PartialOrd for PartialVersion {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for PartialVersion {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.major
+            .cmp(&other.major)
+            .then_with(|| self.minor.cmp(&other.minor))
+            .then_with(|| self.patch.cmp(&other.patch))
+            .then_with(|| {
+                // SemVer sorts a prerelease before its release, while `Option`
+                // would sort `None` before `Some`. Normalizing to
+                // `Prerelease::EMPTY` gives the SemVer behavior because it
+                // sorts after all non-empty prereleases.
+                self.pre
+                    .as_ref()
+                    .unwrap_or(&Prerelease::EMPTY)
+                    .cmp(other.pre.as_ref().unwrap_or(&Prerelease::EMPTY))
+            })
+            .then_with(|| self.build.cmp(&other.build))
+    }
+}
+
+impl Hash for PartialVersion {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.major.hash(state);
+        self.minor.hash(state);
+        self.patch.hash(state);
+        self.pre.as_ref().unwrap_or(&Prerelease::EMPTY).hash(state);
+        self.build.hash(state);
+    }
 }
 
 impl PartialVersion {
@@ -130,7 +183,7 @@ impl Display for PartialVersion {
         if let Some(patch) = self.patch {
             write!(f, ".{patch}")?;
         }
-        if let Some(pre) = self.pre.as_ref() {
+        if let Some(pre) = self.pre.as_ref().filter(|pre| !pre.is_empty()) {
             write!(f, "-{pre}")?;
         }
         if let Some(build) = self.build.as_ref() {
@@ -205,6 +258,42 @@ mod test {
             };
             snapbox::assert_data_eq!(actual, expected.clone().raw());
         }
+    }
+
+    #[test]
+    fn prerelease_ordering() {
+        let versions = [
+            "1.0.0-alpha",
+            "1.0.0-alpha.1",
+            "1.0.0-alpha.beta",
+            "1.0.0-beta",
+            "1.0.0-beta.2",
+            "1.0.0-beta.11",
+            "1.0.0-rc.1",
+            "1.0.0",
+        ];
+        for pair in versions.windows(2) {
+            let lhs: PartialVersion = pair[0].parse().unwrap();
+            let rhs: PartialVersion = pair[1].parse().unwrap();
+            assert!(lhs < rhs, "expected {lhs} to sort before {rhs}");
+        }
+    }
+
+    #[test]
+    fn empty_prerelease_sorts_like_release() {
+        let stable: PartialVersion = "1.0.0".parse().unwrap();
+        let mut empty = stable.clone();
+        empty.pre = Some(semver::Prerelease::EMPTY);
+
+        assert_eq!(empty, stable);
+        assert_eq!(empty.cmp(&stable), std::cmp::Ordering::Equal);
+        assert_eq!(empty.to_string(), stable.to_string());
+
+        let mut empty_hash = std::hash::DefaultHasher::new();
+        empty.hash(&mut empty_hash);
+        let mut stable_hash = std::hash::DefaultHasher::new();
+        stable.hash(&mut stable_hash);
+        assert_eq!(empty_hash.finish(), stable_hash.finish());
     }
 
     #[test]
