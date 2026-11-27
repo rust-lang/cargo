@@ -152,14 +152,15 @@ fn create_package(
     let filecount = ar_files.len();
 
     // Check that the package dependencies are safe to deploy.
+    let manifest_path = pkg.manifest_path().expect("package is on the filesystem");
     for dep in pkg.dependencies() {
         super::check_dep_has_version(dep, false).map_err(|err| {
             ManifestError::new(
                 err.context(format!(
                     "failed to verify manifest at `{}`",
-                    pkg.manifest_path().display()
+                    manifest_path.display()
                 )),
-                pkg.manifest_path().into(),
+                manifest_path.into(),
             )
         })?;
     }
@@ -473,7 +474,11 @@ fn prepare_archive(
     opts: &PackageOpts<'_>,
 ) -> CargoResult<Vec<ArchiveFile>> {
     let gctx = ws.gctx();
-    let src = PathSource::new(pkg.root(), pkg.package_id().source_id(), gctx);
+    let src = PathSource::new(
+        pkg.root().expect("package exists on the filesystem"),
+        pkg.package_id().source_id(),
+        gctx,
+    );
     src.load()?;
 
     if opts.check_metadata {
@@ -503,9 +508,13 @@ fn build_ar_list(
     include_lockfile: bool,
 ) -> CargoResult<Vec<ArchiveFile>> {
     let mut result = HashMap::default();
-    let root = pkg.root();
+    let manifest_path = pkg
+        .manifest_path()
+        .expect("package exists on the filesystem");
+    let root = pkg.root().expect("package exists on the filesystem");
+
     for src_file in &src_files {
-        let rel_path = src_file.strip_prefix(&root)?;
+        let rel_path = src_file.strip_prefix(root)?;
         check_filename(rel_path, &mut ws.gctx().shell())?;
         let rel_str = rel_path.to_str().ok_or_else(|| {
             anyhow::format_err!("non-utf8 path in source directory: {}", rel_path.display())
@@ -538,7 +547,7 @@ fn build_ar_list(
             .push(ArchiveFile {
                 rel_path: PathBuf::from(ORIGINAL_MANIFEST_FILE),
                 rel_str: ORIGINAL_MANIFEST_FILE.to_string(),
-                contents: FileContents::OnDisk(pkg.manifest_path().to_owned()),
+                contents: FileContents::OnDisk(manifest_path.to_owned()),
             });
         result
             .entry(UncasedAscii::new("Cargo.toml"))
@@ -547,7 +556,7 @@ fn build_ar_list(
                 rel_path: PathBuf::from("Cargo.toml"),
                 rel_str: "Cargo.toml".to_string(),
                 contents: FileContents::Generated(GeneratedFile::Manifest(
-                    pkg.manifest_path().to_owned(),
+                    manifest_path.to_owned(),
                 )),
             });
     } else {
@@ -588,7 +597,7 @@ fn build_ar_list(
     let mut result = result.into_values().flatten().collect();
     if let Some(license_file) = &pkg.manifest().metadata().license_file {
         let license_path = Path::new(license_file);
-        let abs_file_path = paths::normalize_path(&pkg.root().join(license_path));
+        let abs_file_path = paths::normalize_path(&root.join(license_path));
         if abs_file_path.is_file() {
             check_for_file_and_add(
                 "license-file",
@@ -609,7 +618,7 @@ fn build_ar_list(
     }
     if let Some(readme) = &pkg.manifest().metadata().readme {
         let readme_path = Path::new(readme);
-        let abs_file_path = paths::normalize_path(&pkg.root().join(readme_path));
+        let abs_file_path = paths::normalize_path(&root.join(readme_path));
         if abs_file_path.is_file() {
             check_for_file_and_add("readme", readme_path, abs_file_path, pkg, &mut result, ws)?;
         } else {
@@ -628,8 +637,8 @@ fn build_ar_list(
         .filter(|t| t.is_custom_build())
     {
         if let Some(custom_build_path) = t.src_path().path() {
-            let abs_custom_build_path = paths::normalize_path(&pkg.root().join(custom_build_path));
-            if !abs_custom_build_path.is_file() || !abs_custom_build_path.starts_with(pkg.root()) {
+            let abs_custom_build_path = paths::normalize_path(&root.join(custom_build_path));
+            if !abs_custom_build_path.is_file() || !abs_custom_build_path.starts_with(root) {
                 error_custom_build_file_not_in_package(pkg, &abs_custom_build_path, t)?;
             }
         }
@@ -648,7 +657,7 @@ fn check_for_file_and_add(
     result: &mut Vec<ArchiveFile>,
     ws: &Workspace<'_>,
 ) -> CargoResult<()> {
-    match abs_file_path.strip_prefix(&pkg.root()) {
+    match abs_file_path.strip_prefix(&pkg.root().expect("package is on the filesystem")) {
         Ok(rel_file_path) => {
             if !result.iter().any(|ar| ar.rel_path == rel_file_path) {
                 result.push(ArchiveFile {
@@ -697,7 +706,10 @@ fn error_on_nonexistent_file(
     let rel_msg = if path.is_absolute() {
         "".to_string()
     } else {
-        format!(" (relative to `{}`)", pkg.root().display())
+        format!(
+            " (relative to `{}`)",
+            pkg.root().expect("package is on the filesystem").display()
+        )
     };
 
     let msg = format!(
@@ -705,7 +717,9 @@ fn error_on_nonexistent_file(
                 Please update the {manifest_key_name} setting in the manifest at `{}`.",
         path.display(),
         rel_msg,
-        pkg.manifest_path().display()
+        pkg.manifest_path()
+            .expect("package is on the filesystem")
+            .display()
     );
 
     invalid.push(msg);
@@ -723,7 +737,7 @@ fn error_custom_build_file_not_in_package(
                 "the source file of {description_name} doesn't appear to be a path inside of the package.\n\
             It is at `{}`, whereas the root the package is `{}`.\n",
                 path.display(),
-                pkg.root().display()
+                pkg.root().expect("package is on the filesystem").display()
             )
         } else {
             format!("the source file of {description_name} doesn't appear to exist.\n",)
@@ -734,7 +748,9 @@ fn error_custom_build_file_not_in_package(
         This may cause issue during packaging, as modules resolution and resources included via macros are often relative to the path of source files.\n\
         Please update the `build` setting in the manifest at `{}` and point to a path inside the root of the package.",
         tip,
-        pkg.manifest_path().display()
+        pkg.manifest_path()
+            .expect("package is on the filesystem")
+            .display()
     );
     anyhow::bail!(msg)
 }

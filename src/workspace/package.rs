@@ -36,7 +36,8 @@ use crate::workspace::{
 };
 use crate::workspace::{Summary, Workspace};
 
-/// Information about a package that is available somewhere in the file system.
+/// Information about a package. Usually this package is available on the filesystem, but cargo
+/// creates "synthetic" in-memory packages to satisfy the resolver in the case of builtin packages.
 ///
 /// A package is a `Cargo.toml` file plus all the files that are part of it.
 #[derive(Clone)]
@@ -50,7 +51,7 @@ struct PackageInner {
     /// The package's manifest.
     manifest: Manifest,
     /// The root of the package.
-    manifest_path: PathBuf,
+    manifest_path: Option<PathBuf>,
 }
 
 impl Ord for Package {
@@ -113,9 +114,20 @@ impl Package {
         Package {
             inner: Rc::new(PackageInner {
                 manifest,
-                manifest_path: manifest_path.to_path_buf(),
+                manifest_path: Some(manifest_path.to_path_buf()),
             }),
         }
+    }
+
+    /// Creates an in-memory package that does not exist on the filesystem. The package should not
+    /// be built and so cannot be turned into a Unit.
+    pub fn synthetic(id: PackageId) -> CargoResult<Package> {
+        Ok(Package {
+            inner: Rc::new(PackageInner {
+                manifest: Manifest::synthetic(id)?,
+                manifest_path: None,
+            }),
+        })
     }
 
     /// Gets the manifest dependencies.
@@ -131,8 +143,9 @@ impl Package {
         &mut Rc::make_mut(&mut self.inner).manifest
     }
     /// Gets the path to the manifest.
-    pub fn manifest_path(&self) -> &Path {
-        &self.inner.manifest_path
+    /// `None` means the package is synthetic and doesn't exist on the filesystem.
+    pub fn manifest_path(&self) -> Option<&Path> {
+        self.inner.manifest_path.as_deref()
     }
     /// Gets the name of the package.
     pub fn name(&self) -> InternedString {
@@ -143,8 +156,9 @@ impl Package {
         self.manifest().package_id()
     }
     /// Gets the root folder of the package.
-    pub fn root(&self) -> &Path {
-        self.manifest_path().parent().unwrap()
+    /// `None`` means the package is synthetic and doesn't exist on the filesystem.
+    pub fn root(&self) -> Option<&Path> {
+        self.manifest_path().and_then(Path::parent)
     }
     /// Gets the summary for the package.
     pub fn summary(&self) -> &Summary {
@@ -196,7 +210,7 @@ impl Package {
         Package {
             inner: Rc::new(PackageInner {
                 manifest: self.manifest().clone().map_source(to_replace, replace_with),
-                manifest_path: self.manifest_path().to_owned(),
+                manifest_path: self.manifest_path().map(ToOwned::to_owned),
             }),
         }
     }
@@ -209,9 +223,18 @@ impl Package {
         let summary = self.manifest().summary();
         let package_id = summary.package_id();
         let manmeta = self.manifest().metadata();
-        // Filter out metabuild targets. They are an internal implementation
-        // detail that is probably not relevant externally. There's also not a
-        // real path to show in `src_path`, and this avoids changing the format.
+        let manifest_path = match self.manifest_path() {
+            Some(p) => p.to_path_buf(),
+            // This mimics rustc's behaviour which prefixes standard library paths with
+            // `/rustc/$HASH/` when `rust-src` is not available.
+            // TODO: Decide the exact format. Do we need the rustc hash here?
+            None => ["/rustc", "library", &package_id.name(), "Cargo.toml"]
+                .iter()
+                .collect(),
+        };
+        // Filter out metabuild and synthetic targets. They are an internal implementation detail
+        // that is probably not relevant externally. There's also not a real path to show in
+        // `src_path`, and this avoids changing the format.
         let targets: Vec<Target> = self
             .manifest()
             .targets()
@@ -260,7 +283,7 @@ impl Package {
             targets,
             features: crate_features,
             features_v2,
-            manifest_path: self.manifest_path().to_path_buf(),
+            manifest_path,
             metadata: self.manifest().custom_metadata().cloned(),
             authors: manmeta.authors.clone(),
             categories: manmeta.categories.clone(),

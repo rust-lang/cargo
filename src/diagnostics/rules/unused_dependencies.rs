@@ -168,9 +168,10 @@ pub fn lint_build_results(
     global_stats: &mut GlobalDiagnosticStats,
 ) -> CargoResult<()> {
     for (pkg_id, states) in &build_runner.unused_dep_state.states {
-        let Some(pkg) = get_package(&build_runner.unused_dep_state, pkg_id) else {
+        let Some(unit) = get_unit(&build_runner.unused_dep_state, pkg_id) else {
             continue;
         };
+        let pkg = &unit.pkg;
         let toml_lints = pkg
             .manifest()
             .normalized_toml()
@@ -214,7 +215,7 @@ pub fn lint_build_results(
         }
 
         let mut pkg_stats = global_stats.scope();
-        lint_package_build_results(build_runner, pkg, states, level, &mut pkg_stats)?;
+        lint_package_build_results(build_runner, unit, states, level, &mut pkg_stats)?;
         pkg_stats.report_summary("finalize", Some(&*pkg.name()), build_runner.bcx.gctx)?;
     }
     Ok(())
@@ -222,18 +223,19 @@ pub fn lint_build_results(
 
 fn lint_package_build_results(
     build_runner: &BuildRunner<'_, '_>,
-    pkg: &Package,
+    unit: &Unit,
     states: &IndexMap<DepKind, DependenciesState>,
     level: LintLevelProduct,
     pkg_stats: &mut ScopedDiagnosticStats<'_>,
 ) -> CargoResult<()> {
+    let pkg = &unit.pkg;
     let mut lint_count = 0;
     let LintLevelProduct {
         level: lint_level,
         source,
     } = level;
     let ws = build_runner.bcx.ws;
-    let manifest_path = workspace_rel_path(ws, pkg.manifest_path());
+    let manifest_path = workspace_rel_path(ws, unit.manifest_path());
     let pkg_id = pkg.package_id();
     for (dep_kind, state) in states.iter() {
         for ext in state.unused_externs.iter().flatten() {
@@ -353,16 +355,12 @@ fn lint_package_build_results(
     Ok(())
 }
 
-fn get_package<'s>(
-    unused_dep_state: &'s UnusedDepState,
-    pkg_id: &PackageId,
-) -> Option<&'s Package> {
+fn get_unit<'s>(unused_dep_state: &'s UnusedDepState, pkg_id: &PackageId) -> Option<&'s Unit> {
     let state = unused_dep_state.states.get(pkg_id)?;
     let mut iter = state.values();
     let state = iter.next()?;
     let mut iter = state.seen_units.iter();
-    let unit = iter.next()?;
-    Some(&unit.pkg)
+    iter.next()
 }
 
 #[instrument(skip_all)]

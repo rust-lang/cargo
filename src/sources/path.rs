@@ -60,7 +60,10 @@ impl<'gctx> PathSource<'gctx> {
     /// yet loaded any other packages.
     pub fn preload_with(pkg: Package, gctx: &'gctx GlobalContext) -> Self {
         let source_id = pkg.package_id().source_id();
-        let path = pkg.root().to_owned();
+        let path = pkg
+            .root()
+            .expect("package exists on the filesystem")
+            .to_owned();
         Self {
             source_id,
             path,
@@ -549,10 +552,16 @@ fn first_package<'p>(
             let mut msg = String::new();
             let _ = writeln!(&mut msg, "skipping duplicate package{plural} `{pkg_id}`:");
             for ignored in ignored {
-                let manifest_path = ignored.manifest_path().display();
+                let manifest_path = ignored
+                    .manifest_path()
+                    .expect("package exists on the filesystem")
+                    .display();
                 let _ = writeln!(&mut msg, "  {manifest_path}");
             }
-            let manifest_path = pkgs[0].manifest_path().display();
+            let manifest_path = pkgs[0]
+                .manifest_path()
+                .expect("package exists on the filesystem")
+                .display();
             let _ = writeln!(&mut msg, "in favor of {manifest_path}");
             let _ = gctx.shell().warn(msg);
         }
@@ -574,14 +583,16 @@ pub fn list_files(pkg: &Package, gctx: &GlobalContext) -> CargoResult<Vec<PathEn
     _list_files(pkg, gctx).with_context(|| {
         format!(
             "failed to determine list of files in {}",
-            pkg.root().display()
+            pkg.root()
+                .expect("package exists on the filesystem")
+                .display()
         )
     })
 }
 
 /// See [`PathSource::list_files`].
 fn _list_files(pkg: &Package, gctx: &GlobalContext) -> CargoResult<Vec<PathEntry>> {
-    let root = pkg.root();
+    let root = pkg.root().expect("package exists on the filesystem");
     let no_include_option = pkg.manifest().include().is_empty();
     let git_repo = if no_include_option {
         discover_gix_repo(root)?
@@ -644,7 +655,13 @@ fn _list_files(pkg: &Package, gctx: &GlobalContext) -> CargoResult<Vec<PathEntry
         }
     }
     let mut ret = Vec::new();
-    list_files_walk(pkg.root(), &mut ret, true, &filter, gctx)?;
+    list_files_walk(
+        pkg.root().expect("package exists on the filesystem"),
+        &mut ret,
+        true,
+        &filter,
+        gctx,
+    )?;
     Ok(ret)
 }
 
@@ -723,7 +740,7 @@ fn list_files_gix(
         "BUG: paths used internally are absolute, and the repo inherits that"
     );
 
-    let pkg_path = pkg.root();
+    let pkg_path = pkg.root().expect("package exists on the filesystem");
     let repo_relative_pkg_path = pkg_path.strip_prefix(root).unwrap_or(Path::new(""));
     let target_prefix = gix::path::to_unix_separators_on_windows(gix::path::into_bstr(
         repo_relative_pkg_path.join("target/"),
@@ -981,7 +998,9 @@ fn last_modified_file(
     for file in list_files(pkg, gctx).with_context(|| {
         format!(
             "failed to determine the most recently modified file in {}",
-            pkg.root().display()
+            pkg.root()
+                .expect("package exists on the filesystem")
+                .display()
         )
     })? {
         // An `fs::stat` error here is either because path is a

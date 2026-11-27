@@ -300,7 +300,7 @@ fn make_failed_scrape_diagnostic(
     unit: &Unit,
     top_line: impl Display,
 ) -> String {
-    let manifest_path = unit.pkg.manifest_path();
+    let manifest_path = unit.manifest_path();
     let relative_manifest_path = manifest_path.trim_prefix(build_runner.bcx.ws.root());
 
     format!(
@@ -356,7 +356,7 @@ fn rustc(
 
     let root_output = build_runner.files().host_dest().map(|v| v.to_path_buf());
     let build_dir = build_runner.bcx.ws.build_dir().into_path_unlocked();
-    let pkg_root = unit.pkg.root().to_path_buf();
+    let pkg_root = unit.root().to_path_buf();
     let ws_root = build_runner.bcx.ws.root().to_path_buf();
     let cwd = rustc
         .get_cwd()
@@ -685,7 +685,7 @@ fn link_targets(
     let outputs = build_runner.outputs(unit)?;
     let export_dir = build_runner.files().export_dir();
     let package_id = unit.pkg.package_id();
-    let manifest_path = PathBuf::from(unit.pkg.manifest_path());
+    let manifest_path = PathBuf::from(unit.manifest_path());
     let profile = unit.profile.clone();
     let unit_mode = unit.mode;
     let features = unit.features.iter().map(|s| s.to_string()).collect();
@@ -844,7 +844,7 @@ fn prepare_rustc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResult
         if !gctx.cli_unstable().script {
             anyhow::bail!(
                 "parsing `{}` requires `-Zscript`",
-                unit.pkg.manifest_path().display()
+                unit.manifest_path().display()
             );
         }
         base.arg("-Z").arg("crate-attr=feature(frontmatter)");
@@ -923,7 +923,7 @@ fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResu
         if !bcx.gctx.cli_unstable().script {
             anyhow::bail!(
                 "parsing `{}` requires `-Zscript`",
-                unit.pkg.manifest_path().display()
+                unit.manifest_path().display()
             );
         }
         rustdoc.arg("-Z").arg("crate-attr=feature(frontmatter)");
@@ -1075,7 +1075,7 @@ fn rustdoc(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<W
     let rustdoc_dep_info_loc = rustdoc_dep_info_loc(build_runner, unit);
     let dep_info_loc = fingerprint::dep_info_loc(build_runner, unit);
     let build_dir = build_runner.bcx.ws.build_dir().into_path_unlocked();
-    let pkg_root = unit.pkg.root().to_path_buf();
+    let pkg_root = unit.root().to_path_buf();
     let ws_root = build_runner.bcx.ws.root().to_path_buf();
     let cwd = rustdoc
         .get_cwd()
@@ -2482,7 +2482,7 @@ impl ManifestErrorContext {
 
         let bcx = build_runner.bcx;
         ManifestErrorContext {
-            path: unit.pkg.manifest_path().to_owned(),
+            path: unit.manifest_path().to_owned(),
             spans: unit.pkg.manifest().document_rc(),
             contents: unit.pkg.manifest().contents().map(String::from),
             requested_kinds: bcx.target_data.requested_kinds().to_owned(),

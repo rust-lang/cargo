@@ -10,6 +10,7 @@ use crate::compiler::{CompileKind, CompileMode, CompileTarget};
 use crate::util::GlobalContext;
 use crate::util::interning::InternedString;
 use crate::workspace::Package;
+use crate::workspace::manifest::TargetSourcePath;
 use crate::workspace::manifest::{Target, TargetKind};
 use crate::workspace::profiles::Profile;
 use cargo_util::collections::HashSet;
@@ -18,6 +19,7 @@ use std::collections::BTreeMap;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
+use std::path::Path;
 use std::rc::Rc;
 
 /// Stable identifier for referencing a [`Unit`].
@@ -170,6 +172,24 @@ impl UnitInner {
     pub fn show_warnings(&self, gctx: &GlobalContext) -> bool {
         self.is_local() || gctx.extra_verbose()
     }
+
+    /// Returns the manifest path of the underlying package.
+    ///
+    /// Units must exist on the filesystem, so synthetic packages like builtins cause this method to
+    /// panic.
+    pub fn manifest_path(&self) -> &Path {
+        self.pkg
+            .manifest_path()
+            .expect("compilation units have a manifest on the filesystem")
+    }
+
+    /// Returns the root of the underlying package.
+    ///
+    /// Units must exist on the filesystem, so synthetic packages like builtins cause this method to
+    /// panic.
+    pub fn root(&self) -> &Path {
+        self.pkg.root().expect("manifest paths have a parent")
+    }
 }
 
 // Just hash the pointer for fast hashing
@@ -264,6 +284,11 @@ impl UnitInterner {
         artifact_target_for_features: Option<CompileTarget>,
         skip_non_compile_time_dep: bool,
     ) -> Unit {
+        assert!(
+            pkg.manifest_path().is_some() && target.src_path() != &TargetSourcePath::Synthetic,
+            "compilation units must exist on the filesystem"
+        );
+
         let target = match (is_std, target.kind()) {
             // This is a horrible hack to support build-std. `libstd` declares
             // itself with both rlib and dylib. We don't want the dylib for a

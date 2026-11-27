@@ -295,7 +295,10 @@ fn check_version_control(gctx: &GlobalContext, opts: &FixOptions) -> CargoResult
 
 fn fix_manifests(ws: &Workspace<'_>, pkgs: &[&Package]) -> CargoResult<()> {
     for pkg in pkgs {
-        let mut manifest_mut = LocalManifest::try_new(pkg.manifest_path())?;
+        let manifest_path = pkg
+            .manifest_path()
+            .expect("workspace members exist on the filesystem");
+        let mut manifest_mut = LocalManifest::try_new(manifest_path)?;
         let mut fixes = 0;
 
         if manifest_mut.ensure_edition() {
@@ -303,8 +306,7 @@ fn fix_manifests(ws: &Workspace<'_>, pkgs: &[&Package]) -> CargoResult<()> {
         }
 
         if 0 < fixes {
-            let file = pkg.manifest_path();
-            let file = file.trim_prefix(ws.root());
+            let file = manifest_path.trim_prefix(ws.root());
             let file = file.display();
             let verb = if fixes == 1 { "fix" } else { "fixes" };
             let msg = format!("{file} ({fixes} {verb})");
@@ -383,15 +385,17 @@ fn migrate_manifests(
         {
             continue;
         }
-        let file = pkg.manifest_path();
-        let file = file.trim_prefix(ws.root());
+        let manifest_path = pkg
+            .manifest_path()
+            .expect("workspace member exists on the filesystem");
+        let file = manifest_path.trim_prefix(ws.root());
         let file = file.display();
         ws.gctx().shell().status(
             "Migrating",
             format!("{file} from {existing_edition} edition to {prepare_for_edition}"),
         )?;
 
-        let mut manifest_mut = LocalManifest::try_new(pkg.manifest_path())?;
+        let mut manifest_mut = LocalManifest::try_new(manifest_path)?;
         let document = &mut manifest_mut.data;
         let mut fixes = 0;
 

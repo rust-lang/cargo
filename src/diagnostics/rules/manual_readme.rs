@@ -109,8 +109,12 @@ fn lint_package_inner(
         return Ok(());
     };
 
+    let Some(root) = pkg.root() else {
+        return Ok(());
+    };
+
     if !DEFAULT_README_FILES.contains(&readme.as_str())
-        || default_readme_from_package_root(pkg.root()).as_deref() != Some(readme)
+        || default_readme_from_package_root(root).as_deref() != Some(readme)
     {
         return Ok(());
     }

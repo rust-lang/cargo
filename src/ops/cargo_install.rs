@@ -918,7 +918,11 @@ fn make_ws_rustc_target<'gctx>(
     pkg: Package,
 ) -> CargoResult<(Workspace<'gctx>, Rustc, String)> {
     let mut ws = if source_id.is_git() || source_id.is_path() {
-        Workspace::new(pkg.manifest_path(), gctx)?
+        Workspace::new(
+            pkg.manifest_path()
+                .expect("git or path sources exist on the filesystem"),
+            gctx,
+        )?
     } else {
         let mut ws = Workspace::ephemeral(pkg, gctx, None, false)?;
         ws.set_resolve_honors_rust_version(Some(false));

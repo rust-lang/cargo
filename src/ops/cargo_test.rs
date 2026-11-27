@@ -208,7 +208,7 @@ fn run_doc_tests(
         p.arg("--test");
 
         add_path_args(ws, unit, &mut p);
-        p.arg("--test-run-directory").arg(unit.pkg.root());
+        p.arg("--test-run-directory").arg(unit.root());
 
         unit.kind.add_target_arg(&mut p);
 
@@ -326,7 +326,7 @@ fn cmd_builds(
     exec_type: &str,
 ) -> CargoResult<(String, ProcessBuilder)> {
     let test_path = unit.target.src_path().path().unwrap();
-    let short_test_path = test_path.trim_prefix(unit.pkg.root()).display();
+    let short_test_path = test_path.trim_prefix(unit.root()).display();
 
     let exe_display = match unit.target.kind() {
         TargetKind::Test | TargetKind::Bench => {

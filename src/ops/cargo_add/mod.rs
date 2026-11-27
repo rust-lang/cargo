@@ -80,7 +80,11 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
         .map(String::from)
         .collect::<Vec<_>>();
 
-    let manifest_path = options.spec.manifest_path().to_path_buf();
+    let manifest_path = options
+        .spec
+        .manifest_path()
+        .expect("cannot add dependencies to a synthetic package")
+        .to_path_buf();
     let mut manifest = LocalManifest::try_new(&manifest_path)?;
     let original_raw_manifest = manifest.to_string();
     let legacy = manifest.get_legacy_sections();
@@ -474,7 +478,11 @@ fn resolve_dependency(
         } else if let Some(package) = ws.members().find(|p| p.name().as_str() == dependency.name) {
             // Only special-case workspaces when the user doesn't provide any extra
             // information, otherwise, trust the user.
-            let mut src = PathSource::new(package.root());
+            let mut src = PathSource::new(
+                package
+                    .root()
+                    .expect("workspace member exists on the filesystem"),
+            );
             // dev-dependencies do not need the version populated
             if section.kind() != DepKind::Development {
                 let op = "";

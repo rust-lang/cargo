@@ -628,7 +628,7 @@ pub fn create_bcx<'a, 'gctx>(
                 target_src_path,
                 unit.target.name(),
                 unit.target.kind(),
-                unit.pkg.manifest_path(),
+                unit.manifest_path(),
                 &mut error_count,
             )?
         }

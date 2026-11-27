@@ -75,7 +75,10 @@ pub fn fix_edition(
 /// Modifies the `edition` value of the given packages to the new edition.
 fn replace_edition(packages: &[&Package], to_edition: Edition) -> CargoResult<()> {
     for package in packages {
-        let mut manifest_mut = LocalManifest::try_new(package.manifest_path())?;
+        let manifest_path = package
+            .manifest_path()
+            .expect("workspace member exists on the filesystem");
+        let mut manifest_mut = LocalManifest::try_new(manifest_path)?;
         let document = &mut manifest_mut.data;
         let root = document.as_table_mut();
         // Update edition to the new value.

@@ -387,7 +387,11 @@ fn changed<'r, 'ws>(
         .map(|pkg| {
             // Having relative package root path so that we can compare with
             // paths of changed files to determine which package has changed.
-            let relative_pkg_root = pkg.root().strip_prefix(ws.root()).unwrap();
+            let relative_pkg_root = pkg
+                .root()
+                .expect("workspace member exists on the filesystem")
+                .strip_prefix(ws.root())
+                .unwrap();
             (relative_pkg_root, pkg)
         })
         .collect::<Vec<_>>();

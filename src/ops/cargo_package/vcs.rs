@@ -52,12 +52,10 @@ pub fn check_repo_state(
     opts: &PackageOpts<'_>,
 ) -> CargoResult<Option<VcsInfo>> {
     let gctx = ws.gctx();
-    let Ok(mut repo) = gix::discover(p.root()) else {
+    let root = p.root().expect("package exists on filesystem");
+    let Ok(mut repo) = gix::discover(root) else {
         gctx.shell().verbose(|shell| {
-            shell.warn(format_args!(
-                "no (git) VCS found for `{}`",
-                p.root().display()
-            ))
+            shell.warn(format_args!("no (git) VCS found for `{}`", root.display()))
         })?;
         // No Git repo found. Have to assume it is clean.
         return Ok(None);
@@ -73,7 +71,7 @@ pub fn check_repo_state(
     };
 
     debug!("found a git repo at `{}`", workdir.display());
-    let path = p.manifest_path();
+    let path = p.manifest_path().expect("package exists on filesystem");
 
     let manifest_exists = path.exists();
     let path = paths::strip_prefix_canonical(path, workdir).unwrap_or_else(|_| path.to_path_buf());
@@ -212,7 +210,7 @@ fn git(
     collect_statuses(
         repo,
         workdir,
-        relative_package_root(repo, pkg.root()).as_deref(),
+        relative_package_root(repo, pkg.root().expect("package exists on filesystem")).as_deref(),
         &mut dirty_files,
     )?;
 
@@ -382,7 +380,7 @@ fn dirty_files_outside_pkg_root(
     repo: &gix::Repository,
     src_files: &[PathEntry],
 ) -> CargoResult<Vec<PathBuf>> {
-    let pkg_root = pkg.root();
+    let pkg_root = pkg.root().expect("package exists on filesystem");
     let workdir = repo.workdir().unwrap();
 
     let meta = pkg.manifest().metadata();

@@ -206,7 +206,7 @@ fn sync(
     let mut tmp_buf = [0; 64 * 1024];
     for (id, pkg) in ids.iter() {
         // Next up, copy it to the vendor directory
-        let src = pkg.root();
+        let src = pkg.root().expect("package exists on the filesystem");
         let max_version = *versions[&id.name()].iter().rev().next().unwrap().0;
         let dir_has_version_suffix = opts.versioned_dirs || id.version() != max_version;
         let dst_name = if dir_has_version_suffix {
@@ -520,13 +520,18 @@ fn prepare_for_vendor(
         features,
         workspace_config,
         source_id,
-        me.manifest_path(),
+        me.manifest_path()
+            .expect("package exists on the filesystem"),
         me.manifest().is_embedded(),
         gctx,
         &mut warnings,
         &mut errors,
     )?;
-    let new_pkg = Package::new(manifest, me.manifest_path());
+    let new_pkg = Package::new(
+        manifest,
+        me.manifest_path()
+            .expect("package exists on the filesystem"),
+    );
     Ok(new_pkg)
 }
 

@@ -39,7 +39,7 @@ pub fn info(
     let nearest_package = ws.as_ref().and_then(|ws| {
         nearest_manifest_path
             .as_ref()
-            .and_then(|path| ws.members().find(|p| p.manifest_path() == path))
+            .and_then(|path| ws.members().find(|p| p.manifest_path() == Some(path)))
     });
     let (mut package_id, is_member) = find_pkgid_in_ws(nearest_package, ws.as_ref(), spec);
 
