@@ -282,6 +282,8 @@ fn git_dependency() {
 [RUNNING] `git [..] fetch [..]`
 From [ROOTURL]/bar
  * [new ref]         HEAD       -> origin/HEAD
+[RUNNING] `git [..] init --quiet --template= [..][ROOT]/home/.cargo/git/checkouts/bar-[HASH]/[..]`
+[RUNNING] `git [..] checkout --quiet --force --detach [..]`
 [LOCKING] 1 package to highest compatible version
 [COMPILING] bar v0.0.1 ([ROOTURL]/bar#[..])
 [RUNNING] `rustc [..]--remap-path-scope=object --remap-path-prefix=[ROOT]/home/.cargo/git/checkouts/bar-[..]=/cargo/git/[..] --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`

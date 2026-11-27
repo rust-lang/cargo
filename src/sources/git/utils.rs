@@ -1,16 +1,20 @@
 //! Utilities for handling git repositories, mainly around
 //! authentication/cloning.
 
+use crate::sources::git::cli::checkout_with_cli;
 use crate::sources::git::cli::fetch_with_cli;
 use crate::sources::git::cli::git_version;
+use crate::sources::git::cli::should_checkout_with_cli;
 use crate::sources::git::fetch::RemoteKind;
+use crate::sources::git::libgit2::checkout_with_libgit2;
 use crate::sources::git::libgit2::fetch_with_libgit2;
-use crate::sources::git::libgit2::with_fetch_options;
 use crate::sources::git::oxide::fetch_with_gitoxide;
 use crate::sources::git::source::GitSource;
 use crate::sources::source::Source as _;
+use crate::util::GlobalContext;
+use crate::util::IntoUrl;
 use crate::util::errors::CargoResult;
-use crate::util::{GlobalContext, IntoUrl, Progress};
+use crate::util::errors::GitCliError;
 use crate::workspace::{GitReference, SourceId};
 
 use anyhow::{Context as _, anyhow};
@@ -18,7 +22,7 @@ use cargo_util::paths;
 use git2::ObjectType;
 use git2::Oid;
 use http::{Request, StatusCode};
-use tracing::{debug, info};
+use tracing::debug;
 use url::Url;
 
 use std::borrow::Cow;
@@ -27,7 +31,7 @@ use std::process::Command;
 use std::str;
 
 /// A file indicates that if present, `git reset` has been done and a repo
-/// checkout is ready to go. See [`GitCheckout::reset`] for why we need this.
+/// checkout is ready to go. See [`CheckoutGuard`] for why we need this.
 const CHECKOUT_READY_LOCK: &str = ".cargo-ok";
 
 /// A remote repository. It gets cloned into a local [`GitDatabase`].
@@ -159,6 +163,16 @@ impl GitRemote {
 }
 
 impl GitDatabase {
+    /// Path to the root of the underlying Git repository on the local filesystem.
+    pub(crate) fn path(&self) -> &Path {
+        &self.path
+    }
+
+    /// Underlying Git repository instance for this database.
+    pub(crate) fn repo(&self) -> &git2::Repository {
+        &self.repo
+    }
+
     /// Checkouts to a revision at `dest`ination from this database.
     #[tracing::instrument(skip(self, gctx))]
     pub fn copy_to(
@@ -305,49 +319,22 @@ impl<'a> GitCheckout<'a> {
             paths::remove_dir_all(into)?;
         }
 
-        // we're doing a local filesystem-to-filesystem clone so there should
-        // be no need to respect global configuration options, so pass in
-        // an empty instance of `git2::Config` below.
-        let git_config = git2::Config::new()?;
-
-        // Clone the repository, but make sure we use the "local" option in
-        // libgit2 which will attempt to use hardlinks to set up the database.
-        // This should speed up the clone operation quite a bit if it works.
-        //
-        // Note that we still use the same fetch options because while we don't
-        // need authentication information we may want progress bars and such.
-        let url = database.path.into_url()?;
-        let mut repo = None;
-        with_fetch_options(&git_config, url.as_str(), gctx, &mut |fopts| {
-            let mut checkout = git2::build::CheckoutBuilder::new();
-            checkout.dry_run(); // we'll do this below during a `reset`
-
-            let r = git2::build::RepoBuilder::new()
-                // use hard links and/or copy the database, we're doing a
-                // filesystem clone so this'll speed things up quite a bit.
-                .clone_local(git2::build::CloneLocal::Local)
-                .with_checkout(checkout)
-                .fetch_options(fopts)
-                .clone(url.as_str(), into)?;
-            // `git2` doesn't seem to handle shallow repos correctly when doing
-            // a local clone. Fortunately all that's needed is the copy of the
-            // one file that defines the shallow boundary, the commits which
-            // have their parents omitted as part of the shallow clone.
-            //
-            // TODO(git2): remove this when git2 supports shallow clone correctly
-            if database.repo.is_shallow() {
-                std::fs::copy(
-                    database.repo.path().join("shallow"),
-                    r.path().join("shallow"),
-                )?;
-            }
-            repo = Some(r);
-            Ok(())
-        })?;
-        let repo = repo.unwrap();
-
+        let repo = if should_checkout_with_cli(gctx) {
+            checkout_with_cli(into, database, revision, gctx).map_err(|err| {
+                GitCliError::new(err.context(format!(
+                    "failed to check out `{revision}` into `{}`",
+                    into.display()
+                )))
+                .workaround(
+                    "help: re-try with `__CARGO_TEMPORARY_GIT_CLI_CHECKOUT_OPT_OUT=1` to check out with the built-in git
+note: please report this at <https://github.com/rust-lang/cargo/issues/17758>",
+                )
+            })?
+        } else {
+            checkout_with_libgit2(into, database, revision, gctx)?
+        };
         let checkout = GitCheckout::new(database, revision, repo);
-        let guard = checkout.reset(gctx)?;
+        let guard = CheckoutGuard::guard(&checkout.path);
         Ok((checkout, guard))
     }
 
@@ -355,43 +342,11 @@ impl<'a> GitCheckout<'a> {
     fn is_fresh(&self) -> bool {
         match self.repo.revparse_single("HEAD") {
             Ok(ref head) if head.id() == self.revision => {
-                // See comments in reset() for why we check this
+                // See `CheckoutGuard` for why we check this
                 self.path.join(CHECKOUT_READY_LOCK).exists()
             }
             _ => false,
         }
-    }
-
-    /// Similar to [`reset()`]. This roughly performs `git reset --hard` to the
-    /// revision of this checkout, with additional interrupt protection by a
-    /// dummy file [`CHECKOUT_READY_LOCK`].
-    ///
-    /// If we're interrupted while performing a `git reset` (e.g., we die
-    /// because of a signal) Cargo needs to be sure to try to check out this
-    /// repo again on the next go-round.
-    ///
-    /// To enable this we have a dummy file in our checkout, [`.cargo-ok`],
-    /// which if present means that the repo has been successfully reset and is
-    /// ready to go. Hence if we start to do a reset, we make sure this file
-    /// *doesn't* exist. The caller of [`reset`] has an option to perform additional operations
-    /// (e.g. submodule update) before marking the check-out as ready.
-    ///
-    /// [`.cargo-ok`]: CHECKOUT_READY_LOCK
-    fn reset(&self, gctx: &GlobalContext) -> CargoResult<CheckoutGuard> {
-        let guard = CheckoutGuard::guard(&self.path);
-        info!("reset {} to {}", self.repo.path().display(), self.revision);
-
-        if let Ok(mut git_config) = self.repo.config() {
-            // Ensure libgit2 won't mess with newlines when we vendor.
-            git_config.set_bool("core.autocrlf", false)?;
-            // Allow libgit2 to check out paths longer than `MAX_PATH` on Windows.
-            git_config.set_bool("core.longpaths", true)?;
-        }
-
-        let object = self.repo.find_object(self.revision, None)?;
-        reset(&self.repo, &object, gctx)?;
-
-        Ok(guard)
     }
 
     /// Like `git submodule update --recursive` but for this git checkout.
@@ -523,13 +478,25 @@ impl<'a> GitCheckout<'a> {
                 let url = fetch_url.unwrap_or_else(|| source_url.to_string());
                 format!("failed to fetch submodule `{name}` from {url}")
             })?;
-            db.copy_to(actual_rev, repo.path(), gctx, quiet)?;
+            db.copy_to(actual_rev, repo.workdir().unwrap(), gctx, quiet)?;
             Ok(())
         }
     }
 }
 
-/// See [`GitCheckout::reset`] for rationale on this type.
+/// Guards against interrupted checkouts.
+///
+/// If we're interrupted while checking out (e.g., we die
+/// because of a signal) Cargo needs to be sure to try to check out this
+/// repo again on the next go-round.
+///
+/// To enable this we have a dummy file in our checkout, [`.cargo-ok`],
+/// which if present means that the repo has been successfully checked out and is
+/// ready to go. Hence the guard makes sure this file *doesn't* exist,
+/// and the caller has an option to perform additional operations
+/// (e.g. submodule update) before marking the check-out as ready.
+///
+/// [`.cargo-ok`]: CHECKOUT_READY_LOCK
 #[must_use]
 struct CheckoutGuard {
     ok_file: PathBuf,
@@ -546,6 +513,17 @@ impl CheckoutGuard {
         let _ = paths::create(self.ok_file)?;
         Ok(())
     }
+}
+
+/// Configures the repository of a fresh checkout before files are checked out.
+pub(crate) fn set_checkout_config(repo: &git2::Repository) -> CargoResult<()> {
+    if let Ok(mut git_config) = repo.config() {
+        // Ensure git won't mess with newlines when we vendor.
+        git_config.set_bool("core.autocrlf", false)?;
+        // Allow checking out paths longer than `MAX_PATH` on Windows.
+        git_config.set_bool("core.longpaths", true)?;
+    }
+    Ok(())
 }
 
 /// Constructs an absolute URL for a child submodule URL with its parent base URL.
@@ -623,22 +601,6 @@ pub(super) fn ssh_url_for_source_id(mut url: gix::Url) -> String {
         url.path.insert(0, b'/');
     }
     url.to_bstring().to_string()
-}
-
-/// `git reset --hard` to the given `obj` for the `repo`.
-///
-/// The `obj` is a commit-ish to which the head should be moved.
-#[tracing::instrument(skip_all)]
-fn reset(repo: &git2::Repository, obj: &git2::Object<'_>, gctx: &GlobalContext) -> CargoResult<()> {
-    let mut pb = Progress::new("Checkout", gctx);
-    let mut opts = git2::build::CheckoutBuilder::new();
-    opts.progress(|_, cur, max| {
-        drop(pb.tick(cur, max, ""));
-    });
-    debug!("doing reset");
-    repo.reset(obj, git2::ResetType::Hard, Some(&mut opts))?;
-    debug!("reset done");
-    Ok(())
 }
 
 /// Attempts to fetch the given git `reference` for a Git repository.
@@ -872,7 +834,7 @@ fn clean_repo_temp_files(repo: &git2::Repository) {
 
 /// Reinitializes a given Git repository. This is useful when a Git repository
 /// seems corrupted and we want to start over.
-pub(super) fn reinitialize(repo: &mut git2::Repository) -> CargoResult<()> {
+pub(crate) fn reinitialize(repo: &mut git2::Repository) -> CargoResult<()> {
     // Here we want to drop the current repository object pointed to by `repo`,
     // so we initialize temporary repository in a sub-folder, blow away the
     // existing git folder, and then recreate the git repo. Finally we blow away
