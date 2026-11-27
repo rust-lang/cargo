@@ -195,7 +195,7 @@ fn clean_specs(
 ) -> CargoResult<()> {
     // Clean specific packages.
     let requested_kinds = CompileKind::from_requested_targets(clean_ctx.gctx, targets)?;
-    let target_data = RustcTargetData::new(ws, &requested_kinds)?;
+    let target_data = RustcTargetData::new(ws.gctx(), Some(ws), &requested_kinds)?;
     let (pkg_set, resolve) = ops::resolve_ws(ws, dry_run)?;
     let prof_dir_name = profiles.get_dir_name();
     let host_layout = Layout::new(ws, None, &prof_dir_name, true, true)?;
