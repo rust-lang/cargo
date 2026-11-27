@@ -104,7 +104,7 @@ use crate::config::ConfigLoader;
 use crate::config::ConfigReader;
 use crate::config::Env;
 pub use crate::config::{
-    ConfigError, ConfigKey, ConfigStore, ConfigValue, Definition, DefinitionKind, OptValue, Value,
+    ConfigError, ConfigKey, ConfigStore, ConfigValue, Definition, OptValue, Scope, Value,
 };
 
 mod target;
@@ -1637,7 +1637,7 @@ pub fn save_credentials(
     if let Some(token) = token {
         // login
 
-        let path_def = Definition::Path(file.path().to_path_buf());
+        let path_def = Definition::path(file.path().to_path_buf());
         let (key, mut value) = match token {
             RegistryCredentialConfig::Token(token) => {
                 // login with token

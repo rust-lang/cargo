@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context as _, Result, bail};
 
-use super::{ConfigKey, ConfigValue, Definition, DefinitionKind};
+use super::{ConfigKey, ConfigValue, Definition, Scope};
 use cargo_util::collections::{BuildHasher, HashMap};
 
 use ConfigValue as CV;
@@ -19,14 +19,14 @@ impl ConfigStore {
     pub const fn new() -> Self {
         Self {
             values: HashMap::with_hasher(BuildHasher),
-            def: Definition::BuiltIn,
+            def: Definition::builtin(),
         }
     }
 
     pub fn from_values(values: HashMap<String, ConfigValue>) -> Self {
         Self {
             values,
-            def: Definition::BuiltIn,
+            def: Definition::builtin(),
         }
     }
 
@@ -52,19 +52,19 @@ impl ConfigStore {
     }
 
     /// Loads configuration from a path without processing includes.
-    pub fn read_layer(path: &Path, definition_kind: DefinitionKind) -> Result<Self> {
-        tracing::debug!(?path, ?definition_kind, "load config from file");
+    pub fn read_layer(path: &Path, scope: Scope) -> Result<Self> {
+        tracing::debug!(?path, ?scope, "load config from file");
 
         let contents = fs::read_to_string(path)
             .with_context(|| format!("failed to read configuration file `{}`", path.display()))?;
         let toml = contents.parse::<toml::Table>().with_context(|| {
             format!("could not parse TOML configuration in `{}`", path.display())
         })?;
-        let def = match definition_kind {
-            DefinitionKind::Cli => Definition::Cli(Some(path.into())),
-            DefinitionKind::Path => Definition::Path(path.into()),
-            DefinitionKind::BuiltIn => Definition::BuiltIn,
-            DefinitionKind::Environment => {
+        let def = match scope {
+            Scope::Cli => Definition::cli(Some(path.into())),
+            Scope::Path => Definition::path(path.into()),
+            Scope::BuiltIn => Definition::builtin(),
+            Scope::Environment => {
                 unimplemented!("Environment defiinitions are not supported")
             }
         };
@@ -104,7 +104,7 @@ impl ConfigStore {
             );
         }
 
-        let table = CV::from_toml(Definition::Cli(None), toml::Value::Table(doc))
+        let table = CV::from_toml(Definition::cli(None), toml::Value::Table(doc))
             .with_context(|| format!("failed to convert --config argument `{arg}`"))?;
         Ok(Self::from_table_value(table).unwrap())
     }
@@ -150,7 +150,7 @@ impl ConfigStore {
             // with no key). The definition here shouldn't matter.
             return Ok(Some(CV::Table(
                 vals.clone(),
-                Definition::Path(PathBuf::new()),
+                Definition::path(PathBuf::new()),
             )));
         }
         let mut parts = key.parts().enumerate();

@@ -13,7 +13,7 @@ use ops::FilterRule;
 use serde::{Deserialize, Serialize};
 
 use crate::compiler::{DirtyReason, Freshness};
-use crate::context::{ConfigRootRelativeProgramPath, Definition};
+use crate::context::{ConfigRootRelativeProgramPath, Scope};
 use crate::ops::{self, CompileFilter, CompileOptions};
 use crate::sources::IndexSummary;
 use crate::sources::PathSource;
@@ -553,7 +553,7 @@ pub fn resolve_root(flag: Option<&str>, gctx: &GlobalContext) -> CargoResult<Fil
             let resolved = p.resolve(gctx.cwd());
             if resolved.is_relative() {
                 let definition = p.definition();
-                if matches!(definition, Definition::Path(_)) {
+                if definition.scope() == Scope::Path {
                     let suggested = format!("{}/", resolved.display());
                     let notes = [
                         Level::NOTE.message("a future version of Cargo will treat it as relative to the configuration directory"),

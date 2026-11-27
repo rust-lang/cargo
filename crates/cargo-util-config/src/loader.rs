@@ -17,7 +17,7 @@ use cargo_util_terminal::Shell;
 use cargo_util_terminal::report::Level;
 
 use super::ConfigValue;
-use super::DefinitionKind;
+use super::Scope;
 use super::schema::{DetailedIncludeConfig, IncludeConfig};
 use super::{ConfigKey, ConfigReader, ConfigStore};
 
@@ -62,12 +62,7 @@ impl<'a> ConfigLoader<'a> {
         let mut result = Vec::new();
         self.walk_tree(path, |path| {
             let mut layers = Vec::new();
-            self.load_file_layers(
-                path,
-                &mut HashSet::default(),
-                DefinitionKind::Path,
-                &mut layers,
-            )?;
+            self.load_file_layers(path, &mut HashSet::default(), Scope::Path, &mut layers)?;
             // `walk_tree` visits highest precedence first,
             // but result is lowest-first,
             // so prepend to ensure the order
@@ -83,7 +78,7 @@ impl<'a> ConfigLoader<'a> {
         &self,
         path: &Path,
         seen: &mut HashSet<PathBuf>,
-        definition_kind: DefinitionKind,
+        scope: Scope,
         output: &mut Vec<ConfigStore>,
     ) -> Result<()> {
         if !seen.insert(path.to_path_buf()) {
@@ -92,9 +87,9 @@ impl<'a> ConfigLoader<'a> {
                 path.display()
             );
         }
-        tracing::debug!(?path, ?definition_kind, "load config from file");
-        let config = ConfigStore::read_layer(path, definition_kind)?;
-        self.load_include_layers(&config, seen, definition_kind, output)?;
+        tracing::debug!(?path, ?scope, "load config from file");
+        let config = ConfigStore::read_layer(path, scope)?;
+        self.load_include_layers(&config, seen, output)?;
         output.push(config);
         Ok(())
     }
@@ -104,14 +99,13 @@ impl<'a> ConfigLoader<'a> {
         &self,
         config: &ConfigStore,
         seen: &mut HashSet<PathBuf>,
-        definition_kind: DefinitionKind,
         output: &mut Vec<ConfigStore>,
     ) -> Result<()> {
         for include in self.include_paths(config)? {
             let Some(abs_path) = include.resolve_path(self.current_dir) else {
                 continue;
             };
-            self.load_file_layers(&abs_path, seen, definition_kind, output)
+            self.load_file_layers(&abs_path, seen, config.definition().scope(), output)
                 .with_context(|| {
                     format!(
                         "failed to load config include `{}` from `{}`",
@@ -177,19 +171,14 @@ impl<'a> ConfigLoader<'a> {
             let arg_as_path = self.current_dir.join(arg);
             if !arg.is_empty() && arg_as_path.exists() {
                 // --config path_to_file
-                self.load_file_layers(&arg_as_path, &mut seen, DefinitionKind::Cli, &mut layers)
+                self.load_file_layers(&arg_as_path, &mut seen, Scope::Cli, &mut layers)
                     .with_context(|| {
                         format!("failed to load config from `{}`", arg_as_path.display())
                     })?;
             } else {
                 let config = ConfigStore::parse_cli_key_value(arg)?;
-                self.load_include_layers(
-                    &config,
-                    &mut HashSet::default(),
-                    DefinitionKind::Cli,
-                    &mut layers,
-                )
-                .context("failed to load --config include")?;
+                self.load_include_layers(&config, &mut HashSet::default(), &mut layers)
+                    .context("failed to load --config include")?;
                 layers.push(config);
             }
             loaded_args = ConfigStore::from_layers(std::iter::once(loaded_args).chain(layers))
@@ -287,7 +276,7 @@ impl<'a> ConfigLoader<'a> {
             return Ok(ConfigStore::default());
         };
 
-        let mut config = ConfigStore::read_layer(&credentials, DefinitionKind::Path)?;
+        let mut config = ConfigStore::read_layer(&credentials, Scope::Path)?;
         // Backwards compatibility for old `.cargo/credentials` layout.
         {
             let def = config.definition().clone();

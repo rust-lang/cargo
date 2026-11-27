@@ -74,7 +74,7 @@ impl<T> From<T> for Value<T> {
     fn from(val: T) -> Self {
         Self {
             val,
-            definition: Definition::BuiltIn,
+            definition: Definition::builtin(),
         }
     }
 }
@@ -188,12 +188,12 @@ impl<'de> de::Deserialize<'de> for Definition {
     {
         let (discr, value) = <(u32, String)>::deserialize(deserializer)?;
         match discr {
-            0 => Ok(Definition::BuiltIn),
-            1 => Ok(Definition::Path(value.into())),
-            2 => Ok(Definition::Environment(value)),
+            0 => Ok(Definition::builtin()),
+            1 => Ok(Definition::path(value.into())),
+            2 => Ok(Definition::environment(value)),
             3 => {
                 let path = (value.len() > 0).then_some(value.into());
-                Ok(Definition::Cli(path))
+                Ok(Definition::cli(path))
             }
             _ => panic!("unexpected discriminant {discr} value {value}"),
         }

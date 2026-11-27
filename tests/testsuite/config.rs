@@ -1739,15 +1739,15 @@ known-hosts = [
         .unwrap();
     assert_eq!(kh.len(), 4);
     assert_eq!(kh[0].val, "example.com ...");
-    assert_eq!(kh[0].definition, Definition::Path(root_path.clone()));
+    assert_eq!(kh[0].definition, Definition::path(root_path.clone()));
     assert_eq!(kh[1].val, "example.net ...");
-    assert_eq!(kh[1].definition, Definition::Path(root_path.clone()));
+    assert_eq!(kh[1].definition, Definition::path(root_path.clone()));
     assert_eq!(kh[2].val, "example.org ...");
-    assert_eq!(kh[2].definition, Definition::Path(foo_path.clone()));
+    assert_eq!(kh[2].definition, Definition::path(foo_path.clone()));
     assert_eq!(kh[3].val, "env-example");
     assert_eq!(
         kh[3].definition,
-        Definition::Environment("CARGO_NET_SSH_KNOWN_HOSTS".to_string())
+        Definition::environment("CARGO_NET_SSH_KNOWN_HOSTS".to_string())
     );
 }
 
@@ -2531,7 +2531,7 @@ fn nested_array() {
     let nested = gctx
         .get::<Vec<Value<Vec<Value<i32>>>>>(["nested_ints"])
         .unwrap();
-    let def = Definition::Path(root_path);
+    let def = Definition::path(root_path);
     assert_eq!(
         nested,
         vec![
@@ -2564,9 +2564,9 @@ fn nested_array() {
             Value {
                 val: vec![Value {
                     val: 5,
-                    definition: Definition::Cli(None),
+                    definition: Definition::cli(None),
                 },],
-                definition: Definition::Cli(None),
+                definition: Definition::cli(None),
             },
         ]
     );
@@ -2643,26 +2643,26 @@ fn mixed_type_array() {
             val: vec![
                 Value {
                     val: T { x: 1 },
-                    definition: Definition::Path(root_path.clone()),
+                    definition: Definition::path(root_path.clone()),
                 },
                 Value {
                     val: B(true),
-                    definition: Definition::Path(foo_path.clone()),
+                    definition: Definition::path(foo_path.clone()),
                 },
                 Value {
                     val: L(vec![false]),
-                    definition: Definition::Path(foo_path.clone()),
+                    definition: Definition::path(foo_path.clone()),
                 },
                 Value {
                     val: S("hello".into()),
-                    definition: Definition::Environment("CARGO_A".into()),
+                    definition: Definition::environment("CARGO_A".into()),
                 },
                 Value {
                     val: I(123),
-                    definition: Definition::Cli(None),
+                    definition: Definition::cli(None),
                 },
             ],
-            definition: Definition::Cli(None),
+            definition: Definition::cli(None),
         }
     );
 }
