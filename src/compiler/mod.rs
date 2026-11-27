@@ -112,12 +112,12 @@ use crate::util::errors::{CargoResult, VerboseError};
 use crate::util::interning::InternedString;
 use crate::util::machine_message::{self, Message};
 use crate::util::{add_path_args, internal, path_args};
-use crate::workspace::Feature;
 use crate::workspace::PackageId;
 use crate::workspace::Target;
 use crate::workspace::TargetKind;
 use crate::workspace::manifest::TargetSourcePath;
 use crate::workspace::profiles::{PanicStrategy, Profile, StripInner};
+use crate::workspace::{Feature, features};
 
 use cargo_util::{ExecStats, ProcessBuilder, ProcessError, paths};
 use cargo_util_schemas::manifest::TomlDebugInfo;
@@ -1324,6 +1324,12 @@ fn add_error_format_and_color(build_runner: &BuildRunner<'_, '_>, cmd: &mut Proc
     let gctx = build_runner.bcx.gctx;
     if let Some(width) = gctx.shell().err_width().diagnostic_terminal_width() {
         cmd.arg(format!("--diagnostic-width={width}"));
+    }
+
+    if gctx.shell().hyperlinks()
+        && features::is_nightly_toolchain(&build_runner.bcx.rustc().version)
+    {
+        cmd.arg("-Zterminal-urls=yes");
     }
 }
 

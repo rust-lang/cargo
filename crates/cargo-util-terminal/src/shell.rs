@@ -287,6 +287,13 @@ impl Shell {
         Ok(())
     }
 
+    pub fn hyperlinks(&self) -> bool {
+        match &self.output {
+            ShellOut::Write(_) => false,
+            ShellOut::Stream { hyperlinks, .. } => *hyperlinks,
+        }
+    }
+
     pub fn out_unicode(&self) -> bool {
         match &self.output {
             ShellOut::Write(_) => true,
