@@ -568,6 +568,7 @@ fn subcommand_leading_plus_output_contains() {
 [ERROR] no such command: `+nightly`
 
 [HELP] invoke `cargo` through `rustup` to handle `+toolchain` directives
+[HELP] or run `rustup run <toolchain> cargo <args>` to pick a toolchain explicitly
 
 "#]])
         .run();
