@@ -12,12 +12,22 @@ use crate::util::{CargoResult, internal};
 use cargo_util::paths;
 use tracing::debug;
 
-/// Basically just normalizes a given path and converts it to a string.
+/// Basically just normalizes a given path and converts it to a string,
+/// escaped for the dep-info file.
 fn render_filename<P: AsRef<Path>>(path: P, basedir: Option<&str>) -> CargoResult<String> {
+    Ok(escape_filename(&unescaped_filename(path, basedir)?))
+}
+
+fn escape_filename(path: &str) -> String {
+    path.replace(" ", "\\ ")
+}
+
+/// Normalizes a given path relative to `basedir` and converts it to a string.
+fn unescaped_filename<P: AsRef<Path>>(path: P, basedir: Option<&str>) -> CargoResult<String> {
     fn wrap_path(path: &Path) -> CargoResult<String> {
         path.to_str()
+            .map(|f| f.to_owned())
             .ok_or_else(|| internal(format!("path `{:?}` not utf-8", path)))
-            .map(|f| f.replace(" ", "\\ "))
     }
 
     let path = path.as_ref();
@@ -149,9 +159,10 @@ pub fn output_depinfo(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> Ca
         }
         None => None,
     };
+    // Unescaped, to compare against a previously written dep-info file
     let deps = deps
         .iter()
-        .map(|f| render_filename(f, basedir))
+        .map(|f| unescaped_filename(f, basedir))
         .collect::<CargoResult<Vec<_>>>()?;
 
     for output in build_runner.outputs(unit)?.iter().filter(|o| {
@@ -182,7 +193,7 @@ pub fn output_depinfo(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> Ca
                 let mut outfile = BufWriter::new(paths::create(output_path)?);
                 write!(outfile, "{}:", target_fn)?;
                 for dep in &deps {
-                    write!(outfile, " {}", dep)?;
+                    write!(outfile, " {}", escape_filename(dep))?;
                 }
                 writeln!(outfile)?;
 

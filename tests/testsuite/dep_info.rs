@@ -245,6 +245,23 @@ fn no_rewrite_if_no_change() {
     );
 }
 
+#[cargo_test]
+fn no_rewrite_if_no_change_with_space_in_path() {
+    let p = project()
+        .file("src/lib.rs", "#[path = \"my mod.rs\"] mod m;")
+        .file("src/my mod.rs", "")
+        .build();
+
+    p.cargo("build").run();
+    let dep_info = p.root().join("target/debug/libfoo.d");
+    let old = FileTime::from_unix_time(1_000_000_000, 0);
+    filetime::set_file_mtime(&dep_info, old).unwrap();
+    p.cargo("build").run();
+    let mtime = FileTime::from_last_modification_time(&dep_info.metadata().unwrap());
+
+    assert_eq!(mtime, old);
+}
+
 #[cargo_test(nightly, reason = "-Z binary-dep-depinfo is unstable")]
 fn relative_depinfo_paths_ws() {
     // Test relative dep-info paths in a workspace with --target with
