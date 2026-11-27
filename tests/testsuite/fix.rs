@@ -978,7 +978,6 @@ fn errors_about_dirty_submodules() {
         .with_stderr_data(str![[r#"
 [ERROR] the working directory of this package has uncommitted changes, and `cargo fix` can potentially perform destructive changes; if you'd like to suppress this error pass `--allow-dirty`, or commit the changes to these files:
 
-  * ignore_all_config (dirty)
   * modified (dirty)
   * new_commit (dirty)
   * untracked (dirty)
