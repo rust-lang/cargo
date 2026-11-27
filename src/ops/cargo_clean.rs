@@ -741,11 +741,14 @@ fn count_bytes(seen: &mut HashSet<FileId>, path: &Path, meta: &fs::Metadata) -> 
     }
     match FileId::new_with_link_count(meta, path) {
         Some((id, nlink)) => {
-            if nlink <= 1 || seen.insert(id) {
-                meta.len()
+            // Links are removed as we go, so the last remaining link of a file
+            // reports `nlink == 1` even if another link was already counted.
+            let first_seen = if nlink > 1 {
+                seen.insert(id)
             } else {
-                0
-            }
+                !seen.contains(&id)
+            };
+            if first_seen { meta.len() } else { 0 }
         }
         None => meta.len(),
     }
