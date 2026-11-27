@@ -89,7 +89,7 @@ impl<'a> ConfigLoader<'a> {
         }
         tracing::debug!(?path, ?scope, "load config from file");
         let config = ConfigStore::read_layer(path, scope)?;
-        self.load_include_layers(&config, seen, scope, output)?;
+        self.load_include_layers(&config, seen, output)?;
         output.push(config);
         Ok(())
     }
@@ -99,14 +99,13 @@ impl<'a> ConfigLoader<'a> {
         &self,
         config: &ConfigStore,
         seen: &mut HashSet<PathBuf>,
-        scope: Scope,
         output: &mut Vec<ConfigStore>,
     ) -> Result<()> {
         for include in self.include_paths(config)? {
             let Some(abs_path) = include.resolve_path(self.current_dir) else {
                 continue;
             };
-            self.load_file_layers(&abs_path, seen, scope, output)
+            self.load_file_layers(&abs_path, seen, config.definition().scope(), output)
                 .with_context(|| {
                     format!(
                         "failed to load config include `{}` from `{}`",
@@ -178,7 +177,7 @@ impl<'a> ConfigLoader<'a> {
                     })?;
             } else {
                 let config = ConfigStore::parse_cli_key_value(arg)?;
-                self.load_include_layers(&config, &mut HashSet::default(), Scope::Cli, &mut layers)
+                self.load_include_layers(&config, &mut HashSet::default(), &mut layers)
                     .context("failed to load --config include")?;
                 layers.push(config);
             }
