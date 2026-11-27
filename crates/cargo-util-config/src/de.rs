@@ -21,6 +21,7 @@
 //!
 //! [`ConfigValue`]: CV
 
+use crate::definition::Origin;
 use crate::value;
 use crate::{
     ArrayItemKeyPath, ConfigError, ConfigKey, ConfigReader, ConfigValue as CV, Definition, Value,
@@ -509,7 +510,7 @@ impl<'reader, 'err> ValueSource<'reader, 'err> {
         // Figure out where this key is defined.
         let definition = {
             let env = de.key.as_env_key();
-            let env_def = || Definition::Environment(env.to_string());
+            let env_def = || Definition::environment(env.to_string());
             match (
                 de.reader.env.contains_key(env),
                 de.reader.store.get_cv(&de.key)?,
@@ -605,21 +606,17 @@ impl<'de, 'reader, 'err> de::MapAccess<'de> for ValueDeserializer<'reader, 'err>
 
         // ... otherwise we're deserializing the `definition` field, so we need
         // to figure out where the field we just deserialized was defined at.
-        match self.definition() {
-            Definition::BuiltIn => seed.deserialize(0.into_deserializer()),
-            Definition::Path(path) => {
+        let definition = self.definition();
+        match definition.origin() {
+            Origin::BuiltIn => seed.deserialize(0.into_deserializer()),
+            Origin::Path(path) if definition.scope() == crate::Scope::Cli => {
+                seed.deserialize(Tuple2Deserializer(3i32, path.to_string_lossy()))
+            }
+            Origin::Path(path) => {
                 seed.deserialize(Tuple2Deserializer(1i32, path.to_string_lossy()))
             }
-            Definition::Environment(env) => {
-                seed.deserialize(Tuple2Deserializer(2i32, env.as_str()))
-            }
-            Definition::Cli(path) => {
-                let s = path
-                    .as_ref()
-                    .map(|p| p.to_string_lossy())
-                    .unwrap_or_default();
-                seed.deserialize(Tuple2Deserializer(3i32, s))
-            }
+            Origin::Environment(env) => seed.deserialize(Tuple2Deserializer(2i32, env.as_str())),
+            Origin::Cli => seed.deserialize(Tuple2Deserializer(3i32, "")),
         }
     }
 }

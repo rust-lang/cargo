@@ -4,27 +4,47 @@ use std::path::{Path, PathBuf};
 
 /// Location where a config value is defined.
 #[derive(Clone, Debug, Eq, Default)]
-pub enum Definition {
-    #[default]
-    BuiltIn,
-    /// Defined in a `.cargo/config`, includes the path to the file.
-    Path(PathBuf),
-    /// Defined in an environment variable, includes the environment key.
-    Environment(String),
-    /// Passed in on the command line.
-    /// A path is attached when the config value is a path to a config file.
-    Cli(Option<PathBuf>),
+pub struct Definition {
+    origin: Origin,
+    scope: Scope,
 }
 
 impl Definition {
+    pub const fn builtin() -> Self {
+        Self {
+            scope: Scope::BuiltIn,
+            origin: Origin::BuiltIn,
+        }
+    }
+
+    pub fn path(path: PathBuf) -> Self {
+        Self {
+            scope: Scope::Path,
+            origin: Origin::Path(path),
+        }
+    }
+
+    pub fn environment(key: String) -> Self {
+        Self {
+            scope: Scope::Environment,
+            origin: Origin::Environment(key),
+        }
+    }
+
+    pub fn cli(path: Option<PathBuf>) -> Self {
+        Self {
+            scope: Scope::Cli,
+            origin: path.map(Origin::Path).unwrap_or(Origin::Cli),
+        }
+    }
+
+    pub fn origin(&self) -> &Origin {
+        &self.origin
+    }
+
     /// Returns the scope in which the config value is defined.
     pub fn scope(&self) -> Scope {
-        match self {
-            Definition::BuiltIn => Scope::BuiltIn,
-            Definition::Path(_) => Scope::Path,
-            Definition::Environment(_) => Scope::Environment,
-            Definition::Cli(_) => Scope::Cli,
-        }
+        self.scope
     }
 
     /// Root directory where this is defined.
@@ -32,10 +52,10 @@ impl Definition {
     /// If from a file, it is the directory above `.cargo/config.toml`.
     /// CLI and env use the provided current working directory.
     pub fn root<'a>(&'a self, current_dir: &'a Path) -> &'a Path {
-        match self {
-            Definition::Path(p) | Definition::Cli(Some(p)) => p.parent().unwrap().parent().unwrap(),
-            Definition::Environment(_) | Definition::Cli(None) | Definition::BuiltIn => current_dir,
-        }
+        self.origin
+            .as_path()
+            .map(|p| p.parent().unwrap().parent().unwrap())
+            .unwrap_or(current_dir)
     }
 
     /// Parent directory where this is defined.
@@ -43,10 +63,10 @@ impl Definition {
     /// If from a file, it is the directory `.cargo/`.
     /// CLI and env use the provided current working directory.
     pub fn parent<'a>(&'a self, current_dir: &'a Path) -> &'a Path {
-        match self {
-            Definition::Path(p) | Definition::Cli(Some(p)) => p.parent().unwrap(),
-            Definition::Environment(_) | Definition::Cli(None) | Definition::BuiltIn => current_dir,
-        }
+        self.origin
+            .as_path()
+            .map(|p| p.parent().unwrap())
+            .unwrap_or(current_dir)
     }
 
     /// Returns true if self is a higher priority to other.
@@ -81,11 +101,39 @@ impl PartialEq for Definition {
 
 impl fmt::Display for Definition {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.origin.fmt(f)
+    }
+}
+
+/// Immediate location where a config value came from
+#[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Origin {
+    #[default]
+    BuiltIn,
+    /// Defined in the specified TOML file
+    Path(PathBuf),
+    /// Env variable where this came from
+    Environment(String),
+    /// Passed in on the command line.
+    Cli,
+}
+
+impl Origin {
+    pub fn as_path(&self) -> Option<&Path> {
         match self {
-            Definition::Path(p) | Definition::Cli(Some(p)) => p.display().fmt(f),
-            Definition::Environment(key) => write!(f, "environment variable `{}`", key),
-            Definition::Cli(None) => write!(f, "--config cli option"),
-            Definition::BuiltIn => write!(f, "default"),
+            Self::Path(p) => Some(p.as_path()),
+            Self::Environment(_) | Self::Cli | Self::BuiltIn => None,
+        }
+    }
+}
+
+impl fmt::Display for Origin {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Origin::Path(p) => p.display().fmt(f),
+            Origin::Environment(key) => write!(f, "environment variable `{}`", key),
+            Origin::Cli => write!(f, "--config cli option"),
+            Origin::BuiltIn => write!(f, "default"),
         }
     }
 }
@@ -93,9 +141,10 @@ impl fmt::Display for Definition {
 /// The kind of source where a config value is defined.
 ///
 /// In priority order.
-#[derive(Clone, Copy, Debug, PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Clone, Copy, Default, Debug, PartialOrd, Ord, PartialEq, Eq)]
 pub enum Scope {
     /// A built-in value.
+    #[default]
     BuiltIn,
     /// Loaded due to config file discovery.
     Path,

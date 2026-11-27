@@ -122,7 +122,7 @@ impl ConfigReader<'_> {
         // map type, this should implement a starts_with check (similar to how
         // ConfigMapAccess does).
         let env = env.unwrap();
-        let env_def = Definition::Environment(key.as_env_key().to_string());
+        let env_def = Definition::environment(key.as_env_key().to_string());
         if env == "true" {
             Ok(Some(CV::Boolean(true, env_def)))
         } else if env == "false" {
@@ -222,7 +222,7 @@ impl ConfigReader<'_> {
             return Ok(());
         };
 
-        let env_def = Definition::Environment(key.as_env_key().to_string());
+        let env_def = Definition::environment(key.as_env_key().to_string());
 
         if is_nonmergeable_list(&key) {
             assert!(
@@ -284,7 +284,7 @@ impl ConfigReader<'_> {
     {
         match self.env.get_str(key.as_env_key()) {
             Some(value) => {
-                let definition = Definition::Environment(key.as_env_key().to_string());
+                let definition = Definition::environment(key.as_env_key().to_string());
                 Ok(Some(Value {
                     val: value
                         .parse()

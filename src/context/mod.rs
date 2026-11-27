@@ -1637,7 +1637,7 @@ pub fn save_credentials(
     if let Some(token) = token {
         // login
 
-        let path_def = Definition::Path(file.path().to_path_buf());
+        let path_def = Definition::path(file.path().to_path_buf());
         let (key, mut value) = match token {
             RegistryCredentialConfig::Token(token) => {
                 // login with token

@@ -274,7 +274,7 @@ fn print_toml_unmerged(
 
     let mut cli_args = gctx.cli_args_to_config()?.into_value();
     if trim_cv(&mut cli_args, key)? {
-        print_table(&Definition::Cli(None), &cli_args);
+        print_table(&Definition::cli(None), &cli_args);
     }
 
     // This slurps up some extra env vars that aren't technically part of the

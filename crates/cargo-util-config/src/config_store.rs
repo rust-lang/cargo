@@ -19,14 +19,14 @@ impl ConfigStore {
     pub const fn new() -> Self {
         Self {
             values: HashMap::with_hasher(BuildHasher),
-            def: Definition::BuiltIn,
+            def: Definition::builtin(),
         }
     }
 
     pub fn from_values(values: HashMap<String, ConfigValue>) -> Self {
         Self {
             values,
-            def: Definition::BuiltIn,
+            def: Definition::builtin(),
         }
     }
 
@@ -61,9 +61,9 @@ impl ConfigStore {
             format!("could not parse TOML configuration in `{}`", path.display())
         })?;
         let def = match scope {
-            Scope::Cli => Definition::Cli(Some(path.into())),
-            Scope::Path => Definition::Path(path.into()),
-            Scope::BuiltIn => Definition::BuiltIn,
+            Scope::Cli => Definition::cli(Some(path.into())),
+            Scope::Path => Definition::path(path.into()),
+            Scope::BuiltIn => Definition::builtin(),
             Scope::Environment => {
                 unimplemented!("Environment defiinitions are not supported")
             }
@@ -104,7 +104,7 @@ impl ConfigStore {
             );
         }
 
-        let table = CV::from_toml(Definition::Cli(None), toml::Value::Table(doc))
+        let table = CV::from_toml(Definition::cli(None), toml::Value::Table(doc))
             .with_context(|| format!("failed to convert --config argument `{arg}`"))?;
         Ok(Self::from_table_value(table).unwrap())
     }
@@ -150,7 +150,7 @@ impl ConfigStore {
             // with no key). The definition here shouldn't matter.
             return Ok(Some(CV::Table(
                 vals.clone(),
-                Definition::Path(PathBuf::new()),
+                Definition::path(PathBuf::new()),
             )));
         }
         let mut parts = key.parts().enumerate();
