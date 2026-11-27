@@ -1,5 +1,8 @@
 //! Tests for the `cargo fix` command.
 
+use std::fs;
+use std::path::Path;
+
 use crate::prelude::*;
 use crate::utils::tools;
 use cargo::workspace::Edition;
@@ -802,6 +805,188 @@ fn does_not_warn_about_dirty_ignored_files() {
     p.change_file("bar", "");
 
     p.cargo("fix").run();
+}
+
+#[cargo_test]
+fn errors_about_staged_and_dirty_files() {
+    let (p, repo) = git::new_repo("foo", |p| {
+        p.file("src/lib.rs", "")
+            .file("src/deleted.rs", "")
+            .file("src/dirty.rs", "")
+            .file("src/renamed.rs", "// renamed")
+            .file("src/staged.rs", "")
+            .file("src/staged_deleted.rs", "")
+            .file("src/staged_then_dirty.rs", "")
+    });
+
+    p.change_file("src/dirty.rs", "// dirty");
+    p.change_file("src/staged.rs", "// staged");
+    p.change_file("src/staged_then_dirty.rs", "// staged");
+    p.root().join("src/deleted.rs").rm_rf();
+    p.root().join("src/staged_deleted.rs").rm_rf();
+    p.root().join("src/renamed.rs").rm_rf();
+    p.change_file("src/renamed_to.rs", "// renamed");
+
+    let mut index = repo.index().unwrap();
+    index.add_path(Path::new("src/staged.rs")).unwrap();
+    index
+        .add_path(Path::new("src/staged_then_dirty.rs"))
+        .unwrap();
+    index
+        .remove_path(Path::new("src/staged_deleted.rs"))
+        .unwrap();
+    index.remove_path(Path::new("src/renamed.rs")).unwrap();
+    index.add_path(Path::new("src/renamed_to.rs")).unwrap();
+    index.write().unwrap();
+
+    p.change_file("src/staged_then_dirty.rs", "// staged then dirty");
+
+    p.cargo("fix")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] the working directory of this package has uncommitted changes, and `cargo fix` can potentially perform destructive changes; if you'd like to suppress this error pass `--allow-dirty`, or commit the changes to these files:
+
+  * src/deleted.rs (dirty)
+  * src/dirty.rs (dirty)
+  * src/staged_then_dirty.rs (dirty)
+  * src/renamed.rs (staged)
+  * src/renamed_to.rs (staged)
+  * src/staged.rs (staged)
+  * src/staged_deleted.rs (staged)
+
+
+
+"#]])
+        .run();
+}
+
+#[cfg(unix)]
+#[cargo_test]
+fn errors_about_typechanged_files() {
+    let p = git::new("foo", |p| p.file("src/lib.rs", "").file("src/foo.rs", ""));
+
+    p.root().join("src/foo.rs").rm_rf();
+    p.symlink("src/lib.rs", "src/foo.rs");
+
+    p.cargo("fix")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] the working directory of this package has uncommitted changes, and `cargo fix` can potentially perform destructive changes; if you'd like to suppress this error pass `--allow-dirty`, or commit the changes to these files:
+
+  * src/foo.rs (dirty)
+
+
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn errors_about_untracked_files_and_dirs() {
+    let (p, repo) = git::new_repo("foo", |p| {
+        p.file("src/lib.rs", "").file(".gitignore", "*.log\n")
+    });
+
+    // Not respected
+    let mut config = repo.config().unwrap();
+    config.set_str("status.showUntrackedFiles", "no").unwrap();
+
+    p.change_file("src/new.rs", "");
+    p.change_file("deep/a/b/c.rs", "");
+    p.change_file("ignored_only/a.log", "");
+    fs::create_dir_all(p.root().join("empty")).unwrap();
+    git::init(&p.root().join("nested_repo"));
+    p.change_file("nested_repo/a.rs", "");
+
+    p.cargo("fix")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] the working directory of this package has uncommitted changes, and `cargo fix` can potentially perform destructive changes; if you'd like to suppress this error pass `--allow-dirty`, or commit the changes to these files:
+
+  * deep/ (dirty)
+  * nested_repo/ (dirty)
+  * src/new.rs (dirty)
+
+
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn errors_about_dirty_files_outside_package() {
+    let p = git::new("foo", |p| {
+        p.file("outside.txt", "")
+            .file("src/lib.rs", "")
+            .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+            .file("bar/src/lib.rs", "")
+    });
+
+    p.change_file("outside.txt", "dirty");
+    p.change_file("bar/src/new.rs", "");
+
+    p.cargo("fix")
+        .cwd("bar")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] the working directory of this package has uncommitted changes, and `cargo fix` can potentially perform destructive changes; if you'd like to suppress this error pass `--allow-dirty`, or commit the changes to these files:
+
+  * bar/src/new.rs (dirty)
+  * outside.txt (dirty)
+
+
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn errors_about_dirty_submodules() {
+    let sub = git::new("sub", |p| p.file("lib.rs", ""));
+    let (p, repo) = git::new_repo("foo", |p| p.file("src/lib.rs", ""));
+    let url = sub.url().to_string();
+    for path in [
+        "clean",
+        "ignore_all_config",
+        "ignore_all_gitmodules",
+        "modified",
+        "new_commit",
+        "untracked",
+    ] {
+        git::add_submodule(&repo, &url, Path::new(path));
+    }
+    let mut gitmodules = git2::Config::open(&p.root().join(".gitmodules")).unwrap();
+    gitmodules
+        .set_str("submodule.ignore_all_gitmodules.ignore", "all")
+        .unwrap();
+    git::add(&repo);
+    git::commit(&repo);
+    let mut config = repo.config().unwrap();
+    config
+        .set_str("submodule.ignore_all_config.ignore", "all")
+        .unwrap();
+
+    p.change_file("ignore_all_config/lib.rs", "// dirty");
+    p.change_file("ignore_all_gitmodules/lib.rs", "// dirty");
+    p.change_file("modified/lib.rs", "// dirty");
+    p.change_file("untracked/new.rs", "");
+    let new_commit = git2::Repository::open(p.root().join("new_commit")).unwrap();
+    git::commit(&new_commit);
+
+    p.cargo("fix")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] the working directory of this package has uncommitted changes, and `cargo fix` can potentially perform destructive changes; if you'd like to suppress this error pass `--allow-dirty`, or commit the changes to these files:
+
+  * ignore_all_config (dirty)
+  * modified (dirty)
+  * new_commit (dirty)
+  * untracked (dirty)
+
+
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
