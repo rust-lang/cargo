@@ -236,33 +236,12 @@ fn check_version_control(gctx: &GlobalContext, opts: &FixOptions) -> CargoResult
         return Ok(());
     }
 
-    let mut dirty_files = Vec::new();
-    let mut staged_files = Vec::new();
-    if let Ok(repo) = git2::Repository::discover(gctx.cwd()) {
-        let mut repo_opts = git2::StatusOptions::new();
-        repo_opts.include_ignored(false);
-        repo_opts.include_untracked(true);
-        for status in repo.statuses(Some(&mut repo_opts))?.iter() {
-            if let Ok(path) = status.path() {
-                match status.status() {
-                    git2::Status::CURRENT => (),
-                    git2::Status::INDEX_NEW
-                    | git2::Status::INDEX_MODIFIED
-                    | git2::Status::INDEX_DELETED
-                    | git2::Status::INDEX_RENAMED
-                    | git2::Status::INDEX_TYPECHANGE => {
-                        if !opts.allow_staged {
-                            staged_files.push(path.to_string())
-                        }
-                    }
-                    _ => {
-                        if !opts.allow_dirty {
-                            dirty_files.push(path.to_string())
-                        }
-                    }
-                };
-            }
-        }
+    let (mut dirty_files, mut staged_files) = git_dirty_and_staged_files(gctx.cwd())?;
+    if opts.allow_dirty {
+        dirty_files.clear();
+    }
+    if opts.allow_staged {
+        staged_files.clear();
     }
 
     if dirty_files.is_empty() && staged_files.is_empty() {
@@ -291,6 +270,32 @@ fn check_version_control(gctx: &GlobalContext, opts: &FixOptions) -> CargoResult
          ",
         files_list
     );
+}
+
+/// Returns dirty and staged files of the whole git repository containing `path`.
+fn git_dirty_and_staged_files(path: &Path) -> CargoResult<(Vec<String>, Vec<String>)> {
+    let mut dirty = Vec::new();
+    let mut staged = Vec::new();
+    let Ok(repo) = git2::Repository::discover(path) else {
+        return Ok((dirty, staged));
+    };
+    let mut repo_opts = git2::StatusOptions::new();
+    repo_opts.include_ignored(false);
+    repo_opts.include_untracked(true);
+    for status in repo.statuses(Some(&mut repo_opts))?.iter() {
+        if let Ok(path) = status.path() {
+            match status.status() {
+                git2::Status::CURRENT => (),
+                git2::Status::INDEX_NEW
+                | git2::Status::INDEX_MODIFIED
+                | git2::Status::INDEX_DELETED
+                | git2::Status::INDEX_RENAMED
+                | git2::Status::INDEX_TYPECHANGE => staged.push(path.to_string()),
+                _ => dirty.push(path.to_string()),
+            };
+        }
+    }
+    Ok((dirty, staged))
 }
 
 fn fix_manifests(ws: &Workspace<'_>, pkgs: &[&Package]) -> CargoResult<()> {
