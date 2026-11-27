@@ -4965,3 +4965,89 @@ Caused by:
         );
     }
 }
+
+#[cargo_test]
+fn mismatched_manifest_name_and_version() {
+    // Regression test for https://github.com/rust-lang/cargo/issues/8698
+    registry::alt_init();
+    Package::new("registry-name", "0.3.1")
+        .alternative(true)
+        .file("Cargo.toml", &basic_manifest("manifest-name", "0.3.1"))
+        .file("src/lib.rs", "")
+        .publish();
+    Package::new("wrong-ver", "0.1.0")
+        .alternative(true)
+        .file("Cargo.toml", &basic_manifest("wrong-ver", "0.2.0"))
+        .file("src/lib.rs", "")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+
+                [dependencies]
+                manifest-name = { version = "0.3.1", package = "registry-name", registry = "alternative" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // First run goes through `finish_download` -> `get_pkg`.
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] `alternative` index
+[LOCKING] 1 package to highest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] registry-name v0.3.1 (registry `alternative`)
+[ERROR] package `registry-name v0.3.1 (registry `alternative`)` does not match `manifest-name v0.3.1` in `[ROOT]/home/.cargo/registry/src/-[HASH]/registry-name-0.3.1/Cargo.toml`
+
+"#]])
+        .run();
+
+    // Second run goes through cached `download` -> `get_pkg`.
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to download `registry-name v0.3.1 (registry `alternative`)`
+
+Caused by:
+  unable to get packages from source
+
+Caused by:
+  package `registry-name v0.3.1 (registry `alternative`)` does not match `manifest-name v0.3.1` in `[ROOT]/home/.cargo/registry/src/-[HASH]/registry-name-0.3.1/Cargo.toml`
+
+"#]])
+        .run();
+
+    p.change_file(
+        "Cargo.toml",
+        r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2021"
+
+            [dependencies]
+            wrong-ver = { version = "0.1.0", registry = "alternative" }
+        "#,
+    );
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] `alternative` index
+[LOCKING] 1 package to highest compatible version
+[ADDING] wrong-ver v0.1.0 (registry `alternative`)
+[DOWNLOADING] crates ...
+[DOWNLOADED] wrong-ver v0.1.0 (registry `alternative`)
+[ERROR] package `wrong-ver v0.1.0 (registry `alternative`)` does not match `wrong-ver v0.2.0` in `[ROOT]/home/.cargo/registry/src/-[HASH]/wrong-ver-0.1.0/Cargo.toml`
+
+"#]])
+        .run();
+}
