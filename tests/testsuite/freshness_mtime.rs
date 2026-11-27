@@ -8,14 +8,12 @@ use std::io::prelude::*;
 use std::net::TcpListener;
 use std::path::{Path, PathBuf};
 use std::thread;
-use std::time::SystemTime;
+use std::time::{Duration, SystemTime};
 
 use crate::prelude::*;
 use cargo_test_support::paths;
 use cargo_test_support::registry::Package;
-use cargo_test_support::{
-    basic_lib_manifest, basic_manifest, is_coarse_mtime, project, sleep_ms, str,
-};
+use cargo_test_support::{basic_lib_manifest, basic_manifest, project, sleep_ms, str};
 use filetime::FileTime;
 
 #[cargo_test]
@@ -84,14 +82,14 @@ fn modify_only_some_files() {
 "#]])
         .run();
     p.cargo("test").run();
-    sleep_ms(1000);
 
     assert!(p.bin("foo").is_file());
 
     let lib = p.root().join("src/lib.rs");
     p.change_file("src/lib.rs", "invalid rust code");
-    p.change_file("src/b.rs", "#[allow(unused)]fn foo() {}");
     lib.move_into_the_past();
+    p.change_file("src/b.rs", "#[allow(unused)]fn foo() {}");
+    p.root().join("src/b.rs").move_into_the_future();
 
     // Make sure the binary is rebuilt, not the lib
     p.cargo("build -v")
@@ -153,9 +151,8 @@ fn rebuild_sub_package_then_while_package() {
 "#]])
         .run();
 
-    if is_coarse_mtime() {
-        sleep_ms(1000);
-    }
+    p.root().move_into_the_past();
+    p.build_dir().move_into_the_past();
     p.change_file("b/src/lib.rs", "pub fn b() {}");
 
     p.cargo("build -pb -v")
@@ -198,7 +195,8 @@ fn rebuild_tests_if_lib_changes() {
     p.cargo("build").run();
     p.cargo("test").run();
 
-    sleep_ms(1000);
+    p.root().move_into_the_past();
+    p.build_dir().move_into_the_past();
     p.change_file("src/lib.rs", "");
 
     p.cargo("build").run();
@@ -516,13 +514,10 @@ fn fingerprint_cleaner_does_not_rebuild() {
 
 "#]])
         .run();
-    if is_coarse_mtime() {
-        sleep_ms(1000);
-    }
-    let timestamp = filetime::FileTime::from_system_time(SystemTime::now());
-    if is_coarse_mtime() {
-        sleep_ms(1000);
-    }
+    // Put the cutoff between the old fingerprints and the next mtime-on-use update.
+    p.root().move_into_the_past();
+    p.build_dir().move_into_the_past();
+    let timestamp = FileTime::from_system_time(SystemTime::now() - Duration::from_secs(60));
     // This does not make new files, but it does update the mtime.
     p.cargo("build --features a")
         .arg("-Zmtime-on-use")
@@ -586,14 +581,10 @@ fn bust_patched_dep() {
         .build();
 
     p.cargo("build").run();
-    if is_coarse_mtime() {
-        sleep_ms(1000);
-    }
+    p.root().move_into_the_past();
+    p.build_dir().move_into_the_past();
 
     p.change_file("reg1new/src/lib.rs", "// modified");
-    if is_coarse_mtime() {
-        sleep_ms(1000);
-    }
 
     p.cargo("build -v").with_stderr_data(str![[r#"
 [DIRTY] registry1 v0.1.0 ([ROOT]/foo/reg1new): the file `reg1new/src/lib.rs` has changed ([TIME_DIFF_AFTER_LAST_BUILD])
@@ -800,6 +791,9 @@ fn dirty_both_lib_and_test() {
         .file("slib.rs", &slib(2))
         .build();
 
+    p.cargo("generate-lockfile").run();
+    p.root().move_into_the_past();
+
     p.cargo("build").run();
 
     // 2 != 1
@@ -808,10 +802,7 @@ fn dirty_both_lib_and_test() {
         .with_stdout_data("...\n[..]doit assert failure[..]\n...")
         .run();
 
-    if is_coarse_mtime() {
-        // #5918
-        sleep_ms(1000);
-    }
+    p.build_dir().move_into_the_past();
     // Fix the mistake.
     p.change_file("slib.rs", &slib(1));
 
@@ -844,9 +835,8 @@ fn script_fails_stay_dirty() {
         .build();
 
     p.cargo("build").run();
-    if is_coarse_mtime() {
-        sleep_ms(1000);
-    }
+    p.root().move_into_the_past();
+    p.build_dir().move_into_the_past();
     p.change_file("helper.rs", r#"pub fn doit() {panic!("Crash!");}"#);
     p.cargo("build")
         .with_stderr_data("...\n[..]Crash![..]\n...")
@@ -1311,10 +1301,8 @@ fn incremental_build_script_execution_got_new_mtime_and_cargo_check() {
 "#]])
         .run();
 
-    if is_coarse_mtime() {
-        sleep_ms(1000);
-    }
-
+    p.root().move_into_the_past();
+    p.build_dir().move_into_the_past();
     p.change_file("touch-me", "oops");
 
     // The first one is expected to rerun build script
